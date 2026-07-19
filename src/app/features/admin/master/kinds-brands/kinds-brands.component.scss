@@ -212,6 +212,12 @@ mat-card {
           color: #334155;
           font-size: 13.5px;
         }
+
+        // Give Pack Sizes column enough room for multiple chips
+        .mat-column-ml {
+          min-width: 200px;
+          flex: 0 0 200px;
+        }
       }
 
       // ── Paginator ──────────────────────────────────────────────────────────
@@ -413,18 +419,19 @@ mat-card {
 .ml-chips-cell {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 4px;
   align-items: center;
   padding: 4px 0;
+  max-width: 220px;
 }
 
 .ml-chip {
   display: inline-block;
   background: #dcfce7;
   color: #15803d;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
-  padding: 3px 9px;
+  padding: 2px 8px;
   border-radius: 20px;
   border: 1px solid #bbf7d0;
   white-space: nowrap;

@@ -156,7 +156,7 @@ export class ManageDialogComponent implements OnInit {
     }).then(result => {
       if (!result.isConfirmed) return;
 
-      if (size.id && this.isEditMode) {
+      if (size.id && size.id > 0 && this.isEditMode) {
         this.companyCollabService.deleteBrandPackSize(size.id).subscribe({
           next: () => this.packSizes.splice(index, 1),
           error: () => Swal.fire('Error', 'Failed to remove pack size.', 'error')

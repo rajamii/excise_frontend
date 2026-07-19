@@ -20,17 +20,18 @@ import { LiquorCategory, LiquorKind, LiquorType } from '../../../../core/models/
 export class KindsBrandsComponent implements OnInit, AfterViewInit {
 
   // ── Paginators ──────────────────────────────────────────────────────────────
-  @ViewChild('catPaginator')  catPaginator!:  MatPaginator;
-  @ViewChild('kindPaginator') kindPaginator!: MatPaginator;
-  @ViewChild('typePaginator') typePaginator!: MatPaginator;
-  @ViewChild('botPaginator')  botPaginator!:  MatPaginator;
+  @ViewChild('catPaginator')   catPaginator!:   MatPaginator;
+  @ViewChild('kindPaginator')  kindPaginator!:  MatPaginator;
+  @ViewChild('typePaginator')  typePaginator!:  MatPaginator;
+  @ViewChild('botPaginator')   botPaginator!:   MatPaginator;
+  @ViewChild('brandPaginator') brandPaginator!: MatPaginator;
 
   // ── Data Sources ────────────────────────────────────────────────────────────
-  categoriesDS    = new MatTableDataSource<any>([]);
-  kindsDS         = new MatTableDataSource<any>([]);
-  typesDS         = new MatTableDataSource<any>([]);
+  categoriesDS      = new MatTableDataSource<any>([]);
+  kindsDS           = new MatTableDataSource<any>([]);
+  typesDS           = new MatTableDataSource<any>([]);
   brandOwnerTypesDS = new MatTableDataSource<any>([]);
-  brands: any[]   = [];  // brands are searched on demand — plain array is fine
+  brandsDS          = new MatTableDataSource<any>([]);
 
   // Kept as plain arrays for dialogs / dropdowns
   categories: any[] = [];
@@ -39,8 +40,6 @@ export class KindsBrandsComponent implements OnInit, AfterViewInit {
   brandOwnerTypes: any[] = [];
 
   readonly pageSizeOptions = [10, 15, 20];
-
-  // ── Table Columns ───────────────────────────────────────────────────────────
   categoryColumns:      string[] = ['code', 'desc', 'abbr', 'actions'];
   kindColumns:          string[] = ['cat', 'code', 'desc', 'abbr', 'actions'];
   typeColumns:          string[] = ['cat', 'kind', 'code', 'desc', 'oldCode', 'actions'];
@@ -74,27 +73,23 @@ export class KindsBrandsComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    // mat-tab hides inactive tab content — paginators inside inactive tabs
-    // are not rendered until that tab is first activated. Use setTimeout to
-    // defer wiring so the first (active) tab paginator is available, and
-    // wire the rest lazily via onTabChange().
     setTimeout(() => {
-      if (this.catPaginator)  this.categoriesDS.paginator    = this.catPaginator;
-      if (this.kindPaginator) this.kindsDS.paginator         = this.kindPaginator;
-      if (this.typePaginator) this.typesDS.paginator         = this.typePaginator;
-      if (this.botPaginator)  this.brandOwnerTypesDS.paginator = this.botPaginator;
+      if (this.catPaginator)   this.categoriesDS.paginator      = this.catPaginator;
+      if (this.kindPaginator)  this.kindsDS.paginator           = this.kindPaginator;
+      if (this.typePaginator)  this.typesDS.paginator           = this.typePaginator;
+      if (this.botPaginator)   this.brandOwnerTypesDS.paginator = this.botPaginator;
+      if (this.brandPaginator) this.brandsDS.paginator          = this.brandPaginator;
       this.cdr.detectChanges();
     });
   }
 
-  /** Called by (selectedTabChange) on the mat-tab-group to wire any paginator
-   *  that wasn't available at ngAfterViewInit because its tab was inactive. */
   onTabChange(): void {
     setTimeout(() => {
-      if (this.catPaginator  && !this.categoriesDS.paginator)      this.categoriesDS.paginator      = this.catPaginator;
-      if (this.kindPaginator && !this.kindsDS.paginator)           this.kindsDS.paginator           = this.kindPaginator;
-      if (this.typePaginator && !this.typesDS.paginator)           this.typesDS.paginator           = this.typePaginator;
-      if (this.botPaginator  && !this.brandOwnerTypesDS.paginator) this.brandOwnerTypesDS.paginator = this.botPaginator;
+      if (this.catPaginator   && !this.categoriesDS.paginator)      this.categoriesDS.paginator      = this.catPaginator;
+      if (this.kindPaginator  && !this.kindsDS.paginator)           this.kindsDS.paginator           = this.kindPaginator;
+      if (this.typePaginator  && !this.typesDS.paginator)           this.typesDS.paginator           = this.typePaginator;
+      if (this.botPaginator   && !this.brandOwnerTypesDS.paginator) this.brandOwnerTypesDS.paginator = this.botPaginator;
+      if (this.brandPaginator && !this.brandsDS.paginator)          this.brandsDS.paginator          = this.brandPaginator;
       this.cdr.detectChanges();
     });
   }
@@ -136,7 +131,7 @@ export class KindsBrandsComponent implements OnInit, AfterViewInit {
     this.filteredTypes = this.selectedCatCode
       ? this.allTypes.filter(t => t.liquorCatCode === this.selectedCatCode)
       : [...this.allTypes];
-    this.brands = [];
+    this.brandsDS.data = [];
   }
 
   onBrandKindChange(): void {
@@ -146,17 +141,17 @@ export class KindsBrandsComponent implements OnInit, AfterViewInit {
       const kindOk = !this.selectedKindId  || t.liquorKindId  === this.selectedKindId;
       return catOk && kindOk;
     });
-    this.brands = [];
+    this.brandsDS.data = [];
   }
 
-  onBrandTypeChange(): void { this.brands = []; }
+  onBrandTypeChange(): void { this.brandsDS.data = []; }
 
   resetBrandFilters(): void {
     this.selectedCatCode  = null;
     this.selectedKindId   = null;
     this.selectedTypeId   = null;
     this.brandSearchQuery = '';
-    this.brands           = [];
+    this.brandsDS.data    = [];
     this.filteredKinds    = [...this.allKinds];
     this.filteredTypes    = [...this.allTypes];
   }
@@ -298,25 +293,40 @@ export class KindsBrandsComponent implements OnInit, AfterViewInit {
   // ── Super Brands ────────────────────────────────────────────────────────────
   onSearchBrands(): void {
     if (!this.brandSearchQuery.trim() && !this.selectedCatCode && !this.selectedKindId && !this.selectedTypeId) {
-      this.brands = [];
+      this.brandsDS.data = [];
       return;
     }
     this.companyCollabService.getBrandsCrudList(
       this.brandSearchQuery, this.selectedCatCode, this.selectedKindId, this.selectedTypeId
     ).subscribe({
       next: (data) => {
-        this.brands = Array.isArray(data) ? data.map(b => ({ ...b, packSizes: [], sizesLoading: true })) : [];
-        if (this.brands.length === 0) {
+        const rows = Array.isArray(data) ? data.map(b => ({ ...b, packSizes: [], sizesLoading: true })) : [];
+        this.brandsDS.data = rows;
+        if (rows.length === 0) {
           Swal.fire('No Brands Found', 'No brands matched your search criteria.', 'info');
         } else {
-          this.brands.forEach((brand, idx) => {
+          rows.forEach((brand, idx) => {
             this.companyCollabService.getBrandPackSizes(brand.liquorBrandCode).subscribe({
               next: (sizes) => {
-                this.brands[idx] = { ...this.brands[idx], packSizes: Array.isArray(sizes) ? sizes : [], sizesLoading: false };
-                this.brands = [...this.brands];
+                const updated = [...this.brandsDS.data];
+                updated[idx] = { ...updated[idx], packSizes: Array.isArray(sizes) ? sizes : [], sizesLoading: false };
+                this.brandsDS.data = updated;
+                this.cdr.markForCheck();
               },
-              error: () => { this.brands[idx] = { ...this.brands[idx], packSizes: [], sizesLoading: false }; }
+              error: () => {
+                const updated = [...this.brandsDS.data];
+                updated[idx] = { ...updated[idx], packSizes: [], sizesLoading: false };
+                this.brandsDS.data = updated;
+                this.cdr.markForCheck();
+              }
             });
+          });
+          // Wire paginator after data loads (tab may have just become active)
+          setTimeout(() => {
+            if (this.brandPaginator && !this.brandsDS.paginator) {
+              this.brandsDS.paginator = this.brandPaginator;
+              this.cdr.detectChanges();
+            }
           });
         }
       },

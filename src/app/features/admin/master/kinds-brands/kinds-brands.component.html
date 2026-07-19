@@ -276,7 +276,7 @@
           </div>
 
           <div class="table-container">
-            <mat-table [dataSource]="brands">
+            <mat-table [dataSource]="brandsDS">
               <ng-container matColumnDef="code">
                 <mat-header-cell *matHeaderCellDef>Brand Code</mat-header-cell>
                 <mat-cell *matCellDef="let element">
@@ -322,12 +322,12 @@
                   <div class="ml-chips-cell">
                     @if (element.sizesLoading) {
                       <mat-spinner diameter="16"></mat-spinner>
-                    } @else {
+                    } @else if (element.packSizes?.length > 0) {
                       @for (s of element.packSizes; track s.label) {
                         <span class="ml-chip">{{ s.label }}</span>
-                      } @empty {
-                        <span class="ml-chip ml-chip--none">—</span>
                       }
+                    } @else {
+                      <span class="ml-chip ml-chip--none">—</span>
                     }
                   </div>
                 </mat-cell>
@@ -346,12 +346,20 @@
               <mat-row *matRowDef="let row; columns: brandColumns;"></mat-row>
             </mat-table>
 
-            @if (brands.length === 0 && !brandSearchQuery && !selectedCatCode && !selectedKindId && !selectedTypeId) {
+            @if (brandsDS.data.length === 0 && !brandSearchQuery && !selectedCatCode && !selectedKindId && !selectedTypeId) {
               <div class="search-placeholder-text">
                 <mat-icon>manage_search</mat-icon>
                 <span>Select filters or type a brand name to search.</span>
               </div>
             }
+
+            <mat-paginator #brandPaginator
+              [pageSizeOptions]="pageSizeOptions"
+              [pageSize]="10"
+              showFirstLastButtons
+              [style.display]="brandsDS.data.length === 0 ? 'none' : ''"
+              aria-label="Super Brands pagination">
+            </mat-paginator>
           </div>
         </mat-tab>
 
