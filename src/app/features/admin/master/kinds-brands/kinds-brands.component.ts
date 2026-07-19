@@ -23,7 +23,7 @@ export class KindsBrandsComponent implements OnInit {
   categoryColumns: string[] = ['code', 'desc', 'abbr', 'actions'];
   kindColumns: string[] = ['cat', 'code', 'desc', 'abbr', 'actions'];
   typeColumns: string[] = ['cat', 'kind', 'code', 'desc', 'oldCode', 'actions'];
-  brandColumns: string[] = ['code', 'desc', 'alias', 'oldCode', 'cat', 'kind', 'type', 'actions'];
+  brandColumns: string[] = ['code', 'desc', 'alias', 'cat', 'kind', 'type', 'ml', 'actions'];
 
   // Brand Search
   brandSearchQuery = '';
@@ -189,12 +189,42 @@ export class KindsBrandsComponent implements OnInit {
     }
     this.companyCollabService.getBrandsCrudList(this.brandSearchQuery).subscribe({
       next: (data) => {
-        this.brands = Array.isArray(data) ? data : [];
+        this.brands = Array.isArray(data) ? data.map(b => ({ ...b, packSizes: [], sizesLoading: true })) : [];
         if (this.brands.length === 0) {
           Swal.fire('No Brands Found', 'No brands matched your search criteria.', 'info');
+        } else {
+          // Load pack sizes for each brand
+          this.brands.forEach((brand, idx) => {
+            this.companyCollabService.getBrandPackSizes(brand.liquorBrandCode).subscribe({
+              next: (sizes) => {
+                this.brands[idx] = { ...this.brands[idx], packSizes: Array.isArray(sizes) ? sizes : [], sizesLoading: false };
+                this.brands = [...this.brands]; // Trigger change detection
+              },
+              error: () => {
+                this.brands[idx] = { ...this.brands[idx], packSizes: [], sizesLoading: false };
+              }
+            });
+          });
         }
       },
       error: () => Swal.fire('Error', 'Failed to search brands.', 'error')
+    });
+  }
+
+  onManageSizes(brand: any): void {
+    const dialogRef = this.dialog.open(ManageDialogComponent, {
+      width: '560px',
+      data: {
+        type: 'brand',
+        element: { ...brand },
+        categories: this.categories,
+        kinds: this.kinds,
+        types: this.types,
+        sizesOnly: true  // signal to dialog to focus on sizes section
+      }
+    });
+    dialogRef.afterClosed().subscribe(res => {
+      if (res) this.onSearchBrands();
     });
   }
 

@@ -14,6 +14,7 @@ import { CompanyCollaborationService } from '../../../../../core/services/compan
 export class ManageDialogComponent implements OnInit {
   type = 'category'; // category | kind | type | brand
   isEditMode = false;
+  sizesOnly = false;
 
   // Option lists
   categories: any[] = [];
@@ -39,6 +40,7 @@ export class ManageDialogComponent implements OnInit {
     this.categories = this.data.categories || [];
     this.kinds = this.data.kinds || [];
     this.types = this.data.types || [];
+    this.sizesOnly = !!this.data.sizesOnly;
 
     if (this.data.element) {
       this.model = { ...this.data.element };

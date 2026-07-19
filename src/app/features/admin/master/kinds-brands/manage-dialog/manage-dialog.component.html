@@ -1,6 +1,6 @@
 <div class="container-fluid">
   <h2 mat-dialog-title align="center">
-    {{ isEditMode ? 'Edit' : 'Add' }} {{ type | titlecase }}
+    {{ sizesOnly ? 'Manage Pack Sizes' : (isEditMode ? 'Edit' : 'Add') + ' ' + (type | titlecase) }}
   </h2>
 
   <form #form="ngForm">
@@ -102,58 +102,66 @@
 
       <!-- ── Brand Fields ── -->
       <ng-container *ngIf="type === 'brand'">
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>Brand Code</mat-label>
-          <input
-            matInput
-            name="liquor_brand_code"
-            required
-            [disabled]="isEditMode"
-            [(ngModel)]="model.liquorBrandCode"
-            #brandCodeModel="ngModel"
-          />
-          <mat-error *ngIf="brandCodeModel.errors?.['required']">Brand Code is required</mat-error>
-        </mat-form-field>
+        <div class="brand-info-header" *ngIf="sizesOnly" style="margin-bottom: 15px; padding: 10px 14px; background-color: #f1f5f9; border-radius: 8px;">
+          <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 700;">Brand Details</div>
+          <div style="font-size: 1rem; font-weight: bold; color: #1e293b; margin-top: 2px;">{{ model.liquorBrandDesc }}</div>
+          <div style="font-size: 0.8rem; color: #64748b; margin-top: 1px;">Code: <strong>{{ model.liquorBrandCode }}</strong></div>
+        </div>
 
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>Brand Name</mat-label>
-          <input matInput name="liquor_brand_desc" required [(ngModel)]="model.liquorBrandDesc" #brandDescModel="ngModel" />
-          <mat-error *ngIf="brandDescModel.errors?.['required']">Brand Name is required</mat-error>
-        </mat-form-field>
+        <ng-container *ngIf="!sizesOnly">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Brand Code</mat-label>
+            <input
+              matInput
+              name="liquor_brand_code"
+              required
+              [disabled]="isEditMode"
+              [(ngModel)]="model.liquorBrandCode"
+              #brandCodeModel="ngModel"
+            />
+            <mat-error *ngIf="brandCodeModel.errors?.['required']">Brand Code is required</mat-error>
+          </mat-form-field>
 
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>Brand Alias</mat-label>
-          <input matInput name="brand_name_alias" [(ngModel)]="model.brandNameAlias" />
-        </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Brand Name</mat-label>
+            <input matInput name="liquor_brand_desc" required [(ngModel)]="model.liquorBrandDesc" #brandDescModel="ngModel" />
+            <mat-error *ngIf="brandDescModel.errors?.['required']">Brand Name is required</mat-error>
+          </mat-form-field>
 
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>Category</mat-label>
-          <mat-select [(ngModel)]="model.liquorCat" name="liquor_cat" required #brandCatModel="ngModel">
-            <mat-option *ngFor="let c of categories" [value]="c.liquorCatCode">{{ c.liquorCatDesc }}</mat-option>
-          </mat-select>
-          <mat-error *ngIf="brandCatModel.errors?.['required']">Category is required</mat-error>
-        </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Brand Alias</mat-label>
+            <input matInput name="brand_name_alias" [(ngModel)]="model.brandNameAlias" />
+          </mat-form-field>
 
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>Kind</mat-label>
-          <mat-select [(ngModel)]="model.liquorKind" name="liquor_kind" required #brandKindModel="ngModel">
-            <mat-option *ngFor="let k of kinds" [value]="k.id">{{ k.liquorKindDesc }}</mat-option>
-          </mat-select>
-          <mat-error *ngIf="brandKindModel.errors?.['required']">Kind is required</mat-error>
-        </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Category</mat-label>
+            <mat-select [(ngModel)]="model.liquorCat" name="liquor_cat" required #brandCatModel="ngModel">
+              <mat-option *ngFor="let c of categories" [value]="c.liquorCatCode">{{ c.liquorCatDesc }}</mat-option>
+            </mat-select>
+            <mat-error *ngIf="brandCatModel.errors?.['required']">Category is required</mat-error>
+          </mat-form-field>
 
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>Type</mat-label>
-          <mat-select [(ngModel)]="model.liquorType" name="liquor_type" required #brandTypeModel="ngModel">
-            <mat-option *ngFor="let t of types" [value]="t.liquorTypeCode">{{ t.liquorTypeDesc }}</mat-option>
-          </mat-select>
-          <mat-error *ngIf="brandTypeModel.errors?.['required']">Type is required</mat-error>
-        </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Kind</mat-label>
+            <mat-select [(ngModel)]="model.liquorKind" name="liquor_kind" required #brandKindModel="ngModel">
+              <mat-option *ngFor="let k of kinds" [value]="k.id">{{ k.liquorKindDesc }}</mat-option>
+            </mat-select>
+            <mat-error *ngIf="brandKindModel.errors?.['required']">Kind is required</mat-error>
+          </mat-form-field>
 
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>Old Type Code</mat-label>
-          <input matInput name="liquor_type_code_old" [(ngModel)]="model.liquorTypeCodeOld" />
-        </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Type</mat-label>
+            <mat-select [(ngModel)]="model.liquorType" name="liquor_type" required #brandTypeModel="ngModel">
+              <mat-option *ngFor="let t of types" [value]="t.liquorTypeCode">{{ t.liquorTypeDesc }}</mat-option>
+            </mat-select>
+            <mat-error *ngIf="brandTypeModel.errors?.['required']">Type is required</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Old Type Code</mat-label>
+            <input matInput name="liquor_type_code_old" [(ngModel)]="model.liquorTypeCodeOld" />
+          </mat-form-field>
+        </ng-container>
 
         <!-- ── Pack Sizes Section ── -->
         <div class="pack-sizes-section">

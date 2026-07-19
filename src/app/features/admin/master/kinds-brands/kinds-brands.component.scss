@@ -107,3 +107,42 @@ mat-card {
     }
   }
 }
+
+.ml-chips-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+  padding: 4px 0;
+  max-width: 100%;
+}
+
+.ml-chip {
+  display: inline-block;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid #bae6fd;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+  &--none {
+    background: #f1f5f9;
+    color: #94a3b8;
+    border-color: #e2e8f0;
+    font-weight: 400;
+    box-shadow: none;
+  }
+}
+
+.sizes-btn {
+  color: #0284c7 !important;
+  transition: transform 0.2s;
+
+  &:hover {
+    transform: scale(1.15);
+  }
+}
