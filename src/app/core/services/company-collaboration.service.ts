@@ -213,9 +213,13 @@ export class CompanyCollaborationService {
     return this.http.delete(`${this.mastersUrl}/liquor-types-crud/${pk}/delete/`);
   }
 
-  // Brands CRUD (with search)
-  getBrandsCrudList(search: string): Observable<any[]> {
-    let params = new HttpParams().set('search', search);
+  // Brands CRUD (with search + optional category/kind/type filter)
+  getBrandsCrudList(search: string, catCode?: number | null, kindId?: number | null, typeId?: number | null): Observable<any[]> {
+    let params = new HttpParams();
+    if (search.trim()) params = params.set('search', search.trim());
+    if (catCode != null) params = params.set('liquor_cat', catCode.toString());
+    if (kindId  != null) params = params.set('liquor_kind', kindId.toString());
+    if (typeId  != null) params = params.set('liquor_type', typeId.toString());
     return this.http.get<any[]>(`${this.mastersUrl}/liquor-brands-crud/`, { params });
   }
   createBrandCrud(data: any): Observable<any> {

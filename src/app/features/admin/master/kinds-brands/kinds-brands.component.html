@@ -169,7 +169,42 @@
         <!-- ── TAB 4: Super Brands (Search-based CRUD) ── -->
         <mat-tab label="Super Brands">
           <div class="search-brands-row">
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+
+            <!-- Category dropdown -->
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="brand-filter-field">
+              <mat-label>Category</mat-label>
+              <mat-select [(ngModel)]="selectedCatCode" (selectionChange)="onBrandCatChange()">
+                <mat-option [value]="null">All Categories</mat-option>
+                @for (cat of categories; track cat.liquorCatCode) {
+                  <mat-option [value]="cat.liquorCatCode">{{ cat.liquorCatDesc }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <!-- Kind dropdown -->
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="brand-filter-field">
+              <mat-label>Kind</mat-label>
+              <mat-select [(ngModel)]="selectedKindId" (selectionChange)="onBrandKindChange()">
+                <mat-option [value]="null">All Kinds</mat-option>
+                @for (kind of filteredKinds; track kind.id) {
+                  <mat-option [value]="kind.id">{{ kind.liquorKindDesc }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <!-- Type dropdown -->
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="brand-filter-field">
+              <mat-label>Type</mat-label>
+              <mat-select [(ngModel)]="selectedTypeId" (selectionChange)="onBrandTypeChange()">
+                <mat-option [value]="null">All Types</mat-option>
+                @for (type of filteredTypes; track type.id) {
+                  <mat-option [value]="type.id">{{ type.liquorTypeDesc }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <!-- Text search -->
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="brand-search-field">
               <mat-label>Search Brands (Code or Name)</mat-label>
               <input
                 matInput
@@ -181,6 +216,21 @@
                 <mat-icon>search</mat-icon>
               </button>
             </mat-form-field>
+
+            <!-- Search button -->
+            <button class="brands-search-btn" type="button" (click)="onSearchBrands()"
+              [disabled]="!brandSearchQuery.trim() && !selectedCatCode && !selectedKindId && !selectedTypeId"
+              title="Search Brands">
+              <mat-icon>search</mat-icon>
+            </button>
+
+            <!-- Reset filters -->
+            @if (brandSearchQuery || selectedCatCode || selectedKindId || selectedTypeId) {
+              <button mat-icon-button type="button" (click)="resetBrandFilters()" title="Clear filters"
+                class="reset-filter-btn">
+                <mat-icon>filter_alt_off</mat-icon>
+              </button>
+            }
 
             <button matButton="filled" (click)="onAddBrand()">
               <mat-icon>add</mat-icon> Add Brand
@@ -273,8 +323,8 @@
               <mat-row *matRowDef="let row; columns: brandColumns;"></mat-row>
             </mat-table>
 
-            <div class="search-placeholder-text" *ngIf="brands.length === 0 && !brandSearchQuery">
-              <mat-icon>search</mat-icon> Search brands to display results here.
+            <div class="search-placeholder-text" *ngIf="brands.length === 0 && !brandSearchQuery && !selectedCatCode && !selectedKindId && !selectedTypeId">
+              <mat-icon>search</mat-icon> Select filters or search brands to display results here.
             </div>
           </div>
         </mat-tab>

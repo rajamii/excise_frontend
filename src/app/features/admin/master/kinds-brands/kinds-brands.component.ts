@@ -1,14 +1,17 @@
 import { Component, OnInit } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
+import { forkJoin } from 'rxjs';
 import Swal from 'sweetalert2';
 import { MaterialModule } from '../../../../shared/material.module';
+import { FormsModule } from '@angular/forms';
 import { CompanyCollaborationService } from '../../../../core/services/company-collaboration.service';
 import { ManageDialogComponent } from './manage-dialog/manage-dialog.component';
+import { LiquorCategory, LiquorKind, LiquorType } from '../../../../core/models/company-collaboration.model';
 
 @Component({
   selector: 'app-kinds-brands',
   standalone: true,
-  imports: [MaterialModule],
+  imports: [MaterialModule, FormsModule],
   templateUrl: './kinds-brands.component.html',
   styleUrl: './kinds-brands.component.scss'
 })
@@ -28,6 +31,17 @@ export class KindsBrandsComponent implements OnInit {
   // Brand Search
   brandSearchQuery = '';
 
+  // ── Super Brands — cascading filter dropdowns ─────────────────────────────
+  allKinds: LiquorKind[] = [];
+  allTypes: LiquorType[] = [];
+
+  filteredKinds: LiquorKind[] = [];
+  filteredTypes: LiquorType[] = [];
+
+  selectedCatCode: number | null = null;
+  selectedKindId:  number | null = null;
+  selectedTypeId:  number | null = null;
+
   constructor(
     private companyCollabService: CompanyCollaborationService,
     private dialog: MatDialog
@@ -37,6 +51,71 @@ export class KindsBrandsComponent implements OnInit {
     this.loadCategories();
     this.loadKinds();
     this.loadTypes();
+    this.loadMasterDropdowns();
+  }
+
+  // ── Master dropdowns for Super Brands filter ──────────────────────────────
+  private loadMasterDropdowns(): void {
+    forkJoin({
+      kinds: this.companyCollabService.getLiquorKinds(),
+      types: this.companyCollabService.getLiquorTypes()
+    }).subscribe({
+      next: ({ kinds, types }) => {
+        this.allKinds = kinds.map((k: any) => ({
+          id:             k.id,
+          liquorCatCode:  k.liquorCat      ?? k.liquor_cat,
+          liquorKindCode: k.liquorKindCode ?? k.liquor_kind_code,
+          liquorKindDesc: k.liquorKindDesc ?? k.liquor_kind_desc,
+          liquorKindAbbr: k.liquorKindAbbr ?? k.liquor_kind_abbr
+        }));
+        this.allTypes = types.map((t: any) => ({
+          id:             t.id,
+          liquorCatCode:  t.liquorCat      ?? t.liquor_cat,
+          liquorKindId:   t.liquorKind     ?? t.liquor_kind,
+          liquorTypeCode: t.liquorTypeCode ?? t.liquor_type_code,
+          liquorTypeDesc: t.liquorTypeDesc ?? t.liquor_type_desc
+        }));
+        this.filteredKinds = [...this.allKinds];
+        this.filteredTypes = [...this.allTypes];
+      },
+      error: (err) => console.error('Failed to load master dropdowns:', err)
+    });
+  }
+
+  onBrandCatChange(): void {
+    this.selectedKindId = null;
+    this.selectedTypeId = null;
+    this.filteredKinds = this.selectedCatCode
+      ? this.allKinds.filter(k => k.liquorCatCode === this.selectedCatCode)
+      : [...this.allKinds];
+    this.filteredTypes = this.selectedCatCode
+      ? this.allTypes.filter(t => t.liquorCatCode === this.selectedCatCode)
+      : [...this.allTypes];
+    this.brands = [];
+  }
+
+  onBrandKindChange(): void {
+    this.selectedTypeId = null;
+    this.filteredTypes = this.allTypes.filter(t => {
+      const catOk  = !this.selectedCatCode  || t.liquorCatCode === this.selectedCatCode;
+      const kindOk = !this.selectedKindId   || t.liquorKindId  === this.selectedKindId;
+      return catOk && kindOk;
+    });
+    this.brands = [];
+  }
+
+  onBrandTypeChange(): void {
+    this.brands = [];
+  }
+
+  resetBrandFilters(): void {
+    this.selectedCatCode  = null;
+    this.selectedKindId   = null;
+    this.selectedTypeId   = null;
+    this.brandSearchQuery = '';
+    this.brands           = [];
+    this.filteredKinds    = [...this.allKinds];
+    this.filteredTypes    = [...this.allTypes];
   }
 
   // ── Categories ─────────────────────────────────────────────────────────────
@@ -183,11 +262,17 @@ export class KindsBrandsComponent implements OnInit {
 
   // ── Super Brands ───────────────────────────────────────────────────────────
   onSearchBrands(): void {
-    if (!this.brandSearchQuery.trim()) {
+    // Allow search with just dropdowns (no text required)
+    if (!this.brandSearchQuery.trim() && !this.selectedCatCode && !this.selectedKindId && !this.selectedTypeId) {
       this.brands = [];
       return;
     }
-    this.companyCollabService.getBrandsCrudList(this.brandSearchQuery).subscribe({
+    this.companyCollabService.getBrandsCrudList(
+      this.brandSearchQuery,
+      this.selectedCatCode,
+      this.selectedKindId,
+      this.selectedTypeId
+    ).subscribe({
       next: (data) => {
         this.brands = Array.isArray(data) ? data.map(b => ({ ...b, packSizes: [], sizesLoading: true })) : [];
         if (this.brands.length === 0) {
