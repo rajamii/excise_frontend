@@ -1,48 +1,144 @@
+// ── Page wrapper ──────────────────────────────────────────────────────────────
 .container-fluid {
-  padding-top: 10px;
+  padding: 16px;
 }
 
+// ── Card ──────────────────────────────────────────────────────────────────────
 mat-card {
-  mat-card-header {
-    padding: 12px;
-    background-color: #1C2B78;
-    color: #ffffff;
-    font-size: 24px;
-    font-weight: 500;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 14, 31, 0.1) !important;
+
+  // ── Header ─────────────────────────────────────────────────────────────────
+  mat-card-header.page-card-header {
+    background: linear-gradient(135deg, #1C2B78 0%, #2a3d9e 100%);
+    padding: 18px 24px;
+    display: block;
+
+    .page-title {
+      color: #ffffff;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
   }
 
-  mat-card-content {
-    padding: 15px;
+  mat-card-content.page-card-content {
+    padding: 0;
+    background: #f4f6fb;
 
-    .tab-action-row {
-      margin: 15px 0;
-      display: flex;
-      justify-content: flex-end;
+    // ── Tab group ──────────────────────────────────────────────────────────
+    ::ng-deep {
+      .mat-mdc-tab-group { background: #ffffff; }
+
+      .mat-mdc-tab-header {
+        background: #ffffff;
+        border-bottom: 2px solid #e4e8f2;
+      }
+
+      .mat-mdc-tab {
+        font-weight: 600;
+        font-size: 13.5px;
+        color: #64748b;
+        min-width: 120px;
+        opacity: 1;
+      }
+
+      .mat-mdc-tab.mdc-tab--active {
+        color: #1C2B78 !important;
+      }
+
+      .mdc-tab-indicator__content--underline {
+        border-color: #1C2B78 !important;
+        border-top-width: 3px !important;
+        border-radius: 3px 3px 0 0;
+      }
     }
 
+    // ── Tab body ───────────────────────────────────────────────────────────
+    ::ng-deep .mat-mdc-tab-body-content {
+      padding: 20px 20px 24px;
+    }
+
+    // ── Action row (for tabs 1-3) ──────────────────────────────────────────
+    .tab-action-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      background: #ffffff;
+      border-radius: 10px;
+      border: 1px solid #e4e8f2;
+      box-shadow: 0 1px 4px rgba(28, 43, 120, 0.05);
+
+      .tab-count {
+        font-size: 13px;
+        color: #64748b;
+        font-weight: 500;
+
+        strong { color: #1C2B78; }
+      }
+    }
+
+    // ── Add button (shared) ────────────────────────────────────────────────
+    .add-btn {
+      background: #1C2B78 !important;
+      color: #ffffff !important;
+      border-radius: 8px !important;
+      font-weight: 600 !important;
+      font-size: 13px !important;
+      padding: 0 16px !important;
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+
+      mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+      &:hover {
+        background: #2a3d9e !important;
+      }
+    }
+
+    // ── Search/filter row (tab 4) ──────────────────────────────────────────
     .search-brands-row {
-      margin: 15px 0;
       display: flex;
       align-items: center;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 10px;
+      margin-bottom: 16px;
+      padding: 14px 16px;
+      background: #ffffff;
+      border-radius: 10px;
+      border: 1px solid #e4e8f2;
+      box-shadow: 0 1px 4px rgba(28, 43, 120, 0.05);
 
       .brand-filter-field {
         flex: 1 1 150px;
         min-width: 130px;
-        max-width: 200px;
+        max-width: 195px;
+
+        ::ng-deep {
+          .mat-mdc-text-field-wrapper { border-radius: 8px; }
+          .mat-mdc-form-field-subscript-wrapper { display: none; }
+        }
       }
 
       .brand-search-field {
-        flex: 1 1 220px;
-        min-width: 180px;
-        max-width: 340px;
+        flex: 1 1 200px;
+        min-width: 160px;
+        max-width: 300px;
+
+        ::ng-deep {
+          .mat-mdc-text-field-wrapper { border-radius: 8px; }
+          .mat-mdc-form-field-subscript-wrapper { display: none; }
+        }
       }
 
-      // Icon-only search button
       .brands-search-btn {
-        width: 44px;
-        height: 44px;
+        width: 42px;
+        height: 42px;
         border-radius: 8px;
         border: none;
         background: #1C2B78;
@@ -52,131 +148,258 @@ mat-card {
         justify-content: center;
         cursor: pointer;
         flex-shrink: 0;
-        transition: background 0.2s ease;
+        transition: background 0.2s ease, transform 0.15s ease;
 
         mat-icon { font-size: 20px; width: 20px; height: 20px; }
 
-        &:hover:not([disabled]) { background: #2a3d9e; }
-        &[disabled] { background: #c5cbe8; cursor: not-allowed; }
+        &:hover:not([disabled]) {
+          background: #2a3d9e;
+          transform: scale(1.05);
+        }
+
+        &[disabled] {
+          background: #c5cbe8;
+          cursor: not-allowed;
+          transform: none;
+        }
       }
 
       .reset-filter-btn {
-        color: #64748b;
+        color: #94a3b8 !important;
         flex-shrink: 0;
-        &:hover { color: #dc2626; }
+
+        &:hover { color: #dc2626 !important; }
       }
     }
 
+    // ── Table container ────────────────────────────────────────────────────
     .table-container {
-      width: 100%;
-      overflow-x: auto;
-      border-radius: 12px;
-      border: 1px solid #e2e8f0;
-      box-shadow: 0 2px 12px rgba(28, 43, 120, 0.07);
+      background: #ffffff;
+      border-radius: 10px;
+      border: 1px solid #e4e8f2;
+      box-shadow: 0 2px 10px rgba(28, 43, 120, 0.06);
       overflow: hidden;
-      margin-top: 10px;
-
-      mat-table {
-        min-width: 800px;
-      }
 
       ::ng-deep {
+        // Header
         mat-header-row {
-          background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%) !important;
-          min-height: 48px;
+          background: linear-gradient(90deg, #1C2B78 0%, #243390 100%) !important;
+          min-height: 46px;
         }
 
         mat-header-cell {
-          font-size: 0.72rem !important;
-          font-weight: 800 !important;
+          font-size: 11.5px !important;
+          font-weight: 700 !important;
           text-transform: uppercase;
-          letter-spacing: 0.07em;
+          letter-spacing: 0.06em;
           color: #e2e8f0 !important;
           background: transparent !important;
-          border-bottom: 2px solid #334155 !important;
-
-          &::before {
-            content: '';
-            display: inline-block;
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            margin-right: 7px;
-            background: #34d399;
-            flex-shrink: 0;
-            vertical-align: middle;
-          }
+          border-bottom: none !important;
         }
 
+        // Rows
         mat-row {
-          border-bottom: 1px solid #f1f5f9;
-          transition: background 0.15s ease;
+          border-bottom: 1px solid #f0f2f8 !important;
+          transition: background 0.12s ease;
+          min-height: 52px;
 
-          &:nth-child(even) { background: #f8fafc; }
-          &:hover { background: #eff6ff !important; }
+          &:last-child { border-bottom: none !important; }
+          &:nth-child(even) { background: #f9faff; }
+          &:hover { background: #eef1ff !important; }
         }
 
         mat-cell {
           color: #334155;
-          font-size: 0.875rem;
+          font-size: 13.5px;
         }
       }
 
+      // Placeholder when no data
       .search-placeholder-text {
-        padding: 40px;
+        padding: 48px 24px;
         text-align: center;
         color: #94a3b8;
-        font-size: 1.1rem;
         display: flex;
+        flex-direction: column;
         align-items: center;
-        justify-content: center;
         gap: 10px;
 
         mat-icon {
-          font-size: 28px;
-          width: 28px;
-          height: 28px;
+          font-size: 40px;
+          width: 40px;
+          height: 40px;
+          opacity: 0.4;
         }
+
+        span {
+          font-size: 14px;
+          color: #64748b;
+        }
+      }
+    }
+
+    // ── Action buttons in rows ─────────────────────────────────────────────
+    .action-btns {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .edit-btn {
+      color: #2563eb !important;
+      &:hover { background: #eff6ff !important; }
+    }
+
+    .delete-btn {
+      color: #ef4444 !important;
+      &:hover { background: #fef2f2 !important; }
+    }
+
+    .sizes-btn {
+      color: #0891b2 !important;
+      &:hover { background: #ecfeff !important; }
+    }
+
+    // ── Cell badges ────────────────────────────────────────────────────────
+    .code-badge {
+      display: inline-block;
+      background: #f1f5f9;
+      color: #475569;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      font-family: monospace;
+    }
+
+    .abbr-badge {
+      display: inline-block;
+      background: #eef2ff;
+      color: #4338ca;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 6px;
+      border: 1px solid #c7d2fe;
+    }
+
+    .cat-badge {
+      display: inline-block;
+      background: #f5f3ff;
+      color: #6d28d9;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 3px 9px;
+      border-radius: 20px;
+      border: 1px solid #ddd6fe;
+      white-space: nowrap;
+    }
+
+    .kind-badge {
+      display: inline-block;
+      background: #fffbeb;
+      color: #b45309;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 3px 9px;
+      border-radius: 20px;
+      border: 1px solid #fde68a;
+      white-space: nowrap;
+    }
+
+    .type-badge {
+      display: inline-block;
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 3px 9px;
+      border-radius: 20px;
+      border: 1px solid #bfdbfe;
+      white-space: nowrap;
+    }
+
+    .muted-text {
+      color: #94a3b8;
+      font-size: 12px;
+    }
+
+    // ── Brand name cell ────────────────────────────────────────────────────
+    .brand-name-cell {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+
+      .brand-initial {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #0f766e, #14b8a6);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        text-transform: uppercase;
+      }
+
+      .brand-label {
+        font-weight: 600;
+        color: #0f766e;
+        font-size: 13px;
       }
     }
   }
 }
 
+// ── Pack size chips ───────────────────────────────────────────────────────────
 .ml-chips-cell {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
   align-items: center;
   padding: 4px 0;
-  max-width: 100%;
 }
 
 .ml-chip {
   display: inline-block;
-  background: #e0f2fe;
-  color: #0369a1;
-  font-size: 0.75rem;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 11.5px;
   font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 6px;
-  border: 1px solid #bae6fd;
+  padding: 3px 9px;
+  border-radius: 20px;
+  border: 1px solid #bbf7d0;
   white-space: nowrap;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 
   &--none {
     background: #f1f5f9;
     color: #94a3b8;
     border-color: #e2e8f0;
     font-weight: 400;
-    box-shadow: none;
   }
 }
 
-.sizes-btn {
-  color: #0284c7 !important;
-  transition: transform 0.2s;
+// ── Responsive ────────────────────────────────────────────────────────────────
+@media (max-width: 768px) {
+  mat-card mat-card-content.page-card-content {
+    .search-brands-row {
+      flex-direction: column;
+      align-items: stretch;
 
-  &:hover {
-    transform: scale(1.15);
+      .brand-filter-field,
+      .brand-search-field {
+        max-width: 100%;
+      }
+
+      .brands-search-btn {
+        width: 100%;
+        height: 42px;
+        border-radius: 8px;
+      }
+    }
   }
 }
