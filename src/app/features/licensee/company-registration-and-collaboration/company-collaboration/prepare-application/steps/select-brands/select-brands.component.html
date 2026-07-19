@@ -85,15 +85,14 @@
       } @else if (allBrands.length > 0) {
         <!-- Alphabet Filtering Row -->
         <div class="alphabet-filter-row notranslate" translate="no">
-          <span class="alphabet-label">Filter by Alphabet:</span>
-          <div class="alphabet-bar">
+          <span class="alphabet-label notranslate" translate="no">Filter by Alphabet:</span>
+          <div class="alphabet-bar notranslate" translate="no">
             @for (letter of alphabets; track letter) {
               <button type="button"
-                class="alphabet-btn"
+                class="alphabet-btn notranslate"
+                translate="no"
                 [class.alphabet-btn--active]="selectedAlphabet === letter"
-                (click)="selectAlphabet(letter)">
-                {{ letter }}
-              </button>
+                (click)="selectAlphabet(letter)">{{ letter }}</button>
             }
           </div>
         </div>

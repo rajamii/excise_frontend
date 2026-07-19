@@ -20,6 +20,7 @@ import { CompanyCollaborationService } from '../../../../../../../core/services/
   styleUrl: './select-brands.component.scss'
 })
 export class SelectBrandsComponent implements OnInit, OnDestroy {
+  // Angular component for brand selection in company registration stepper
   @Output() readonly next = new EventEmitter<void>();
   @Output() readonly back = new EventEmitter<void>();
 
@@ -60,7 +61,7 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
 
   // Alphabet sorting/filtering bar
   selectedAlphabet = 'ALL';
-  alphabets: string[] = ['ALL', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+  alphabets: string[] = ['ALL', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
 
   constructor(private svc: CompanyCollaborationService) {}
 

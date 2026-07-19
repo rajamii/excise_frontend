@@ -454,15 +454,16 @@ mat-card {
   .alphabet-bar {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 5px;
+    align-items: center;
   }
 
   .alphabet-btn {
     height: 32px;
     min-width: 32px;
     padding: 0 8px;
-    border: 1px solid #e2e8f0;
-    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    background: #f8fafc;
     color: #475569;
     font-size: 12px;
     font-weight: 600;
@@ -471,20 +472,30 @@ mat-card {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.15s ease-in-out;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
     user-select: none;
+    text-transform: uppercase;
+    line-height: 1;
 
-    &:hover {
-      background: #f0fdfa;
-      color: #0d9488;
-      border-color: #99f6e4;
+    // Normal hover — subtle blue tint, NOT teal (teal is reserved for active)
+    &:hover:not(.alphabet-btn--active) {
+      background: #eef1fb;
+      border-color: #a5b4fc;
+      color: #1C2B78;
     }
 
+    // Active / selected — solid teal
     &--active {
-      background: #0d9488;
-      border-color: #0d9488;
+      background: #0d9488 !important;
+      border-color: #0d9488 !important;
       color: #ffffff !important;
-      box-shadow: 0 3px 8px rgba(13, 148, 136, 0.25);
+      box-shadow: 0 2px 8px rgba(13, 148, 136, 0.3);
+
+      // Hover on already-active button — slightly darker
+      &:hover {
+        background: #0f766e !important;
+        border-color: #0f766e !important;
+      }
     }
   }
 }
@@ -515,6 +526,18 @@ mat-card {
     font-size: 14px;
     font-weight: 500;
     color: #64748b;
+  }
+}
+
+.letter-span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: uppercase;
+  pointer-events: none;
+
+  &::before {
+    content: attr(data-letter);
   }
 }
 
