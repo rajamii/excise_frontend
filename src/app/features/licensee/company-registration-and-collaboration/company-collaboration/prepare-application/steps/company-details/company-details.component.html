@@ -37,7 +37,7 @@
             } @else {
               @for (bottler of bottlerOptions; track bottler.id) {
                 <mat-option [value]="bottler.id">
-                  {{ bottler.name }}{{ bottler.code ? ' [' + bottler.code + ']' : '' }}
+                  {{ bottler.name }}{{ bottler.code ? ' [' + bottler.code + ']' : '' }}{{ bottler.licensee_id_no ? ' - ' + bottler.licensee_id_no : '' }}
                 </mat-option>
               }
             }

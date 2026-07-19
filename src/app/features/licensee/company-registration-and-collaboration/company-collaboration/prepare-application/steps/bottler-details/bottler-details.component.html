@@ -20,7 +20,7 @@
             } @else {
               @for (owner of brandOwners; track owner.id) {
                 <mat-option [value]="owner.id">
-                  {{ owner.company_name }}{{ owner.brand_owner_code ? ' [' + owner.brand_owner_code + ']' : '' }}
+                  {{ owner.company_name }}{{ owner.brand_owner_code ? ' [' + owner.brand_owner_code + ']' : '' }}{{ owner.brand_owner_licensee_id_no ? ' - ' + owner.brand_owner_licensee_id_no : '' }}
                 </mat-option>
               }
             }

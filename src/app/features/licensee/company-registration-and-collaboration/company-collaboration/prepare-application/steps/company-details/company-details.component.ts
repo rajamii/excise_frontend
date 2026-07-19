@@ -17,6 +17,7 @@ interface BottlerOption {
   code: string;
   name: string;
   address: string;
+  licensee_id_no?: string;
 }
 
 @Component({
@@ -107,7 +108,8 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
       id: String(owner.brand_owner_code || owner.id || owner.company_name || ''),
       code: String(owner.brand_owner_code || ''),
       name: String(owner.company_name || ''),
-      address: String(owner.office_address || owner.location || '')
+      address: String(owner.office_address || owner.location || ''),
+      licensee_id_no: String(owner.brand_owner_licensee_id_no || '')
     }));
   }
 

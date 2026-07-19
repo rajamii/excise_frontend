@@ -51,6 +51,7 @@ function normalizeBrandOwner(raw: any): CompanyCollaborationBrandOwner {
     mobile:          raw.brandOwnerMobileNo ?? raw.brand_owner_mobile_no ?? '',
     email:           raw.brandOwnerEmail  ?? raw.brand_owner_email  ?? '',
     owner_type:      raw.brandOwnerTypeDesc ?? raw.brand_owner_type_desc ?? '',
+    brand_owner_licensee_id_no: raw.brandOwnerLicenseeIdNo ?? raw.brand_owner_licensee_id_no ?? '',
     location:        '',
     status:          raw.enableStatus === 'E' || raw.enable_status === 'E' ? 'Active' : 'Inactive',
     brand_count:     0,
