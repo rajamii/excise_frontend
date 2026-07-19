@@ -1,5 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, AfterViewInit, ChangeDetectorRef } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
+import { MatPaginator } from '@angular/material/paginator';
+import { MatTableDataSource } from '@angular/material/table';
 import { forkJoin } from 'rxjs';
 import Swal from 'sweetalert2';
 import { MaterialModule } from '../../../../shared/material.module';
@@ -15,38 +17,52 @@ import { LiquorCategory, LiquorKind, LiquorType } from '../../../../core/models/
   templateUrl: './kinds-brands.component.html',
   styleUrl: './kinds-brands.component.scss'
 })
-export class KindsBrandsComponent implements OnInit {
-  // Data Sources
+export class KindsBrandsComponent implements OnInit, AfterViewInit {
+
+  // ── Paginators ──────────────────────────────────────────────────────────────
+  @ViewChild('catPaginator')  catPaginator!:  MatPaginator;
+  @ViewChild('kindPaginator') kindPaginator!: MatPaginator;
+  @ViewChild('typePaginator') typePaginator!: MatPaginator;
+  @ViewChild('botPaginator')  botPaginator!:  MatPaginator;
+
+  // ── Data Sources ────────────────────────────────────────────────────────────
+  categoriesDS    = new MatTableDataSource<any>([]);
+  kindsDS         = new MatTableDataSource<any>([]);
+  typesDS         = new MatTableDataSource<any>([]);
+  brandOwnerTypesDS = new MatTableDataSource<any>([]);
+  brands: any[]   = [];  // brands are searched on demand — plain array is fine
+
+  // Kept as plain arrays for dialogs / dropdowns
   categories: any[] = [];
-  kinds: any[] = [];
-  types: any[] = [];
-  brands: any[] = [];
+  kinds:      any[] = [];
+  types:      any[] = [];
   brandOwnerTypes: any[] = [];
 
-  // Table Columns
-  categoryColumns: string[] = ['code', 'desc', 'abbr', 'actions'];
-  kindColumns: string[] = ['cat', 'code', 'desc', 'abbr', 'actions'];
-  typeColumns: string[] = ['cat', 'kind', 'code', 'desc', 'oldCode', 'actions'];
-  brandColumns: string[] = ['code', 'desc', 'alias', 'cat', 'kind', 'type', 'ml', 'actions'];
+  readonly pageSizeOptions = [10, 15, 20];
+
+  // ── Table Columns ───────────────────────────────────────────────────────────
+  categoryColumns:      string[] = ['code', 'desc', 'abbr', 'actions'];
+  kindColumns:          string[] = ['cat', 'code', 'desc', 'abbr', 'actions'];
+  typeColumns:          string[] = ['cat', 'kind', 'code', 'desc', 'oldCode', 'actions'];
+  brandColumns:         string[] = ['code', 'desc', 'alias', 'cat', 'kind', 'type', 'ml', 'actions'];
   brandOwnerTypeColumns: string[] = ['typeCode', 'typeDesc', 'actions'];
 
-  // Brand Search
+  // ── Brand Search ────────────────────────────────────────────────────────────
   brandSearchQuery = '';
 
-  // ── Super Brands — cascading filter dropdowns ─────────────────────────────
+  // ── Super Brands cascading dropdowns ────────────────────────────────────────
   allKinds: LiquorKind[] = [];
   allTypes: LiquorType[] = [];
-
   filteredKinds: LiquorKind[] = [];
   filteredTypes: LiquorType[] = [];
-
   selectedCatCode: number | null = null;
   selectedKindId:  number | null = null;
   selectedTypeId:  number | null = null;
 
   constructor(
     private companyCollabService: CompanyCollaborationService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -57,7 +73,33 @@ export class KindsBrandsComponent implements OnInit {
     this.loadBrandOwnerTypes();
   }
 
-  // ── Master dropdowns for Super Brands filter ──────────────────────────────
+  ngAfterViewInit(): void {
+    // mat-tab hides inactive tab content — paginators inside inactive tabs
+    // are not rendered until that tab is first activated. Use setTimeout to
+    // defer wiring so the first (active) tab paginator is available, and
+    // wire the rest lazily via onTabChange().
+    setTimeout(() => {
+      if (this.catPaginator)  this.categoriesDS.paginator    = this.catPaginator;
+      if (this.kindPaginator) this.kindsDS.paginator         = this.kindPaginator;
+      if (this.typePaginator) this.typesDS.paginator         = this.typePaginator;
+      if (this.botPaginator)  this.brandOwnerTypesDS.paginator = this.botPaginator;
+      this.cdr.detectChanges();
+    });
+  }
+
+  /** Called by (selectedTabChange) on the mat-tab-group to wire any paginator
+   *  that wasn't available at ngAfterViewInit because its tab was inactive. */
+  onTabChange(): void {
+    setTimeout(() => {
+      if (this.catPaginator  && !this.categoriesDS.paginator)      this.categoriesDS.paginator      = this.catPaginator;
+      if (this.kindPaginator && !this.kindsDS.paginator)           this.kindsDS.paginator           = this.kindPaginator;
+      if (this.typePaginator && !this.typesDS.paginator)           this.typesDS.paginator           = this.typePaginator;
+      if (this.botPaginator  && !this.brandOwnerTypesDS.paginator) this.brandOwnerTypesDS.paginator = this.botPaginator;
+      this.cdr.detectChanges();
+    });
+  }
+
+  // ── Master dropdowns for Super Brands ──────────────────────────────────────
   private loadMasterDropdowns(): void {
     forkJoin({
       kinds: this.companyCollabService.getLiquorKinds(),
@@ -100,16 +142,14 @@ export class KindsBrandsComponent implements OnInit {
   onBrandKindChange(): void {
     this.selectedTypeId = null;
     this.filteredTypes = this.allTypes.filter(t => {
-      const catOk  = !this.selectedCatCode  || t.liquorCatCode === this.selectedCatCode;
-      const kindOk = !this.selectedKindId   || t.liquorKindId  === this.selectedKindId;
+      const catOk  = !this.selectedCatCode || t.liquorCatCode === this.selectedCatCode;
+      const kindOk = !this.selectedKindId  || t.liquorKindId  === this.selectedKindId;
       return catOk && kindOk;
     });
     this.brands = [];
   }
 
-  onBrandTypeChange(): void {
-    this.brands = [];
-  }
+  onBrandTypeChange(): void { this.brands = []; }
 
   resetBrandFilters(): void {
     this.selectedCatCode  = null;
@@ -121,229 +161,161 @@ export class KindsBrandsComponent implements OnInit {
     this.filteredTypes    = [...this.allTypes];
   }
 
-  // ── Brand Owner Types ─────────────────────────────────────────────────────
+  // ── Brand Owner Types ───────────────────────────────────────────────────────
   loadBrandOwnerTypes(): void {
     this.companyCollabService.getBrandOwnerTypes().subscribe({
-      next: (data) => this.brandOwnerTypes = Array.isArray(data) ? data : [],
+      next: (data) => {
+        this.brandOwnerTypes = Array.isArray(data) ? data : [];
+        this.brandOwnerTypesDS.data = this.brandOwnerTypes;
+      },
       error: () => Swal.fire('Error', 'Failed to load brand owner types.', 'error')
     });
   }
 
   onAddBrandOwnerType(): void {
-    const dialogRef = this.dialog.open(ManageDialogComponent, {
-      width: '480px',
-      data: { type: 'brandOwnerType' }
-    });
-    dialogRef.afterClosed().subscribe(res => { if (res) this.loadBrandOwnerTypes(); });
+    this.dialog.open(ManageDialogComponent, { width: '480px', data: { type: 'brandOwnerType' } })
+      .afterClosed().subscribe(res => { if (res) this.loadBrandOwnerTypes(); });
   }
 
   onEditBrandOwnerType(element: any): void {
-    const code = element.brand_owner_type_code ?? element.brandOwnerTypeCode;
-    const desc = element.brand_owner_type_desc ?? element.brandOwnerTypeDesc;
-    const dialogRef = this.dialog.open(ManageDialogComponent, {
+    const code = element.brandOwnerTypeCode ?? element.brand_owner_type_code;
+    const desc = element.brandOwnerTypeDesc ?? element.brand_owner_type_desc;
+    this.dialog.open(ManageDialogComponent, {
       width: '480px',
-      data: {
-        type: 'brandOwnerType',
-        element: {
-          brandOwnerTypeCode: code,
-          brandOwnerTypeDesc: desc
-        }
-      }
-    });
-    dialogRef.afterClosed().subscribe(res => { if (res) this.loadBrandOwnerTypes(); });
+      data: { type: 'brandOwnerType', element: { brandOwnerTypeCode: code, brandOwnerTypeDesc: desc } }
+    }).afterClosed().subscribe(res => { if (res) this.loadBrandOwnerTypes(); });
   }
 
   onDeleteBrandOwnerType(element: any): void {
-    const code = element.brand_owner_type_code ?? element.brandOwnerTypeCode;
-    const desc = element.brand_owner_type_desc ?? element.brandOwnerTypeDesc;
-    Swal.fire({
-      title: 'Are you sure?',
-      text: `Delete Brand Owner Type "${desc}"?`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Delete'
-    }).then(result => {
-      if (!result.isConfirmed) return;
-      this.companyCollabService.deleteBrandOwnerType(code).subscribe({
-        next: () => {
-          Swal.fire('Deleted!', 'Brand owner type deleted.', 'success');
-          this.loadBrandOwnerTypes();
-        },
-        error: () => Swal.fire('Error', 'Failed to delete brand owner type.', 'error')
+    const code = element.brandOwnerTypeCode ?? element.brand_owner_type_code;
+    const desc = element.brandOwnerTypeDesc ?? element.brand_owner_type_desc;
+    Swal.fire({ title: 'Are you sure?', text: `Delete "${desc}"?`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete' })
+      .then(r => {
+        if (!r.isConfirmed) return;
+        this.companyCollabService.deleteBrandOwnerType(code).subscribe({
+          next: () => { Swal.fire('Deleted!', '', 'success'); this.loadBrandOwnerTypes(); },
+          error: () => Swal.fire('Error', 'Failed to delete.', 'error')
+        });
       });
-    });
   }
 
-  // ── Categories ─────────────────────────────────────────────────────────────
+  // ── Categories ──────────────────────────────────────────────────────────────
   loadCategories(): void {
     this.companyCollabService.getCategoriesCrudList().subscribe({
-      next: (data) => this.categories = Array.isArray(data) ? data : [],
+      next: (data) => {
+        this.categories = Array.isArray(data) ? data : [];
+        this.categoriesDS.data = this.categories;
+      },
       error: () => Swal.fire('Error', 'Failed to load categories.', 'error')
     });
   }
 
   onAddCategory(): void {
-    const dialogRef = this.dialog.open(ManageDialogComponent, {
-      width: '500px',
-      data: { type: 'category' }
-    });
-    dialogRef.afterClosed().subscribe(res => {
-      if (res) this.loadCategories();
-    });
+    this.dialog.open(ManageDialogComponent, { width: '500px', data: { type: 'category' } })
+      .afterClosed().subscribe(res => { if (res) this.loadCategories(); });
   }
 
   onEditCategory(element: any): void {
-    const dialogRef = this.dialog.open(ManageDialogComponent, {
-      width: '500px',
-      data: { type: 'category', element: { ...element } }
-    });
-    dialogRef.afterClosed().subscribe(res => {
-      if (res) this.loadCategories();
-    });
+    this.dialog.open(ManageDialogComponent, { width: '500px', data: { type: 'category', element: { ...element } } })
+      .afterClosed().subscribe(res => { if (res) this.loadCategories(); });
   }
 
   onDeleteCategory(element: any): void {
-    Swal.fire({
-      title: 'Are you sure?',
-      text: `Delete Category "${element.liquorCategoryDesc || element.liquorCatDesc || ''}"?`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Delete'
-    }).then(result => {
-      if (!result.isConfirmed) return;
-      const code = element.liquorCatCode ?? element.liquorCategoryCode;
-      this.companyCollabService.deleteCategoryCrud(code).subscribe({
-        next: () => {
-          Swal.fire('Deleted!', 'Category deleted successfully.', 'success');
-          this.loadCategories();
-        },
-        error: () => Swal.fire('Error', 'Failed to delete category.', 'error')
+    Swal.fire({ title: 'Are you sure?', text: `Delete Category "${element.liquorCatDesc || ''}"?`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete' })
+      .then(r => {
+        if (!r.isConfirmed) return;
+        this.companyCollabService.deleteCategoryCrud(element.liquorCatCode ?? element.liquorCategoryCode).subscribe({
+          next: () => { Swal.fire('Deleted!', 'Category deleted.', 'success'); this.loadCategories(); },
+          error: () => Swal.fire('Error', 'Failed to delete category.', 'error')
+        });
       });
-    });
   }
 
-  // ── Kinds ──────────────────────────────────────────────────────────────────
+  // ── Kinds ───────────────────────────────────────────────────────────────────
   loadKinds(): void {
     this.companyCollabService.getKindsCrudList().subscribe({
-      next: (data) => this.kinds = Array.isArray(data) ? data : [],
+      next: (data) => {
+        this.kinds = Array.isArray(data) ? data : [];
+        this.kindsDS.data = this.kinds;
+      },
       error: () => Swal.fire('Error', 'Failed to load kinds.', 'error')
     });
   }
 
   onAddKind(): void {
-    const dialogRef = this.dialog.open(ManageDialogComponent, {
-      width: '550px',
-      data: { type: 'kind', categories: this.categories }
-    });
-    dialogRef.afterClosed().subscribe(res => {
-      if (res) this.loadKinds();
-    });
+    this.dialog.open(ManageDialogComponent, { width: '550px', data: { type: 'kind', categories: this.categories } })
+      .afterClosed().subscribe(res => { if (res) this.loadKinds(); });
   }
 
   onEditKind(element: any): void {
-    const dialogRef = this.dialog.open(ManageDialogComponent, {
-      width: '550px',
-      data: { type: 'kind', element: { ...element }, categories: this.categories }
-    });
-    dialogRef.afterClosed().subscribe(res => {
-      if (res) this.loadKinds();
-    });
+    this.dialog.open(ManageDialogComponent, { width: '550px', data: { type: 'kind', element: { ...element }, categories: this.categories } })
+      .afterClosed().subscribe(res => { if (res) this.loadKinds(); });
   }
 
   onDeleteKind(element: any): void {
-    Swal.fire({
-      title: 'Are you sure?',
-      text: `Delete Kind "${element.liquorKindDesc}"?`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Delete'
-    }).then(result => {
-      if (!result.isConfirmed) return;
-      this.companyCollabService.deleteKindCrud(element.id).subscribe({
-        next: () => {
-          Swal.fire('Deleted!', 'Kind deleted successfully.', 'success');
-          this.loadKinds();
-        },
-        error: () => Swal.fire('Error', 'Failed to delete kind.', 'error')
+    Swal.fire({ title: 'Are you sure?', text: `Delete Kind "${element.liquorKindDesc}"?`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete' })
+      .then(r => {
+        if (!r.isConfirmed) return;
+        this.companyCollabService.deleteKindCrud(element.id).subscribe({
+          next: () => { Swal.fire('Deleted!', 'Kind deleted.', 'success'); this.loadKinds(); },
+          error: () => Swal.fire('Error', 'Failed to delete kind.', 'error')
+        });
       });
-    });
   }
 
-  // ── Types ──────────────────────────────────────────────────────────────────
+  // ── Types ───────────────────────────────────────────────────────────────────
   loadTypes(): void {
     this.companyCollabService.getTypesCrudList().subscribe({
-      next: (data) => this.types = Array.isArray(data) ? data : [],
+      next: (data) => {
+        this.types = Array.isArray(data) ? data : [];
+        this.typesDS.data = this.types;
+      },
       error: () => Swal.fire('Error', 'Failed to load types.', 'error')
     });
   }
 
   onAddType(): void {
-    const dialogRef = this.dialog.open(ManageDialogComponent, {
-      width: '550px',
-      data: { type: 'type', categories: this.categories, kinds: this.kinds }
-    });
-    dialogRef.afterClosed().subscribe(res => {
-      if (res) this.loadTypes();
-    });
+    this.dialog.open(ManageDialogComponent, { width: '550px', data: { type: 'type', categories: this.categories, kinds: this.kinds } })
+      .afterClosed().subscribe(res => { if (res) this.loadTypes(); });
   }
 
   onEditType(element: any): void {
-    const dialogRef = this.dialog.open(ManageDialogComponent, {
-      width: '550px',
-      data: { type: 'type', element: { ...element }, categories: this.categories, kinds: this.kinds }
-    });
-    dialogRef.afterClosed().subscribe(res => {
-      if (res) this.loadTypes();
-    });
+    this.dialog.open(ManageDialogComponent, { width: '550px', data: { type: 'type', element: { ...element }, categories: this.categories, kinds: this.kinds } })
+      .afterClosed().subscribe(res => { if (res) this.loadTypes(); });
   }
 
   onDeleteType(element: any): void {
-    Swal.fire({
-      title: 'Are you sure?',
-      text: `Delete Type "${element.liquorTypeDesc}"?`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Delete'
-    }).then(result => {
-      if (!result.isConfirmed) return;
-      this.companyCollabService.deleteTypeCrud(element.id).subscribe({
-        next: () => {
-          Swal.fire('Deleted!', 'Type deleted successfully.', 'success');
-          this.loadTypes();
-        },
-        error: () => Swal.fire('Error', 'Failed to delete type.', 'error')
+    Swal.fire({ title: 'Are you sure?', text: `Delete Type "${element.liquorTypeDesc}"?`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete' })
+      .then(r => {
+        if (!r.isConfirmed) return;
+        this.companyCollabService.deleteTypeCrud(element.id).subscribe({
+          next: () => { Swal.fire('Deleted!', 'Type deleted.', 'success'); this.loadTypes(); },
+          error: () => Swal.fire('Error', 'Failed to delete type.', 'error')
+        });
       });
-    });
   }
 
-  // ── Super Brands ───────────────────────────────────────────────────────────
+  // ── Super Brands ────────────────────────────────────────────────────────────
   onSearchBrands(): void {
-    // Allow search with just dropdowns (no text required)
     if (!this.brandSearchQuery.trim() && !this.selectedCatCode && !this.selectedKindId && !this.selectedTypeId) {
       this.brands = [];
       return;
     }
     this.companyCollabService.getBrandsCrudList(
-      this.brandSearchQuery,
-      this.selectedCatCode,
-      this.selectedKindId,
-      this.selectedTypeId
+      this.brandSearchQuery, this.selectedCatCode, this.selectedKindId, this.selectedTypeId
     ).subscribe({
       next: (data) => {
         this.brands = Array.isArray(data) ? data.map(b => ({ ...b, packSizes: [], sizesLoading: true })) : [];
         if (this.brands.length === 0) {
           Swal.fire('No Brands Found', 'No brands matched your search criteria.', 'info');
         } else {
-          // Load pack sizes for each brand
           this.brands.forEach((brand, idx) => {
             this.companyCollabService.getBrandPackSizes(brand.liquorBrandCode).subscribe({
               next: (sizes) => {
                 this.brands[idx] = { ...this.brands[idx], packSizes: Array.isArray(sizes) ? sizes : [], sizesLoading: false };
-                this.brands = [...this.brands]; // Trigger change detection
+                this.brands = [...this.brands];
               },
-              error: () => {
-                this.brands[idx] = { ...this.brands[idx], packSizes: [], sizesLoading: false };
-              }
+              error: () => { this.brands[idx] = { ...this.brands[idx], packSizes: [], sizesLoading: false }; }
             });
           });
         }
@@ -353,62 +325,34 @@ export class KindsBrandsComponent implements OnInit {
   }
 
   onManageSizes(brand: any): void {
-    const dialogRef = this.dialog.open(ManageDialogComponent, {
+    this.dialog.open(ManageDialogComponent, {
       width: '560px',
-      data: {
-        type: 'brand',
-        element: { ...brand },
-        categories: this.categories,
-        kinds: this.kinds,
-        types: this.types,
-        sizesOnly: true  // signal to dialog to focus on sizes section
-      }
-    });
-    dialogRef.afterClosed().subscribe(res => {
-      if (res) this.onSearchBrands();
-    });
+      data: { type: 'brand', element: { ...brand }, categories: this.categories, kinds: this.kinds, types: this.types, sizesOnly: true }
+    }).afterClosed().subscribe(res => { if (res) this.onSearchBrands(); });
   }
 
   onAddBrand(): void {
-    const dialogRef = this.dialog.open(ManageDialogComponent, {
+    this.dialog.open(ManageDialogComponent, {
       width: '600px',
       data: { type: 'brand', categories: this.categories, kinds: this.kinds, types: this.types }
-    });
-    dialogRef.afterClosed().subscribe(res => {
-      if (res) {
-        if (this.brandSearchQuery.trim()) this.onSearchBrands();
-      }
-    });
+    }).afterClosed().subscribe(res => { if (res && this.brandSearchQuery.trim()) this.onSearchBrands(); });
   }
 
   onEditBrand(element: any): void {
-    const dialogRef = this.dialog.open(ManageDialogComponent, {
+    this.dialog.open(ManageDialogComponent, {
       width: '600px',
       data: { type: 'brand', element: { ...element }, categories: this.categories, kinds: this.kinds, types: this.types }
-    });
-    dialogRef.afterClosed().subscribe(res => {
-      if (res) {
-        if (this.brandSearchQuery.trim()) this.onSearchBrands();
-      }
-    });
+    }).afterClosed().subscribe(res => { if (res && this.brandSearchQuery.trim()) this.onSearchBrands(); });
   }
 
   onDeleteBrand(element: any): void {
-    Swal.fire({
-      title: 'Are you sure?',
-      text: `Delete Brand "${element.liquorBrandDesc}"?`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Delete'
-    }).then(result => {
-      if (!result.isConfirmed) return;
-      this.companyCollabService.deleteBrandCrud(element.id).subscribe({
-        next: () => {
-          Swal.fire('Deleted!', 'Brand deleted successfully.', 'success');
-          if (this.brandSearchQuery.trim()) this.onSearchBrands();
-        },
-        error: () => Swal.fire('Error', 'Failed to delete brand.', 'error')
+    Swal.fire({ title: 'Are you sure?', text: `Delete Brand "${element.liquorBrandDesc}"?`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Delete' })
+      .then(r => {
+        if (!r.isConfirmed) return;
+        this.companyCollabService.deleteBrandCrud(element.id).subscribe({
+          next: () => { Swal.fire('Deleted!', 'Brand deleted.', 'success'); if (this.brandSearchQuery.trim()) this.onSearchBrands(); },
+          error: () => Swal.fire('Error', 'Failed to delete brand.', 'error')
+        });
       });
-    });
   }
 }
