@@ -387,6 +387,21 @@
                 </a>
               </ng-container>
 
+              <!-- Brand Master Details II group -->
+              <button class="nav-item bulk-spirit-nav-item" (click)="adminBrandMasterDetailsIIExpanded = !adminBrandMasterDetailsIIExpanded"
+                [class.active]="adminBrandMasterDetailsIIExpanded || isAdminRouteActive('/dashboard/admin/brand-owners')"
+                [class.group-expanded]="adminBrandMasterDetailsIIExpanded">
+                <mat-icon class="nav-icon">dns</mat-icon>
+                <span class="nav-text">brand master details II</span>
+                <mat-icon class="nav-chevron">{{ adminBrandMasterDetailsIIExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+              <ng-container *ngIf="adminBrandMasterDetailsIIExpanded">
+                <a routerLink="/dashboard/admin/brand-owners" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">admin_panel_settings</mat-icon>
+                  <span class="nav-text">master Brand owner</span>
+                </a>
+              </ng-container>
+
               <button class="nav-item bulk-spirit-nav-item" (click)="adminBulkSpiritExpanded = !adminBulkSpiritExpanded"
                 [class.active]="adminBulkSpiritExpanded || isAdminRouteActive('/dashboard/admin/bulk-spirit')"
                 [class.group-expanded]="adminBulkSpiritExpanded">

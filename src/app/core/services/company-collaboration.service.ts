@@ -52,6 +52,7 @@ function normalizeBrandOwner(raw: any): CompanyCollaborationBrandOwner {
     email:           raw.brandOwnerEmail  ?? raw.brand_owner_email  ?? '',
     owner_type:      raw.brandOwnerTypeDesc ?? raw.brand_owner_type_desc ?? '',
     brand_owner_licensee_id_no: raw.brandOwnerLicenseeIdNo ?? raw.brand_owner_licensee_id_no ?? '',
+    brand_owner_origin: raw.brandOwnerOrigin ?? raw.brand_owner_origin ?? '',
     location:        '',
     status:          raw.enableStatus === 'E' || raw.enable_status === 'E' ? 'Active' : 'Inactive',
     brand_count:     0,
@@ -136,6 +137,18 @@ export class CompanyCollaborationService {
         return throwError(() => err);
       })
     );
+  }
+
+  createBrandOwner(data: any): Observable<any> {
+    return this.http.post(`${this.mastersUrl}/brand-owners/create/`, data);
+  }
+
+  updateBrandOwner(code: string, data: any): Observable<any> {
+    return this.http.put(`${this.mastersUrl}/brand-owners/${encodeURIComponent(code)}/update/`, data);
+  }
+
+  deleteBrandOwner(code: string): Observable<any> {
+    return this.http.delete(`${this.mastersUrl}/brand-owners/${encodeURIComponent(code)}/delete/`);
   }
 
   /**

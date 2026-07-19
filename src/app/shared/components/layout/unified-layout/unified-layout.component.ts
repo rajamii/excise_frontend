@@ -70,6 +70,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   adminMasterDataExpanded = false;
   adminLicenseMasterDataExpanded = false;
   adminBrandMasterDataExpanded = false;
+  adminBrandMasterDetailsIIExpanded = false;
   adminUserManagementExpanded = false;
   hasBreweryOrDistilleryWalletViews = false;
   /** Manufacturing licensees (including non–brewery/distillery) who may use Payment & Wallet. */
@@ -931,6 +932,11 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         normalized.includes('/admin/brand-ml-in-cases') ||
         normalized.includes('/admin/hologram-suppliers')) {
       this.adminBrandMasterDataExpanded = true;
+    }
+    
+    // Brand Master Details II
+    if (normalized.includes('/admin/brand-owners')) {
+      this.adminBrandMasterDetailsIIExpanded = true;
     }
     
     // Bulk Spirit

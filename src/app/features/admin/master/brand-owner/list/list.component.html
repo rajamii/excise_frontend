@@ -1,0 +1,68 @@
+<div class="container-fluid">
+  <mat-card>
+
+    <!-- Header: Title and Add button -->
+    <mat-card-header class="page-card-header">
+      <div class="page-title">Brand Owner Master</div>
+      <button matButton="filled" (click)="onAdd()">
+        <mat-icon>add</mat-icon> Add Brand Owner
+      </button>
+    </mat-card-header>
+
+    <!-- Content: Table of brand owners -->
+    <mat-card-content class="page-card-content">
+      <div class="table-container">
+        <mat-table [dataSource]="dataSource">
+
+          <!-- Code -->
+          <ng-container matColumnDef="code">
+            <mat-header-cell *matHeaderCellDef>Code</mat-header-cell>
+            <mat-cell *matCellDef="let element">{{ element.brand_owner_code }}</mat-cell>
+          </ng-container>
+
+          <!-- Name -->
+          <ng-container matColumnDef="name">
+            <mat-header-cell *matHeaderCellDef>Company/Brand Owner Name</mat-header-cell>
+            <mat-cell *matCellDef="let element">{{ element.company_name }}</mat-cell>
+          </ng-container>
+
+          <!-- Licensee ID -->
+          <ng-container matColumnDef="licensee_id">
+            <mat-header-cell *matHeaderCellDef>Licensee ID</mat-header-cell>
+            <mat-cell *matCellDef="let element">{{ element.brand_owner_licensee_id_no || '-' }}</mat-cell>
+          </ng-container>
+
+          <!-- Origin -->
+          <ng-container matColumnDef="origin">
+            <mat-header-cell *matHeaderCellDef>Origin</mat-header-cell>
+            <mat-cell *matCellDef="let element">{{ element.brand_owner_origin === 'I' ? 'In-State' : 'Out-of-State' }}</mat-cell>
+          </ng-container>
+
+          <!-- Owner Type -->
+          <ng-container matColumnDef="type">
+            <mat-header-cell *matHeaderCellDef>Type</mat-header-cell>
+            <mat-cell *matCellDef="let element">{{ element.owner_type || '-' }}</mat-cell>
+          </ng-container>
+
+          <!-- Actions -->
+          <ng-container matColumnDef="actions">
+            <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
+            <mat-cell *matCellDef="let element">
+              <button matIconButton color="primary" (click)="onEdit(element)">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button matIconButton color="warn" (click)="onDelete(element)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </mat-cell>
+          </ng-container>
+
+          <!-- Table rows -->
+          <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+          <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+
+        </mat-table>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

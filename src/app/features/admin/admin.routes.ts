@@ -282,6 +282,15 @@ const routes: Routes = [
             data: { authorities: ['site_admin'] },
           },
           {
+            path: 'brand-owners',
+            loadComponent: () =>
+              import('./master/brand-owner/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: ['site_admin'] },
+          },
+          {
             path: 'about-us',
             redirectTo: 'about-us/heads-of-organisations',
             pathMatch: 'full'

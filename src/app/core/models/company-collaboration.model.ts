@@ -21,6 +21,7 @@ export interface CompanyCollaborationBrandOwner {
   email?: string;
   owner_type?: string;
   brand_owner_licensee_id_no?: string;
+  brand_owner_origin?: string;
   members?: CompanyCollaborationMember[];
 }
 
