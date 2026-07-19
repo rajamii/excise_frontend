@@ -127,7 +127,7 @@ export class CompanyCollaborationService {
    * Returns enabled brand owners from master_brand_owner.
    */
   getBrandOwners(): Observable<CompanyCollaborationBrandOwner[]> {
-    return this.http.get<any>(`${this.mastersUrl}/brand-owners/`).pipe(
+    return this.http.get<any>(`${this.mastersUrl}/company-details/`).pipe(
       map((response) => {
         const raw = unwrapArray<any>(response, 'getBrandOwners');
         return raw.map(normalizeBrandOwner);
@@ -149,6 +149,26 @@ export class CompanyCollaborationService {
 
   deleteBrandOwner(code: string): Observable<any> {
     return this.http.delete(`${this.mastersUrl}/brand-owners/${encodeURIComponent(code)}/delete/`);
+  }
+
+  getCompanyDetailsList(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.mastersUrl}/company-details/`);
+  }
+
+  createCompanyDetail(data: any): Observable<any> {
+    return this.http.post(`${this.mastersUrl}/company-details/create/`, data);
+  }
+
+  updateCompanyDetail(code: string, data: any): Observable<any> {
+    return this.http.put(`${this.mastersUrl}/company-details/${encodeURIComponent(code)}/update/`, data);
+  }
+
+  deleteCompanyDetail(code: string): Observable<any> {
+    return this.http.delete(`${this.mastersUrl}/company-details/${encodeURIComponent(code)}/delete/`);
+  }
+
+  getBrandOwnerTypes(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.mastersUrl}/brand-owner-types/`);
   }
 
   /**

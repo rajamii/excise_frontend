@@ -1,0 +1,176 @@
+<div class="container-fluid">
+  <h2 mat-dialog-title align="center">
+    {{ isEditMode ? 'Edit' : 'Add' }} Company Details
+  </h2>
+
+  <form #form="ngForm">
+    <mat-dialog-content>
+
+      <!-- Code -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Brand Owner Code</mat-label>
+        <input
+          matInput
+          name="brand_owner_code"
+          required
+          [disabled]="isEditMode"
+          [(ngModel)]="company.brandOwnerCode"
+          #codeModel="ngModel"
+        />
+        <mat-error *ngIf="codeModel.errors?.['required']">
+          Code is required
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Name -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Company Name</mat-label>
+        <input
+          matInput
+          name="brand_owner_name"
+          required
+          [(ngModel)]="company.brandOwnerName"
+          #nameModel="ngModel"
+        />
+        <mat-error *ngIf="nameModel.errors?.['required']">
+          Name is required
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Type -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Type</mat-label>
+        <mat-select
+          [(ngModel)]="company.brandOwnerType"
+          name="brand_owner_type"
+          required
+          #typeModel="ngModel"
+        >
+          <mat-option *ngFor="let t of types" [value]="t.brandOwnerTypeCode">
+            {{ t.brandOwnerTypeDesc }}
+          </mat-option>
+        </mat-select>
+        <mat-error *ngIf="typeModel.errors?.['required']">
+          Type is required
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Email -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Email</mat-label>
+        <input
+          matInput
+          type="email"
+          name="brand_owner_email"
+          [(ngModel)]="company.brandOwnerEmail"
+        />
+      </mat-form-field>
+
+      <!-- Mobile No -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Mobile No</mat-label>
+        <input
+          matInput
+          name="brand_owner_mobile_no"
+          [(ngModel)]="company.brandOwnerMobileNo"
+        />
+      </mat-form-field>
+
+      <!-- Company Address -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Company Address</mat-label>
+        <textarea
+          matInput
+          rows="2"
+          name="brand_owner_company_address"
+          [(ngModel)]="company.brandOwnerCompanyAddress"
+        ></textarea>
+      </mat-form-field>
+
+      <!-- Address -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Address</mat-label>
+        <textarea
+          matInput
+          rows="2"
+          name="brand_owner_address"
+          [(ngModel)]="company.brandOwnerAddress"
+        ></textarea>
+      </mat-form-field>
+
+      <!-- Pincode -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Pin Code</mat-label>
+        <input
+          matInput
+          name="brand_owner_pincode"
+          [(ngModel)]="company.brandOwnerPincode"
+        />
+      </mat-form-field>
+
+      <!-- PAN -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>PAN No</mat-label>
+        <input
+          matInput
+          name="brand_owner_pan"
+          [(ngModel)]="company.brandOwnerPan"
+        />
+      </mat-form-field>
+
+      <!-- Origin Selection -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Origin</mat-label>
+        <mat-select
+          [(ngModel)]="company.brandOwnerOrigin"
+          name="brand_owner_origin"
+          required
+        >
+          <mat-option value="I">India</mat-option>
+          <mat-option value="F">Foreign</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Licensee ID No -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Licensee ID No</mat-label>
+        <input
+          matInput
+          name="brand_owner_licensee_id_no"
+          [(ngModel)]="company.brandOwnerLicenseeIdNo"
+        />
+      </mat-form-field>
+
+      <!-- Parent Licensee ID No -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Parent Licensee ID No</mat-label>
+        <input
+          matInput
+          name="parent_licensee_id_no"
+          [(ngModel)]="company.parentLicenseeIdNo"
+        />
+      </mat-form-field>
+
+      <!-- Status -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Status</mat-label>
+        <mat-select
+          [(ngModel)]="company.enableStatus"
+          name="enable_status"
+          required
+        >
+          <mat-option value="E">Enabled</mat-option>
+          <mat-option value="D">Disabled</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="center">
+      <button mat-button type="button" (click)="onCancel()">Cancel</button>
+      <button mat-raised-button color="primary" [disabled]="form.invalid" (click)="onSave()">
+        {{ isEditMode ? 'Update' : 'Save' }}
+      </button>
+    </mat-dialog-actions>
+  </form>
+</div>

@@ -202,6 +202,13 @@ const routes: Routes = [
         data: { authorities: ['site_admin'] }
       },
       {
+        path: 'admin/company-details',
+        loadComponent: () =>
+          import('../admin/master/company-details/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
         path: 'admin/hologram',
         redirectTo: 'admin/hologram/transit-permit-distributor-data',
         pathMatch: 'full'

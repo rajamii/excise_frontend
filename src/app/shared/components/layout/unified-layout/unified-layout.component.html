@@ -387,9 +387,9 @@
                 </a>
               </ng-container>
 
-              <!-- Brand Master Details II group -->
+               <!-- Brand Master Details II group -->
               <button class="nav-item bulk-spirit-nav-item" (click)="adminBrandMasterDetailsIIExpanded = !adminBrandMasterDetailsIIExpanded"
-                [class.active]="adminBrandMasterDetailsIIExpanded || isAdminRouteActive('/dashboard/admin/brand-owners')"
+                [class.active]="adminBrandMasterDetailsIIExpanded || isAdminRouteActive('/dashboard/admin/brand-owners') || isAdminRouteActive('/dashboard/admin/company-details')"
                 [class.group-expanded]="adminBrandMasterDetailsIIExpanded">
                 <mat-icon class="nav-icon">dns</mat-icon>
                 <span class="nav-text">brand master details II</span>
@@ -399,6 +399,10 @@
                 <a routerLink="/dashboard/admin/brand-owners" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
                   <mat-icon class="nav-icon">admin_panel_settings</mat-icon>
                   <span class="nav-text">master Brand owner</span>
+                </a>
+                <a routerLink="/dashboard/admin/company-details" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">business</mat-icon>
+                  <span class="nav-text">company details</span>
                 </a>
               </ng-container>
 
