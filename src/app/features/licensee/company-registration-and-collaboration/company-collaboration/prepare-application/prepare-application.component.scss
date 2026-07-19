@@ -78,6 +78,17 @@
     border-top-color: #d1d5db;
   }
 
+  // ── Hide Brand Confirmation tab until Brands step is confirmed ─────────────
+  // The 4th step header (index 3) is hidden; connector before it too
+  // child layout in .mat-horizontal-stepper-header-container:
+  // 1=header, 2=line, 3=header, 4=line, 5=header, 6=line, 7=header(brand confirm), 8=line, 9=header
+  .hide-brand-confirmation .mat-horizontal-stepper-header-container {
+    .mat-step-header:nth-child(7),
+    .mat-stepper-horizontal-line:nth-child(6) {
+      display: none !important;
+    }
+  }
+
   .mat-horizontal-content-container {
     padding: 0;
     border-radius: 8px;

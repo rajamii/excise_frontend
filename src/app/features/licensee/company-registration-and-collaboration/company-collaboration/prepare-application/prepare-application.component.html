@@ -1,4 +1,4 @@
-<mat-horizontal-stepper [linear]="true" #stepper>
+<mat-horizontal-stepper [linear]="true" #stepper [class.hide-brand-confirmation]="!showBrandConfirmation">
 
   <!-- Step 1: Bottler - licensee data is auto-fetched (PDF Step 5) -->
   <mat-step label="Bottler">
@@ -20,11 +20,11 @@
   <mat-step label="Brands">
     <app-select-brands
       (back)="stepper.previous()"
-      (next)="stepper.next()">
+      (next)="onBrandsNext()">
     </app-select-brands>
   </mat-step>
 
-  <!-- Step 4: Brand Confirmation - review selected brands and MLs -->
+  <!-- Step 4: Brand Confirmation - revealed only after Brands step is confirmed -->
   <mat-step label="Brand Confirmation">
     <app-brand-confirmation
       (back)="stepper.previous()"
@@ -40,4 +40,3 @@
   </mat-step>
 
 </mat-horizontal-stepper>
-
