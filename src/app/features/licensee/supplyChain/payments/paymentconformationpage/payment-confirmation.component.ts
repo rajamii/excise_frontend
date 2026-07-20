@@ -540,6 +540,35 @@ private initializeWalletContextAndLoadData(): void {
       );
       this.hasAppliedCompanyCollaboration = (collabList && collabList.length > 0) || this.companyCollabSecurityDepositAmount > 0;
 
+      // Auto-restore pending payment context from backend flags (survives hard refresh)
+      // If one fee is paid but the other is not, recreate the context for the missing fee.
+      if (!this.pendingWalletPaymentContext) {
+        const pendingCollabApp = collabList.find((app: any) => {
+          const secPaid = Boolean(app.is_security_fee_paid || app.isSecurityFeePaid || app.is_paid || app.isPaid);
+          const licPaid = Boolean(app.is_license_fee_paid || app.isLicenseFeePaid);
+          // App has at least one fee paid but not both — still needs the other
+          return (secPaid || licPaid) && !(secPaid && licPaid);
+        });
+        if (pendingCollabApp) {
+          const secPaid = Boolean(pendingCollabApp.is_security_fee_paid || pendingCollabApp.isSecurityFeePaid);
+          const licPaid = Boolean(pendingCollabApp.is_license_fee_paid || pendingCollabApp.isLicenseFeePaid);
+          const refNo = String(pendingCollabApp.application_id || pendingCollabApp.applicationId || '').trim();
+          const appId = String(pendingCollabApp.id || '').trim();
+          if (refNo) {
+            const missingTab = licPaid ? 'security_deposit' : 'license_fee';
+            this.pendingWalletPaymentContext = {
+              tab: missingTab as any,
+              amount: 25000,
+              itemType: 'company-collaboration',
+              referenceNo: refNo,
+              id: appId
+            };
+            this.hasHandledPendingWalletPayment = false;
+            this.persistPendingPaymentContextToStorage();
+          }
+        }
+      }
+
       this.applyWalletSummary(response.summary);
       this.applyWalletRecharge(response.recharge);
       this.applyWalletHistory(response.history);
@@ -1945,6 +1974,13 @@ private initializeWalletContextAndLoadData(): void {
     const refNo = this.pendingNewLicenseReferenceNo || ctx.referenceNo;
 
     if (this.activeTab === 'license_fee') {
+      // Do NOT override a security_deposit chain context that was intentionally set (e.g., collab chain)
+      const isCollabRef = String(ctx.referenceNo || '').trim().toUpperCase().startsWith('CCOL/')
+                       || String(ctx.itemType || '').trim().toLowerCase() === 'company-collaboration';
+      if (isCollabRef && ctx.tab === 'security_deposit') {
+        // Already chained to security deposit — keep it as-is
+        return;
+      }
       if (this.isFeePaid('license_fee', refNo)) {
         return;
       }
@@ -1967,6 +2003,13 @@ private initializeWalletContextAndLoadData(): void {
                      || String(refNo || '').trim().toUpperCase().startsWith('LRA/')
                      || String(refNo || '').trim().toUpperCase().startsWith('RCR/');
       if (isRenewal) {
+        return;
+      }
+      // Do NOT override a license_fee chain context that was intentionally set (e.g., collab reverse chain)
+      const isCollabRef = String(ctx.referenceNo || '').trim().toUpperCase().startsWith('CCOL/')
+                       || String(ctx.itemType || '').trim().toLowerCase() === 'company-collaboration';
+      if (isCollabRef && ctx.tab === 'license_fee') {
+        // Already chained to license fee — keep it as-is
         return;
       }
       if (this.isFeePaid('security_deposit', refNo)) {
@@ -2524,6 +2567,41 @@ private initializeWalletContextAndLoadData(): void {
             }
           } else if (context.tab === 'security_deposit') {
             const licensePaid = this.isFeePaid('license_fee', refNo);
+
+            if (isCollab && !licensePaid) {
+              // Company collaboration: chain security_deposit → license_fee (₹25,000)
+              const chainedContext: PendingWalletPaymentContext = {
+                ...context,
+                tab: 'license_fee' as any,
+                amount: 25000,
+                itemType: 'company-collaboration',
+                referenceNo: refNo
+              };
+              this.pendingWalletPaymentContext = chainedContext;
+              // Block auto-trigger while Swal is visible
+              this.hasHandledPendingWalletPayment = true;
+              this.isHandlingPendingWalletPayment = false;
+              this.setActiveTab('license_fee');
+              this.persistPendingPaymentContextToStorage();
+              Swal.fire({
+                icon: 'success',
+                title: 'Security Deposit Paid!',
+                text: 'Security deposit payment was successful. Please now proceed to pay the License Fee of ₹25,000.',
+                confirmButtonText: 'Pay License Fee',
+                showCancelButton: true,
+                cancelButtonText: 'Later'
+              }).then((result) => {
+                this.hasHandledPendingWalletPayment = false;
+                this.refreshWalletData();
+                if (result.isConfirmed) {
+                  setTimeout(() => this.openPendingWalletPaymentConfirmation(), 300);
+                } else {
+                  this.finishPendingWalletPaymentHandling();
+                }
+              });
+              return;
+            }
+
             const nextAmount = this.pendingNewLicenseLicenseFeeAmount || 0;
             if (!licensePaid && nextAmount > 0) {
               this.pendingWalletPaymentContext = {
@@ -2803,7 +2881,9 @@ private initializeWalletContextAndLoadData(): void {
           return this.companyRegistrationService.payCompanyRegistrationFee(String(context.id));
         }
         if (String(context.itemType || '').trim().toLowerCase() === 'company-collaboration') {
-          return this.companyCollaborationService.payCollaborationFee(String(context.id));
+          // Backend expects the application_id (e.g. CCOL/2026-27/0001), not the numeric PK
+          const collabAppId = String(context.referenceNo || context.id || '').trim();
+          return this.companyCollaborationService.payCollaborationFee(collabAppId);
         }
         if (String(context.itemType || '').trim().toLowerCase() === 'license-renewal') {
           return this.licenseApplicationService.payLicenseRenewalFee(String(context.id), new FormData());
@@ -2817,7 +2897,8 @@ private initializeWalletContextAndLoadData(): void {
           return this.licenseApplicationService.payLicenseRenewalSecurityFee(String(context.id));
         }
         if (String(context.itemType || '').trim().toLowerCase() === 'company-collaboration') {
-          return this.companyCollaborationService.payCollaborationSecurityFee(String(context.id));
+          const collabAppId = String(context.referenceNo || context.id || '').trim();
+          return this.companyCollaborationService.payCollaborationSecurityFee(collabAppId);
         }
         return this.licenseApplicationService.payNewLicenseSecurityFee(String(context.id));
       default:
