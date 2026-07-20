@@ -261,6 +261,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   securityDepositBalance = 0;
   newLicenseSecurityDepositAmount = 0;
   companyCollabSecurityDepositAmount = 0;
+  hasAppliedCompanyCollaboration = false;
   licenseFeeBalance = 0;
   activeLicenseeId = '';
   private activeLicenseeName = '';
@@ -525,11 +526,18 @@ private initializeWalletContextAndLoadData(): void {
           console.error('Wallet history API load failed:', error);
           return of({ results: [] } as any);
         })
+      ),
+      collabApps: this.companyCollaborationService.listCompanyCollaborations().pipe(
+        catchError(() => of([] as any))
       )
     }).subscribe((response) => {
       this.applyWalletSummary(response.summary);
       this.applyWalletRecharge(response.recharge);
       this.applyWalletHistory(response.history);
+      const collabList = Array.isArray(response.collabApps)
+        ? response.collabApps
+        : (response.collabApps?.results || response.collabApps?.data || []);
+      this.hasAppliedCompanyCollaboration = (collabList && collabList.length > 0) || this.companyCollabSecurityDepositAmount > 0;
       this.walletDataLoaded = true;
       this.applyLastPaidTabAsDefault();
     });
