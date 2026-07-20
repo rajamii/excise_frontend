@@ -224,6 +224,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   private pendingNewLicenseReferenceNo = '';
   private pendingNewLicenseLicenseFeeAmount = 0;
   private pendingNewLicenseSecurityFeeAmount = 0;
+  private pendingNewLicenseIsLicenseFeePaid = false;
+  private pendingNewLicenseIsSecurityFeePaid = false;
 
   // Monthly filter method - declared early to avoid TypeScript issues
   private setCurrentMonthAutomatically(): void {
@@ -1919,6 +1921,22 @@ private initializeWalletContextAndLoadData(): void {
       return false;
     }
 
+    const isNewLicenseOrRenewalRef =
+      ref.startsWith('NLI/') ||
+      ref.startsWith('NLA/') ||
+      ref.startsWith('NA/') ||
+      ref.startsWith('LIC/') ||
+      ref.startsWith('LRA/') ||
+      ref.startsWith('RCR/') ||
+      ref.startsWith('RSBM/');
+    if (isNewLicenseOrRenewalRef) {
+      if (walletType === 'license_fee' && this.pendingNewLicenseIsLicenseFeePaid) return true;
+      if (walletType === 'security_deposit') {
+        if (this.pendingNewLicenseIsSecurityFeePaid) return true;
+        if (this.pendingNewLicenseApplicationId || this.pendingNewLicenseReferenceNo) return false;
+      }
+    }
+
     const merged = [...(this.optimisticPaymentHistory || []), ...(this.historyData || [])];
     const hasPaidTxn = merged.some((txn) => {
       const txnRef = String(txn?.reference || '').trim().toUpperCase();
@@ -1947,13 +1965,6 @@ private initializeWalletContextAndLoadData(): void {
     });
 
     if (hasPaidTxn) return true;
-
-    if (walletType === 'security_deposit') {
-      const requiredAmount = this.pendingNewLicenseSecurityFeeAmount || this.chainedNewLicenseSecurityAmount || 0;
-      if (requiredAmount > 0 && this.securityDepositBalance >= requiredAmount) {
-        return true;
-      }
-    }
 
     return false;
   }
@@ -2049,6 +2060,9 @@ private initializeWalletContextAndLoadData(): void {
     const action = String(params?.['action'] || '').trim().toLowerCase();
     const isPaymentAction = action === 'pay' || action === 'makepayment';
     if (!isPaymentAction) {
+      if (this.shouldPreservePendingLicensePaymentContext()) {
+        return;
+      }
       this.pendingWalletPaymentContext = null;
       this.clearPendingPaymentContextFromStorage();
       if (this.isBrowser) {
@@ -2059,6 +2073,8 @@ private initializeWalletContextAndLoadData(): void {
       this.pendingNewLicenseApplicationId = '';
       this.pendingNewLicenseReferenceNo = '';
       this.pendingNewLicenseSecurityFeeAmount = 0;
+      this.pendingNewLicenseIsLicenseFeePaid = false;
+      this.pendingNewLicenseIsSecurityFeePaid = false;
       return;
     }
 
@@ -2112,6 +2128,20 @@ private initializeWalletContextAndLoadData(): void {
     this.persistPendingPaymentContextToStorage();
   }
 
+  private shouldPreservePendingLicensePaymentContext(): boolean {
+    const refNo = String(this.pendingNewLicenseReferenceNo || this.pendingWalletPaymentContext?.referenceNo || '').trim();
+    if (!refNo) return false;
+
+    const isLicenseFlow =
+      this.isLicenseFeeWorkflowPaymentType(this.pendingWalletPaymentContext?.itemType) ||
+      this.getPendingApplicationType() === 'new-license' ||
+      this.getPendingApplicationType() === 'license-renewal' ||
+      this.getPendingApplicationType() === 'company-collaboration';
+    if (!isLicenseFlow) return false;
+
+    return !this.isFeePaid('license_fee', refNo) || !this.isFeePaid('security_deposit', refNo);
+  }
+
   private ensurePendingNewLicenseAmountsResolved(): void {
     const applicationId = String(this.pendingNewLicenseApplicationId || '').trim();
     if (!applicationId) return;
@@ -2135,6 +2165,12 @@ private initializeWalletContextAndLoadData(): void {
       );
       if (licenseFee > 0) this.pendingNewLicenseLicenseFeeAmount = licenseFee;
       if (securityFee > 0) this.pendingNewLicenseSecurityFeeAmount = securityFee;
+      this.pendingNewLicenseIsLicenseFeePaid = Boolean(
+        app?.is_license_fee_paid ?? app?.isLicenseFeePaid ?? app?.is_license_paid ?? app?.isLicensePaid ?? false
+      );
+      this.pendingNewLicenseIsSecurityFeePaid = Boolean(
+        app?.is_security_fee_paid ?? app?.isSecurityFeePaid ?? app?.is_secuirty_paid ?? app?.isSecuirtyPaid ?? false
+      );
 
       // If current pending context is for new-license and has 0 amount, update it.
       const ctx = this.pendingWalletPaymentContext;
@@ -2162,9 +2198,6 @@ private initializeWalletContextAndLoadData(): void {
       && this.isLicenseFeeWorkflowPaymentType(this.pendingWalletPaymentContext.itemType)
       && this.pendingWalletPaymentContext.tab === tab
       && this.activeTab === tab) {
-      if (tab === 'security_deposit') {
-        return false;
-      }
       return true;
     }
 
@@ -2232,10 +2265,21 @@ private initializeWalletContextAndLoadData(): void {
     return this.isFeePaid('security_deposit', refNo);
   }
 
+  isLicenseFeeCompleteForPendingNewLicenseAlert(): boolean {
+    return this.isLicenseFeePaidForPendingNewLicense();
+  }
+
+  isSecurityDepositCompleteForPendingNewLicenseAlert(): boolean {
+    if (this.isSecurityDepositPaidForPendingNewLicense()) return true;
+    const requiredAmount = this.getRequiredSecurityDepositAmount();
+    if (requiredAmount <= 0) return false;
+    return this.newLicenseSecurityDepositAmount >= requiredAmount;
+  }
+
   getRechargeAlertTitle(): string {
     const refNo = this.pendingNewLicenseRef;
-    const isSecurityPaid = this.isSecurityDepositPaidForPendingNewLicense();
-    const isLicensePaid = this.isLicenseFeePaidForPendingNewLicense();
+    const isSecurityPaid = this.isSecurityDepositCompleteForPendingNewLicenseAlert();
+    const isLicensePaid = this.isLicenseFeeCompleteForPendingNewLicenseAlert();
 
     if (isLicensePaid && !isSecurityPaid) {
       return 'Security Deposit Wallet Recharge Required';
@@ -2370,6 +2414,17 @@ private initializeWalletContextAndLoadData(): void {
     }
     const ctxAmount = Number(this.pendingWalletPaymentContext?.amount || 0);
     return ctxAmount > 0 ? ctxAmount : 0;
+  }
+
+  getNewLicenseSecurityDepositDisplayAmount(): number {
+    const requiredAmount = this.getRequiredSecurityDepositAmount();
+    if (requiredAmount > 0 && this.pendingNewLicenseRef) {
+      if (!this.isSecurityDepositPaidForPendingNewLicense()) {
+        return this.newLicenseSecurityDepositAmount;
+      }
+      return requiredAmount;
+    }
+    return this.newLicenseSecurityDepositAmount;
   }
 
   getRequiredLicenseFeeAmount(): number {
@@ -2521,6 +2576,12 @@ private initializeWalletContextAndLoadData(): void {
         const isLicenseFlow = this.isLicenseFeeWorkflowPaymentType(context.itemType);
 
         if (isLicenseFlow) {
+          if (context.tab === 'license_fee') {
+            this.pendingNewLicenseIsLicenseFeePaid = true;
+          } else if (context.tab === 'security_deposit') {
+            this.pendingNewLicenseIsSecurityFeePaid = true;
+          }
+
           const isRenewal = String(context.itemType || '').trim().toLowerCase() === 'license-renewal'
                          || String(refNo || '').trim().toUpperCase().startsWith('LRA/')
                          || String(refNo || '').trim().toUpperCase().startsWith('RCR/');
@@ -2565,6 +2626,43 @@ private initializeWalletContextAndLoadData(): void {
               });
               return;
             }
+
+            const securityPaid = this.isFeePaid('security_deposit', refNo);
+            const nextAmount =
+              this.pendingNewLicenseSecurityFeeAmount ||
+              this.chainedNewLicenseSecurityAmount ||
+              this.getRequiredSecurityDepositAmount() ||
+              0;
+            if (!isRenewal && !securityPaid && nextAmount > 0) {
+              const chainedContext: PendingWalletPaymentContext = {
+                ...context,
+                tab: 'security_deposit',
+                amount: nextAmount,
+                referenceNo: refNo
+              };
+              this.pendingWalletPaymentContext = chainedContext;
+              this.hasHandledPendingWalletPayment = true;
+              this.isHandlingPendingWalletPayment = false;
+              this.setActiveTab('security_deposit');
+              this.persistPendingPaymentContextToStorage();
+              Swal.fire({
+                icon: 'success',
+                title: 'License Fee Paid!',
+                text: `License fee payment was successful. Please now proceed to pay the Security Deposit of Rs ${nextAmount.toLocaleString('en-IN')}.`,
+                confirmButtonText: 'Pay Security Deposit',
+                showCancelButton: true,
+                cancelButtonText: 'Later'
+              }).then((result) => {
+                this.hasHandledPendingWalletPayment = false;
+                this.refreshWalletData();
+                if (result.isConfirmed) {
+                  setTimeout(() => this.openPendingWalletPaymentConfirmation(), 300);
+                } else {
+                  this.resetPendingPaymentAttemptState();
+                }
+              });
+              return;
+            }
           } else if (context.tab === 'security_deposit') {
             const licensePaid = this.isFeePaid('license_fee', refNo);
 
@@ -2602,7 +2700,7 @@ private initializeWalletContextAndLoadData(): void {
               return;
             }
 
-            const nextAmount = this.pendingNewLicenseLicenseFeeAmount || 0;
+            const nextAmount = this.pendingNewLicenseLicenseFeeAmount || this.getRequiredLicenseFeeAmount() || 0;
             if (!licensePaid && nextAmount > 0) {
               this.pendingWalletPaymentContext = {
                 ...context,
@@ -2615,6 +2713,25 @@ private initializeWalletContextAndLoadData(): void {
               this.persistPendingPaymentContextToStorage();
               return;
             }
+          }
+
+          const licensePaid = this.isFeePaid('license_fee', refNo);
+          const securityPaid = this.isFeePaid('security_deposit', refNo);
+          if (!licensePaid || !securityPaid) {
+            const missingTab: WalletTableTab = licensePaid ? 'security_deposit' : 'license_fee';
+            const missingAmount = missingTab === 'security_deposit'
+              ? (this.getRequiredSecurityDepositAmount() || this.pendingNewLicenseSecurityFeeAmount || context.amount)
+              : (this.getRequiredLicenseFeeAmount() || this.pendingNewLicenseLicenseFeeAmount || context.amount);
+            this.pendingWalletPaymentContext = {
+              ...context,
+              tab: missingTab,
+              amount: missingAmount || 0,
+              referenceNo: refNo
+            };
+            this.hasHandledPendingWalletPayment = false;
+            this.isHandlingPendingWalletPayment = false;
+            this.setActiveTab(missingTab);
+            this.persistPendingPaymentContextToStorage();
           }
         }
         this.refreshWalletData();
@@ -2959,15 +3076,26 @@ private initializeWalletContextAndLoadData(): void {
   private finishPendingWalletPaymentHandling(): void {
     this.hasHandledPendingWalletPayment = true;
     this.isHandlingPendingWalletPayment = false;
-    this.pendingWalletPaymentContext = null;
     this.closePendingWalletPaymentConfirmation();
     this.pendingHologramAutoPayRefNo = '';
     this.pendingHologramAutoPayType = '';
-    this.clearPendingPaymentContextFromStorage();
     this.clearPendingHologramDeepLinkRef();
 
     const refNo = this.pendingNewLicenseReferenceNo;
-    if (refNo && this.isFeePaid('license_fee', refNo) && this.isFeePaid('security_deposit', refNo)) {
+    const isUnfinishedLicensePayment =
+      refNo &&
+      this.pendingWalletPaymentContext &&
+      this.isLicenseFeeWorkflowPaymentType(this.pendingWalletPaymentContext.itemType) &&
+      (!this.isFeePaid('license_fee', refNo) || !this.isFeePaid('security_deposit', refNo));
+
+    if (isUnfinishedLicensePayment) {
+      this.persistPendingPaymentContextToStorage();
+    } else {
+      this.pendingWalletPaymentContext = null;
+      this.clearPendingPaymentContextFromStorage();
+    }
+
+    if (refNo && !isUnfinishedLicensePayment && this.isFeePaid('license_fee', refNo) && this.isFeePaid('security_deposit', refNo)) {
       if (this.isBrowser) {
         sessionStorage.removeItem('pendingNewLicenseApplicationId');
         sessionStorage.removeItem('pendingNewLicenseReferenceNo');
