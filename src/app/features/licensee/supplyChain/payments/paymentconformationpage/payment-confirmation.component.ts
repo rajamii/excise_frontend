@@ -265,6 +265,9 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   companyCollabSecurityDepositAmount = 0;
   hasAppliedCompanyCollaboration = false;
   hasPaidCompanyCollabSecurityDeposit = false;
+  private paidCompanyCollabSecurityAmount = 0;
+  private paidCompanyCollabSecurityRefs = new Set<string>();
+  private paidCompanyCollabLicenseRefs = new Set<string>();
   licenseFeeBalance = 0;
   activeLicenseeId = '';
   private activeLicenseeName = '';
@@ -537,16 +540,28 @@ private initializeWalletContextAndLoadData(): void {
       const collabList = Array.isArray(response.collabApps)
         ? response.collabApps
         : (response.collabApps?.results || response.collabApps?.data || []);
-      this.hasPaidCompanyCollabSecurityDeposit = collabList.some((app: any) =>
-        Boolean(app.is_security_fee_paid || app.isSecurityFeePaid || app.is_paid || app.isPaid)
-      );
+      this.paidCompanyCollabSecurityRefs = new Set<string>();
+      this.paidCompanyCollabLicenseRefs = new Set<string>();
+      this.paidCompanyCollabSecurityAmount = 0;
+      collabList.forEach((app: any) => {
+        const refNo = this.getCompanyCollabReferenceFromApp(app);
+        if (!refNo) return;
+        if (Boolean(app.is_security_fee_paid || app.isSecurityFeePaid)) {
+          this.paidCompanyCollabSecurityRefs.add(refNo);
+          this.paidCompanyCollabSecurityAmount += this.getCompanyCollabSecurityAmountFromApp(app);
+        }
+        if (Boolean(app.is_license_fee_paid || app.isLicenseFeePaid)) {
+          this.paidCompanyCollabLicenseRefs.add(refNo);
+        }
+      });
+      this.hasPaidCompanyCollabSecurityDeposit = this.paidCompanyCollabSecurityRefs.size > 0;
       this.hasAppliedCompanyCollaboration = (collabList && collabList.length > 0) || this.companyCollabSecurityDepositAmount > 0;
 
       // Auto-restore pending payment context from backend flags (survives hard refresh)
       // If one fee is paid but the other is not, recreate the context for the missing fee.
       if (!this.pendingWalletPaymentContext) {
         const pendingCollabApp = collabList.find((app: any) => {
-          const secPaid = Boolean(app.is_security_fee_paid || app.isSecurityFeePaid || app.is_paid || app.isPaid);
+          const secPaid = Boolean(app.is_security_fee_paid || app.isSecurityFeePaid);
           const licPaid = Boolean(app.is_license_fee_paid || app.isLicenseFeePaid);
           // App has at least one fee paid but not both — still needs the other
           return (secPaid || licPaid) && !(secPaid && licPaid);
@@ -1077,29 +1092,20 @@ private initializeWalletContextAndLoadData(): void {
 
     if (collabSecurity < 0) collabSecurity = 0;
     if (newLicenseSecurity < 0) newLicenseSecurity = 0;
-    if (!this.hasPaidCompanyCollabSecurityDeposit) collabSecurity = 0;
-
     const pendingApplicationType = this.getPendingApplicationType();
-    const hasUnpaidPendingCollabSecurity =
-      this.hasAppliedCompanyCollaboration &&
-      !this.hasPaidCompanyCollabSecurityDeposit &&
-      pendingApplicationType === 'company-collaboration';
-
-    if (collabSecurity === 0 && newLicenseSecurity === 0 && this.securityDepositBalance > 0) {
-      if (this.hasAppliedCompanyCollaboration && this.hasPaidCompanyCollabSecurityDeposit) {
-        // Reserve up to ₹25,000 for the collab security deposit (whether paid or pending)
-        collabSecurity = Math.min(this.securityDepositBalance, 25000);
-        newLicenseSecurity = Math.max(0, this.securityDepositBalance - collabSecurity);
-      } else if (hasUnpaidPendingCollabSecurity) {
+    const pendingCollabRef = pendingApplicationType === 'company-collaboration' ? this.pendingNewLicenseRef : '';
+    const hasPaidPendingCollabSecurity = pendingCollabRef
+      ? this.isCompanyCollabSecurityPaidForRef(pendingCollabRef)
+      : this.hasPaidCompanyCollabSecurityDeposit;
+    if (!hasPaidPendingCollabSecurity) collabSecurity = 0;
+    collabSecurity = Math.max(collabSecurity, this.paidCompanyCollabSecurityAmount);
+    if (collabSecurity + newLicenseSecurity > this.securityDepositBalance) {
+      if (collabSecurity > this.securityDepositBalance) {
+        collabSecurity = this.securityDepositBalance;
         newLicenseSecurity = 0;
       } else {
-        newLicenseSecurity = this.securityDepositBalance;
+        newLicenseSecurity = Math.max(0, this.securityDepositBalance - collabSecurity);
       }
-    } else if (collabSecurity === 0 && this.hasAppliedCompanyCollaboration && this.hasPaidCompanyCollabSecurityDeposit) {
-      collabSecurity = Math.min(this.securityDepositBalance, 25000);
-      newLicenseSecurity = Math.max(0, this.securityDepositBalance - collabSecurity);
-    } else if (collabSecurity + newLicenseSecurity < this.securityDepositBalance && !hasUnpaidPendingCollabSecurity) {
-      newLicenseSecurity += (this.securityDepositBalance - (collabSecurity + newLicenseSecurity));
     }
 
     this.newLicenseSecurityDepositAmount = newLicenseSecurity;
@@ -1914,7 +1920,8 @@ private initializeWalletContextAndLoadData(): void {
     // For company collaboration, check the flag loaded from backend directly
     const isCollabRef = ref.startsWith('CCOL/');
     if (isCollabRef) {
-      if (walletType === 'security_deposit') return this.hasPaidCompanyCollabSecurityDeposit;
+      if (walletType === 'security_deposit') return this.isCompanyCollabSecurityPaidForRef(ref);
+      if (walletType === 'license_fee' && this.isCompanyCollabLicensePaidForRef(ref)) return true;
       if (walletType === 'license_fee') {
         // Check optimistic / history for a license_fee debit on this ref
         const merged = [...(this.optimisticPaymentHistory || []), ...(this.historyData || [])];
@@ -2063,6 +2070,56 @@ private initializeWalletContextAndLoadData(): void {
   private isLicenseFeeWorkflowPaymentType(value: any): boolean {
     const normalized = String(value || '').trim().toLowerCase();
     return normalized === 'new-license' || normalized === 'license-renewal' || normalized === 'company-collaboration';
+  }
+
+  private normalizeApplicationReference(value: any): string {
+    return String(value || '').trim().toUpperCase();
+  }
+
+  private getCompanyCollabReferenceFromApp(app: any): string {
+    return this.normalizeApplicationReference(
+      app?.application_id ?? app?.applicationId ?? app?.reference_no ?? app?.referenceNo ?? app?.id ?? ''
+    );
+  }
+
+  private getCompanyCollabSecurityAmountFromApp(app: any): number {
+    const feeDetails = this.parseObjectLike(app?.fee_details ?? app?.feeDetails);
+    const amount = this.toNumber(
+      app?.security_fee_amount ??
+      app?.securityFeeAmount ??
+      app?.security_deposit_amount ??
+      app?.securityDepositAmount ??
+      app?.security_fee ??
+      app?.securityFee ??
+      app?.security_deposit ??
+      app?.securityDeposit ??
+      feeDetails?.securityDeposit ??
+      feeDetails?.security_deposit ??
+      feeDetails?.security_fee ??
+      feeDetails?.securityFee ??
+      0
+    );
+    return amount > 0 ? amount : 25000;
+  }
+
+  private parseObjectLike(value: any): any {
+    if (!value) return {};
+    if (typeof value === 'object') return value;
+    if (typeof value !== 'string') return {};
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  private isCompanyCollabSecurityPaidForRef(referenceNo: string): boolean {
+    return this.paidCompanyCollabSecurityRefs.has(this.normalizeApplicationReference(referenceNo));
+  }
+
+  private isCompanyCollabLicensePaidForRef(referenceNo: string): boolean {
+    return this.paidCompanyCollabLicenseRefs.has(this.normalizeApplicationReference(referenceNo));
   }
 
   private capturePendingWalletPaymentContext(params: any): void {
