@@ -1508,29 +1508,40 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     }
 
     private findItemByReference(items: any[], refNo: string, referenceFields: string[]): any {
-        const decodedRefNo = decodeURIComponent(refNo || '');
-        const targetRef = String(refNo || '');
-        const decodedTargetRef = String(decodedRefNo || '');
+        const rawTarget = String(refNo || '').trim();
+        if (!rawTarget) return null;
 
-        for (const field of referenceFields) {
-            const foundItem = items.find((item: any) =>
-                String(item[field] ?? '') === targetRef || String(item[field] ?? '') === decodedTargetRef
-            );
-            if (foundItem) return foundItem;
+        const targetRef = rawTarget.toLowerCase();
+        let decodedTarget = rawTarget;
+        try { decodedTarget = decodeURIComponent(rawTarget).trim(); } catch { /* ignore */ }
+        const decodedRef = decodedTarget.toLowerCase();
+
+        const allKeys = Array.from(new Set([
+            ...(referenceFields || []),
+            'application_id', 'applicationId', 'id', 'referenceNo', 'reference_no',
+            'ourRefNo', 'our_ref_no', 'refNo', 'ref_no', 'license_id', 'licenseId', 'old_license_id', 'oldLicenseId'
+        ]));
+
+        // 1. Exact match on any field or key
+        for (const item of items || []) {
+            if (!item) continue;
+            for (const key of allKeys) {
+                const val = String(item[key] ?? '').trim().toLowerCase();
+                if (val && (val === targetRef || val === decodedRef)) {
+                    return item;
+                }
+            }
         }
 
-        for (const field of referenceFields) {
-            const foundItem = items.find((item: any) =>
-                String(item[field] ?? '') && (
-                    String(item[field] ?? '').includes(targetRef) ||
-                    String(item[field] ?? '').includes(decodedTargetRef)
-                )
-            );
-            if (foundItem) return foundItem;
-        }
-
-        if (items.length > 0) {
-            return items[0];
+        // 2. Partial/includes match on any field or key
+        for (const item of items || []) {
+            if (!item) continue;
+            for (const key of allKeys) {
+                const val = String(item[key] ?? '').trim().toLowerCase();
+                if (val && (val.includes(targetRef) || targetRef.includes(val) || val.includes(decodedRef) || decodedRef.includes(val))) {
+                    return item;
+                }
+            }
         }
 
         return null;
