@@ -259,6 +259,8 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   educationCessBalance = 0;
   hologramWalletBalance = 0;
   securityDepositBalance = 0;
+  newLicenseSecurityDepositAmount = 0;
+  companyCollabSecurityDepositAmount = 0;
   licenseFeeBalance = 0;
   activeLicenseeId = '';
   private activeLicenseeName = '';
@@ -1003,6 +1005,39 @@ private initializeWalletContextAndLoadData(): void {
     this.hologramWalletTransactions = mappedModalHistory.filter(item => item.walletType === 'hologram');
     this.securityDepositWalletTransactions = mappedModalHistory.filter(item => item.walletType === 'security_deposit');
     this.licenseFeeWalletTransactions = mappedModalHistory.filter(item => item.walletType === 'license_fee');
+
+    let collabSecurity = 0;
+    let newLicenseSecurity = 0;
+    this.securityDepositWalletTransactions.forEach((tx) => {
+      const ref = String(tx.reference || '').toUpperCase();
+      const pFor = String(tx.paymentFor || '').toUpperCase();
+      const isCollab = ref.includes('CCOL') || ref.includes('COLLAB') || pFor.includes('COLLAB');
+      if (tx.type === 'Credited') {
+        if (isCollab) {
+          collabSecurity += tx.amount;
+        } else {
+          newLicenseSecurity += tx.amount;
+        }
+      } else if (tx.type === 'Debited') {
+        if (isCollab) {
+          collabSecurity -= tx.amount;
+        } else {
+          newLicenseSecurity -= tx.amount;
+        }
+      }
+    });
+
+    if (collabSecurity < 0) collabSecurity = 0;
+    if (newLicenseSecurity < 0) newLicenseSecurity = 0;
+
+    if (collabSecurity === 0 && newLicenseSecurity === 0 && this.securityDepositBalance > 0) {
+      newLicenseSecurity = this.securityDepositBalance;
+    } else if (collabSecurity + newLicenseSecurity < this.securityDepositBalance) {
+      newLicenseSecurity += (this.securityDepositBalance - (collabSecurity + newLicenseSecurity));
+    }
+
+    this.newLicenseSecurityDepositAmount = newLicenseSecurity;
+    this.companyCollabSecurityDepositAmount = collabSecurity;
 
     if (this.selectedWalletForHistory) {
       this.applyWalletHistoryFilters();
@@ -2608,6 +2643,9 @@ private initializeWalletContextAndLoadData(): void {
       case 'security_deposit':
         if (String(context.itemType || '').trim().toLowerCase() === 'license-renewal') {
           return this.licenseApplicationService.payLicenseRenewalSecurityFee(String(context.id));
+        }
+        if (String(context.itemType || '').trim().toLowerCase() === 'company-collaboration') {
+          return this.companyCollaborationService.payCollaborationSecurityFee(String(context.id));
         }
         return this.licenseApplicationService.payNewLicenseSecurityFee(String(context.id));
       default:

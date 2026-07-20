@@ -372,8 +372,7 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
 
   getTotalAmount(): number {
     if (!this.feeStructure) return 0;
-    return Number(this.feeStructure.applicationFee || 0)
-         + Number(this.feeStructure.collaborationFee || 0)
+    return Number(this.feeStructure.collaborationFee || 0)
          + Number(this.feeStructure.securityDeposit || 0);
   }
 

@@ -322,10 +322,15 @@ export class CompanyCollaborationService {
     return this.http.get<any>(`${this.mastersUrl}/fee/`).pipe(
       map((response): CompanyCollaborationFeeStructure => {
         const payload = response?.data ?? response ?? {};
+        const collabFee = Number(payload.collaborationFees ?? payload.collaboration_fees ?? payload.collaborationFee ?? payload.collaboration_fee ?? 25000);
+        const rawSecurity = payload.securityDeposit ?? payload.security_deposit;
+        const securityDep = (rawSecurity !== undefined && rawSecurity !== null && Number(rawSecurity) > 0)
+          ? Number(rawSecurity)
+          : collabFee;
         return {
-          applicationFee:   Number(payload.registrationFee   ?? payload.registration_fee   ?? payload.applicationFee   ?? payload.application_fee   ?? 0),
-          collaborationFee: Number(payload.collaborationFees ?? payload.collaboration_fees  ?? payload.collaborationFee ?? payload.collaboration_fee  ?? 0),
-          securityDeposit:  Number(payload.securityDeposit   ?? payload.security_deposit   ?? 0)
+          applicationFee:   0,
+          collaborationFee: collabFee,
+          securityDeposit:  securityDep
         };
       }),
       catchError((err) => {
@@ -347,6 +352,12 @@ export class CompanyCollaborationService {
   payCollaborationFee(applicationId: string): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.post(`${this.baseUrl}/pay-fee/${encodedId}/`, {});
+  }
+
+  // Pay collaboration security deposit fee via security_deposit wallet
+  payCollaborationSecurityFee(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post(`${this.baseUrl}/pay-security-fee/${encodedId}/`, {});
   }
 
   // ── Selected brands state ──────────────────────────────────────────────────
