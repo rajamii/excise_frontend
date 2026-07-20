@@ -1004,6 +1004,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     if (id.startsWith('RCR/')) return 'license-renewal';
     if (id.startsWith('RSBM/')) return 'license-renewal';
     if (id.startsWith('RCOL/')) return 'license-renewal';
+    if (id.startsWith('RCC/')) return 'license-renewal';
     if (id.startsWith('SBM/')) return 'salesman-barman';
     if (id.startsWith('CCOL/')) return 'company-collaboration';
     return 'new-license';
@@ -1111,7 +1112,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
         // as well as DP (Dry Day Permit) and SP (Special Permit) applications.
         const filteredApps = approvedApps.filter((app: UnifiedApplication) => {
           const id = String(app.applicationId || '').trim().toUpperCase();
-          return !id.startsWith('LRA/') && !id.startsWith('RCR/') && !id.startsWith('RCOL/') && !id.startsWith('RSBM/') && !id.startsWith('DP/') && !id.startsWith('SP/');
+          return !id.startsWith('LRA/') && !id.startsWith('RCR/') && !id.startsWith('RCOL/') && !id.startsWith('RCC/') && !id.startsWith('RSBM/') && !id.startsWith('DP/') && !id.startsWith('SP/');
         });
         
         // 🔍 DEBUG: Log the first approved app to see structure
