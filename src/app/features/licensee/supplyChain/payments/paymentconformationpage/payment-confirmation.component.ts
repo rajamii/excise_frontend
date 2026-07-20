@@ -1048,13 +1048,14 @@ private initializeWalletContextAndLoadData(): void {
     if (newLicenseSecurity < 0) newLicenseSecurity = 0;
 
     if (collabSecurity === 0 && newLicenseSecurity === 0 && this.securityDepositBalance > 0) {
-      if (this.hasAppliedCompanyCollaboration && this.hasPaidCompanyCollabSecurityDeposit) {
+      if (this.hasAppliedCompanyCollaboration) {
+        // Reserve up to ₹25,000 for the collab security deposit (whether paid or pending)
         collabSecurity = Math.min(this.securityDepositBalance, 25000);
-        newLicenseSecurity = this.securityDepositBalance - collabSecurity;
+        newLicenseSecurity = Math.max(0, this.securityDepositBalance - collabSecurity);
       } else {
         newLicenseSecurity = this.securityDepositBalance;
       }
-    } else if (collabSecurity === 0 && this.hasAppliedCompanyCollaboration && this.hasPaidCompanyCollabSecurityDeposit) {
+    } else if (collabSecurity === 0 && this.hasAppliedCompanyCollaboration) {
       collabSecurity = Math.min(this.securityDepositBalance, 25000);
       newLicenseSecurity = Math.max(0, this.securityDepositBalance - collabSecurity);
     } else if (collabSecurity + newLicenseSecurity < this.securityDepositBalance) {
@@ -1870,6 +1871,25 @@ private initializeWalletContextAndLoadData(): void {
     const ref = String(referenceNo || '').trim().toUpperCase();
     if (!ref) return false;
 
+    // For company collaboration, check the flag loaded from backend directly
+    const isCollabRef = ref.startsWith('CCOL/');
+    if (isCollabRef) {
+      if (walletType === 'security_deposit') return this.hasPaidCompanyCollabSecurityDeposit;
+      if (walletType === 'license_fee') {
+        // Check optimistic / history for a license_fee debit on this ref
+        const merged = [...(this.optimisticPaymentHistory || []), ...(this.historyData || [])];
+        return merged.some((txn) => {
+          const txnRef = String(txn?.reference || '').trim().toUpperCase();
+          if (txnRef !== ref) return false;
+          const txnWalletType = String((txn as any)?.walletType || '').trim().toLowerCase();
+          if (txnWalletType && txnWalletType !== 'license_fee') return false;
+          const type = String(txn?.type || '').toLowerCase();
+          return type.includes('utilization') || type.includes('utilized') || type.includes('debit');
+        });
+      }
+      return false;
+    }
+
     const merged = [...(this.optimisticPaymentHistory || []), ...(this.historyData || [])];
     const hasPaidTxn = merged.some((txn) => {
       const txnRef = String(txn?.reference || '').trim().toUpperCase();
@@ -1899,7 +1919,7 @@ private initializeWalletContextAndLoadData(): void {
 
     if (hasPaidTxn) return true;
 
-    if (walletType === 'security_deposit' && !ref.startsWith('CCOL/')) {
+    if (walletType === 'security_deposit') {
       const requiredAmount = this.pendingNewLicenseSecurityFeeAmount || this.chainedNewLicenseSecurityAmount || 0;
       if (requiredAmount > 0 && this.securityDepositBalance >= requiredAmount) {
         return true;
@@ -2450,12 +2470,6 @@ private initializeWalletContextAndLoadData(): void {
     this.executeWalletPaymentFromContext(context).subscribe({
       next: () => {
         this.closePendingWalletPaymentConfirmation();
-        Swal.fire({
-          icon: 'success',
-          title: 'Payment Successful',
-          text: `${this.getModuleLabelForTab(context.tab)} payment completed successfully.`
-        });
-        this.refreshWalletData();
         this.loadCancellationDataFromApi();
         this.loadHologramDataFromApi();
         this.unifiedDashboardService.clearUnifiedAppsCache();
@@ -2467,8 +2481,47 @@ private initializeWalletContextAndLoadData(): void {
           const isRenewal = String(context.itemType || '').trim().toLowerCase() === 'license-renewal'
                          || String(refNo || '').trim().toUpperCase().startsWith('LRA/')
                          || String(refNo || '').trim().toUpperCase().startsWith('RCR/');
+          const isCollab = String(context.itemType || '').trim().toLowerCase() === 'company-collaboration'
+                        || String(refNo || '').trim().toUpperCase().startsWith('CCOL/');
+
           if (context.tab === 'license_fee') {
-            // No manual Pay Now tab redirection for security deposit since it is paid on recharge.
+            // After paying license fee, chain to security deposit if it hasn't been paid yet.
+            if (isCollab) {
+              // Company collaboration: chain license_fee → security_deposit (₹25,000)
+              // hasPaidCompanyCollabSecurityDeposit not yet reloaded — use false since we just paid license_fee only
+              const chainedContext: PendingWalletPaymentContext = {
+                ...context,
+                tab: 'security_deposit' as any,
+                amount: 25000,
+                itemType: 'company-collaboration',
+                referenceNo: refNo
+              };
+              this.pendingWalletPaymentContext = chainedContext;
+              // Keep hasHandledPendingWalletPayment = true so walletDataLoaded auto-trigger does NOT fire
+              // while the Swal is shown. We'll reset it after the user responds.
+              this.hasHandledPendingWalletPayment = true;
+              this.isHandlingPendingWalletPayment = false;
+              this.setActiveTab('security_deposit');
+              this.persistPendingPaymentContextToStorage();
+              Swal.fire({
+                icon: 'success',
+                title: 'License Fee Paid!',
+                text: 'License fee payment was successful. Please now proceed to pay the Security Deposit of ₹25,000.',
+                confirmButtonText: 'Pay Security Deposit',
+                showCancelButton: true,
+                cancelButtonText: 'Later'
+              }).then((result) => {
+                // Now refresh wallet data after user has responded
+                this.hasHandledPendingWalletPayment = false;
+                this.refreshWalletData();
+                if (result.isConfirmed) {
+                  setTimeout(() => this.openPendingWalletPaymentConfirmation(), 300);
+                } else {
+                  this.finishPendingWalletPaymentHandling();
+                }
+              });
+              return;
+            }
           } else if (context.tab === 'security_deposit') {
             const licensePaid = this.isFeePaid('license_fee', refNo);
             const nextAmount = this.pendingNewLicenseLicenseFeeAmount || 0;
@@ -2486,6 +2539,12 @@ private initializeWalletContextAndLoadData(): void {
             }
           }
         }
+        this.refreshWalletData();
+        Swal.fire({
+          icon: 'success',
+          title: 'Payment Successful',
+          text: `${this.getModuleLabelForTab(context.tab)} payment completed successfully.`
+        });
         this.maybeForceRefreshAfterNewLicenseApproval(context);
         this.finishPendingWalletPaymentHandling();
       },
