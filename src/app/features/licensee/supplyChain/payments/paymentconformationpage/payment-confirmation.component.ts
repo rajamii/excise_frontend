@@ -593,7 +593,10 @@ private initializeWalletContextAndLoadData(): void {
       this.walletDataLoaded = true;
       this.applyLastPaidTabAsDefault();
       if (this.pendingWalletPaymentContext && !this.hasHandledPendingWalletPayment) {
-        this.openPendingWalletPaymentConfirmation();
+        const appType = this.getPendingApplicationType();
+        if (appType !== 'new-license' && appType !== 'company-collaboration') {
+          this.openPendingWalletPaymentConfirmation();
+        }
       }
     });
   }
