@@ -1077,19 +1077,28 @@ private initializeWalletContextAndLoadData(): void {
 
     if (collabSecurity < 0) collabSecurity = 0;
     if (newLicenseSecurity < 0) newLicenseSecurity = 0;
+    if (!this.hasPaidCompanyCollabSecurityDeposit) collabSecurity = 0;
+
+    const pendingApplicationType = this.getPendingApplicationType();
+    const hasUnpaidPendingCollabSecurity =
+      this.hasAppliedCompanyCollaboration &&
+      !this.hasPaidCompanyCollabSecurityDeposit &&
+      pendingApplicationType === 'company-collaboration';
 
     if (collabSecurity === 0 && newLicenseSecurity === 0 && this.securityDepositBalance > 0) {
-      if (this.hasAppliedCompanyCollaboration) {
+      if (this.hasAppliedCompanyCollaboration && this.hasPaidCompanyCollabSecurityDeposit) {
         // Reserve up to ₹25,000 for the collab security deposit (whether paid or pending)
         collabSecurity = Math.min(this.securityDepositBalance, 25000);
         newLicenseSecurity = Math.max(0, this.securityDepositBalance - collabSecurity);
+      } else if (hasUnpaidPendingCollabSecurity) {
+        newLicenseSecurity = 0;
       } else {
         newLicenseSecurity = this.securityDepositBalance;
       }
-    } else if (collabSecurity === 0 && this.hasAppliedCompanyCollaboration) {
+    } else if (collabSecurity === 0 && this.hasAppliedCompanyCollaboration && this.hasPaidCompanyCollabSecurityDeposit) {
       collabSecurity = Math.min(this.securityDepositBalance, 25000);
       newLicenseSecurity = Math.max(0, this.securityDepositBalance - collabSecurity);
-    } else if (collabSecurity + newLicenseSecurity < this.securityDepositBalance) {
+    } else if (collabSecurity + newLicenseSecurity < this.securityDepositBalance && !hasUnpaidPendingCollabSecurity) {
       newLicenseSecurity += (this.securityDepositBalance - (collabSecurity + newLicenseSecurity));
     }
 
@@ -2271,6 +2280,7 @@ private initializeWalletContextAndLoadData(): void {
 
   isSecurityDepositCompleteForPendingNewLicenseAlert(): boolean {
     if (this.isSecurityDepositPaidForPendingNewLicense()) return true;
+    if (this.isCompanyCollaborationPendingRef()) return false;
     const requiredAmount = this.getRequiredSecurityDepositAmount();
     if (requiredAmount <= 0) return false;
     return this.newLicenseSecurityDepositAmount >= requiredAmount;
