@@ -532,14 +532,17 @@ private initializeWalletContextAndLoadData(): void {
         catchError(() => of([] as any))
       )
     }).subscribe((response) => {
-      this.applyWalletSummary(response.summary);
-      this.applyWalletRecharge(response.recharge);
-      this.applyWalletHistory(response.history);
       const collabList = Array.isArray(response.collabApps)
         ? response.collabApps
         : (response.collabApps?.results || response.collabApps?.data || []);
+      this.hasPaidCompanyCollabSecurityDeposit = collabList.some((app: any) =>
+        Boolean(app.is_security_fee_paid || app.isSecurityFeePaid || app.is_paid || app.isPaid)
+      );
       this.hasAppliedCompanyCollaboration = (collabList && collabList.length > 0) || this.companyCollabSecurityDepositAmount > 0;
-      this.hasPaidCompanyCollabSecurityDeposit = collabList.some((app: any) => app.is_security_fee_paid || app.isSecurityFeePaid);
+
+      this.applyWalletSummary(response.summary);
+      this.applyWalletRecharge(response.recharge);
+      this.applyWalletHistory(response.history);
 
       this.walletDataLoaded = true;
       this.applyLastPaidTabAsDefault();
