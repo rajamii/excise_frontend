@@ -1164,10 +1164,16 @@ private initializeWalletContextAndLoadData(): void {
       return 'Licensee Fee Paid';
     }
     if (walletType === 'security_deposit') {
+      if (reference.startsWith('CCOL/') || sourceModule.includes('collaboration') || sourceModule.includes('ccol')) {
+        return 'com col security paid';
+      }
       return 'Security Fee Paid';
     }
 
     if (sourceModule.includes('security') && sourceModule.includes('deposit')) {
+      if (reference.startsWith('CCOL/') || sourceModule.includes('collaboration') || sourceModule.includes('ccol')) {
+        return 'com col security paid';
+      }
       return 'Security Paid';
     }
     if (sourceModule.includes('license') && sourceModule.includes('fee')) {
@@ -2258,8 +2264,11 @@ private initializeWalletContextAndLoadData(): void {
   }
 
   shouldShowPendingPaymentInTab(tab: WalletTableTab): boolean {
+    if (tab === 'security_deposit') {
+      return false;
+    }
     // New license deep-link: show Pay Now row even if amount is still resolving.
-    if ((tab === 'license_fee' || tab === 'security_deposit')
+    if (tab === 'license_fee'
       && this.pendingWalletPaymentContext
       && this.isLicenseFeeWorkflowPaymentType(this.pendingWalletPaymentContext.itemType)
       && this.pendingWalletPaymentContext.tab === tab
@@ -2363,7 +2372,7 @@ private initializeWalletContextAndLoadData(): void {
     const type = String(this.pendingWalletPaymentContext?.itemType || '').toLowerCase();
     const refNo = String(this.pendingWalletPaymentContext?.referenceNo || '').toUpperCase();
     if (type === 'company-collaboration' || refNo.startsWith('CCOL/')) {
-      return tab === 'security_deposit' ? 'Company Collaboration Security Fee' : 'Company Collaboration Fee';
+      return tab === 'security_deposit' ? 'com col security paid' : 'Company Collaboration Fee';
     }
     if (type === 'new-license' || refNo.startsWith('NA/') || refNo.startsWith('NLI/') || refNo.startsWith('NLA/') || refNo.startsWith('LIC/')) {
       return tab === 'security_deposit' ? 'New License Security Deposit' : 'New License Fee';
@@ -2398,6 +2407,10 @@ private initializeWalletContextAndLoadData(): void {
     const context = this.pendingWalletPaymentContext;
     if (!context) {
       this.resetPendingPaymentAttemptState();
+      return;
+    }
+
+    if (context.tab === 'security_deposit') {
       return;
     }
 
@@ -2439,6 +2452,8 @@ private initializeWalletContextAndLoadData(): void {
 
   getPendingApplicationType(): 'company-collaboration' | 'new-license' | 'license-renewal' | 'other' {
     if (!this.pendingWalletPaymentContext) {
+      const ref = String(this.pendingNewLicenseReferenceNo || '').toUpperCase();
+      if (ref.startsWith('CCOL/')) return 'company-collaboration';
       return 'other';
     }
     const ctxType = String(this.pendingWalletPaymentContext.itemType || '').toLowerCase();
@@ -2457,7 +2472,14 @@ private initializeWalletContextAndLoadData(): void {
   }
 
   isCompanyCollaborationPendingRef(): boolean {
-    return this.getPendingApplicationType() === 'company-collaboration';
+    if (this.getPendingApplicationType() === 'company-collaboration') return true;
+    const ref = String(this.pendingNewLicenseRef || '').toUpperCase();
+    if (ref.startsWith('CCOL/')) return true;
+    const ctxRef = String(this.pendingWalletPaymentContext?.referenceNo || '').toUpperCase();
+    if (ctxRef.startsWith('CCOL/')) return true;
+    const ctxType = String(this.pendingWalletPaymentContext?.itemType || '').toLowerCase();
+    if (ctxType === 'company-collaboration') return true;
+    return false;
   }
 
   isNewLicensePendingRef(): boolean {
@@ -2677,19 +2699,13 @@ private initializeWalletContextAndLoadData(): void {
               Swal.fire({
                 icon: 'success',
                 title: 'License Fee Paid!',
-                text: 'License fee payment was successful. Please now proceed to pay the Security Deposit of ₹25,000.',
-                confirmButtonText: 'Pay Security Deposit',
-                showCancelButton: true,
-                cancelButtonText: 'Later'
-              }).then((result) => {
+                text: 'License fee payment was successful. Now recharge the security fee by Clicking on ADD MONEY Button on Security Deposit Wallet and complete the application successfully.',
+                confirmButtonText: 'OK'
+              }).then(() => {
                 // Now refresh wallet data after user has responded
                 this.hasHandledPendingWalletPayment = false;
                 this.refreshWalletData();
-                if (result.isConfirmed) {
-                  setTimeout(() => this.openPendingWalletPaymentConfirmation(), 300);
-                } else {
-                  this.finishPendingWalletPaymentHandling();
-                }
+                this.finishPendingWalletPaymentHandling();
               });
               return;
             }
@@ -2715,18 +2731,12 @@ private initializeWalletContextAndLoadData(): void {
               Swal.fire({
                 icon: 'success',
                 title: 'License Fee Paid!',
-                text: `License fee payment was successful. Please now proceed to pay the Security Deposit of Rs ${nextAmount.toLocaleString('en-IN')}.`,
-                confirmButtonText: 'Pay Security Deposit',
-                showCancelButton: true,
-                cancelButtonText: 'Later'
-              }).then((result) => {
+                text: 'License fee payment was successful. Now recharge the security fee by Clicking on ADD MONEY Button on Security Deposit Wallet and complete the application successfully.',
+                confirmButtonText: 'OK'
+              }).then(() => {
                 this.hasHandledPendingWalletPayment = false;
                 this.refreshWalletData();
-                if (result.isConfirmed) {
-                  setTimeout(() => this.openPendingWalletPaymentConfirmation(), 300);
-                } else {
-                  this.resetPendingPaymentAttemptState();
-                }
+                this.resetPendingPaymentAttemptState();
               });
               return;
             }
