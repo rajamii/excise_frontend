@@ -16,6 +16,7 @@ export interface AddMoneyViewContext {
   moduleLabel: string;
   walletLabel: string;
   hoa: string;
+  purposeLabel?: string;
 }
 
 @Component({

@@ -262,6 +262,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   newLicenseSecurityDepositAmount = 0;
   companyCollabSecurityDepositAmount = 0;
   hasAppliedCompanyCollaboration = false;
+  hasPaidCompanyCollabSecurityDeposit = false;
   licenseFeeBalance = 0;
   activeLicenseeId = '';
   private activeLicenseeName = '';
@@ -538,8 +539,13 @@ private initializeWalletContextAndLoadData(): void {
         ? response.collabApps
         : (response.collabApps?.results || response.collabApps?.data || []);
       this.hasAppliedCompanyCollaboration = (collabList && collabList.length > 0) || this.companyCollabSecurityDepositAmount > 0;
+      this.hasPaidCompanyCollabSecurityDeposit = collabList.some((app: any) => app.is_security_fee_paid || app.isSecurityFeePaid);
+
       this.walletDataLoaded = true;
       this.applyLastPaidTabAsDefault();
+      if (this.pendingWalletPaymentContext && !this.hasHandledPendingWalletPayment) {
+        this.openPendingWalletPaymentConfirmation();
+      }
     });
   }
 
@@ -1039,7 +1045,15 @@ private initializeWalletContextAndLoadData(): void {
     if (newLicenseSecurity < 0) newLicenseSecurity = 0;
 
     if (collabSecurity === 0 && newLicenseSecurity === 0 && this.securityDepositBalance > 0) {
-      newLicenseSecurity = this.securityDepositBalance;
+      if (this.hasAppliedCompanyCollaboration && this.hasPaidCompanyCollabSecurityDeposit) {
+        collabSecurity = Math.min(this.securityDepositBalance, 25000);
+        newLicenseSecurity = this.securityDepositBalance - collabSecurity;
+      } else {
+        newLicenseSecurity = this.securityDepositBalance;
+      }
+    } else if (collabSecurity === 0 && this.hasAppliedCompanyCollaboration && this.hasPaidCompanyCollabSecurityDeposit) {
+      collabSecurity = Math.min(this.securityDepositBalance, 25000);
+      newLicenseSecurity = Math.max(0, this.securityDepositBalance - collabSecurity);
     } else if (collabSecurity + newLicenseSecurity < this.securityDepositBalance) {
       newLicenseSecurity += (this.securityDepositBalance - (collabSecurity + newLicenseSecurity));
     }
@@ -1853,15 +1867,8 @@ private initializeWalletContextAndLoadData(): void {
     const ref = String(referenceNo || '').trim().toUpperCase();
     if (!ref) return false;
 
-    if (walletType === 'security_deposit') {
-      const requiredAmount = this.pendingNewLicenseSecurityFeeAmount || this.chainedNewLicenseSecurityAmount || 0;
-      if (requiredAmount > 0 && this.securityDepositBalance >= requiredAmount) {
-        return true;
-      }
-    }
-
     const merged = [...(this.optimisticPaymentHistory || []), ...(this.historyData || [])];
-    return merged.some((txn) => {
+    const hasPaidTxn = merged.some((txn) => {
       const txnRef = String(txn?.reference || '').trim().toUpperCase();
       if (txnRef !== ref) return false;
 
@@ -1871,7 +1878,7 @@ private initializeWalletContextAndLoadData(): void {
 
       const type = String(txn?.type || '').toLowerCase();
       if (walletType === 'security_deposit') {
-        const isTxnOk = type.includes('credit') || type.includes('recharge') || type.includes('utilization') || type.includes('utilized') || type.includes('debit');
+        const isTxnOk = type.includes('utilization') || type.includes('utilized') || type.includes('debit');
         if (!isTxnOk) return false;
       } else {
         const isDebitLike = type.includes('utilization') || type.includes('utilized') || type.includes('debit');
@@ -1882,10 +1889,21 @@ private initializeWalletContextAndLoadData(): void {
       if (txnWalletType) return txnWalletType === walletType;
 
       const paymentFor = String(txn?.paymentFor || '').toLowerCase();
-      if (walletType === 'license_fee') return paymentFor.includes('license');
+      if (walletType === 'license_fee') return paymentFor.includes('license') || paymentFor.includes('collaboration');
       if (walletType === 'security_deposit') return paymentFor.includes('security');
-      return false;
+      return true;
     });
+
+    if (hasPaidTxn) return true;
+
+    if (walletType === 'security_deposit' && !ref.startsWith('CCOL/')) {
+      const requiredAmount = this.pendingNewLicenseSecurityFeeAmount || this.chainedNewLicenseSecurityAmount || 0;
+      if (requiredAmount > 0 && this.securityDepositBalance >= requiredAmount) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   private syncPendingNewLicenseContextToActiveTab(): void {
@@ -1951,23 +1969,30 @@ private initializeWalletContextAndLoadData(): void {
     if (normalized === 'cancellation') return 'cancellation';
     if (normalized === 'transit' || normalized === 'transit-permit') return 'transit';
     if (normalized === 'hologram' || normalized === 'hologram-request') return 'hologram';
-    if (normalized === 'license_fee' || normalized === 'licensefee') return 'license_fee';
+    if (normalized === 'license_fee' || normalized === 'licensefee' || normalized === 'new-license' || normalized === 'company-collaboration' || normalized === 'company_collaboration') return 'license_fee';
     if (normalized === 'security_deposit' || normalized === 'securitydeposit') return 'security_deposit';
     return null;
   }
 
   private isLicenseFeeWorkflowPaymentType(value: any): boolean {
     const normalized = String(value || '').trim().toLowerCase();
-    return normalized === 'new-license' || normalized === 'license-renewal';
+    return normalized === 'new-license' || normalized === 'license-renewal' || normalized === 'company-collaboration';
   }
 
   private capturePendingWalletPaymentContext(params: any): void {
     const action = String(params?.['action'] || '').trim().toLowerCase();
     const isPaymentAction = action === 'pay' || action === 'makepayment';
     if (!isPaymentAction) {
-      if (!this.pendingWalletPaymentContext) {
-        this.loadPendingPaymentContextFromStorage();
+      this.pendingWalletPaymentContext = null;
+      this.clearPendingPaymentContextFromStorage();
+      if (this.isBrowser) {
+        sessionStorage.removeItem('pendingNewLicenseApplicationId');
+        sessionStorage.removeItem('pendingNewLicenseReferenceNo');
+        sessionStorage.removeItem('pendingNewLicenseSecurityFeeAmount');
       }
+      this.pendingNewLicenseApplicationId = '';
+      this.pendingNewLicenseReferenceNo = '';
+      this.pendingNewLicenseSecurityFeeAmount = 0;
       return;
     }
 
@@ -2037,9 +2062,11 @@ private initializeWalletContextAndLoadData(): void {
     ).subscribe((app: any) => {
       if (!app) return;
       const licenseFee = this.toNumber(
-        app?.license_fee_amount ?? app?.licenseFeeAmount ?? app?.yearly_license_fee ?? app?.yearlyLicenseFee ?? 0
+        app?.license_fee_amount ?? app?.licenseFeeAmount ?? app?.yearly_license_fee ?? app?.yearlyLicenseFee ?? app?.fee_amount ?? app?.feeAmount ?? 0
       );
-      const securityFee = this.toNumber(app?.security_fee_amount ?? app?.securityFeeAmount ?? 0);
+      const securityFee = this.toNumber(
+        app?.security_fee_amount ?? app?.securityFeeAmount ?? app?.security_deposit_amount ?? app?.securityDepositAmount ?? app?.security_fee ?? app?.securityFee ?? app?.security_deposit ?? app?.securityDeposit ?? app?.security_amount ?? app?.securityAmount ?? licenseFee
+      );
       if (licenseFee > 0) this.pendingNewLicenseLicenseFeeAmount = licenseFee;
       if (securityFee > 0) this.pendingNewLicenseSecurityFeeAmount = securityFee;
 
@@ -2047,12 +2074,11 @@ private initializeWalletContextAndLoadData(): void {
       const ctx = this.pendingWalletPaymentContext;
       if (!ctx) return;
       if (!this.isLicenseFeeWorkflowPaymentType(ctx.itemType)) return;
-      if (ctx.amount > 0) return;
 
       const resolvedAmount = ctx.tab === 'security_deposit'
-        ? this.pendingNewLicenseSecurityFeeAmount
+        ? (this.pendingNewLicenseSecurityFeeAmount || licenseFee)
         : this.pendingNewLicenseLicenseFeeAmount;
-      if (resolvedAmount > 0) {
+      if (resolvedAmount > 0 && (ctx.amount <= 0 || ctx.tab === 'security_deposit')) {
         this.pendingWalletPaymentContext = { ...ctx, amount: resolvedAmount };
         this.persistPendingPaymentContextToStorage();
       }
@@ -2107,24 +2133,25 @@ private initializeWalletContextAndLoadData(): void {
     return context.tab === tab && this.activeTab === tab;
   }
 
+  get pendingNewLicenseRef(): string {
+    return this.pendingWalletPaymentContext?.referenceNo || this.pendingNewLicenseReferenceNo || '';
+  }
+
   showSecurityRechargeAlert(): boolean {
-    const refNo = this.pendingNewLicenseReferenceNo || this.pendingWalletPaymentContext?.referenceNo;
+    if (!this.pendingWalletPaymentContext) return false;
+    const refNo = this.pendingNewLicenseRef;
     if (!refNo) return false;
 
     const refNoUpper = String(refNo).trim().toUpperCase();
     const isNewLicense = !refNoUpper.startsWith('LRA/') && !refNoUpper.startsWith('RCR/') && !refNoUpper.startsWith('RCOL/') && !refNoUpper.startsWith('RSBM/');
     if (!isNewLicense) return false;
 
-    const type = this.pendingWalletPaymentContext?.itemType || 'new-license';
+    const type = this.pendingWalletPaymentContext?.itemType || (refNoUpper.startsWith('CCOL/') ? 'company-collaboration' : 'new-license');
     const isLicenseFee = this.isLicenseFeeWorkflowPaymentType(type)
       && String(type).trim().toLowerCase() !== 'license-renewal';
     if (!isLicenseFee) return false;
 
     return !this.isFeePaid('security_deposit', refNo) || !this.isFeePaid('license_fee', refNo);
-  }
-
-  get pendingNewLicenseRef(): string {
-    return this.pendingNewLicenseReferenceNo || this.pendingWalletPaymentContext?.referenceNo || '';
   }
 
   isLicenseFeePaidForPendingNewLicense(): boolean {
@@ -2150,15 +2177,22 @@ private initializeWalletContextAndLoadData(): void {
     if (!isLicensePaid && isSecurityPaid) {
       return 'License Fee Wallet Recharge Required';
     }
-    return 'Wallet Recharge Required';
+    return 'Action Required: Complete License Fee & Security Deposit Payment';
   }
 
   getPendingPaymentModuleLabel(): string {
     const tab = this.pendingWalletPaymentContext?.tab;
     if (!tab) return '-';
+    const type = String(this.pendingWalletPaymentContext?.itemType || '').toLowerCase();
     const refNo = String(this.pendingWalletPaymentContext?.referenceNo || '').toUpperCase();
+    if (type === 'company-collaboration' || refNo.startsWith('CCOL/')) {
+      return tab === 'security_deposit' ? 'Company Collaboration Security Fee' : 'Company Collaboration Fee';
+    }
+    if (type === 'new-license' || refNo.startsWith('NA/') || refNo.startsWith('NLI/') || refNo.startsWith('NLA/') || refNo.startsWith('LIC/')) {
+      return tab === 'security_deposit' ? 'New License Security Deposit' : 'New License Fee';
+    }
     if (tab === 'license_fee' && refNo.startsWith('RCOL/')) {
-      return 'com coll renewal fee';
+      return 'Company Collaboration Renewal Fee';
     }
     return this.getModuleLabelForTab(tab);
   }
@@ -2226,10 +2260,78 @@ private initializeWalletContextAndLoadData(): void {
     this.continueOpenPendingWalletPaymentConfirmation(context);
   }
 
+  getPendingApplicationType(): 'company-collaboration' | 'new-license' | 'license-renewal' | 'other' {
+    if (!this.pendingWalletPaymentContext) {
+      return 'other';
+    }
+    const ctxType = String(this.pendingWalletPaymentContext.itemType || '').toLowerCase();
+    const ctxRef = String(this.pendingWalletPaymentContext.referenceNo || '').toUpperCase();
+
+    if (ctxType === 'company-collaboration' || ctxRef.startsWith('CCOL/')) {
+      return 'company-collaboration';
+    }
+    if (ctxType === 'new-license' || ctxRef.startsWith('NA/') || ctxRef.startsWith('NLI/') || ctxRef.startsWith('NLA/') || ctxRef.startsWith('LIC/')) {
+      return 'new-license';
+    }
+    if (ctxType === 'license-renewal' || ctxRef.startsWith('LRA/') || ctxRef.startsWith('RCR/') || ctxRef.startsWith('RCOL/') || ctxRef.startsWith('RSBM/')) {
+      return 'license-renewal';
+    }
+    return 'other';
+  }
+
+  isCompanyCollaborationPendingRef(): boolean {
+    return this.getPendingApplicationType() === 'company-collaboration';
+  }
+
+  isNewLicensePendingRef(): boolean {
+    return this.getPendingApplicationType() === 'new-license';
+  }
+
+  getRequiredSecurityDepositAmount(): number {
+    const appType = this.getPendingApplicationType();
+    if (appType === 'company-collaboration') {
+      return 25000;
+    }
+    if (appType === 'new-license' || appType === 'license-renewal') {
+      const ctxAmount = Number(this.pendingWalletPaymentContext?.amount || 0);
+      const secAmount = Number((this.pendingWalletPaymentContext as any)?.securityAmount || 0);
+      if (secAmount > 0) return secAmount;
+      if (this.pendingNewLicenseSecurityFeeAmount > 0) return this.pendingNewLicenseSecurityFeeAmount;
+      if (this.chainedNewLicenseSecurityAmount > 0) return this.chainedNewLicenseSecurityAmount;
+      if (ctxAmount > 0 && this.pendingWalletPaymentContext?.tab === 'security_deposit') return ctxAmount;
+      if (this.pendingNewLicenseLicenseFeeAmount > 0) return this.pendingNewLicenseLicenseFeeAmount;
+      return ctxAmount > 0 ? ctxAmount : 0;
+    }
+    const ctxAmount = Number(this.pendingWalletPaymentContext?.amount || 0);
+    return ctxAmount > 0 ? ctxAmount : 0;
+  }
+
+  getRequiredLicenseFeeAmount(): number {
+    const appType = this.getPendingApplicationType();
+    if (appType === 'company-collaboration') {
+      return 25000;
+    }
+    if (appType === 'new-license' || appType === 'license-renewal') {
+      const ctxAmount = Number(this.pendingWalletPaymentContext?.amount || 0);
+      if (ctxAmount > 0 && this.pendingWalletPaymentContext?.tab === 'license_fee') return ctxAmount;
+      if (this.pendingNewLicenseLicenseFeeAmount > 0) return this.pendingNewLicenseLicenseFeeAmount;
+      return ctxAmount > 0 ? ctxAmount : 0;
+    }
+    const ctxAmount = Number(this.pendingWalletPaymentContext?.amount || 0);
+    return ctxAmount > 0 ? ctxAmount : 0;
+  }
+
   private continueOpenPendingWalletPaymentConfirmation(context: any): void {
     const deductionAmount = Number(context.amount || 0);
     const currentBalance = this.getAvailableBalanceForModuleTab(context.tab);
     if (deductionAmount <= 0) {
+      if (String(context.itemType || '').trim().toLowerCase() === 'company-collaboration' || String(context.referenceNo || '').toUpperCase().startsWith('CCOL/')) {
+        const resolvedAmount = 25000;
+        this.pendingWalletPaymentContext = { ...context, amount: resolvedAmount };
+        this.persistPendingPaymentContextToStorage();
+        setTimeout(() => this.openPendingWalletPaymentConfirmation(), 0);
+        return;
+      }
       if (String(context.itemType || '').trim().toLowerCase() === 'new-license') {
         this.ensurePendingNewLicenseAmountsResolved();
         const resolvedAmount = context.tab === 'security_deposit'
@@ -2908,53 +3010,32 @@ private initializeWalletContextAndLoadData(): void {
   }
 
   addMoney(walletType: string): void {
-
-    let moduleLabel = 'Wallet Advance';
-    let walletLabel = '';
-    let hoa = '';
     let modalWalletType: AddMoneyWalletType = 'excise';
 
-    // Use the constants already defined at the top of your file
     if (walletType === 'license_fee') {
-      walletLabel = 'License Fee Wallet';
-      hoa = LICENSE_FEE_HOA; // '0039-00-800-45-02'
       modalWalletType = 'license_fee';
-      moduleLabel = 'Manufacturing';
     } else if (walletType === 'security_deposit') {
-      walletLabel = 'Security Deposit Wallet';
-      hoa = SECURITY_DEPOSIT_HOA_SENTINEL; // 'non'
       modalWalletType = 'security_deposit';
-      moduleLabel = 'Manufacturing';
     } else if (walletType === 'excise') {
-      walletLabel = 'Excise Duty';
       modalWalletType = 'excise';
-      hoa = String(this.walletHoaByType?.excise || '').trim();
     } else if (walletType === 'education_cess' || walletType === 'education') {
-      walletLabel = 'Education Cess Wallet';
       modalWalletType = 'education';
-      hoa = String(this.walletHoaByType?.education || '').trim();
     } else if (walletType === 'hologram') {
-      walletLabel = 'Hologram Wallet';
       modalWalletType = 'hologram';
-      hoa = String(this.walletHoaByType?.hologram || '').trim();
     } else {
-      console.warn(`Unsupported wallet type "${walletType}", defaulting to excise.`);
-      walletLabel = 'Excise Duty';
       modalWalletType = 'excise';
-      hoa = String(this.walletHoaByType?.excise || '').trim();
     }
 
-    this.modalContext = { walletType: modalWalletType , moduleLabel, walletLabel, hoa };
+    this.modalContext = this.getAddMoneyContext(modalWalletType);
     this.currentTxnId = this.generateWalletTransactionId(modalWalletType);
     const refNo = this.pendingNewLicenseRef;
+
     if (modalWalletType === 'license_fee') {
-      this.paymentAmount = (refNo && this.isFeePaid('license_fee', refNo))
-        ? 0
-        : (this.pendingNewLicenseLicenseFeeAmount || this.pendingWalletPaymentContext?.amount || 0);
+      const isPaid = refNo ? this.isFeePaid('license_fee', refNo) : false;
+      this.paymentAmount = isPaid ? 0 : this.getRequiredLicenseFeeAmount();
     } else if (modalWalletType === 'security_deposit') {
-      this.paymentAmount = (refNo && this.isFeePaid('security_deposit', refNo))
-        ? 0
-        : (this.pendingNewLicenseSecurityFeeAmount || this.chainedNewLicenseSecurityAmount || this.pendingWalletPaymentContext?.amount || 0);
+      const isPaid = refNo ? this.isFeePaid('security_deposit', refNo) : false;
+      this.paymentAmount = isPaid ? 0 : this.getRequiredSecurityDepositAmount();
     } else {
       this.paymentAmount = 0;
     }
@@ -2963,7 +3044,9 @@ private initializeWalletContextAndLoadData(): void {
     const modalElement = document.getElementById('addMoneyModal');
     if (modalElement) {
       let modal = (window as any).bootstrap.Modal.getInstance(modalElement);
-      if (!modal) modal = new (window as any).bootstrap.Modal(modalElement);
+      if (!modal) {
+        modal = new (window as any).bootstrap.Modal(modalElement);
+      }
       modal.show();
     }
   }
@@ -3087,13 +3170,11 @@ private initializeWalletContextAndLoadData(): void {
     this.addMoneyTransactionId = this.generateWalletTransactionId(walletType);
     const refNo = this.pendingNewLicenseRef;
     if (walletType === 'license_fee') {
-      this.addMoneyAmount = (refNo && this.isFeePaid('license_fee', refNo))
-        ? 0
-        : (this.pendingNewLicenseLicenseFeeAmount || this.pendingWalletPaymentContext?.amount || 0);
+      const isPaid = refNo ? this.isFeePaid('license_fee', refNo) : false;
+      this.addMoneyAmount = isPaid ? 0 : this.getRequiredLicenseFeeAmount();
     } else if (walletType === 'security_deposit') {
-      this.addMoneyAmount = (refNo && this.isFeePaid('security_deposit', refNo))
-        ? 0
-        : (this.pendingNewLicenseSecurityFeeAmount || this.chainedNewLicenseSecurityAmount || this.pendingWalletPaymentContext?.amount || 0);
+      const isPaid = refNo ? this.isFeePaid('security_deposit', refNo) : false;
+      this.addMoneyAmount = isPaid ? 0 : this.getRequiredSecurityDepositAmount();
     } else {
       this.addMoneyAmount = 0;
     }
@@ -3111,55 +3192,78 @@ private initializeWalletContextAndLoadData(): void {
   }
 
   private getAddMoneyContext(walletType: AddMoneyWalletType): AddMoneyViewContext {
-    const moduleLabel = this.walletModuleLabel;
+    const isCollab = this.isCompanyCollaborationPendingRef();
+    const isNewLic = !isCollab && !!this.pendingNewLicenseRef;
 
     switch (walletType) {
       case 'excise':
         return {
           walletType,
-          moduleLabel,
+          moduleLabel: this.walletModuleLabel,
           walletLabel: 'Excise Duty Wallet',
           hoa: this.walletHoaByType.excise
         };
       case 'brewery':
         return {
           walletType,
-          moduleLabel,
+          moduleLabel: this.walletModuleLabel,
           walletLabel: 'Excise Duty Wallet',
           hoa: this.walletHoaByType.brewery
         };
       case 'education':
         return {
           walletType,
-          moduleLabel,
+          moduleLabel: this.walletModuleLabel,
           walletLabel: 'Education Cess Wallet',
           hoa: this.walletHoaByType.education
         };
       case 'hologram':
         return {
           walletType,
-          moduleLabel,
+          moduleLabel: this.walletModuleLabel,
           walletLabel: 'Hologram Wallet',
           hoa: this.walletHoaByType.hologram
         };
-      case 'security_deposit':
+      case 'security_deposit': {
+        let purposeLabel = 'Security Deposit Wallet Recharge';
+        let moduleLabel = 'Manufacturing';
+        if (isCollab) {
+          purposeLabel = 'Recharge for Company Collaboration Security Deposit';
+          moduleLabel = 'Company Collaboration';
+        } else if (isNewLic) {
+          purposeLabel = 'Recharge for New License Security Deposit';
+          moduleLabel = 'New License Application';
+        }
         return {
           walletType,
-          moduleLabel: 'Manufacturing',
+          moduleLabel,
           walletLabel: 'Security Deposit Wallet',
-          hoa: ''
+          hoa: '',
+          purposeLabel
         };
-      case 'license_fee':
+      }
+      case 'license_fee': {
+        let purposeLabel = 'License Fee Wallet Recharge';
+        let moduleLabel = 'Manufacturing';
+        if (isCollab) {
+          purposeLabel = 'Recharge for Company Collaboration Fee';
+          moduleLabel = 'Company Collaboration';
+        } else if (isNewLic) {
+          purposeLabel = 'Recharge for New License Fee';
+          moduleLabel = 'New License Application';
+        }
         return {
           walletType,
-          moduleLabel: 'Manufacturing',
+          moduleLabel,
           walletLabel: 'License Fee Wallet',
-          hoa: LICENSE_FEE_HOA
+          hoa: LICENSE_FEE_HOA,
+          purposeLabel
         };
+      }
       default:
         return {
           walletType: 'excise',
-          moduleLabel,
+          moduleLabel: this.walletModuleLabel,
           walletLabel: 'Excise Duty Wallet',
           hoa: this.walletHoaByType.excise
         };

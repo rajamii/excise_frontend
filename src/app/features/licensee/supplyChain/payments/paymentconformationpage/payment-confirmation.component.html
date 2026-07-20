@@ -19,7 +19,7 @@
           </span>
           <!-- Case 3: Both unpaid -->
           <span *ngIf="!isLicenseFeePaidForPendingNewLicense() && !isSecurityDepositPaidForPendingNewLicense()">
-            To complete your new license application <strong *ngIf="pendingNewLicenseRef">({{ pendingNewLicenseRef }})</strong> successfully, please recharge/add money to your <strong>License Fee Wallet</strong> and <strong>Security Deposit Wallet</strong> below with the required amounts.
+            To complete your <span *ngIf="isCompanyCollaborationPendingRef()">company collaboration</span><span *ngIf="!isCompanyCollaborationPendingRef()">new license</span> application <strong *ngIf="pendingNewLicenseRef">({{ pendingNewLicenseRef }})</strong> successfully, please recharge/add money to your <strong>License Fee Wallet</strong> and <strong>Security Deposit Wallet</strong> below with the required amounts.
           </span>
         </p>
       </div>

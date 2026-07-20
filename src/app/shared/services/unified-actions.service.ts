@@ -673,24 +673,22 @@ export class UnifiedActionsService {
         if (!applicationId) {
           return of({ success: false, message: 'Application ID is required for payment' });
         }
+        const isLicenseFeePaid = item?.is_license_fee_paid || item?.isLicenseFeePaid || item?.is_fee_paid || item?.isFeePaid;
+        const targetTab = isLicenseFeePaid ? 'security_deposit' : 'license_fee';
         const feeStructure = item?.fee_structure ?? item?.feeStructure ?? {};
-        const collabFee = Number(
-          feeStructure?.collaborationFee ??
-          feeStructure?.collaboration_fee ??
-          feeStructure?.collaborationFees ??
-          item?.amount ??
-          item?.brAmount ??
-          0
-        );
+        const collabFee = isLicenseFeePaid
+          ? Number(feeStructure?.securityDeposit ?? feeStructure?.security_deposit ?? item?.security_amount ?? 25000)
+          : Number(feeStructure?.collaborationFee ?? feeStructure?.collaboration_fee ?? item?.amount ?? 25000);
+
         this.router.navigate(['/dashboard'], {
           queryParams: {
             section: 'wallet',
-            tab: 'license_fee',
+            tab: targetTab,
             id: applicationId,
             type: 'company-collaboration',
             ref: applicationId,
             referenceNo: applicationId,
-            amount: Number.isFinite(collabFee) && collabFee > 0 ? collabFee : undefined,
+            amount: Number.isFinite(collabFee) && collabFee > 0 ? collabFee : 25000,
             action: 'pay',
             source: 'company-collaboration'
           }
