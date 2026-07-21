@@ -82,6 +82,7 @@ import { PrepareApplicationComponent as SalesmanPrepareApplicationComponent } fr
 import { LabelRegistrationPrepareApplicationComponent } from '../licensee/label-registration/prepare-application/prepare-application.component';
 import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-new-license.component';
 import { ApplySpecialPermitComponent } from '../licensee/special-permit/apply-special-permit.component';
+import { DistributorPermitComponent } from '../licensee/distributor-permit/distributor-permit.component';
 import { SingleWindowComponent } from '../single-window/single-window.component';
 import { SingleWindowDetailComponent } from '../single-window/single-window-detail.component';
 import { PaymentTransactionsComponent } from '../admin/payment-transactions/payment-transactions.component';
@@ -171,6 +172,7 @@ const CHART_BAR_LABELS_PLUGIN = [{
     LabelRegistrationPrepareApplicationComponent,
     ApplyNewLicenseComponent,
     ApplySpecialPermitComponent,
+    DistributorPermitComponent,
     SingleWindowComponent,
     SingleWindowDetailComponent,
     PaymentTransactionsComponent
@@ -995,6 +997,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Supply Chain Section Management
   selectedSupplyChainSection: string | null = null;
+  distributorPermitMode: 'list' | 'apply' = 'list';
   walletViewMode: 'wallets' | 'others' = 'wallets';
   private licenseeMenuAccessResolved = false;
   public showDistilleryMenus = false;
@@ -1748,6 +1751,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   private handleQueryParams(): void {
     const initialSection = this.route.snapshot.queryParamMap.get('section');
     this.selectedSupplyChainSection = initialSection || null;
+    this.distributorPermitMode = this.readDistributorPermitMode(this.route.snapshot.queryParams);
     this.enforceSectionAccess();
     this.walletViewMode = this.readWalletViewFromParams(this.route.snapshot.queryParams);
     this.ensureWalletViewParamAllowed(this.route.snapshot.queryParams);
@@ -1770,6 +1774,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.navigationCount = 0;
         }
         this.selectedSupplyChainSection = section || null;
+        this.distributorPermitMode = this.readDistributorPermitMode(params);
         this.enforceSectionAccess();
         this.walletViewMode = this.readWalletViewFromParams(params);
         this.ensureWalletViewParamAllowed(params);
@@ -2101,6 +2106,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     const value = String(params?.walletView || '').trim().toLowerCase();
     return value === 'others' ? 'others' : 'wallets';
+  }
+
+  private readDistributorPermitMode(params: any): 'list' | 'apply' {
+    if (this.selectedSupplyChainSection !== 'distributor-permit') {
+      return 'list';
+    }
+    const value = String(params?.mode || '').trim().toLowerCase();
+    return value === 'apply' ? 'apply' : 'list';
   }
 
   private ensureWalletViewParamAllowed(params: any): void {
@@ -2738,6 +2751,16 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     return this.currentUser?.roleId === 2;
   }
 
+  isDistributorUser(): boolean {
+    const roleName = String(
+      this.currentUser?.role?.name ||
+      this.currentUser?.role?.displayName ||
+      ''
+    ).toLowerCase();
+    const normalized = roleName.replace(/[^a-z0-9]/g, '');
+    return normalized === 'distributor' || normalized.includes('distributor');
+  }
+
   isCommissionerUser(): boolean {
     const roleId = Number(this.currentUser?.roleId || 0);
     if (roleId === 10) {
@@ -3070,6 +3093,16 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Supply Chain Section Handlers
   clearSupplyChainSection(): void {
+    if (this.selectedSupplyChainSection === 'distributor-permit' && this.distributorPermitMode === 'apply') {
+      this.distributorPermitMode = 'list';
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { section: 'distributor-permit', mode: null },
+        queryParamsHandling: 'merge'
+      });
+      return;
+    }
+
     if (this.selectedSupplyChainSection === 'single-window-detail') {
       if (this.navigationCount > 0) {
         this.navigationCount -= 2;
@@ -3312,6 +3345,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.selectedSupplyChainSection === 'officer-activity') {
       return this.isLicenseeUser() ? 'License Activity' : 'Officer Activity';
     }
+    if (this.selectedSupplyChainSection === 'distributor-permit') {
+      return this.distributorPermitMode === 'apply' ? 'Apply for Import Permit' : 'Import Permit Management';
+    }
     const titles: { [key: string]: string } = {
       // Common sections
       'single-window': 'User Details',
@@ -3338,6 +3374,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       'license-renewal': 'License Renewal Management',
       'special-permit': 'Dry Day Permit',
       'special-permit-apply': 'Prepare Dry Day Permit Application',
+      'distributor-permit': 'Import Permit Management',
 
       // SPA Forms
       'transit-permit': 'Apply Transit Permit',
@@ -3374,9 +3411,17 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     const section = this.selectedSupplyChainSection;
 
+    if (section === 'distributor-permit' && this.distributorPermitMode === 'apply') {
+      return false;
+    }
+
     // Commissioner: show Refresh for Working Records
     if (section === 'commissioner-hologram-working-records' && this.isCommissionerUser()) {
       return true;
+    }
+
+    if (section === 'distributor-permit') {
+      return this.isDistributorUser();
     }
 
     // Licensee: show Create actions only
@@ -3395,7 +3440,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       'company-registration',
       'company-collaboration',
       'label-registration',
-      'salesman-barman-registration'
+      'salesman-barman-registration',
+      'distributor-permit'
     ];
 
     return sectionsWithActions.includes(section);
@@ -3416,6 +3462,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       case 'company-collaboration': return 'Apply Collaboration';
       case 'label-registration': return 'Apply Label';
       case 'salesman-barman-registration': return 'Apply Salesman/Barman';
+      case 'distributor-permit': return 'Apply for Import Permit';
       default: return 'Create New';
     }
   }
@@ -3435,6 +3482,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       case 'company-collaboration': return 'add_circle';
       case 'label-registration': return 'add_circle';
       case 'salesman-barman-registration': return 'add_circle';
+      case 'distributor-permit': return 'add_circle';
       default: return 'add';
     }
   }
@@ -3468,6 +3516,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       this.router.navigate(['/dashboard'], { queryParams: { section: 'label-registration-apply' } });
     } else if (section === 'salesman-barman-registration') {
       this.router.navigate(['/dashboard'], { queryParams: { section: 'salesman-barman-registration-apply' } });
+    } else if (section === 'distributor-permit') {
+      this.router.navigate(['/dashboard'], { queryParams: { section: 'distributor-permit', mode: 'apply' } });
     }
   }
 

@@ -231,7 +231,7 @@
               <button
                 class="nav-item"
                 [class.nav-item--sub]="!!item.group"
-                *ngIf="(item.showOnlyForOic ? isOicUser() : true) && (item.showOnlyForCommissioner ? isCommissionerUser() : true) && (!item.hideForSiteAdmin || !isSiteAdminUser()) && (!item.hideForPermitSection || !isPermitSectionUser()) && (!item.hideForOic || !isOicUser()) && (!item.hideForCommissioner || !isCommissionerUser()) && canAccessSection(item.section) && (!item.group || isGroupExpanded(item.group))"
+                *ngIf="(item.showOnlyForOic ? isOicUser() : true) && (item.showOnlyForCommissioner ? isCommissionerUser() : true) && (item.showOnlyForDistributor ? isDistributorUser() : true) && (!item.hideForSiteAdmin || !isSiteAdminUser()) && (!item.hideForPermitSection || !isPermitSectionUser()) && (!item.hideForOic || !isOicUser()) && (!item.hideForCommissioner || !isCommissionerUser()) && canAccessSection(item.section) && (!item.group || isGroupExpanded(item.group))"
                 (click)="navigateToSection(item.section)"
                 [class.active]="isDashboardSectionActive(item.section)">
                 <mat-icon class="nav-icon">{{ item.icon }}</mat-icon>

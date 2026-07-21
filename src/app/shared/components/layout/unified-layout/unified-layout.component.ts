@@ -87,7 +87,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     revalidation: 'Revalidation',
     cancellation: 'Cancellation',
     transit: 'Transit Permit',
-    hologram: 'New Procurement'
+    hologram: 'New Procurement',
+    'distributor-permit': 'Import Permit'
   };
   private dbNavigationRoutes = new Set<string>();
   private dbPermissionTokens = new Set<string>();
@@ -96,6 +97,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     label: string;
     icon: string;
     group?: string;
+    showOnlyForDistributor?: boolean;
     hideForSiteAdmin?: boolean;
     hideForPermitSection?: boolean;
     hideForItCell?: boolean;
@@ -125,6 +127,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     { section: 'commissioner-monthly-view-details', label: 'Monthly View Details', icon: 'calendar_month', showOnlyForCommissioner: true },
     // ── Other ──
       { section: 'stock-inventory', label: 'Stock Inventory', icon: 'inventory' },
+      { section: 'distributor-permit', label: 'Apply for Import Permit', icon: 'assignment', showOnlyForDistributor: true },
       { section: 'salesman-barman-registration', label: 'Salesman/Barman Registration', icon: 'badge' },
       { section: 'company-registration', label: 'Company Registration', icon: 'apartment' },
       { section: 'company-collaboration', label: 'Company Collaboration', icon: 'groups', hideForSiteAdmin: true },
@@ -1585,6 +1588,11 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return normalized.includes('permitsection');
   }
 
+  isDistributorUser(): boolean {
+    const normalized = this.getNormalizedRoleName();
+    return normalized === 'distributor' || normalized.includes('distributor');
+  }
+
   isItCellUser(): boolean {
     const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
     if (roleId === 6) {
@@ -1638,6 +1646,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     // Activity log should be visible for everyone (admins see officer activity, licensees see their own activity).
     if (section === 'officer-activity') {
       return true;
+    }
+
+    if (section === 'distributor-permit') {
+      return this.isDistributorUser();
     }
 
     if (section === 'single-window' || section === 'single-window-detail') {
@@ -1727,6 +1739,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       'stock-inventory': ['stock_inventory', 'inventory', 'brandwarehouse'],
       'bl-details': ['bl_details', 'bulk_liter', 'bulk_detail', 'arrival_bulk_liter', 'arrival_details', 'bl'],
       'officer-activity': ['officer_activity', 'officer'],
+      'distributor-permit': ['distributor_permit', 'distributor-permit'],
       'salesman-barman-registration': ['salesman_barman', 'salesman-barman', 'salesmanbarman'],
       'company-registration': ['company_registration', 'company-registration', 'companyregistration'],
       'company-collaboration': ['company_collaboration', 'company-collaboration', 'companycollaboration'],
