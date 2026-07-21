@@ -1,7 +1,7 @@
 <div class="registration-management-container">
   <div class="new-license-register-header">
     <div class="row g-3 mb-4 stats-row">
-      <div class="col-xl col-lg-6 col-md-6" *ngIf="currentSection === 'salesman-barman-registration' || currentSection === 'company-registration'">
+      <div class="col-xl col-lg-6 col-md-6" *ngIf="currentSection === 'salesman-barman-registration' || currentSection === 'company-registration' || currentSection === 'company-collaboration' || currentSection === 'label-registration'">
         <div
           class="summary-card total-application-requests summary-card-clickable"
           role="button"
@@ -53,7 +53,7 @@
         </div>
       </div>
       <!-- Awaiting Payment Card -->
-      <div class="col-xl col-lg-6 col-md-6" *ngIf="(currentSection === 'salesman-barman-registration' || currentSection === 'company-registration') && counts.awaitingPayment && counts.awaitingPayment > 0">
+      <div class="col-xl col-lg-6 col-md-6" *ngIf="(currentSection === 'salesman-barman-registration' || currentSection === 'company-registration' || currentSection === 'company-collaboration' || currentSection === 'label-registration') && counts.awaitingPayment && counts.awaitingPayment > 0">
         <div
           class="summary-card awaiting-payment-requests summary-card-clickable"
           role="button"

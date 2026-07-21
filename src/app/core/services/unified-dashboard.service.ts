@@ -230,14 +230,21 @@ export class UnifiedDashboardService {
     this.unifiedCountsCache$ = forkJoin(tasks).pipe(
       map((results) =>
         results.reduce(
-          (acc, cur) => ({
-            applied: (acc.applied || 0) + (cur.applied || 0),
-            pending: (acc.pending || 0) + (cur.pending || 0),
-            objection: (acc.objection || 0) + (cur.objection || 0),
-            approved: (acc.approved || 0) + (cur.approved || 0),
-            rejected: (acc.rejected || 0) + (cur.rejected || 0),
-            awaitingPayment: (acc.awaitingPayment || 0) + (cur.awaitingPayment || (cur as any).awaiting_payment || 0)
-          }),
+          (acc, cur) => {
+            const curApplied = (cur.applied != null && cur.applied > 0)
+              ? cur.applied
+              : (cur as any).total != null && (cur as any).total > 0
+                ? (cur as any).total
+                : ((cur.pending || 0) + (cur.approved || 0) + (cur.objection || 0) + (cur.rejected || 0) + ((cur as any).awaitingPayment || (cur as any).awaiting_payment || 0));
+            return {
+              applied: (acc.applied || 0) + curApplied,
+              pending: (acc.pending || 0) + (cur.pending || 0),
+              objection: (acc.objection || 0) + (cur.objection || 0),
+              approved: (acc.approved || 0) + (cur.approved || 0),
+              rejected: (acc.rejected || 0) + (cur.rejected || 0),
+              awaitingPayment: (acc.awaitingPayment || 0) + (cur.awaitingPayment || (cur as any).awaiting_payment || 0)
+            };
+          },
           { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any
         )
       )
@@ -299,6 +306,20 @@ export class UnifiedDashboardService {
         : of(empty)
     }).pipe(
       map((res) => {
+        const getApplied = (c: DashboardCount) => {
+          if (!c) return 0;
+          if (c.applied != null && c.applied > 0) return c.applied;
+          if ((c as any).total != null && (c as any).total > 0) return (c as any).total;
+          return (c.pending || 0) + (c.approved || 0) + (c.objection || 0) + (c.rejected || 0) + ((c as any).awaitingPayment || (c as any).awaiting_payment || 0);
+        };
+
+        if (res.newLicense) res.newLicense.applied = getApplied(res.newLicense);
+        if (res.renewal) res.renewal.applied = getApplied(res.renewal);
+        if (res.salesman) res.salesman.applied = getApplied(res.salesman);
+        if (res.company) res.company.applied = getApplied(res.company);
+        if (res.companyCollaboration) res.companyCollaboration.applied = getApplied(res.companyCollaboration);
+        if (res.specialPermit) res.specialPermit.applied = getApplied(res.specialPermit);
+
         const total = {
           applied: (res.newLicense.applied || 0) + (res.renewal.applied || 0) + (res.salesman.applied || 0) + (res.company.applied || 0) + (res.companyCollaboration.applied || 0) + (res.specialPermit.applied || 0),
           pending: (res.newLicense.pending || 0) + (res.renewal.pending || 0) + (res.salesman.pending || 0) + (res.company.pending || 0) + (res.companyCollaboration.pending || 0) + (res.specialPermit.pending || 0),

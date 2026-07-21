@@ -357,22 +357,24 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   public getModuleTotal(moduleName: string): number {
     if (moduleName === 'all') {
-      const baseTotal = (this.dashboardCounts.pending || 0) +
-                        (this.dashboardCounts.approved || 0) +
-                        (this.dashboardCounts.objection || 0) +
-                        (this.dashboardCounts.rejected || 0) +
-                        (this.dashboardCounts.awaitingPayment || 0);
-      const supplyChainTotal = Object.values(this.supplyChainModuleCounts || {}).reduce((sum, v) =>
-        sum + (v.applied || 0), 0);
-      return baseTotal + supplyChainTotal;
+      return (this.dashboardCounts.applied != null && this.dashboardCounts.applied > 0)
+        ? this.dashboardCounts.applied
+        : (this.dashboardCounts.pending || 0) +
+          (this.dashboardCounts.approved || 0) +
+          (this.dashboardCounts.objection || 0) +
+          (this.dashboardCounts.rejected || 0) +
+          (this.dashboardCounts.awaitingPayment || 0);
     }
 
-    // Supply chain modules (including company/company-collaboration for permit section)
-    if (['requisition', 'revalidation', 'cancellation', 'transit', 'hologram', 'company', 'company-collaboration'].includes(moduleName)) {
-      return this.supplyChainModuleCounts[moduleName]?.applied || 0;
+    const scModules = ['requisition', 'revalidation', 'cancellation', 'transit', 'hologram'];
+    if (scModules.includes(moduleName)) {
+      const counts = this.supplyChainModuleCounts[moduleName];
+      if (counts?.applied != null && counts.applied > 0) return counts.applied;
+      return (counts?.pending || 0) + (counts?.approved || 0) + (counts?.objection || 0) + (counts?.rejected || 0) + ((counts as any)?.awaitingPayment || 0);
     }
 
-    let sourceCounts = this.dashboardCounts;
+    let sourceCounts: DashboardCount = this.dashboardCounts;
+
     if (moduleName === 'newLicense') {
       sourceCounts = this.detailedCounts.newLicense;
     } else if (moduleName === 'renewal') {
@@ -380,18 +382,30 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     } else if (moduleName === 'salesman') {
       sourceCounts = this.detailedCounts.salesman;
     } else if (moduleName === 'company') {
-      sourceCounts = this.detailedCounts.company;
+      const sc = this.supplyChainModuleCounts['company'];
+      const hasSc = sc && ((sc.applied || 0) > 0 || (sc.pending || 0) > 0 || (sc.approved || 0) > 0);
+      sourceCounts = hasSc ? sc : this.detailedCounts.company;
     } else if (moduleName === 'companyCollaboration' || moduleName === 'company-collaboration') {
-      sourceCounts = this.detailedCounts.companyCollaboration;
+      const sc = this.supplyChainModuleCounts['company-collaboration'];
+      const hasSc = sc && ((sc.applied || 0) > 0 || (sc.pending || 0) > 0 || (sc.approved || 0) > 0);
+      sourceCounts = hasSc ? sc : this.detailedCounts.companyCollaboration;
     } else if (moduleName === 'specialPermit') {
       sourceCounts = this.detailedCounts.specialPermit;
+    } else if (this.supplyChainModuleCounts[moduleName]) {
+      sourceCounts = this.supplyChainModuleCounts[moduleName];
+    }
+
+    if (!sourceCounts) return 0;
+
+    if (sourceCounts.applied != null && sourceCounts.applied > 0) {
+      return sourceCounts.applied;
     }
 
     return (sourceCounts.pending || 0) +
            (sourceCounts.approved || 0) +
            (sourceCounts.objection || 0) +
            (sourceCounts.rejected || 0) +
-           (sourceCounts.awaitingPayment || 0);
+           ((sourceCounts as any).awaitingPayment || 0);
   }
 
   updateSingleWindowChart(): void {
@@ -429,16 +443,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     // For the Applied bar, use getModuleTotal() which accounts for roles where
     // the API returns applied=0 (admin/officer roles) by summing all statuses.
     // For supply chain modules, always use the stored count (0 if not yet loaded).
-    const supplyChainModules = ['requisition', 'revalidation', 'cancellation', 'transit', 'hologram', 'company', 'company-collaboration'];
     const appliedValue = isAllModules
       ? this.getModuleTotal('all')
-      : supplyChainModules.includes(effectiveModule)
-        ? (this.supplyChainModuleCounts[effectiveModule]?.applied || 0)
-        : (sourceCounts.applied != null && sourceCounts.applied > 0
-            ? sourceCounts.applied
-            : (sourceCounts.pending || 0) + (sourceCounts.approved || 0) +
-              (sourceCounts.objection || 0) + (sourceCounts.rejected || 0) +
-              (sourceCounts.awaitingPayment || 0));
+      : this.getModuleTotal(effectiveModule);
 
     this.singleWindowChartData = {
       ...this.singleWindowChartData,
@@ -828,16 +835,23 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
         // ── COMPANY COLLABORATION (Permit Section + Commissioner) ─────────────
         if ((isPermitSection || isCommissioner) && collab) {
+          const collabApproved = Number(collab?.approved || 0);
+          const collabPending = Number(collab?.pending || 0);
+          const collabObjection = Number(collab?.objection || 0);
+          const collabRejected = Number(collab?.rejected || 0);
+          const collabAwaiting = Number(collab?.awaiting_payment || collab?.awaitingPayment || 0);
+          const collabApplied = Number(collab?.applied || collab?.total || (collabPending + collabApproved + collabObjection + collabRejected + collabAwaiting));
+
           this.supplyChainModuleCounts['company-collaboration'] = {
-            applied:  Number(collab?.applied  || collab?.total  || 0),
-            pending:  Number(collab?.pending  || 0),
-            approved: Number(collab?.approved || 0),
-            objection: Number(collab?.objection || 0),
-            rejected: Number(collab?.rejected || 0)
+            applied: collabApplied,
+            pending: collabPending,
+            approved: collabApproved,
+            objection: collabObjection,
+            rejected: collabRejected
           };
           this.detailedCounts.companyCollaboration = {
             ...this.supplyChainModuleCounts['company-collaboration'],
-            awaitingPayment: Number(collab?.awaiting_payment || collab?.awaitingPayment || 0)
+            awaitingPayment: collabAwaiting
           };
         }
 
