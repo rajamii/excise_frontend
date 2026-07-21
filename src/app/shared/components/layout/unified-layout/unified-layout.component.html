@@ -186,7 +186,7 @@
               <span class="nav-badge" *ngIf="getPendingCount('company-registration') as pending">{{ pending }}</span>
               <span class="nav-badge nav-badge--payment" *ngIf="getPendingCount('company-registration:payment') as payCount" title="Awaiting Payment"><mat-icon>payment</mat-icon></span>
             </button>
-            <button class="nav-item company-collaboration-nav-item" (click)="navigateToLicenseeRegistration('collaboration')" [class.active]="isDashboardSectionActive('company-collaboration')">
+            <button *ngIf="!isSiteAdminUser()" class="nav-item company-collaboration-nav-item" (click)="navigateToLicenseeRegistration('collaboration')" [class.active]="isDashboardSectionActive('company-collaboration')">
               <mat-icon class="nav-icon">groups</mat-icon>
               <span class="nav-text">Company Collaboration</span>
               <span class="nav-badge" *ngIf="getPendingCount('company-collaboration') as pending">{{ pending }}</span>
@@ -392,7 +392,7 @@
                 [class.active]="adminBrandMasterDetailsIIExpanded || isAdminRouteActive('/dashboard/admin/brand-owners') || isAdminRouteActive('/dashboard/admin/company-details') || isAdminRouteActive('/dashboard/admin/kinds-brands')"
                 [class.group-expanded]="adminBrandMasterDetailsIIExpanded">
                 <mat-icon class="nav-icon">dns</mat-icon>
-                <span class="nav-text">Brand Master Details II</span>
+                <span class="nav-text">Brand Master Data II</span>
                 <mat-icon class="nav-chevron">{{ adminBrandMasterDetailsIIExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
               </button>
               <ng-container *ngIf="adminBrandMasterDetailsIIExpanded">
