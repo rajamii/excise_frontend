@@ -124,20 +124,22 @@
         <div class="wallet-summary-meta mb-2">Used for manufacturing license and collaboration security deposit</div>
 
         <!-- Sub-boxes for Security Deposit Amount Breakdown -->
-        <div class="security-breakdown-container d-flex gap-2 mb-3" (click)="$event.stopPropagation()">
-          <div class="security-breakdown-box flex-fill p-2 rounded text-start" style="background: rgba(255, 255, 255, 0.85); border: 1px solid rgba(46, 125, 50, 0.3);">
-            <div class="text-secondary fw-semibold mb-1" style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.3px;">
-              <i class="bi bi-file-earmark-plus me-1 text-success"></i>New License Amount
+        <div class="security-breakdown-container" (click)="$event.stopPropagation()">
+          <div class="security-breakdown-box security-breakdown-box--license text-start">
+            <div class="security-breakdown-box__label">
+              <i class="bi bi-file-earmark-plus security-breakdown-box__icon security-breakdown-box__icon--green"></i>
+              New License Security Amount
             </div>
-            <div class="fw-bold text-success" style="font-size: 1rem;">
+            <div class="security-breakdown-box__amount security-breakdown-box__amount--green">
               &#8377;{{ getNewLicenseSecurityDepositDisplayAmount() | number:'1.2-2' }}
             </div>
           </div>
-          <div class="security-breakdown-box flex-fill p-2 rounded text-start" *ngIf="hasAppliedCompanyCollaboration" style="background: rgba(255, 255, 255, 0.85); border: 1px solid rgba(13, 110, 253, 0.3);">
-            <div class="text-secondary fw-semibold mb-1" style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.3px;">
-              <i class="bi bi-building me-1 text-primary"></i>Company Collaboration Security Amount
+          <div class="security-breakdown-box security-breakdown-box--collab text-start" *ngIf="hasAppliedCompanyCollaboration">
+            <div class="security-breakdown-box__label">
+              <i class="bi bi-building security-breakdown-box__icon security-breakdown-box__icon--blue"></i>
+              Company Collaboration Security Amount
             </div>
-            <div class="fw-bold text-primary" style="font-size: 1rem;">
+            <div class="security-breakdown-box__amount security-breakdown-box__amount--blue">
               &#8377;{{ companyCollabSecurityDepositAmount | number:'1.2-2' }}
             </div>
           </div>
