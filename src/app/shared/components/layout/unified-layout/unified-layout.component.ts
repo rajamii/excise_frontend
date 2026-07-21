@@ -1607,18 +1607,14 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
   private canAccessCompanyCollaborationWorkflow(): boolean {
     const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
-    if ([3, 5, 10, 12].includes(roleId)) {
+    // Company Collaboration is only accessible to Permit Section (5) and Commissioner (10)
+    if ([5, 10].includes(roleId)) {
       return true;
     }
 
+    // Fallback: check by role name (exact match to avoid 'jointcommissioner' matching 'commissioner')
     const normalizedRole = this.getNormalizedRoleName();
-    return [
-      'singlewindow',
-      'permitsection',
-      'deputycommissioner',
-      'commissioner',
-      'siteadmin'
-    ].some((token) => normalizedRole.includes(token));
+    return normalizedRole === 'permitsection' || normalizedRole === 'commissioner';
   }
 
   private canAccessCompanyRegistrationWorkflow(): boolean {
@@ -1627,11 +1623,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return true;
     }
 
+    // Fallback: check by role name (exact match to avoid 'jointcommissioner' matching 'commissioner')
     const normalizedRole = this.getNormalizedRoleName();
-    return [
-      'permitsection',
-      'commissioner',
-    ].some((token) => normalizedRole.includes(token));
+    return normalizedRole === 'permitsection' || normalizedRole === 'commissioner';
   }
 
   canAccessSection(section: string): boolean {
@@ -1658,8 +1652,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return this.canAccessCompanyRegistrationWorkflow();
     }
 
-    if (section === 'company-collaboration' && this.canAccessCompanyCollaborationWorkflow()) {
-      return true;
+    if (section === 'company-collaboration') {
+      return this.canAccessCompanyCollaborationWorkflow();
     }
 
     if (this.isLicenseeUser() || this.isSiteAdminUser()) {
