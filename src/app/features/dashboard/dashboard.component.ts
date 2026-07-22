@@ -2517,6 +2517,47 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             rejected: result.applications.rejected || []
           };
 
+          // For licensee users: the backend places company-collaboration and company-registration
+          // items in the 'approved' bucket once they leave the applicant's hands (i.e. forwarded
+          // to Permit Section, Commissioner etc.). From the licensee's view these are still
+          // "Under Review" (pending). Reclassify them based on their actual stage name.
+          if (this.isLicenseeUser()) {
+            const isOfficerStage = (app: any): boolean => {
+              const stage = String(
+                app?.current_stage_name ?? app?.currentStageName ?? app?.status ?? ''
+              ).toLowerCase().replace(/[^a-z0-9]/g, '');
+              // Truly final stages that should remain 'approved'
+              const finalStages = ['approved', 'finalapproved', 'issued', 'complete', 'active'];
+              if (finalStages.some(s => stage.includes(s))) return false;
+              // Rejected stages should stay in rejected
+              if (stage.includes('reject') || stage.includes('cancel')) return false;
+              // Objection stages
+              if (stage.includes('objection')) return false;
+              // Otherwise it's at an officer review stage → treat as pending
+              return true;
+            };
+
+            const reClassifyTypes = ['company-collaboration', 'company'];
+            const stillApproved: any[] = [];
+            const movedToPending: any[] = [];
+
+            filteredApplications.approved.forEach((app: any) => {
+              if (reClassifyTypes.includes(app.type) && isOfficerStage(app)) {
+                movedToPending.push(app);
+              } else {
+                stillApproved.push(app);
+              }
+            });
+
+            if (movedToPending.length > 0) {
+              filteredApplications = {
+                ...filteredApplications,
+                approved: stillApproved,
+                pending: [...filteredApplications.pending, ...movedToPending]
+              };
+            }
+          }
+
           // Product requirement: newly submitted applications should appear under Pending.
           const pendingBucket = [
             ...filteredApplications.pending,

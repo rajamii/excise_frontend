@@ -725,15 +725,33 @@ export class RegistrationManagementComponent implements OnInit {
           'submitted'
         );
 
+        // For licensees: classify by actual stage name so internal officer stages
+        // (permit_section, commissioner) show as Pending, not Approved.
+        // Only use the API bucket as 'approved' when the stage truly is final.
+        const resolvedGroup = this.isLicenseeUser()
+          ? this.resolveStatusGroup(rawStage, statusGroup)
+          : statusGroup;
+
+        // Display: licensees see 'Under Review' for officer stages, 'Approved' only when final
+        let displayStage: string;
+        if (this.isLicenseeUser()) {
+          if (resolvedGroup === 'approved') displayStage = 'Approved';
+          else if (resolvedGroup === 'rejected') displayStage = 'Rejected';
+          else if (resolvedGroup === 'objection') displayStage = 'Objection';
+          else displayStage = 'Under Review';
+        } else {
+          displayStage = this.formatStageName(rawStage);
+        }
+
         return {
           id: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
           applicationId: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
           submittedOn: this.formatDate(item?.created_at ?? item?.createdAt ?? item?.updated_at ?? item?.updatedAt),
           applicantName: String(item?.licensee_name ?? item?.licenseeName ?? item?.applicant_name ?? item?.applicantName ?? 'N/A'),
           establishmentName: String(item?.brand_owner_name ?? item?.brandOwnerName ?? item?.brand_owner ?? item?.brandOwner ?? 'N/A'),
-          currentStage: this.formatStageName(rawStage),
+          currentStage: displayStage,
           currentStageRaw: rawStage,
-          statusGroup: this.resolveStatusGroup(rawStage, statusGroup)
+          statusGroup: resolvedGroup
         };
       });
     };
@@ -776,15 +794,28 @@ export class RegistrationManagementComponent implements OnInit {
         'submitted'
       );
 
+      const resolvedGroup = this.classifyStatus(rawStage);
+
+      // Licensees see 'Under Review' for internal officer stages (permit_section, commissioner)
+      let displayStage: string;
+      if (this.isLicenseeUser()) {
+        if (resolvedGroup === 'approved') displayStage = 'Approved';
+        else if (resolvedGroup === 'rejected') displayStage = 'Rejected';
+        else if (resolvedGroup === 'objection') displayStage = 'Objection';
+        else displayStage = 'Under Review';
+      } else {
+        displayStage = this.formatStageName(rawStage);
+      }
+
       return {
         id: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
         applicationId: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
         submittedOn: this.formatDate(item?.created_at ?? item?.createdAt ?? item?.updated_at ?? item?.updatedAt),
         applicantName: String(item?.licensee_name ?? item?.licenseeName ?? item?.applicant_name ?? item?.applicantName ?? 'N/A'),
         establishmentName: String(item?.brand_owner_name ?? item?.brandOwnerName ?? item?.brand_owner ?? item?.brandOwner ?? 'N/A'),
-        currentStage: this.formatStageName(rawStage),
+        currentStage: displayStage,
         currentStageRaw: rawStage,
-        statusGroup: this.classifyStatus(rawStage)
+        statusGroup: resolvedGroup
       };
     });
   }
@@ -1047,9 +1078,12 @@ export class RegistrationManagementComponent implements OnInit {
     stageValue: string,
     fallback: 'approved' | 'pending' | 'objection' | 'rejected'
   ): 'approved' | 'pending' | 'objection' | 'rejected' {
-    if (fallback === 'approved' || fallback === 'rejected') {
+    if (fallback === 'rejected') {
       return fallback;
     }
+    // Always classify by actual stage name so that items at officer stages
+    // (permit_section, commissioner) show as 'pending' from licensee's view,
+    // not as 'approved' just because the API placed them in the approved bucket.
     return this.classifyStatus(stageValue);
   }
 
