@@ -535,15 +535,15 @@ export class RegistrationManagementComponent implements OnInit {
 
         // Auto-select active tab if default filter is not set
         if (this.activeCardFilter === '') {
-          if (this.counts.objection > 0) {
+          if (this.counts.pending > 0) {
+            this.activeCardFilter = 'pending';
+            this.statusFilter = 'pending';
+          } else if (this.counts.objection > 0) {
             this.activeCardFilter = 'objection';
             this.statusFilter = 'objection';
           } else if (this.counts.awaitingPayment > 0) {
             this.activeCardFilter = 'awaiting-payment';
             this.statusFilter = 'awaiting-payment';
-          } else if (this.counts.pending > 0) {
-            this.activeCardFilter = 'pending';
-            this.statusFilter = 'pending';
           }
         }
 
@@ -602,6 +602,21 @@ export class RegistrationManagementComponent implements OnInit {
 
         this.counts = this.resolveCounts(this.allRows, countsResult.data || {});
         this.stageFilterOptions = this.getStageFilterOptions(this.allRows);
+
+        // Auto-select active tab if default filter is not set
+        if (this.activeCardFilter === '') {
+          if (this.counts.pending > 0) {
+            this.activeCardFilter = 'pending';
+            this.statusFilter = 'pending';
+          } else if (this.counts.objection > 0) {
+            this.activeCardFilter = 'objection';
+            this.statusFilter = 'objection';
+          } else if (this.counts.awaitingPayment > 0) {
+            this.activeCardFilter = 'awaiting-payment';
+            this.statusFilter = 'awaiting-payment';
+          }
+        }
+
         this.applyFilters();
         this.isLoading = false;
       },
@@ -880,15 +895,15 @@ export class RegistrationManagementComponent implements OnInit {
         this.companyOptions = this.getCompanyOptions(this.allRows);
 
         if (this.activeCardFilter === '') {
-          if (objectionCount > 0) {
+          if (pendingCount > 0) {
+            this.activeCardFilter = 'pending';
+            this.statusFilter = 'pending';
+          } else if (objectionCount > 0) {
             this.activeCardFilter = 'objection';
             this.statusFilter = 'objection';
           } else if (awaitingPaymentCount > 0) {
             this.activeCardFilter = 'awaiting-payment';
             this.statusFilter = 'awaiting-payment';
-          } else if (pendingCount > 0) {
-            this.activeCardFilter = 'pending';
-            this.statusFilter = 'pending';
           }
         }
 
@@ -1042,7 +1057,9 @@ export class RegistrationManagementComponent implements OnInit {
     const value = String(stageValue || '').toLowerCase();
     if (value.includes('reject')) return 'rejected';
     if (value.includes('object')) return 'objection';
-    if (value.includes('approve')) return 'approved';
+    if (value === 'approved' || value.includes('final_approved') || value.includes('issued') || value.includes('complete') || value === 'active') {
+      return 'approved';
+    }
     return 'pending';
   }
 

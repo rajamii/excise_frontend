@@ -412,6 +412,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   updateSingleWindowChart(): void {
     const isITCell = this.currentUser?.roleId === 6;
+    const isPermitSection = Number(this.currentUser?.roleId || 0) === 5;
+    const isCommissioner  = this.isCommissionerUser();
 
     // For IT Cell, "All Modules" means hologram only — redirect to hologram counts
     const effectiveModule = (isITCell && this.selectedChartModule === 'all')
@@ -441,6 +443,31 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     const isAllModules = this.selectedChartModule === 'all' && !isITCell;
+
+    // For Permit Section / Commissioner in All Modules view:
+    // dashboardCounts already includes company/collab data from the unified API.
+    // Adding getSupplyChain*Total() (which also has company/collab from supplyChainModuleCounts)
+    // would double-count. Instead, use supplyChainModuleCounts directly.
+    if (isAllModules && (isPermitSection || isCommissioner)) {
+      const compCounts   = this.supplyChainModuleCounts['company']              || { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
+      const collabCounts = this.supplyChainModuleCounts['company-collaboration'] || { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
+      const psApplied  = (compCounts.applied  || 0) + (collabCounts.applied  || 0);
+      const psPending  = (compCounts.pending  || 0) + (collabCounts.pending  || 0);
+      const psApproved = (compCounts.approved || 0) + (collabCounts.approved || 0);
+      const psObjection = (compCounts.objection || 0) + (collabCounts.objection || 0);
+      const psRejected = (compCounts.rejected || 0) + (collabCounts.rejected || 0);
+
+      this.singleWindowChartData = {
+        ...this.singleWindowChartData,
+        datasets: [
+          {
+            ...this.singleWindowChartData.datasets[0],
+            data: [psApplied, psPending, psApproved, psObjection, psRejected]
+          }
+        ]
+      };
+      return;
+    }
 
     // For the Applied bar, use getModuleTotal() which accounts for roles where
     // the API returns applied=0 (admin/officer roles) by summing all statuses.
@@ -818,21 +845,26 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         // ── COMPANY REGISTRATION (Permit Section only) ────────────────────────
         if (isPermitSection && comp) {
           const flatten = (arr: any[]) => Array.isArray(arr) ? arr : [];
-          const allItems = [
-            ...flatten(comp?.applied), ...flatten(comp?.pending),
-            ...flatten(comp?.approved), ...flatten(comp?.rejected),
-            ...flatten(comp?.objection), ...flatten(comp?.awaiting_payment)
-          ];
-          const seen = new Set<any>();
-          const items = allItems.filter(item => {
-            const key = item?.id ?? item?.application_id ?? item?.applicationId;
-            if (seen.has(key)) return false; seen.add(key); return true;
-          });
-          const pending  = this.sidebarPendingBadgeService.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY']);
-          const approved = items.filter((x: any) => { const s = String(x.current_stage_name || x.currentStageName || x.status || '').toLowerCase().replace(/[^a-z0-9]/g,''); return (s.includes('approv') || s.includes('issued') || s.includes('complete')) && !s.includes('reject'); }).length;
-          const rejected = items.filter((x: any) => { const s = String(x.current_stage_name || x.currentStageName || x.status || '').toLowerCase().replace(/[^a-z0-9]/g,''); return s.includes('reject') || s.includes('cancel'); }).length;
-          const objection = items.filter((x: any) => { const s = String(x.current_stage_name || x.currentStageName || x.status || '').toLowerCase().replace(/[^a-z0-9]/g,''); return s.includes('objection'); }).length;
-          this.supplyChainModuleCounts['company'] = { applied: items.length, pending, approved, objection, rejected };
+          // For the Permit Section, the response buckets are from the officer perspective:
+          // "pending" = stages at Permit Section level, "approved" = forwarded to Commissioner or approved
+          // Use buckets directly — countActionable() won't work because allowedActions isn't in the response
+          const pendingItems  = flatten(comp?.pending);
+          const appliedItems  = flatten(comp?.applied);
+          const approvedItems = flatten(comp?.approved);
+          const rejectedItems = flatten(comp?.rejected);
+          const objectionItems = flatten(comp?.objection);
+          const awaitingItems = flatten(comp?.awaiting_payment);
+
+          // Permit section sees "pending" as whatever is currently at their stage.
+          // The API returns items at permit_section stage under comp.pending.
+          // Items that came through applied are also actionable for permit section (initial applicant_applied stage).
+          const pending   = pendingItems.length + appliedItems.length;
+          const approved  = approvedItems.length;
+          const rejected  = rejectedItems.length;
+          const objection = objectionItems.length;
+          const totalItems = pending + approved + rejected + objection + awaitingItems.length;
+
+          this.supplyChainModuleCounts['company'] = { applied: totalItems, pending, approved, objection, rejected };
         }
 
         // ── COMPANY COLLABORATION (Permit Section + Commissioner) ─────────────
