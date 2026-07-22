@@ -304,8 +304,8 @@
         </button>
       </div>
 
-      <mat-horizontal-stepper linear class="dp-stepper">
-        <mat-step [stepControl]="applicantForm">
+      <mat-horizontal-stepper class="dp-stepper">
+        <mat-step>
           <ng-template matStepLabel>Applicant Details</ng-template>
           <form [formGroup]="applicantForm" class="dp-form-grid dp-form-grid--card">
             <mat-form-field appearance="outline">
@@ -339,7 +339,7 @@
           </div>
         </mat-step>
 
-        <mat-step [stepControl]="supplierForm">
+        <mat-step>
           <ng-template matStepLabel>Source / Supplier Details</ng-template>
           <form [formGroup]="supplierForm" class="dp-form-grid dp-form-grid--card">
             <mat-form-field appearance="outline" class="dp-col-span">
@@ -374,7 +374,7 @@
           </div>
         </mat-step>
 
-        <mat-step [stepControl]="brandStepForm">
+        <mat-step>
           <ng-template matStepLabel>Brand Details</ng-template>
 
           <div class="dp-section-note">
@@ -450,11 +450,11 @@
 
           <div class="dp-form-actions">
             <button mat-stroked-button matStepperPrevious type="button">Back</button>
-            <button mat-raised-button color="primary" matStepperNext type="button" [disabled]="brandStepForm.invalid">Continue</button>
+            <button mat-raised-button color="primary" matStepperNext type="button">Continue</button>
           </div>
         </mat-step>
 
-        <mat-step [stepControl]="routeForm">
+        <mat-step>
           <ng-template matStepLabel>Route & Logistics</ng-template>
           <form [formGroup]="routeForm" class="dp-form-grid dp-form-grid--card">
             <mat-form-field appearance="outline">
@@ -495,7 +495,7 @@
           </div>
         </mat-step>
 
-        <mat-step [stepControl]="reviewForm">
+        <mat-step>
           <ng-template matStepLabel>Review & Submit</ng-template>
 
           <div class="dp-review">
