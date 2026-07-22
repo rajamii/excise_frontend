@@ -1,0 +1,254 @@
+<div class="member-details-wrapper">
+
+  <!-- SAVED MEMBERS LIST -->
+  @if (members.length > 0) {
+    <div class="saved-members-section">
+      <div class="saved-members-title" style="display: flex; align-items: center; gap: 8px; font-weight: bold; margin-bottom: 15px;">
+        <mat-icon>group</mat-icon>
+        <span>Added Members ({{ members.length }})</span>
+      </div>
+
+      <div class="members-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-bottom: 20px;">
+        @for (member of members; track member; let i = $index) {
+          <div class="member-card" style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; position: relative; background: #fafafa;">
+            <div class="member-badge" style="background: #1C2B78; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; margin-bottom: 8px;">
+              {{ i + 1 }}
+            </div>
+
+            <div class="member-info">
+              <div class="member-name-row" style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                <mat-icon style="color: #666;">account_circle</mat-icon>
+                <div>
+                  <div class="member-name" style="font-weight: bold;">{{ member.memberName }}</div>
+                  <div class="member-designation" style="font-size: 12px; color: #666;">{{ member.memberDesignation }}</div>
+                </div>
+              </div>
+
+              <div class="member-meta-grid" style="font-size: 13px; color: #444; display: grid; gap: 4px;">
+                <div><b>Mobile:</b> {{ member.memberMobileNumber }}</div>
+                @if (member.memberEmailId) {
+                  <div><b>Email:</b> {{ member.memberEmailId }}</div>
+                }
+                <div><b>Address:</b> {{ member.memberAddress }}</div>
+              </div>
+            </div>
+
+            <div class="member-actions" style="margin-top: 12px; display: flex; gap: 8px; justify-content: flex-end;">
+              <button mat-icon-button color="primary" (click)="editMember(i)">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" (click)="deleteMember(i)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+
+      @if (!isFormOpen) {
+        <div class="add-another-row" style="margin-bottom: 20px;">
+          <button mat-stroked-button color="primary" (click)="addAnotherMember()">
+            <mat-icon>person_add</mat-icon>
+            Add Another Member
+          </button>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- INPUT FORM -->
+  @if (isFormOpen) {
+    <form [formGroup]="memberDetailsForm">
+      <mat-card style="margin-bottom: 20px;">
+        <mat-card-header>
+          <div class="heading" style="font-size: 18px; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+            <mat-icon>{{ editingIndex !== null ? 'edit_note' : 'person_add' }}</mat-icon>
+            {{ formHeading }}
+          </div>
+          <div class="validation" style="color: #666; font-size: 12px;">* Marked Fields Are Mandatory</div>
+        </mat-card-header>
+
+        <mat-card-content>
+          <div class="form-field-container">
+            <!-- Member Name -->
+            <mat-form-field appearance="outline">
+              <mat-label>Member Name *</mat-label>
+              <input matInput placeholder="Enter Member Name" type="text" formControlName="memberName" />
+              @if (memberDetailsForm.controls['memberName'].invalid && memberDetailsForm.controls['memberName'].touched) {
+                <mat-error>{{ getErrorMessage('memberName') }}</mat-error>
+              }
+            </mat-form-field>
+
+            <!-- Member Designation -->
+            <mat-form-field appearance="outline">
+              <mat-label>Member Designation *</mat-label>
+              <input matInput placeholder="Enter Member Designation" type="text" formControlName="memberDesignation" />
+              @if (memberDetailsForm.controls['memberDesignation'].invalid && memberDetailsForm.controls['memberDesignation'].touched) {
+                <mat-error>{{ getErrorMessage('memberDesignation') }}</mat-error>
+              }
+            </mat-form-field>
+
+            <!-- Mobile Number -->
+            <mat-form-field appearance="outline">
+              <mat-label>Mobile Number *</mat-label>
+              <input matInput placeholder="Enter Mobile Number" type="number" formControlName="memberMobileNumber" />
+              @if (memberDetailsForm.controls['memberMobileNumber'].invalid && memberDetailsForm.controls['memberMobileNumber'].touched) {
+                <mat-error>{{ getErrorMessage('memberMobileNumber') }}</mat-error>
+              }
+            </mat-form-field>
+
+            <!-- Email -->
+            <mat-form-field appearance="outline">
+              <mat-label>Email Id</mat-label>
+              <input matInput placeholder="Enter Email" type="email" formControlName="memberEmailId" />
+              @if (memberDetailsForm.controls['memberEmailId'].invalid && memberDetailsForm.controls['memberEmailId'].touched) {
+                <mat-error>{{ getErrorMessage('memberEmailId') }}</mat-error>
+              }
+            </mat-form-field>
+
+            <!-- Member Address -->
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Member Address *</mat-label>
+              <textarea matInput placeholder="Enter Member Address (max 500 characters)"
+                formControlName="memberAddress"
+                cdkTextareaAutosize
+                cdkAutosizeMinRows="2"
+                cdkAutosizeMaxRows="4">
+              </textarea>
+              @if (memberDetailsForm.controls['memberAddress'].invalid && memberDetailsForm.controls['memberAddress'].touched) {
+                <mat-error>{{ getErrorMessage('memberAddress') }}</mat-error>
+              }
+            </mat-form-field>
+          </div>
+        </mat-card-content>
+
+        <mat-card-actions>
+          @if (editingIndex !== null || members.length > 0) {
+            <button mat-stroked-button type="button" (click)="cancelEdit()">
+              <mat-icon>close</mat-icon>
+              Cancel
+            </button>
+          }
+          <button mat-flat-button color="primary" type="button" (click)="saveMember()">
+            <mat-icon>save</mat-icon>
+            {{ editingIndex !== null ? 'Update Member' : 'Save Member' }}
+          </button>
+        </mat-card-actions>
+      </mat-card>
+    </form>
+  }
+
+  <!-- UPLOAD DOCUMENTS SECTION -->
+  <mat-card style="margin-top: 20px; margin-bottom: 20px;">
+    <mat-card-header>
+      <div class="heading" style="font-size: 18px; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+        <mat-icon>upload_file</mat-icon>
+        Upload Company Documents
+      </div>
+      <div class="validation" style="color: #666; font-size: 12px;">* Marked Fields Are Mandatory</div>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="section-wrapper" style="margin-top: 15px;">
+        <div class="table-container" style="overflow-x: auto; margin-bottom: 20px;">
+          <table mat-table [dataSource]="documents" class="mat-elevation-z2" style="width: 100%;">
+
+            <!-- Serial Number Column -->
+            <ng-container matColumnDef="serialNo">
+              <th mat-header-cell *matHeaderCellDef style="padding: 10px;">Sl. No</th>
+              <td mat-cell *matCellDef="let element; let i = index" style="padding: 10px;">{{ i + 1 }}</td>
+            </ng-container>
+
+            <!-- Document Type Column -->
+            <ng-container matColumnDef="docType">
+              <th mat-header-cell *matHeaderCellDef style="padding: 10px;">Document Type Description</th>
+              <td mat-cell *matCellDef="let element" style="padding: 10px;">
+                <div class="doc-type-cell" style="display: flex; flex-direction: column;">
+                  <span class="doc-name" style="font-weight: 500;">
+                    @if (element.required) {
+                      <span class="required-star" style="color: red;">* </span>
+                    }
+                    {{ element.name }}
+                    @if (!element.required) {
+                      <span class="optional-badge" style="font-size: 10px; background: #e0e0e0; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">optional</span>
+                    }
+                  </span>
+                  @if (element.format) {
+                    <span class="format" style="font-size: 11px; color: #666; margin-top: 4px;">{{ element.format }}</span>
+                  }
+                </div>
+              </td>
+            </ng-container>
+
+            <!-- File Upload Column -->
+            <ng-container matColumnDef="upload">
+              <th mat-header-cell *matHeaderCellDef style="padding: 10px;">Browse File</th>
+              <td mat-cell *matCellDef="let element" style="padding: 10px;">
+                <div class="file-upload-wrapper">
+                  <input
+                    type="file"
+                    (change)="onFileSelect($event, element)"
+                    [accept]="element.accept"
+                    [id]="'collab-file-' + element.key"
+                    class="file-input"
+                    style="display: none;">
+                  <label [for]="'collab-file-' + element.key"
+                         class="file-label"
+                         [class.has-file]="element.file"
+                         style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px dashed #999; border-radius: 4px; background: #fdfdfd; font-size: 13px;">
+                    <mat-icon style="font-size: 18px; width: 18px; height: 18px;">{{ element.file ? 'check_circle' : 'attach_file' }}</mat-icon>
+                    {{ element.file ? element.file.name : 'Choose File' }}
+                  </label>
+                </div>
+              </td>
+            </ng-container>
+
+            <!-- View File Column -->
+            <ng-container matColumnDef="view">
+              <th mat-header-cell *matHeaderCellDef style="padding: 10px;">View</th>
+              <td mat-cell *matCellDef="let element" style="padding: 10px;">
+                @if (element.file) {
+                  <button mat-icon-button color="primary" (click)="viewFile(element)" matTooltip="View Document">
+                    <mat-icon>visibility</mat-icon>
+                  </button>
+                } @else {
+                  <mat-icon class="no-file-icon" style="color: #ccc;">remove_circle_outline</mat-icon>
+                }
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;" [class.uploaded]="row.file"></tr>
+          </table>
+        </div>
+
+        <!-- Document Upload Status Banner -->
+        <div class="upload-status" [class.complete]="areDocumentsUploaded()" style="display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 4px; background: #fdf6ec; color: #e6a23c; margin-top: 15px;">
+          <mat-icon>{{ areDocumentsUploaded() ? 'check_circle' : 'info' }}</mat-icon>
+          <span>
+            {{ areDocumentsUploaded()
+                ? 'All required documents uploaded successfully. You may now proceed.'
+                : 'Please upload all mandatory (*) documents to proceed.' }}
+          </span>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- BOTTOM NAVIGATION -->
+  <div class="nav-actions" style="margin-top: 20px; display: flex; gap: 10px;">
+    <button mat-stroked-button (click)="goBack()">
+      <mat-icon>arrow_back</mat-icon>
+      Back
+    </button>
+    <button mat-stroked-button color="warn" (click)="resetForm()">
+      <mat-icon>refresh</mat-icon>
+      Reset
+    </button>
+    <button mat-flat-button color="primary" (click)="proceedToNext()" [disabled]="members.length === 0 || !areDocumentsUploaded()">
+      Next
+      <mat-icon>arrow_forward</mat-icon>
+    </button>
+  </div>
+
+</div>

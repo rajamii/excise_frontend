@@ -1615,25 +1615,25 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
   private canAccessCompanyCollaborationWorkflow(): boolean {
     const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
-    // Company Collaboration is only accessible to Permit Section (5) and Commissioner (10)
-    if ([5, 10].includes(roleId)) {
+    // Permit Section (5), Commissioner (10), and Distributor (16)
+    if ([5, 10, 16].includes(roleId)) {
       return true;
     }
 
     // Fallback: check by role name (exact match to avoid 'jointcommissioner' matching 'commissioner')
     const normalizedRole = this.getNormalizedRoleName();
-    return normalizedRole === 'permitsection' || normalizedRole === 'commissioner';
+    return normalizedRole === 'permitsection' || normalizedRole === 'commissioner' || normalizedRole === 'distributor' || normalizedRole.includes('distributor');
   }
 
   private canAccessCompanyRegistrationWorkflow(): boolean {
     const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
-    if ([5, 10].includes(roleId)) {
+    if ([5, 10, 16].includes(roleId)) {
       return true;
     }
 
     // Fallback: check by role name (exact match to avoid 'jointcommissioner' matching 'commissioner')
     const normalizedRole = this.getNormalizedRoleName();
-    return normalizedRole === 'permitsection' || normalizedRole === 'commissioner';
+    return normalizedRole === 'permitsection' || normalizedRole === 'commissioner' || normalizedRole === 'distributor' || normalizedRole.includes('distributor');
   }
 
   canAccessSection(section: string): boolean {

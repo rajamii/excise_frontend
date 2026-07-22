@@ -3424,8 +3424,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return this.isDistributorUser();
     }
 
-    // Licensee: show Create actions only
-    if (!this.isLicenseeUser()) {
+    // Licensee or Distributor: show Create actions only
+    if (!this.isLicenseeUser() && !this.isDistributorUser()) {
       return false;
     }
 

@@ -1,9 +1,9 @@
 <form [formGroup]="companyDetailsForm">
   <mat-card>
     <mat-card-header>
-      <div class="heading">Company Details</div>
+      <div class="heading">Company Registration Details</div>
       <div class="validation">
-        Select the collaborating company (bottler). Details will be auto-filled. * Marked fields are mandatory.
+        Select the collaborating company registration ID. Details will be auto-filled. * Marked fields are mandatory.
       </div>
     </mat-card-header>
 
@@ -27,35 +27,35 @@
           <mat-icon matSuffix>event</mat-icon>
         </mat-form-field>
 
-        <!-- Row 2: Select Bottler -->
+        <!-- Row 2: Select Company Registration ID -->
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Select Bottler *</mat-label>
+          <mat-label>Select Company Registration ID *</mat-label>
           <mat-select formControlName="bottlerId" required>
-            <mat-option value="">-- Select Bottler --</mat-option>
+            <mat-option value="">-- Select Company Registration ID --</mat-option>
             @if (isLoadingBottlers) {
               <mat-option disabled>Loading...</mat-option>
             } @else {
               @for (bottler of bottlerOptions; track bottler.id) {
                 <mat-option [value]="bottler.id">
-                  {{ bottler.name }}{{ bottler.code ? ' [' + bottler.code + ']' : '' }}{{ bottler.licensee_id_no ? ' - ' + bottler.licensee_id_no : '' }}
+                  {{ bottler.code }}{{ bottler.licensee_id_no ? ' (' + bottler.licensee_id_no + ')' : '' }}
                 </mat-option>
               }
             }
           </mat-select>
           <mat-icon matSuffix>factory</mat-icon>
           @if (companyDetailsForm.controls['bottlerId'].invalid && companyDetailsForm.controls['bottlerId'].touched) {
-            <mat-error>Please select a bottler</mat-error>
+            <mat-error>Please select a company registration ID</mat-error>
           }
         </mat-form-field>
 
         <!-- Row 3: Bottler Address (auto-filled, read-only) -->
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Bottler Address</mat-label>
+          <mat-label>Company Address</mat-label>
           <textarea matInput
             formControlName="bottlerAddress"
             readonly
-            aria-label="Bottler address"
-            title="Bottler address"
+            aria-label="Company address"
+            title="Company address"
             cdkTextareaAutosize
             cdkAutosizeMinRows="2"
             cdkAutosizeMaxRows="4">

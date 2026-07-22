@@ -11,6 +11,7 @@ import { environment } from '../../../../../../../../environments/environment';
 import { AccountService } from '../../../../../../../core/services/account.service';
 import { MasterService } from '../../../../../../../core/services/master.service';
 import { LicenseMeService } from '../../../../../../../core/services/license-me.service';
+import { RoleService } from '../../../../../../../core/services/role.service';
 
 interface LicenseType {
   id: number;
@@ -66,6 +67,7 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
     private accountService: AccountService,
     private masterService:  MasterService,       // ✅ NEW: for licensee profile
     private licenseMeService: LicenseMeService,   // ✅ NEW: for user active licenses
+    private roleService:    RoleService,
     private cdr:            ChangeDetectorRef
   ) {
     const storedValues = this.getFromSessionStorage();
@@ -74,8 +76,11 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
       this.applicationYears.push(currentFinYear);
     }
 
+    const isDistributor = this.roleService.getCurrentUser()?.roleId === 16;
+    const defaultBrandType = isDistributor ? 'Imported from other States/Country' : 'Manufactured in Sikkim';
+
     this.companyDetailsForm = this.fb.group({
-      brandType:           new FormControl(storedValues.brandType,           [Validators.required]),
+      brandType:           new FormControl(storedValues.brandType || defaultBrandType, [Validators.required]),
       license:             new FormControl(storedValues.license,             Validators.required),
       applicationYear:     new FormControl(storedValues.applicationYear || currentFinYear,     Validators.required),
       companyName:         new FormControl(storedValues.companyName,         [Validators.required, Validators.pattern(PatternConstants.NAME)]),
@@ -322,6 +327,11 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
     this.companyDetailsForm.reset();
     sessionStorage.removeItem('companyDetails');
     sessionStorage.removeItem('licenseeProfile');
+    const isDistributor = this.roleService.getCurrentUser()?.roleId === 16;
+    const defaultBrandType = isDistributor ? 'Imported from other States/Country' : 'Manufactured in Sikkim';
+    this.companyDetailsForm.patchValue({
+      brandType: defaultBrandType
+    });
   }
 
   goBack() { this.back.emit(); }

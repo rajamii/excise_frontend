@@ -11,6 +11,9 @@ import {
   CompanyCollaborationBrandOwner
 } from '../../../../../../../core/models/company-collaboration.model';
 import { CompanyCollaborationService } from '../../../../../../../core/services/company-collaboration.service';
+import { CompanyRegistrationService } from '../../../../../../../core/services/company-registration.service';
+import { Router } from '@angular/router';
+import Swal from 'sweetalert2';
 
 interface BottlerOption {
   id: string | number;
@@ -40,7 +43,9 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
 
   constructor(
     private fb: FormBuilder,
-    private companyCollaborationService: CompanyCollaborationService
+    private companyCollaborationService: CompanyCollaborationService,
+    private companyRegistrationService: CompanyRegistrationService,
+    private router: Router
   ) {
     const saved = this.getFromSessionStorage();
 
@@ -86,11 +91,32 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
 
   private loadBottlerOptions(): void {
     this.isLoadingBottlers = true;
-    this.companyCollaborationService.getBrandOwners()
+    this.companyRegistrationService.getApplicationsByStatus()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (owners) => {
-          this.bottlerOptions = this.mapBottlerOptions(owners);
+        next: (response) => {
+          const approvedList = response?.approved || [];
+          if (approvedList.length === 0) {
+            Swal.fire({
+              title: 'Access Denied',
+              text: 'You must have an approved company registration application to apply for company collaboration.',
+              icon: 'error',
+              confirmButtonText: 'OK'
+            }).then(() => {
+              this.router.navigate(['/dashboard']);
+            });
+            this.bottlerOptions = [];
+            this.isLoadingBottlers = false;
+            return;
+          }
+
+          this.bottlerOptions = approvedList.map((app: any) => ({
+            id: String(app.applicationId || app.application_id || app.id || ''),
+            code: String(app.applicationId || app.application_id || ''),
+            name: String(app.companyName || app.company_name || ''),
+            address: String(app.factoryAddress || app.factory_address || ''),
+            licensee_id_no: String(app.applicantName || app.applicant_name || '')
+          }));
           this.isLoadingBottlers = false;
 
           const current = this.companyDetailsForm.get('bottlerId')?.value;
@@ -101,16 +127,6 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
           this.isLoadingBottlers = false;
         }
       });
-  }
-
-  private mapBottlerOptions(owners: CompanyCollaborationBrandOwner[]): BottlerOption[] {
-    return owners.map((owner) => ({
-      id: String(owner.brand_owner_code || owner.id || owner.company_name || ''),
-      code: String(owner.brand_owner_code || ''),
-      name: String(owner.company_name || ''),
-      address: String(owner.office_address || owner.location || ''),
-      licensee_id_no: String(owner.brand_owner_licensee_id_no || '')
-    }));
   }
 
   private applyBottlerDetails(id: string | number | null): void {

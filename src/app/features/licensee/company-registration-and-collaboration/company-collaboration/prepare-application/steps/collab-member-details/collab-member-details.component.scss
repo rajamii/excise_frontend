@@ -1,0 +1,25 @@
+.member-details-wrapper {
+  padding: 10px;
+  .form-field-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    .full-width {
+      grid-column: 1 / -1;
+    }
+  }
+}
+.nav-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+.file-label.has-file {
+  border-color: #2e7d32 !important;
+  background-color: #e8f5e9 !important;
+  color: #2e7d32 !important;
+}
+.upload-status.complete {
+  background-color: #e8f5e9 !important;
+  color: #2e7d32 !important;
+}

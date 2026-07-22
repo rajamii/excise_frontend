@@ -3,13 +3,13 @@ import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms'
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { MaterialModule } from '../../../../../../../shared/material.module';
+import { PatternConstants } from '../../../../../../../shared/constants/pattern.constants';
 import {
   COMPANY_COLLAB_STORAGE_KEYS,
-  CompanyCollaborationBottlerDetails,
-  CompanyCollaborationBrandOwner,
-  CompanyCollaborationMember
+  CompanyCollaborationBottlerDetails
 } from '../../../../../../../core/models/company-collaboration.model';
-import { CompanyCollaborationService } from '../../../../../../../core/services/company-collaboration.service';
+import { LicenseMeService } from '../../../../../../../core/services/license-me.service';
+import { RoleService } from '../../../../../../../core/services/role.service';
 
 @Component({
   selector: 'app-bottler-details',
@@ -23,29 +23,36 @@ export class BottlerDetailsComponent implements OnInit, OnDestroy {
   @Output() readonly back = new EventEmitter<void>();
 
   bottlerDetailsForm: FormGroup;
-  brandOwners: CompanyCollaborationBrandOwner[] = [];
-  selectedOwner: CompanyCollaborationBrandOwner | null = null;
-  members: CompanyCollaborationMember[] = [];
-  isLoadingBrandOwners = false;
+  myActiveLicenses: any[] = [];
+  isLoadingLicenses = true;
+
+  countries: string[] = ['India', 'Nepal', 'Bhutan', 'China'];
+  states: string[] = ['Sikkim', 'West Bengal', 'Bihar', 'Assam'];
 
   private destroy$ = new Subject<void>();
 
   constructor(
     private fb: FormBuilder,
-    private companyCollaborationService: CompanyCollaborationService
+    private licenseMeService: LicenseMeService,
+    private roleService: RoleService
   ) {
     const saved = this.getFromSessionStorage();
+    const isDistributor = this.roleService.getCurrentUser()?.roleId === 16;
+    const defaultBrandType = isDistributor ? 'Imported from other States/Country' : 'Manufactured in Sikkim';
 
     this.bottlerDetailsForm = this.fb.group({
       financialYear:             new FormControl(this.getCurrentFinancialYear(), [Validators.required]),
-      brandOwner:                new FormControl(saved.brandOwner || '', [Validators.required]),
-      brandOwnerCode:            new FormControl(saved.brandOwnerCode || ''),
-      brandOwnerName:            new FormControl(saved.brandOwnerName || ''),
-      brandOwnerPan:             new FormControl(saved.brandOwnerPan || ''),
-      brandOwnerOfficeAddress:   new FormControl(saved.brandOwnerOfficeAddress || ''),
-      brandOwnerFactoryAddress:  new FormControl(saved.brandOwnerFactoryAddress || ''),
-      brandOwnerMobile:          new FormControl(saved.brandOwnerMobile || ''),
-      brandOwnerEmail:           new FormControl(saved.brandOwnerEmail || '')
+      brandOwnerName:            new FormControl(saved.brandOwnerName || '', [Validators.required, Validators.pattern(PatternConstants.NAME)]),
+      brandOwnerPan:             new FormControl(saved.brandOwnerPan || '', [Validators.required, Validators.pattern(PatternConstants.PAN)]),
+      brandOwnerOfficeAddress:   new FormControl(saved.brandOwnerOfficeAddress || '', [Validators.required, Validators.maxLength(500)]),
+      brandOwnerFactoryAddress:  new FormControl(saved.brandOwnerFactoryAddress || '', [Validators.required, Validators.maxLength(500)]),
+      brandOwnerMobile:          new FormControl(saved.brandOwnerMobile || '', [Validators.required, Validators.pattern(PatternConstants.MOBILE)]),
+      brandOwnerEmail:           new FormControl(saved.brandOwnerEmail || '', [Validators.required, Validators.pattern(PatternConstants.EMAIL)]),
+      brandType:                 new FormControl(saved.brandType || defaultBrandType, [Validators.required]),
+      license:                   new FormControl(saved.license || '', [Validators.required]),
+      country:                   new FormControl(saved.country || 'India', [Validators.required]),
+      state:                     new FormControl(saved.state || 'Sikkim', [Validators.required]),
+      pinCode:                   new FormControl(saved.pinCode || '', [Validators.required, Validators.pattern(PatternConstants.PINCODE)])
     });
 
     this.bottlerDetailsForm.valueChanges
@@ -54,8 +61,7 @@ export class BottlerDetailsComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.watchBrandOwnerChanges();
-    this.loadBrandOwners();
+    this.loadLicenseTypes();
   }
 
   ngOnDestroy(): void {
@@ -71,88 +77,52 @@ export class BottlerDetailsComponent implements OnInit, OnDestroy {
       : `${y - 1}-${y.toString().slice(-2)}`;
   }
 
-  private watchBrandOwnerChanges(): void {
-    this.bottlerDetailsForm.get('brandOwner')?.valueChanges
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((id) => this.applySelectedOwnerDetails(id));
-  }
-
-  private loadBrandOwners(): void {
-    this.isLoadingBrandOwners = true;
-    this.companyCollaborationService.getBrandOwners()
+  private loadLicenseTypes(): void {
+    this.isLoadingLicenses = true;
+    this.licenseMeService.getMyLicenses()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (owners) => {
-          this.brandOwners = owners;
-          // Restore previously selected owner
-          const savedId = this.bottlerDetailsForm.get('brandOwner')?.value;
-          if (savedId) this.applySelectedOwnerDetails(savedId);
-          this.isLoadingBrandOwners = false;
+        next: (data) => {
+          this.myActiveLicenses = (data || []).filter((l: any) => {
+            const approved = l.isApproved !== undefined ? l.isApproved : (l.is_approved !== undefined ? l.is_approved : false);
+            const expired = l.isExpired !== undefined ? l.isExpired : l.is_expired;
+            const id = l.licenseId || l.license_id || '';
+            return approved && !expired && id.startsWith('NA/');
+          });
+          this.isLoadingLicenses = false;
+
+          if (this.myActiveLicenses.length === 1) {
+            const singleLicense = this.myActiveLicenses[0].licenseId || this.myActiveLicenses[0].license_id;
+            this.bottlerDetailsForm.patchValue({ license: singleLicense });
+          }
         },
-        error: (err) => {
-          console.error('Failed to load brand owners:', err);
-          this.brandOwners = [];
-          this.isLoadingBrandOwners = false;
+        error: (error) => {
+          console.error('Error fetching active licenses:', error);
+          this.myActiveLicenses = [];
+          this.isLoadingLicenses = false;
         }
       });
   }
 
-  private applySelectedOwnerDetails(selectedId: string | number | null | undefined): void {
-    if (!selectedId) {
-      this.selectedOwner = null;
-      this.members = [];
-      this.bottlerDetailsForm.patchValue({
-        brandOwnerCode: '', brandOwnerName: '', brandOwnerPan: '',
-        brandOwnerOfficeAddress: '', brandOwnerFactoryAddress: '',
-        brandOwnerMobile: '', brandOwnerEmail: ''
-      }, { emitEvent: false });
-      this.saveToSessionStorage();
-      return;
-    }
-
-    const owner = this.brandOwners.find(
-      (o) => String(o.id) === String(selectedId) || String(o.brand_owner_code) === String(selectedId)
-    );
-
-    this.selectedOwner = owner || null;
-    this.members = owner?.members || [];
-
-    if (owner) {
-      this.bottlerDetailsForm.patchValue({
-        brandOwnerCode:           owner.brand_owner_code,
-        brandOwnerName:           owner.company_name,
-        brandOwnerPan:            owner.pan_no,
-        brandOwnerOfficeAddress:  owner.office_address,
-        brandOwnerFactoryAddress: owner.factory_address,
-        brandOwnerMobile:         owner.mobile,
-        brandOwnerEmail:          owner.email
-      }, { emitEvent: false });
-    }
-
-    this.saveToSessionStorage();
-  }
-
-  private getFromSessionStorage(): Partial<CompanyCollaborationBottlerDetails> {
+  private getFromSessionStorage(): any {
     const raw = sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.bottlerDetails);
     if (!raw) return {};
     try { return JSON.parse(raw); } catch { return {}; }
   }
 
   private saveToSessionStorage(): void {
-    const value = {
-      ...this.bottlerDetailsForm.getRawValue(),
-      brandOwnerMembers: this.members
-    };
-    sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.bottlerDetails, JSON.stringify(value));
+    sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.bottlerDetails, JSON.stringify(this.bottlerDetailsForm.getRawValue()));
   }
 
   resetForm(): void {
     sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.bottlerDetails);
-    this.selectedOwner = null;
-    this.members = [];
+    const isDistributor = this.roleService.getCurrentUser()?.roleId === 16;
+    const defaultBrandType = isDistributor ? 'Imported from other States/Country' : 'Manufactured in Sikkim';
     this.bottlerDetailsForm.reset({
       financialYear: this.getCurrentFinancialYear(),
-      brandOwner: ''
+      brandType: defaultBrandType,
+      country: 'India',
+      state: 'Sikkim'
     });
   }
 
@@ -162,6 +132,8 @@ export class BottlerDetailsComponent implements OnInit, OnDestroy {
     if (this.bottlerDetailsForm.valid) {
       this.saveToSessionStorage();
       this.next.emit();
+    } else {
+      this.bottlerDetailsForm.markAllAsTouched();
     }
   }
 }

@@ -10,19 +10,6 @@
 
     <mat-card-content>
 
-      <!-- Brand Type Radio Buttons -->
-      <mat-radio-group aria-label="Brand Type" formControlName="brandType">
-        <mat-radio-button value="Manufactured in Sikkim">Manufactured in Sikkim</mat-radio-button>
-        <mat-radio-button value="Imported from other States/Country">Imported from other States/Country</mat-radio-button>
-        <mat-radio-button value="Bottled in Sikkim (Collaboration)">Bottled in Sikkim (Collaboration)</mat-radio-button>
-        <!-- Error Display -->
-        @if (companyDetailsForm.controls['brandType'].invalid) {
-          <mat-error>
-            {{ getErrorMessage('brandType') }}
-          </mat-error>
-        }
-      </mat-radio-group>
-
       <!-- Basic Company Info Fields -->
       <div class="form-field-container">
 

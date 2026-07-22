@@ -6,6 +6,7 @@ import { CompanyDetailsComponent } from './steps/company-details/company-details
 import { SelectBrandsComponent } from './steps/select-brands/select-brands.component';
 import { BrandConfirmationComponent } from './steps/brand-confirmation/brand-confirmation.component';
 import { SubmitApplicationComponent } from './steps/submit-application/submit-application.component';
+import { CollabMemberDetailsComponent } from './steps/collab-member-details/collab-member-details.component';
 import { AccountService } from '../../../../../core/services/account.service';
 
 @Component({
@@ -17,7 +18,8 @@ import { AccountService } from '../../../../../core/services/account.service';
     CompanyDetailsComponent,
     SelectBrandsComponent,
     BrandConfirmationComponent,
-    SubmitApplicationComponent
+    SubmitApplicationComponent,
+    CollabMemberDetailsComponent
   ],
   templateUrl: './prepare-application.component.html',
   styleUrl: './prepare-application.component.scss'

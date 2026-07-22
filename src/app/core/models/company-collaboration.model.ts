@@ -54,6 +54,11 @@ export interface CompanyCollaborationBottlerDetails {
   brandOwnerMobile?: string;
   brandOwnerEmail?: string;
   brandOwnerMembers?: CompanyCollaborationMember[];
+  brandType?: string;
+  license?: string;
+  country?: string;
+  state?: string;
+  pinCode?: string | number;
 }
 
 export interface CompanyCollaborationCompanyDetails {

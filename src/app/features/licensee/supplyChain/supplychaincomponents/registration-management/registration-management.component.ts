@@ -107,7 +107,7 @@ export class RegistrationManagementComponent implements OnInit {
   }
 
   isLicenseeUser(): boolean {
-    return this.roleService.isLicenseeRole();
+    return this.roleService.isLicenseeRole() || this.roleService.getCurrentUser()?.roleId === 16;
   }
 
   isAdminUser(): boolean {

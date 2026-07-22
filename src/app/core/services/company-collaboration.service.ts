@@ -95,8 +95,21 @@ export class CompanyCollaborationService {
   private mastersUrl  = `${environment.apiBaseUrl}/masters/company-collaboration`;
 
   private selectedBrands: CompanyCollaborationBrand[] = [];
+  private collabDocs: Partial<Record<string, File>> = {};
 
   constructor(private http: HttpClient) {}
+
+  setCollabDocuments(docs: Partial<Record<string, File>>): void {
+    this.collabDocs = { ...this.collabDocs, ...docs };
+  }
+
+  getCollabDocuments(): Partial<Record<string, File>> {
+    return this.collabDocs;
+  }
+
+  clearCollabDocuments(): void {
+    this.collabDocs = {};
+  }
 
   // ── Application lifecycle ──────────────────────────────────────────────────
 
