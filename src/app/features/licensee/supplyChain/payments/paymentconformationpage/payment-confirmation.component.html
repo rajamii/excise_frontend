@@ -121,29 +121,7 @@
         <div class="wallet-summary-balance">
           <span class="currency">&#8377;</span>{{ securityDepositBalance | number:'1.2-2' }}
         </div>
-        <div class="wallet-summary-meta mb-2">Used for manufacturing license and collaboration security deposit</div>
-
-        <!-- Sub-boxes for Security Deposit Amount Breakdown -->
-        <div class="security-breakdown-container" (click)="$event.stopPropagation()">
-          <div class="security-breakdown-box security-breakdown-box--license text-start">
-            <div class="security-breakdown-box__label">
-              <i class="bi bi-file-earmark-plus security-breakdown-box__icon security-breakdown-box__icon--green"></i>
-              New License Security Amount
-            </div>
-            <div class="security-breakdown-box__amount security-breakdown-box__amount--green">
-              &#8377;{{ getNewLicenseSecurityDepositDisplayAmount() | number:'1.2-2' }}
-            </div>
-          </div>
-          <div class="security-breakdown-box security-breakdown-box--collab text-start" *ngIf="hasAppliedCompanyCollaboration">
-            <div class="security-breakdown-box__label">
-              <i class="bi bi-building security-breakdown-box__icon security-breakdown-box__icon--blue"></i>
-              Company Collaboration Security Amount
-            </div>
-            <div class="security-breakdown-box__amount security-breakdown-box__amount--blue">
-              &#8377;{{ companyCollabSecurityDepositAmount | number:'1.2-2' }}
-            </div>
-          </div>
-        </div>
+        <div class="wallet-summary-meta">Used for manufacturing license security deposit</div>
 
         <div class="wallet-summary-actions">
           <button class="btn btn-primary btn-sm" (click)="addMoney('security_deposit'); $event.stopPropagation()">

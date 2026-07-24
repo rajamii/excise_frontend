@@ -194,10 +194,6 @@
               <span class="fee-label">Company Registration Fee (License Fee Wallet):</span>
               <span class="fee-value">&#8377;25,000.00</span>
             </div>
-            <div class="fee-row">
-              <span class="fee-label">Security Deposit (Security Deposit Wallet):</span>
-              <span class="fee-value">&#8377;{{ feeStructure.securityDeposit | number:'1.2-2' }}</span>
-            </div>
             <div class="fee-row total">
               <span class="fee-label">Total Amount:</span>
               <span class="fee-value">&#8377;{{ getTotalAmount() | number:'1.2-2' }}</span>
@@ -207,7 +203,6 @@
               <div style="font-weight: bold; color: #1C2B78; margin-bottom: 4px;">Wallet Wise Payment Breakout:</div>
               <ul style="margin: 0; padding-left: 20px; line-height: 1.5; color: #333;">
                 <li><strong>License Fee Wallet:</strong> &#8377;50,000.00 (Collaboration Fee: &#8377;25,000.00 + Company Registration Fee: &#8377;25,000.00)</li>
-                <li><strong>Security Deposit Wallet:</strong> &#8377;{{ feeStructure.securityDeposit | number:'1.2-2' }} (Security Deposit)</li>
               </ul>
             </div>
           </div>

@@ -367,12 +367,6 @@ export class CompanyCollaborationService {
     return this.http.post(`${this.baseUrl}/pay-fee/${encodedId}/`, {});
   }
 
-  // Pay collaboration security deposit fee via security_deposit wallet
-  payCollaborationSecurityFee(applicationId: string): Observable<any> {
-    const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.baseUrl}/pay-security-fee/${encodedId}/`, {});
-  }
-
   // ── Selected brands state ──────────────────────────────────────────────────
 
   setSelectedBrands(brands: CompanyCollaborationBrand[]): void { this.selectedBrands = [...brands]; }
