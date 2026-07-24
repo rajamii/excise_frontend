@@ -29,6 +29,8 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
   companyDetails: Partial<CompanyCollaborationCompanyDetails> = {};
   selectedBrands: CompanyCollaborationBrand[] = [];
   feeStructure: CompanyCollaborationFeeStructure | null = null;
+  members: any[] = [];
+  documents: { key: string; name: string; file: File | null }[] = [];
 
   acceptTerms = false;
   isSubmitting = false;
@@ -51,7 +53,8 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
       bottler: sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.bottlerDetails),
       company: sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.companyDetails),
       brands: sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrands),
-      fees: sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.feeStructure)
+      fees: sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.feeStructure),
+      members: sessionStorage.getItem('companyCollabMembersList')
     });
 
     if (currentData !== this.lastDataCheck) {
@@ -68,6 +71,14 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
       COMPANY_COLLAB_STORAGE_KEYS.feeStructure,
       null
     );
+    this.members = this.getStorageData('companyCollabMembersList', []);
+    const docs = this.collaborationService.getCollabDocuments();
+    this.documents = [
+      { key: 'exciseLicense', name: 'Excise License issued by the Excise Authority to company', file: docs['exciseLicense'] || null },
+      { key: 'deedOfPartnership', name: 'Deed of Partnership, if any', file: docs['deedOfPartnership'] || null },
+      { key: 'memorandumOfAssociation', name: 'Memorandum of Association & Article of Association', file: docs['memorandumOfAssociation'] || null },
+      { key: 'undertaking', name: 'Undertaking stating compliance', file: docs['undertaking'] || null }
+    ].filter(d => d.file !== null);
   }
 
   private getStorageData<T>(key: string, fallback: T): T {

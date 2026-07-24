@@ -117,6 +117,42 @@
         </div>
       }
 
+      <!-- Member Details -->
+      @if (members.length > 0) {
+        <div class="info-section">
+          <div class="section-header">
+            <mat-icon>people</mat-icon>
+            <h3>Member Details ({{ members.length }})</h3>
+          </div>
+          <div class="brands-review-container">
+            <table class="brands-review-table mat-elevation-z1">
+              <thead>
+                <tr>
+                  <th class="col-sl">Sl. No</th>
+                  <th>Member Name</th>
+                  <th>Designation</th>
+                  <th>Mobile Number</th>
+                  <th>Email ID</th>
+                  <th>Address</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (member of members; track member.memberName; let i = $index) {
+                  <tr>
+                    <td class="col-sl">{{ i + 1 }}</td>
+                    <td><strong>{{ member.memberName }}</strong></td>
+                    <td>{{ member.memberDesignation }}</td>
+                    <td>{{ member.memberMobileNumber }}</td>
+                    <td>{{ member.memberEmailId || 'N/A' }}</td>
+                    <td>{{ member.memberAddress }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+
       <!-- Step 3 - Selected Brands -->
       @if (selectedBrands.length > 0) {
         <div class="info-section">
@@ -169,6 +205,42 @@
                         title="Remove brand">
                         <mat-icon>delete</mat-icon>
                       </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+
+      <!-- Uploaded Documents -->
+      @if (documents.length > 0) {
+        <div class="info-section">
+          <div class="section-header">
+            <mat-icon>description</mat-icon>
+            <h3>Uploaded Documents</h3>
+          </div>
+          <div class="brands-review-container">
+            <table class="brands-review-table mat-elevation-z1">
+              <thead>
+                <tr>
+                  <th class="col-sl">Sl. No</th>
+                  <th>Document Type</th>
+                  <th>File Name</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (doc of documents; track doc.key; let i = $index) {
+                  <tr>
+                    <td class="col-sl">{{ i + 1 }}</td>
+                    <td>{{ doc.name }}</td>
+                    <td><span class="file-name-text" style="font-family: monospace; color: #1c2b78; font-weight: 500;">{{ doc.file?.name }}</span></td>
+                    <td>
+                      <span class="status-badge" style="background-color: #e8f5e9; color: #2e7d32; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                        Uploaded
+                      </span>
                     </td>
                   </tr>
                 }
