@@ -117,7 +117,6 @@ export class BrandConfirmationComponent implements OnInit, DoCheck {
   getTotalAmount(): number {
     if (!this.feeStructure) return 0;
     return Number(this.feeStructure.collaborationFee || 0)
-         + Number(this.feeStructure.securityDeposit || 0)
          + 25000;
   }
 
