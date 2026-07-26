@@ -91,25 +91,11 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
 
   private loadBottlerOptions(): void {
     this.isLoadingBottlers = true;
-    this.companyRegistrationService.getApplicationsByStatus()
+    this.companyRegistrationService.getApplicationsByStatus({ all_approved: 'true' })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
           const approvedList = response?.approved || [];
-          if (approvedList.length === 0) {
-            Swal.fire({
-              title: 'Access Denied',
-              text: 'You must have an approved company registration application to apply for company collaboration.',
-              icon: 'error',
-              confirmButtonText: 'OK'
-            }).then(() => {
-              this.router.navigate(['/dashboard']);
-            });
-            this.bottlerOptions = [];
-            this.isLoadingBottlers = false;
-            return;
-          }
-
           this.bottlerOptions = approvedList.map((app: any) => ({
             id: String(app.applicationId || app.application_id || app.id || ''),
             code: String(app.applicationId || app.application_id || ''),
