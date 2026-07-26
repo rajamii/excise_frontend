@@ -91,7 +91,7 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
 
   private loadBottlerOptions(): void {
     this.isLoadingBottlers = true;
-    this.companyRegistrationService.getApplicationsByStatus({ all_approved: 'true' })
+    this.companyRegistrationService.getApplicationsByStatus()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
