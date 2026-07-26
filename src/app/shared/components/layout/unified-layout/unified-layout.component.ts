@@ -170,6 +170,14 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
           this.closeSidenav();
         }
       });
+
+    // Listen to badge refresh broadcasts to update pending count badges
+    this.sidebarPendingBadgeService.refreshNeeded$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        console.log('🔄 UNIFIED LAYOUT: Refreshing sidebar badges due to triggerRefresh');
+        this.refreshSidebarBadges(true, 'full');
+      });
   }
 
   ngAfterViewInit() {

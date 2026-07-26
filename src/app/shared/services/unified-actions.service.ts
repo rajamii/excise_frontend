@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
-import { catchError, map, switchMap } from 'rxjs/operators';
+import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { MatDialog } from '@angular/material/dialog';
@@ -14,6 +14,7 @@ import { EnaRequisitionService } from '../../core/services/ena-requisition.servi
 import { SupplyChainService } from '../../features/licensee/supplyChain/services/supplychain.service';
 import { HologramDataService } from '../../features/licensee/supplyChain/services/hologram-data.service';
 import { ApplicationType } from '../constants/application.constants';
+import { SidebarPendingBadgeService } from './sidebar-pending-badge.service';
 
 export interface ActionResult {
   success: boolean;
@@ -37,13 +38,31 @@ export class UnifiedActionsService {
     private dialog: MatDialog,
     private enaRequisitionService: EnaRequisitionService,
     private supplyChainService: SupplyChainService,
-    private hologramService: HologramDataService
+    private hologramService: HologramDataService,
+    private sidebarPendingBadgeService: SidebarPendingBadgeService
   ) { }
 
   /**
    * Execute an action on an item based on item type and action
    */
   executeAction(
+    action: string,
+    item: any,
+    itemType: ApplicationType,
+    context?: string,
+    options?: ActionExecutionOptions
+  ): Observable<ActionResult> {
+    return this.executeActionInternal(action, item, itemType, context, options).pipe(
+      tap((result) => {
+        if (result && result.success !== false) {
+          console.log(`🔄 UNIFIED ACTIONS: Action ${action} executed successfully. Requesting sidebar pending badge refresh.`);
+          this.sidebarPendingBadgeService.triggerRefresh();
+        }
+      })
+    );
+  }
+
+  private executeActionInternal(
     action: string,
     item: any,
     itemType: ApplicationType,

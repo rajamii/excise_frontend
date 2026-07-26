@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, forkJoin, of } from 'rxjs';
+import { Observable, forkJoin, of, Subject } from 'rxjs';
 import { catchError, map, tap, shareReplay } from 'rxjs/operators';
 
 import { EnaRequisitionService } from '../../core/services/ena-requisition.service';
@@ -17,6 +17,15 @@ export class SidebarPendingBadgeService {
   private readonly cacheTtlMs = 60_000;
   private countsCache = new Map<string, { counts: PendingCountsBySection; fetchedAt: number }>();
   private readonly apiBase = `${environment.apiBaseUrl}/transactional`;
+
+  private refreshNeededSource = new Subject<void>();
+  refreshNeeded$ = this.refreshNeededSource.asObservable();
+
+  triggerRefresh(): void {
+    console.log('🔄 BADGE SERVICE: Clearing cache and triggering sidebar refresh');
+    this.countsCache.clear();
+    this.refreshNeededSource.next();
+  }
 
   constructor(
     private http: HttpClient,
