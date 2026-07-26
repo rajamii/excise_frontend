@@ -301,7 +301,16 @@ export class RegistrationManagementComponent implements OnInit {
     if (!applicationId) return;
 
     const encoded = encodeURIComponent(applicationId);
-    this.http.get<any>(`${this.salesmanApiBase}/detail/${encoded}/`).subscribe({
+    let apiBase = this.salesmanApiBase;
+    if (this.currentSection === 'company-registration') {
+      apiBase = this.companyApiBase;
+    } else if (this.currentSection === 'company-collaboration') {
+      apiBase = this.collaborationApiBase;
+    } else if (this.currentSection === 'label-registration') {
+      apiBase = this.labelApiBase;
+    }
+
+    this.http.get<any>(`${apiBase}/detail/${encoded}/`).subscribe({
       next: (res: any) => {
         this.dialog.open(ApplicationMovementComponent, {
           width: '700px',
