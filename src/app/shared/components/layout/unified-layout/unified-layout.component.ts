@@ -1028,7 +1028,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
     // Backward-compatible fallback while older role configs are being updated.
     return (this.currentUser?.permissions || []).includes('licensee.module.view')
-      || this.currentUser?.roleId === 2;
+      || this.currentUser?.roleId === 2
+      || this.currentUser?.roleId === 16;
   }
 
   private loadLicenseeMenuAccess(): void {

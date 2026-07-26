@@ -198,7 +198,7 @@ export class RoleService {
     const checkRoleId = roleId || this.getCurrentUser()?.roleId;
     if (!checkRoleId) return false;
 
-    const licenseeRoles = [2];
+    const licenseeRoles = [2, 16];
     return licenseeRoles.includes(checkRoleId);
   }
 

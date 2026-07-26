@@ -2821,7 +2821,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   isLicenseeUser(): boolean {
-    return this.currentUser?.roleId === 2;
+    return this.currentUser?.roleId === 2 || this.currentUser?.roleId === 16;
   }
 
   isDistributorUser(): boolean {
@@ -3635,7 +3635,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     
     // For licensee roles, count rejected items and payment due
-    if (roleId && [2].includes(roleId)) {
+    if (roleId && [2, 16].includes(roleId)) {
       count += this.dashboardCounts.rejected || 0;
       count += this.dashboardCounts.awaitingPayment || 0;
     }
@@ -4004,7 +4004,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     ];
 
     // Filter activities based on role permissions
-    if (roleId && [2].includes(roleId)) { // Licensee role
+    if (roleId && [2, 16].includes(roleId)) { // Licensee role
       this.recentActivities = this.recentActivities.filter(activity => 
         ['approval', 'rejection', 'payment'].includes(activity.type)
       );
