@@ -1,0 +1,93 @@
+.container-fluid {
+  padding-top: 10px;
+}
+
+mat-card {
+  mat-card-header {
+    padding: 12px;
+    background-color: #1C2B78;
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: 500;
+    justify-content: center;
+  }
+
+  mat-card-content {
+    padding: 15px;
+
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 2px 12px rgba(28, 43, 120, 0.07);
+      overflow: hidden;
+
+      mat-table {
+        min-width: 800px;
+      }
+
+      ::ng-deep {
+        mat-header-row {
+          background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%) !important;
+          min-height: 48px;
+        }
+
+        mat-header-cell {
+          font-size: 0.72rem !important;
+          font-weight: 800 !important;
+          text-transform: uppercase;
+          letter-spacing: 0.07em;
+          color: #e2e8f0 !important;
+          background: transparent !important;
+          border-bottom: 2px solid #334155 !important;
+
+          &::before {
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-right: 7px;
+            background: #34d399;
+            flex-shrink: 0;
+            vertical-align: middle;
+          }
+        }
+
+        mat-row {
+          border-bottom: 1px solid #f1f5f9;
+          transition: background 0.15s ease;
+
+          &:nth-child(even) { background: #f8fafc; }
+          &:hover { background: #eff6ff !important; }
+        }
+
+        mat-cell {
+          color: #334155;
+          font-size: 0.875rem;
+        }
+      }
+    }
+  }
+}
+
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  display: inline-block;
+
+  &.active {
+    background-color: #ecfdf5;
+    color: #10b981;
+  }
+
+  &.inactive {
+    background-color: #fef2f2;
+    color: #ef4444;
+  }
+}

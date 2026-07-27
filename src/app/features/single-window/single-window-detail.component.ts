@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { FormsModule } from '@angular/forms';
 import { environment } from '../../../environments/environment';
 import { MaterialModule } from '../../shared/material.module';
 import { Subject, takeUntil } from 'rxjs';
@@ -10,7 +11,7 @@ import Swal from 'sweetalert2';
 @Component({
   selector: 'app-single-window-detail',
   standalone: true,
-  imports: [CommonModule, MaterialModule],
+  imports: [CommonModule, MaterialModule, FormsModule],
   templateUrl: './single-window-detail.component.html',
   styleUrls: ['./single-window-detail.component.scss']
 })
@@ -31,6 +32,58 @@ export class SingleWindowDetailComponent implements OnInit, OnDestroy {
   selectedWorkflowAppId: string | null = null;
   selectedWorkflowApp: any = null;
   paymentApplications: any[] = [];
+
+  // Payment History search & pagination fields
+  paymentSearchQuery = '';
+  paymentCurrentPage = 1;
+  paymentPageSize = 5;
+
+  getFilteredPayments(): any[] {
+    if (!this.selectedWorkflowApp || !this.selectedWorkflowApp.payments) {
+      return [];
+    }
+    const payments = this.selectedWorkflowApp.payments;
+    if (!this.paymentSearchQuery.trim()) {
+      return payments;
+    }
+    const q = this.paymentSearchQuery.toLowerCase().trim();
+    return payments.filter((p: any) => {
+      const txId = (p.transaction_id || '').toLowerCase();
+      const amt = (p.amount || '').toLowerCase();
+      const date = (p.created_at || '').toLowerCase();
+      const remarks = (p.remarks || '').toLowerCase();
+      const ptype = (p.payment_type || '').toLowerCase();
+      return txId.includes(q) || amt.includes(q) || date.includes(q) || remarks.includes(q) || ptype.includes(q);
+    });
+  }
+
+  getPagedPayments(): any[] {
+    const filtered = this.getFilteredPayments();
+    const totalPages = Math.ceil(filtered.length / this.paymentPageSize);
+    if (this.paymentCurrentPage > totalPages) {
+      this.paymentCurrentPage = Math.max(1, totalPages);
+    }
+    const start = (this.paymentCurrentPage - 1) * this.paymentPageSize;
+    return filtered.slice(start, start + this.paymentPageSize);
+  }
+
+  getTotalPaymentPages(): number {
+    const filtered = this.getFilteredPayments();
+    return Math.ceil(filtered.length / this.paymentPageSize);
+  }
+
+  getPaymentPageNumbers(): number[] {
+    const total = this.getTotalPaymentPages();
+    const pages: number[] = [];
+    for (let i = 1; i <= total; i++) {
+      pages.push(i);
+    }
+    return pages;
+  }
+
+  getMin(a: number, b: number): number {
+    return Math.min(a, b);
+  }
 
   ngOnInit() {
     this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(params => {
@@ -60,6 +113,7 @@ export class SingleWindowDetailComponent implements OnInit, OnDestroy {
     this.selectedWorkflowAppId = null;
     this.selectedWorkflowApp = null;
     this.paymentApplications = [];
+    this.activeTab = 0;
 
     let url = '';
     if (this.type === 'licensee') {
@@ -82,6 +136,8 @@ export class SingleWindowDetailComponent implements OnInit, OnDestroy {
       next: (res) => {
         this.detailData = res;
         this.isLoading = false;
+        this.paymentSearchQuery = '';
+        this.paymentCurrentPage = 1;
 
         // Auto-select the active workflow application
         if (this.type === 'new_license_app') {
@@ -95,13 +151,11 @@ export class SingleWindowDetailComponent implements OnInit, OnDestroy {
             if (renewalMatch) {
               this.selectedWorkflowAppId = renewalMatch.application_id;
               this.selectedWorkflowApp = renewalMatch;
-              this.activeTab = 1; // Auto-switch to Workflow Tracking tab
             } else {
               const sbmMatch = this.detailData.salesman_barman_applications?.find((s: any) => s.application_id === this.targetId);
               if (sbmMatch) {
                 this.selectedWorkflowAppId = sbmMatch.application_id;
                 this.selectedWorkflowApp = sbmMatch;
-                this.activeTab = 1; // Auto-switch to Workflow Tracking tab
               }
             }
           }
@@ -188,6 +242,8 @@ export class SingleWindowDetailComponent implements OnInit, OnDestroy {
   selectWorkflowApp(appId: string, appData: any) {
     this.selectedWorkflowAppId = appId;
     this.selectedWorkflowApp = appData;
+    this.paymentSearchQuery = '';
+    this.paymentCurrentPage = 1;
   }
 
   getWorkflowLicenseId(): string | null {

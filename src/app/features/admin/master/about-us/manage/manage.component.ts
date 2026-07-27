@@ -5,19 +5,21 @@ import Swal from 'sweetalert2';
 import { MaterialModule } from '../../../../../shared/material.module';
 import {
   ExciseSecretary,
-  HeadOfOrganisation
+  HeadOfOrganisation,
+  AboutUs
 } from '../../../../../core/models/about-us.model';
 
 type AboutUsRecord =
   | HeadOfOrganisation
-  | ExciseSecretary;
+  | ExciseSecretary
+  | AboutUs;
 
 interface AboutUsFieldConfig {
   key: string;
   apiKey?: string;
   label: string;
   required?: boolean;
-  type?: 'text' | 'email' | 'file';
+  type?: 'text' | 'email' | 'file' | 'textarea' | 'date';
 }
 
 interface AboutUsCategoryConfig {
@@ -99,6 +101,28 @@ export class ManageComponent implements OnInit {
 
   onCancel(): void {
     this.dialogRef.close();
+  }
+
+  makeBold(key: string): void {
+    const textarea = document.getElementById('textarea-' + key) as HTMLTextAreaElement;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value || '';
+    const selectedText = text.substring(start, end);
+    const replacement = `**${selectedText || 'bold text'}**`;
+
+    // Update the record content
+    const updatedValue = text.substring(0, start) + replacement + text.substring(end);
+    (this.record as any)[key] = updatedValue;
+
+    // Reset cursor position after change
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorPos = start + 2 + (selectedText ? selectedText.length : 9);
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
   }
 
   onFileSelected(event: Event, field: AboutUsFieldConfig): void {
@@ -211,7 +235,14 @@ export class ManageComponent implements OnInit {
       return value;
     }
 
-    return value.trim();
+    const trimmed = value.trim();
+
+    // Return null for empty date fields so backend accepts blank nullable dates
+    if (trimmed === '') {
+      return null;
+    }
+
+    return trimmed;
   }
 
   private readValue(record: any, key: string, apiKey?: string): any {

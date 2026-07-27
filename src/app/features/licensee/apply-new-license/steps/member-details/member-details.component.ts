@@ -143,7 +143,6 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.restoreDocuments();
-    this.autoFillFromProfiles();
   }
 
   ngOnDestroy(): void {
@@ -154,13 +153,19 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
 
   get memberRoleLabel(): string {
     try {
-      const applicantDetailsData = sessionStorage.getItem('applicantDetailsData');
-      if (!applicantDetailsData) {
-        return 'Member';
+      let mode = '';
+      const unitDetailsData = sessionStorage.getItem('unitDetailsData');
+      if (unitDetailsData) {
+        const parsed = JSON.parse(unitDetailsData);
+        mode = String(parsed.mode_of_operation ?? parsed.modeOfOperation ?? '').trim();
       }
-
-      const parsed = JSON.parse(applicantDetailsData);
-      const mode = String(parsed.mode_of_operation ?? parsed.modeOfOperation ?? '').trim();
+      if (!mode) {
+        const applicantDetailsData = sessionStorage.getItem('applicantDetailsData');
+        if (applicantDetailsData) {
+          const parsed = JSON.parse(applicantDetailsData);
+          mode = String(parsed.mode_of_operation ?? parsed.modeOfOperation ?? '').trim();
+        }
+      }
       return mode || 'Member';
     } catch {
       return 'Member';
@@ -391,7 +396,6 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
       this.licenseApplicationService.removeSiteDocument(document.key);
     });
     sessionStorage.removeItem('memberDetailsData');
-    this.autoFillFromProfiles();
   }
 
   goBack(): void {

@@ -1,322 +1,872 @@
-<div class="login-layout">
-  <div class="top-actions">
-    <button type="button" class="back-home-btn" (click)="goToHome()">
-      <mat-icon>arrow_back</mat-icon>
-      Back to Home
-    </button>
-  </div>
+<div class="auth-page">
 
-  <div class="container" [class.right-panel-active]="isRightPanelActive" id="container">
-    <!-- Sign Up Panel -->
-    <div class="form-container sign-up-container">
-      <div class="form-header">
-        <h1>Create Account</h1>
-        <p>Register as a Licensee</p>
+  <!-- ░░ BEER FACTORY PAGE BACKGROUND — behind the card ░░ -->
+  <div class="factory-bg" aria-hidden="true">
+
+    <!-- Sky / atmosphere -->
+    <div class="factory-sky"></div>
+
+    <!-- ── Top Brewery Storage Silos ── -->
+    <div class="top-silos" aria-hidden="true">
+      <div class="silo silo-1">
+        <div class="silo-cap"></div>
+        <div class="silo-body">
+          <div class="silo-gauge"><div class="gauge-needle"></div></div>
+          <div class="silo-glass-tube"><div class="beer-level level-1"></div></div>
+        </div>
+        <div class="silo-label">FERMENTER 01</div>
       </div>
-      <div class="form-content">
-        <form [formGroup]="registrationForm" (ngSubmit)="onRegister()">
+      <div class="silo silo-2">
+        <div class="silo-cap"></div>
+        <div class="silo-body">
+          <div class="silo-glass-tube"><div class="beer-level level-2"></div></div>
+        </div>
+        <div class="silo-label">FERMENTER 02</div>
+      </div>
+      <div class="silo silo-3">
+        <div class="silo-cap"></div>
+        <div class="silo-body">
+          <div class="silo-gauge"><div class="gauge-needle"></div></div>
+          <div class="silo-glass-tube"><div class="beer-level level-3"></div></div>
+        </div>
+        <div class="silo-label">BRIGHT BEER 03</div>
+      </div>
+    </div>
 
-          <!-- STEP 1: Name + Phone Number -->
+    <!-- Chimney smoke stacks -->
+    <div class="chimney ch-1"><div class="smoke s1"></div><div class="smoke s2"></div><div class="smoke s3"></div></div>
+    <div class="chimney ch-2"><div class="smoke s1"></div><div class="smoke s2"></div></div>
+    <div class="chimney ch-3"><div class="smoke s1"></div><div class="smoke s2"></div><div class="smoke s3"></div></div>
+    <div class="chimney ch-4"><div class="smoke s1"></div><div class="smoke s2"></div></div>
+
+    <!-- Factory building silhouette -->
+    <svg class="factory-building" viewBox="0 0 1200 400" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMax slice">
+      <!-- Far background buildings -->
+      <rect x="0"   y="220" width="180" height="180" fill="rgba(203,213,225,0.70)" rx="2"/>
+      <rect x="160" y="180" width="220" height="220" fill="rgba(148,163,184,0.75)" rx="2"/>
+      <rect x="360" y="200" width="160" height="200" fill="rgba(203,213,225,0.72)" rx="2"/>
+      <rect x="500" y="160" width="260" height="240" fill="rgba(226,232,240,0.78)" rx="2"/>
+      <rect x="740" y="190" width="200" height="210" fill="rgba(148,163,184,0.74)" rx="2"/>
+      <rect x="920" y="170" width="280" height="230" fill="rgba(148,163,184,0.76)" rx="2"/>
+      <!-- Roof steps -->
+      <rect x="160" y="165" width="100" height="20" fill="rgba(226,232,240,0.70)" rx="1"/>
+      <rect x="520" y="145" width="140" height="20" fill="rgba(226,232,240,0.70)" rx="1"/>
+      <rect x="940" y="155" width="120" height="18" fill="rgba(226,232,240,0.70)" rx="1"/>
+      <!-- Water towers -->
+      <rect x="700" y="100" width="28" height="70" fill="rgba(148,163,184,0.65)"/>
+      <ellipse cx="714" cy="100" rx="34" ry="16" fill="rgba(203,213,225,0.70)"/>
+      <rect x="1050" y="110" width="24" height="65" fill="rgba(148,163,184,0.65)"/>
+      <ellipse cx="1062" cy="110" rx="30" ry="14" fill="rgba(203,213,225,0.70)"/>
+      <!-- Windows lit amber -->
+      <rect x="30"  y="240" width="35" height="26" rx="3" fill="rgba(251,191,36,0.60)"/>
+      <rect x="90"  y="240" width="35" height="26" rx="3" fill="rgba(251,191,36,0.40)"/>
+      <rect x="185" y="205" width="35" height="26" rx="3" fill="rgba(251,191,36,0.55)"/>
+      <rect x="240" y="205" width="35" height="26" rx="3" fill="rgba(251,191,36,0.35)"/>
+      <rect x="295" y="205" width="35" height="26" rx="3" fill="rgba(251,191,36,0.60)"/>
+      <rect x="385" y="225" width="30" height="22" rx="3" fill="rgba(251,191,36,0.45)"/>
+      <rect x="430" y="225" width="30" height="22" rx="3" fill="rgba(251,191,36,0.55)"/>
+      <rect x="535" y="185" width="35" height="26" rx="3" fill="rgba(251,191,36,0.50)"/>
+      <rect x="590" y="185" width="35" height="26" rx="3" fill="rgba(251,191,36,0.40)"/>
+      <rect x="645" y="185" width="35" height="26" rx="3" fill="rgba(251,191,36,0.60)"/>
+      <rect x="760" y="215" width="32" height="24" rx="3" fill="rgba(251,191,36,0.50)"/>
+      <rect x="810" y="215" width="32" height="24" rx="3" fill="rgba(251,191,36,0.38)"/>
+      <rect x="860" y="215" width="32" height="24" rx="3" fill="rgba(251,191,36,0.55)"/>
+      <rect x="950" y="195" width="34" height="25" rx="3" fill="rgba(251,191,36,0.48)"/>
+      <rect x="1005" y="195" width="34" height="25" rx="3" fill="rgba(251,191,36,0.58)"/>
+      <rect x="1060" y="195" width="34" height="25" rx="3" fill="rgba(251,191,36,0.42)"/>
+      <rect x="1120" y="195" width="34" height="25" rx="3" fill="rgba(251,191,36,0.55)"/>
+      <!-- Chimney bases -->
+      <rect x="60"  y="130" width="20" height="95" fill="rgba(203,213,225,0.80)"/>
+      <rect x="310" y="110" width="20" height="95" fill="rgba(203,213,225,0.80)"/>
+      <rect x="680" y="100" width="20" height="95" fill="rgba(203,213,225,0.80)"/>
+      <rect x="1080" y="108" width="20" height="80" fill="rgba(203,213,225,0.80)"/>
+      <!-- Wall pipes -->
+      <path d="M200 180 L200 280 Q200 295 215 295 L350 295" stroke="rgba(14,165,233,0.40)" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <path d="M600 165 L600 260 Q600 275 585 275 L450 275" stroke="rgba(14,165,233,0.38)" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <path d="M900 180 L900 270 Q900 285 915 285 L1050 285" stroke="rgba(14,165,233,0.35)" stroke-width="6" fill="none" stroke-linecap="round"/>
+    </svg>
+
+    <!-- Beer Storage Tanks -->
+    <div class="tank tank-1"><div class="tank-body"><div class="tank-fill"></div><div class="tank-shine"></div><div class="tank-label">🍺</div></div><div class="tank-base"></div><div class="tank-pipe"></div></div>
+    <div class="tank tank-2"><div class="tank-body"><div class="tank-fill"></div><div class="tank-shine"></div><div class="tank-label">🌾</div></div><div class="tank-base"></div><div class="tank-pipe"></div></div>
+    <div class="tank tank-3"><div class="tank-body"><div class="tank-fill"></div><div class="tank-shine"></div><div class="tank-label">🍻</div></div><div class="tank-base"></div><div class="tank-pipe"></div></div>
+    <div class="tank tank-4"><div class="tank-body"><div class="tank-fill"></div><div class="tank-shine"></div></div><div class="tank-base"></div><div class="tank-pipe"></div></div>
+
+    <!-- Rotating Gears -->
+    <svg class="gear gear-1" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg"><g transform="translate(40,40)"><circle r="22" fill="rgba(14,165,233,0.22)" stroke="rgba(14,165,233,0.50)" stroke-width="3"/><circle r="9" fill="rgba(14,165,233,0.18)" stroke="rgba(14,165,233,0.45)" stroke-width="2"/><rect x="-5" y="-38" width="10" height="14" rx="2" fill="rgba(14,165,233,0.52)"/><rect x="-5" y="-38" width="10" height="14" rx="2" fill="rgba(14,165,233,0.52)" transform="rotate(45)"/><rect x="-5" y="-38" width="10" height="14" rx="2" fill="rgba(14,165,233,0.52)" transform="rotate(90)"/><rect x="-5" y="-38" width="10" height="14" rx="2" fill="rgba(14,165,233,0.52)" transform="rotate(135)"/><rect x="-5" y="-38" width="10" height="14" rx="2" fill="rgba(14,165,233,0.52)" transform="rotate(180)"/><rect x="-5" y="-38" width="10" height="14" rx="2" fill="rgba(14,165,233,0.52)" transform="rotate(225)"/><rect x="-5" y="-38" width="10" height="14" rx="2" fill="rgba(14,165,233,0.52)" transform="rotate(270)"/><rect x="-5" y="-38" width="10" height="14" rx="2" fill="rgba(14,165,233,0.52)" transform="rotate(315)"/></g></svg>
+    <svg class="gear gear-2" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><g transform="translate(30,30)"><circle r="16" fill="rgba(251,191,36,0.18)" stroke="rgba(251,191,36,0.45)" stroke-width="2.5"/><circle r="6" fill="rgba(251,191,36,0.15)" stroke="rgba(251,191,36,0.40)" stroke-width="1.5"/><rect x="-4" y="-28" width="8" height="11" rx="2" fill="rgba(251,191,36,0.45)"/><rect x="-4" y="-28" width="8" height="11" rx="2" fill="rgba(251,191,36,0.45)" transform="rotate(51.4)"/><rect x="-4" y="-28" width="8" height="11" rx="2" fill="rgba(251,191,36,0.45)" transform="rotate(102.8)"/><rect x="-4" y="-28" width="8" height="11" rx="2" fill="rgba(251,191,36,0.45)" transform="rotate(154.2)"/><rect x="-4" y="-28" width="8" height="11" rx="2" fill="rgba(251,191,36,0.45)" transform="rotate(205.6)"/><rect x="-4" y="-28" width="8" height="11" rx="2" fill="rgba(251,191,36,0.45)" transform="rotate(257)"/><rect x="-4" y="-28" width="8" height="11" rx="2" fill="rgba(251,191,36,0.45)" transform="rotate(308.4)"/></g></svg>
+    <svg class="gear gear-3" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg"><g transform="translate(25,25)"><circle r="13" fill="rgba(56,189,248,0.18)" stroke="rgba(56,189,248,0.45)" stroke-width="2"/><circle r="5" fill="rgba(56,189,248,0.15)" stroke="rgba(56,189,248,0.38)" stroke-width="1.5"/><rect x="-3.5" y="-22" width="7" height="9" rx="1.5" fill="rgba(56,189,248,0.45)"/><rect x="-3.5" y="-22" width="7" height="9" rx="1.5" fill="rgba(56,189,248,0.45)" transform="rotate(60)"/><rect x="-3.5" y="-22" width="7" height="9" rx="1.5" fill="rgba(56,189,248,0.45)" transform="rotate(120)"/><rect x="-3.5" y="-22" width="7" height="9" rx="1.5" fill="rgba(56,189,248,0.45)" transform="rotate(180)"/><rect x="-3.5" y="-22" width="7" height="9" rx="1.5" fill="rgba(56,189,248,0.45)" transform="rotate(240)"/><rect x="-3.5" y="-22" width="7" height="9" rx="1.5" fill="rgba(56,189,248,0.45)" transform="rotate(300)"/></g></svg>
+    <svg class="gear gear-4" viewBox="0 0 90 90" xmlns="http://www.w3.org/2000/svg"><g transform="translate(45,45)"><circle r="26" fill="rgba(56,189,248,0.20)" stroke="rgba(14,165,233,0.48)" stroke-width="3.5"/><circle r="11" fill="rgba(56,189,248,0.15)" stroke="rgba(14,165,233,0.40)" stroke-width="2"/><rect x="-6" y="-43" width="12" height="16" rx="2" fill="rgba(14,165,233,0.48)"/><rect x="-6" y="-43" width="12" height="16" rx="2" fill="rgba(14,165,233,0.48)" transform="rotate(45)"/><rect x="-6" y="-43" width="12" height="16" rx="2" fill="rgba(14,165,233,0.48)" transform="rotate(90)"/><rect x="-6" y="-43" width="12" height="16" rx="2" fill="rgba(14,165,233,0.48)" transform="rotate(135)"/><rect x="-6" y="-43" width="12" height="16" rx="2" fill="rgba(14,165,233,0.48)" transform="rotate(180)"/><rect x="-6" y="-43" width="12" height="16" rx="2" fill="rgba(14,165,233,0.48)" transform="rotate(225)"/><rect x="-6" y="-43" width="12" height="16" rx="2" fill="rgba(14,165,233,0.48)" transform="rotate(270)"/><rect x="-6" y="-43" width="12" height="16" rx="2" fill="rgba(14,165,233,0.48)" transform="rotate(315)"/></g></svg>
+
+    <!-- Conveyor Belt (full width) -->
+    <div class="conveyor-wrap">
+      <div class="conveyor-track"><div class="conveyor-belt"></div></div>
+      <div class="conv-bottles">
+        <!-- Set 1 -->
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(245,158,11,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(255,255,255,0.42)" stroke="rgba(203,213,225,0.8)" stroke-width="1"/><path d="M7 32 L7 40 Q7 44 11 44 Q15 44 15 40 L15 32 Z" fill="rgba(251,191,36,0.60)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(148,163,184,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(167,243,208,0.45)" stroke="rgba(52,211,153,0.75)" stroke-width="1"/><path d="M7 28 L7 40 Q7 44 11 44 Q15 44 15 40 L15 28 Z" fill="rgba(251,191,36,0.55)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(245,158,11,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(255,255,255,0.42)" stroke="rgba(203,213,225,0.8)" stroke-width="1"/><rect x="7" y="22" width="8" height="9" rx="1" fill="rgba(255,255,255,0.40)"/><path d="M7 36 L7 40 Q7 44 11 44 Q15 44 15 40 L15 36 Z" fill="rgba(251,191,36,0.65)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(148,163,184,0.8)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(148,163,184,0.40)" stroke="rgba(148,163,184,0.65)" stroke-width="1"/><path d="M7 24 L7 40 Q7 44 11 44 Q15 44 15 40 L15 24 Z" fill="rgba(251,191,36,0.50)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(245,158,11,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(255,255,255,0.42)" stroke="rgba(203,213,225,0.8)" stroke-width="1"/><path d="M7 30 L7 40 Q7 44 11 44 Q15 44 15 40 L15 30 Z" fill="rgba(251,191,36,0.60)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(148,163,184,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(167,243,208,0.45)" stroke="rgba(52,211,153,0.75)" stroke-width="1"/><rect x="7" y="22" width="8" height="9" rx="1" fill="rgba(255,255,255,0.38)"/><path d="M7 34 L7 40 Q7 44 11 44 Q15 44 15 40 L15 34 Z" fill="rgba(251,191,36,0.55)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(245,158,11,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(255,255,255,0.42)" stroke="rgba(203,213,225,0.8)" stroke-width="1"/><path d="M7 20 L7 40 Q7 44 11 44 Q15 44 15 40 L15 20 Z" fill="rgba(251,191,36,0.45)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(148,163,184,0.8)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(148,163,184,0.40)" stroke="rgba(148,163,184,0.65)" stroke-width="1"/><path d="M7 26 L7 40 Q7 44 11 44 Q15 44 15 40 L15 26 Z" fill="rgba(251,191,36,0.52)"/></svg></div>
+
+        <!-- Set 2 -->
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(245,158,11,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(255,255,255,0.42)" stroke="rgba(203,213,225,0.8)" stroke-width="1"/><path d="M7 32 L7 40 Q7 44 11 44 Q15 44 15 40 L15 32 Z" fill="rgba(251,191,36,0.60)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(148,163,184,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(167,243,208,0.45)" stroke="rgba(52,211,153,0.75)" stroke-width="1"/><path d="M7 28 L7 40 Q7 44 11 44 Q15 44 15 40 L15 28 Z" fill="rgba(251,191,36,0.55)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(245,158,11,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(255,255,255,0.42)" stroke="rgba(203,213,225,0.8)" stroke-width="1"/><rect x="7" y="22" width="8" height="9" rx="1" fill="rgba(255,255,255,0.40)"/><path d="M7 36 L7 40 Q7 44 11 44 Q15 44 15 40 L15 36 Z" fill="rgba(251,191,36,0.65)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(148,163,184,0.8)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(148,163,184,0.40)" stroke="rgba(148,163,184,0.65)" stroke-width="1"/><path d="M7 24 L7 40 Q7 44 11 44 Q15 44 15 40 L15 24 Z" fill="rgba(251,191,36,0.50)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(245,158,11,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(255,255,255,0.42)" stroke="rgba(203,213,225,0.8)" stroke-width="1"/><path d="M7 30 L7 40 Q7 44 11 44 Q15 44 15 40 L15 30 Z" fill="rgba(251,191,36,0.60)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(148,163,184,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(167,243,208,0.45)" stroke="rgba(52,211,153,0.75)" stroke-width="1"/><rect x="7" y="22" width="8" height="9" rx="1" fill="rgba(255,255,255,0.38)"/><path d="M7 34 L7 40 Q7 44 11 44 Q15 44 15 40 L15 34 Z" fill="rgba(251,191,36,0.55)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(245,158,11,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(255,255,255,0.42)" stroke="rgba(203,213,225,0.8)" stroke-width="1"/><path d="M7 20 L7 40 Q7 44 11 44 Q15 44 15 40 L15 20 Z" fill="rgba(251,191,36,0.45)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(148,163,184,0.8)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(148,163,184,0.40)" stroke="rgba(148,163,184,0.65)" stroke-width="1"/><path d="M7 26 L7 40 Q7 44 11 44 Q15 44 15 40 L15 26 Z" fill="rgba(251,191,36,0.52)"/></svg></div>
+
+        <!-- Set 3 -->
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(245,158,11,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(255,255,255,0.42)" stroke="rgba(203,213,225,0.8)" stroke-width="1"/><path d="M7 32 L7 40 Q7 44 11 44 Q15 44 15 40 L15 32 Z" fill="rgba(251,191,36,0.60)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(148,163,184,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(167,243,208,0.45)" stroke="rgba(52,211,153,0.75)" stroke-width="1"/><path d="M7 28 L7 40 Q7 44 11 44 Q15 44 15 40 L15 28 Z" fill="rgba(251,191,36,0.55)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(245,158,11,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(255,255,255,0.42)" stroke="rgba(203,213,225,0.8)" stroke-width="1"/><rect x="7" y="22" width="8" height="9" rx="1" fill="rgba(255,255,255,0.40)"/><path d="M7 36 L7 40 Q7 44 11 44 Q15 44 15 40 L15 36 Z" fill="rgba(251,191,36,0.65)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(148,163,184,0.8)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(148,163,184,0.40)" stroke="rgba(148,163,184,0.65)" stroke-width="1"/><path d="M7 24 L7 40 Q7 44 11 44 Q15 44 15 40 L15 24 Z" fill="rgba(251,191,36,0.50)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(245,158,11,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(255,255,255,0.42)" stroke="rgba(203,213,225,0.8)" stroke-width="1"/><path d="M7 30 L7 40 Q7 44 11 44 Q15 44 15 40 L15 30 Z" fill="rgba(251,191,36,0.60)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(148,163,184,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(167,243,208,0.45)" stroke="rgba(52,211,153,0.75)" stroke-width="1"/><rect x="7" y="22" width="8" height="9" rx="1" fill="rgba(255,255,255,0.38)"/><path d="M7 34 L7 40 Q7 44 11 44 Q15 44 15 40 L15 34 Z" fill="rgba(251,191,36,0.55)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(245,158,11,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(255,255,255,0.42)" stroke="rgba(203,213,225,0.8)" stroke-width="1"/><path d="M7 20 L7 40 Q7 44 11 44 Q15 44 15 40 L15 20 Z" fill="rgba(251,191,36,0.45)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(148,163,184,0.8)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(148,163,184,0.40)" stroke="rgba(148,163,184,0.65)" stroke-width="1"/><path d="M7 26 L7 40 Q7 44 11 44 Q15 44 15 40 L15 26 Z" fill="rgba(251,191,36,0.52)"/></svg></div>
+
+        <!-- Set 4 -->
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(245,158,11,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(255,255,255,0.42)" stroke="rgba(203,213,225,0.8)" stroke-width="1"/><path d="M7 32 L7 40 Q7 44 11 44 Q15 44 15 40 L15 32 Z" fill="rgba(251,191,36,0.60)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(148,163,184,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(167,243,208,0.45)" stroke="rgba(52,211,153,0.75)" stroke-width="1"/><path d="M7 28 L7 40 Q7 44 11 44 Q15 44 15 40 L15 28 Z" fill="rgba(251,191,36,0.55)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(245,158,11,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(255,255,255,0.42)" stroke="rgba(203,213,225,0.8)" stroke-width="1"/><rect x="7" y="22" width="8" height="9" rx="1" fill="rgba(255,255,255,0.40)"/><path d="M7 36 L7 40 Q7 44 11 44 Q15 44 15 40 L15 36 Z" fill="rgba(251,191,36,0.65)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(148,163,184,0.8)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(148,163,184,0.40)" stroke="rgba(148,163,184,0.65)" stroke-width="1"/><path d="M7 24 L7 40 Q7 44 11 44 Q15 44 15 40 L15 24 Z" fill="rgba(251,191,36,0.50)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(245,158,11,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(255,255,255,0.42)" stroke="rgba(203,213,225,0.8)" stroke-width="1"/><path d="M7 30 L7 40 Q7 44 11 44 Q15 44 15 40 L15 30 Z" fill="rgba(251,191,36,0.60)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(148,163,184,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(167,243,208,0.45)" stroke="rgba(52,211,153,0.75)" stroke-width="1"/><rect x="7" y="22" width="8" height="9" rx="1" fill="rgba(255,255,255,0.38)"/><path d="M7 34 L7 40 Q7 44 11 44 Q15 44 15 40 L15 34 Z" fill="rgba(251,191,36,0.55)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(245,158,11,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(255,255,255,0.42)" stroke="rgba(203,213,225,0.8)" stroke-width="1"/><path d="M7 20 L7 40 Q7 44 11 44 Q15 44 15 40 L15 20 Z" fill="rgba(251,191,36,0.45)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(148,163,184,0.8)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(148,163,184,0.40)" stroke="rgba(148,163,184,0.65)" stroke-width="1"/><path d="M7 26 L7 40 Q7 44 11 44 Q15 44 15 40 L15 26 Z" fill="rgba(251,191,36,0.52)"/></svg></div>
+
+        <!-- Set 5 -->
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(245,158,11,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(255,255,255,0.42)" stroke="rgba(203,213,225,0.8)" stroke-width="1"/><path d="M7 32 L7 40 Q7 44 11 44 Q15 44 15 40 L15 32 Z" fill="rgba(251,191,36,0.60)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(148,163,184,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(167,243,208,0.45)" stroke="rgba(52,211,153,0.75)" stroke-width="1"/><path d="M7 28 L7 40 Q7 44 11 44 Q15 44 15 40 L15 28 Z" fill="rgba(251,191,36,0.55)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(245,158,11,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(255,255,255,0.42)" stroke="rgba(203,213,225,0.8)" stroke-width="1"/><rect x="7" y="22" width="8" height="9" rx="1" fill="rgba(255,255,255,0.40)"/><path d="M7 36 L7 40 Q7 44 11 44 Q15 44 15 40 L15 36 Z" fill="rgba(251,191,36,0.65)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(148,163,184,0.8)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(148,163,184,0.40)" stroke="rgba(148,163,184,0.65)" stroke-width="1"/><path d="M7 24 L7 40 Q7 44 11 44 Q15 44 15 40 L15 24 Z" fill="rgba(251,191,36,0.50)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(245,158,11,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(255,255,255,0.42)" stroke="rgba(203,213,225,0.8)" stroke-width="1"/><path d="M7 30 L7 40 Q7 44 11 44 Q15 44 15 40 L15 30 Z" fill="rgba(251,191,36,0.60)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(148,163,184,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(167,243,208,0.45)" stroke="rgba(52,211,153,0.75)" stroke-width="1"/><rect x="7" y="22" width="8" height="9" rx="1" fill="rgba(255,255,255,0.38)"/><path d="M7 34 L7 40 Q7 44 11 44 Q15 44 15 40 L15 34 Z" fill="rgba(251,191,36,0.55)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(245,158,11,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(255,255,255,0.42)" stroke="rgba(203,213,225,0.8)" stroke-width="1"/><path d="M7 20 L7 40 Q7 44 11 44 Q15 44 15 40 L15 20 Z" fill="rgba(251,191,36,0.45)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(148,163,184,0.8)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(148,163,184,0.40)" stroke="rgba(148,163,184,0.65)" stroke-width="1"/><path d="M7 26 L7 40 Q7 44 11 44 Q15 44 15 40 L15 26 Z" fill="rgba(251,191,36,0.52)"/></svg></div>
+
+        <!-- Set 6 -->
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(245,158,11,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(255,255,255,0.42)" stroke="rgba(203,213,225,0.8)" stroke-width="1"/><path d="M7 32 L7 40 Q7 44 11 44 Q15 44 15 40 L15 32 Z" fill="rgba(251,191,36,0.60)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(148,163,184,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(167,243,208,0.45)" stroke="rgba(52,211,153,0.75)" stroke-width="1"/><path d="M7 28 L7 40 Q7 44 11 44 Q15 44 15 40 L15 28 Z" fill="rgba(251,191,36,0.55)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(245,158,11,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(255,255,255,0.42)" stroke="rgba(203,213,225,0.8)" stroke-width="1"/><rect x="7" y="22" width="8" height="9" rx="1" fill="rgba(255,255,255,0.40)"/><path d="M7 36 L7 40 Q7 44 11 44 Q15 44 15 40 L15 36 Z" fill="rgba(251,191,36,0.65)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(148,163,184,0.8)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(148,163,184,0.40)" stroke="rgba(148,163,184,0.65)" stroke-width="1"/><path d="M7 24 L7 40 Q7 44 11 44 Q15 44 15 40 L15 24 Z" fill="rgba(251,191,36,0.50)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(245,158,11,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(255,255,255,0.42)" stroke="rgba(203,213,225,0.8)" stroke-width="1"/><path d="M7 30 L7 40 Q7 44 11 44 Q15 44 15 40 L15 30 Z" fill="rgba(251,191,36,0.60)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(148,163,184,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(167,243,208,0.45)" stroke="rgba(52,211,153,0.75)" stroke-width="1"/><rect x="7" y="22" width="8" height="9" rx="1" fill="rgba(255,255,255,0.38)"/><path d="M7 34 L7 40 Q7 44 11 44 Q15 44 15 40 L15 34 Z" fill="rgba(251,191,36,0.55)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(245,158,11,0.85)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(255,255,255,0.42)" stroke="rgba(203,213,225,0.8)" stroke-width="1"/><path d="M7 20 L7 40 Q7 44 11 44 Q15 44 15 40 L15 20 Z" fill="rgba(251,191,36,0.45)"/></svg></div>
+        <div class="conv-bottle"><svg viewBox="0 0 22 48" fill="none"><rect x="8" y="4" width="6" height="3" rx="1" fill="rgba(148,163,184,0.8)"/><path d="M9 7 Q7 11 7 16 L7 40 Q7 44 11 44 Q15 44 15 40 L15 16 Q15 11 13 7 Z" fill="rgba(148,163,184,0.40)" stroke="rgba(148,163,184,0.65)" stroke-width="1"/><path d="M7 26 L7 40 Q7 44 11 44 Q15 44 15 40 L15 26 Z" fill="rgba(251,191,36,0.52)"/></svg></div>
+      </div><div class="roller r-left"></div>
+      <div class="roller r-right"></div>
+    </div>
+
+    <!-- Rising bubbles -->
+    <div class="bubbles-wrap">
+      <div class="bubble bbl-1"></div><div class="bubble bbl-2"></div>
+      <div class="bubble bbl-3"></div><div class="bubble bbl-4"></div>
+      <div class="bubble bbl-5"></div><div class="bubble bbl-6"></div>
+      <div class="bubble bbl-7"></div><div class="bubble bbl-8"></div>
+      <div class="bubble bbl-9"></div><div class="bubble bbl-10"></div>
+    </div>
+
+    <!-- Ground -->
+    <div class="factory-ground"></div>
+
+  </div><!-- /factory-bg -->
+
+  <div class="auth-container">
+    <div class="auth-card" [class.flipped]="isRightPanelActive">
+
+      <!-- ════════════════ SIGN IN FACE (FRONT) ════════════════ -->
+      <div class="card-face card-front auth-panel signin-panel">
+      <!-- ░░ 3-D animated layer inside the Sign In box ░░ -->
+      <div class="signin-scene" aria-hidden="true">
+        <div class="s-orb s-orb-1"></div>
+        <div class="s-orb s-orb-2"></div>
+        <div class="s-orb s-orb-3"></div>
+        <div class="s-beam"></div>
+        <div class="s-grid"></div>
+        <div class="s-particles">
+          <span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <div class="s-ring s-ring-1"></div>
+        <div class="s-ring s-ring-2"></div>
+
+        <!-- ── Floating Bottles ── -->
+
+        <!-- Bottle 1: large, top-left -->
+        <div class="float-icon fi-bottle fi-1">
+          <svg viewBox="0 0 44 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="17" y="8" width="10" height="4" rx="2" fill="rgba(14,165,233,0.55)"/>
+            <rect x="16" y="12" width="12" height="4" rx="2" fill="rgba(14,165,233,0.45)"/>
+            <path d="M18 16 Q14 22 13 30 L13 72 Q13 78 22 78 Q31 78 31 72 L31 30 Q30 22 26 16 Z"
+              fill="rgba(14,165,233,0.18)" stroke="rgba(14,165,233,0.50)" stroke-width="1.6" stroke-linejoin="round"/>
+            <rect x="14" y="44" width="16" height="14" rx="2"
+              fill="rgba(255,255,255,0.28)" stroke="rgba(14,165,233,0.30)" stroke-width="1"/>
+            <path d="M13 58 Q13 78 22 78 Q31 78 31 58 Z" fill="rgba(14,165,233,0.12)"/>
+            <line x1="16" y1="47" x2="28" y2="47" stroke="rgba(14,165,233,0.35)" stroke-width="0.8"/>
+            <line x1="16" y1="50" x2="28" y2="50" stroke="rgba(14,165,233,0.35)" stroke-width="0.8"/>
+          </svg>
+        </div>
+
+        <!-- Bottle 2: small, bottom-right (far depth) -->
+        <div class="float-icon fi-bottle fi-2">
+          <svg viewBox="0 0 44 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="17" y="8" width="10" height="4" rx="2" fill="rgba(251,191,36,0.45)"/>
+            <rect x="16" y="12" width="12" height="4" rx="2" fill="rgba(251,191,36,0.38)"/>
+            <path d="M18 16 Q14 22 13 30 L13 72 Q13 78 22 78 Q31 78 31 72 L31 30 Q30 22 26 16 Z"
+              fill="rgba(251,191,36,0.14)" stroke="rgba(251,191,36,0.42)" stroke-width="1.6" stroke-linejoin="round"/>
+            <rect x="14" y="44" width="16" height="14" rx="2"
+              fill="rgba(255,255,255,0.22)" stroke="rgba(251,191,36,0.28)" stroke-width="1"/>
+            <path d="M13 62 Q13 78 22 78 Q31 78 31 62 Z" fill="rgba(251,191,36,0.10)"/>
+          </svg>
+        </div>
+
+        <!-- Bottle 3: medium, middle-right -->
+        <div class="float-icon fi-bottle fi-3">
+          <svg viewBox="0 0 44 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="17" y="8" width="10" height="4" rx="2" fill="rgba(56,189,248,0.50)"/>
+            <rect x="16" y="12" width="12" height="4" rx="2" fill="rgba(56,189,248,0.40)"/>
+            <path d="M18 16 Q14 22 13 30 L13 72 Q13 78 22 78 Q31 78 31 72 L31 30 Q30 22 26 16 Z"
+              fill="rgba(56,189,248,0.15)" stroke="rgba(56,189,248,0.45)" stroke-width="1.6" stroke-linejoin="round"/>
+            <rect x="14" y="44" width="16" height="14" rx="2"
+              fill="rgba(255,255,255,0.25)" stroke="rgba(56,189,248,0.28)" stroke-width="1"/>
+            <path d="M13 58 Q13 78 22 78 Q31 78 31 58 Z" fill="rgba(56,189,248,0.10)"/>
+          </svg>
+        </div>
+
+        <!-- Bottle 4: tiny, top-right (far) -->
+        <div class="float-icon fi-bottle fi-4">
+          <svg viewBox="0 0 44 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="17" y="8" width="10" height="4" rx="2" fill="rgba(14,165,233,0.35)"/>
+            <rect x="16" y="12" width="12" height="4" rx="2" fill="rgba(14,165,233,0.28)"/>
+            <path d="M18 16 Q14 22 13 30 L13 72 Q13 78 22 78 Q31 78 31 72 L31 30 Q30 22 26 16 Z"
+              fill="rgba(14,165,233,0.10)" stroke="rgba(14,165,233,0.32)" stroke-width="1.6" stroke-linejoin="round"/>
+          </svg>
+        </div>
+
+        <!-- ── Floating Beer Glasses ── -->
+
+        <!-- Beer Glass 1: large, bottom-left -->
+        <div class="float-icon fi-glass fi-5">
+          <svg viewBox="0 0 56 68" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Glass body -->
+            <path d="M8 8 L12 62 L44 62 L48 8 Z"
+              fill="rgba(251,191,36,0.14)" stroke="rgba(251,191,36,0.45)" stroke-width="1.8" stroke-linejoin="round"/>
+            <!-- Handle -->
+            <path d="M48 18 Q60 18 60 34 Q60 50 48 50"
+              fill="none" stroke="rgba(251,191,36,0.45)" stroke-width="2.2" stroke-linecap="round"/>
+            <!-- Beer liquid amber -->
+            <path d="M10 26 L13 62 L43 62 L46 26 Z" fill="rgba(251,191,36,0.22)"/>
+            <!-- Foam head -->
+            <ellipse cx="28" cy="24" rx="18" ry="7" fill="rgba(255,255,255,0.45)"/>
+            <ellipse cx="20" cy="22" rx="5" ry="4" fill="rgba(255,255,255,0.35)"/>
+            <ellipse cx="36" cy="22" rx="4" ry="3.5" fill="rgba(255,255,255,0.35)"/>
+            <!-- Bubbles -->
+            <circle cx="22" cy="42" r="2" fill="rgba(255,255,255,0.30)"/>
+            <circle cx="30" cy="36" r="1.5" fill="rgba(255,255,255,0.28)"/>
+            <circle cx="26" cy="50" r="1.2" fill="rgba(255,255,255,0.25)"/>
+            <circle cx="36" cy="45" r="1.8" fill="rgba(255,255,255,0.28)"/>
+            <!-- Glass shine -->
+            <path d="M12 14 L13 40" stroke="rgba(255,255,255,0.35)" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+
+        <!-- Beer Glass 2: medium, top-right -->
+        <div class="float-icon fi-glass fi-6">
+          <svg viewBox="0 0 56 68" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 8 L12 62 L44 62 L48 8 Z"
+              fill="rgba(14,165,233,0.13)" stroke="rgba(14,165,233,0.40)" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M48 18 Q60 18 60 34 Q60 50 48 50"
+              fill="none" stroke="rgba(14,165,233,0.40)" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M10 26 L13 62 L43 62 L46 26 Z" fill="rgba(251,191,36,0.18)"/>
+            <ellipse cx="28" cy="24" rx="18" ry="7" fill="rgba(255,255,255,0.42)"/>
+            <ellipse cx="20" cy="22" rx="5" ry="4" fill="rgba(255,255,255,0.30)"/>
+            <circle cx="24" cy="44" r="1.8" fill="rgba(255,255,255,0.28)"/>
+            <circle cx="33" cy="38" r="1.2" fill="rgba(255,255,255,0.25)"/>
+            <path d="M12 14 L13 36" stroke="rgba(255,255,255,0.30)" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+
+        <!-- Beer Glass 3: small, mid-left (far) -->
+        <div class="float-icon fi-glass fi-7">
+          <svg viewBox="0 0 56 68" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 8 L12 62 L44 62 L48 8 Z"
+              fill="rgba(56,189,248,0.12)" stroke="rgba(56,189,248,0.35)" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M48 18 Q60 18 60 34 Q60 50 48 50"
+              fill="none" stroke="rgba(56,189,248,0.35)" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M10 26 L13 62 L43 62 L46 26 Z" fill="rgba(251,191,36,0.16)"/>
+            <ellipse cx="28" cy="24" rx="18" ry="7" fill="rgba(255,255,255,0.38)"/>
+            <circle cx="28" cy="44" r="1.5" fill="rgba(255,255,255,0.25)"/>
+          </svg>
+        </div>
+
+        <!-- Beer Glass 4: tiny, bottom-center (far depth) -->
+        <div class="float-icon fi-glass fi-8">
+          <svg viewBox="0 0 56 68" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 8 L12 62 L44 62 L48 8 Z"
+              fill="rgba(251,191,36,0.10)" stroke="rgba(251,191,36,0.30)" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M48 18 Q60 18 60 34 Q60 50 48 50"
+              fill="none" stroke="rgba(251,191,36,0.30)" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M10 28 L13 62 L43 62 L46 28 Z" fill="rgba(251,191,36,0.14)"/>
+            <ellipse cx="28" cy="26" rx="18" ry="7" fill="rgba(255,255,255,0.32)"/>
+          </svg>
+        </div>
+
+      </div>
+
+      <div class="panel-inner">
+        <button type="button" class="back-home-btn" (click)="goToHome()" aria-label="Back to Home">
+          <mat-icon>arrow_back</mat-icon>
+        </button>
+
+        <div class="panel-logo-greeting">
+          <img src="assets/icons/fav-icon-black.png" alt="Sikkim Excise" class="panel-logo-img" />
+          <h2 class="greeting-text">Hello!</h2>
+        </div>
+        <h2 class="panel-title">Sign In</h2>
+        <p class="panel-sub">Sikkim State Excise Department</p>
+
+        <!-- Mode toggle -->
+        <div class="mode-toggle">
+          <button [class.active]="isPasswordMode"  (click)="toggleMode(true)">Password</button>
+          <button [class.active]="!isPasswordMode" (click)="toggleMode(false)">OTP</button>
+          <div class="mode-indicator" [class.right]="!isPasswordMode"></div>
+        </div>
+
+        <form [formGroup]="loginForm" (ngSubmit)="onLogin()" autocomplete="off">
+
+          <!-- ── PASSWORD FLOW ── -->
+          @if (isPasswordMode) {
+
+            <!-- Step 1: Username -->
+            @if (!usernameChecked) {
+              <div class="field-group">
+                <label>User ID</label>
+                <div class="input-box">
+                  <mat-icon class="input-icon">person</mat-icon>
+                  <input formControlName="username" placeholder="Enter your User ID" autocomplete="username" />
+                </div>
+              </div>
+
+              @if (usernameNotFound) {
+                <div class="alert-box alert-warn">
+                  <mat-icon>info</mat-icon>
+                  <div>
+                    <strong>User ID not found.</strong>
+                    <span>Please <a (click)="switchToSignUp()">Sign Up</a> first to create an account.</span>
+                  </div>
+                </div>
+              }
+
+              <button type="button" class="btn-primary" (click)="checkUsername()" [disabled]="isCheckingUsername || !loginForm.value.username">
+                @if (isCheckingUsername) {
+                  <mat-spinner diameter="18"></mat-spinner> Checking...
+                } @else {
+                  Continue <mat-icon>arrow_forward</mat-icon>
+                }
+              </button>
+            }
+
+            <!-- Step 2: Password + Captcha -->
+            @if (usernameChecked) {
+              <div class="user-chip">
+                <mat-icon>account_circle</mat-icon>
+                <span>{{ loginForm.value.username }}</span>
+                <button type="button" class="chip-change" (click)="resetUsername()">Change</button>
+              </div>
+
+              <div class="field-group">
+                <label>Password</label>
+                <div class="input-box">
+                  <mat-icon class="input-icon">lock</mat-icon>
+                  <input [type]="hidePassword ? 'password' : 'text'" formControlName="password"
+                    placeholder="Enter your password" autocomplete="current-password" />
+                  <button type="button" class="eye-btn" (click)="togglePasswordVisibility()">
+                    <mat-icon>{{ hidePassword ? 'visibility' : 'visibility_off' }}</mat-icon>
+                  </button>
+                </div>
+              </div>
+
+              <app-captcha [formGroup]="loginForm"></app-captcha>
+
+              @if (loginError) {
+                <div class="alert-box alert-error">
+                  <mat-icon>error_outline</mat-icon>
+                  <div>
+                    @for (msg of loginErrorMessages; track msg) {
+                      <div>{{ msg }}</div>
+                    }
+                  </div>
+                </div>
+              }
+
+              <button type="submit" class="btn-primary" [disabled]="loginForm.invalid">
+                Sign In <mat-icon>login</mat-icon>
+              </button>
+
+              <a routerLink="/forgot-password" class="forgot-link">Forgot your password?</a>
+            }
+          }
+
+          <!-- ── OTP FLOW ── -->
+          @if (!isPasswordMode) {
+
+            @if (!otpSent) {
+              <div class="field-group">
+                <label>Mobile Number</label>
+                <div class="input-box">
+                  <mat-icon class="input-icon">phone_android</mat-icon>
+                  <input formControlName="phoneNumber" placeholder="10-digit mobile number"
+                    maxlength="10" inputmode="numeric" autocomplete="tel"
+                    (input)="sanitizePhoneNumberInput('login', $event)"
+                    (keydown.enter)="onOtpPhoneEnter($event)" />
+                </div>
+              </div>
+
+              @if (loginError) {
+                <ng-container *ngIf="loginErrorMessages[0] as firstMsg">
+                  <div class="alert-box"
+                    [class.alert-warn]="firstMsg.includes('not registered') || firstMsg.includes('sign up') || firstMsg.includes('does not exist')"
+                    [class.alert-error]="!(firstMsg.includes('not registered') || firstMsg.includes('sign up') || firstMsg.includes('does not exist'))">
+                    <mat-icon>{{ (firstMsg.includes('not registered') || firstMsg.includes('sign up') || firstMsg.includes('does not exist')) ? 'info' : 'error_outline' }}</mat-icon>
+                    <div>
+                      @for (msg of loginErrorMessages; track msg) {
+                        <div>{{ msg }}</div>
+                      }
+                      @if (firstMsg.includes('not registered') || firstMsg.includes('sign up') || firstMsg.includes('does not exist')) {
+                        <a (click)="switchToSignUp()" style="cursor:pointer;font-weight:700;text-decoration:underline;margin-top:4px;display:inline-block;">
+                          Sign Up now →
+                        </a>
+                      }
+                    </div>
+                  </div>
+                </ng-container>
+              }
+
+              <button type="button" class="btn-primary" (click)="sendOtp()"
+                [disabled]="isSendingOtp || (loginForm.controls['phoneNumber'].value?.length !== 10)">
+                @if (isSendingOtp) {
+                  <mat-spinner diameter="18"></mat-spinner> Sending OTP...
+                } @else {
+                  Send OTP <mat-icon>send</mat-icon>
+                }
+              </button>
+            }
+
+            @if (otpSent) {
+              <div class="otp-sent-info">
+                <mat-icon>check_circle</mat-icon>
+                <span>OTP sent to <strong>+91 {{ loginForm.controls['phoneNumber'].value }}</strong></span>
+                <button type="button" class="chip-change" (click)="resetPhoneNumber()">Change</button>
+              </div>
+
+              <div class="otp-input-wrap" [class.otp-shake]="otpShakeActive">
+                <label>Enter 4-digit OTP</label>
+                <ng-otp-input [formControl]="otpControl"
+                  [config]="{ length: 4, allowNumbersOnly: true, inputStyles: { width: '56px', height: '56px', fontSize: '22px', fontWeight: '700', borderRadius: '10px', border: '2px solid #d1d5db' } }"
+                  (onInputChange)="onOtpChange($event)">
+                </ng-otp-input>
+              </div>
+
+              @if (loginOtpPreview) {
+                <div class="otp-preview">
+                  <span class="otp-preview-label">Your OTP:</span>
+                  <span class="otp-preview-value">{{ loginOtpPreview }}</span>
+                </div>
+              }
+
+              @if (loginError) {
+                <div class="alert-box alert-error">
+                  <mat-icon>error_outline</mat-icon>
+                  <div>
+                    @for (msg of loginErrorMessages; track msg) {
+                      <div>{{ msg }}</div>
+                    }
+                  </div>
+                </div>
+              }
+
+              @if (!otpAutoSubmitted) {
+                <button type="submit" class="btn-primary" [disabled]="loginForm.controls['otp'].invalid">
+                  Verify OTP <mat-icon>verified</mat-icon>
+                </button>
+              }
+            }
+          }
+
+        </form>
+
+        <div class="panel-footer">
+          Don't have an account?
+          <button type="button" class="link-btn" (click)="switchToSignUp()">Sign Up</button>
+        </div>
+
+        <!-- Helpdesk info compact -->
+        <div class="panel-footer-help">
+          <span><mat-icon>call</mat-icon> 03592-203963</span>
+          <span><mat-icon>email</mat-icon> helpdesk-excise&#64;sikkim.gov.in</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════ SIGN UP FACE (BACK) ════════════════ -->
+    <div class="card-face card-back auth-panel signup-panel">
+      <!-- ░░ 3-D animated layer inside the Sign Up box ░░ -->
+      <div class="signup-scene" aria-hidden="true">
+        <div class="s-orb s-orb-1"></div>
+        <div class="s-orb s-orb-2"></div>
+        <div class="s-orb s-orb-3"></div>
+        <div class="s-beam"></div>
+        <div class="s-grid"></div>
+        <div class="s-particles">
+          <span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <div class="s-ring s-ring-1"></div>
+        <div class="s-ring s-ring-2"></div>
+
+        <!-- ── Floating Bottles ── -->
+
+        <!-- Bottle 1: large, top-left -->
+        <div class="float-icon fi-bottle fi-1">
+          <svg viewBox="0 0 44 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="17" y="8" width="10" height="4" rx="2" fill="rgba(14,165,233,0.55)"/>
+            <rect x="16" y="12" width="12" height="4" rx="2" fill="rgba(14,165,233,0.45)"/>
+            <path d="M18 16 Q14 22 13 30 L13 72 Q13 78 22 78 Q31 78 31 72 L31 30 Q30 22 26 16 Z"
+              fill="rgba(14,165,233,0.18)" stroke="rgba(14,165,233,0.50)" stroke-width="1.6" stroke-linejoin="round"/>
+            <rect x="14" y="44" width="16" height="14" rx="2"
+              fill="rgba(255,255,255,0.28)" stroke="rgba(14,165,233,0.30)" stroke-width="1"/>
+            <path d="M13 58 Q13 78 22 78 Q31 78 31 58 Z" fill="rgba(14,165,233,0.12)"/>
+            <line x1="16" y1="47" x2="28" y2="47" stroke="rgba(14,165,233,0.35)" stroke-width="0.8"/>
+            <line x1="16" y1="50" x2="28" y2="50" stroke="rgba(14,165,233,0.35)" stroke-width="0.8"/>
+          </svg>
+        </div>
+
+        <!-- Bottle 2: small, bottom-right (far depth) -->
+        <div class="float-icon fi-bottle fi-2">
+          <svg viewBox="0 0 44 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="17" y="8" width="10" height="4" rx="2" fill="rgba(56,189,248,0.45)"/>
+            <rect x="16" y="12" width="12" height="4" rx="2" fill="rgba(56,189,248,0.38)"/>
+            <path d="M18 16 Q14 22 13 30 L13 72 Q13 78 22 78 Q31 78 31 72 L31 30 Q30 22 26 16 Z"
+              fill="rgba(56,189,248,0.14)" stroke="rgba(56,189,248,0.42)" stroke-width="1.6" stroke-linejoin="round"/>
+            <rect x="14" y="44" width="16" height="14" rx="2"
+              fill="rgba(255,255,255,0.22)" stroke="rgba(56,189,248,0.28)" stroke-width="1"/>
+            <path d="M13 62 Q13 78 22 78 Q31 78 31 62 Z" fill="rgba(56,189,248,0.10)"/>
+          </svg>
+        </div>
+
+        <!-- Bottle 3: medium, middle-right -->
+        <div class="float-icon fi-bottle fi-3">
+          <svg viewBox="0 0 44 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="17" y="8" width="10" height="4" rx="2" fill="rgba(148,163,184,0.50)"/>
+            <rect x="16" y="12" width="12" height="4" rx="2" fill="rgba(148,163,184,0.40)"/>
+            <path d="M18 16 Q14 22 13 30 L13 72 Q13 78 22 78 Q31 78 31 72 L31 30 Q30 22 26 16 Z"
+              fill="rgba(148,163,184,0.15)" stroke="rgba(148,163,184,0.45)" stroke-width="1.6" stroke-linejoin="round"/>
+            <rect x="14" y="44" width="16" height="14" rx="2"
+              fill="rgba(255,255,255,0.25)" stroke="rgba(148,163,184,0.28)" stroke-width="1"/>
+            <path d="M13 58 Q13 78 22 78 Q31 78 31 58 Z" fill="rgba(148,163,184,0.10)"/>
+          </svg>
+        </div>
+
+        <!-- Bottle 4: tiny, top-right (far) -->
+        <div class="float-icon fi-bottle fi-4">
+          <svg viewBox="0 0 44 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="17" y="8" width="10" height="4" rx="2" fill="rgba(14,165,233,0.35)"/>
+            <rect x="16" y="12" width="12" height="4" rx="2" fill="rgba(14,165,233,0.28)"/>
+            <path d="M18 16 Q14 22 13 30 L13 72 Q13 78 22 78 Q31 78 31 72 L31 30 Q30 22 26 16 Z"
+              fill="rgba(14,165,233,0.10)" stroke="rgba(14,165,233,0.32)" stroke-width="1.6" stroke-linejoin="round"/>
+          </svg>
+        </div>
+
+        <!-- ── Floating Beer Glasses ── -->
+
+        <!-- Beer Glass 1: large, bottom-left -->
+        <div class="float-icon fi-glass fi-5">
+          <svg viewBox="0 0 56 68" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Glass body -->
+            <path d="M8 8 L12 62 L44 62 L48 8 Z"
+              fill="rgba(56,189,248,0.14)" stroke="rgba(56,189,248,0.45)" stroke-width="1.8" stroke-linejoin="round"/>
+            <!-- Handle -->
+            <path d="M48 18 Q60 18 60 34 Q60 50 48 50"
+              fill="none" stroke="rgba(56,189,248,0.45)" stroke-width="2.2" stroke-linecap="round"/>
+            <!-- Beer liquid amber -->
+            <path d="M10 26 L13 62 L43 62 L46 26 Z" fill="rgba(251,191,36,0.22)"/>
+            <!-- Foam head -->
+            <ellipse cx="28" cy="24" rx="18" ry="7" fill="rgba(255,255,255,0.45)"/>
+            <ellipse cx="20" cy="22" rx="5" ry="4" fill="rgba(255,255,255,0.35)"/>
+            <ellipse cx="36" cy="22" rx="4" ry="3.5" fill="rgba(255,255,255,0.35)"/>
+            <!-- Bubbles -->
+            <circle cx="22" cy="42" r="2" fill="rgba(255,255,255,0.30)"/>
+            <circle cx="30" cy="36" r="1.5" fill="rgba(255,255,255,0.28)"/>
+            <circle cx="26" cy="50" r="1.2" fill="rgba(255,255,255,0.25)"/>
+            <circle cx="36" cy="45" r="1.8" fill="rgba(255,255,255,0.28)"/>
+            <!-- Glass shine -->
+            <path d="M12 14 L13 40" stroke="rgba(255,255,255,0.35)" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+
+        <!-- Beer Glass 2: medium, top-right -->
+        <div class="float-icon fi-glass fi-6">
+          <svg viewBox="0 0 56 68" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 8 L12 62 L44 62 L48 8 Z"
+              fill="rgba(14,165,233,0.13)" stroke="rgba(14,165,233,0.40)" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M48 18 Q60 18 60 34 Q60 50 48 50"
+              fill="none" stroke="rgba(14,165,233,0.40)" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M10 26 L13 62 L43 62 L46 26 Z" fill="rgba(251,191,36,0.18)"/>
+            <ellipse cx="28" cy="24" rx="18" ry="7" fill="rgba(255,255,255,0.42)"/>
+            <ellipse cx="20" cy="22" rx="5" ry="4" fill="rgba(255,255,255,0.30)"/>
+            <circle cx="24" cy="44" r="1.8" fill="rgba(255,255,255,0.28)"/>
+            <circle cx="33" cy="38" r="1.2" fill="rgba(255,255,255,0.25)"/>
+            <path d="M12 14 L13 36" stroke="rgba(255,255,255,0.30)" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+
+        <!-- Beer Glass 3: small, mid-left (far) -->
+        <div class="float-icon fi-glass fi-7">
+          <svg viewBox="0 0 56 68" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 8 L12 62 L44 62 L48 8 Z"
+              fill="rgba(148,163,184,0.12)" stroke="rgba(148,163,184,0.35)" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M48 18 Q60 18 60 34 Q60 50 48 50"
+              fill="none" stroke="rgba(148,163,184,0.35)" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M10 26 L13 62 L43 62 L46 26 Z" fill="rgba(251,191,36,0.16)"/>
+            <ellipse cx="28" cy="24" rx="18" ry="7" fill="rgba(255,255,255,0.38)"/>
+            <circle cx="28" cy="44" r="1.5" fill="rgba(255,255,255,0.25)"/>
+          </svg>
+        </div>
+
+        <!-- Beer Glass 4: tiny, bottom-center (far depth) -->
+        <div class="float-icon fi-glass fi-8">
+          <svg viewBox="0 0 56 68" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 8 L12 62 L44 62 L48 8 Z"
+              fill="rgba(6,182,212,0.10)" stroke="rgba(6,182,212,0.30)" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M48 18 Q60 18 60 34 Q60 50 48 50"
+              fill="none" stroke="rgba(6,182,212,0.30)" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M10 28 L13 62 L43 62 L46 28 Z" fill="rgba(251,191,36,0.14)"/>
+            <ellipse cx="28" cy="26" rx="18" ry="7" fill="rgba(255,255,255,0.32)"/>
+          </svg>
+        </div>
+
+      </div>
+
+      <div class="panel-inner">
+        <button type="button" class="back-home-btn" (click)="goToHome()" aria-label="Back to Home">
+          <mat-icon>arrow_back</mat-icon>
+        </button>
+
+        <div class="panel-logo-greeting">
+          <img src="assets/icons/fav-icon-black.png" alt="Sikkim Excise" class="panel-logo-img" />
+          <h2 class="greeting-text">Hello!</h2>
+        </div>
+        <h2 class="panel-title">Create Account</h2>
+        <p class="panel-sub">Register as a Licensee</p>
+
+        <form [formGroup]="registrationForm" (ngSubmit)="onRegister()" autocomplete="off">
+
+          <!-- STEP 1: Name + Phone -->
           @if (!registrationOtpSent && !registrationComplete) {
-          <input formControlName="firstName" placeholder="First Name" required />
-          <input formControlName="middleName" placeholder="Middle Name" />
-          <input formControlName="lastName" placeholder="Last Name" required />
+            <div class="name-row">
+              <div class="field-group">
+                <label>First Name <span class="req">*</span></label>
+                <div class="input-box">
+                  <input formControlName="firstName" placeholder="First name" />
+                </div>
+              </div>
+              <div class="field-group">
+                <label>Last Name <span class="req">*</span></label>
+                <div class="input-box">
+                  <input formControlName="lastName" placeholder="Last name" />
+                </div>
+              </div>
+            </div>
 
-          <input formControlName="phoneNumber" placeholder="Phone Number" type="text" maxlength="10" required
-            inputmode="numeric" (keypress)="allowOnlyDigits($event)"
-            (input)="sanitizePhoneInput($event, 'registration')" (keydown.enter)="onRegistrationPhoneEnter($event)" />
+            <div class="field-group">
+              <label>Middle Name</label>
+              <div class="input-box">
+                <input formControlName="middleName" placeholder="Middle name (optional)" />
+              </div>
+            </div>
 
-          <button mat-raised-button color="primary" class="filled-button" type="button" (click)="sendRegistrationOtp()"
-            [disabled]="isSendingOtp || 
-                    registrationForm.get('firstName')?.invalid || 
-                    registrationForm.get('lastName')?.invalid || 
-                    registrationForm.get('phoneNumber')?.invalid">
-            <span *ngIf="!isSendingOtp">Send OTP</span>
-            <span *ngIf="isSendingOtp">
-              Sending OTP...
-              <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
-            </span>
-          </button>
+            <div class="field-group">
+              <label>Mobile Number <span class="req">*</span></label>
+              <div class="input-box">
+                <mat-icon class="input-icon">phone_android</mat-icon>
+                <input formControlName="phoneNumber" placeholder="10-digit mobile number"
+                  type="text" maxlength="10" inputmode="numeric"
+                  (input)="sanitizePhoneNumberInput('registration', $event)" />
+              </div>
+            </div>
 
-          @if (registrationError) {
-          <div class="error-box">
-            <mat-card class="error-card">
-              <mat-card-content>
-                <ul>
+            @if (registrationError) {
+              <div class="alert-box alert-error">
+                <mat-icon>error_outline</mat-icon>
+                <div>
                   @for (msg of registrationErrorMessages; track msg) {
-                  <li>{{ msg }}</li>
+                    <div>{{ msg }}</div>
                   }
-                </ul>
-              </mat-card-content>
-            </mat-card>
-          </div>
-          }
+                </div>
+              </div>
+            }
+
+            <button type="button" class="btn-primary" (click)="sendRegistrationOtp()"
+              [disabled]="isSendingOtp || registrationForm.get('firstName')?.invalid || registrationForm.get('lastName')?.invalid || registrationForm.get('phoneNumber')?.invalid">
+              @if (isSendingOtp) {
+                <mat-spinner diameter="18"></mat-spinner> Sending OTP...
+              } @else {
+                Send OTP <mat-icon>send</mat-icon>
+              }
+            </button>
           }
 
-          <!-- STEP 2: OTP Verification -->
+          <!-- STEP 2: OTP -->
           @if (registrationOtpSent && !otpVerified && !registrationComplete) {
-          <p class="otp-info">
-            OTP sent to +91 {{ registrationForm.controls['phoneNumber'].value }}.<br>
-            Not correct? <a (click)="resetRegistration()">Change Number</a>
-          </p>
+            <div class="otp-sent-info">
+              <mat-icon>check_circle</mat-icon>
+              <span>OTP sent to <strong>+91 {{ registrationForm.controls['phoneNumber'].value }}</strong></span>
+              <button type="button" class="chip-change" (click)="resetRegistration()">Change</button>
+            </div>
 
-          <ng-otp-input (onInputChange)="onRegistrationOtpChange($event)"
-            [config]="{ length: 4, inputStyles: { width: '54.4px', height: '50px' } }">
-          </ng-otp-input>
+            <div class="otp-input-wrap" [class.otp-shake]="regOtpShakeActive">
+              <label>Enter 4-digit OTP</label>
+              <ng-otp-input [formControl]="registrationOtpControl" (onInputChange)="onRegistrationOtpChange($event)"
+                [config]="{ length: 4, allowNumbersOnly: true, inputStyles: { width: '56px', height: '56px', fontSize: '22px', fontWeight: '700', borderRadius: '10px', border: '2px solid #d1d5db' } }">
+              </ng-otp-input>
+            </div>
 
-          <button mat-raised-button color="primary" class="filled-button" (click)="verifyRegistrationOtp()"
-            [disabled]="registrationOtpControl.value?.length !== 4 || !registrationOtpId || registrationOtpControl.invalid">
-            Verify OTP
-          </button>
-
-          @if (registrationError) {
-          <div class="error-box">
-            <mat-card class="error-card">
-              <mat-card-content>
-                <ul>
+            @if (registrationError) {
+              <div class="alert-box alert-error">
+                <mat-icon>error_outline</mat-icon>
+                <div>
                   @for (msg of registrationErrorMessages; track msg) {
-                  <li>{{ msg }}</li>
+                    <div>{{ msg }}</div>
                   }
-                </ul>
-              </mat-card-content>
-            </mat-card>
-          </div>
-          }
+                </div>
+              </div>
+            }
+
+            <button type="button" class="btn-primary" (click)="verifyRegistrationOtp()"
+              [disabled]="registrationOtpControl.value?.length !== 4 || !registrationOtpId">
+              Verify OTP <mat-icon>verified</mat-icon>
+            </button>
           }
 
-          <!-- STEP 3: Remaining Details (after OTP verified) -->
+          <!-- STEP 3: Full Details -->
           @if (otpVerified && !registrationComplete) {
-          <input formControlName="email" type="email" placeholder="Email Address" required />
-          <input formControlName="panNumber" placeholder="PAN Number (e.g. ABCDE1234F)" required />
-          <input formControlName="address" placeholder="Full Address" required />
+            <div class="step-badge"><mat-icon>check_circle</mat-icon> Identity verified</div>
 
-          <!-- District Select -->
-          <mat-form-field appearance="fill">
-            <mat-label>District</mat-label>
-            <mat-select formControlName="district" (selectionChange)="onDistrictChange($event.value)" required>
-              <mat-option>-- Select District --</mat-option>
-              <mat-option *ngFor="let district of districts" [value]="district.districtCode">
-                {{ district.district }}
-              </mat-option>
-            </mat-select>
-            <mat-spinner *ngIf="loadingDistricts" diameter="20"></mat-spinner>
-          </mat-form-field>
+            <div class="field-group">
+              <label>Email <span class="req">*</span></label>
+              <div class="input-box">
+                <mat-icon class="input-icon">email</mat-icon>
+                <input formControlName="email" type="email" placeholder="Email address" />
+              </div>
+            </div>
 
-          <!-- Subdivision Select -->
-          <mat-form-field appearance="fill">
-            <mat-label>Subdivision</mat-label>
-            <mat-select formControlName="subdivision" required
-              [disabled]="!registrationForm.get('district')?.value || loadingSubdivisions">
-              <mat-option>-- Select Subdivision --</mat-option>
-              <mat-option *ngFor="let sub of subdivisions" [value]="sub.subdivisionCode">
-                {{ sub.subdivision }}
-              </mat-option>
-            </mat-select>
-            <mat-spinner *ngIf="loadingSubdivisions" diameter="20"></mat-spinner>
-          </mat-form-field>
+            <div class="field-group">
+              <label>PAN Number <span class="req">*</span></label>
+              <div class="input-box">
+                <input formControlName="panNumber" placeholder="e.g. ABCDE1234F" />
+              </div>
+            </div>
 
-          <!-- Password Field -->
-          <div class="input-wrapper">
-            <input [type]="hideRegPassword ? 'password' : 'text'" formControlName="password"
-              placeholder="Password (min 8 characters)" required class="password-input" />
-            <mat-icon class="toggle-icon" (click)="hideRegPassword = !hideRegPassword">
-              {{ hideRegPassword ? 'visibility' : 'visibility_off' }}
-            </mat-icon>
-          </div>
+            <div class="field-group">
+              <label>Address <span class="req">*</span></label>
+              <div class="input-box">
+                <input formControlName="address" placeholder="Full address" />
+              </div>
+            </div>
 
-          <!-- Confirm Password Field -->
-          <div class="input-wrapper">
-            <input [type]="hideConfirmPassword ? 'password' : 'text'" formControlName="confirmPassword"
-              placeholder="Confirm Password" required class="password-input" />
-            <mat-icon class="toggle-icon" (click)="hideConfirmPassword = !hideConfirmPassword">
-              {{ hideConfirmPassword ? 'visibility' : 'visibility_off' }}
-            </mat-icon>
-          </div>
+            <mat-form-field appearance="outline" class="full-select">
+              <mat-label>District</mat-label>
+              <mat-select formControlName="district" (selectionChange)="onDistrictChange($event.value)">
+                <mat-option *ngFor="let d of districts" [value]="d.districtCode">{{ d.district }}</mat-option>
+              </mat-select>
+            </mat-form-field>
 
-          <!-- <app-captcha [formGroup]="registrationForm"></app-captcha> -->
+            <mat-form-field appearance="outline" class="full-select">
+              <mat-label>Subdivision</mat-label>
+              <mat-select formControlName="subdivision" [disabled]="!registrationForm.get('district')?.value">
+                <mat-option *ngFor="let s of subdivisions" [value]="s.subdivisionCode">{{ s.subdivision }}</mat-option>
+              </mat-select>
+            </mat-form-field>
 
-          <!-- Final Register Button -->
-          <button mat-raised-button color="primary" class="filled-button" (click)="onRegister()"
-            [disabled]="!otpVerified || registrationForm.invalid || isRegistering">
-            <span *ngIf="!isRegistering">Register</span>
-            <span *ngIf="isRegistering">
-              Registering... <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
-            </span>
-          </button>
+            <div class="field-group">
+              <label>Password <span class="req">*</span></label>
+              <div class="input-box">
+                <mat-icon class="input-icon">lock</mat-icon>
+                <input [type]="hideRegPassword ? 'password' : 'text'" formControlName="password"
+                  placeholder="Min 8 characters" />
+                <button type="button" class="eye-btn" (click)="hideRegPassword = !hideRegPassword">
+                  <mat-icon>{{ hideRegPassword ? 'visibility' : 'visibility_off' }}</mat-icon>
+                </button>
+              </div>
+            </div>
 
-          @if (registrationError) {
-          <div class="error-box">
-            <mat-card class="error-card">
-              <mat-card-content>
-                <ul>
+            <div class="field-group">
+              <label>Confirm Password <span class="req">*</span></label>
+              <div class="input-box">
+                <mat-icon class="input-icon">lock_reset</mat-icon>
+                <input [type]="hideConfirmPassword ? 'password' : 'text'" formControlName="confirmPassword"
+                  placeholder="Re-enter password" />
+                <button type="button" class="eye-btn" (click)="hideConfirmPassword = !hideConfirmPassword">
+                  <mat-icon>{{ hideConfirmPassword ? 'visibility' : 'visibility_off' }}</mat-icon>
+                </button>
+              </div>
+            </div>
+
+            <app-captcha [formGroup]="registrationForm"></app-captcha>
+
+            @if (registrationError) {
+              <div class="alert-box alert-error">
+                <mat-icon>error_outline</mat-icon>
+                <div>
                   @for (msg of registrationErrorMessages; track msg) {
-                  <li>{{ msg }}</li>
+                    <div>{{ msg }}</div>
                   }
-                </ul>
-              </mat-card-content>
-            </mat-card>
-          </div>
-          }
+                </div>
+              </div>
+            }
+
+            <button type="button" class="btn-primary" (click)="onRegister()"
+              [disabled]="!otpVerified || registrationForm.invalid || isRegistering">
+              @if (isRegistering) {
+                <mat-spinner diameter="18"></mat-spinner> Registering...
+              } @else {
+                Complete Registration <mat-icon>how_to_reg</mat-icon>
+              }
+            </button>
           }
 
           <!-- STEP 4: Success -->
           @if (registrationComplete) {
-          <div class="success-message">
-            <mat-icon>check_circle</mat-icon>
-            <h3>Registration Successful!</h3>
-            <p>Welcome! You're being redirected to your dashboard...</p>
-          </div>
+            <div class="success-state">
+              <div class="success-icon"><mat-icon>check_circle</mat-icon></div>
+              <h3>Registration Successful!</h3>
+              <p>Welcome! Redirecting to your dashboard...</p>
+            </div>
           }
+
         </form>
-      </div>
-    </div>
 
-    <!-- Sign In Panel -->
-    <div class="form-container sign-in-container">
-      <div class="form-header">
-        <h1>Sign In</h1>
-        <!-- Mode toggle: password / OTP -->
-        <div class="switch-toggle">
-          <div class="switch-indicator" [class.right]="!isPasswordMode"></div>
-          <button (click)="toggleMode(true)" [class.active]="isPasswordMode">Password</button>
-          <button (click)="toggleMode(false)" [class.active]="!isPasswordMode">OTP</button>
-        </div>
-      </div>
-
-      <form [formGroup]="loginForm" (ngSubmit)="onLogin()">
-        <!-- Password login -->
-        @if (isPasswordMode) {
-        <input formControlName="username" placeholder="Username" required />
-        <div class="password-wrapper">
-          <input [type]="hidePassword ? 'password' : 'text'" formControlName="password" placeholder="Password"
-            required />
-          <mat-icon class="toggle-password-icon" (click)="togglePasswordVisibility()">
-            {{ hidePassword ? 'visibility' : 'visibility_off' }}
-          </mat-icon>
+        <div class="panel-footer">
+          Already have an account?
+          <button type="button" class="link-btn" (click)="switchToSignIn()">Sign In</button>
         </div>
 
-        <!-- <app-captcha [formGroup]="loginForm"></app-captcha> -->
-
-        @if (loginError) {
-        <div class="error-box">
-          <mat-card class="error-card">
-            <mat-card-content>
-              <ul>
-                @for (msg of loginErrorMessages; track msg) {
-                <li>{{ msg }}</li>
-                }
-              </ul>
-            </mat-card-content>
-          </mat-card>
-        </div>
-        }
-
-        <button matButton="filled" class="filled-button" type="submit" [disabled]="loginForm.get('username')?.invalid || loginForm.get('password')?.invalid">Sign In</button>
-
-        <div class="forgot-password-container">
-          <a routerLink="/forgot-password" class="forgot-link" tabindex="0">
-            Forgot your password?
-          </a>
-        </div>
-        }
-
-        <!-- OTP login -->
-        @if (!isPasswordMode) {
-        @if (!otpSent) {
-        <input formControlName="phoneNumber" placeholder="Phone Number" maxlength="10" inputmode="numeric"
-          autocomplete="tel" required (input)="sanitizePhoneInput($event, 'login')"
-          (keydown.enter)="onOtpPhoneEnter($event)" />
-        <button matButton="filled" class="filled-button" type="button" (click)="sendOtp()"
-          [disabled]="isSendingOtp">Send OTP</button>
-        }
-
-        @if (otpSent) {
-        <p class="otp-info">
-          OTP sent to +91 {{ loginForm.controls['phoneNumber'].value }}.<br>
-          Not your number? <a (click)="resetPhoneNumber()">Go Back</a>
-        </p>
-
-        <ng-otp-input [formControl]="otpControl"
-          [config]="{ length: 4, inputStyles: { width: '54.4px', height: '50px' } }"
-          (onInputChange)="onOtpChange($event)">
-        </ng-otp-input>
-
-        @if (!otpAutoSubmitted) {
-        <button matButton="filled" class="filled-button" type="submit"
-          [disabled]="loginForm.controls['otp'].invalid">Verify</button>
-        }
-        }
-
-        @if (loginError) {
-        <div class="error-box">
-          <mat-card class="error-card">
-            <mat-card-content>
-              <ul>
-                @for (msg of loginErrorMessages; track msg) {
-                <li>{{ msg }}</li>
-                }
-              </ul>
-            </mat-card-content>
-          </mat-card>
-        </div>
-        }
-        }
-      </form>
-    </div>
-
-    <!-- Overlay Panel -->
-    <div class="overlay-container">
-      <div class="overlay">
-        <div class="overlay-panel overlay-left">
-          <header>
-            <img src="assets/icons/fav-icon.png">
-          </header>
-          <content>
-            <h1>Welcome Back!</h1>
-            <p>Login, if you already have an account</p>
-            <button matButton="filled" (click)="switchToSignIn()">Sign In</button>
-          </content>
-          <footer>
-            <h6>HELP DESK</h6>
-            <div class="footer-contact">
-              <mat-icon>call</mat-icon>
-              <span>03592-203963</span>
-            </div>
-            <div class="footer-contact">
-              <mat-icon>email</mat-icon>
-              <span>helpdesk-excise&#64;sikkim.gov.in</span>
-            </div>
-          </footer>
-        </div>
-        <div class="overlay-panel overlay-right">
-          <header>
-            <img src="assets/icons/fav-icon.png">
-          </header>
-          <content>
-            <h1 class="pt-4">Hello!</h1>
-            <p>Register now and apply for licenses</p>
-            <button matButton="filled" (click)="switchToSignUp()">Sign Up</button>
-          </content>
-          <footer>
-            <h6>HELP DESK</h6>
-            <div class="footer-contact">
-              <mat-icon>call</mat-icon>
-              <span>03592-203963</span>
-            </div>
-            <div class="footer-contact">
-              <mat-icon>email</mat-icon>
-              <span>helpdesk-excise&#64;sikkim.gov.in</span>
-            </div>
-          </footer>
+        <!-- Helpdesk info compact -->
+        <div class="panel-footer-help">
+          <span><mat-icon>call</mat-icon> 03592-203963</span>
+          <span><mat-icon>email</mat-icon> helpdesk-excise&#64;sikkim.gov.in</span>
         </div>
       </div>
     </div>
+
   </div>
-
-@if (!isPasswordMode && otpSent && loginOtpPreview) {
-<aside class="otp-preview-box" aria-live="polite">
-  <span class="otp-preview-label">Login OTP</span>
-  <span class="otp-preview-value">{{ loginOtpPreview }}</span>
-  <span class="otp-preview-note">Use this OTP to complete sign in.</span>
-</aside>
-}
+</div>
+</div>

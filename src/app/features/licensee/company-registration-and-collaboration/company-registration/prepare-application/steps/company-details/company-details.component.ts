@@ -10,6 +10,8 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../../../../../environments/environment';
 import { AccountService } from '../../../../../../../core/services/account.service';
 import { MasterService } from '../../../../../../../core/services/master.service';
+import { LicenseMeService } from '../../../../../../../core/services/license-me.service';
+import { RoleService } from '../../../../../../../core/services/role.service';
 
 interface LicenseType {
   id: number;
@@ -35,6 +37,7 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
   companyDetailsForm: FormGroup;
 
   licenses: LicenseType[] = [];
+  myActiveLicenses: any[] = [];
   isLoadingLicenses: boolean = true;
   applicationYears: string[] = ['2025-2026'];
   countries: string[] = ['India', 'Nepal', 'Bhutan', 'China'];
@@ -50,8 +53,6 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
     license:             signal(''),
     applicationYear:     signal(''),
     companyName:         signal(''),
-    pan:                 signal(''),
-    officeAddress:       signal(''),
     country:             signal(''),
     state:               signal(''),
     factoryAddress:      signal(''),
@@ -65,17 +66,24 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
     private http:           HttpClient,
     private accountService: AccountService,
     private masterService:  MasterService,       // ✅ NEW: for licensee profile
+    private licenseMeService: LicenseMeService,   // ✅ NEW: for user active licenses
+    private roleService:    RoleService,
     private cdr:            ChangeDetectorRef
   ) {
     const storedValues = this.getFromSessionStorage();
+    const currentFinYear = this.getCurrentFinancialYear();
+    if (!this.applicationYears.includes(currentFinYear)) {
+      this.applicationYears.push(currentFinYear);
+    }
+
+    const isDistributor = this.roleService.getCurrentUser()?.roleId === 16;
+    const defaultBrandType = isDistributor ? 'Imported from other States/Country' : 'Manufactured in Sikkim';
 
     this.companyDetailsForm = this.fb.group({
-      brandType:           new FormControl(storedValues.brandType,           [Validators.required]),
+      brandType:           new FormControl(storedValues.brandType || defaultBrandType, [Validators.required]),
       license:             new FormControl(storedValues.license,             Validators.required),
-      applicationYear:     new FormControl(storedValues.applicationYear,     Validators.required),
+      applicationYear:     new FormControl(storedValues.applicationYear || currentFinYear,     Validators.required),
       companyName:         new FormControl(storedValues.companyName,         [Validators.required, Validators.pattern(PatternConstants.NAME)]),
-      pan:                 new FormControl(storedValues.pan,                 [Validators.required, Validators.pattern(PatternConstants.PAN)]),
-      officeAddress:       new FormControl(storedValues.officeAddress,       [Validators.required, Validators.maxLength(1000)]),
       country:             new FormControl(storedValues.country,             [Validators.required, Validators.pattern(PatternConstants.NAME)]),
       state:               new FormControl(storedValues.state,               [Validators.required]),
       factoryAddress:      new FormControl(storedValues.factoryAddress,      [Validators.required, Validators.maxLength(500)]),
@@ -83,6 +91,23 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
       companyMobileNumber: new FormControl(storedValues.companyMobileNumber, [Validators.required, Validators.pattern(PatternConstants.MOBILE)]),
       companyEmailId:      new FormControl(storedValues.companyEmailId,      [Validators.pattern(PatternConstants.EMAIL)])
     });
+
+    this.companyDetailsForm.get('license')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(val => {
+        if (val) {
+          const matched = this.myActiveLicenses.find(l => {
+            const id = l.licenseId || l.license_id;
+            return id === val;
+          });
+          if (matched) {
+            const estName = matched.establishmentName || matched.establishment_name;
+            if (estName) {
+              this.companyDetailsForm.patchValue({ companyName: estName });
+            }
+          }
+        }
+      });
 
     this.companyDetailsForm.valueChanges
       .pipe(takeUntil(this.destroy$))
@@ -92,8 +117,14 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
       });
   }
 
+  getCurrentFinancialYear(): string {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth() + 1;
+    return month >= 4 ? `${year}-${(year + 1) % 100}` : `${year - 1}-${year % 100}`;
+  }
+
   ngOnInit() {
-    FormUtils.capitalize(this.companyDetailsForm.get('pan')!, this.destroy$);
     this.loadLicenseTypes();
 
     // ✅ Auto-fill after short delay to ensure form is ready
@@ -158,19 +189,10 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
       if (!this.companyDetailsForm.get('companyEmailId')?.value && user.email) {
         fillData.companyEmailId = user.email;
       }
-      if (!this.companyDetailsForm.get('officeAddress')?.value && user.address) {
-        fillData.officeAddress = user.address;
-      }
     }
 
     // ── From licensee profile ──────────────────────────────────────
     if (licensee) {
-      // ✅ Auto-fill PAN from licensee profile
-      if (!this.companyDetailsForm.get('pan')?.value && licensee.panNumber) {
-        fillData.pan = licensee.panNumber;
-        console.log(`✅ Auto-filled PAN: ${licensee.panNumber}`);
-      }
-
       const nationality: string = (licensee.nationality || '').trim().toLowerCase();
 
       // Map nationality → country dropdown
@@ -238,12 +260,34 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
 
   private loadLicenseTypes() {
     this.isLoadingLicenses = true;
-    const apiUrl = `${environment.apiBaseUrl}/masters/core/license-types/`;
-    this.http.get<LicenseType[]>(apiUrl)
+    this.licenseMeService.getMyLicenses()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next:  (data)  => { this.licenses = data; this.isLoadingLicenses = false; },
-        error: (error) => { console.error('❌ Error fetching license types:', error); this.isLoadingLicenses = false; }
+        next: (data) => {
+          // Only show NA/ (new license application) licenses — exclude everything else
+          this.myActiveLicenses = (data || []).filter(l => {
+            const approved = l.isApproved !== undefined ? l.isApproved : (l.is_approved !== undefined ? l.is_approved : false);
+            const expired = l.isExpired !== undefined ? l.isExpired : l.is_expired;
+            const id = l.licenseId || l.license_id || '';
+            return approved && !expired && id.startsWith('NA/');
+          });
+          console.log('✅ Loaded my active licenses:', this.myActiveLicenses);
+          this.isLoadingLicenses = false;
+
+          // Auto-catch if exactly 1 active license exists
+          if (this.myActiveLicenses.length === 1) {
+            const singleLicense = this.myActiveLicenses[0].licenseId || this.myActiveLicenses[0].license_id;
+            this.companyDetailsForm.patchValue({ license: singleLicense });
+            console.log('✅ Auto-caught single license:', singleLicense);
+          }
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('❌ Error fetching active licenses:', error);
+          this.myActiveLicenses = [];
+          this.isLoadingLicenses = false;
+          this.cdr.detectChanges();
+        }
       });
   }
 
@@ -283,6 +327,11 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
     this.companyDetailsForm.reset();
     sessionStorage.removeItem('companyDetails');
     sessionStorage.removeItem('licenseeProfile');
+    const isDistributor = this.roleService.getCurrentUser()?.roleId === 16;
+    const defaultBrandType = isDistributor ? 'Imported from other States/Country' : 'Manufactured in Sikkim';
+    this.companyDetailsForm.patchValue({
+      brandType: defaultBrandType
+    });
   }
 
   goBack() { this.back.emit(); }

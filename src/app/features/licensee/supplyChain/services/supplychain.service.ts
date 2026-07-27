@@ -1,4 +1,4 @@
-import { catchError, map, Observable, of, throwError } from "rxjs";
+import { catchError, finalize, map, Observable, of, shareReplay, tap, throwError } from "rxjs";
 import { environment } from "../../../../../environments/environment";
 import { HttpClient, HttpParams } from "@angular/common/http";
 import { Injectable } from "@angular/core";
@@ -9,7 +9,57 @@ import { BulkSpiritType, Checkpost, Distillery, DistRow, LiquorRates, Purpose } 
   providedIn: 'root',
 })
 export class SupplyChainService {
+  private readonly cacheTtlMs = 60_000;
+  private readonly responseCache = new Map<string, { value: unknown; fetchedAt: number }>();
+  private readonly inflightRequests = new Map<string, Observable<unknown>>();
+
   constructor(private http: HttpClient) { }
+
+  private getCachedOrFetch<T>(key: string, requestFactory: () => Observable<T>): Observable<T> {
+    const cachedEntry = this.responseCache.get(key);
+    const now = Date.now();
+    if (cachedEntry && now - cachedEntry.fetchedAt < this.cacheTtlMs) {
+      return of(cachedEntry.value as T);
+    }
+
+    const inflightRequest = this.inflightRequests.get(key);
+    if (inflightRequest) {
+      return inflightRequest as Observable<T>;
+    }
+
+    const request$ = requestFactory().pipe(
+      tap((value) => {
+        this.responseCache.set(key, { value, fetchedAt: Date.now() });
+      }),
+      finalize(() => {
+        this.inflightRequests.delete(key);
+      }),
+      shareReplay(1)
+    );
+
+    this.inflightRequests.set(key, request$ as Observable<unknown>);
+    return request$;
+  }
+
+  private invalidateCache(...keys: string[]): void {
+    for (const key of keys) {
+      this.responseCache.delete(key);
+      this.inflightRequests.delete(key);
+    }
+  }
+
+  private invalidateCacheByPrefix(prefix: string): void {
+    for (const key of [...this.responseCache.keys()]) {
+      if (key.startsWith(prefix)) {
+        this.responseCache.delete(key);
+      }
+    }
+    for (const key of [...this.inflightRequests.keys()]) {
+      if (key.startsWith(prefix)) {
+        this.inflightRequests.delete(key);
+      }
+    }
+  }
 
   getBulkSpiritTypes(licenseSubCategoryId?: number): Observable<BulkSpiritType[]> {
     let params = new HttpParams();
@@ -189,19 +239,21 @@ export class SupplyChainService {
   }
 
   getRevalidationData(): Observable<any[]> {
-    return this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/`).pipe(
-      map((response: any) => {
-        if (Array.isArray(response)) {
-          return response;
-        } else if (response?.results && Array.isArray(response.results)) {
-          return response.results;
-        }
-        return [];
-      }),
-      catchError((error) => {
-        console.error('getRevalidationData error', error);
-        return of([]);
-      })
+    return this.getCachedOrFetch('revalidations:list', () =>
+      this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/`).pipe(
+        map((response: any) => {
+          if (Array.isArray(response)) {
+            return response;
+          } else if (response?.results && Array.isArray(response.results)) {
+            return response.results;
+          }
+          return [];
+        }),
+        catchError((error) => {
+          console.error('getRevalidationData error', error);
+          return of([]);
+        })
+      )
     );
   }
 
@@ -223,6 +275,7 @@ export class SupplyChainService {
       `${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/from-requisition/`,
       payload
     ).pipe(
+      tap(() => this.invalidateCache('revalidations:list')),
       catchError((error) => {
         console.error('createRevalidationFromRequisition error', error);
         throw error;
@@ -235,6 +288,7 @@ export class SupplyChainService {
       `${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/${id}/submit_revalidation/`,
       {}
     ).pipe(
+      tap(() => this.invalidateCache('revalidations:list')),
       catchError((error) => {
         console.error('submitRevalidation error', error);
         throw error;
@@ -247,6 +301,7 @@ export class SupplyChainService {
       `${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/${id}/perform_action/`,
       { action, role }
     ).pipe(
+      tap(() => this.invalidateCache('revalidations:list')),
       catchError((error) => {
         console.error('performRevalidationAction error', error);
         throw error;
@@ -259,6 +314,7 @@ export class SupplyChainService {
     console.log('submitCancellation: Payload:', payload);
     console.log('submitCancellation: URL:', url);
     return this.http.post<any>(url, payload).pipe(
+      tap(() => this.invalidateCache('cancellations:list')),
       catchError((error) => {
         console.error('submitCancellation error', error);
         throw error;
@@ -267,16 +323,18 @@ export class SupplyChainService {
   }
 
   getCancellations(): Observable<any[]> {
-    return this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/`).pipe(
-      map((response: any) => {
-        if (Array.isArray(response)) return response;
-        if (response?.results) return response.results;
-        return [];
-      }),
-      catchError((error) => {
-        console.error('getCancellations error', error);
-        return of([]);
-      })
+    return this.getCachedOrFetch('cancellations:list', () =>
+      this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/`).pipe(
+        map((response: any) => {
+          if (Array.isArray(response)) return response;
+          if (response?.results) return response.results;
+          return [];
+        }),
+        catchError((error) => {
+          console.error('getCancellations error', error);
+          return of([]);
+        })
+      )
     );
   }
 
@@ -311,6 +369,7 @@ export class SupplyChainService {
       `${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/${id}/perform_action/`,
       { action, role }
     ).pipe(
+      tap(() => this.invalidateCache('cancellations:list')),
       catchError((error) => {
         console.error('performCancellationAction error', error);
         throw error;
@@ -323,6 +382,7 @@ export class SupplyChainService {
       `${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/${id}/sync_wallet_debit/`,
       {}
     ).pipe(
+      tap(() => this.invalidateCache('cancellations:list')),
       catchError((error) => {
         console.error('syncCancellationWalletDebit error', error);
         throw error;
@@ -342,26 +402,30 @@ export class SupplyChainService {
   }
 
   getTransitPermits(billNo?: string): Observable<any[]> {
+    const cacheKey = `transit-permits:${String(billNo || '').trim() || 'all'}`;
     let url = `${environment.apiBaseUrl}/transactional/supply_chain/transit-permits/`;
     if (billNo) {
       url += `?bill_no=${encodeURIComponent(billNo)}`;
     }
-    return this.http.get<any[]>(url).pipe(
-      map((response: any) => {
-        if (Array.isArray(response)) return response;
-        if (response?.results) return response.results;
-        return [];
-      }),
-      catchError((error) => {
-        console.error('getTransitPermits error', error);
-        return of([]);
-      })
+    return this.getCachedOrFetch(cacheKey, () =>
+      this.http.get<any[]>(url).pipe(
+        map((response: any) => {
+          if (Array.isArray(response)) return response;
+          if (response?.results) return response.results;
+          return [];
+        }),
+        catchError((error) => {
+          console.error('getTransitPermits error', error);
+          return of([]);
+        })
+      )
     );
   }
 
   submitTransitPermit(payload: any): Observable<any> {
     const url = `${environment.apiBaseUrl}/transactional/supply_chain/transit-permits/submit/`;
     return this.http.post<any>(url, payload).pipe(
+      tap(() => this.invalidateCacheByPrefix('transit-permits:')),
       catchError((error) => {
         console.error('submitTransitPermit error', error);
         throw error;
@@ -374,6 +438,7 @@ export class SupplyChainService {
       `${environment.apiBaseUrl}/transactional/supply_chain/transit-permits/action/${id}/`,
       { action, role }
     ).pipe(
+      tap(() => this.invalidateCacheByPrefix('transit-permits:')),
       catchError((error) => {
         console.error('performTransitPermitAction error', error);
         throw error;

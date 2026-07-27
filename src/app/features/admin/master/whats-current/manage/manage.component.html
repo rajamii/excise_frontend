@@ -1,0 +1,94 @@
+<div class="container-fluid">
+  <h2 mat-dialog-title align="center">
+    <mat-icon style="vertical-align: middle; margin-right: 8px; font-size: 22px;">{{ isEditMode ? 'edit_note' : 'add_circle' }}</mat-icon>
+    {{ isEditMode ? 'Edit' : 'Add' }} What's Current Update
+  </h2>
+
+  <mat-dialog-content>
+    <div class="row">
+      <!-- Category Field -->
+      <div class="col-md-6 field-group">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Category</mat-label>
+          <mat-select [(ngModel)]="record.category" name="category" required>
+            <mat-option value="act">Acts</mat-option>
+            <mat-option value="rule">Rules</mat-option>
+            <mat-option value="circular">Circulars</mat-option>
+            <mat-option value="bullet">Bullet Notifications</mat-option>
+            <mat-option value="license">Flash Notification</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <!-- Date Field -->
+      <div class="col-md-6 field-group">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Date</mat-label>
+          <input matInput type="date" [(ngModel)]="record.date" name="date" required>
+        </mat-form-field>
+      </div>
+    </div>
+
+    <!-- Title / Subject Field -->
+    <div class="field-group">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Title / Subject</mat-label>
+        <input matInput [(ngModel)]="record.title" name="title" required placeholder="Enter notification title or subject">
+      </mat-form-field>
+    </div>
+
+    <!-- Optional Message/Ticker Content -->
+    <div class="field-group">
+      <div class="message-toolbar">
+        <button type="button" class="toolbar-btn" (click)="wrapBold()" title="Bold">
+          <strong>B</strong>
+        </button>
+      </div>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Message / Details (Optional)</mat-label>
+        <textarea #messageArea matInput [(ngModel)]="record.message" name="message" rows="3" placeholder="Enter additional details or ticker text (useful for bullet notifications)"></textarea>
+      </mat-form-field>
+    </div>
+
+    <!-- Active Status Toggle -->
+    <div class="field-group toggle-group">
+      <mat-icon class="toggle-icon">{{ record.isActive ? 'visibility' : 'visibility_off' }}</mat-icon>
+      <div class="toggle-label">
+        <span class="toggle-title">Visibility on Home Page</span>
+        <span class="toggle-hint">{{ record.isActive ? 'Currently active — visible to users' : 'Currently inactive — hidden from home page' }}</span>
+      </div>
+      <mat-slide-toggle [(ngModel)]="record.isActive" name="isActive" color="primary"></mat-slide-toggle>
+    </div>
+
+    <!-- File Upload Field -->
+    <div class="file-upload-section field-group">
+      <label class="upload-label">PDF Document Upload (Optional)</label>
+      <div class="upload-controls">
+        <input
+          type="file"
+          id="pdf-upload"
+          accept="application/pdf"
+          class="hidden-file-input"
+          (change)="onFileSelected($event)">
+        
+        <label for="pdf-upload" class="file-picker-btn">
+          <mat-icon>cloud_upload</mat-icon> Choose PDF
+        </label>
+
+        <span class="file-name-display" [title]="getFileDisplay()">
+          {{ getFileDisplay() || 'No file selected' }}
+        </span>
+      </div>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="center">
+    <button matButton="filled" color="primary" (click)="onSave()">
+      <mat-icon>save</mat-icon> {{ isEditMode ? 'Update' : 'Save' }}
+    </button>
+    <button matButton="filled" color="warn" (click)="onCancel()">
+      <mat-icon>close</mat-icon> Cancel
+    </button>
+  </mat-dialog-actions>
+
+</div>

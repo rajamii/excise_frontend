@@ -4,7 +4,7 @@ type HttpKind = 'blocking' | 'background';
 
 @Injectable({ providedIn: 'root' })
 export class UiLoadingService {
-  private readonly routeLoading = signal<boolean>(true);
+  private readonly routeLoading = signal<boolean>(false);
   private routeShownAt = Date.now();
   private routeHideTimer: any = null;
 

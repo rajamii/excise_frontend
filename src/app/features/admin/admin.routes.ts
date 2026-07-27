@@ -79,19 +79,17 @@ const routes: Routes = [
               requiredPermission: 'master.roles.view',
             },
           },
-          // ✅ COMMENTED OUT: District route causing compilation errors
-          // Uncomment this once the district list component export issue is fixed
-          // {
-          //   path: 'districts',
-          //   loadComponent: () =>
-          //     import('./master/district/list/list.component').then(
-          //       (m) => m.ListComponent
-          //     ),
-          //   canActivate: [UserRouteAccessService],
-          //   data: {
-          //     authorities: [Authority.SITE_ADMIN],
-          //   },
-          // },
+          {
+            path: 'districts',
+            loadComponent: () =>
+              import('./master/district/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              requiredPermission: 'master.districts.view',
+            },
+          },
           {
             path: 'subdivisions',
             loadComponent: () =>
@@ -103,6 +101,21 @@ const routes: Routes = [
               requiredPermission: 'master.subdivisions.view',
             },
           },
+          {
+            path: 'blocks-wards',
+            loadComponent: () =>
+              import('./master/blocks-wards/blocks-wards.component').then(
+                (m) => m.BlocksWardsComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              requiredPermission: 'master.blocks.view',
+            },
+          },
+          // Legacy redirects — keep old URLs working
+          { path: 'blocks',       redirectTo: 'blocks-wards', pathMatch: 'full' },
+          { path: 'urban-wards',  redirectTo: 'blocks-wards', pathMatch: 'full' },
+          { path: 'rural-wards',  redirectTo: 'blocks-wards', pathMatch: 'full' },
           {
             path: 'police-stations',
             loadComponent: () =>
@@ -126,9 +139,42 @@ const routes: Routes = [
             },
           },
           {
-            path: 'license-categories',
+            path: 'additional-charges',
             loadComponent: () =>
-              import('./master/license-category/list/list.component').then(
+              import('./master/additional-charge/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              requiredPermission: 'master.license_categories.view',
+            },
+          },
+          {
+            path: 'pachwai-excess',
+            loadComponent: () =>
+              import('./master/pachwai-excess/list/list.component').then(
+                (m) => m.PachwaiExcessListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              requiredPermission: 'master.license_categories.view',
+            },
+          },
+          {
+            path: 'locations',
+            loadComponent: () =>
+              import('./master/location/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              requiredPermission: 'master.license_categories.view',
+            },
+          },
+          {
+            path: 'fixed-fees',
+            loadComponent: () =>
+              import('./master/fixed-fee/list/list.component').then(
                 (m) => m.ListComponent
               ),
             canActivate: [UserRouteAccessService],
@@ -148,17 +194,6 @@ const routes: Routes = [
             },
           },
           {
-            path: 'license-subcategories',
-            loadComponent: () =>
-              import('./master/license-subcategory/list/list.component').then(
-                (m) => m.ListComponent
-              ),
-            canActivate: [UserRouteAccessService],
-            data: {
-              requiredPermission: 'master.license_subcategories.view',
-            },
-          },
-          {
             path: 'roads',
             loadComponent: () =>
               import('./master/road/list/list.component').then(
@@ -167,6 +202,17 @@ const routes: Routes = [
             canActivate: [UserRouteAccessService],
             data: {
               requiredPermission: 'master.roads.view',
+            },
+          },
+          {
+            path: 'whats-current',
+            loadComponent: () =>
+              import('./master/whats-current/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              requiredPermission: 'master.license_categories.view',
             },
           },
           {
@@ -236,6 +282,33 @@ const routes: Routes = [
             data: { authorities: ['site_admin'] },
           },
           {
+            path: 'brand-owners',
+            loadComponent: () =>
+              import('./master/brand-owner/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: ['site_admin'] },
+          },
+          {
+            path: 'company-details',
+            loadComponent: () =>
+              import('./master/company-details/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: ['site_admin'] },
+          },
+          {
+            path: 'kinds-brands',
+            loadComponent: () =>
+              import('./master/kinds-brands/kinds-brands.component').then(
+                (m) => m.KindsBrandsComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: ['site_admin'] },
+          },
+          {
             path: 'about-us',
             redirectTo: 'about-us/heads-of-organisations',
             pathMatch: 'full'
@@ -262,6 +335,29 @@ const routes: Routes = [
             data: {
               authorities: ['site_admin'],
               aboutUsCategory: 'exciseSecretaries',
+            },
+          },
+          {
+            path: 'about-us/department-content',
+            loadComponent: () =>
+              import('./master/about-us/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: ['site_admin'],
+              aboutUsCategory: 'aboutUsText',
+            },
+          },
+          {
+            path: 'preventive-raids',
+            loadComponent: () =>
+              import('./master/preventive-raids/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: ['site_admin'],
             },
           },
           {
@@ -322,6 +418,28 @@ const routes: Routes = [
             loadComponent: () =>
               import('./master/license-validity-period/license-validity-period.component').then(
                 (m) => m.LicenseValidityPeriodComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: ['site_admin'],
+            },
+          },
+          {
+            path: 'license-categories',
+            loadComponent: () =>
+              import('./master/license-category/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: ['site_admin'],
+            },
+          },
+          {
+            path: 'license-subcategories',
+            loadComponent: () =>
+              import('./master/license-subcategory/list/list.component').then(
+                (m) => m.ListComponent
               ),
             canActivate: [UserRouteAccessService],
             data: {

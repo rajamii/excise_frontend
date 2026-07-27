@@ -1,0 +1,58 @@
+<div class="dialog-container">
+  <h2 mat-dialog-title class="dialog-title">
+    <mat-icon class="dialog-title-icon">list_alt</mat-icon>
+    {{ isEditMode ? 'Edit' : 'Add' }} License Category
+  </h2>
+
+  <form #form="ngForm">
+    <mat-dialog-content class="dialog-content">
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>License Category</mat-label>
+        <mat-icon matPrefix class="field-prefix-icon">list_alt</mat-icon>
+        <input
+          matInput
+          name="licenseCategory"
+          [(ngModel)]="licenseCategory.licenseCategory"
+          required
+          placeholder="Enter category name"
+          #licenseCategoryModel="ngModel"
+        />
+        <mat-error *ngIf="licenseCategoryModel.errors?.['required']">
+          License Category is required
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Special Permit Toggle Card -->
+      <div class="permit-toggle-card" [class.permit-active]="licenseCategory.isSpecialPermitAllowed">
+        <div class="permit-toggle-left">
+          <div class="permit-icon" [class.permit-icon-active]="licenseCategory.isSpecialPermitAllowed">
+            <mat-icon>assignment_turned_in</mat-icon>
+          </div>
+          <div class="permit-text">
+            <span class="permit-title">Allow Dry Day Permit</span>
+            <span class="permit-subtitle">
+              Licensees of this category can view &amp; submit Dry Day Permit applications
+            </span>
+          </div>
+        </div>
+        <mat-slide-toggle
+          name="isSpecialPermitAllowed"
+          [(ngModel)]="licenseCategory.isSpecialPermitAllowed"
+          color="primary">
+        </mat-slide-toggle>
+      </div>
+
+    </mat-dialog-content>
+
+    <mat-dialog-actions class="dialog-actions">
+      <button mat-stroked-button class="btn-cancel" (click)="onCancel()">
+        Cancel
+      </button>
+      <button mat-flat-button color="primary" class="btn-save" (click)="onSave()" [disabled]="form.invalid">
+        <mat-icon>save</mat-icon>
+        {{ isEditMode ? 'Update' : 'Save' }}
+      </button>
+    </mat-dialog-actions>
+  </form>
+</div>

@@ -4,20 +4,19 @@ import Swal from 'sweetalert2';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { LicenseSubcategory } from '../../../../../core/models/license-subcategory.model';
 import { MasterService } from '../../../../../core/services/master.service';
-import { ManageComponent } from '../manage/manage.component';
 import { AdminService } from '../../../admin.service';
+import { ManageComponent } from '../manage/manage.component';
 
 @Component({
-  selector: 'app-list',
+  selector: 'app-license-subcategory-list',
   standalone: true,
   imports: [MaterialModule],
   templateUrl: './list.component.html',
   styleUrl: './list.component.scss'
 })
 export class ListComponent implements OnInit {
-  licenseSubcategories: LicenseSubcategory[] = []; // List of license subcategories
-
-  displayedColumns: string[] = ['description', 'category', 'actions']; // Columns for table display
+  displayedColumns: string[] = ['description', 'categoryName', 'actions'];
+  licenseSubcategories: LicenseSubcategory[] = [];
 
   constructor(
     private masterService: MasterService,
@@ -26,41 +25,41 @@ export class ListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.loadLicenseSubcategories(); // Load data on component init
+    this.loadSubcategories();
   }
 
-  loadLicenseSubcategories(): void {
+  loadSubcategories(): void {
     this.masterService.getLicenseSubcategories().subscribe({
-      next: (data) => this.licenseSubcategories = data, // Populate subcategory list
-      error: () => Swal.fire('Error', 'Failed to load license subcategories.', 'error') // Handle load error
+      next: (data) => this.licenseSubcategories = data,
+      error: () => Swal.fire('Error', 'Failed to load license subcategories.', 'error')
     });
   }
 
   onAdd(): void {
     const dialogRef = this.dialog.open(ManageComponent, {
       width: '500px',
-    }); // Open dialog for adding subcategory
+    });
 
     dialogRef.afterClosed().subscribe(result => {
-      if (result) this.loadLicenseSubcategories(); // Refresh list after dialog closes
+      if (result) this.loadSubcategories();
     });
   }
 
   onEdit(subcategory: LicenseSubcategory): void {
     const dialogRef = this.dialog.open(ManageComponent, {
       width: '500px',
-      data: subcategory, // Pass selected subcategory for editing
+      data: subcategory
     });
 
     dialogRef.afterClosed().subscribe(result => {
-      if (result) this.loadLicenseSubcategories(); // Refresh list after edit
+      if (result) this.loadSubcategories();
     });
   }
 
   onDelete(subcategory: LicenseSubcategory): void {
     Swal.fire({
       title: 'Are you sure?',
-      text: `Delete "${subcategory.description}"?`,
+      text: `Delete subcategory "${subcategory.description}"?`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Delete',
@@ -68,10 +67,10 @@ export class ListComponent implements OnInit {
       if (result.isConfirmed && subcategory.id !== undefined) {
         this.adminService.deleteLicenseSubcategory(subcategory.id).subscribe({
           next: () => {
-            Swal.fire('Deleted!', 'License subcategory deleted.', 'success'); // Show success message
-            this.loadLicenseSubcategories(); // Refresh list after deletion
+            Swal.fire('Deleted!', 'License subcategory deleted.', 'success');
+            this.loadSubcategories();
           },
-          error: () => Swal.fire('Error', 'Failed to delete license subcategory.', 'error') // Handle deletion error
+          error: () => Swal.fire('Error', 'Failed to delete license subcategory.', 'error')
         });
       }
     });

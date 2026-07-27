@@ -44,6 +44,10 @@ export interface LabelRegistrationPackagingItem {
   importPerCase?: number;
   exportPerCase?: number;
   mrpRange?: string;
+  labelHeightMm: number;
+  labelWidthMm: number;
+  isMonoCarton: boolean;
+  gtin: string;
 }
 
 export interface LabelRegistrationPackagingDetails {

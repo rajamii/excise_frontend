@@ -1,6 +1,7 @@
 export class LicenseCategory {
     id?: number;
     licenseCategory!: string;
-description: any;
+    description?: any;
+    isActive?: boolean;
+    isSpecialPermitAllowed?: boolean;
   }
-  

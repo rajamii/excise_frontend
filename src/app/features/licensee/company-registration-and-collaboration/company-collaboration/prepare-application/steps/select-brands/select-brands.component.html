@@ -13,207 +13,162 @@
       <!-- ── Filter Section ──────────────────────────────────────────────── -->
       <div class="filter-section">
 
-        <mat-form-field appearance="outline">
-          <mat-label>Liquor Category</mat-label>
-          <mat-select [(ngModel)]="selectedCatCode" (selectionChange)="onCategoryChange()">
-            <mat-option [value]="null">-- All --</mat-option>
-            @for (cat of categories; track cat.liquorCatCode) {
-              <mat-option [value]="cat.liquorCatCode">{{ cat.liquorCatDesc }}</mat-option>
-            }
-          </mat-select>
-          <mat-icon matSuffix>filter_list</mat-icon>
-        </mat-form-field>
+        <div class="filter-row">
 
-        <mat-form-field appearance="outline">
-          <mat-label>Liquor Kind</mat-label>
-          <mat-select [(ngModel)]="selectedKindId" (selectionChange)="onKindChange()">
-            <mat-option [value]="null">-- All --</mat-option>
-            @for (kind of kinds; track kind.id) {
-              <mat-option [value]="kind.id">{{ kind.liquorKindDesc }}</mat-option>
-            }
-          </mat-select>
-          <mat-icon matSuffix>local_bar</mat-icon>
-        </mat-form-field>
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Liquor Category *</mat-label>
+            <mat-select [(ngModel)]="selectedCatCode" (selectionChange)="onCategoryChange()">
+              @for (cat of categories; track cat.liquorCatCode) {
+                <mat-option [value]="cat.liquorCatCode">{{ cat.liquorCatDesc }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Liquor Type</mat-label>
-          <mat-select [(ngModel)]="selectedTypeId" (selectionChange)="onTypeChange()">
-            <mat-option [value]="null">-- All --</mat-option>
-            @for (type of types; track type.id) {
-              <mat-option [value]="type.id">{{ type.liquorTypeDesc }}</mat-option>
-            }
-          </mat-select>
-          <mat-icon matSuffix>category</mat-icon>
-        </mat-form-field>
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Liquor Kind *</mat-label>
+            <mat-select [(ngModel)]="selectedKindId" (selectionChange)="onKindChange()">
+              @for (kind of kinds; track kind.id) {
+                <mat-option [value]="kind.id">{{ kind.liquorKindDesc }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
 
-        <mat-form-field appearance="outline" class="filter-search">
-          <mat-label>Search Brands</mat-label>
-          <input matInput [(ngModel)]="searchTerm" (input)="filterBrands()" placeholder="Brand name or code">
-          <mat-icon matSuffix>search</mat-icon>
-        </mat-form-field>
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Liquor Type *</mat-label>
+            <mat-select [(ngModel)]="selectedTypeId" (selectionChange)="onTypeChange()">
+              @for (type of types; track type.id) {
+                <mat-option [value]="type.id">{{ type.liquorTypeDesc }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <button class="search-btn" type="button"
+            [disabled]="!selectedCatCode || !selectedKindId || !selectedTypeId || isSearchingBrands"
+            (click)="searchFilteredBrands()"
+            [title]="isSearchingBrands ? 'Searching...' : 'Search Brands'">
+            @if (isSearchingBrands) {
+              <mat-icon class="spin">sync</mat-icon>
+            } @else {
+              <mat-icon>search</mat-icon>
+            }
+          </button>
+
+        </div>
+
+        <!-- Search field — only visible after brands are loaded -->
+        @if (allBrands.length > 0) {
+          <div class="brand-search-row">
+            <div class="brand-search-field">
+              <mat-icon class="search-icon">manage_search</mat-icon>
+              <input
+                [(ngModel)]="searchTerm"
+                (input)="filterBrands()"
+                placeholder="Search by brand name or code…"
+                class="brand-search-input" />
+              @if (searchTerm) {
+                <button class="clear-btn" type="button" (click)="searchTerm = ''; filterBrands()">
+                  <mat-icon>close</mat-icon>
+                </button>
+              }
+            </div>
+          </div>
+        }
 
       </div>
 
       <!-- ── Brands Table ────────────────────────────────────────────────── -->
-      @if (isLoadingBrands) {
+      @if (isLoadingBrands || isSearchingBrands) {
         <div class="no-brands">
-          <mat-icon>hourglass_empty</mat-icon>
+          <mat-icon class="spin">hourglass_empty</mat-icon>
           <p>Loading brands...</p>
         </div>
-      } @else if (filteredBrands.length > 0) {
+      } @else if (allBrands.length > 0) {
+        <!-- Alphabet Filtering Row -->
+        <div class="alphabet-filter-row notranslate" translate="no">
+          <span class="alphabet-label notranslate" translate="no">Filter by Alphabet:</span>
+          <div class="alphabet-bar notranslate" translate="no">
+            @for (letter of alphabets; track letter) {
+              <button type="button"
+                class="alphabet-btn notranslate"
+                translate="no"
+                [class.alphabet-btn--active]="selectedAlphabet === letter"
+                (click)="selectAlphabet(letter)">{{ letter }}</button>
+            }
+          </div>
+        </div>
+
         <div class="brands-table">
-          <div class="table-header">
-            <mat-checkbox
-              [checked]="isAllSelected()"
-              [indeterminate]="isIndeterminate()"
-              (change)="masterToggle()">
-              Select All &nbsp;({{ getSelectedBrandCount() }} brand(s) selected)
-            </mat-checkbox>
+          <div class="table-header-info">
+            <span class="selected-count">
+              Selected: <strong>{{ getSelectedBrandCount() }}</strong> brand(s)
+            </span>
           </div>
 
-          <table class="brands-selection-table mat-elevation-z2">
-            <thead>
-              <tr>
-                <th class="col-sl">Sl. No</th>
-                <th class="col-brand">Brand Name</th>
-                <th class="col-cat">Category</th>
-                <th class="col-kind">Kind</th>
-                <th class="col-type">Type</th>
-                <th class="col-select">Select</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (brand of filteredBrands; track brand.id; let i = $index) {
-                <tr [class.row-selected]="isSelected(brand.id)">
-                  <td class="col-sl">{{ i + 1 }}</td>
-                  <td class="col-brand">
-                    <div class="brand-name">{{ brand.brand_name }}</div>
-                    <div class="brand-meta">
-                      <span class="brand-code">{{ brand.brand_code }}</span>
-                    </div>
-                  </td>
-                  <td class="col-cat">{{ brand.category }}</td>
-                  <td class="col-kind">{{ brand.kind }}</td>
-                  <td class="col-type">{{ brand.type }}</td>
-                  <td class="col-select">
-                    <mat-checkbox
-                      [checked]="isSelected(brand.id)"
-                      (change)="toggleBrand(brand)"
-                      [attr.aria-label]="'Select ' + brand.brand_name">
-                    </mat-checkbox>
-                  </td>
+          @if (filteredBrands.length > 0) {
+            <table class="brands-selection-table mat-elevation-z2">
+              <thead>
+                <tr>
+                  <th class="col-sl">#</th>
+                  <th class="col-brand">Brand Name</th>
+                  <th class="col-size">Pack Size</th>
                 </tr>
-              }
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                @for (brand of getPagedBrands(); track brand.id; let i = $index) {
+                  <tr [class.row-selected]="isSelected(brand.id)">
+                    <td class="col-sl">{{ pageIndex * pageSize + i + 1 }}</td>
+                    <td class="col-brand">
+                      <div class="brand-pill">
+                        <span class="brand-initial">{{ brand.brand_name.charAt(0) }}</span>
+                        <span class="brand-name">{{ brand.brand_name }}</span>
+                      </div>
+                    </td>
+                    <td class="col-size">
+                      <div class="sizes-checkbox-group">
+                        @for (size of brand.pack_sizes; track size.product_id) {
+                          <label class="size-chip" [class.size-chip--selected]="isSizeSelected(brand, size.label)">
+                            <input type="checkbox"
+                              [checked]="isSizeSelected(brand, size.label)"
+                              (change)="toggleBrandSize(brand, size.label)"
+                              class="size-checkbox-input" />
+                            {{ size.label }}
+                          </label>
+                        } @empty {
+                          <span class="no-sizes-label">No sizes available</span>
+                        }
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+
+            <mat-paginator
+              [length]="filteredBrands.length"
+              [pageSize]="pageSize"
+              [pageSizeOptions]="pageSizeOptions"
+              [pageIndex]="pageIndex"
+              (page)="onPageChange($event)"
+              aria-label="Select page of brands">
+            </mat-paginator>
+          } @else {
+            <div class="no-filtered-brands">
+              <mat-icon>search_off</mat-icon>
+              <p>No brands start with letter "{{ selectedAlphabet }}" or match search query.</p>
+            </div>
+          }
         </div>
-      } @else {
+      } @else if (hasSearched && allBrands.length === 0) {
+        <!-- Searched but no results -->
         <div class="no-brands">
           <mat-icon>search_off</mat-icon>
           <p>No brands found. Please adjust your filters.</p>
         </div>
-      }
-    }
-
-    <!-- =====================================================================
-         OVERVIEW / SUMMARY VIEW
-         ===================================================================== -->
-    @if (showOverview) {
-      <div class="overview-section">
-        <div class="section-header">
-          <mat-icon>inventory</mat-icon>
-          <h3>Selected Brands ({{ selectedBrands.length }})</h3>
-        </div>
-
-        <div class="brands-overview-table">
-          <table mat-table [dataSource]="selectedBrands" class="mat-elevation-z2">
-
-            <ng-container matColumnDef="serialNo">
-              <th mat-header-cell *matHeaderCellDef>Sl. No</th>
-              <td mat-cell *matCellDef="let element; let i = index">{{ i + 1 }}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="brandCode">
-              <th mat-header-cell *matHeaderCellDef>Brand Code</th>
-              <td mat-cell *matCellDef="let element">{{ element.brand_code }}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="brandName">
-              <th mat-header-cell *matHeaderCellDef>Brand Name</th>
-              <td mat-cell *matCellDef="let element">{{ element.brand_name }}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="category">
-              <th mat-header-cell *matHeaderCellDef>Category</th>
-              <td mat-cell *matCellDef="let element">{{ element.category }}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="kind">
-              <th mat-header-cell *matHeaderCellDef>Kind</th>
-              <td mat-cell *matCellDef="let element">{{ element.kind }}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="type">
-              <th mat-header-cell *matHeaderCellDef>Type</th>
-              <td mat-cell *matCellDef="let element">{{ element.type }}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="action">
-              <th mat-header-cell *matHeaderCellDef>Action</th>
-              <td mat-cell *matCellDef="let element">
-                <button mat-icon-button color="warn" type="button"
-                  (click)="removeBrand(element.id)"
-                  [attr.aria-label]="'Remove ' + element.brand_name"
-                  title="Remove brand">
-                  <mat-icon>delete</mat-icon>
-                </button>
-              </td>
-            </ng-container>
-
-            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-          </table>
-        </div>
-      </div>
-
-      @if (isLoadingFee) {
-        <div class="no-brands">
-          <mat-icon>hourglass_empty</mat-icon>
-          <p>Loading fee structure...</p>
-        </div>
-      } @else if (feeStructure) {
-        <div class="overview-section">
-          <div class="section-header">
-            <mat-icon>receipt</mat-icon>
-            <h3>Fee Breakdown</h3>
-          </div>
-          <div class="fee-breakdown">
-            <div class="fee-grid">
-              <div class="fee-item">
-                <div class="fee-label">Application Fee:</div>
-                <div class="fee-value">&#8377;{{ feeStructure.applicationFee | number:'1.2-2' }}</div>
-              </div>
-              <div class="fee-item">
-                <div class="fee-label">Collaboration Fee:</div>
-                <div class="fee-value">&#8377;{{ feeStructure.collaborationFee | number:'1.2-2' }}</div>
-              </div>
-              <div class="fee-item">
-                <div class="fee-label">Security Deposit:</div>
-                <div class="fee-value">&#8377;{{ feeStructure.securityDeposit | number:'1.2-2' }}</div>
-              </div>
-              <div class="fee-item highlight">
-                <div class="fee-label">Total Amount:</div>
-                <div class="fee-value">&#8377;{{ getTotalAmount() | number:'1.2-2' }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      }
-
-      @if (selectedBrands.length === 0) {
-        <div class="no-brands-warning">
-          <mat-icon>warning</mat-icon>
-          <p>No brands selected. Please go back and select at least one brand.</p>
+      } @else if (!hasSearched) {
+        <!-- Filters filled but search not yet clicked -->
+        <div class="no-brands hint">
+          <mat-icon>manage_search</mat-icon>
+          <p>Select filters above and click <strong>Search</strong> to find brands.</p>
         </div>
       }
     }
@@ -221,21 +176,12 @@
   </mat-card-content>
 
   <mat-card-actions>
-    @if (!showOverview) {
-      <button mat-stroked-button type="button" (click)="goBack()">Back</button>
-      <button mat-flat-button color="primary" type="button"
-        (click)="addSelectedBrands()"
-        [disabled]="getSelectedBrandCount() === 0">
-        Add Selected Brands
-      </button>
-      <button mat-stroked-button color="warn" type="button" (click)="resetSelection()">Reset</button>
-    } @else {
-      <button mat-stroked-button type="button" (click)="addMoreProduct()">Add More Brands</button>
-      <button mat-flat-button color="primary" type="button"
-        (click)="proceedToSubmit()"
-        [disabled]="selectedBrands.length === 0 || !feeStructure || isLoadingFee">
-        Proceed to Submit
-      </button>
-    }
+    <button mat-stroked-button type="button" (click)="goBack()">Back</button>
+    <button mat-flat-button color="primary" type="button"
+      (click)="addSelectedBrands()"
+      [disabled]="getSelectedBrandCount() === 0">
+      Add Selected Brands
+    </button>
+    <button mat-stroked-button color="warn" type="button" (click)="resetSelection()">Reset</button>
   </mat-card-actions>
 </mat-card>

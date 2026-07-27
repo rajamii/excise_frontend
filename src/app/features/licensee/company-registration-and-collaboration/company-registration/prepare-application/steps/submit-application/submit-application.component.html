@@ -1,144 +1,245 @@
-<mat-card>
+<mat-card class="submit-card">
+
+  <!-- ═══ CARD HEADER ══════════════════════════════════════════════ -->
   <mat-card-header>
-    <div class="heading">Submit Application</div>
+    <div class="heading">
+      <mat-icon>rate_review</mat-icon>
+      Submit Application
+    </div>
     @if (!applicationId) {
-      <div class="validation">
-        Review all details before final submission
-      </div>
+      <div class="validation">Review all details carefully before final submission</div>
     }
   </mat-card-header>
 
   <mat-card-content>
-    <!-- FORM VIEW - Show only when NOT submitted -->
+
+    <!-- ══════════════════════════════════════════════════════════════
+         PREVIEW MODE  (shown before submission)
+    ══════════════════════════════════════════════════════════════ -->
     @if (!applicationId) {
-      <!-- Application Summary Section -->
-      <div class="info-section" *ngIf="companyDetails.length > 0 || memberDetails.length > 0 || paymentDetails.length > 0">
-      <div class="section-header">
-        <mat-icon>summarize</mat-icon>
-        <h3>Application Summary</h3>
-      </div>
-      <div class="application-summary">
-        <div class="summary-row" *ngFor="let item of getSummaryData()">
-          <span class="label">{{ item.label }}:</span>
-          <span class="value">{{ item.value }}</span>
-        </div>
-      </div>
-    </div>
 
-    <!-- Company/License Details Section -->
-    <div class="info-section" *ngIf="companyDetails.length > 0">
-      <div class="section-header">
-        <mat-icon>business</mat-icon>
-        <h3>License Details</h3>
-      </div>
-      <div class="details-grid">
-        <div class="detail-item" *ngFor="let item of companyDetails" [class.full-width]="item.label === 'Office Address' || item.label === 'Factory Address'">
-          <span class="label">{{ item.label }}:</span>
-          <span class="value">{{ item.value }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Member Details Section -->
-    <div class="info-section" *ngIf="memberDetails.length > 0">
-      <div class="section-header">
-        <mat-icon>group</mat-icon>
-        <h3>Member Details</h3>
-      </div>
-      <div class="details-grid">
-        <div class="detail-item" *ngFor="let item of memberDetails" [class.full-width]="item.label === 'Member Address'">
-          <span class="label">{{ item.label }}:</span>
-          <span class="value">{{ item.value }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Payment Details Section -->
-    <div class="info-section" *ngIf="paymentDetails.length > 0">
-      <div class="section-header">
-        <mat-icon>receipt</mat-icon>
-        <h3>Payment Details</h3>
-      </div>
-      <div class="details-grid">
-        <div class="detail-item" *ngFor="let item of paymentDetails" [class.full-width]="item.label === 'Payment Remarks'">
-          <span class="label">{{ item.label }}:</span>
-          <span class="value">{{ item.value }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Uploaded Documents Section -->
-    <div class="info-section" *ngIf="companyDocuments.length > 0">
-      <div class="section-header">
-        <mat-icon>folder_open</mat-icon>
-        <h3>Uploaded Documents</h3>
-      </div>
-      <div class="documents-list">
-        <div class="document-item" *ngFor="let doc of companyDocuments">
-          <div class="doc-icon">
-            <mat-icon>description</mat-icon>
+      <!-- ── Quick Summary Bar ─────────────────────────────────────── -->
+      @if (summaryData.length > 0) {
+        <div class="info-section summary-section">
+          <div class="section-header">
+            <mat-icon>summarize</mat-icon>
+            <h3>Application Summary</h3>
           </div>
-          <div class="doc-details">
-            <div class="doc-name">{{ documentLabels[doc.key] || doc.key }}</div>
-            <div class="doc-filename">{{ doc.file.name }}</div>
+          <div class="summary-chips">
+            @for (item of summaryData; track item.key) {
+              <div class="chip">
+                <span class="chip-label">{{ item.key }}</span>
+                <span class="chip-value">{{ item.value }}</span>
+              </div>
+            }
           </div>
-          <button mat-icon-button color="primary" (click)="viewFile(doc)" matTooltip="View Document">
-            <mat-icon>visibility</mat-icon>
-          </button>
         </div>
+      }
+
+      <!-- ── Company / License Details ─────────────────────────────── -->
+      @if (companyDetails.length > 0) {
+        <div class="info-section">
+          <div class="section-header">
+            <mat-icon>business</mat-icon>
+            <h3>Company / License Details</h3>
+          </div>
+          <div class="details-grid">
+            @for (item of companyDetails; track item.key) {
+              <div class="detail-item"
+                   [class.full-width]="item.key === 'Office Address' || item.key === 'Factory Address'">
+                <span class="label">{{ item.key }}</span>
+                <span class="value">{{ item.value }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- ── Member Details (all members as cards) ─────────────────── -->
+      @if (membersList.length > 0) {
+        <div class="info-section">
+          <div class="section-header">
+            <mat-icon>group</mat-icon>
+            <h3>Member Details
+              <span class="member-count-badge">{{ membersList.length }}</span>
+            </h3>
+          </div>
+
+          <div class="members-preview-grid">
+            @for (member of membersList; track $index; let i = $index) {
+              <div class="member-preview-card">
+
+                <!-- Badge + Name row -->
+                <div class="mpcard-header">
+                  <div class="mp-badge">{{ i + 1 }}</div>
+                  <div>
+                    <div class="mp-name">{{ member.memberName }}</div>
+                    <div class="mp-desig">{{ member.memberDesignation }}</div>
+                  </div>
+                </div>
+
+                <!-- Details grid -->
+                <div class="mpcard-body">
+                  <div class="mp-item">
+                    <span class="mp-label">Mobile</span>
+                    <span class="mp-value">{{ member.memberMobileNumber }}</span>
+                  </div>
+                  @if (member.memberEmailId) {
+                    <div class="mp-item">
+                      <span class="mp-label">Email</span>
+                      <span class="mp-value">{{ member.memberEmailId }}</span>
+                    </div>
+                  }
+                  <div class="mp-item full">
+                    <span class="mp-label">Address</span>
+                    <span class="mp-value">{{ member.memberAddress }}</span>
+                  </div>
+                  @if (member.fatherName) {
+                    <div class="mp-item">
+                      <span class="mp-label">Father's Name</span>
+                      <span class="mp-value">{{ member.fatherName }}</span>
+                    </div>
+                  }
+                  @if (member.dob) {
+                    <div class="mp-item">
+                      <span class="mp-label">Date of Birth</span>
+                      <span class="mp-value">{{ member.dob }}</span>
+                    </div>
+                  }
+                  @if (member.gender) {
+                    <div class="mp-item">
+                      <span class="mp-label">Gender</span>
+                      <span class="mp-value">{{ member.gender }}</span>
+                    </div>
+                  }
+                  @if (member.nationality) {
+                    <div class="mp-item">
+                      <span class="mp-label">Nationality</span>
+                      <span class="mp-value">{{ member.nationality }}</span>
+                    </div>
+                  }
+                </div>
+
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- ── Uploaded Documents ─────────────────────────────────────── -->
+      @if (companyDocuments.length > 0) {
+        <div class="info-section">
+          <div class="section-header">
+            <mat-icon>folder_open</mat-icon>
+            <h3>Uploaded Documents
+              <span class="member-count-badge">{{ companyDocuments.length }}</span>
+            </h3>
+          </div>
+          <div class="documents-list">
+            @for (doc of companyDocuments; track doc.key; let i = $index) {
+              <div class="document-item">
+                <div class="doc-icon">
+                  <mat-icon>description</mat-icon>
+                </div>
+                <div class="doc-details">
+                  <div class="doc-sl">Doc {{ i + 1 }}</div>
+                  <div class="doc-name">{{ doc.label }}</div>
+                  <div class="doc-filename">{{ doc.file.name }}</div>
+                </div>
+                <button mat-icon-button color="primary"
+                        (click)="viewFile(doc)"
+                        matTooltip="View Document">
+                  <mat-icon>visibility</mat-icon>
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- ── Declaration / Terms ─────────────────────────────────────── -->
+      <div class="declaration-section">
+        <div class="declaration-header">
+          <mat-icon>gavel</mat-icon>
+          <h3>Declaration</h3>
+        </div>
+        <div class="declaration-text">
+          <p>
+            I/We hereby solemnly declare and affirm that:
+          </p>
+          <ol>
+            <li>All the information furnished in this application is true, correct and complete to the best of my/our knowledge and belief.</li>
+            <li>No material fact has been suppressed or misrepresented.</li>
+            <li>The company/firm shall abide by the provisions of the Sikkim Excise Act, 1992, and all rules, regulations and orders made thereunder.</li>
+            <li>I/We understand that any misrepresentation may lead to rejection of the application or cancellation of the license.</li>
+          </ol>
+        </div>
+        <mat-checkbox [(ngModel)]="acceptTerms" class="accept-checkbox">
+          <span class="checkbox-label">
+            I/We accept the above declaration and confirm that all details are correct.
+          </span>
+        </mat-checkbox>
       </div>
-    </div>
 
-    <!-- Terms and Conditions -->
-    <div class="terms-section">
-      <mat-checkbox [(ngModel)]="acceptTerms" required>
-        <span class="terms-text">
-          I hereby declare that all the information provided above is true and correct to the best of my knowledge. 
-          I agree to the terms and conditions for company registration.
-        </span>
-      </mat-checkbox>
-    </div>
-    }
+    } <!-- /PREVIEW MODE -->
 
-    <!-- SUCCESS VIEW - Show only when submitted -->
+    <!-- ══════════════════════════════════════════════════════════════
+         SUCCESS VIEW  (after submission)
+    ══════════════════════════════════════════════════════════════ -->
     @if (applicationId) {
       <div class="success-section">
-        <div class="success-header">
-          <mat-icon>check_circle</mat-icon>
-          <h3>Application Submitted Successfully!</h3>
+        <div class="success-icon-wrap">
+          <mat-icon class="success-icon">check_circle</mat-icon>
         </div>
-        <div class="application-id">
-          <span class="label">Application ID:</span>
-          <span class="value">{{ applicationId }}</span>
+        <h2 class="success-title">Application Submitted Successfully!</h2>
+        <div class="application-id-box">
+          <span class="aid-label">Application ID</span>
+          <span class="aid-value">{{ applicationId }}</span>
         </div>
         <div class="next-steps">
-          <h4>Next Steps:</h4>
+          <h4>What happens next?</h4>
           <ul>
-            <li>Your application will be reviewed by the licensing authority</li>
-            <li>You will receive updates via email and SMS</li>
-            <li>Processing time: 7-15 working days</li>
-            <li>Application receipt will be sent to your registered email</li>
+            <li>Your application will be reviewed by the Excise Authority</li>
+            <li>You will receive updates via your registered email and mobile number</li>
+            <li>Estimated processing time: <strong>7–15 working days</strong></li>
+            <li>An application receipt will be sent to your registered email</li>
           </ul>
         </div>
       </div>
     }
+
   </mat-card-content>
 
-  <!-- Buttons -->
-  <mat-card-actions>
+  <!-- ═══ ACTION BUTTONS ══════════════════════════════════════════ -->
+  <mat-card-actions class="card-actions">
     @if (!applicationId) {
-      <button mat-stroked-button (click)="goBack()">Back</button>
-      <button 
-        mat-flat-button 
-        color="primary" 
-        (click)="submit()" 
-        [disabled]="!acceptTerms || isSubmitting">
-        {{ isSubmitting ? 'Submitting...' : 'Submit Application' }}
+      <button mat-stroked-button (click)="goBack()">
+        <mat-icon>arrow_back</mat-icon>
+        Back
+      </button>
+      <button mat-flat-button
+              color="primary"
+              class="submit-btn"
+              (click)="submit()"
+              *ngIf="!isSubmitting"
+              [disabled]="!acceptTerms">
+        <mat-icon>send</mat-icon>
+        Submit Application
+      </button>
+      <button mat-flat-button
+              color="primary"
+              class="submit-btn"
+              disabled
+              *ngIf="isSubmitting">
+        <mat-icon>hourglass_top</mat-icon>
+        Submitting...
       </button>
     } @else {
-      <button mat-flat-button color="primary" (click)="goToDashboard()">
+      <button mat-flat-button color="primary" class="submit-btn" (click)="goToDashboard()">
+        <mat-icon>home</mat-icon>
         Go to Dashboard
       </button>
     }
   </mat-card-actions>
+
 </mat-card>

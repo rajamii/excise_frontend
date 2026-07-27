@@ -234,12 +234,22 @@ export class AccountService {
     this.roleService.clearCurrentUser();
 
     if (isPlatformBrowser(this.platformId)) {
+      // Preserve certain keys across logout
       const blockedUsers = localStorage.getItem(this.blockedUsersStorageKey);
+      const dismissedBanner = sessionStorage.getItem('dismissedLicenseBanner');
+      
       localStorage.clear();
+      sessionStorage.clear();
+      
+      // Restore preserved keys
       if (blockedUsers) {
         localStorage.setItem(this.blockedUsersStorageKey, blockedUsers);
       }
-      sessionStorage.clear();
+      if (dismissedBanner) {
+        sessionStorage.setItem('dismissedLicenseBanner', dismissedBanner);
+      }
+      
+      console.log('💾 Cleared localStorage and sessionStorage (preserved banner dismissal state)');
     }
 
     this.userIdentity = null;

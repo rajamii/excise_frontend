@@ -1,0 +1,369 @@
+<div class="container-fluid">
+  <mat-card>
+    <mat-card-header class="page-card-header">
+      <div class="page-title">Liquor Hierarchy &amp; Brands Management</div>
+    </mat-card-header>
+
+    <mat-card-content class="page-card-content">
+      <mat-tab-group animationDuration="300ms" (selectedTabChange)="onTabChange()">
+
+        <!-- ── TAB 1: Categories ── -->
+        <mat-tab label="Liquor Categories">
+          <div class="tab-action-row">
+            <span class="tab-count">{{ categories.length }} record(s)</span>
+            <button mat-flat-button class="add-btn" (click)="onAddCategory()">
+              <mat-icon>add</mat-icon> Add Category
+            </button>
+          </div>
+
+          <div class="table-container">
+            <mat-table [dataSource]="categoriesDS">
+              <ng-container matColumnDef="code">
+                <mat-header-cell *matHeaderCellDef>Code</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <span class="code-badge">{{ element.liquorCatCode }}</span>
+                </mat-cell>
+              </ng-container>
+              <ng-container matColumnDef="desc">
+                <mat-header-cell *matHeaderCellDef>Description</mat-header-cell>
+                <mat-cell *matCellDef="let element">{{ element.liquorCatDesc }}</mat-cell>
+              </ng-container>
+              <ng-container matColumnDef="abbr">
+                <mat-header-cell *matHeaderCellDef>Abbreviation</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <span class="abbr-badge">{{ element.liquorCatAbbr }}</span>
+                </mat-cell>
+              </ng-container>
+              <ng-container matColumnDef="actions">
+                <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <div class="action-btns">
+                    <button mat-icon-button class="edit-btn" (click)="onEditCategory(element)" matTooltip="Edit"><mat-icon>edit</mat-icon></button>
+                    <button mat-icon-button class="delete-btn" (click)="onDeleteCategory(element)" matTooltip="Delete"><mat-icon>delete_outline</mat-icon></button>
+                  </div>
+                </mat-cell>
+              </ng-container>
+              <mat-header-row *matHeaderRowDef="categoryColumns"></mat-header-row>
+              <mat-row *matRowDef="let row; columns: categoryColumns;"></mat-row>
+            </mat-table>
+            <mat-paginator #catPaginator
+              [pageSizeOptions]="pageSizeOptions"
+              [pageSize]="10"
+              showFirstLastButtons
+              aria-label="Categories pagination">
+            </mat-paginator>
+          </div>
+        </mat-tab>
+
+        <!-- ── TAB 2: Kinds ── -->
+        <mat-tab label="Liquor Kinds">
+          <div class="tab-action-row">
+            <span class="tab-count">{{ kinds.length }} record(s)</span>
+            <button mat-flat-button class="add-btn" (click)="onAddKind()">
+              <mat-icon>add</mat-icon> Add Kind
+            </button>
+          </div>
+
+          <div class="table-container">
+            <mat-table [dataSource]="kindsDS">
+              <ng-container matColumnDef="cat">
+                <mat-header-cell *matHeaderCellDef>Category</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <span class="cat-badge">{{ element.liquorCatDesc || element.liquorCat }}</span>
+                </mat-cell>
+              </ng-container>
+              <ng-container matColumnDef="code">
+                <mat-header-cell *matHeaderCellDef>Kind Code</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <span class="code-badge">{{ element.liquorKindCode }}</span>
+                </mat-cell>
+              </ng-container>
+              <ng-container matColumnDef="desc">
+                <mat-header-cell *matHeaderCellDef>Description</mat-header-cell>
+                <mat-cell *matCellDef="let element">{{ element.liquorKindDesc }}</mat-cell>
+              </ng-container>
+              <ng-container matColumnDef="abbr">
+                <mat-header-cell *matHeaderCellDef>Abbreviation</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <span class="abbr-badge">{{ element.liquorKindAbbr }}</span>
+                </mat-cell>
+              </ng-container>
+              <ng-container matColumnDef="actions">
+                <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <div class="action-btns">
+                    <button mat-icon-button class="edit-btn" (click)="onEditKind(element)" matTooltip="Edit"><mat-icon>edit</mat-icon></button>
+                    <button mat-icon-button class="delete-btn" (click)="onDeleteKind(element)" matTooltip="Delete"><mat-icon>delete_outline</mat-icon></button>
+                  </div>
+                </mat-cell>
+              </ng-container>
+              <mat-header-row *matHeaderRowDef="kindColumns"></mat-header-row>
+              <mat-row *matRowDef="let row; columns: kindColumns;"></mat-row>
+            </mat-table>
+            <mat-paginator #kindPaginator
+              [pageSizeOptions]="pageSizeOptions"
+              [pageSize]="10"
+              showFirstLastButtons
+              aria-label="Kinds pagination">
+            </mat-paginator>
+          </div>
+        </mat-tab>
+
+        <!-- ── TAB 3: Types ── -->
+        <mat-tab label="Liquor Types">
+          <div class="tab-action-row">
+            <span class="tab-count">{{ types.length }} record(s)</span>
+            <button mat-flat-button class="add-btn" (click)="onAddType()">
+              <mat-icon>add</mat-icon> Add Type
+            </button>
+          </div>
+
+          <div class="table-container">
+            <mat-table [dataSource]="typesDS">
+              <ng-container matColumnDef="cat">
+                <mat-header-cell *matHeaderCellDef>Category</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <span class="cat-badge">{{ element.liquorCatDesc || element.liquorCat }}</span>
+                </mat-cell>
+              </ng-container>
+              <ng-container matColumnDef="kind">
+                <mat-header-cell *matHeaderCellDef>Kind</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <span class="kind-badge">{{ element.liquorKindDesc || element.liquorKind }}</span>
+                </mat-cell>
+              </ng-container>
+              <ng-container matColumnDef="code">
+                <mat-header-cell *matHeaderCellDef>Type Code</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <span class="code-badge">{{ element.liquorTypeCode }}</span>
+                </mat-cell>
+              </ng-container>
+              <ng-container matColumnDef="desc">
+                <mat-header-cell *matHeaderCellDef>Description</mat-header-cell>
+                <mat-cell *matCellDef="let element">{{ element.liquorTypeDesc }}</mat-cell>
+              </ng-container>
+              <ng-container matColumnDef="oldCode">
+                <mat-header-cell *matHeaderCellDef>Old Code</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <span class="muted-text">{{ element.liquorTypeCodeOld || '—' }}</span>
+                </mat-cell>
+              </ng-container>
+              <ng-container matColumnDef="actions">
+                <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <div class="action-btns">
+                    <button mat-icon-button class="edit-btn" (click)="onEditType(element)" matTooltip="Edit"><mat-icon>edit</mat-icon></button>
+                    <button mat-icon-button class="delete-btn" (click)="onDeleteType(element)" matTooltip="Delete"><mat-icon>delete_outline</mat-icon></button>
+                  </div>
+                </mat-cell>
+              </ng-container>
+              <mat-header-row *matHeaderRowDef="typeColumns"></mat-header-row>
+              <mat-row *matRowDef="let row; columns: typeColumns;"></mat-row>
+            </mat-table>
+            <mat-paginator #typePaginator
+              [pageSizeOptions]="pageSizeOptions"
+              [pageSize]="10"
+              showFirstLastButtons
+              aria-label="Types pagination">
+            </mat-paginator>
+          </div>
+        </mat-tab>
+
+        <!-- ── TAB 4: Brand Owner Type ── -->
+        <mat-tab label="Brand Owner Type">
+          <div class="tab-action-row">
+            <span class="tab-count">{{ brandOwnerTypes.length }} record(s)</span>
+            <button mat-flat-button class="add-btn" (click)="onAddBrandOwnerType()">
+              <mat-icon>add</mat-icon> Add Brand Owner Type
+            </button>
+          </div>
+
+          <div class="table-container">
+            <mat-table [dataSource]="brandOwnerTypesDS">
+              <ng-container matColumnDef="typeCode">
+                <mat-header-cell *matHeaderCellDef>Type Code</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <span class="code-badge">{{ element.brandOwnerTypeCode ?? element.brand_owner_type_code }}</span>
+                </mat-cell>
+              </ng-container>
+              <ng-container matColumnDef="typeDesc">
+                <mat-header-cell *matHeaderCellDef>Description</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <div class="bot-desc-cell">
+                    <span class="bot-icon"><mat-icon>business</mat-icon></span>
+                    <span class="bot-label">{{ element.brandOwnerTypeDesc ?? element.brand_owner_type_desc }}</span>
+                  </div>
+                </mat-cell>
+              </ng-container>
+              <ng-container matColumnDef="actions">
+                <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <div class="action-btns">
+                    <button mat-icon-button class="edit-btn" (click)="onEditBrandOwnerType(element)" matTooltip="Edit"><mat-icon>edit</mat-icon></button>
+                    <button mat-icon-button class="delete-btn" (click)="onDeleteBrandOwnerType(element)" matTooltip="Delete"><mat-icon>delete_outline</mat-icon></button>
+                  </div>
+                </mat-cell>
+              </ng-container>
+              <mat-header-row *matHeaderRowDef="brandOwnerTypeColumns"></mat-header-row>
+              <mat-row *matRowDef="let row; columns: brandOwnerTypeColumns;"></mat-row>
+            </mat-table>
+            <mat-paginator #botPaginator
+              [pageSizeOptions]="pageSizeOptions"
+              [pageSize]="10"
+              showFirstLastButtons
+              aria-label="Brand Owner Types pagination">
+            </mat-paginator>
+          </div>
+        </mat-tab>
+
+        <!-- ── TAB 5: Super Brands ── -->
+        <mat-tab label="Super Brands">
+          <div class="search-brands-row">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="brand-filter-field">
+              <mat-label>Category</mat-label>
+              <mat-select [(ngModel)]="selectedCatCode" (selectionChange)="onBrandCatChange()">
+                <mat-option [value]="null">All Categories</mat-option>
+                @for (cat of categories; track cat.liquorCatCode) {
+                  <mat-option [value]="cat.liquorCatCode">{{ cat.liquorCatDesc }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="brand-filter-field">
+              <mat-label>Kind</mat-label>
+              <mat-select [(ngModel)]="selectedKindId" (selectionChange)="onBrandKindChange()">
+                <mat-option [value]="null">All Kinds</mat-option>
+                @for (kind of filteredKinds; track kind.id) {
+                  <mat-option [value]="kind.id">{{ kind.liquorKindDesc }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="brand-filter-field">
+              <mat-label>Type</mat-label>
+              <mat-select [(ngModel)]="selectedTypeId" (selectionChange)="onBrandTypeChange()">
+                <mat-option [value]="null">All Types</mat-option>
+                @for (type of filteredTypes; track type.id) {
+                  <mat-option [value]="type.id">{{ type.liquorTypeDesc }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="brand-search-field">
+              <mat-label>Search by Name or Code</mat-label>
+              <input matInput [(ngModel)]="brandSearchQuery"
+                (keydown.enter)="onSearchBrands()"
+                placeholder="Brand name or code…" />
+              <mat-icon matSuffix>search</mat-icon>
+            </mat-form-field>
+
+            <button class="brands-search-btn" type="button" (click)="onSearchBrands()"
+              [disabled]="!brandSearchQuery.trim() && !selectedCatCode && !selectedKindId && !selectedTypeId"
+              title="Search Brands">
+              <mat-icon>search</mat-icon>
+            </button>
+
+            @if (brandSearchQuery || selectedCatCode || selectedKindId || selectedTypeId) {
+              <button mat-icon-button class="reset-filter-btn" type="button"
+                (click)="resetBrandFilters()" matTooltip="Clear filters">
+                <mat-icon>filter_alt_off</mat-icon>
+              </button>
+            }
+
+            <button mat-flat-button class="add-btn" (click)="onAddBrand()">
+              <mat-icon>add</mat-icon> Add Brand
+            </button>
+          </div>
+
+          <div class="table-container">
+            <mat-table [dataSource]="brandsDS">
+              <ng-container matColumnDef="code">
+                <mat-header-cell *matHeaderCellDef>Brand Code</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <span class="code-badge">{{ element.liquorBrandCode }}</span>
+                </mat-cell>
+              </ng-container>
+              <ng-container matColumnDef="desc">
+                <mat-header-cell *matHeaderCellDef>Brand Name</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <div class="brand-name-cell">
+                    <span class="brand-initial">{{ element.liquorBrandDesc?.charAt(0) }}</span>
+                    <span class="brand-label">{{ element.liquorBrandDesc }}</span>
+                  </div>
+                </mat-cell>
+              </ng-container>
+              <ng-container matColumnDef="alias">
+                <mat-header-cell *matHeaderCellDef>Alias</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <span class="muted-text">{{ element.brandNameAlias || '—' }}</span>
+                </mat-cell>
+              </ng-container>
+              <ng-container matColumnDef="cat">
+                <mat-header-cell *matHeaderCellDef>Category</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <span class="cat-badge">{{ element.liquorCatDesc || element.liquorCat }}</span>
+                </mat-cell>
+              </ng-container>
+              <ng-container matColumnDef="kind">
+                <mat-header-cell *matHeaderCellDef>Kind</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <span class="kind-badge">{{ element.liquorKindDesc || element.liquorKind }}</span>
+                </mat-cell>
+              </ng-container>
+              <ng-container matColumnDef="type">
+                <mat-header-cell *matHeaderCellDef>Type</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <span class="type-badge">{{ element.liquorTypeDesc || element.liquorType }}</span>
+                </mat-cell>
+              </ng-container>
+              <ng-container matColumnDef="ml">
+                <mat-header-cell *matHeaderCellDef>Pack Sizes (Ml)</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <div class="ml-chips-cell">
+                    @if (element.sizesLoading) {
+                      <mat-spinner diameter="16"></mat-spinner>
+                    } @else if (element.packSizes?.length > 0) {
+                      @for (s of element.packSizes; track s.label) {
+                        <span class="ml-chip">{{ s.label }}</span>
+                      }
+                    } @else {
+                      <span class="ml-chip ml-chip--none">—</span>
+                    }
+                  </div>
+                </mat-cell>
+              </ng-container>
+              <ng-container matColumnDef="actions">
+                <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
+                <mat-cell *matCellDef="let element">
+                  <div class="action-btns">
+                    <button mat-icon-button class="edit-btn" (click)="onEditBrand(element)" matTooltip="Edit Brand"><mat-icon>edit</mat-icon></button>
+                    <button mat-icon-button class="sizes-btn" (click)="onManageSizes(element)" matTooltip="Manage Pack Sizes"><mat-icon>straighten</mat-icon></button>
+                    <button mat-icon-button class="delete-btn" (click)="onDeleteBrand(element)" matTooltip="Delete Brand"><mat-icon>delete_outline</mat-icon></button>
+                  </div>
+                </mat-cell>
+              </ng-container>
+              <mat-header-row *matHeaderRowDef="brandColumns"></mat-header-row>
+              <mat-row *matRowDef="let row; columns: brandColumns;"></mat-row>
+            </mat-table>
+
+            @if (brandsDS.data.length === 0 && !brandSearchQuery && !selectedCatCode && !selectedKindId && !selectedTypeId) {
+              <div class="search-placeholder-text">
+                <mat-icon>manage_search</mat-icon>
+                <span>Select filters or type a brand name to search.</span>
+              </div>
+            }
+
+            <mat-paginator #brandPaginator
+              [pageSizeOptions]="pageSizeOptions"
+              [pageSize]="10"
+              showFirstLastButtons
+              [style.display]="brandsDS.data.length === 0 ? 'none' : ''"
+              aria-label="Super Brands pagination">
+            </mat-paginator>
+          </div>
+        </mat-tab>
+
+      </mat-tab-group>
+    </mat-card-content>
+  </mat-card>
+</div>

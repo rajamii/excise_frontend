@@ -64,13 +64,18 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   showBreweryOrDistilleryMenus = false;
   /** Whether the Bulk Spirit group is expanded in the sidebar (default: closed) */
   bulkSpiritExpanded = false;
-  adminHologramExpanded = false;
   adminBulkSpiritExpanded = false;
   adminAboutUsExpanded = false;
   adminContactUsExpanded = false;
+  adminMasterDataExpanded = false;
+  adminLicenseMasterDataExpanded = false;
+  adminBrandMasterDataExpanded = false;
+  adminBrandMasterDetailsIIExpanded = false;
+  adminUserManagementExpanded = false;
   hasBreweryOrDistilleryWalletViews = false;
   /** Manufacturing licensees (including non–brewery/distillery) who may use Payment & Wallet. */
   showManufacturingWalletNav = false;
+  showSpecialPermitMenu = false;
 
   myLicenses: any[] = [];
   selectedLicenseGroupKey = '';
@@ -82,7 +87,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     revalidation: 'Revalidation',
     cancellation: 'Cancellation',
     transit: 'Transit Permit',
-    hologram: 'New Procurement'
+    hologram: 'New Procurement',
+    'distributor-permit': 'Import Permit'
   };
   private dbNavigationRoutes = new Set<string>();
   private dbPermissionTokens = new Set<string>();
@@ -91,6 +97,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     label: string;
     icon: string;
     group?: string;
+    showOnlyForDistributor?: boolean;
     hideForSiteAdmin?: boolean;
     hideForPermitSection?: boolean;
     hideForItCell?: boolean;
@@ -101,6 +108,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   }> = [
     { section: 'new-license', label: 'New License', icon: 'add_business', hideForSiteAdmin: true, hideForPermitSection: true, hideForItCell: true, hideForOic: true },
     { section: 'license-renewal', label: 'License Renewal', icon: 'autorenew', hideForSiteAdmin: true, hideForPermitSection: true, hideForItCell: true, hideForOic: true },
+    { section: 'special-permit', label: 'Dry Day Permit', icon: 'assignment_turned_in', hideForSiteAdmin: true, hideForPermitSection: true, hideForItCell: true, hideForOic: true },
     { section: 'requisition', label: 'Requisition', icon: 'description', group: 'Bulk Spirit' },
     { section: 'revalidation', label: 'Revalidation', icon: 'refresh', group: 'Bulk Spirit', hideForPermitSection: true },
     { section: 'cancellation', label: 'Cancellation', icon: 'cancel', group: 'Bulk Spirit', hideForPermitSection: true },
@@ -119,7 +127,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     { section: 'commissioner-monthly-view-details', label: 'Monthly View Details', icon: 'calendar_month', showOnlyForCommissioner: true },
     // ── Other ──
       { section: 'stock-inventory', label: 'Stock Inventory', icon: 'inventory' },
+      { section: 'distributor-permit', label: 'Apply for Import Permit', icon: 'assignment', showOnlyForDistributor: true },
       { section: 'salesman-barman-registration', label: 'Salesman/Barman Registration', icon: 'badge' },
+      { section: 'company-registration', label: 'Company Registration', icon: 'apartment' },
+      { section: 'company-collaboration', label: 'Company Collaboration', icon: 'groups', hideForSiteAdmin: true },
       { section: 'single-window', label: 'User Details', icon: 'manage_search', hideForSiteAdmin: true },
       { section: 'payment-transactions', label: 'Transactions', icon: 'receipt_long', hideForSiteAdmin: true },
       { section: 'officer-activity', label: 'Officer Activity', icon: 'assignment', hideForSiteAdmin: true }
@@ -144,13 +155,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     this.initializeUserAndAuth();
 
     // Auto-expand admin groups based on current route
-    const currentPath = this.router.url.split('?')[0];
-    if (currentPath.startsWith('/dashboard/admin/hologram')) {
-      this.adminHologramExpanded = true;
-    }
-    if (currentPath.startsWith('/dashboard/admin/bulk-spirit')) {
-      this.adminBulkSpiritExpanded = true;
-    }
+    this.expandAdminGroupsForPath(this.router.url);
 
     // Auto-close the sidebar after navigation from menu selections.
     this.router.events
@@ -159,13 +164,19 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         takeUntil(this.destroy$)
       )
       .subscribe((event: any) => {
-        const path = (event.urlAfterRedirects || event.url || '').split('?')[0];
-        if (path.startsWith('/dashboard/admin/hologram')) {
-          this.adminHologramExpanded = true;
-        }
+        const url = event.urlAfterRedirects || event.url || '';
+        this.expandAdminGroupsForPath(url);
         if (this.isSidenavOpen) {
           this.closeSidenav();
         }
+      });
+
+    // Listen to badge refresh broadcasts to update pending count badges
+    this.sidebarPendingBadgeService.refreshNeeded$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        console.log('🔄 UNIFIED LAYOUT: Refreshing sidebar badges due to triggerRefresh');
+        this.refreshSidebarBadges(true, 'full');
       });
   }
 
@@ -394,8 +405,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     const sections = this.officerSectionItems
       .filter(item => item.group === 'Bulk Spirit' && this.shouldShowOfficerSectionItem(item))
       .map(item => item.section);
-    // For licensee users, only requisition has an actionable badge (payment at Approved Commissioner stage)
-    const keys = sections.length > 0 ? sections : (this.isLicenseeUser() ? ['requisition'] : ['requisition', 'revalidation', 'cancellation']);
+    if (this.isLicenseeUser()) {
+      return this.getPendingCount('requisition:payment');
+    }
+    const keys = sections.length > 0 ? sections : ['requisition', 'revalidation', 'cancellation'];
     return keys.reduce((sum, s) => sum + this.getPendingCount(s), 0);
   }
 
@@ -404,9 +417,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     const sections = this.officerSectionItems
       .filter(item => item.group === 'Hologram' && this.shouldShowOfficerSectionItem(item))
       .map(item => item.section);
-    // For licensee users, only hologram procurement has an actionable badge (payment at stage 78)
     if (this.isLicenseeUser()) {
-      return this.getPendingCount('hologram');
+      return this.getPendingCount('hologram:payment');
     }
     const keys = sections.length > 0 ? sections : ['hologram', 'hologram-request'];
     return keys.reduce((sum, s) => sum + this.getPendingCount(s), 0);
@@ -431,16 +443,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         return false;
       };
 
-      const licenseeSections: string[] = [];
-      if (hasDbRoute(/new[_-]?license|new_license_application/)) {
-        licenseeSections.push('new-license');
-      }
-      if (hasDbRoute(/license[_-]?renewal|license_renewal_application/)) {
-        licenseeSections.push('license-renewal');
-      }
-      if (hasDbRoute(/salesman|barman|salesman[_-]?barman|salesman_barman/)) {
-        licenseeSections.push('salesman-barman-registration');
-      }
+      const licenseeSections: string[] = ['new-license', 'license-renewal', 'salesman-barman-registration', 'company-registration', 'company-collaboration', 'special-permit'];
       // Distillery licensees always see Bulk Spirit menus even when DB navigation routes are incomplete.
       // Ensure Requisition payment-pending badge still loads in that case.
       if (this.showDistilleryMenus || hasDbRoute(/requisition|ena|bulk[_-]?spirit/)) {
@@ -546,6 +549,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
           const dialogRef = this.dialog.open(UserProfileComponent, {
             width: '600px',
             maxWidth: '90vw',
+            maxHeight: '90vh',
             panelClass: 'user-profile-dialog'
           });
         })
@@ -561,6 +565,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
           const dialogRef = this.dialog.open(UserProfileComponent, {
             width: '600px',
             maxWidth: '90vw',
+            maxHeight: '90vh',
             panelClass: 'user-profile-dialog'
           });
         })
@@ -863,6 +868,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       'hologram-new': 'hologram',
       'hologram-request-form': 'hologram-request',
       'new-license-apply': 'new-license',
+      'special-permit-apply': 'special-permit',
       'company-registration-apply': 'company-registration',
       'company-collaboration-apply': 'company-collaboration',
       'salesman-barman-registration-apply': 'salesman-barman-registration',
@@ -892,6 +898,74 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   isAdminRouteActive(routePrefix: string): boolean {
     const currentPath = this.router.url.split('?')[0].split('#')[0];
     return currentPath === routePrefix || currentPath.startsWith(`${routePrefix}/`);
+  }
+
+  expandAdminGroupsForPath(url: string): void {
+    if (!url) return;
+    const normalized = url.toLowerCase();
+    
+    // User Management
+    if (normalized.includes('/admin/users') ||
+        normalized.includes('/admin/oic') ||
+        normalized.includes('/admin/roles') ||
+        normalized.includes('section=single-window')) {
+      this.adminUserManagementExpanded = true;
+    }
+    
+    // Master Data
+    if (normalized.includes('/admin/districts') ||
+        normalized.includes('/admin/subdivisions') ||
+        normalized.includes('/admin/roads') ||
+        normalized.includes('/admin/police-stations') ||
+        normalized.includes('/admin/locations') ||
+        normalized.includes('/admin/blocks') ||
+        normalized.includes('/admin/urban-wards') ||
+        normalized.includes('/admin/rural-wards')) {
+      this.adminMasterDataExpanded = true;
+    }
+    
+    // License Master Data
+    if (normalized.includes('/admin/license-validity-period') ||
+        normalized.includes('/admin/license-types') ||
+        normalized.includes('/admin/license-categories') ||
+        normalized.includes('/admin/additional-charges') ||
+        normalized.includes('/admin/pachwai-excess') ||
+        normalized.includes('/admin/fixed-fees') ||
+        normalized.includes('/admin/license-terms') ||
+        normalized.includes('/admin/license-titles') ||
+        normalized.includes('/admin/dry-day-calendar') ||
+        normalized.includes('/admin/license-subcategories')) {
+      this.adminLicenseMasterDataExpanded = true;
+    }
+    
+    // Brand Master Data (originally hologram)
+    if (normalized.includes('/admin/hologram') ||
+        normalized.includes('/admin/brand-ml-in-cases') ||
+        normalized.includes('/admin/hologram-suppliers')) {
+      this.adminBrandMasterDataExpanded = true;
+    }
+    
+    // Brand Master Details II
+    if (normalized.includes('/admin/brand-owners') || normalized.includes('/admin/company-details') || normalized.includes('/admin/kinds-brands')) {
+      this.adminBrandMasterDetailsIIExpanded = true;
+    }
+    
+    // Bulk Spirit
+    if (normalized.includes('/admin/bulk-spirit')) {
+      this.adminBulkSpiritExpanded = true;
+    }
+    
+    // Home Page / About Us
+    if (normalized.includes('/admin/about-us') ||
+        normalized.includes('/admin/preventive-raids') ||
+        normalized.includes('/admin/whats-current')) {
+      this.adminAboutUsExpanded = true;
+    }
+    
+    // Contact Us
+    if (normalized.includes('/admin/contact-us')) {
+      this.adminContactUsExpanded = true;
+    }
   }
 
   getSidebarLabel(section: string, fallbackLabel?: string): string {
@@ -962,7 +1036,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
     // Backward-compatible fallback while older role configs are being updated.
     return (this.currentUser?.permissions || []).includes('licensee.module.view')
-      || this.currentUser?.roleId === 2;
+      || this.currentUser?.roleId === 2
+      || this.currentUser?.roleId === 16;
   }
 
   private loadLicenseeMenuAccess(): void {
@@ -1084,7 +1159,13 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
                   </svg>
                 </div>
                 <div class="lp-header-text">
-                  <h2 class="lp-title">License &amp; Application Numbers</h2>
+                  <div class="lp-title-row">
+                    <h2 class="lp-title">License &amp; Application Numbers</h2>
+                    <button class="lp-my-licenses-btn" id="lpMyLicensesBtn" type="button">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                      My Licenses
+                    </button>
+                  </div>
                   <p class="lp-subtitle">Your registered license details and renewal history</p>
                 </div>
                 <button class="lp-close-btn" id="lpCloseBtn" type="button" aria-label="Close">
@@ -1107,6 +1188,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
           customClass: { popup: 'lp-swal-popup', htmlContainer: 'lp-swal-html' },
           didOpen: () => {
             document.getElementById('lpCloseBtn')?.addEventListener('click', () => Swal.close());
+            document.getElementById('lpMyLicensesBtn')?.addEventListener('click', () => {
+              Swal.close();
+              this.navigateToSupplyChain('new-license');
+            });
             const selectEl = document.getElementById('licenseGroup') as HTMLSelectElement | null;
             const initialKey = groups.some((g) => g.key === this.selectedLicenseGroupKey) ? this.selectedLicenseGroupKey : groups[0].key;
             if (selectEl) {
@@ -1125,6 +1210,19 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         void Swal.fire('Error', 'Failed to retrieve license details. Please try again.', 'error');
       }
     });
+  }
+
+  openMyLicensesDialog(): void {
+    import('../../../../features/licensee/my-licenses/my-licenses.component')
+      .then(({ MyLicensesComponent }) => {
+        this.dialog.open(MyLicensesComponent, {
+          width: '900px',
+          maxHeight: '90vh'
+        });
+      })
+      .catch((err) => {
+        console.error('Failed to load My Licenses dialog:', err);
+      });
   }
 
   private renderLicensePopupList(groups: Array<{ key: string; label: string; items: any[] }>, groupKey: string): void {
@@ -1299,12 +1397,20 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     // (Awaiting License Fee Payment) or final approval.
     this.showManufacturingWalletNav = this.computeWalletNavVisible(rows);
 
+    // Dynamic: show Special Permit menu only if ANY active license has is_special_permit_allowed=true
+    // or if the user is District User (roleId 4) or Commissioner (roleId 10)
+    const userRoleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
+    this.showSpecialPermitMenu = [4, 10].includes(userRoleId) || rows.some((row) =>
+      row?.isSpecialPermitAllowed === true || row?.is_special_permit_allowed === true
+    );
+
     console.log('Resolved menu flags:', {
       hasDistillery,
       hasBrewery,
       showDistilleryMenus: this.showDistilleryMenus,
       showBreweryOrDistilleryMenus: this.showBreweryOrDistilleryMenus,
-      showManufacturingWalletNav: this.showManufacturingWalletNav
+      showManufacturingWalletNav: this.showManufacturingWalletNav,
+      showSpecialPermitMenu: this.showSpecialPermitMenu
     });
 
     if (rows.length > 0) {
@@ -1419,7 +1525,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       '/dashboard/admin/license-subcategories',
       '/dashboard/admin/roads',
       '/dashboard/admin/oic',
-      '/dashboard/admin/sbi-e-pay'
+      '/dashboard/admin/dry-day-calendar'
     ];
 
     const hasAdminNav = adminRoutes.some((route) =>
@@ -1491,6 +1597,11 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return normalized.includes('permitsection');
   }
 
+  isDistributorUser(): boolean {
+    const normalized = this.getNormalizedRoleName();
+    return normalized === 'distributor' || normalized.includes('distributor');
+  }
+
   isItCellUser(): boolean {
     const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
     if (roleId === 6) {
@@ -1513,26 +1624,41 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
   private canAccessCompanyCollaborationWorkflow(): boolean {
     const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
-    if ([3, 5, 10, 12].includes(roleId)) {
+    // Permit Section (5), Commissioner (10), and Distributor (16)
+    if ([5, 10, 16].includes(roleId)) {
       return true;
     }
 
+    // Fallback: check by role name (exact match to avoid 'jointcommissioner' matching 'commissioner')
     const normalizedRole = this.getNormalizedRoleName();
-    return [
-      'singlewindow',
-      'permitsection',
-      'deputycommissioner',
-      'commissioner',
-      'siteadmin'
-    ].some((token) => normalizedRole.includes(token));
+    return normalizedRole === 'permitsection' || normalizedRole === 'commissioner' || normalizedRole === 'distributor' || normalizedRole.includes('distributor');
+  }
+
+  private canAccessCompanyRegistrationWorkflow(): boolean {
+    const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
+    if ([5, 10, 16].includes(roleId)) {
+      return true;
+    }
+
+    // Fallback: check by role name (exact match to avoid 'jointcommissioner' matching 'commissioner')
+    const normalizedRole = this.getNormalizedRoleName();
+    return normalizedRole === 'permitsection' || normalizedRole === 'commissioner' || normalizedRole === 'distributor' || normalizedRole.includes('distributor');
   }
 
   canAccessSection(section: string): boolean {
     const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
 
+    if (section === 'special-permit') {
+      return roleId === 4 || roleId === 10;
+    }
+
     // Activity log should be visible for everyone (admins see officer activity, licensees see their own activity).
     if (section === 'officer-activity') {
       return true;
+    }
+
+    if (section === 'distributor-permit') {
+      return this.isDistributorUser();
     }
 
     if (section === 'single-window' || section === 'single-window-detail') {
@@ -1541,6 +1667,14 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
     if (section === 'payment-transactions') {
       return roleId === 3;
+    }
+
+    if (section === 'company-registration') {
+      return this.canAccessCompanyRegistrationWorkflow();
+    }
+
+    if (section === 'company-collaboration') {
+      return this.canAccessCompanyCollaborationWorkflow();
     }
 
     if (this.isLicenseeUser() || this.isSiteAdminUser()) {
@@ -1578,9 +1712,6 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return true;
     }
 
-    if (section === 'company-collaboration' && this.canAccessCompanyCollaborationWorkflow()) {
-      return true;
-    }
 
     const sectionRouteToken = String(section || '').trim().toLowerCase();
     if (this.dbNavigationRoutes.has(sectionRouteToken)) {
@@ -1617,6 +1748,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       'stock-inventory': ['stock_inventory', 'inventory', 'brandwarehouse'],
       'bl-details': ['bl_details', 'bulk_liter', 'bulk_detail', 'arrival_bulk_liter', 'arrival_details', 'bl'],
       'officer-activity': ['officer_activity', 'officer'],
+      'distributor-permit': ['distributor_permit', 'distributor-permit'],
       'salesman-barman-registration': ['salesman_barman', 'salesman-barman', 'salesmanbarman'],
       'company-registration': ['company_registration', 'company-registration', 'companyregistration'],
       'company-collaboration': ['company_collaboration', 'company-collaboration', 'companycollaboration'],

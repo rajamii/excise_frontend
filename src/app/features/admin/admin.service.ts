@@ -20,6 +20,7 @@ import { ActiveLicense } from '../../core/models/active-license.model';
 import { TransitPermitDistributorData } from '../../core/models/transit-permit-distributor-data.model';
 import { BrandMlInCases } from '../../core/models/brand-ml-in-cases.model';
 import { MasterBottleType } from '../../core/models/master-bottle-type.model';
+import { LocationSubcategory } from '../../core/models/location-subcategory.model';
 
 export type UserPayload = Omit<Partial<Account>, 'district' | 'subdivision' | 'role'> & {
   district?: number;
@@ -72,6 +73,7 @@ export class AdminService {
   private readonly licenseMastersUrl = `${this.baseUrl}/masters/license`;
   private readonly usersUrl = `${this.baseUrl}/auth`;
   private readonly supplyChainUrl = `${this.baseUrl}/masters/supply_chain`;
+  private readonly notificationUrl = `${this.baseUrl}/masters/notification`;
 
   constructor(private http: HttpClient) { }
 
@@ -252,6 +254,32 @@ export class AdminService {
     return this.http.delete(`${this.mastersUrl}/license-categories/${id}/delete/`);
   }
 
+  // Toggles is_active for a license category
+  toggleLicenseCategoryActive(id: number): Observable<any> {
+    return this.http.patch(`${this.mastersUrl}/license-categories/${id}/toggle-active/`, {});
+  }
+
+  // ========================== ADDITIONAL CHARGE CONFIG MANAGEMENT ==========================
+
+  getAdditionalChargeConfigs(categoryId?: number): Observable<any[]> {
+    const params = categoryId ? `?category_id=${categoryId}` : '';
+    return this.http.get<any[]>(`${this.mastersUrl}/additional-charge-configs/${params}`);
+  }
+
+  addAdditionalChargeConfig(config: any): Observable<any> {
+    return this.http.post(`${this.mastersUrl}/additional-charge-configs/create/`, config);
+  }
+
+  updateAdditionalChargeConfig(id: number, changes: any): Observable<any> {
+    return this.http.put(`${this.mastersUrl}/additional-charge-configs/${id}/update/`, changes);
+  }
+
+  deleteAdditionalChargeConfig(id: number): Observable<any> {
+    return this.http.delete(`${this.mastersUrl}/additional-charge-configs/${id}/delete/`);
+  }
+
+  // ========================== LICENSE SUBCATEGORY MANAGEMENT ==========================
+
   // Adds a new license subcategory
   addLicenseSubcategory(category: LicenseSubcategory): Observable<any> {
     return this.http.post(`${this.mastersUrl}/license-subcategories/create/`, category);
@@ -259,13 +287,20 @@ export class AdminService {
 
   // Updates an existing license subcategory by ID
   updateLicenseSubcategory(id: number, changes: Partial<LicenseSubcategory>): Observable<LicenseSubcategory> {
-    return this.http.put<LicenseSubcategory>(`${this.mastersUrl}/license-subcategories/${id}/update/`, changes);
+    return this.http.patch<LicenseSubcategory>(`${this.mastersUrl}/license-subcategories/${id}/update/`, changes);
   }
 
   // Deletes a license subcategory by ID
   deleteLicenseSubcategory(id: number): Observable<any> {
     return this.http.delete(`${this.mastersUrl}/license-subcategories/${id}/delete/`);
   }
+
+  // Toggles is_active for a license subcategory
+  toggleLicenseSubcategoryActive(id: number): Observable<any> {
+    return this.http.patch(`${this.mastersUrl}/license-subcategories/${id}/toggle-active/`, {});
+  }
+
+  // ========================== LICENSE TITLE MANAGEMENT ==========================
 
   // Adds a new license title
   addLicenseTitle(category: LicenseTitle): Observable<any> {
@@ -281,6 +316,54 @@ export class AdminService {
   deleteLicenseTitle(id: number): Observable<any> {
     return this.http.delete(`${this.mastersUrl}/license-titles/${id}/delete/`);
   }
+
+  // ========================== LOCATION ==========================
+
+  // --- LOCATION SUBCATEGORIES ---
+  addLocationSubcategory(data: Partial<LocationSubcategory>): Observable<any> {
+    return this.http.post(`${this.mastersUrl}/location-subcategories/create/`, data);
+  }
+  updateLocationSubcategory(id: number, data: Partial<LocationSubcategory>): Observable<any> {
+    return this.http.put(`${this.mastersUrl}/location-subcategories/${id}/update/`, data);
+  }
+  deleteLocationSubcategory(id: number): Observable<any> {
+    return this.http.delete(`${this.mastersUrl}/location-subcategories/${id}/delete/`);
+  }
+
+  // --- BLOCKS ---
+  addBlock(data: any): Observable<any> {
+    return this.http.post(`${this.mastersUrl}/blocks/create/`, data);
+  }
+  updateBlock(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.mastersUrl}/blocks/${id}/update/`, data);
+  }
+  deleteBlock(id: number): Observable<any> {
+    return this.http.delete(`${this.mastersUrl}/blocks/${id}/delete/`);
+  }
+
+  // --- RURAL WARDS ---
+  addRuralWard(data: any): Observable<any> {
+    return this.http.post(`${this.mastersUrl}/rural-wards/create/`, data);
+  }
+  updateRuralWard(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.mastersUrl}/rural-wards/${id}/update/`, data);
+  }
+  deleteRuralWard(id: number): Observable<any> {
+    return this.http.delete(`${this.mastersUrl}/rural-wards/${id}/delete/`);
+  }
+
+  // --- URBAN WARDS ---
+  addWard(data: any): Observable<any> {
+    return this.http.post(`${this.mastersUrl}/wards/create/`, data);
+  }
+  updateWard(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.mastersUrl}/wards/${id}/update/`, data);
+  }
+  deleteWard(id: number): Observable<any> {
+    return this.http.delete(`${this.mastersUrl}/wards/${id}/delete/`);
+  }
+
+  // ========================== ROAD MANAGEMENT ==========================
 
   // Adds a new road
   addRoad(category: Road): Observable<any> {
@@ -443,6 +526,20 @@ export class AdminService {
 
   toggleCheckPostActive(id: number): Observable<any> {
     return this.http.patch(`${this.supplyChainUrl}/checkposts/admin/checkposts/${id}/toggle-active/`, {});
+  }
+
+  // ========================== NOTIFICATION MANAGEMENT ==========================
+
+  addNotification(payload: FormData): Observable<any> {
+    return this.http.post(`${this.notificationUrl}/create/`, payload);
+  }
+
+  updateNotification(id: number, payload: FormData): Observable<any> {
+    return this.http.put(`${this.notificationUrl}/update/${id}/`, payload);
+  }
+
+  deleteNotification(id: number): Observable<any> {
+    return this.http.delete(`${this.notificationUrl}/delete/${id}/`);
   }
 
   // Renewal Application Config

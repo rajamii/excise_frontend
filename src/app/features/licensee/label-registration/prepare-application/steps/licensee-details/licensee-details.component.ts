@@ -277,6 +277,7 @@ export class LabelRegistrationLicenseeDetailsComponent implements OnInit, OnDest
           const mapped: string[] = [];
 
           categories
+            .filter((item: any) => item?.isActive !== false && item?.is_active !== false)
             .map((item: any) => String(item?.licenseCategory ?? item?.license_category ?? '').trim())
             .forEach((value) => {
               if (!value || seen.has(value)) {

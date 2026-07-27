@@ -7,6 +7,7 @@ import { environment } from '../../../environments/environment';
 import { MaterialModule } from '../../shared/material.module';
 import { debounceTime, distinctUntilChanged, Subject } from 'rxjs';
 import Swal from 'sweetalert2';
+import { SingleWindowSearchStateService } from '../../core/services/single-window-search-state.service';
 
 @Component({
   selector: 'app-single-window',
@@ -18,6 +19,7 @@ import Swal from 'sweetalert2';
 export class SingleWindowComponent implements OnInit {
   private http = inject(HttpClient);
   private router = inject(Router);
+  private searchStateService = inject(SingleWindowSearchStateService);
 
   searchQuery = '';
   searchResults: any[] = [];
@@ -35,6 +37,13 @@ export class SingleWindowComponent implements OnInit {
   filterYear = '';
   filterCategory = '';
   filterRole = '';
+  filterModule = '';
+
+  modulesList = [
+    { value: '001', label: 'Application Fee' },
+    { value: '002', label: 'Renewal Fee' },
+    { value: '999', label: 'Wallet Recharge' }
+  ];
 
   daysList: number[] = Array.from({ length: 31 }, (_, i) => i + 1);
   monthsList = [
@@ -71,6 +80,9 @@ export class SingleWindowComponent implements OnInit {
   latestUsers: any[] = [];
   latestRecords: any[] = [];
   latestDeactivatedUsers: any[] = [];
+  latestUsersCount = 0;
+  latestRecordsCount = 0;
+  latestDeactivatedUsersCount = 0;
   activeLatestTab = 'admin'; // 'admin', 'license', or 'deactivated'
   isLatestLoading = false;
 
@@ -90,13 +102,35 @@ export class SingleWindowComponent implements OnInit {
   private searchSubject = new Subject<string>();
 
   ngOnInit() {
-    this.searchSubject.pipe(
-      debounceTime(400),
-      distinctUntilChanged()
-    ).subscribe(query => {
-      this.executeSearch(query);
-    });
-
+    // Restore previous search state if returning from detail view
+    if (this.searchStateService.hasState()) {
+      const saved = this.searchStateService.restore()!;
+      this.searchQuery = saved.searchQuery;
+      this.searchMode = saved.searchMode;
+      this.hasSearched = saved.hasSearched;
+      this.searchResults = saved.searchResults;
+      this.latestUsers = saved.latestUsers;
+      this.latestRecords = saved.latestRecords;
+      this.latestDeactivatedUsers = saved.latestDeactivatedUsers;
+      this.latestUsersCount = saved.latestUsersCount;
+      this.latestRecordsCount = saved.latestRecordsCount;
+      this.latestDeactivatedUsersCount = saved.latestDeactivatedUsersCount;
+      this.activeLatestTab = saved.activeLatestTab;
+      this.selectedTab = saved.selectedTab;
+      this.adminPageIndex = saved.adminPageIndex;
+      this.licensePageIndex = saved.licensePageIndex;
+      this.deactivatedPageIndex = saved.deactivatedPageIndex;
+      this.showAdvancedFilters = saved.showAdvancedFilters;
+      this.filterDay = saved.filterDay;
+      this.filterMonth = saved.filterMonth;
+      this.filterYear = saved.filterYear;
+      this.filterCategory = saved.filterCategory;
+      this.filterRole = saved.filterRole;
+      this.filterModule = saved.filterModule;
+      // Clear saved state so it doesn't persist across unrelated navigations
+      this.searchStateService.clear();
+      return;
+    }
     // Load latest created entries for landing view
     this.fetchLatestCreated();
   }
@@ -105,9 +139,12 @@ export class SingleWindowComponent implements OnInit {
     this.isLatestLoading = true;
     this.http.get<any>(`${environment.apiBaseUrl}/transactional/single-window/latest/`).subscribe({
       next: (res) => {
-        this.latestUsers = res.users || [];
-        this.latestRecords = res.records || [];
-        this.latestDeactivatedUsers = res.deactivated_users || [];
+        this.latestUsersCount = res.users_count || 0;
+        this.latestRecordsCount = res.records_count || 0;
+        this.latestDeactivatedUsersCount = res.deactivated_users_count || 0;
+        this.latestUsers = [];
+        this.latestRecords = [];
+        this.latestDeactivatedUsers = [];
         this.isLatestLoading = false;
       },
       error: (err) => {
@@ -238,6 +275,7 @@ export class SingleWindowComponent implements OnInit {
     this.filterYear = '';
     this.filterCategory = '';
     this.filterRole = '';
+    this.filterModule = '';
     this.onFilterChange();
   }
 
@@ -259,7 +297,11 @@ export class SingleWindowComponent implements OnInit {
     this.searchQuery = '';
     this.searchResults = [];
     this.filteredResults = [];
+    this.latestUsers = [];
+    this.latestRecords = [];
+    this.latestDeactivatedUsers = [];
     this.hasSearched = false;
+    this.searchStateService.clear();
   }
 
   executeSearch(query: string) {
@@ -267,6 +309,9 @@ export class SingleWindowComponent implements OnInit {
     if (!trimmed) {
       this.searchResults = [];
       this.filteredResults = [];
+      this.latestUsers = [];
+      this.latestRecords = [];
+      this.latestDeactivatedUsers = [];
       this.hasSearched = false;
       return;
     }
@@ -286,6 +331,7 @@ export class SingleWindowComponent implements OnInit {
       if (this.filterYear) params.year = this.filterYear;
       if (this.filterCategory) params.category = this.filterCategory;
       if (this.filterRole) params.role = this.filterRole;
+      if (this.filterModule) params.module = this.filterModule;
     }
 
     this.http.get<any>(`${environment.apiBaseUrl}/transactional/single-window/search/`, {
@@ -294,6 +340,45 @@ export class SingleWindowComponent implements OnInit {
       next: (res) => {
         this.searchResults = res.results || [];
         this.filterResults();
+
+        // Split search results into respective lists for the tabs
+        this.latestUsers = this.searchResults.filter(r => r.type === 'licensee' && r.status !== 'Deactivated');
+        this.latestDeactivatedUsers = this.searchResults.filter(r => r.type === 'licensee' && r.status === 'Deactivated');
+        this.latestRecords = this.searchResults
+          .filter(r => ['license', 'new_license_app', 'renewal_app', 'salesman_barman_app', 'payment'].includes(r.type))
+          .map(r => {
+            if (r.type === 'payment') {
+              return {
+                ...r,
+                application_id: r.meta?.application_id || r.id,
+                establishment_name: r.meta?.payment_type || 'Payment Gateway',
+                applicant_name: r.meta?.applicant_name || 'N/A',
+                applicant_username: r.meta?.username || 'N/A',
+                license_category: 'Payment Transaction',
+                issued_license_id: r.id,
+                license_is_active: r.status === 'Success',
+                current_stage: r.status || 'Pending',
+                pending_at: 'N/A',
+                created_at: r.meta?.created_at?.split(' ')[0] || 'N/A'
+              };
+            }
+            return r;
+          });
+
+        // Reset pagination indexes on new search
+        this.adminPageIndex = 0;
+        this.licensePageIndex = 0;
+        this.deactivatedPageIndex = 0;
+
+        // Automatically switch to the tab that has results
+        if (this.latestRecords.length > 0) {
+          this.activeLatestTab = 'license';
+        } else if (this.latestUsers.length > 0) {
+          this.activeLatestTab = 'admin';
+        } else if (this.latestDeactivatedUsers.length > 0) {
+          this.activeLatestTab = 'deactivated';
+        }
+
         this.isLoading = false;
       },
       error: (err) => {
@@ -317,7 +402,35 @@ export class SingleWindowComponent implements OnInit {
     }
   }
 
+  private saveCurrentSearchState(): void {
+    this.searchStateService.save({
+      searchQuery: this.searchQuery,
+      searchMode: this.searchMode,
+      hasSearched: this.hasSearched,
+      searchResults: this.searchResults,
+      latestUsers: this.latestUsers,
+      latestRecords: this.latestRecords,
+      latestDeactivatedUsers: this.latestDeactivatedUsers,
+      latestUsersCount: this.latestUsersCount,
+      latestRecordsCount: this.latestRecordsCount,
+      latestDeactivatedUsersCount: this.latestDeactivatedUsersCount,
+      activeLatestTab: this.activeLatestTab,
+      selectedTab: this.selectedTab,
+      adminPageIndex: this.adminPageIndex,
+      licensePageIndex: this.licensePageIndex,
+      deactivatedPageIndex: this.deactivatedPageIndex,
+      showAdvancedFilters: this.showAdvancedFilters,
+      filterDay: this.filterDay,
+      filterMonth: this.filterMonth,
+      filterYear: this.filterYear,
+      filterCategory: this.filterCategory,
+      filterRole: this.filterRole,
+      filterModule: this.filterModule,
+    });
+  }
+
   viewDetails(result: any) {
+    this.saveCurrentSearchState();
     if (result.type === 'licensee') {
       this.router.navigate(['/dashboard'], {
         queryParams: {
@@ -326,6 +439,41 @@ export class SingleWindowComponent implements OnInit {
           id: result.id
         }
       });
+    } else if (result.type === 'payment') {
+      if (result.meta && result.meta.target_type && result.meta.target_id) {
+        this.router.navigate(['/dashboard'], {
+          queryParams: {
+            section: 'single-window-detail',
+            type: result.meta.target_type,
+            id: result.meta.target_id,
+            targetId: result.id
+          }
+        });
+      } else {
+        const appId = (result.meta && result.meta.application_id) || result.application_id;
+        if (appId) {
+          const isApplication = appId.includes('/') || appId.startsWith('NLI') || appId.startsWith('NLA') || appId.startsWith('LRA') || appId.startsWith('SBM');
+          if (isApplication) {
+            this.router.navigate(['/dashboard'], {
+              queryParams: {
+                section: 'single-window-detail',
+                type: 'new_license_app',
+                id: appId,
+                targetId: result.id
+              }
+            });
+          } else {
+            const userId = result.meta && result.meta.user_id;
+            this.router.navigate(['/dashboard'], {
+              queryParams: {
+                section: 'single-window-detail',
+                type: 'licensee',
+                id: userId || appId
+              }
+            });
+          }
+        }
+      }
     } else {
       // Check if there is an associated NLA application ID
       const appId = (result.meta && result.meta.application_id) || result.application_id;
@@ -387,6 +535,9 @@ export class SingleWindowComponent implements OnInit {
   getStatusClass(status: string): string {
     if (!status) return 'status-draft';
     const s = status.toLowerCase();
+    if (s.includes('deactivate')) {
+      return 'status-deactivated';
+    }
     if (s.includes('active') || s.includes('approve') || s.includes('pass') || s.includes('resolve')) {
       return 'status-active';
     }

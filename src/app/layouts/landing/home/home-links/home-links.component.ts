@@ -1,11 +1,19 @@
 import { Component, OnInit } from '@angular/core';
 import { MaterialModule } from '../../../../shared/material.module';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Location } from '@angular/common';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { WhatsCurrentService } from '../../../../core/services/whats-current.service';
+import { PreventiveRaidsService } from '../../../../core/services/preventive-raids.service';
+import { PreventiveRaid } from '../../../../core/models/preventive-raids.model';
+import { environment } from '../../../../../environments/environment';
 
 interface Notification {
   date: string;
   subject: string;
+  message?: string;
   category: string;
+  file?: string;
 }
 
 @Component({
@@ -18,14 +26,8 @@ export class HomeLinksComponent implements OnInit{
   page: string | null= '';
   selectedCategory: string = 'all';
 
-  notifications: Notification[] = [
-    { date: '26/09/1974', subject: 'Circular Regarding Settlement of Excise License for the Year 2025-2026', category: 'circular' },
-    { date: '26/09/1974', subject: 'DRY DAY NOTIFIATION - 2025', category: 'circular' },
-    { date: '14/08/2024', subject: 'Gazette No 394 - Suspension on issue of New Foreign Liquor Retail License', category: 'act' },
-    { date: '08/02/2024', subject: 'Notification No 01/Excise - License Renewal for FY 2024-25', category: 'rule' },
-    { date: '01/12/2023', subject: 'Notification No 31/Ex - License Fees and others', category: 'act' },
-    { date: '20/05/2023', subject: 'Notification No 25/Excise - Departmental Promotional Committee Members', category: 'rule' },
-  ];
+  notifications: Notification[] = [];
+  preventiveRaids: PreventiveRaid[] = [];
 
   displayedColumns: string[] = ['date', 'subject', 'download'];
 
@@ -33,29 +35,102 @@ export class HomeLinksComponent implements OnInit{
     this.route.paramMap.subscribe(params => {
       this.page = params.get('page');
     });
+    this.loadNotifications();
+    this.loadRaids();
   }
 
-  constructor(private route: ActivatedRoute) {}
+  constructor(
+    private route: ActivatedRoute,
+    private sanitizer: DomSanitizer,
+    private whatsCurrentService: WhatsCurrentService,
+    private raidsService: PreventiveRaidsService,
+    private location: Location,
+    private router: Router
+  ) {}
+
+  goBack(): void {
+    if (window.history.length > 1) {
+      this.location.back();
+    } else {
+      this.router.navigate(['/']);
+    }
+  }
+
+  loadNotifications() {
+    this.whatsCurrentService.getWhatsCurrent().subscribe({
+      next: (data) => {
+        const activeData = (data || []).filter(item => item.isActive !== false);
+        this.notifications = activeData.map(item => ({
+          date: item.date,
+          subject: item.title,
+          message: item.message,
+          category: item.category,
+          file: item.file ? String(item.file) : undefined
+        }));
+      },
+      error: (err) => {
+        console.error('Failed to load notifications dynamically:', err);
+      }
+    });
+  }
 
   get filteredNotifications(): Notification[] {
+    // Never show bullet notifications in the public list
+    const nonBullet = this.notifications.filter(n => n.category !== 'bullet');
     if (this.selectedCategory === 'all') {
-      return this.notifications;
+      return nonBullet;
     }
-    return this.notifications.filter(notification => notification.category === this.selectedCategory);
+    return nonBullet.filter(n => n.category === this.selectedCategory);
   }
 
   downloadFile(notification: Notification) {
-    alert(`Downloading file: ${notification.subject}`);
+    if (notification.file) {
+      const url = notification.file.startsWith('http')
+        ? notification.file
+        : `${environment.apiBaseUrl}${notification.file}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      alert('No document attached.');
+    }
+  }
+
+  truncateText(text: string, maxLength: number): string {
+    if (!text) return '';
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength).trim() + '...';
+  }
+
+  renderBold(text: string): SafeHtml {
+    if (!text) return '';
+    const escaped = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    const html = escaped
+      .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+      .replace(/\n/g, '<br>');
+    return this.sanitizer.bypassSecurityTrustHtml(html);
   }
   
   raidsColumns: string[] = ['photo', 'caption'];
+  dataSource: PreventiveRaid[] = [];
 
-  dataSource = [
-    {
-      photoUrl: '../../assets/images/main/preventive-raids/preventive-raids.jpg',
-      publishedOn: 'Apr 20 2021 12:00AM',
-      caption: 'Raid conducted by Sikkim State Excise',
-      captionLink: 'Excise Raids on illicit dens in Remote Villages.'
+  loadRaids(): void {
+    this.raidsService.getPreventiveRaids().subscribe({
+      next: (data) => {
+        this.dataSource = data;
+      },
+      error: (err) => {
+        console.error('Failed to load preventive raids:', err);
+      }
+    });
+  }
+
+  getRaidImageUrl(imagePath: string): string {
+    if (!imagePath) return '';
+    if (imagePath.startsWith('http') || imagePath.startsWith('assets/')) {
+      return imagePath;
     }
-  ];
+    return `${environment.apiBaseUrl}${imagePath}`;
+  }
 }

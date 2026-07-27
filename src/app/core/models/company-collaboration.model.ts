@@ -20,6 +20,8 @@ export interface CompanyCollaborationBrandOwner {
   mobile?: string;
   email?: string;
   owner_type?: string;
+  brand_owner_licensee_id_no?: string;
+  brand_owner_origin?: string;
   members?: CompanyCollaborationMember[];
 }
 
@@ -36,6 +38,8 @@ export interface CompanyCollaborationBrand {
   liquorCatCode?: number;
   liquorKindId?: number;
   liquorTypeId?: number;
+  pack_sizes?: { product_id: number; value: number; unit: string; label: string }[];
+  selected_sizes?: string[]; // E.g., ['750 Ml', '375 Ml']
 }
 
 export interface CompanyCollaborationBottlerDetails {
@@ -50,6 +54,11 @@ export interface CompanyCollaborationBottlerDetails {
   brandOwnerMobile?: string;
   brandOwnerEmail?: string;
   brandOwnerMembers?: CompanyCollaborationMember[];
+  brandType?: string;
+  license?: string;
+  country?: string;
+  state?: string;
+  pinCode?: string | number;
 }
 
 export interface CompanyCollaborationCompanyDetails {

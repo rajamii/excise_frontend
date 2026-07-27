@@ -10,19 +10,6 @@
 
     <mat-card-content>
 
-      <!-- Brand Type Radio Buttons -->
-      <mat-radio-group aria-label="Brand Type" formControlName="brandType">
-        <mat-radio-button value="Manufactured in Sikkim">Manufactured in Sikkim</mat-radio-button>
-        <mat-radio-button value="Imported from other States/Country">Imported from other States/Country</mat-radio-button>
-        <mat-radio-button value="Bottled in Sikkim (Collaboration)">Bottled in Sikkim (Collaboration)</mat-radio-button>
-        <!-- Error Display -->
-        @if (companyDetailsForm.controls['brandType'].invalid) {
-          <mat-error>
-            {{ getErrorMessage('brandType') }}
-          </mat-error>
-        }
-      </mat-radio-group>
-
       <!-- Basic Company Info Fields -->
       <div class="form-field-container">
 
@@ -33,8 +20,8 @@
             @if (isLoadingLicenses) {
               <mat-option disabled>Loading...</mat-option>
             } @else {
-              @for (license of licenses; track license.id) {
-                <mat-option [value]="license.licenseType">{{ license.licenseType }}</mat-option>
+              @for (lic of myActiveLicenses; track (lic.licenseId || lic.license_id)) {
+                <mat-option [value]="lic.licenseId || lic.license_id">{{ lic.licenseId || lic.license_id }}</mat-option>
               }
             }
           </mat-select>
@@ -45,19 +32,10 @@
           }
         </mat-form-field>
 
-        <!-- Application Year Dropdown -->
+        <!-- Application Year - auto set, read only -->
         <mat-form-field appearance="outline">
-          <mat-label>Select Application Year</mat-label>
-          <mat-select formControlName="applicationYear">
-            @for (year of applicationYears; track year) {
-              <mat-option [value]="year">{{ year }}</mat-option>
-            }
-          </mat-select>
-          @if (companyDetailsForm.controls['applicationYear'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('applicationYear') }}
-            </mat-error>
-          }
+          <mat-label>Application Year</mat-label>
+          <input matInput formControlName="applicationYear" readonly />
         </mat-form-field>
 
         <!-- Company Name - FIXED LABEL -->
@@ -71,33 +49,9 @@
           }
         </mat-form-field>
 
-        <!-- PAN Input -->
-        <mat-form-field appearance="outline">
-          <mat-label>PAN</mat-label>
-          <input matInput placeholder="Enter PAN" type="text" formControlName="pan" required/>
-          @if (companyDetailsForm.controls['pan'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('pan') }}
-            </mat-error>
-          }
-        </mat-form-field>
+        <!-- PAN Input — REMOVED -->
 
-        <!-- Registered Office Address -->
-        <mat-form-field appearance="outline">
-          <mat-label>Registered Office Address</mat-label>
-          <textarea matInput placeholder="Enter Registered Office Address (max 1000 characters)"
-            formControlName="officeAddress"
-            cdkTextareaAutosize
-            #autosize="cdkTextareaAutosize"
-            cdkAutosizeMinRows="1"
-            cdkAutosizeMaxRows="5">
-          </textarea>
-          @if (companyDetailsForm.controls['officeAddress'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('officeAddress') }}
-            </mat-error>
-          }
-        </mat-form-field>
+        <!-- Registered Office Address — REMOVED -->
 
       </div>
 

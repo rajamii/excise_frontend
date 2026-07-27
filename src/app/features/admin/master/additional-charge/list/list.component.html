@@ -1,0 +1,152 @@
+<div class="lf-page">
+
+  <mat-tab-group class="outer-tabs" animationDuration="200ms">
+
+    <!-- ══════════════════════════════
+         TAB 1 — LOCATIONS
+    ══════════════════════════════ -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">location_on</mat-icon>
+        <span class="tab-label-text">Locations</span>
+        <span class="count-badge">{{ locations.length }}</span>
+      </ng-template>
+
+      <div class="tab-body">
+        <div class="tab-toolbar">
+          <span class="toolbar-title">Location Management</span>
+          <button mat-flat-button color="primary" (click)="onAddLocation()" class="add-btn">
+            <mat-icon>add</mat-icon> Add Location
+          </button>
+        </div>
+        <div class="table-wrapper">
+          <mat-table [dataSource]="locations" class="data-table">
+
+            <ng-container matColumnDef="locationCode">
+              <mat-header-cell *matHeaderCellDef>Location Code</mat-header-cell>
+              <mat-cell *matCellDef="let item"><span class="code-chip">{{ item.locationCode }}</span></mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="locationDescription">
+              <mat-header-cell *matHeaderCellDef>Description</mat-header-cell>
+              <mat-cell *matCellDef="let item">{{ item.locationDescription }}</mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="district">
+              <mat-header-cell *matHeaderCellDef>District</mat-header-cell>
+              <mat-cell *matCellDef="let item">{{ item.district }}</mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="status">
+              <mat-header-cell *matHeaderCellDef>Status</mat-header-cell>
+              <mat-cell *matCellDef="let item">
+                <span class="status-badge" [class.active]="item.isActive" [class.inactive]="!item.isActive">
+                  {{ item.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+              <mat-header-cell *matHeaderCellDef class="actions-col">Actions</mat-header-cell>
+              <mat-cell *matCellDef="let item" class="actions-col">
+                <button mat-icon-button color="primary" matTooltip="Edit" (click)="onEditLocation(item)"><mat-icon>edit</mat-icon></button>
+                <button mat-icon-button color="warn" matTooltip="Deactivate" (click)="onDeleteLocation(item)"><mat-icon>delete</mat-icon></button>
+              </mat-cell>
+            </ng-container>
+
+            <mat-header-row *matHeaderRowDef="locationColumns"></mat-header-row>
+            <mat-row *matRowDef="let row; columns: locationColumns;"></mat-row>
+          </mat-table>
+
+          @if (locations.length === 0) {
+            <div class="empty-state"><mat-icon>inbox</mat-icon><p>No locations found.</p></div>
+          }
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- ══════════════════════════════
+         TAB 2 — LICENSE LOCATION FEE
+    ══════════════════════════════ -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">attach_money</mat-icon>
+        <span class="tab-label-text">License Location Fee</span>
+        <span class="count-badge">{{ licenseFees.length }}</span>
+      </ng-template>
+
+      <div class="tab-body">
+        <div class="tab-toolbar">
+          <span class="toolbar-title">License Location Fee Configuration</span>
+          <button mat-flat-button color="primary" (click)="onAddLicenseFee()" class="add-btn">
+            <mat-icon>add</mat-icon> Add License Fee
+          </button>
+        </div>
+        <div class="table-wrapper">
+          <mat-table [dataSource]="licenseFees" class="data-table">
+
+            <ng-container matColumnDef="category">
+              <mat-header-cell *matHeaderCellDef>License Category</mat-header-cell>
+              <mat-cell *matCellDef="let item">{{ item.licenseCategoryName || item.licenseCategory }}</mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="subcategory">
+              <mat-header-cell *matHeaderCellDef>Subcategory</mat-header-cell>
+              <mat-cell *matCellDef="let item">{{ item.licenseSubcategoryName || item.licenseSubcategory }}</mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="location">
+              <mat-header-cell *matHeaderCellDef>Location</mat-header-cell>
+              <mat-cell *matCellDef="let item">{{ item.locationDescription || 'All Locations' }}</mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="fee">
+              <mat-header-cell *matHeaderCellDef>License Fee</mat-header-cell>
+              <mat-cell *matCellDef="let item">{{ item.licenseFee != null ? (item.licenseFee | currency:'INR':'symbol':'1.2-2') : 'N/A' }}</mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="security">
+              <mat-header-cell *matHeaderCellDef>Security</mat-header-cell>
+              <mat-cell *matCellDef="let item">{{ item.securityAmount != null ? (item.securityAmount | currency:'INR':'symbol':'1.2-2') : 'N/A' }}</mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="renewal">
+              <mat-header-cell *matHeaderCellDef>Renewal</mat-header-cell>
+              <mat-cell *matCellDef="let item">{{ item.renewalAmount != null ? (item.renewalAmount | currency:'INR':'symbol':'1.2-2') : 'N/A' }}</mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="lateFee">
+              <mat-header-cell *matHeaderCellDef>Late Fee</mat-header-cell>
+              <mat-cell *matCellDef="let item">{{ item.lateFee != null ? (item.lateFee | currency:'INR':'symbol':'1.2-2') : 'N/A' }}</mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="status">
+              <mat-header-cell *matHeaderCellDef>Status</mat-header-cell>
+              <mat-cell *matCellDef="let item">
+                <span class="status-badge" [class.active]="item.isActive" [class.inactive]="!item.isActive">
+                  {{ item.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+              <mat-header-cell *matHeaderCellDef class="actions-col">Actions</mat-header-cell>
+              <mat-cell *matCellDef="let item" class="actions-col">
+                <button mat-icon-button color="primary" matTooltip="Edit" (click)="onEditLicenseFee(item)"><mat-icon>edit</mat-icon></button>
+                <button mat-icon-button color="warn" matTooltip="Deactivate" (click)="onDeleteLicenseFee(item)"><mat-icon>delete</mat-icon></button>
+              </mat-cell>
+            </ng-container>
+
+            <mat-header-row *matHeaderRowDef="licenseFeeColumns"></mat-header-row>
+            <mat-row *matRowDef="let row; columns: licenseFeeColumns;"></mat-row>
+          </mat-table>
+
+          @if (licenseFees.length === 0) {
+            <div class="empty-state"><mat-icon>inbox</mat-icon><p>No license fees configured.</p></div>
+          }
+        </div>
+      </div>
+    </mat-tab>
+
+  </mat-tab-group>
+</div>

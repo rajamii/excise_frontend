@@ -871,6 +871,7 @@ export class CommissionerDashboardComponent implements OnInit {
   readonly Math = Math;
 
   @Input() embeddedHologramOnly = false;
+  @Input() supplyChainHologramPending = 0; // Passed from parent dashboard when available
 
   // Services
   public accountService = inject(AccountService);
@@ -884,7 +885,8 @@ export class CommissionerDashboardComponent implements OnInit {
   // Data properties
   allApplications: CommissionerData[] = [];
   filteredApplications: CommissionerData[] = [];
-  unifiedCounts = { applied: 0, pending: 0, approved: 0, rejected: 0 };
+  unifiedCounts = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 };
+  hologramPendingCount = 0; // Separate counter updated when hologram data loads
   selectedApplicationType: string = 'all';
   selectedCompany: string = '';
   companyOptions: string[] = [];
@@ -913,10 +915,12 @@ export class CommissionerDashboardComponent implements OnInit {
     this.resolveCurrentUserRole();
     if (this.embeddedHologramOnly) {
       this.selectedApplicationType = 'hologram';
-      this.loadHolograms();
+      setTimeout(() => this.loadHolograms(), 0);
     } else {
-      this.loadAllApplications();
-      this.loadUnifiedDashboardCounts();
+      setTimeout(() => {
+        this.loadAllApplications();
+        this.loadUnifiedDashboardCounts();
+      }, 0);
     }
   }
 
@@ -963,6 +967,7 @@ export class CommissionerDashboardComponent implements OnInit {
         this.unifiedCounts = {
           applied: counts?.applied || 0,
           pending: counts?.pending || 0,
+          objection: counts?.objection || 0,
           approved: counts?.approved || 0,
           rejected: counts?.rejected || 0
         };
@@ -1129,6 +1134,29 @@ export class CommissionerDashboardComponent implements OnInit {
           ? response
           : (response?.results || response?.data || []);
 
+        // Compute pending count directly from raw data — same logic as sidebar badge
+        this.hologramPendingCount = rows.filter(item => {
+          const actions: string[] = Array.isArray(item?.allowedActions || item?.allowed_actions)
+            ? (item?.allowedActions || item?.allowed_actions)
+            : [];
+          const upper = actions.map((a: any) => String(a || '').toUpperCase());
+          if (upper.includes('APPROVE') || upper.includes('REJECT') ||
+              upper.includes('VERIFY') || upper.includes('ASSIGN_CARTONS')) {
+            return true;
+          }
+          // Status-based fallback
+          const t = String(item?.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          const isFinal = (t.includes('approved') && t.includes('commissioner')) ||
+                           t.includes('cartoonassigned') || t.includes('cartonassigned') ||
+                           t.includes('rejected') || t.includes('cancelled');
+          const hasReachedCommissioner = t.includes('forwardedtocommissioner') ||
+                                          (t.includes('forwarded') && t.includes('commissioner')) ||
+                                          t.includes('paymentcompleted');
+          return hasReachedCommissioner && !isFinal;
+        }).length;
+
+        console.log(`Commissioner Dashboard: hologramPendingCount = ${this.hologramPendingCount}`);
+
         const holograms: CommissionerData[] = rows
           .map((item: any) => ({
             id: item.id,
@@ -1205,12 +1233,24 @@ export class CommissionerDashboardComponent implements OnInit {
 
   // Dashboard statistics methods
   getDashboardStatistics() {
-    const actionablePending = this.getActionablePendingCount();
-    const legacyPending = this.getStatusCount('PENDING') + this.getStatusCount('FORWARDED');
+    // Non-hologram actionable pending (requisitions, revalidations, etc.)
+    const otherPending = this.allApplications
+      .filter(app => app.type !== 'hologram')
+      .filter(app => {
+        const actions = Array.isArray(app?.allowedActions) ? app.allowedActions : [];
+        const upper = actions.map((a: any) => String(a || '').toUpperCase());
+        return upper.includes('APPROVE') || upper.includes('REJECT');
+      }).length;
+
+    // Use the maximum of our computed count vs the parent-supplied count
+    // (parent uses sidebar badge service which is most accurate)
+    const effectiveHologramPending = Math.max(this.hologramPendingCount, this.supplyChainHologramPending);
+    const totalPending = effectiveHologramPending + otherPending + (this.unifiedCounts?.pending || 0);
 
     return {
       applied: this.getStatusCount('APPLIED') + this.getStatusCount('SUBMITTED') + (this.unifiedCounts?.applied || 0),
-      pending: (actionablePending || legacyPending) + (this.unifiedCounts?.pending || 0),
+      pending: totalPending,
+      objection: this.getStatusCount('OBJECTION') + (this.unifiedCounts?.objection || 0),
       approved: this.getStatusCount('APPROVED') + this.getStatusCount('APPROVED_BY_COMMISSIONER') + (this.unifiedCounts?.approved || 0),
       rejected: this.getStatusCount('REJECTED') + this.getStatusCount('REJECTED_BY_COMMISSIONER') + (this.unifiedCounts?.rejected || 0)
     };

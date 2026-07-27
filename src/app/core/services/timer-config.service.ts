@@ -15,6 +15,7 @@ export interface TimerConfig {
   delay_ms: number;
   source?: 'db' | 'default' | string;
   is_active?: boolean;
+  validity_period_days?: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -78,7 +79,8 @@ export class TimerConfigService {
           delay_seconds: resolvedSeconds,
           delay_ms: resolvedSeconds * 1000,
           source: res?.source ?? 'db',
-          is_active: res?.is_active ?? res?.isActive
+          is_active: res?.is_active ?? res?.isActive,
+          validity_period_days: res?.validity_period_days ?? res?.validityPeriodDays ?? null
         } as TimerConfig;
       }),
       catchError(() =>

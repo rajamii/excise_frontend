@@ -14,7 +14,13 @@ export const environment = {
         billdeskGatewayUrl: 'https://uat1.billdesk.com/pgidsk/PGIMerchantPayment',
         // BillDesk must POST its payment response to a backend endpoint,
         // Django route: /transactional/payment-gateway/billdesk/response/
-        callbackUrl: 'https://sems.sikkim.gov.in/transactional/payment-gateway/billdesk/response/',
-        cancelUrl: 'https://sems.sikkim.gov.in/transactional/payment-gateway/billdesk/response/',
+        // callbackUrl: 'https://sems.sikkim.gov.in/transactional/payment-gateway/billdesk/response/',
+        callbackUrl: 'http://127.0.0.1:8000/transactional/payment-gateway/billdesk/response/',
+
+        // cancelUrl: 'https://sems.sikkim.gov.in/transactional/payment-gateway/billdesk/response/',
+        cancelUrl: 'http://127.0.0.1:8000/transactional/payment-gateway/billdesk/response/',
+
+
+
     },
 };

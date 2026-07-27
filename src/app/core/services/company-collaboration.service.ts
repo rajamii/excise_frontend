@@ -51,6 +51,8 @@ function normalizeBrandOwner(raw: any): CompanyCollaborationBrandOwner {
     mobile:          raw.brandOwnerMobileNo ?? raw.brand_owner_mobile_no ?? '',
     email:           raw.brandOwnerEmail  ?? raw.brand_owner_email  ?? '',
     owner_type:      raw.brandOwnerTypeDesc ?? raw.brand_owner_type_desc ?? '',
+    brand_owner_licensee_id_no: raw.brandOwnerLicenseeIdNo ?? raw.brand_owner_licensee_id_no ?? '',
+    brand_owner_origin: raw.brandOwnerOrigin ?? raw.brand_owner_origin ?? '',
     location:        '',
     status:          raw.enableStatus === 'E' || raw.enable_status === 'E' ? 'Active' : 'Inactive',
     brand_count:     0,
@@ -68,7 +70,7 @@ function normalizeBrandOwner(raw: any): CompanyCollaborationBrandOwner {
  */
 function normalizeBrand(raw: any): CompanyCollaborationBrand {
   return {
-    id:               raw.liquorBrandCode  ?? raw.liquor_brand_code  ?? raw.id ?? '',
+    id:               raw.id               ?? raw.liquorBrandCode  ?? raw.liquor_brand_code  ?? '',
     brand_code:       raw.liquorBrandCode  ?? raw.liquor_brand_code  ?? String(raw.id ?? ''),
     brand_name:       raw.liquorBrandDesc  ?? raw.liquor_brand_desc  ?? '',
     category:         raw.liquorCatDesc    ?? raw.liquor_cat_desc    ?? '',
@@ -79,6 +81,7 @@ function normalizeBrand(raw: any): CompanyCollaborationBrand {
     liquorCatCode:    raw.liquorCat        ?? raw.liquor_cat         ?? undefined,
     liquorKindId:     raw.liquorKind       ?? raw.liquor_kind        ?? undefined,
     liquorTypeId:     raw.liquorType       ?? raw.liquor_type        ?? undefined,
+    pack_sizes:       raw.pack_sizes       ?? raw.packSizes          ?? [],
   };
 }
 
@@ -92,8 +95,21 @@ export class CompanyCollaborationService {
   private mastersUrl  = `${environment.apiBaseUrl}/masters/company-collaboration`;
 
   private selectedBrands: CompanyCollaborationBrand[] = [];
+  private collabDocs: Partial<Record<string, File>> = {};
 
   constructor(private http: HttpClient) {}
+
+  setCollabDocuments(docs: Partial<Record<string, File>>): void {
+    this.collabDocs = { ...this.collabDocs, ...docs };
+  }
+
+  getCollabDocuments(): Partial<Record<string, File>> {
+    return this.collabDocs;
+  }
+
+  clearCollabDocuments(): void {
+    this.collabDocs = {};
+  }
 
   // ── Application lifecycle ──────────────────────────────────────────────────
 
@@ -124,7 +140,7 @@ export class CompanyCollaborationService {
    * Returns enabled brand owners from master_brand_owner.
    */
   getBrandOwners(): Observable<CompanyCollaborationBrandOwner[]> {
-    return this.http.get<any>(`${this.mastersUrl}/brand-owners/`).pipe(
+    return this.http.get<any>(`${this.mastersUrl}/company-details/`).pipe(
       map((response) => {
         const raw = unwrapArray<any>(response, 'getBrandOwners');
         return raw.map(normalizeBrandOwner);
@@ -134,6 +150,126 @@ export class CompanyCollaborationService {
         return throwError(() => err);
       })
     );
+  }
+
+  createBrandOwner(data: any): Observable<any> {
+    return this.http.post(`${this.mastersUrl}/brand-owners/create/`, data);
+  }
+
+  updateBrandOwner(code: string, data: any): Observable<any> {
+    return this.http.put(`${this.mastersUrl}/brand-owners/${encodeURIComponent(code)}/update/`, data);
+  }
+
+  deleteBrandOwner(code: string): Observable<any> {
+    return this.http.delete(`${this.mastersUrl}/brand-owners/${encodeURIComponent(code)}/delete/`);
+  }
+
+  getCompanyDetailsList(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.mastersUrl}/company-details/`);
+  }
+
+  createCompanyDetail(data: any): Observable<any> {
+    return this.http.post(`${this.mastersUrl}/company-details/create/`, data);
+  }
+
+  updateCompanyDetail(code: string, data: any): Observable<any> {
+    return this.http.put(`${this.mastersUrl}/company-details/${encodeURIComponent(code)}/update/`, data);
+  }
+
+  deleteCompanyDetail(code: string): Observable<any> {
+    return this.http.delete(`${this.mastersUrl}/company-details/${encodeURIComponent(code)}/delete/`);
+  }
+
+  getBrandOwnerTypes(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.mastersUrl}/brand-owner-types/`);
+  }
+
+  createBrandOwnerType(data: any): Observable<any> {
+    return this.http.post(`${this.mastersUrl}/brand-owner-types/create/`, data);
+  }
+
+  updateBrandOwnerType(pk: number, data: any): Observable<any> {
+    return this.http.put(`${this.mastersUrl}/brand-owner-types/${pk}/update/`, data);
+  }
+
+  deleteBrandOwnerType(pk: number): Observable<any> {
+    return this.http.delete(`${this.mastersUrl}/brand-owner-types/${pk}/delete/`);
+  }
+
+  // Categories CRUD
+  getCategoriesCrudList(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.mastersUrl}/liquor-categories-crud/`);
+  }
+  createCategoryCrud(data: any): Observable<any> {
+    return this.http.post(`${this.mastersUrl}/liquor-categories-crud/create/`, data);
+  }
+  updateCategoryCrud(pk: number | string, data: any): Observable<any> {
+    return this.http.put(`${this.mastersUrl}/liquor-categories-crud/${pk}/update/`, data);
+  }
+  deleteCategoryCrud(pk: number | string): Observable<any> {
+    return this.http.delete(`${this.mastersUrl}/liquor-categories-crud/${pk}/delete/`);
+  }
+
+  // Kinds CRUD
+  getKindsCrudList(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.mastersUrl}/liquor-kinds-crud/`);
+  }
+  createKindCrud(data: any): Observable<any> {
+    return this.http.post(`${this.mastersUrl}/liquor-kinds-crud/create/`, data);
+  }
+  updateKindCrud(pk: number | string, data: any): Observable<any> {
+    return this.http.put(`${this.mastersUrl}/liquor-kinds-crud/${pk}/update/`, data);
+  }
+  deleteKindCrud(pk: number | string): Observable<any> {
+    return this.http.delete(`${this.mastersUrl}/liquor-kinds-crud/${pk}/delete/`);
+  }
+
+  // Types CRUD
+  getTypesCrudList(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.mastersUrl}/liquor-types-crud/`);
+  }
+  createTypeCrud(data: any): Observable<any> {
+    return this.http.post(`${this.mastersUrl}/liquor-types-crud/create/`, data);
+  }
+  updateTypeCrud(pk: number | string, data: any): Observable<any> {
+    return this.http.put(`${this.mastersUrl}/liquor-types-crud/${pk}/update/`, data);
+  }
+  deleteTypeCrud(pk: number | string): Observable<any> {
+    return this.http.delete(`${this.mastersUrl}/liquor-types-crud/${pk}/delete/`);
+  }
+
+  // Brands CRUD (with search + optional category/kind/type filter)
+  getBrandsCrudList(search: string, catCode?: number | null, kindId?: number | null, typeId?: number | null): Observable<any[]> {
+    let params = new HttpParams();
+    if (search.trim()) params = params.set('search', search.trim());
+    if (catCode != null) params = params.set('liquor_cat', catCode.toString());
+    if (kindId  != null) params = params.set('liquor_kind', kindId.toString());
+    if (typeId  != null) params = params.set('liquor_type', typeId.toString());
+    return this.http.get<any[]>(`${this.mastersUrl}/liquor-brands-crud/`, { params });
+  }
+  createBrandCrud(data: any): Observable<any> {
+    return this.http.post(`${this.mastersUrl}/liquor-brands-crud/create/`, data);
+  }
+  updateBrandCrud(pk: number | string, data: any): Observable<any> {
+    return this.http.put(`${this.mastersUrl}/liquor-brands-crud/${pk}/update/`, data);
+  }
+  deleteBrandCrud(pk: number | string): Observable<any> {
+    return this.http.delete(`${this.mastersUrl}/liquor-brands-crud/${pk}/delete/`);
+  }
+
+  // Brand Pack Sizes (from master_liquor_product)
+  getBrandPackSizes(brandCode: string): Observable<any[]> {
+    const encoded = encodeURIComponent(brandCode);
+    return this.http.get<any[]>(`${this.mastersUrl}/liquor-brands-crud/pack-sizes/${encoded}/`);
+  }
+  addBrandPackSize(brandCode: string, measureValue: number): Observable<any> {
+    const encoded = encodeURIComponent(brandCode);
+    // POST to the same pack-sizes URL — the backend differentiates GET vs POST by HTTP method
+    // (Avoids URL routing conflict with <path:brand_code> greedily capturing /add/)
+    return this.http.post(`${this.mastersUrl}/liquor-brands-crud/pack-sizes/${encoded}/`, { measureValue });
+  }
+  deleteBrandPackSize(sizeId: number): Observable<any> {
+    return this.http.delete(`${this.mastersUrl}/liquor-brands-crud/pack-sizes/${sizeId}/delete/`);
   }
 
   /**
@@ -199,10 +335,15 @@ export class CompanyCollaborationService {
     return this.http.get<any>(`${this.mastersUrl}/fee/`).pipe(
       map((response): CompanyCollaborationFeeStructure => {
         const payload = response?.data ?? response ?? {};
+        const collabFee = Number(payload.collaborationFees ?? payload.collaboration_fees ?? payload.collaborationFee ?? payload.collaboration_fee ?? 25000);
+        const rawSecurity = payload.securityDeposit ?? payload.security_deposit;
+        const securityDep = (rawSecurity !== undefined && rawSecurity !== null && Number(rawSecurity) > 0)
+          ? Number(rawSecurity)
+          : collabFee;
         return {
-          applicationFee:   Number(payload.registrationFee   ?? payload.registration_fee   ?? payload.applicationFee   ?? payload.application_fee   ?? 0),
-          collaborationFee: Number(payload.collaborationFees ?? payload.collaboration_fees  ?? payload.collaborationFee ?? payload.collaboration_fee  ?? 0),
-          securityDeposit:  Number(payload.securityDeposit   ?? payload.security_deposit   ?? 0)
+          applicationFee:   0,
+          collaborationFee: collabFee,
+          securityDeposit:  securityDep
         };
       }),
       catchError((err) => {
@@ -212,6 +353,19 @@ export class CompanyCollaborationService {
     );
   }
 
+
+  // ── Workflow actions ───────────────────────────────────────────────────────
+
+  performWorkflowAction(applicationId: string, action: string, remarks: string = ''): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post(`${this.baseUrl}/workflow-action/${encodedId}/`, { action, remarks });
+  }
+
+  // Pay collaboration fee via license_fee wallet
+  payCollaborationFee(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post(`${this.baseUrl}/pay-fee/${encodedId}/`, {});
+  }
 
   // ── Selected brands state ──────────────────────────────────────────────────
 

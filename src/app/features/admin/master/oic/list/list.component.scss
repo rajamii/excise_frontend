@@ -75,14 +75,33 @@ mat-card.oic-card mat-card-header.oic-card-header {
   border-radius: 8px;
   overflow: hidden;
 
+  mat-header-row {
+    background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%) !important;
+    min-height: 48px;
+  }
+
   mat-header-cell {
-    font-size: 13px;
-    font-weight: 700;
-    color: #223561;
-    background: #f4f7ff;
-    border-bottom: 1px solid #d9e2f5;
-    padding-top: 12px;
-    padding-bottom: 12px;
+    font-size: 0.72rem !important;
+    font-weight: 800 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #e2e8f0 !important;
+    background: transparent !important;
+    border-bottom: 2px solid #334155 !important;
+    padding-top: 0;
+    padding-bottom: 0;
+
+    &::before {
+      content: '';
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      margin-right: 7px;
+      background: #34d399;
+      flex-shrink: 0;
+      vertical-align: middle;
+    }
   }
 
   mat-cell {
@@ -92,17 +111,16 @@ mat-card.oic-card mat-card-header.oic-card-header {
     padding-bottom: 11px;
   }
 
-  mat-row:hover {
-    background: #f9fbff;
+  mat-row {
+    transition: background 0.15s ease;
+
+    &:nth-child(even) { background: #f8fafc; }
+
+    &:hover { background: #eff6ff !important; }
   }
 
-  .email-cell {
-    word-break: break-word;
-  }
-
-  .mat-mdc-slide-toggle {
-    margin-left: 0;
-  }
+  .email-cell { word-break: break-word; }
+  .mat-mdc-slide-toggle { margin-left: 0; }
 }
 
 .empty-state {

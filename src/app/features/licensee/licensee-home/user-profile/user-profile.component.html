@@ -1,59 +1,165 @@
 <!-- user-profile.component.html -->
 @if (loaded) {
-  <mat-card>
+  <div class="profile-dialog">
 
-    <!-- ── Header ─────────────────────────────────────────────── -->
-    <mat-card-header>
-      {{ showEditForm ? (isNewProfile ? 'Create Licensee Profile' : 'Edit Licensee Profile') : 'User Profile' }}
-      <button mat-icon-button (click)="closeDialog()">
-        <mat-icon style="color: white;">close</mat-icon>
+    <!-- ── Hero Header ──────────────────────────────────────────── -->
+    <div class="profile-hero">
+      <button class="close-btn" mat-icon-button (click)="closeDialog()">
+        <mat-icon>close</mat-icon>
       </button>
-    </mat-card-header>
+
+      <div class="avatar-ring">
+        <div class="avatar">
+          {{ (user?.firstName?.[0] || '') + (user?.lastName?.[0] || '') | uppercase }}
+        </div>
+      </div>
+
+      @if (!showEditForm) {
+        <div class="hero-name">
+          {{ user?.firstName }} {{ user?.middleName }} {{ user?.lastName }}
+        </div>
+        <div class="hero-meta">
+          <span class="role-chip">
+            <mat-icon>verified_user</mat-icon>
+            {{ resolvedRoleName }}
+          </span>
+          <span class="username-chip">
+            <mat-icon>alternate_email</mat-icon>
+            {{ user?.username }}
+          </span>
+        </div>
+      } @else {
+        <div class="hero-name">
+          {{ isNewProfile ? 'Create Licensee Profile' : 'Edit Licensee Profile' }}
+        </div>
+        <div class="hero-subtitle">Fill in your personal details below</div>
+      }
+    </div>
 
     @if (user) {
-      <mat-card-content>
+      <div class="profile-body">
 
-        <!-- ══ VIEW MODE ══════════════════════════════════════════ -->
+        <!-- ══ VIEW MODE ════════════════════════════════════════════ -->
         @if (!showEditForm) {
 
-          <!-- Account details -->
-          <table>
-            <tr><td><strong>First Name:</strong></td>   <td>{{ user.firstName }}</td></tr>
-            <tr><td><strong>Middle Name:</strong></td>  <td>{{ user.middleName }}</td></tr>
-            <tr><td><strong>Last Name:</strong></td>    <td>{{ user.lastName }}</td></tr>
-            <tr><td><strong>User Name:</strong></td>    <td>{{ user.username }}</td></tr>
-            <tr><td><strong>Email:</strong></td>        <td>{{ user.email }}</td></tr>
-            <tr><td><strong>Phone:</strong></td>        <td>{{ user.phoneNumber }}</td></tr>
-            <tr><td><strong>Role:</strong></td>         <td>{{ resolvedRoleName }}</td></tr>
-            <tr><td><strong>District:</strong></td>     <td>{{ user.district?.name }}</td></tr>
-            <tr><td><strong>Sub Division:</strong></td> <td>{{ user.subdivision?.name }}</td></tr>
-            <tr><td><strong>Address:</strong></td>      <td>{{ user.address }}</td></tr>
-            <tr><td><strong>Created by:</strong></td>   <td>{{ user.createdBy }}</td></tr>
-          </table>
+          <!-- Account info section -->
+          <div class="section-title">
+            <mat-icon>contact_page</mat-icon>
+            Account Information
+          </div>
+
+          <div class="info-grid">
+            <div class="info-card">
+              <div class="info-icon contact"><mat-icon>email</mat-icon></div>
+              <div class="info-content">
+                <span class="info-label">Email</span>
+                <span class="info-value">{{ user.email || '—' }}</span>
+              </div>
+            </div>
+
+            <div class="info-card">
+              <div class="info-icon phone"><mat-icon>phone</mat-icon></div>
+              <div class="info-content">
+                <span class="info-label">Phone</span>
+                <span class="info-value">{{ user.phoneNumber || '—' }}</span>
+              </div>
+            </div>
+
+            <div class="info-card">
+              <div class="info-icon location"><mat-icon>location_city</mat-icon></div>
+              <div class="info-content">
+                <span class="info-label">District</span>
+                <span class="info-value">{{ user.district?.name || '—' }}</span>
+              </div>
+            </div>
+
+            <div class="info-card">
+              <div class="info-icon location"><mat-icon>map</mat-icon></div>
+              <div class="info-content">
+                <span class="info-label">Sub Division</span>
+                <span class="info-value">{{ user.subdivision?.name || '—' }}</span>
+              </div>
+            </div>
+
+            <div class="info-card full-span">
+              <div class="info-icon address"><mat-icon>home</mat-icon></div>
+              <div class="info-content">
+                <span class="info-label">Address</span>
+                <span class="info-value">{{ user.address || '—' }}</span>
+              </div>
+            </div>
+          </div>
 
           <!-- Licensee profile summary -->
           @if (!profileLoading && licenseeProfile) {
-            <div class="profile-summary">
-              <div class="profile-summary-header">
-                <mat-icon>person_pin</mat-icon>
-                <span>Licensee Profile</span>
+            <div class="section-title" style="margin-top: 20px;">
+              <mat-icon>person_pin</mat-icon>
+              Licensee Profile
+            </div>
+
+            <div class="info-grid">
+              <div class="info-card">
+                <div class="info-icon id"><mat-icon>badge</mat-icon></div>
+                <div class="info-content">
+                  <span class="info-label">PAN Number</span>
+                  <span class="info-value">{{ licenseeProfile.pan_number || '—' }}</span>
+                </div>
               </div>
-              <table>
-                <tr><td><strong>PAN Number:</strong></td>         <td>{{ licenseeProfile.pan_number }}</td></tr>
-                <tr><td><strong>Father's Name:</strong></td>      <td>{{ licenseeProfile.father_name }}</td></tr>
-                <tr><td><strong>Date of Birth:</strong></td>      <td>{{ licenseeProfile.dob }}</td></tr>
-                <tr><td><strong>Gender:</strong></td>             <td>{{ licenseeProfile.gender_display }}</td></tr>
-                <tr><td><strong>Nationality:</strong></td>        <td>{{ licenseeProfile.nationality }}</td></tr>
-                <tr><td><strong>Marital Status:</strong></td>     <td>{{ licenseeProfile.marital_status_display }}</td></tr>
-                <tr><td><strong>Residential Status:</strong></td> <td>{{ licenseeProfile.residential_status_display }}</td></tr>
-              </table>
+
+              <div class="info-card">
+                <div class="info-icon person"><mat-icon>people</mat-icon></div>
+                <div class="info-content">
+                  <span class="info-label">Father's Name</span>
+                  <span class="info-value">{{ licenseeProfile.father_name || '—' }}</span>
+                </div>
+              </div>
+
+              <div class="info-card">
+                <div class="info-icon calendar"><mat-icon>cake</mat-icon></div>
+                <div class="info-content">
+                  <span class="info-label">Date of Birth</span>
+                  <span class="info-value">{{ licenseeProfile.dob || '—' }}</span>
+                </div>
+              </div>
+
+              <div class="info-card">
+                <div class="info-icon gender"><mat-icon>wc</mat-icon></div>
+                <div class="info-content">
+                  <span class="info-label">Gender</span>
+                  <span class="info-value">{{ licenseeProfile.gender_display || '—' }}</span>
+                </div>
+              </div>
+
+              <div class="info-card">
+                <div class="info-icon location"><mat-icon>flag</mat-icon></div>
+                <div class="info-content">
+                  <span class="info-label">Nationality</span>
+                  <span class="info-value">{{ licenseeProfile.nationality || '—' }}</span>
+                </div>
+              </div>
+
+              <div class="info-card">
+                <div class="info-icon status"><mat-icon>favorite</mat-icon></div>
+                <div class="info-content">
+                  <span class="info-label">Marital Status</span>
+                  <span class="info-value">{{ licenseeProfile.marital_status_display || '—' }}</span>
+                </div>
+              </div>
+
+              <div class="info-card full-span">
+                <div class="info-icon status"><mat-icon>house</mat-icon></div>
+                <div class="info-content">
+                  <span class="info-label">Residential Status</span>
+                  <span class="info-value">{{ licenseeProfile.residential_status_display || '—' }}</span>
+                </div>
+              </div>
             </div>
           }
 
           @if (!profileLoading && !licenseeProfile) {
             <div class="no-profile-hint">
               <mat-icon>info_outline</mat-icon>
-              <span>No licensee profile found. Click <strong>Edit Profile</strong> to create one.</span>
+              <span>No licensee profile found. Click <strong>Create Profile</strong> to add one.</span>
             </div>
           }
 
@@ -65,15 +171,15 @@
               {{ licenseeProfile ? 'Edit Profile' : 'Create Profile' }}
             </button>
 
-            <button mat-raised-button color="primary"
-              (click)="openMyLicenses()" class="my-licenses-btn">
+            <button mat-raised-button class="my-licenses-btn"
+              (click)="openMyLicenses()">
               <mat-icon>workspace_premium</mat-icon>
               My Licenses
             </button>
           </div>
         }
 
-        <!-- ══ EDIT / CREATE FORM ════════════════════════════════ -->
+        <!-- ══ EDIT / CREATE FORM ══════════════════════════════════ -->
         @if (showEditForm) {
           <form [formGroup]="profileForm" (ngSubmit)="saveProfile()" class="profile-form" novalidate>
 
@@ -91,7 +197,6 @@
               </div>
             }
 
-            <!-- ── Immutable fields ───────────────────────────── -->
             <div class="form-section-label">
               <mat-icon>lock</mat-icon>
               Personal Details
@@ -100,23 +205,17 @@
               }
             </div>
 
-            <!-- Father's Name -->
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Father's Name</mat-label>
               <input matInput formControlName="father_name" placeholder="Enter father's full name" />
               @if (f['father_name'].touched && f['father_name'].errors?.['required']) {
                 <mat-error>Father's name is required.</mat-error>
               }
-              @if (f['father_name'].touched && f['father_name'].errors?.['pattern']) {
-                <mat-error>Only letters and spaces are allowed.</mat-error>
-              }
             </mat-form-field>
 
-            <!-- Date of Birth -->
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Date of Birth</mat-label>
-              <input matInput [matDatepicker]="dobPicker"
-                     formControlName="dob" placeholder="YYYY-MM-DD" />
+              <input matInput [matDatepicker]="dobPicker" formControlName="dob" placeholder="YYYY-MM-DD" />
               <mat-datepicker-toggle matIconSuffix [for]="dobPicker"></mat-datepicker-toggle>
               <mat-datepicker #dobPicker></mat-datepicker>
               @if (f['dob'].touched && f['dob'].errors?.['required']) {
@@ -124,7 +223,6 @@
               }
             </mat-form-field>
 
-            <!-- Gender -->
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Gender</mat-label>
               <mat-select formControlName="gender">
@@ -137,7 +235,6 @@
               }
             </mat-form-field>
 
-            <!-- Nationality -->
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Nationality</mat-label>
               <input matInput formControlName="nationality" />
@@ -146,14 +243,12 @@
               }
             </mat-form-field>
 
-            <!-- ── Mutable fields ─────────────────────────────── -->
             <div class="form-section-label">
               <mat-icon>edit_note</mat-icon>
               Status Details
               <span class="lock-hint">(can be updated anytime)</span>
             </div>
 
-            <!-- Marital Status -->
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Marital Status</mat-label>
               <mat-select formControlName="marital_status">
@@ -166,7 +261,6 @@
               }
             </mat-form-field>
 
-            <!-- Residential Status -->
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Residential Status</mat-label>
               <mat-select formControlName="residential_status">
@@ -179,7 +273,6 @@
               }
             </mat-form-field>
 
-            <!-- Form actions -->
             <div class="form-actions">
               <button mat-stroked-button type="button" (click)="cancelEdit()" [disabled]="isSaving">
                 <mat-icon>cancel</mat-icon>
@@ -198,7 +291,7 @@
           </form>
         }
 
-      </mat-card-content>
+      </div>
     }
-  </mat-card>
+  </div>
 }

@@ -1,15 +1,78 @@
-.container-fluid{
-    padding:0;
-    h2{
-        color: #fff;
-        background-color: #1C2B78;
+// ═══════════════════════════════════════════════════════════
+// License Subcategory Dialog — Styles
+// ═══════════════════════════════════════════════════════════
+
+.dialog-container {
+  width: 100%;
+  min-width: 460px;
+}
+
+.dialog-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1e293b;
+  padding: 20px 24px 4px;
+  margin: 0;
+  border-bottom: 2px solid #f1f5f9;
+  margin-bottom: 4px;
+
+  .dialog-title-icon {
+    color: #1C2B78;
+    font-size: 22px;
+    height: 22px;
+    width: 22px;
+  }
+}
+
+.dialog-content {
+  padding: 20px 24px 8px !important;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: unset !important;
+  overflow: visible !important;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.field-prefix-icon {
+  color: #64748b;
+  margin-right: 4px;
+  font-size: 18px;
+  height: 18px;
+  width: 18px;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 8px 24px 20px !important;
+  border-top: 1px solid #f1f5f9;
+
+  .btn-cancel {
+    border-radius: 8px;
+    font-weight: 600;
+    color: #64748b;
+    border-color: #cbd5e1;
+    min-width: 90px;
+  }
+
+  .btn-save {
+    border-radius: 8px;
+    font-weight: 700;
+    min-width: 100px;
+
+    mat-icon {
+      margin-right: 4px;
+      font-size: 17px;
+      height: 17px;
+      width: 17px;
     }
-    mat-dialog-content{
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-    }
-    mat-form-field{
-        width: 100%;
-    }
+  }
 }

@@ -13,8 +13,7 @@ import { SalesmanBarmanRegistrationService } from '../../../core/services/salesm
 import { DashboardConfigService } from '../../../core/services/dashboard-config.service';
 import { SidebarPendingBadgeService } from '../../../shared/services/sidebar-pending-badge.service';
 import { TimerConfigService } from '../../../core/services/timer-config.service';
-import { environment } from '../../../../environments/environment';
-import { HttpClient } from '@angular/common/http';
+import { RenewalConfigService } from '../../../core/services/renewal-config.service';
 import { ChangeDetectorRef } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { MyLicensesComponent } from '../my-licenses/my-licenses.component';
@@ -43,7 +42,8 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     newLicense: 0,
     licenseRenewal: 0,
     salesmanBarman: 0,
-    companyRegistration: 0
+    companyRegistration: 0,
+    specialPermit: 0
   };
 
   isLoading = false;
@@ -75,8 +75,8 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     private dashboardConfigService: DashboardConfigService,
     private sidebarPendingBadgeService: SidebarPendingBadgeService,
     private router: Router,
-    private http: HttpClient,
     private timerConfigService: TimerConfigService,
+    private renewalConfigService: RenewalConfigService,
     private cdr: ChangeDetectorRef,
     private dialog: MatDialog
   ) { }
@@ -127,7 +127,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // this.loadDashboardData();
+    this.loadDashboardData();
 
     this.routerSubscription = this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
@@ -181,7 +181,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
 
       forkJoin({
         timer: this.timerConfigService.getTimerConfig('LICENSE_RENEWAL_REMINDER_TIMER', fallbackSeconds).pipe(take(1)),
-        renewalConfig: this.http.get<any>(`${environment.apiBaseUrl}/masters/core/renewal-application-config/`).pipe(catchError(() => of(null)))
+        renewalConfig: this.renewalConfigService.getConfig().pipe(take(1))
       }).subscribe(({ timer, renewalConfig }) => {
         let newWarnings: any[] = [];
         const windowMs = Math.max(0, Number(timer?.delay_ms ?? 0) || 0);
@@ -327,7 +327,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
 
           filteredApplications.approved.forEach((app: UnifiedApplication) => {
             const licenseId = this.extractLicenseId(app);
-            const isRenewed = licenseId && renewedLicenseIds.has(licenseId);
+            const isRenewed = app.type === 'new-license' && licenseId && renewedLicenseIds.has(licenseId);
             
             if (isRenewed) {
               // console.log(`Dashboard: Moving approved license ${licenseId} to Applied - has active renewal`);
@@ -359,7 +359,8 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
             newLicense: filteredApplications.awaitingPayment.filter(app => app.type === 'new-license').length,
             licenseRenewal: filteredApplications.awaitingPayment.filter(app => app.type === 'license-renewal').length,
             salesmanBarman: filteredApplications.awaitingPayment.filter(app => app.type === 'salesman-barman').length,
-            companyRegistration: filteredApplications.awaitingPayment.filter(app => app.type === 'company-registration').length
+            companyRegistration: filteredApplications.awaitingPayment.filter(app => app.type === 'company-registration').length,
+            specialPermit: filteredApplications.awaitingPayment.filter(app => app.type === 'special-permit').length
           };
 
           // console.log(`📊 Dashboard Counts - Applied: ${this.dashboardCounts.applied} (${approvedWithRenewal.length} renewals), Pending: ${this.dashboardCounts.pending}, Awaiting Payment: ${this.dashboardCounts.awaitingPayment}, Approved: ${this.dashboardCounts.approved}, Rejected: ${this.dashboardCounts.rejected}`);
@@ -431,7 +432,9 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
         if (appId.startsWith('NLI/')) return appId.replace('NLI/', 'LA/');
         if (appId.startsWith('SBM/')) return appId.replace('SBM/', 'SB/');
         if (appId.startsWith('RSBM/')) return appId.replace('RSBM/', 'SB/');
-        if (appId.startsWith('COMP/')) return appId.replace('COMP/', 'CREG/');
+        if (appId.startsWith('COMP/')) return appId.replace('COMP/', 'CR/1101/');
+        if (appId.startsWith('CCOL/')) return appId.replace('CCOL/', 'CC/1101/');
+        if (appId.startsWith('RCOL/')) return appId.replace('RCOL/', 'CC/1101/');
       }
       return null;
     }
@@ -439,8 +442,8 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     private isValidLicenseId(licenseId: string): boolean {
     if (!licenseId || typeof licenseId !== 'string') return false;
     const trimmed = licenseId.trim();
-    // ✅ ADDED: 'COMP/' and 'CREG/' prefixes for company registration
-    const validPrefixes = ['LA/', 'NA/', 'SB/', 'LIC/', 'NLI/', 'SBM/', 'COMP/', 'CREG/'];
+    // ✅ ADDED: 'COMP/', 'CREG/', 'CR/', 'CC/', 'CCOL/', 'RCOL/' prefixes for company registration/collaboration
+    const validPrefixes = ['LA/', 'NA/', 'SB/', 'CR/', 'LIC/', 'NLI/', 'SBM/', 'COMP/', 'CREG/', 'CC/', 'CCOL/', 'RCOL/'];
     const hasValidPrefix = validPrefixes.some(prefix => trimmed.startsWith(prefix));
     if (!hasValidPrefix) return false;
     const parts = trimmed.split('/');
@@ -455,6 +458,9 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     const renewedIds = new Set<string>();
     
     [...applied, ...pending, ...awaitingPayment].forEach(app => {
+      if (app.type !== 'license-renewal') {
+        return;
+      }
       const raw = app.raw || {};
       
       // PRIORITY 1: Check renewalOf or old license fields
@@ -518,14 +524,18 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
         } else if (appId.startsWith('SBM/')) {
           derivedLicenseId = appId.replace('SBM/', 'SB/');
         } else if (appId.startsWith('COMP/')) {
-          derivedLicenseId = appId.replace('COMP/', 'CREG/');
+          derivedLicenseId = appId.replace('COMP/', 'CR/1101/');
         } else if (appId.startsWith('LRA/')) {
           // A renewal application LRA/01/2026-27/... could be renewing an NA/ or LA/ license.
           // Since it's ambiguous, we can add both potential derivations.
           renewedIds.add(appId.replace('LRA/', 'LA/'));
           renewedIds.add(appId.replace('LRA/', 'NA/'));
+        } else if (appId.startsWith('RCR/')) {
+          renewedIds.add(appId.replace('RCR/', 'CR/'));
         } else if (appId.startsWith('RSBM/')) {
           renewedIds.add(appId.replace('RSBM/', 'SB/'));
+        } else if (appId.startsWith('RCOL/')) {
+          renewedIds.add(appId.replace('RCOL/', 'CC/'));
         }
         
         if (derivedLicenseId && this.isValidLicenseId(derivedLicenseId)) {
@@ -580,6 +590,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
       case 'new-license': return 'New License';
       case 'salesman-barman': return 'Salesman/Barman';
       case 'company-registration': return 'Company Registration';
+      case 'company-collaboration': return 'Company Collaboration';
       default: return type;
     }
   }
@@ -587,16 +598,19 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
   getAwaitingPaymentBreakdownText(): string {
     const parts: string[] = [];
     if (this.awaitingPaymentBreakdown.newLicense > 0) {
-      parts.push('New License');
+      parts.push(`New License (${this.awaitingPaymentBreakdown.newLicense})`);
     }
     if (this.awaitingPaymentBreakdown.licenseRenewal > 0) {
-      parts.push('Renewal');
+      parts.push(`Renewal (${this.awaitingPaymentBreakdown.licenseRenewal})`);
     }
     if (this.awaitingPaymentBreakdown.salesmanBarman > 0) {
-      parts.push('Salesman/Barman');
+      parts.push(`Salesman/Barman (${this.awaitingPaymentBreakdown.salesmanBarman})`);
     }
     if (this.awaitingPaymentBreakdown.companyRegistration > 0) {
-      parts.push('Company Reg');
+      parts.push(`Company Registration (${this.awaitingPaymentBreakdown.companyRegistration})`);
+    }
+    if (this.awaitingPaymentBreakdown.specialPermit > 0) {
+      parts.push(`Dry Day Permit (${this.awaitingPaymentBreakdown.specialPermit})`);
     }
     return parts.length > 0 ? parts.join(', ') : 'Fees pending';
   }

@@ -20,6 +20,7 @@ export class ListComponent implements OnInit {
 
   // Table columns
   displayedColumns: string[] = [
+    'name',
     'description',
     'actions'
   ];

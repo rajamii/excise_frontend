@@ -363,8 +363,11 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
   }
 
   get isEligibilityAllowed(): boolean {
+    if (this.isCompanyApplication) {
+      return true;
+    }
     const formValue = this.applicantDetailsForm.getRawValue();
-    const hasRequiredCertificate = formValue.hasSikkimCertificate !== 'No' || this.isCompanyApplication;
+    const hasRequiredCertificate = formValue.hasSikkimCertificate !== 'No';
     return hasRequiredCertificate && formValue.criminalConviction !== 'Yes';
   }
 
@@ -383,6 +386,9 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
   }
 
   private autoFillFromProfiles(): void {
+    if (this.isCompanyApplication) {
+      return;
+    }
     const sessionData = sessionStorage.getItem('applicantDetailsData');
     if (sessionData) {
       try {
@@ -513,42 +519,66 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
   private saveToSessionStorage(): void {
     const raw = this.applicantDetailsForm.getRawValue();
 
-    const applicantNameParts = [raw.firstName, raw.middleName, raw.lastName].filter(Boolean);
-    raw.applicant_name = applicantNameParts.join(' ');
-    raw.father_husband_name = raw.fatherHusbandName;
+    if (this.isCompanyApplication) {
+      raw.applicant_name = null;
+      raw.father_husband_name = null;
+      raw.dob = null;
+      raw.gender = null;
+      raw.nationality = null;
+      raw.residential_status = null;
+      raw.marital_status = null;
+      raw.present_address = null;
+      raw.permanent_address = null;
+      raw.pan = null;
+      raw.email = null;
+      raw.mobile_number = null;
+      raw.mode_of_operation = raw.modeOfOperation || null;
+      raw.coi_rc_ss = null;
+      raw.hasSikkimCertificate = 'No';
+      raw.has_sikkim_certificate = 'No';
+      raw.has_excise_license = null;
+      raw.existing_license_category_id = null;
+      raw.existing_license_category_name = null;
+      raw.existing_license_no = null;
+      raw.family_excise_license = null;
+      raw.family_license_category_id = null;
+      raw.family_license_category_name = null;
+      raw.family_license_no = null;
+      raw.criminal_conviction = null;
+    } else {
+      const applicantNameParts = [raw.firstName, raw.middleName, raw.lastName].filter(Boolean);
+      raw.applicant_name = applicantNameParts.join(' ');
+      raw.father_husband_name = raw.fatherHusbandName;
 
-    if (raw.applicantMobileNumber) {
-      raw.mobile_number = String(raw.applicantMobileNumber).replace(/\D/g, '');
-    }
-    if (raw.dob) {
-      raw.dob = new Date(raw.dob).toISOString().split('T')[0];
-    }
-    if (raw.maritalStatus) {
-      raw.marital_status = raw.maritalStatus;
-    }
-    if (raw.residentialStatus) {
-      raw.residential_status = raw.residentialStatus;
-    }
+      raw.mobile_number = raw.applicantMobileNumber
+        ? String(raw.applicantMobileNumber).replace(/\D/g, '')
+        : null;
 
-    raw.present_address = raw.presentAddress;
-    raw.permanent_address = raw.permanentAddress;
-    raw.mode_of_operation = raw.modeOfOperation || null;
-    raw.coi_rc_ss = this.requiresNationalityDocument ? raw.coiRcSsDocumentType : null;
-    raw.hasSikkimCertificate = this.requiresNationalityDocument ? raw.hasSikkimCertificate : 'No';
-    raw.has_sikkim_certificate = raw.hasSikkimCertificate;
-    raw.has_excise_license = raw.hasExciseLicense;
-    raw.existing_license_category_id = raw.hasExciseLicense === 'Yes' ? raw.existingLicenseCategoryId : null;
-    raw.existing_license_category_name = raw.hasExciseLicense === 'Yes'
-      ? this.getLicenseCategoryName(raw.existingLicenseCategoryId)
-      : null;
-    raw.existing_license_no = raw.hasExciseLicense === 'Yes' ? raw.existingLicenseNo : null;
-    raw.family_excise_license = raw.familyExciseLicense;
-    raw.family_license_category_id = raw.familyExciseLicense === 'Yes' ? raw.familyLicenseCategoryId : null;
-    raw.family_license_category_name = raw.familyExciseLicense === 'Yes'
-      ? this.getLicenseCategoryName(raw.familyLicenseCategoryId)
-      : null;
-    raw.family_license_no = raw.familyExciseLicense === 'Yes' ? raw.familyLicenseNo : null;
-    raw.criminal_conviction = raw.criminalConviction;
+      if (raw.dob) {
+        raw.dob = new Date(raw.dob).toISOString().split('T')[0];
+      }
+      raw.marital_status = raw.maritalStatus || null;
+      raw.residential_status = raw.residentialStatus || null;
+      raw.present_address = raw.presentAddress;
+      raw.permanent_address = raw.permanentAddress;
+      raw.mode_of_operation = raw.modeOfOperation || null;
+      raw.coi_rc_ss = this.requiresNationalityDocument ? raw.coiRcSsDocumentType : null;
+      raw.hasSikkimCertificate = this.requiresNationalityDocument ? raw.hasSikkimCertificate : 'No';
+      raw.has_sikkim_certificate = raw.hasSikkimCertificate;
+      raw.has_excise_license = raw.hasExciseLicense;
+      raw.existing_license_category_id = raw.hasExciseLicense === 'Yes' ? raw.existingLicenseCategoryId : null;
+      raw.existing_license_category_name = raw.hasExciseLicense === 'Yes'
+        ? this.getLicenseCategoryName(raw.existingLicenseCategoryId)
+        : null;
+      raw.existing_license_no = raw.hasExciseLicense === 'Yes' ? raw.existingLicenseNo : null;
+      raw.family_excise_license = raw.familyExciseLicense;
+      raw.family_license_category_id = raw.familyExciseLicense === 'Yes' ? raw.familyLicenseCategoryId : null;
+      raw.family_license_category_name = raw.familyExciseLicense === 'Yes'
+        ? this.getLicenseCategoryName(raw.familyLicenseCategoryId)
+        : null;
+      raw.family_license_no = raw.familyExciseLicense === 'Yes' ? raw.familyLicenseNo : null;
+      raw.criminal_conviction = raw.criminalConviction;
+    }
 
     sessionStorage.setItem('applicantDetailsData', JSON.stringify(raw));
   }
@@ -605,6 +635,64 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
     }
 
     this.updateNationalityDocumentRequirements();
+    this.adjustFormValidatorsForCompany();
+  }
+
+  private adjustFormValidatorsForCompany(): void {
+    const personalFields = [
+      'firstName',
+      'lastName',
+      'fatherHusbandName',
+      'dob',
+      'gender',
+      'nationality',
+      'maritalStatus',
+      'residentialStatus',
+      'email',
+      'applicantMobileNumber',
+      'presentAddress',
+      'permanentAddress',
+      'pan',
+      'hasSikkimCertificate',
+      'hasExciseLicense',
+      'familyExciseLicense',
+      'criminalConviction'
+    ];
+
+    if (this.isCompanyApplication) {
+      personalFields.forEach(field => {
+        const control = this.applicantDetailsForm.get(field);
+        control?.clearValidators();
+        control?.setValue(null, { emitEvent: false });
+        control?.updateValueAndValidity({ emitEvent: false });
+      });
+
+      const historyFields = [
+        'coiRcSsDocumentType',
+        'existingLicenseCategoryId',
+        'existingLicenseNo',
+        'familyLicenseCategoryId',
+        'familyLicenseNo'
+      ];
+      historyFields.forEach(field => {
+        const control = this.applicantDetailsForm.get(field);
+        control?.clearValidators();
+        control?.setValue(null, { emitEvent: false });
+        control?.updateValueAndValidity({ emitEvent: false });
+      });
+
+      this.documents.forEach(doc => {
+        if (['passportPhoto', 'pan_card', 'dob_proof', 'sikkim_certificate'].includes(doc.name)) {
+          doc.required = false;
+          doc.file = null;
+          doc.fileUrl = '';
+        }
+      });
+      this.licenseSrv.clearPassPhoto();
+      this.licenseSrv.removeSiteDocument('pan_card');
+      this.licenseSrv.removeSiteDocument('dob_proof');
+      this.licenseSrv.removeSiteDocument('sikkim_certificate');
+    }
   }
 
   private updateNationalityDocumentRequirements(): void {

@@ -22,6 +22,7 @@ export class ManageComponent implements OnInit {
   };
 
   licenses: ActiveLicense[] = [];
+  selectedLicenseIds: string[] = [];
   isEditMode = false;
 
   constructor(
@@ -41,7 +42,16 @@ export class ManageComponent implements OnInit {
   private loadLicenses(): void {
     this.adminService.getActiveLicenses().subscribe({
       next: (rows) => {
-        this.licenses = Array.isArray(rows) ? rows : [];
+        const all: ActiveLicense[] = Array.isArray(rows) ? rows : [];
+        // Only show NA licenses with category "Manufacturing" and subcategory "Distillery"
+        this.licenses = all.filter(l => {
+          const id = String(l.id || '').toUpperCase();
+          const category = String(l.license_category || l.licenseCategory || '').toLowerCase();
+          const subcategory = String(l.license_subcategory || l.licenseSubcategory || '').toLowerCase();
+          return id.startsWith('NA')
+            && category.includes('manufactur')
+            && subcategory.includes('distiller');
+        });
       },
       error: () => {
         this.licenses = [];
@@ -68,7 +78,8 @@ export class ManageComponent implements OnInit {
         bulkSpiritKindType: this.row.bulkSpiritKindType.trim(),
         strength: this.row.strength.trim(),
         priceBl: Number(this.row.priceBl ?? 0),
-        licenseId: this.row.licenseId ? String(this.row.licenseId).trim() : null,
+        licenseId: this.isEditMode && this.row.licenseId ? String(this.row.licenseId).trim() : null,
+        license_ids: !this.isEditMode && this.selectedLicenseIds.length > 0 ? this.selectedLicenseIds : null
       };
 
       const request = this.isEditMode

@@ -2,49 +2,50 @@
   <mat-card>
     <mat-card-header class="page-card-header">
       <div class="page-title">ENA Bulk Spirit Details</div>
-      <button matButton="filled" (click)="onAdd()">
+      <button mat-flat-button color="primary" (click)="onAdd()" style="border-radius: 8px;">
         <mat-icon>add</mat-icon> Add
       </button>
     </mat-card-header>
 
     <mat-card-content>
       <div class="table-container">
-        <mat-table [dataSource]="rows">
+        <mat-table [dataSource]="groupedRows">
 
-          <ng-container matColumnDef="bulkSpiritKindType">
-            <mat-header-cell *matHeaderCellDef>Bulk Spirit Type</mat-header-cell>
-            <mat-cell *matCellDef="let row">{{ row.bulkSpiritKindType }}</mat-cell>
-          </ng-container>
-
-          <ng-container matColumnDef="strength">
-            <mat-header-cell *matHeaderCellDef>Strength</mat-header-cell>
-            <mat-cell *matCellDef="let row">{{ row.strength }}</mat-cell>
-          </ng-container>
-
-          <ng-container matColumnDef="priceBl">
-            <mat-header-cell *matHeaderCellDef>Price / BL</mat-header-cell>
-            <mat-cell *matCellDef="let row">{{ row.priceBl }}</mat-cell>
-          </ng-container>
-
-          <ng-container matColumnDef="licenseId">
-            <mat-header-cell *matHeaderCellDef>Assigned License</mat-header-cell>
-            <mat-cell *matCellDef="let row">
-              @if (row.licenseId) {
-                <span class="license-name">{{ getLicenseName(row.licenseId) }}</span>
-              } @else {
-                <span>—</span>
-              }
+          <!-- License Name Column -->
+          <ng-container matColumnDef="licenseName">
+            <mat-header-cell *matHeaderCellDef>License / Establishment</mat-header-cell>
+            <mat-cell *matCellDef="let row" style="font-weight: 600; color: #1e293b;">
+              {{ row.licenseName }}
             </mat-cell>
           </ng-container>
 
+          <!-- License ID Column -->
+          <ng-container matColumnDef="licenseId">
+            <mat-header-cell *matHeaderCellDef>License ID</mat-header-cell>
+            <mat-cell *matCellDef="let row">
+              <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #475569;">
+                {{ row.licenseId || 'Unassigned' }}
+              </code>
+            </mat-cell>
+          </ng-container>
+
+          <!-- Spirits List Column -->
+          <ng-container matColumnDef="spiritsList">
+            <mat-header-cell *matHeaderCellDef>Assigned Spirit Types</mat-header-cell>
+            <mat-cell *matCellDef="let row">
+              <span class="badge" style="background: #e0f2fe; color: #0369a1; padding: 4px 10px; border-radius: 20px; font-weight: 600; font-size: 0.85rem;">
+                {{ row.spiritCount }} assigned
+              </span>
+            </mat-cell>
+          </ng-container>
+
+          <!-- Actions Column -->
           <ng-container matColumnDef="actions">
             <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
             <mat-cell *matCellDef="let row">
-              <button matIconButton color="primary" (click)="onEdit(row)">
-                <mat-icon>edit</mat-icon>
-              </button>
-              <button matIconButton color="warn" (click)="onDelete(row)">
-                <mat-icon>delete</mat-icon>
+              <button mat-flat-button color="primary" (click)="onViewDetails(row)" style="border-radius: 8px; display: flex; align-items: center; gap: 4px;">
+                <mat-icon style="font-size: 18px; width: 18px; height: 18px; margin: 0;">visibility</mat-icon>
+                <span>View Details</span>
               </button>
             </mat-cell>
           </ng-container>
@@ -53,7 +54,7 @@
           <mat-row *matRowDef="let row; columns: displayedColumns"></mat-row>
         </mat-table>
 
-        @if (rows.length === 0) {
+        @if (groupedRows.length === 0) {
           <div class="no-data">No records found.</div>
         }
       </div>

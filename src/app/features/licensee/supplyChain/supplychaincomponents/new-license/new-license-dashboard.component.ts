@@ -2,7 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { forkJoin, of, timeout } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
@@ -12,6 +12,8 @@ import { MaterialModule } from '../../../../../shared/material.module';
 import { ApplicationMovementComponent } from '../../../licensee-dashboard/application-table/application-movement/application-movement.component';
 import { RoleService } from '../../../../../core/services/role.service';
 import { PaymentIntegrationService } from '../../../../../core/services/payment-integration.service';
+import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
+import { timeout } from 'rxjs';
 import { ResolveObjectionsDialogComponent } from './resolve-objections-dialog/resolve-objections-dialog.component';
 import { ObjectionDetailsDialogComponent } from './objection-details-dialog/objection-details-dialog.component';
 
@@ -65,6 +67,7 @@ export class NewLicenseDashboardComponent implements OnInit {
   private dialog = inject(MatDialog);
   private roleService = inject(RoleService);
   private paymentIntegrationService = inject(PaymentIntegrationService);
+  private licenseApplicationService = inject(LicenseApplicationService);
   private readonly apiBase = `${environment.apiBaseUrl}/transactional/new_license_application`;
 
   isLoading = false;
@@ -110,6 +113,8 @@ export class NewLicenseDashboardComponent implements OnInit {
     return Array.from(new Set(numbers));
   }
 
+  
+
   ngOnInit(): void {
     this.loadData();
   }
@@ -118,8 +123,10 @@ export class NewLicenseDashboardComponent implements OnInit {
     return this.roleService.isLicenseeRole();
   }
 
+  /** Returns true when the current user needs to take action on this row. */
   needsLicenseeAction(row: NewLicenseItem): boolean {
     if (this.isLicenseeUser()) {
+      // Licensee: flag awaiting payment (app fee or license fee) or objection
       if (row.statusGroup === 'objection') return true;
       if (row.canPayNow) return true;
       const stage = String(row.currentStageRaw || '').toLowerCase();
@@ -127,6 +134,9 @@ export class NewLicenseDashboardComponent implements OnInit {
         stage === 'awaiting_payment' ||
         stage === 'awaiting payment';
     }
+
+    // Admin/officer: flag only pending rows (needs processing by officer).
+    // Objection rows are waiting for the licensee to respond — not the officer's action.
     return row.statusGroup === 'pending';
   }
 
@@ -134,16 +144,17 @@ export class NewLicenseDashboardComponent implements OnInit {
     this.isLoading = true;
     this.error = null;
 
+    // Reset to default pending filter on each fresh load.
     this.activeSummaryFilter = '';
     this.searchFilter = '';
     this.dateFilter = '';
     this.monthFilter = '';
 
     forkJoin({
-      counts: this.http.get<NewLicenseCounts>(`${this.apiBase}/dashboard-counts/`).pipe(
+      counts: this.licenseApplicationService.getNewLicenseDashboardCounts().pipe(
         catchError(() => of({ applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 }))
       ),
-      grouped: this.http.get<GroupedNewLicenseResponse>(`${this.apiBase}/list-by-status/`).pipe(
+      grouped: this.licenseApplicationService.getNewLicenseApplicationsByStatus().pipe(
         catchError(() => of({ applied: [], pending: [], objection: [], approved: [], rejected: [] }))
       )
     }).subscribe({
@@ -158,6 +169,9 @@ export class NewLicenseDashboardComponent implements OnInit {
         };
         this.allRows = this.flattenGroupedData(grouped);
 
+        // Default to "Pending" filter for all users (admin + licensee) when there are pending items.
+        // Objection has higher priority than pending.
+        // If no objection/pending items exist, show all applications (no filter).
         if (this.activeSummaryFilter === '') {
           const objectionCount = Number((counts as any)?.objection || 0);
           const pendingCount = Number(counts?.pending || 0);
@@ -188,6 +202,7 @@ export class NewLicenseDashboardComponent implements OnInit {
   applyFilters(): void {
     const q = this.searchFilter.trim().toLowerCase();
 
+    // Summary rows are affected by search only (counts stay stable when selecting status via card).
     this.summaryRows = this.allRows.filter((row) => {
       const matchesSearch = !q
         || row.applicationId.toLowerCase().includes(q)
@@ -199,16 +214,21 @@ export class NewLicenseDashboardComponent implements OnInit {
     });
 
     this.filteredRows = this.summaryRows.filter((row) => {
+      // Date filter
       if (this.dateFilter) {
+        const rowDate = (row.submittedOn || '').split('T')[0];
+        // submittedOn may be formatted as "dd-MMM-yyyy", convert to ISO for comparison
         const isoDate = this.toIsoDate(row.submittedOn);
         if (isoDate !== this.dateFilter) return false;
       }
 
+      // Month filter (yyyy-MM)
       if (this.monthFilter) {
         const isoDate = this.toIsoDate(row.submittedOn);
         if (!isoDate || isoDate.substring(0, 7) !== this.monthFilter) return false;
       }
 
+      // Summary card status filter
       if (this.activeSummaryFilter) {
         if (row.statusGroup !== this.activeSummaryFilter) return false;
       }
@@ -222,6 +242,8 @@ export class NewLicenseDashboardComponent implements OnInit {
     this.counts = canUseServerCounts ? this.serverCounts : calculated;
 
     this.syncActiveSummaryFilter();
+
+    // Reset pagination whenever filters change.
     this.pageIndex = 0;
   }
 
@@ -309,7 +331,6 @@ export class NewLicenseDashboardComponent implements OnInit {
     });
   }
 
-  // --- Updated SBI ePay Payment Flow ---
   payNow(row: NewLicenseItem): void {
     if (!this.isLicenseeUser()) return;
     if (!row?.applicationId) return;
@@ -318,14 +339,19 @@ export class NewLicenseDashboardComponent implements OnInit {
     const applicationId = String(row.applicationId || '').trim();
     if (!applicationId) return;
 
+    const cooldownRemaining = this.paymentIntegrationService.getCooldownRemainingSeconds(applicationId);
+    if (cooldownRemaining > 0) {
+      this.paymentIntegrationService.showCooldownPopup(cooldownRemaining);
+      return;
+    }
+
     const isPending = String(row.paymentStatus || '').trim().toLowerCase() === 'pending';
-    
     if (isPending) {
       void Swal.fire({
         title: 'Payment Pending',
         html:
-          `Your last payment attempt is still showing as <b>Pending</b>.<br/>` +
-          `There may be an issue with the payment response. You can try again later.`,
+          `Your last BillDesk payment attempt is still showing as <b>Pending</b>.<br/>` +
+          `There may be an issue with the payment response from BillDesk. You can try again later.`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Proceed',
@@ -333,7 +359,7 @@ export class NewLicenseDashboardComponent implements OnInit {
         allowOutsideClick: false,
       }).then((res) => {
         if (!res.isConfirmed) return;
-        this.startPaymentInitiation(applicationId);
+        this.startBilldeskInitiation(applicationId);
       });
       return;
     }
@@ -347,38 +373,89 @@ export class NewLicenseDashboardComponent implements OnInit {
       cancelButtonText: 'Cancel',
     }).then((res) => {
       if (!res.isConfirmed) return;
-      this.startPaymentInitiation(applicationId);
+
+      this.startBilldeskInitiation(applicationId);
     });
   }
 
-  private startPaymentInitiation(applicationId: string): void {
-    void Swal.fire({
-      title: 'Redirecting to SBI ePay',
-      text: 'Preparing application fee payment...',
-      allowOutsideClick: false,
-      didOpen: () => Swal.showLoading(),
-    });
+  private startBilldeskInitiation(applicationId: string): void {
+  void Swal.fire({
+    title: 'Redirecting to BillDesk',
+    text: 'Preparing application fee payment...',
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading(),
+  });
 
-    // We pass 500 as the fallback amount just like the old BillDesk logic did
-    this.paymentIntegrationService
-      .initiateNewLicenseFee(String(applicationId).trim(), 500)
-      .pipe(timeout(30000))
-      .subscribe({
-        next: (initRes: any) => {
-          Swal.close();
+  this.paymentIntegrationService
+    .initiateNewLicenseFee(String(applicationId).trim(), 500)
+    .pipe(timeout(30000))
+    .subscribe({
+      next: (initRes: any) => {
+        Swal.close();
+        this.paymentIntegrationService.clearRetryState(applicationId);
 
-          if (initRes.success && initRes.transactionUrl) {
-            // Direct redirect to SBI ePay hosted checkout page
-            window.location.href = initRes.transactionUrl;
-          } else {
-            void Swal.fire('Error', 'Missing transaction URL from gateway.', 'error');
+        // Check for SDK parameters (handles both casing styles)[cite: 2]
+        const hasSDK = (initRes?.bdOrderId || initRes?.bd_order_id) && 
+                       (initRes?.authToken || initRes?.auth_token);
+
+        if (hasSDK) {
+          try {
+            // Use the single shared method from your service
+            this.paymentIntegrationService.launchBillDeskSDK(initRes, (txn) => {
+              if (txn.status === 'success' || txn.status === '0300') {
+                // Success: Refresh data to reflect the new payment status[cite: 2]
+                this.loadData();
+                Swal.fire('Success', 'Payment processed successfully.', 'success');
+              } else {
+                Swal.fire('Payment Incomplete', 'Payment was cancelled or declined.', 'info');
+              }
+            });
+          } catch (err) {
+            void Swal.fire('Error', 'Payment SDK failed to load. Please refresh.', 'error');
           }
-        },
-        error: (err: any) => {
-          this.paymentIntegrationService.handleInitiationError(err);
-        },
-      });
+        } else {
+          this.paymentIntegrationService.recordBilldeskFailure(applicationId);
+          void Swal.fire('Error', 'Missing SDK gateway parameters.', 'error');
+        }
+      },
+      error: (err: any) => {
+        this.paymentIntegrationService.handleInitiationError(err, applicationId);
+      },
+    });
+}
+
+  private submitToBillDesk(url: string, requestMsg: string): void {
+    try {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = url;
+
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'msg';
+      input.value = requestMsg;
+
+      form.appendChild(input);
+      document.body.appendChild(form);
+      form.submit();
+    } catch {
+      void Swal.fire('Error', 'Unable to redirect to BillDesk. Please try again.', 'error');
+    }
   }
+
+  private extractRetryAfterSeconds(err: any): number {
+    const httpStatus = Number(err?.status || 0);
+    if (httpStatus !== 409) return 0;
+    const raw = err?.error?.retry_after_seconds || err?.error?.retryAfterSeconds || 0;
+    const seconds = Number(raw);
+    return Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
+  }
+
+ 
+
+  
+
+  
 
   private getDetailViewSource(): string {
     const roleId = Number(this.roleService.getCurrentUser()?.roleId || 0);
@@ -462,6 +539,7 @@ export class NewLicenseDashboardComponent implements OnInit {
           }
         }
 
+        // Licensee UX: a failed/unpaid application fee means the application is not submitted to workflow yet.
         const currentStage = this.isLicenseeUser() && !canView
           ? (paymentStatus === 'Failed' ? 'Application Not Submitted (Payment Failed)' : 'Application Not Submitted')
           : this.computeCurrentStageLabel(item, finalStatusGroup, currentStageRaw);
@@ -510,6 +588,7 @@ export class NewLicenseDashboardComponent implements OnInit {
       ...mapGroup(grouped?.rejected, 'rejected')
     ];
 
+    // De-duplicate by applicationId (backend sometimes returns the same application twice).
     const priority: Record<NewLicenseItem['statusGroup'], number> = {
       applied: 1,
       pending: 2,
@@ -627,6 +706,7 @@ export class NewLicenseDashboardComponent implements OnInit {
     this.dialog.open(ObjectionDetailsDialogComponent, {
       width: 'min(820px, 92vw)',
       maxWidth: '92vw',
+      panelClass: 'objection-details-dialog',
       data: { applicationId }
     });
   }
@@ -661,6 +741,7 @@ export class NewLicenseDashboardComponent implements OnInit {
     }).replace(/ /g, '-');
   }
 
+  /** Converts a formatted date string (e.g. "02-May-2026" or ISO) to "yyyy-MM-dd" for filter comparison. */
   private toIsoDate(dateValue: string | undefined): string {
     if (!dateValue) return '';
     const parsed = new Date(dateValue);
@@ -675,6 +756,8 @@ export class NewLicenseDashboardComponent implements OnInit {
     const raw = String(stageValue ?? '').trim();
     if (!raw) return 'Not available';
 
+    // Backend sometimes returns numeric stage id instead of stage name.
+    // Stage 23 = awaiting_payment (critical UX for licensee + admin to take payment action).
     const stageId = Number.parseInt(raw, 10);
     if (Number.isFinite(stageId) && String(stageId) === raw) {
       if (stageId === 23) return 'Awaiting Payment';
@@ -698,8 +781,10 @@ export class NewLicenseDashboardComponent implements OnInit {
     if (raw.includes('approved')) return 'Approved';
     if (raw.includes('reject')) return 'Rejected';
     if (raw.includes('awaiting') && raw.includes('payment')) return 'Awaiting Payment';
+    // Some backends return payment-related stage names without the "awaiting_" prefix.
     if (raw.includes('payment')) return 'Awaiting Payment';
 
+    // Licensee UX: don't expose internal role/stage names (commissioner/permit section/etc).
     return 'Pending';
   }
 
@@ -736,5 +821,6 @@ export class NewLicenseDashboardComponent implements OnInit {
   }
 
   private syncActiveSummaryFilter(): void {
+    // activeSummaryFilter is managed directly by onSummaryCardClick; nothing to sync here.
   }
 }

@@ -11,9 +11,14 @@
       </div>
 
       <div class="modal-body p-4">
-        <div class="unified-pay-meta mb-3">
-          <span class="badge bg-light text-primary border me-2">{{ context?.moduleLabel }}</span>
-          <span class="badge bg-light text-dark border">{{ context?.walletLabel }}</span>
+        <div class="unified-pay-meta mb-3 d-flex align-items-center flex-wrap gap-2">
+          <span class="badge bg-primary text-white border py-2 px-3 fs-6" *ngIf="context?.moduleLabel">{{ context?.moduleLabel }}</span>
+          <span class="badge bg-light text-dark border py-2 px-3 fs-6">{{ context?.walletLabel }}</span>
+        </div>
+
+        <div class="alert alert-info py-2 px-3 mb-3 fw-semibold d-flex align-items-center" *ngIf="context?.purposeLabel" style="background-color: #e8f4fd; border-color: #b6d4fe; color: #084298; border-radius: 8px;">
+          <i class="bi bi-info-circle-fill me-2 fs-5 text-primary"></i>
+          <div>{{ context?.purposeLabel }}</div>
         </div>
 
         <div class="table-responsive">

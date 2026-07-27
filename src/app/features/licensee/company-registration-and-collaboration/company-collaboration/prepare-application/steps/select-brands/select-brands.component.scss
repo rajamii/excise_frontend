@@ -1,76 +1,200 @@
+// ── Card shell ────────────────────────────────────────────────────────────────
 mat-card {
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 14, 31, 0.12) !important;
+
   mat-card-header {
-    padding: 12px;
+    padding: 16px 20px;
     border-radius: 8px 8px 0 0;
     background-color: #1C2B78;
     color: #ffffff;
-    font-size: 24px;
-    font-weight: 500;
-    align-items: flex-start;
-    justify-content: flex-start;
     display: flex;
-    flex-wrap: wrap;
-    gap: 6px 16px;
+    flex-direction: column;
+    gap: 4px;
 
     .heading {
-      flex: 1 1 100%;
-      font-size: 22px;
+      font-size: 20px;
+      font-weight: 600;
       line-height: 1.2;
     }
-    
+
     .validation {
       font-size: 12px;
-      color: rgba(255, 255, 255, 0.9);
+      color: rgba(255, 255, 255, 0.82);
       font-style: italic;
       line-height: 1.4;
-      flex: 1 1 100%;
-      margin-top: 2px;
     }
   }
-  
+
   mat-card-content {
     padding: 20px;
+    background-color: #f4f6fb;
 
+    // ── Filter section ────────────────────────────────────────────────────────
     .filter-section {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px 20px;
+      background: #ffffff;
+      border-radius: 10px;
+      border: 1px solid #e4e8f2;
+      padding: 16px 20px 8px;
       margin-bottom: 20px;
-      padding: 16px;
-      background-color: #f8f9fa;
-      border-radius: 8px;
-      border-left: 4px solid #1C2B78;
+      box-shadow: 0 2px 8px rgba(28, 43, 120, 0.06);
+    }
 
-      mat-form-field {
-        width: 100%;
+    .filter-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+
+      .filter-field {
+        flex: 1 1 180px;
+        min-width: 160px;
+
+        // Tighter outline fields
+        ::ng-deep {
+          .mat-mdc-text-field-wrapper {
+            border-radius: 8px;
+          }
+          .mat-mdc-form-field-subscript-wrapper {
+            display: none;
+          }
+        }
       }
 
-      .filter-search {
-        grid-column: span 2;
+      // Icon-only search button
+      .search-btn {
+        flex: 0 0 48px;
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        border: none;
+        background: #1C2B78;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.2s ease, transform 0.15s ease;
+        margin-top: 4px;
+
+        mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+        }
+
+        &:hover:not([disabled]) {
+          background: #2a3d9e;
+          transform: scale(1.05);
+        }
+
+        &[disabled] {
+          background: #c5cbe8;
+          cursor: not-allowed;
+          transform: none;
+        }
       }
     }
 
-    .brands-table {
-      border: 1px solid #e0e0e0;
-      border-radius: 8px;
-      overflow-x: auto;
-      overflow-y: hidden;
+    // Spin animation for loading icon
+    .spin {
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
 
-      .table-header {
-        padding: 15px;
-        background-color: #1C2B78;
-        color: white;
-        border-radius: 8px 8px 0 0;
+    // ── Brand search input ────────────────────────────────────────────────────
+    .brand-search-row {
+      margin-top: 10px;
+      margin-bottom: 4px;
+    }
+
+    .brand-search-field {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #f1f4fb;
+      border: 1.5px solid #d0d8f0;
+      border-radius: 30px;
+      padding: 6px 14px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      max-width: 380px;
+
+      &:focus-within {
+        border-color: #1C2B78;
+        box-shadow: 0 0 0 3px rgba(28, 43, 120, 0.1);
+      }
+
+      .search-icon {
+        color: #1C2B78;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+      }
+
+      .brand-search-input {
+        border: none;
+        background: transparent;
+        outline: none;
+        flex: 1;
+        font-size: 13.5px;
+        color: #333;
+
+        &::placeholder {
+          color: #9aa3be;
+        }
+      }
+
+      .clear-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        color: #9aa3be;
         display: flex;
         align-items: center;
 
-        mat-checkbox {
-          ::ng-deep .mat-checkbox-label {
-            color: white;
-          }
+        mat-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+        }
 
-          ::ng-deep .mdc-label {
-            color: white;
+        &:hover {
+          color: #1C2B78;
+        }
+      }
+    }
+
+    // ── Brands table ──────────────────────────────────────────────────────────
+    .brands-table {
+      background: #ffffff;
+      border: 1px solid #e4e8f2;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(28, 43, 120, 0.06);
+
+      .table-header-info {
+        padding: 10px 16px;
+        background: #eef1fb;
+        border-bottom: 1px solid #dde2f0;
+        display: flex;
+        justify-content: flex-end;
+
+        .selected-count {
+          font-size: 12.5px;
+          color: #1C2B78;
+          background: #fff;
+          border: 1px solid #c5d0f0;
+          border-radius: 20px;
+          padding: 3px 12px;
+
+          strong {
+            color: #1C2B78;
           }
         }
       }
@@ -78,284 +202,358 @@ mat-card {
       .brands-selection-table {
         width: 100%;
         border-collapse: collapse;
-        min-width: 760px;
-        background-color: #ffffff;
+        min-width: 500px;
+        background: #ffffff;
+
+        thead tr {
+          background: #1C2B78;
+        }
 
         th {
-          background-color: #1C2B78;
           color: #ffffff;
           font-weight: 600;
           font-size: 13px;
-          padding: 12px 14px;
+          padding: 12px 16px;
           text-align: left;
           white-space: nowrap;
+          letter-spacing: 0.3px;
         }
 
         td {
-          padding: 12px 14px;
-          border-bottom: 1px solid #e0e0e0;
-          vertical-align: top;
+          padding: 12px 16px;
+          border-bottom: 1px solid #f0f2f8;
+          vertical-align: middle;
           font-size: 13px;
           color: #333;
         }
 
         tbody tr {
-          transition: background-color 0.2s ease;
+          transition: background-color 0.15s ease;
 
           &:hover {
             background-color: #f5f7ff;
           }
+
+          &:last-child td {
+            border-bottom: none;
+          }
+
+          &.row-selected {
+            background-color: #edf1ff;
+          }
         }
 
-        tbody tr:last-child td {
-          border-bottom: none;
-        }
-
-        .row-selected {
-          background-color: #f0f4ff;
-        }
-
-        .col-size,
-        .col-select {
+        // Serial number col
+        .col-sl {
+          width: 48px;
           text-align: center;
+          color: #9aa3be;
+          font-size: 12px;
         }
 
-        .brand-name {
-          font-weight: 600;
-          color: #1C2B78;
+        // Brand name col
+        .col-brand {
+          min-width: 180px;
         }
 
-        .brand-meta {
+        // Pack size col
+        .col-size {
+          min-width: 220px;
+        }
+
+        // ── Brand pill ───────────────────────────────────────────────────────
+        .brand-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+
+          .brand-initial {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            text-transform: uppercase;
+          }
+
+          .brand-name {
+            font-weight: 600;
+            color: #0f766e;
+            font-size: 13.5px;
+          }
+        }
+
+        // ── Size checkboxes → custom chips ────────────────────────────────────
+        .sizes-checkbox-group {
           display: flex;
           flex-wrap: wrap;
-          gap: 6px;
-          margin-top: 4px;
+          gap: 8px;
+          align-items: center;
+        }
+
+        .size-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          padding: 5px 12px;
+          border-radius: 20px;
+          border: 1.5px solid #c5d0f0;
+          background: #f4f6fb;
           font-size: 12px;
-          color: #666;
+          font-weight: 500;
+          color: #4a5578;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          user-select: none;
 
-          .brand-code {
-            font-weight: 600;
+          .size-checkbox-input {
+            width: 13px;
+            height: 13px;
+            accent-color: #1C2B78;
+            cursor: pointer;
+          }
+
+          &:hover {
+            border-color: #1C2B78;
+            background: #eef1fb;
             color: #1C2B78;
           }
 
-          .brand-category,
-          .brand-type {
-            background-color: #eef2ff;
-            color: #3f51b5;
-            padding: 2px 6px;
-            border-radius: 12px;
-            font-size: 11px;
+          &.size-chip--selected {
+            background: #16a34a;
+            border-color: #16a34a;
+            color: #ffffff;
+
+            .size-checkbox-input {
+              accent-color: #fff;
+            }
           }
         }
-      }
 
-      .brands-selection-table .mat-mdc-checkbox {
-        display: inline-flex;
-      }
-
-      .no-brands {
-        text-align: center;
-        padding: 40px;
-        color: #666;
-
-        mat-icon {
-          font-size: 48px;
-          margin-bottom: 16px;
-          opacity: 0.5;
+        .no-sizes-label {
+          font-size: 12px;
+          color: #aaa;
+          font-style: italic;
         }
       }
     }
 
-
-    .overview-section {
-      margin-bottom: 30px;
-
-      .section-header {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 20px;
-        padding-bottom: 10px;
-        border-bottom: 2px solid #1C2B78;
-
-        mat-icon {
-          color: #1C2B78;
-          font-size: 24px;
-        }
-
-        h3 {
-          margin: 0;
-          color: #1C2B78;
-          font-weight: 600;
-          font-size: 20px;
-        }
-      }
-
-      .brands-overview-table {
-        overflow-x: auto;
-
-        table {
-          width: 100%;
-          background-color: white;
-
-          th {
-            background-color: #f5f5f5;
-            font-weight: 600;
-            color: #1C2B78;
-          }
-
-          .brand-name-cell {
-            .name {
-              display: block;
-              font-weight: 600;
-              color: #1C2B78;
-            }
-
-            .category {
-              display: block;
-              font-size: 12px;
-              color: #666;
-              margin-top: 2px;
-            }
-          }
-
-          .sizes-cell {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-
-            .size-badge {
-              background-color: #e3f2fd;
-              color: #1976d2;
-              padding: 2px 8px;
-              border-radius: 12px;
-              font-size: 11px;
-              font-weight: 500;
-            }
-          }
-        }
-      }
-
-      .fee-breakdown {
-        .fee-grid {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 12px;
-          background-color: #f8f9fa;
-          padding: 20px;
-          border-radius: 8px;
-          margin-bottom: 20px;
-
-          .fee-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid #e0e0e0;
-
-            &:last-child {
-              border-bottom: none;
-            }
-
-            &.highlight {
-              background: linear-gradient(135deg, #1C2B78 0%, #2a3d8f 100%);
-              color: white;
-              padding: 16px;
-              border-radius: 8px;
-              margin-top: 12px;
-              border-bottom: none;
-              font-weight: 600;
-              font-size: 16px;
-            }
-
-            .fee-label {
-              font-weight: 500;
-              color: #555;
-            }
-
-            .fee-value {
-              font-weight: 600;
-              color: #1C2B78;
-              font-size: 16px;
-            }
-
-            &.highlight .fee-label,
-            &.highlight .fee-value {
-              color: white;
-            }
-          }
-        }
-      }
-    }
-
-    .no-brands-warning {
+    // ── Empty / hint states ───────────────────────────────────────────────────
+    .no-brands {
       text-align: center;
-      padding: 40px;
-      background-color: #fff3e0;
-      border-radius: 8px;
-      border-left: 4px solid #ff9800;
+      padding: 48px 24px;
+      color: #9aa3be;
+      background: #ffffff;
+      border-radius: 10px;
+      border: 1px dashed #d0d8f0;
 
       mat-icon {
-        font-size: 48px;
-        color: #ff9800;
-        margin-bottom: 16px;
+        font-size: 44px;
+        width: 44px;
+        height: 44px;
+        margin-bottom: 12px;
+        opacity: 0.5;
       }
 
       p {
-        color: #e65100;
-        font-weight: 500;
         margin: 0;
+        font-size: 14px;
+        color: #6b7280;
+      }
+
+      &.hint {
+        border-style: dashed;
+        background: #f8f9ff;
+
+        mat-icon {
+          color: #1C2B78;
+          opacity: 0.35;
+        }
+
+        p {
+          color: #4a5578;
+        }
       }
     }
   }
-  
+
+  // ── Actions bar ────────────────────────────────────────────────────────────
   mat-card-actions {
     display: flex;
     justify-content: center;
-    gap: 8px;
-    padding: 16px;
-    border-top: 1px solid #e0e0e0;
-    background-color: #fafafa;
+    gap: 10px;
+    padding: 14px 20px;
+    border-top: 1px solid #e4e8f2;
+    background: #fafbff;
   }
 }
 
-@media(max-width: 768px) {
-  mat-card {
-    mat-card-content {
-      .filter-section {
-        grid-template-columns: 1fr;
-        gap: 15px;
+// ── Responsive ────────────────────────────────────────────────────────────────
+@media (max-width: 768px) {
+  mat-card mat-card-content {
+    .filter-row {
+      flex-direction: column;
 
-        .filter-search {
-          grid-column: 1 / -1;
-        }
+      .filter-field {
+        width: 100%;
       }
 
-      .brands-table {
-        overflow-x: auto;
-      }
-
-      .brands-overview-table {
-        font-size: 12px;
-      }
-
-      .fee-grid {
-        .fee-item {
-          flex-direction: column;
-          align-items: flex-start;
-          gap: 4px;
-        }
+      .search-btn {
+        width: 100%;
+        height: 44px;
+        border-radius: 8px;
+        flex: 1 1 auto;
       }
     }
 
-    mat-card-actions {
-      flex-wrap: wrap;
-      gap: 10px;
+    .brand-search-field {
+      max-width: 100%;
+    }
 
-      button {
-        flex: 1;
-        min-width: 120px;
+    .brands-selection-table {
+      font-size: 12px;
+    }
+  }
+
+  mat-card mat-card-actions {
+    flex-wrap: wrap;
+
+    button {
+      flex: 1;
+      min-width: 100px;
+    }
+  }
+}
+
+// ── Alphabet Filter Bar Styles ──────────────────────────────────────────────
+.alphabet-filter-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px solid #e4e8f2;
+  padding: 14px 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(28, 43, 120, 0.04);
+
+  .alphabet-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #475569;
+  }
+
+  .alphabet-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-items: center;
+    position: relative;
+    isolation: isolate;
+  }
+
+  .alphabet-btn {
+    height: 32px;
+    min-width: 32px;
+    padding: 0 8px;
+    border: 1.5px solid #e2e8f0;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+    user-select: none;
+    text-transform: uppercase;
+    line-height: 1;
+    font-family: Arial, Helvetica, sans-serif;
+    font-variant-ligatures: none;
+    font-feature-settings: "liga" 0, "calt" 0;
+    appearance: none;
+    -webkit-appearance: none;
+    position: relative;
+    z-index: 1;
+
+    &::before,
+    &::after {
+      content: none !important;
+      display: none !important;
+    }
+
+    // Normal hover — subtle blue tint, NOT teal (teal is reserved for active)
+    &:hover:not(.alphabet-btn--active) {
+      background: #f8fafc;
+      border-color: #e2e8f0;
+      color: #475569;
+      box-shadow: none;
+    }
+
+    // Active / selected — solid teal
+    &--active {
+      background: #0d9488 !important;
+      border-color: #0d9488 !important;
+      color: #ffffff !important;
+      box-shadow: 0 2px 8px rgba(13, 148, 136, 0.3);
+
+      // Hover on already-active button — slightly darker
+      &:hover {
+        background: #0f766e !important;
+        border-color: #0f766e !important;
       }
     }
   }
 }
+
+.no-filtered-brands {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  color: #94a3b8;
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px dashed #cbd5e1;
+  text-align: center;
+  margin-top: 10px;
+
+  mat-icon {
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+    margin-bottom: 10px;
+    color: #cbd5e1;
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: #64748b;
+  }
+}
+
+.letter-span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: uppercase;
+  pointer-events: none;
+
+  &::before {
+    content: attr(data-letter);
+  }
+}
+

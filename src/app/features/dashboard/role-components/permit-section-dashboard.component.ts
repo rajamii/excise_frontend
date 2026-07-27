@@ -1,10 +1,12 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SupplyChainService } from '../../licensee/supplyChain/services/supplychain.service';
 import { EnaRequisitionService } from '../../../core/services/ena-requisition.service';
 import { AccountService } from '../../../core/services/account.service';
+import { CompanyRegistrationService } from '../../../core/services/company-registration.service';
+import { CompanyCollaborationService } from '../../../core/services/company-collaboration.service';
 import { DashboardStatisticsComponent } from '../../../shared/components/dashboard-statistics/dashboard-statistics.component';
 import { UnifiedActionButtonsComponent } from '../../../shared/components/unified-action-buttons/unified-action-buttons.component';
 import { UnifiedActionsService } from '../../../shared/services/unified-actions.service';
@@ -16,7 +18,7 @@ interface PermitData {
   distilleryName: string;
   status: string;
   amount: string;
-  type: 'requisition' | 'revalidation' | 'transit' | 'hologram' | 'cancellation';
+  type: 'requisition' | 'revalidation' | 'transit' | 'hologram' | 'cancellation' | 'company';
   allowedActions?: string[];
   allowedActionConfigs?: any[];
   workflowId?: number;
@@ -172,12 +174,19 @@ export class PermitSectionDashboardComponent implements OnInit {
   private router = inject(Router);
   private enaRequisitionService = inject(EnaRequisitionService);
   private supplyChainService = inject(SupplyChainService);
+  private companyRegistrationService = inject(CompanyRegistrationService);
+  private companyCollaborationService = inject(CompanyCollaborationService);
   private unifiedActionsService = inject(UnifiedActionsService);
 
   // Data properties
   allPermits: PermitData[] = [];
   filteredPermits: PermitData[] = [];
   selectedApplicationType: string = 'all';
+
+  /** Selected module from the parent chart dropdown — drives stat box filtering */
+  @Input() selectedModule: string = 'all';
+  /** supplyChainModuleCounts passed from parent — used for per-module stat boxes */
+  @Input() moduleCounts: Record<string, any> = {};
 
   // Pagination
   currentPage: number = 1;
@@ -186,7 +195,7 @@ export class PermitSectionDashboardComponent implements OnInit {
   constructor() {}
 
   ngOnInit(): void {
-    this.loadAllApplications();
+    setTimeout(() => this.loadAllApplications(), 0);
   }
 
   private isPermitSectionUser(): boolean {
@@ -194,15 +203,11 @@ export class PermitSectionDashboardComponent implements OnInit {
   }
 
   loadAllApplications(): void {
-    // Load all types of applications for permit section review
+    // Permit Section bar chart and stat cards cover Requisitions, Company Registration and Company Collaboration.
+    // Revalidations, cancellations and holograms are handled by their own dedicated tabs.
     this.loadRequisitions();
-    this.loadRevalidations();
-    this.loadCancellations();
-    this.loadHolograms();
-
-    if (!this.isPermitSectionUser()) {
-      this.loadTransitPermits();
-    }
+    this.loadCompanyRegistrations();
+    this.loadCompanyCollaborations();
   }
 
   loadRequisitions(): void {
@@ -276,10 +281,164 @@ export class PermitSectionDashboardComponent implements OnInit {
   }
 
   loadHolograms(): void {
-    // Assuming there's a hologram service method
-    // This would need to be implemented based on your hologram service
-    // For now, adding empty array
+    // Hologram data not applicable for permit section — keep as empty
     this.updatePermits('hologram', []);
+  }
+
+  loadCompanyRegistrations(): void {
+    // Use list-by-status endpoint — same as registration-management component uses
+    // to get the actual row data visible to permit section
+    this.companyRegistrationService.getApplicationsByStatus().subscribe({
+      next: (response: any) => {
+        // Response is { applied:[], pending:[], approved:[], rejected:[], objection:[], awaiting_payment:[] }
+        const flatten = (arr: any[]) => Array.isArray(arr) ? arr : [];
+        const pendingItems = [
+          ...flatten(response?.applied),
+          ...flatten(response?.pending)
+        ];
+        const pendingIds = new Set(pendingItems.map(item => item?.id ?? item?.application_id ?? item?.applicationId));
+
+        const allItems = [
+          ...flatten(response?.applied),
+          ...flatten(response?.pending),
+          ...flatten(response?.approved),
+          ...flatten(response?.rejected),
+          ...flatten(response?.objection),
+          ...flatten(response?.awaiting_payment)
+        ];
+        // Deduplicate by id
+        const seen = new Set<any>();
+        const data = allItems.filter(item => {
+          const key = item?.id ?? item?.application_id ?? item?.applicationId;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        const companies: PermitData[] = data.map((item: any) => {
+          const id = item?.id ?? item?.application_id ?? item?.applicationId;
+          const isActionable = pendingIds.has(id);
+          return {
+            id: item.id,
+            referenceNo: item.application_id || item.applicationId || `COMP-${item.id}`,
+            submissionDate: this.formatDate(item.submitted_on || item.submittedOn || item.created_at),
+            distilleryName: item.establishment_name || item.establishmentName ||
+                            item.company_name || item.companyName || 'N/A',
+            status: item.current_stage_name || item.currentStageName ||
+                    item.status || 'PENDING',
+            amount: String(item.amount || item.fee || '0.00'),
+            type: 'company' as const,
+            allowedActions: item.allowedActions || item.allowed_actions || (isActionable ? ['APPROVE', 'REJECT'] : []),
+            allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
+            workflowId: item.workflow || item.workflow_id || item.workflowId,
+            currentStage: item.current_stage || item.currentStage || item.stage_id
+          };
+        });
+        this.updatePermits('company', companies);
+      },
+      error: () => {
+        // Fallback: try root list endpoint
+        this.companyRegistrationService.getCompanyList().subscribe({
+          next: (res: any) => {
+            const data = Array.isArray(res) ? res : (res?.results || res?.data || []);
+            const companies: PermitData[] = data.map((item: any) => {
+              const status = String(item.current_stage_name || item.currentStageName || item.status || '').toLowerCase();
+              const isActionable = status.includes('permit_section') || status.includes('pending') || status.includes('submit');
+              return {
+                id: item.id,
+                referenceNo: item.application_id || item.applicationId || `COMP-${item.id}`,
+                submissionDate: this.formatDate(item.submitted_on || item.submittedOn || item.created_at),
+                distilleryName: item.establishment_name || item.establishmentName ||
+                                item.company_name || item.companyName || 'N/A',
+                status: item.current_stage_name || item.currentStageName || item.status || 'PENDING',
+                amount: String(item.amount || item.fee || '0.00'),
+                type: 'company' as const,
+                allowedActions: item.allowedActions || item.allowed_actions || (isActionable ? ['APPROVE', 'REJECT'] : []),
+                allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
+                workflowId: item.workflow || item.workflow_id || item.workflowId,
+                currentStage: item.current_stage || item.currentStage || item.stage_id
+              };
+            });
+            this.updatePermits('company', companies);
+          },
+          error: (err) => console.error('Error loading company registrations:', err)
+        });
+      }
+    });
+  }
+
+  loadCompanyCollaborations(): void {
+    this.companyCollaborationService.getApplicationsByStatus().subscribe({
+      next: (response: any) => {
+        const flatten = (arr: any[]) => Array.isArray(arr) ? arr : [];
+        const pendingItems = [
+          ...flatten(response?.applied),
+          ...flatten(response?.pending)
+        ];
+        const pendingIds = new Set(pendingItems.map(item => item?.id ?? item?.application_id ?? item?.applicationId));
+
+        const allItems = [
+          ...flatten(response?.applied),
+          ...flatten(response?.pending),
+          ...flatten(response?.approved),
+          ...flatten(response?.rejected),
+          ...flatten(response?.objection),
+          ...flatten(response?.awaiting_payment)
+        ];
+        const seen = new Set<any>();
+        const data = allItems.filter(item => {
+          const key = item?.id ?? item?.application_id ?? item?.applicationId;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        const collabs: PermitData[] = data.map((item: any) => {
+          const id = item?.id ?? item?.application_id ?? item?.applicationId;
+          const isActionable = pendingIds.has(id);
+          return {
+            id: item.id,
+            referenceNo: item.application_id || item.applicationId || `CCOL-${item.id}`,
+            submissionDate: this.formatDate(item.created_at || item.updated_at),
+            distilleryName: item.brand_owner_name || item.brandOwnerName || 'N/A',
+            status: item.current_stage_name || item.currentStageName || item.status || 'PENDING',
+            amount: String(item.amount || item.fee || '0.00'),
+            type: 'company' as const, // Treat as company so it falls under the "Company Registration" filter/stats
+            allowedActions: item.allowedActions || item.allowed_actions || (isActionable ? ['APPROVE', 'REJECT'] : []),
+            allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
+            workflowId: item.workflow || item.workflow_id || item.workflowId,
+            currentStage: item.current_stage || item.currentStage || item.stage_id
+          };
+        });
+        this.updatePermits('company-collaboration', collabs);
+      },
+      error: () => {
+        this.companyCollaborationService.listCompanyCollaborations().subscribe({
+          next: (res: any) => {
+            const data = Array.isArray(res) ? res : (res?.results || res?.data || []);
+            const collabs: PermitData[] = data.map((item: any) => {
+              const status = String(item.current_stage_name || item.currentStageName || item.status || '').toLowerCase();
+              const isActionable = status.includes('permit_section') || status.includes('pending') || status.includes('submit');
+              return {
+                id: item.id,
+                referenceNo: item.application_id || item.applicationId || `CCOL-${item.id}`,
+                submissionDate: this.formatDate(item.created_at || item.updated_at),
+                distilleryName: item.brand_owner_name || item.brandOwnerName || 'N/A',
+                status: item.current_stage_name || item.currentStageName || item.status || 'PENDING',
+                amount: String(item.amount || item.fee || '0.00'),
+                type: 'company' as const,
+                allowedActions: item.allowedActions || item.allowed_actions || (isActionable ? ['APPROVE', 'REJECT'] : []),
+                allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
+                workflowId: item.workflow || item.workflow_id || item.workflowId,
+                currentStage: item.current_stage || item.currentStage || item.stage_id
+              };
+            });
+            this.updatePermits('company-collaboration', collabs);
+          },
+          error: (err) => console.error('Error loading company collaborations:', err)
+        });
+      }
+    });
   }
 
   loadCancellations(): void {
@@ -343,7 +502,15 @@ export class PermitSectionDashboardComponent implements OnInit {
   private updatePermits(type: string, newPermits: PermitData[]): void {
     // Remove old permits of this type and add new ones
     this.allPermits = [
-      ...this.allPermits.filter(p => p.type !== type),
+      ...this.allPermits.filter(p => {
+        if (type === 'company') {
+          return !p.referenceNo.startsWith('COMP-') && !p.referenceNo.startsWith('COMP/');
+        }
+        if (type === 'company-collaboration') {
+          return !p.referenceNo.startsWith('CCOL-') && !p.referenceNo.startsWith('CCOL/');
+        }
+        return p.type !== type;
+      }),
       ...newPermits
     ];
     this.applyFilters();
@@ -364,15 +531,35 @@ export class PermitSectionDashboardComponent implements OnInit {
 
   // Dashboard statistics methods
   getDashboardStatistics() {
-    const actionablePending = this.getActionablePendingCount();
-    const legacyPending = this.getStatusCount('PENDING') + this.getStatusCount('UNDER_REVIEW');
+    // When a specific module is selected, use its counts from moduleCounts
+    if (this.selectedModule && this.selectedModule !== 'all') {
+      const mc = this.moduleCounts[this.selectedModule];
+      if (mc) {
+        const total = (mc.applied || 0) || (mc.pending || 0) + (mc.approved || 0) +
+                      (mc.objection || 0) + (mc.rejected || 0);
+        return {
+          applied: total,
+          pending: mc.pending || 0,
+          approved: mc.approved || 0,
+          rejected: mc.rejected || 0
+        };
+      }
+    }
 
-    return {
-      applied: this.getStatusCount('APPLIED') + this.getStatusCount('SUBMITTED'),
-      pending: actionablePending || legacyPending,
-      approved: this.getStatusCount('APPROVED') + this.getStatusCount('APPROVED_BY_COMMISSIONER'),
-      rejected: this.getStatusCount('REJECTED') + this.getStatusCount('REJECTED_BY_COMMISSIONER')
-    };
+    // All Modules: use allPermits totals
+    const actionablePending = this.getActionablePendingCount();
+
+    const rejected = this.allPermits.filter(p => {
+      const s = String(p.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      return s.includes('reject') || s.includes('cancel');
+    }).length;
+
+    // "Approved" from the Permit Section perspective means any application that has
+    // moved PAST the Permit Section stage — including Commissioner, Awaiting Payment,
+    // and truly Approved. We compute this as all remaining items (not pending, not rejected).
+    const approved = this.allPermits.length - actionablePending - rejected;
+
+    return { applied: this.allPermits.length, pending: actionablePending, approved, rejected };
   }
 
   getFilterOptions() {

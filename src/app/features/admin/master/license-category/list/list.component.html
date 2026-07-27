@@ -11,20 +11,40 @@
       <div class="table-container">
         <mat-table [dataSource]="licenseCategories">
 
-          <!-- License Category -->
+          <!-- License Category Column -->
           <ng-container matColumnDef="licenseCategory">
             <mat-header-cell *matHeaderCellDef> Category </mat-header-cell>
-            <mat-cell *matCellDef="let item"> {{ item.licenseCategory }} </mat-cell>
+            <mat-cell *matCellDef="let item">
+              <span class="category-name">{{ item.licenseCategory }}</span>
+            </mat-cell>
           </ng-container>
 
-          <!-- Actions -->
+          <!-- Special Permit Column -->
+          <ng-container matColumnDef="specialPermit">
+            <mat-header-cell *matHeaderCellDef>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <mat-icon style="font-size:16px;width:16px;height:16px;">assignment_turned_in</mat-icon>
+                Dry Day Permit
+              </div>
+            </mat-header-cell>
+            <mat-cell *matCellDef="let item">
+              <span *ngIf="item.isSpecialPermitAllowed" class="badge badge-allowed">
+                <mat-icon>check_circle</mat-icon> Allowed
+              </span>
+              <span *ngIf="!item.isSpecialPermitAllowed" class="badge badge-not-allowed">
+                <mat-icon>remove_circle_outline</mat-icon> Not Allowed
+              </span>
+            </mat-cell>
+          </ng-container>
+
+          <!-- Actions Column -->
           <ng-container matColumnDef="actions">
             <mat-header-cell *matHeaderCellDef> Actions </mat-header-cell>
             <mat-cell *matCellDef="let item">
-              <button matIconButton color="primary" (click)="onEdit(item)">
+              <button matIconButton color="primary" matTooltip="Edit" (click)="onEdit(item)">
                 <mat-icon>edit</mat-icon>
               </button>
-              <button matIconButton color="warn" (click)="onDelete(item)">
+              <button matIconButton color="warn" matTooltip="Delete" (click)="onDelete(item)">
                 <mat-icon>delete</mat-icon>
               </button>
             </mat-cell>

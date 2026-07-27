@@ -20,16 +20,26 @@ import { CompanyCollaborationService } from '../../../../../../../core/services/
   styleUrl: './select-brands.component.scss'
 })
 export class SelectBrandsComponent implements OnInit, OnDestroy {
+  // Angular component for brand selection in company registration stepper
   @Output() readonly next = new EventEmitter<void>();
   @Output() readonly back = new EventEmitter<void>();
 
   allBrands: CompanyCollaborationBrand[] = [];
   filteredBrands: CompanyCollaborationBrand[] = [];
   isLoadingBrands = false;
+  isSearchingBrands = false;
   isLoadingFee = false;
   showOverview = false;
   feeStructure: CompanyCollaborationFeeStructure | null = null;
   displayedColumns: string[] = ['serialNo', 'brandCode', 'brandName', 'category', 'kind', 'type', 'action'];
+
+  // Pagination state
+  pageSize = 10;
+  pageIndex = 0;
+  pageSizeOptions = [10, 15, 20];
+
+  /** True only after the user has clicked Search at least once for the current filters */
+  hasSearched = false;
 
   // ── Master dropdown data ───────────────────────────────────────────────────
   allCategories: LiquorCategory[] = [];
@@ -49,6 +59,10 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
   selectedBrandIds = new Set<string>();
   selectedBrands: CompanyCollaborationBrand[] = [];
 
+  // Alphabet sorting/filtering bar
+  selectedAlphabet = 'ALL';
+  alphabets: string[] = ['ALL', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
+
   constructor(private svc: CompanyCollaborationService) {}
 
   ngOnInit(): void { this.loadMasterData(); }
@@ -66,10 +80,9 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
     forkJoin({
       categories: this.svc.getLiquorCategories(),
       kinds:      this.svc.getLiquorKinds(),
-      types:      this.svc.getLiquorTypes(),
-      brands:     this.svc.getBrands()
+      types:      this.svc.getLiquorTypes()
     }).subscribe({
-      next: ({ categories, kinds, types, brands }) => {
+      next: ({ categories, kinds, types }) => {
         this.allCategories = categories.map((c: any) => ({
           liquorCatCode: c.liquorCatCode ?? c.liquor_cat_code,
           liquorCatDesc: c.liquorCatDesc ?? c.liquor_cat_desc,
@@ -90,13 +103,9 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
           liquorTypeDesc: t.liquorTypeDesc  ?? t.liquor_type_desc
         }));
 
-        this.allBrands = brands;
         this.categories = [...this.allCategories];
         this.rebuildKinds();
         this.loadSavedSelection();
-        this.filterBrands();
-        this.updateSelectedBrands();
-        this.saveSelection();
         this.isLoadingBrands = false;
       },
       error: (err) => {
@@ -114,16 +123,24 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
     this.selectedKindId = null;
     this.selectedTypeId = null;
     this.rebuildKinds();
-    this.filterBrands();
+    this.allBrands = [];
+    this.filteredBrands = [];
+    this.hasSearched = false;
   }
 
   onKindChange(): void {
     this.selectedTypeId = null;
     this.rebuildTypes();
-    this.filterBrands();
+    this.allBrands = [];
+    this.filteredBrands = [];
+    this.hasSearched = false;
   }
 
-  onTypeChange(): void { this.filterBrands(); }
+  onTypeChange(): void {
+    this.allBrands = [];
+    this.filteredBrands = [];
+    this.hasSearched = false;
+  }
 
   private rebuildKinds(): void {
     this.kinds = this.selectedCatCode
@@ -145,77 +162,108 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Brand filtering
-  // ---------------------------------------------------------------------------
+  searchFilteredBrands(): void {
+    if (!this.selectedCatCode || !this.selectedKindId || !this.selectedTypeId) {
+      return;
+    }
+    this.isSearchingBrands = true;
+    this.hasSearched = true;
+    this.svc.getBrands(this.selectedCatCode, this.selectedKindId, this.selectedTypeId).subscribe({
+      next: (brands) => {
+        this.allBrands = brands;
+        
+        // Restore selection states for the newly loaded brands
+        if (this.selectedBrands.length > 0) {
+          this.selectedBrands.forEach((sb) => {
+            const match = this.allBrands.find((b) => String(b.id) === String(sb.id));
+            if (match) {
+              match.selected_sizes = sb.selected_sizes;
+            }
+          });
+        }
+        
+        this.filterBrands();
+        this.isSearchingBrands = false;
+      },
+      error: (err) => {
+        console.error('Failed to load brands:', err);
+        this.isSearchingBrands = false;
+      }
+    });
+  }
 
   filterBrands(): void {
+    this.pageIndex = 0; // Reset page index on filter change
     this.filteredBrands = this.allBrands.filter((brand) => {
-      const catMatch  = !this.selectedCatCode || brand.liquorCatCode === this.selectedCatCode;
-      const kindMatch = !this.selectedKindId  || brand.liquorKindId  === this.selectedKindId;
-      const typeMatch = !this.selectedTypeId  || brand.liquorTypeId  === this.selectedTypeId;
-      const search    = !this.searchTerm      ||
+      const search = !this.searchTerm ||
         brand.brand_name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
         brand.brand_code.toLowerCase().includes(this.searchTerm.toLowerCase());
-      return catMatch && kindMatch && typeMatch && search;
+
+      const alphabetMatch = this.selectedAlphabet === 'ALL' ||
+        brand.brand_name.trim().toUpperCase().startsWith(this.selectedAlphabet.toUpperCase());
+
+      return search && alphabetMatch;
     });
+  }
+
+  selectAlphabet(letter: string): void {
+    this.selectedAlphabet = letter;
+    this.filterBrands();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Pagination helpers
+  // ---------------------------------------------------------------------------
+
+  onPageChange(event: any): void {
+    this.pageSize = event.pageSize;
+    this.pageIndex = event.pageIndex;
+  }
+
+  getPagedBrands(): CompanyCollaborationBrand[] {
+    const start = this.pageIndex * this.pageSize;
+    const end = start + this.pageSize;
+    return this.filteredBrands.slice(start, end);
   }
 
   // ---------------------------------------------------------------------------
   // Selection helpers
   // ---------------------------------------------------------------------------
 
+  isSizeSelected(brand: CompanyCollaborationBrand, sizeLabel: string): boolean {
+    return brand.selected_sizes ? brand.selected_sizes.includes(sizeLabel) : false;
+  }
+
+  toggleBrandSize(brand: CompanyCollaborationBrand, sizeLabel: string): void {
+    if (!brand.selected_sizes) {
+      brand.selected_sizes = [];
+    }
+    const idx = brand.selected_sizes.indexOf(sizeLabel);
+    if (idx > -1) {
+      brand.selected_sizes.splice(idx, 1);
+    } else {
+      brand.selected_sizes.push(sizeLabel);
+    }
+
+    const key = String(brand.id);
+    if (brand.selected_sizes.length > 0) {
+      this.selectedBrandIds.add(key);
+    } else {
+      this.selectedBrandIds.delete(key);
+    }
+
+    this.updateSelectedBrands();
+    this.saveSelection();
+    this.refreshFeeStructure();
+  }
+
   isSelected(brandId: string | number): boolean {
     return this.selectedBrandIds.has(String(brandId));
   }
 
-  toggleBrand(brand: CompanyCollaborationBrand): void {
-    const key = String(brand.id);
-    const updated = new Set(this.selectedBrandIds);
-    if (updated.has(key)) {
-      updated.delete(key);
-    } else {
-      updated.add(key);
-    }
-    this.selectedBrandIds = updated;
-    this.updateSelectedBrands();
-    this.saveSelection();
-    if (this.showOverview) this.refreshFeeStructure();
+  getSelectedBrandCount(): number {
+    return this.selectedBrandIds.size;
   }
-
-  isAllSelected(): boolean {
-    return this.filteredBrands.length > 0 &&
-      this.filteredBrands.every((b) => this.isSelected(b.id));
-  }
-
-  isIndeterminate(): boolean {
-    const n = this.filteredBrands.filter((b) => this.isSelected(b.id)).length;
-    return n > 0 && n < this.filteredBrands.length;
-  }
-
-  masterToggle(): void {
-    const updated = new Set(this.selectedBrandIds);
-    if (this.isAllSelected()) {
-      this.filteredBrands.forEach((b) => updated.delete(String(b.id)));
-    } else {
-      this.filteredBrands.forEach((b) => updated.add(String(b.id)));
-    }
-    this.selectedBrandIds = updated;
-    this.updateSelectedBrands();
-    this.saveSelection();
-    if (this.showOverview) this.refreshFeeStructure();
-  }
-
-  removeBrand(brandId: string | number): void {
-    const updated = new Set(this.selectedBrandIds);
-    updated.delete(String(brandId));
-    this.selectedBrandIds = updated;
-    this.updateSelectedBrands();
-    this.saveSelection();
-    if (this.showOverview) this.refreshFeeStructure();
-  }
-
-  getSelectedBrandCount(): number { return this.selectedBrandIds.size; }
 
   resetSelection(): void {
     this.selectedBrandIds = new Set();
@@ -223,16 +271,19 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
     this.selectedKindId  = null;
     this.selectedTypeId  = null;
     this.searchTerm = '';
+    this.selectedAlphabet = 'ALL';
     this.selectedBrands = [];
+    this.filteredBrands = [];
+    this.allBrands = [];
     this.feeStructure = null;
     this.showOverview = false;
+    this.pageIndex = 0;
     sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrandIds);
     sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrands);
     sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.feeStructure);
     sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.overviewSummary);
     this.svc.clearSelectedBrands();
     this.rebuildKinds();
-    this.filterBrands();
   }
 
   // ---------------------------------------------------------------------------
@@ -240,13 +291,31 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
   // ---------------------------------------------------------------------------
 
   private loadSavedSelection(): void {
-    const saved = sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrandIds);
-    if (!saved) return;
-    try {
-      const parsed = JSON.parse(saved) as string[];
-      this.selectedBrandIds = new Set(Array.isArray(parsed) ? parsed : []);
-    } catch {
-      this.selectedBrandIds = new Set();
+    const savedIds = sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrandIds);
+    const savedBrands = sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrands);
+    if (savedIds) {
+      try {
+        const parsed = JSON.parse(savedIds) as string[];
+        this.selectedBrandIds = new Set(Array.isArray(parsed) ? parsed : []);
+      } catch {
+        this.selectedBrandIds = new Set();
+      }
+    }
+    if (savedBrands) {
+      try {
+        const parsedBrands = JSON.parse(savedBrands) as CompanyCollaborationBrand[];
+        if (Array.isArray(parsedBrands)) {
+          this.selectedBrands = parsedBrands;
+          this.selectedBrands.forEach((sb) => {
+            const match = this.allBrands.find((b) => String(b.id) === String(sb.id));
+            if (match) {
+              match.selected_sizes = sb.selected_sizes;
+            }
+          });
+        }
+      } catch (e) {
+        console.error('Failed to parse saved brands:', e);
+      }
     }
   }
 
@@ -263,27 +332,36 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
   }
 
   private updateSelectedBrands(): void {
-    this.selectedBrands = this.allBrands.filter((b) => this.selectedBrandIds.has(String(b.id)));
+    const newSelectedMap = new Map<string, CompanyCollaborationBrand>();
+    
+    // Keep previously selected brands
+    this.selectedBrands.forEach(b => newSelectedMap.set(String(b.id), b));
+    
+    // Update state of currently loaded brands
+    this.allBrands.forEach((b) => {
+      const key = String(b.id);
+      if (this.selectedBrandIds.has(key)) {
+        newSelectedMap.set(key, b);
+      } else {
+        newSelectedMap.delete(key);
+      }
+    });
+    
+    this.selectedBrands = Array.from(newSelectedMap.values()).filter(b => this.selectedBrandIds.has(String(b.id)));
   }
 
   // ---------------------------------------------------------------------------
   // Navigation
   // ---------------------------------------------------------------------------
 
-  goBack(): void { this.saveSelection(); this.back.emit(); }
+  goBack(): void {
+    this.saveSelection();
+    this.back.emit();
+  }
 
   addSelectedBrands(): void {
     this.saveSelection();
     if (this.selectedBrandIds.size === 0) return;
-    this.showOverview = true;
-    this.refreshFeeStructure();
-  }
-
-  addMoreProduct(): void { this.showOverview = false; }
-
-  proceedToSubmit(): void {
-    this.saveSelection();
-    if (this.selectedBrands.length === 0 || !this.feeStructure) return;
     this.saveOverviewSummary();
     this.next.emit();
   }
@@ -294,8 +372,7 @@ export class SelectBrandsComponent implements OnInit, OnDestroy {
 
   getTotalAmount(): number {
     if (!this.feeStructure) return 0;
-    return Number(this.feeStructure.applicationFee || 0)
-         + Number(this.feeStructure.collaborationFee || 0)
+    return Number(this.feeStructure.collaborationFee || 0)
          + Number(this.feeStructure.securityDeposit || 0);
   }
 

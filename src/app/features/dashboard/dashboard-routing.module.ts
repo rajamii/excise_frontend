@@ -103,7 +103,60 @@ const routes: Routes = [
       {
         path: 'admin/license-categories',
         loadComponent: () =>
-          import('../admin/master/license-category/list/list.component').then((m) => m.ListComponent),
+          import('../admin/master/license-subcategory/license-subcategory.component').then((m) => m.LicenseSubcategoryComponent),
+        canActivate: [UserRouteAccessService],
+        data: { requiredPermission: 'master.license_categories.view' }
+      },
+      {
+        path: 'admin/license-subcategories',
+        loadComponent: () =>
+          import('../admin/master/license-subcategory/license-subcategory.component').then((m) => m.LicenseSubcategoryComponent),
+        canActivate: [UserRouteAccessService],
+        data: { requiredPermission: 'master.license_categories.view' }
+      },
+      {
+        path: 'admin/additional-charges',
+        loadComponent: () =>
+          import('../admin/master/additional-charge/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { requiredPermission: 'master.license_categories.view' }
+      },
+      {
+        path: 'admin/pachwai-excess',
+        loadComponent: () =>
+          import('../admin/master/pachwai-excess/list/list.component').then((m) => m.PachwaiExcessListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { requiredPermission: 'master.license_categories.view' }
+      },
+      {
+        path: 'admin/locations',
+        loadComponent: () =>
+          import('../admin/master/location/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { requiredPermission: 'master.license_categories.view' }
+      },
+      {
+        path: 'admin/blocks-wards',
+        loadComponent: () =>
+          import('../admin/master/blocks-wards/blocks-wards.component').then((m) => m.BlocksWardsComponent),
+        canActivate: [UserRouteAccessService],
+        data: { requiredPermission: 'master.subdivisions.view' }
+      },
+      // Legacy redirects
+      { path: 'admin/blocks',       redirectTo: 'admin/blocks-wards', pathMatch: 'full' },
+      { path: 'admin/urban-wards',  redirectTo: 'admin/blocks-wards', pathMatch: 'full' },
+      { path: 'admin/rural-wards',  redirectTo: 'admin/blocks-wards', pathMatch: 'full' },
+      {
+        path: 'admin/fixed-fees',
+        loadComponent: () =>
+          import('../admin/master/fixed-fee/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { requiredPermission: 'master.license_categories.view' }
+      },
+      {
+        path: 'admin/dry-day-calendar',
+        loadComponent: () =>
+          import('../admin/master/dry-day-calendar/dry-day-calendar.component').then((m) => m.DryDayCalendarComponent),
         canActivate: [UserRouteAccessService],
         data: { requiredPermission: 'master.license_categories.view' }
       },
@@ -113,13 +166,6 @@ const routes: Routes = [
           import('../admin/master/license-title/list/list.component').then((m) => m.ListComponent),
         canActivate: [UserRouteAccessService],
         data: { requiredPermission: 'master.license_titles.view' }
-      },
-      {
-        path: 'admin/license-subcategories',
-        loadComponent: () =>
-          import('../admin/master/license-subcategory/list/list.component').then((m) => m.ListComponent),
-        canActivate: [UserRouteAccessService],
-        data: { requiredPermission: 'master.license_subcategories.view' }
       },
       {
         path: 'admin/license-terms',
@@ -135,9 +181,37 @@ const routes: Routes = [
         data: { requiredPermission: 'master.roads.view' }
       },
       {
+        path: 'admin/whats-current',
+        loadComponent: () =>
+          import('../admin/master/whats-current/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
         path: 'admin/hologram-suppliers',
         loadComponent: () =>
           import('../admin/master/hologram-supplier/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
+        path: 'admin/brand-owners',
+        loadComponent: () =>
+          import('../admin/master/brand-owner/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
+        path: 'admin/company-details',
+        loadComponent: () =>
+          import('../admin/master/company-details/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
+        path: 'admin/kinds-brands',
+        loadComponent: () =>
+          import('../admin/master/kinds-brands/kinds-brands.component').then((m) => m.KindsBrandsComponent),
         canActivate: [UserRouteAccessService],
         data: { authorities: ['site_admin'] }
       },
@@ -241,6 +315,20 @@ const routes: Routes = [
         data: { authorities: ['site_admin'], aboutUsCategory: 'exciseSecretaries' }
       },
       {
+        path: 'admin/about-us/department-content',
+        loadComponent: () =>
+          import('../admin/master/about-us/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'], aboutUsCategory: 'aboutUsText' }
+      },
+      {
+        path: 'admin/preventive-raids',
+        loadComponent: () =>
+          import('../admin/master/preventive-raids/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
         path: 'admin/contact-us',
         redirectTo: 'admin/contact-us/nodal-officer',
         pathMatch: 'full'
@@ -289,6 +377,7 @@ const routes: Routes = [
       { path: 'license-validity-period', redirectTo: 'admin/license-validity-period', pathMatch: 'full' },
       { path: 'license-types', redirectTo: 'admin/license-types', pathMatch: 'full' },
       { path: 'license-categories', redirectTo: 'admin/license-categories', pathMatch: 'full' },
+      { path: 'additional-charges', redirectTo: 'admin/additional-charges', pathMatch: 'full' },
       { path: 'license-titles', redirectTo: 'admin/license-titles', pathMatch: 'full' },
       { path: 'license-subcategories', redirectTo: 'admin/license-subcategories', pathMatch: 'full' },
       { path: 'license-terms', redirectTo: 'admin/license-terms', pathMatch: 'full' },

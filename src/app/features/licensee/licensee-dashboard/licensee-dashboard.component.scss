@@ -144,11 +144,95 @@
         align-items: center;
         margin-top: 0;
         transition: transform 0.25s ease, box-shadow 0.25s ease;
+        border: 2px solid transparent;
 
         &:hover {
             transform: translateY(-5px) scale(1.02);
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
             cursor: pointer;
+        }        &.applied {
+            border-color: rgba(28, 43, 120, 0.45) !important;
+            box-shadow: 0 2px 12px rgba(28, 43, 120, 0.10) !important;
+            .value { color: #1c2b78; }
+            .label { color: #1c2b78; }
+        }
+
+        &.pending {
+            border-color: rgba(231, 184, 0, 0.60) !important;
+            box-shadow: 0 2px 12px rgba(231, 184, 0, 0.12) !important;
+            .value { color: #b45309; }
+            .label { color: #b45309; }
+        }
+
+        &.awaiting-payment {
+            border-color: rgba(255, 152, 0, 0.55) !important;
+            box-shadow: 0 2px 12px rgba(255, 152, 0, 0.12) !important;
+            background: linear-gradient(135deg, rgba(255,247,237,0.6) 0%, rgba(255,237,213,0.6) 100%) !important;
+            position: relative;
+            overflow: hidden;
+            animation: payment-border-pulse-ld 1.8s ease-in-out infinite;
+
+            // Diagonal shimmer sweep
+            &::after {
+                content: '';
+                position: absolute;
+                top: -50%;
+                left: -75%;
+                width: 50%;
+                height: 200%;
+                background: linear-gradient(
+                    120deg,
+                    transparent 0%,
+                    rgba(255, 255, 255, 0.45) 50%,
+                    transparent 100%
+                );
+                animation: shimmer-sweep-ld 2.8s ease-in-out infinite;
+                pointer-events: none;
+                z-index: 0;
+            }
+
+            // HTML badge styling
+            .action-badge {
+                position: absolute;
+                top: 8px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: linear-gradient(90deg, #f97316, #fb923c);
+                color: #fff;
+                font-size: 9px;
+                font-weight: 700;
+                letter-spacing: 0.8px;
+                white-space: nowrap;
+                padding: 3px 10px;
+                border-radius: 20px;
+                box-shadow: 0 2px 6px rgba(249,115,22,0.4);
+                z-index: 2;
+            }
+
+            .value { color: #c2570a; }
+            .label { color: #c2570a; }
+        }
+
+        &.approved {
+            border-color: rgba(22, 163, 74, 0.50) !important;
+            box-shadow: 0 2px 12px rgba(22, 163, 74, 0.10) !important;
+            .value { color: #15803d; }
+            .label { color: #15803d; }
+        }
+
+        &.rejected {
+            border-color: rgba(220, 38, 38, 0.45) !important;
+            box-shadow: 0 2px 12px rgba(220, 38, 38, 0.10) !important;
+            .value { color: #dc2626; }
+            .label { color: #dc2626; }
+        }
+
+        &.objection {
+            border-color: rgba(255, 152, 0, 0.55) !important;
+            box-shadow: 0 2px 12px rgba(255, 152, 0, 0.12) !important;
+            background: linear-gradient(135deg, rgba(255,247,237,0.35) 0%, rgba(255,237,213,0.35) 100%) !important;
+            .value { color: #ea580c; }
+            .label { color: #f97316; }
         }
 
         .circle-icon {
@@ -189,16 +273,16 @@
         .value {
             font-size: 28px;
             font-weight: 700;
-            color: #1c1c1c;
             line-height: 1.2;
             margin-bottom: 8px;
         }
 
         .label {
             font-size: 14px;
-            color: #666;
-            font-weight: 500;
+            font-weight: 600;
             text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
         // ✅ NEW: Sub-label for showing awaiting payment count
@@ -208,6 +292,10 @@
             color: #ff9800;
             font-weight: 500;
             text-align: center;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 6px;
             
             .payment-count {
                 display: inline-flex;
@@ -228,6 +316,26 @@
             }
         }
     }
+}
+
+// ========================================
+// AWAITING PAYMENT ANIMATIONS
+// ========================================
+@keyframes payment-border-pulse-ld {
+    0%, 100% {
+        border-color: rgba(249, 115, 22, 0.55);
+        box-shadow: 0 0 0 0 rgba(249, 115, 22, 0), 0 4px 20px rgba(28, 43, 120, 0.08);
+    }
+    50% {
+        border-color: rgba(251, 191, 36, 0.9);
+        box-shadow: 0 0 0 6px rgba(249, 115, 22, 0.18), 0 0 28px rgba(251, 191, 36, 0.4), 0 4px 20px rgba(28, 43, 120, 0.08);
+    }
+}
+
+@keyframes shimmer-sweep-ld {
+    0%   { left: -75%; }
+    60%  { left: 125%; }
+    100% { left: 125%; }
 }
 
 // ========================================
@@ -724,4 +832,56 @@ $expiring-date-color:#e65100;
             }
         }
     }
+}
+
+// ── Force colored borders on stat cards — override Material's mdc-card ────────
+::ng-deep {
+  .stat-card.applied.mat-mdc-card {
+    border: 2px solid rgba(28, 43, 120, 0.55) !important;
+    --mdc-elevated-card-container-color: #fff !important;
+    
+    // Add small arrow design
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      width: 20px;
+      height: 20px;
+      background: linear-gradient(135deg, transparent 50%, rgba(28, 43, 120, 0.15) 50%);
+      border-right: 2px solid rgba(28, 43, 120, 0.35);
+      border-bottom: 2px solid rgba(28, 43, 120, 0.35);
+      transform: rotate(-45deg);
+      transition: all 0.3s ease;
+      opacity: 0.6;
+    }
+    
+    &:hover::after {
+      right: 8px;
+      bottom: 8px;
+      opacity: 1;
+      border-right-color: rgba(28, 43, 120, 0.7);
+      border-bottom-color: rgba(28, 43, 120, 0.7);
+    }
+  }
+  .stat-card.pending.mat-mdc-card {
+    border: 2px solid rgba(231, 184, 0, 0.70) !important;
+    --mdc-elevated-card-container-color: #fff !important;
+  }
+  .stat-card.awaiting-payment.mat-mdc-card {
+    border: 2px solid rgba(255, 152, 0, 0.65) !important;
+    --mdc-elevated-card-container-color: #fff !important;
+  }
+  .stat-card.approved.mat-mdc-card {
+    border: 2px solid rgba(22, 163, 74, 0.60) !important;
+    --mdc-elevated-card-container-color: #fff !important;
+  }
+  .stat-card.rejected.mat-mdc-card {
+    border: 2px solid rgba(220, 38, 38, 0.55) !important;
+    --mdc-elevated-card-container-color: #fff !important;
+  }
+  .stat-card.objection.mat-mdc-card {
+    border: 2px solid rgba(255, 152, 0, 0.55) !important;
+    --mdc-elevated-card-container-color: transparent !important;
+  }
 }

@@ -186,8 +186,8 @@ export class LicenseComponent implements OnInit, OnDestroy {
 
     this.masterService.getLicenseCategories().subscribe({
       next: (data) => {
-        this.licenseCategories = data;
-        console.log('📋 Loaded license categories:', data);
+        this.licenseCategories = data.filter((cat: any) => cat.isActive !== false);
+        console.log('📋 Loaded license categories:', this.licenseCategories);
       },
       error: (e) => console.error('Categories error', e)
     });
@@ -343,7 +343,11 @@ export class LicenseComponent implements OnInit, OnDestroy {
           console.log('✅ Fetched licensees:', data);
           console.log('📊 Total licensees found:', data.length);
 
-          this.filteredLicensees = data;
+          // Exclude SB-type (salesman/barman) licenses from the selection list
+          this.filteredLicensees = data.filter(l => {
+            const id = String(l.licenseeId || l.id || '');
+            return !id.toUpperCase().startsWith('SB/') && !id.toUpperCase().startsWith('SBM/');
+          });
 
           if (data.length > 0) {
             this.applicationForm.get('licensee')?.enable();

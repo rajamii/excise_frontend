@@ -91,7 +91,12 @@
         <mat-accordion>
           <mat-expansion-panel>
             <mat-expansion-panel-header>
-              Company Registration
+              <span class="panel-header-with-badge">
+                <span>Company Registration</span>
+                @if (companyRegistrationPendingCount > 0) {
+                  <span class="nav-count-badge">{{ companyRegistrationPendingCount }}</span>
+                }
+              </span>
             </mat-expansion-panel-header>
             <div class="button-column">
               <button mat-menu-item (click)="navigateToDashboardSection('company-registration')">

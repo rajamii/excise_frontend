@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, BehaviorSubject, map, forkJoin, of, catchError } from 'rxjs';
+import { Observable, BehaviorSubject, map, forkJoin, of, catchError, finalize, shareReplay, tap } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 
 export interface HologramIssuedEntry {
@@ -190,6 +190,9 @@ export interface LiquorBrandsResponse {
 export class HologramDataService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiBaseUrl}/transactional/supply_chain/hologram`;
+  private readonly cacheTtlMs = 60_000;
+  private readonly responseCache = new Map<string, { value: unknown; fetchedAt: number }>();
+  private readonly inflightRequests = new Map<string, Observable<unknown>>();
 
   // Legacy subjects (keep if necessary for other components, but ideally should be replaced)
   private dailyEntriesSubject = new BehaviorSubject<any[]>([]);
@@ -238,15 +241,51 @@ export class HologramDataService {
 
   constructor() { }
 
+  private getCachedOrFetch<T>(key: string, requestFactory: () => Observable<T>): Observable<T> {
+    const cachedEntry = this.responseCache.get(key);
+    const now = Date.now();
+    if (cachedEntry && now - cachedEntry.fetchedAt < this.cacheTtlMs) {
+      return of(cachedEntry.value as T);
+    }
+
+    const inflightRequest = this.inflightRequests.get(key);
+    if (inflightRequest) {
+      return inflightRequest as Observable<T>;
+    }
+
+    const request$ = requestFactory().pipe(
+      tap((value) => {
+        this.responseCache.set(key, { value, fetchedAt: Date.now() });
+      }),
+      finalize(() => {
+        this.inflightRequests.delete(key);
+      }),
+      shareReplay(1)
+    );
+
+    this.inflightRequests.set(key, request$ as Observable<unknown>);
+    return request$;
+  }
+
+  private invalidateCache(...keys: string[]): void {
+    for (const key of keys) {
+      this.responseCache.delete(key);
+      this.inflightRequests.delete(key);
+    }
+  }
+
   // --- Procurement APIs ---
 
   getProcurements(): Observable<HologramProcurement[]> {
-    const t = new Date().getTime();
-    return this.http.get<HologramProcurement[]>(`${this.apiUrl}/procurement/?_t=${t}`);
+    return this.getCachedOrFetch('procurements:list', () =>
+      this.http.get<HologramProcurement[]>(`${this.apiUrl}/procurement/`)
+    );
   }
 
   createProcurement(data: HologramProcurement): Observable<HologramProcurement> {
-    return this.http.post<HologramProcurement>(`${this.apiUrl}/procurement/`, data);
+    return this.http.post<HologramProcurement>(`${this.apiUrl}/procurement/`, data).pipe(
+      tap(() => this.invalidateCache('procurements:list'))
+    );
   }
 
   getProcurement(id: number): Observable<HologramProcurement> {
@@ -257,7 +296,9 @@ export class HologramDataService {
     return this.http.post(`${this.apiUrl}/procurement/${id}/forward_request/`, {
       target_stage: targetStage,
       remarks: remarks
-    });
+    }).pipe(
+      tap(() => this.invalidateCache('procurements:list'))
+    );
   }
 
   // --- Supplier Master APIs ---
@@ -276,7 +317,9 @@ export class HologramDataService {
   }
 
   setProcurementSupplier(procurementId: number, supplierId: number): Observable<any> {
-    return this.http.post(`${this.procurementApiUrl}/${procurementId}/set-supplier/`, { supplier_id: supplierId });
+    return this.http.post(`${this.procurementApiUrl}/${procurementId}/set-supplier/`, { supplier_id: supplierId }).pipe(
+      tap(() => this.invalidateCache('procurements:list'))
+    );
   }
 
   downloadSupplyOrderLetter(procurementId: number, supplierId: number): Observable<Blob> {
@@ -287,30 +330,36 @@ export class HologramDataService {
   // --- Request APIs ---
 
   getRequests(): Observable<HologramRequest[]> {
-    const t = new Date().getTime();
-    return this.http.get<HologramRequest[]>(`${this.apiUrl}/request/?_t=${t}`);
+    return this.getCachedOrFetch('requests:list', () =>
+      this.http.get<HologramRequest[]>(`${this.apiUrl}/request/`)
+    );
   }
 
   createRequest(data: HologramRequest): Observable<HologramRequest> {
-    return this.http.post<HologramRequest>(`${this.requestApiUrl}/`, data);
+    return this.http.post<HologramRequest>(`${this.requestApiUrl}/`, data).pipe(
+      tap(() => this.invalidateCache('requests:list'))
+    );
   }
 
   getRequest(id: number): Observable<HologramRequest> {
-    const t = new Date().getTime();
-    return this.http.get<HologramRequest>(`${this.requestApiUrl}/${id}/?_t=${t}`);
+    return this.http.get<HologramRequest>(`${this.requestApiUrl}/${id}/`);
   }
 
   updateRequestStatus(id: number, targetStage: string, remarks: string = ''): Observable<any> {
     return this.http.post(`${this.requestApiUrl}/${id}/update_status/`, {
       target_stage: targetStage,
       remarks: remarks
-    });
+    }).pipe(
+      tap(() => this.invalidateCache('requests:list'))
+    );
   }
 
   // Generic Workflow Action
   performAction(endpoint: 'procurement' | 'request', id: number, action: string, remarks: string = '', data: any = {}): Observable<any> {
     const url = endpoint === 'procurement' ? this.procurementApiUrl : this.requestApiUrl;
-    return this.http.post<any>(`${url}/${id}/perform_action/`, { action, remarks, ...data });
+    return this.http.post<any>(`${url}/${id}/perform_action/`, { action, remarks, ...data }).pipe(
+      tap(() => this.invalidateCache(endpoint === 'procurement' ? 'procurements:list' : 'requests:list'))
+    );
   }
 
   // Update hologram procurement quantities (Commissioner edit feature)
@@ -324,7 +373,9 @@ export class HologramDataService {
       local_qty: localQty,
       export_qty: exportQty,
       defence_qty: defenceQty
-    });
+    }).pipe(
+      tap(() => this.invalidateCache('procurements:list'))
+    );
   }
 
   // Notify that hologram arrivals have been updated

@@ -43,6 +43,13 @@ export class LoginComponent extends BaseComponent {
   loginOtpPreview: string | null = null;
   otpAutoSubmitted = false;
   isSendingOtp = false;
+  otpShakeActive = false;
+  regOtpShakeActive = false;
+
+  // Username check state (password flow)
+  usernameChecked = false;
+  isCheckingUsername = false;
+  usernameNotFound = false;
 
   // Registration related properties
   registrationOtpSent = false;
@@ -297,6 +304,9 @@ export class LoginComponent extends BaseComponent {
     this.otpIndex = null;
     this.loginOtpPreview = null;
     this.otpAutoSubmitted = false;
+    this.usernameChecked = false;
+    this.isCheckingUsername = false;
+    this.usernameNotFound = false;
     this.loginForm.reset();
     this.clearLoginErrors();
     this.setValidators();
@@ -339,9 +349,14 @@ export class LoginComponent extends BaseComponent {
     }
 
     const targetForm = form === 'registration' ? this.registrationForm : this.loginForm;
-    targetForm.get('phoneNumber')?.setValue(sanitizedValue, { emitEvent: false });
+    targetForm.get('phoneNumber')?.setValue(sanitizedValue, { emitEvent: true });
     targetForm.get('phoneNumber')?.markAsDirty();
     targetForm.get('phoneNumber')?.updateValueAndValidity();
+
+    // Clear stale login errors as the user types a new number
+    if (form === 'login') {
+      this.clearLoginErrors();
+    }
   }
 
   onOtpPhoneEnter(event: Event): void {
@@ -425,6 +440,61 @@ export class LoginComponent extends BaseComponent {
     });
   }
 
+  checkUsername(): void {
+    const username = String(this.loginForm.value.username || '').trim();
+    if (!username) {
+      this.usernameNotFound = true;
+      return;
+    }
+    if (this.isLocallyBlockedByUsername(username)) {
+      this.usernameNotFound = true;
+      this.usernameChecked = false;
+      return;
+    }
+    this.isCheckingUsername = true;
+    this.usernameNotFound = false;
+    this.clearLoginErrors();
+
+    this.authService.checkUserExists(username).subscribe({
+      next: (res: any) => {
+        this.isCheckingUsername = false;
+        if (res?.active === false) {
+          // Account exists but inactive
+          this.usernameChecked = false;
+          this.usernameNotFound = false;
+          this.setLoginErrors(['Your account is inactive. Please contact the administrator.']);
+        } else {
+          // User exists and is active — show password field
+          this.usernameChecked = true;
+          this.usernameNotFound = false;
+        }
+      },
+      error: (err) => {
+        this.isCheckingUsername = false;
+        if (err?.status === 404) {
+          this.usernameNotFound = true;
+          this.usernameChecked = false;
+        } else if (err?.status === 403) {
+          this.usernameNotFound = false;
+          this.usernameChecked = false;
+          this.setLoginErrors(['Your account is inactive. Please contact the administrator.']);
+        } else {
+          this.usernameNotFound = false;
+          this.usernameChecked = false;
+          this.setLoginErrors(['Could not verify User ID. Please try again.']);
+        }
+      }
+    });
+  }
+
+  resetUsername(): void {
+    this.usernameChecked = false;
+    this.usernameNotFound = false;
+    this.isCheckingUsername = false;
+    this.loginForm.patchValue({ username: '', password: '' });
+    this.clearLoginErrors();
+  }
+
   sendOtp(): void {
     if (this.isSendingOtp) {
       return;
@@ -432,20 +502,21 @@ export class LoginComponent extends BaseComponent {
 
     const phoneControl = this.loginForm.controls['phoneNumber'];
     const sanitizedPhoneNumber = String(phoneControl.value || '').replace(/\D/g, '').slice(0, 10);
-    if (phoneControl.value !== sanitizedPhoneNumber) {
-      phoneControl.setValue(sanitizedPhoneNumber);
-    }
 
-    if (phoneControl.invalid) {
-      this.setLoginErrors(['Enter a valid mobile number: 10 digits, starting with 6, 7, 8, or 9.']);
+    // Only block if obviously invalid (less than 10 digits or doesn't start with 6-9)
+    if (sanitizedPhoneNumber.length < 10 || !/^[6-9]/.test(sanitizedPhoneNumber)) {
+      this.loginError = true;
+      this.loginErrorMessages = ['Enter a valid mobile number: 10 digits, starting with 6, 7, 8, or 9.'];
       return;
     }
 
     if (this.isLocallyBlockedByPhone(sanitizedPhoneNumber)) {
-      this.setLoginErrors(['This user has been deleted and is not allowed to log in from this system.']);
+      this.loginError = true;
+      this.loginErrorMessages = ['This user has been deleted and is not allowed to log in from this system.'];
       return;
     }
 
+    // Valid format — clear errors and call backend
     this.isSendingOtp = true;
     this.clearLoginErrors();
     const phoneNumber = sanitizedPhoneNumber;
@@ -461,16 +532,16 @@ export class LoginComponent extends BaseComponent {
         }
 
         this.otpSent = true;
-        this.otpIndex = otpId;
-        this.loginOtpPreview = this.extractOtpPreview(response);
-        this.showOtpSuccessPopup(
-          response?.message || 'OTP sent successfully to your registered mobile number.'
-        );
+        this.otpIndex = response.otpId ?? response.otp_id ?? null;
+        this.loginOtpPreview = response.otp ? String(response.otp) : null;
         this.isSendingOtp = false;
       },
       error: (err) => {
         console.error('Error sending OTP:', err);
-        this.setLoginErrors(this.mapLoginErrors(err, 'sendOtp'));
+        const messages = this.mapLoginErrors(err, 'sendOtp');
+        // Always inline for OTP flow — no Swal popup
+        this.loginError = true;
+        this.loginErrorMessages = messages;
         this.loginOtpPreview = null;
         this.isSendingOtp = false;
       },
@@ -567,7 +638,20 @@ export class LoginComponent extends BaseComponent {
       },
       error: (err) => {
         this.registrationError = true;
-        this.registrationErrorMessages = this.mapRegistrationErrors(err, 'verifyOtp');
+        const msgs = this.mapRegistrationErrors(err, 'verifyOtp');
+        this.registrationErrorMessages = msgs;
+        this.registrationOtpControl.setValue('');
+        // Shake OTP input and show popup for wrong OTP
+        this.regOtpShakeActive = true;
+        setTimeout(() => { this.regOtpShakeActive = false; }, 700);
+        Swal.fire({
+          icon: 'error',
+          title: 'Wrong OTP',
+          text: msgs.join('\n'),
+          confirmButtonText: 'Retry',
+          allowOutsideClick: true,
+          allowEscapeKey: true
+        });
       }
     });
   }
@@ -695,7 +779,7 @@ export class LoginComponent extends BaseComponent {
     if (typeof errorObj !== 'object') return [];
 
     return Object.entries(errorObj).flatMap(([key, val]) => {
-      if (key === 'detail' || key === 'message' || key === 'non_field_errors') {
+      if (key === 'detail' || key === 'message' || key === 'error' || key === 'non_field_errors') {
         if (Array.isArray(val)) {
           return val.map((v) => String(v));
         }
@@ -739,8 +823,13 @@ export class LoginComponent extends BaseComponent {
       },
       error: (err) => {
         console.error('OTP verification error:', err);
-        this.setLoginErrors(this.mapLoginErrors(err, 'verifyOtp'));
+        const msgs = this.mapLoginErrors(err, 'verifyOtp');
+        this.setLoginErrors(msgs);
         this.otpAutoSubmitted = false;
+        this.otpControl.setValue('');
+        // Shake the OTP input to give visual feedback
+        this.otpShakeActive = true;
+        setTimeout(() => { this.otpShakeActive = false; }, 700);
       },
     });
   }
@@ -845,6 +934,11 @@ export class LoginComponent extends BaseComponent {
   }
 
   private showErrorPopup(messages: string[]): void {
+    const text = messages.join('\n').toLowerCase();
+    // Show inline only for "not registered" — no popup needed, message is clear
+    if (text.includes('not registered') || text.includes('sign up first')) {
+      return;
+    }
     Swal.fire({
       icon: 'error',
       title: 'Login Error',
@@ -956,11 +1050,11 @@ export class LoginComponent extends BaseComponent {
       if (status === 403 || hasAny(['inactive', 'contact administrator'])) {
         return ['Your account is inactive. Contact administrator for login.'];
       }
+      if (status === 404 || hasAny(['user not found', 'not registered', 'does not exist', 'no user', 'not found'])) {
+        return ['This mobile number is not registered. Please sign up first.'];
+      }
       if (hasAny(['invalid phone', 'invalid mobile', 'phone number', 'mobile number', 'format'])) {
         return ['Enter a valid mobile number: 10 digits, starting with 6, 7, 8, or 9.'];
-      }
-      if (status === 404 || hasAny(['user not found', 'not registered', 'does not exist'])) {
-        return ['This mobile number is not registered. Please sign up first.'];
       }
       if (status === 429 || hasAny(['too many', 'rate limit'])) {
         return ['OTP request limit reached (15 attempts). Please try again after 15 minutes.'];
@@ -971,15 +1065,16 @@ export class LoginComponent extends BaseComponent {
       if (status === 403 || hasAny(['inactive', 'contact administrator'])) {
         return ['Your account is inactive. Contact administrator for login.'];
       }
-      if (status === 401 || status === 400 || hasAny(['invalid otp', 'otp is invalid', 'incorrect otp'])) {
-        return ['Invalid OTP. Enter the correct OTP and try again.'];
-      }
       if (hasAny(['expired otp', 'otp expired', 'expired'])) {
         return ['OTP has expired. Please request a new OTP.'];
+      }
+      if (status === 401 || status === 400 || hasAny(['invalid otp', 'otp is invalid', 'incorrect otp', 'wrong otp', 'does not match', 'mismatch', 'invalid'])) {
+        return ['Wrong OTP entered or OTP doesn\'t match. Please retry.'];
       }
       if (status === 404 || hasAny(['not registered', 'user not found'])) {
         return ['This mobile number is not registered. Please sign up first.'];
       }
+      return ['Wrong OTP entered or OTP doesn\'t match. Please retry.'];
     }
 
     if (backendMessages.length > 0) {
@@ -1054,12 +1149,13 @@ export class LoginComponent extends BaseComponent {
     }
 
     if (flow === 'verifyOtp') {
-      if (status === 400 || status === 401 || hasAny(['invalid otp', 'incorrect otp', 'otp is invalid'])) {
-        return ['Invalid OTP. Enter the correct OTP and try again.'];
-      }
       if (hasAny(['expired otp', 'otp expired', 'expired'])) {
         return ['OTP has expired. Please request a new OTP.'];
       }
+      if (status === 400 || status === 401 || hasAny(['invalid otp', 'incorrect otp', 'otp is invalid', 'wrong otp', 'does not match', 'mismatch', 'invalid'])) {
+        return ['Wrong OTP entered or OTP doesn\'t match. Please retry.'];
+      }
+      return ['Wrong OTP entered or OTP doesn\'t match. Please retry.'];
     }
 
     if (flow === 'register') {

@@ -187,7 +187,8 @@ export class ITCELLComponent implements OnInit {
     if (this.statusFilter && this.statusFilter !== 'All') {
       const filter = this.normalizeStageToken(this.statusFilter);
       if (filter === 'approved') {
-        filtered = filtered.filter(item => this.isApprovedLikeStatus(item));
+        // Approved includes both approved-like statuses AND forwarded to commissioner
+        filtered = filtered.filter(item => this.isApprovedLikeStatus(item) || this.isForwardedLikeStatus(item));
       } else if (filter === 'edited') {
         filtered = filtered.filter(item => Boolean(item?.editedByCommissioner));
       } else if (filter === 'pending') {
@@ -243,15 +244,21 @@ export class ITCELLComponent implements OnInit {
       return;
     }
 
-    if (current === normalized) {
+    // "Forwarded to Commissioner" is now merged into Approved
+    const effectiveFilter = (normalized === 'forwarded to commissioner' || normalized.includes('forwarded'))
+      ? 'Approved'
+      : filter;
+    const effectiveNormalized = effectiveFilter.trim().toLowerCase();
+
+    if (current === effectiveNormalized) {
       this.statusFilter = 'All';
       this.activeSummaryFilter = '';
       this.applyFilters();
       return;
     }
 
-    this.statusFilter = filter;
-    this.activeSummaryFilter = filter;
+    this.statusFilter = effectiveFilter;
+    this.activeSummaryFilter = effectiveFilter;
     this.applyFilters();
   }
 
@@ -858,6 +865,12 @@ export class ITCELLComponent implements OnInit {
       this.activeSummaryFilter = '';
       return;
     }
+    // Forwarded is merged into Approved card
+    const token = this.normalizeStageToken(selected);
+    if (token.includes('forwarded')) {
+      this.activeSummaryFilter = 'Approved';
+      return;
+    }
     this.activeSummaryFilter = selected;
   }
 
@@ -865,23 +878,36 @@ export class ITCELLComponent implements OnInit {
     return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   }
 
-  private isApprovedLikeStatus(item: any): boolean {
+  /** Rejected by any party */
+  private isRejectedLikeStatus(item: any): boolean {
     const token = this.normalizeStageToken(item?.status);
-    const isCartoonAssigned = token.includes('cartoonassigned') || token.includes('cartonassigned');
-    return token.includes('approved') || isCartoonAssigned;
+    return token.includes('rejected') || token.includes('cancelled');
   }
 
-  /** Pending = Submitted OR Under IT Cell Review — anything still actionable by IT Cell */
+  /** Pending = still in IT Cell queue — submitted or under IT cell review */
   private isPendingLikeStatus(item: any): boolean {
-    if (this.isApprovedLikeStatus(item)) return false;
     const token = this.normalizeStageToken(item?.status);
     return (
-      token.includes('submit') ||
+      token.includes('submittedhp') ||
+      token.includes('submitted') ||
       token.includes('underitcellreview') ||
-      token.includes('itcellreview') ||
-      token.includes('pending') ||
-      token.includes('review')
+      token.includes('itcellreview')
     );
+  }
+
+  /**
+   * Approved (from IT Cell perspective) = anything that is NOT pending and NOT rejected.
+   * Once IT Cell forwards/verifies, all subsequent stages (payment, commissioner approval,
+   * carton assigned, etc.) count as approved by IT Cell.
+   */
+  private isApprovedLikeStatus(item: any): boolean {
+    return !this.isPendingLikeStatus(item) && !this.isRejectedLikeStatus(item);
+  }
+
+  private isForwardedLikeStatus(item: any): boolean {
+    const token = this.normalizeStageToken(item?.status);
+    return (token.includes('forwarded') && token.includes('commissioner')) ||
+           token.includes('forwardedtocommissioner');
   }
 
   closeModal(): void {

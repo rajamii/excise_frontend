@@ -1,144 +1,209 @@
-<!-- Bind the form to the Reactive Form Group in your component -->
-<form [formGroup]="memberDetailsForm">
-  <mat-card>
+<!-- Member Details Step - Supports multiple members -->
+<div class="member-details-wrapper">
 
-    <!-- Card header with title and note -->
-    <mat-card-header>
-      <div class="heading">Member Details</div>
-      <div class="validation">* Marked Fields Are Mandatory</div>
-    </mat-card-header>
-
-    <mat-card-content>
-
-      <!-- ══ EDITABLE MEMBER FIELDS ════════════════════════════════ -->
-      <div class="form-field-container">
-
-        <!-- Member Name Input -->
-        <mat-form-field appearance="outline">
-          <mat-label>Member Name</mat-label>
-          <input matInput placeholder="Enter Member Name" type="text" formControlName="memberName" />
-          @if (memberDetailsForm.controls['memberName'].invalid) {
-            <mat-error>{{ getErrorMessage('memberName') }}</mat-error>
-          }
-        </mat-form-field>
-
-        <!-- Member Designation -->
-        <mat-form-field appearance="outline">
-          <mat-label>Member Designation</mat-label>
-          <textarea
-            matInput
-            placeholder="Enter Member Designation (max 100 characters)"
-            formControlName="memberDesignation"
-            cdkTextareaAutosize
-            #autosize="cdkTextareaAutosize"
-            cdkAutosizeMinRows="1"
-            cdkAutosizeMaxRows="5">
-          </textarea>
-          @if (memberDetailsForm.controls['memberDesignation'].invalid) {
-            <mat-error>{{ getErrorMessage('memberDesignation') }}</mat-error>
-          }
-        </mat-form-field>
-
-        <!-- Mobile Number -->
-        <mat-form-field appearance="outline">
-          <mat-label>Mobile Number</mat-label>
-          <input matInput placeholder="Enter Mobile Number" type="number" formControlName="memberMobileNumber" />
-          @if (memberDetailsForm.controls['memberMobileNumber'].invalid) {
-            <mat-error>{{ getErrorMessage('memberMobileNumber') }}</mat-error>
-          }
-        </mat-form-field>
-
-        <!-- Email -->
-        <mat-form-field appearance="outline">
-          <mat-label>Email Id</mat-label>
-          <input matInput placeholder="Enter Email" type="email" formControlName="memberEmailId" />
-          @if (memberDetailsForm.controls['memberEmailId'].invalid) {
-            <mat-error>{{ getErrorMessage('memberEmailId') }}</mat-error>
-          }
-        </mat-form-field>
-
-        <!-- Member Address -->
-        <mat-form-field appearance="outline">
-          <mat-label>Member Address</mat-label>
-          <textarea
-            matInput
-            placeholder="Enter Member Address (max 500 characters)"
-            formControlName="memberAddress"
-            cdkTextareaAutosize
-            #autosize="cdkTextareaAutosize"
-            cdkAutosizeMinRows="1"
-            cdkAutosizeMaxRows="5">
-          </textarea>
-          @if (memberDetailsForm.controls['memberAddress'].invalid) {
-            <mat-error>{{ getErrorMessage('memberAddress') }}</mat-error>
-          }
-        </mat-form-field>
-
+  <!-- ══ SAVED MEMBERS LIST ══════════════════════════════════════════ -->
+  @if (members.length > 0) {
+    <div class="saved-members-section">
+      <div class="saved-members-title">
+        <mat-icon>group</mat-icon>
+        <span>Added Members ({{ members.length }})</span>
       </div>
 
-      <!-- ══ LICENSEE PROFILE DETAILS (read-only, auto-filled) ══════ -->
-      @if (hasLicenseeProfile) {
-        <div class="section">
-          <div class="heading" style="display:flex; align-items:center; gap:8px;">
-            <mat-icon style="color: #1C2B78;">person_pin</mat-icon>
-            Licensee Profile Details
-            <span style="font-size:12px; color:#888; font-weight:400;">(auto-filled · read-only)</span>
-          </div>
+      <div class="members-grid">
+        @for (member of members; track member; let i = $index) {
+          <div class="member-card" [class.editing]="editingIndex === i">
+            <!-- Card Badge -->
+            <div class="member-badge">
+              <span class="badge-num">{{ i + 1 }}</span>
+            </div>
 
+            <!-- Card Body -->
+            <div class="member-info">
+              <div class="member-name-row">
+                <mat-icon class="person-icon">account_circle</mat-icon>
+                <div>
+                  <div class="member-name">{{ member.memberName }}</div>
+                  <div class="member-designation">{{ member.memberDesignation }}</div>
+                </div>
+              </div>
+
+              <div class="member-meta-grid">
+                <div class="meta-item">
+                  <mat-icon class="meta-icon">phone</mat-icon>
+                  <span>{{ member.memberMobileNumber }}</span>
+                </div>
+                @if (member.memberEmailId) {
+                  <div class="meta-item">
+                    <mat-icon class="meta-icon">email</mat-icon>
+                    <span>{{ member.memberEmailId }}</span>
+                  </div>
+                }
+                <div class="meta-item full-width">
+                  <mat-icon class="meta-icon">location_on</mat-icon>
+                  <span>{{ member.memberAddress }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card Actions -->
+            <div class="member-actions">
+              <button mat-icon-button
+                      class="edit-btn"
+                      matTooltip="Edit Member"
+                      (click)="editMember(i)">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button
+                      class="delete-btn"
+                      matTooltip="Remove Member"
+                      (click)="deleteMember(i)">
+                <mat-icon>delete_outline</mat-icon>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Add Another Member button (shown when form is closed) -->
+      @if (!isFormOpen) {
+        <div class="add-another-row">
+          <button mat-stroked-button color="primary" class="add-another-btn" (click)="addAnotherMember()">
+            <mat-icon>person_add</mat-icon>
+            Add Another Member
+          </button>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ══ INPUT FORM ═══════════════════════════════════════════════════ -->
+  @if (isFormOpen) {
+    <form [formGroup]="memberDetailsForm">
+      <mat-card class="form-card">
+
+        <!-- Card Header -->
+        <mat-card-header>
+          <div class="heading">
+            <mat-icon>{{ editingIndex !== null ? 'edit_note' : 'person_add' }}</mat-icon>
+            {{ formHeading }}
+          </div>
+          <div class="validation">* Marked Fields Are Mandatory</div>
+        </mat-card-header>
+
+        <mat-card-content>
+
+          <!-- ── EDITABLE MEMBER FIELDS ─────────────────────────────── -->
           <div class="form-field-container">
 
-            <!-- Father's Name -->
+            <!-- Member Name -->
             <mat-form-field appearance="outline">
-              <mat-label>Father's Name</mat-label>
-              <input matInput formControlName="fatherName" readonly />
-              <mat-icon matSuffix style="color:#aaa;">lock</mat-icon>
+              <mat-label>Member Name</mat-label>
+              <input matInput placeholder="Enter Member Name" type="text" formControlName="memberName" />
+              @if (memberDetailsForm.controls['memberName'].invalid && memberDetailsForm.controls['memberName'].touched) {
+                <mat-error>{{ getErrorMessage('memberName') }}</mat-error>
+              }
             </mat-form-field>
 
-            <!-- Date of Birth -->
+            <!-- Member Designation -->
             <mat-form-field appearance="outline">
-              <mat-label>Date of Birth</mat-label>
-              <input matInput formControlName="dob" readonly />
-              <mat-icon matSuffix style="color:#aaa;">lock</mat-icon>
+              <mat-label>Member Designation</mat-label>
+              <textarea
+                matInput
+                placeholder="Enter Member Designation"
+                formControlName="memberDesignation"
+                cdkTextareaAutosize
+                #autosize="cdkTextareaAutosize"
+                cdkAutosizeMinRows="1"
+                cdkAutosizeMaxRows="3">
+              </textarea>
+              @if (memberDetailsForm.controls['memberDesignation'].invalid && memberDetailsForm.controls['memberDesignation'].touched) {
+                <mat-error>{{ getErrorMessage('memberDesignation') }}</mat-error>
+              }
             </mat-form-field>
 
-            <!-- Gender -->
+            <!-- Mobile Number -->
             <mat-form-field appearance="outline">
-              <mat-label>Gender</mat-label>
-              <input matInput formControlName="gender" readonly />
-              <mat-icon matSuffix style="color:#aaa;">lock</mat-icon>
+              <mat-label>Mobile Number</mat-label>
+              <input matInput placeholder="Enter Mobile Number" type="number" formControlName="memberMobileNumber" />
+              @if (memberDetailsForm.controls['memberMobileNumber'].invalid && memberDetailsForm.controls['memberMobileNumber'].touched) {
+                <mat-error>{{ getErrorMessage('memberMobileNumber') }}</mat-error>
+              }
             </mat-form-field>
 
-            <!-- Nationality -->
+            <!-- Email -->
             <mat-form-field appearance="outline">
-              <mat-label>Nationality</mat-label>
-              <input matInput formControlName="nationality" readonly />
-              <mat-icon matSuffix style="color:#aaa;">lock</mat-icon>
+              <mat-label>Email Id</mat-label>
+              <input matInput placeholder="Enter Email" type="email" formControlName="memberEmailId" />
+              @if (memberDetailsForm.controls['memberEmailId'].invalid && memberDetailsForm.controls['memberEmailId'].touched) {
+                <mat-error>{{ getErrorMessage('memberEmailId') }}</mat-error>
+              }
+            </mat-form-field>
+
+            <!-- Member Address -->
+            <mat-form-field appearance="outline" class="full-span">
+              <mat-label>Member Address</mat-label>
+              <textarea
+                matInput
+                placeholder="Enter Member Address (max 500 characters)"
+                formControlName="memberAddress"
+                cdkTextareaAutosize
+                #autosize2="cdkTextareaAutosize"
+                cdkAutosizeMinRows="1"
+                cdkAutosizeMaxRows="4">
+              </textarea>
+              @if (memberDetailsForm.controls['memberAddress'].invalid && memberDetailsForm.controls['memberAddress'].touched) {
+                <mat-error>{{ getErrorMessage('memberAddress') }}</mat-error>
+              }
             </mat-form-field>
 
           </div>
-        </div>
-      }
 
-      <!-- ══ WARNING: No licensee profile found ════════════════════ -->
-      @if (!hasLicenseeProfile) {
-        <div style="display:flex; align-items:center; gap:8px; padding:12px 16px;
-                    background:#fff3e0; border-radius:8px; margin-top:12px; color:#e65100;">
-          <mat-icon>warning_amber</mat-icon>
-          <span>
-            No Licensee Profile found. Please create your profile first via
-            <strong>User Profile → Create Profile</strong> before submitting the application.
-          </span>
-        </div>
-      }
 
-    </mat-card-content>
+        </mat-card-content>
 
-    <!-- Action Buttons -->
-    <mat-card-actions>
-      <button mat-stroked-button (click)="goBack()">Back</button>
-      <button mat-stroked-button color="warn" (click)="resetForm()">Reset</button>
-      <button mat-flat-button color="primary" (click)="proceedToNext()" [disabled]="!memberDetailsForm.valid">Next</button>
-    </mat-card-actions>
+        <!-- ── FORM ACTION BUTTONS ────────────────────────────────── -->
+        <mat-card-actions class="form-actions">
+          <!-- Cancel edit (only when editing an existing member) -->
+          @if (editingIndex !== null || members.length > 0) {
+            <button mat-stroked-button type="button" (click)="cancelEdit()">
+              <mat-icon>close</mat-icon>
+              Cancel
+            </button>
+          }
 
-  </mat-card>
-</form>
+          <!-- Save Member button -->
+          <button mat-flat-button
+                  color="primary"
+                  class="save-btn"
+                  type="button"
+                  (click)="saveMember()">
+            <mat-icon>save</mat-icon>
+            {{ editingIndex !== null ? 'Update Member' : 'Save Member' }}
+          </button>
+        </mat-card-actions>
+
+      </mat-card>
+    </form>
+  }
+
+  <!-- ══ BOTTOM NAVIGATION ════════════════════════════════════════════ -->
+  <div class="nav-actions">
+    <button mat-stroked-button (click)="goBack()">
+      <mat-icon>arrow_back</mat-icon>
+      Back
+    </button>
+    <button mat-stroked-button color="warn" (click)="resetForm()">
+      <mat-icon>refresh</mat-icon>
+      Reset
+    </button>
+    <button mat-flat-button
+            color="primary"
+            class="next-btn"
+            (click)="proceedToNext()"
+            [disabled]="members.length === 0">
+      Next
+      <mat-icon>arrow_forward</mat-icon>
+    </button>
+  </div>
+
+</div>

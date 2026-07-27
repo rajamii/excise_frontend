@@ -1,0 +1,74 @@
+<div class="container-fluid">
+  <mat-card>
+
+    <!-- Header: Title and Add button -->
+    <mat-card-header class="page-card-header">
+      <div class="page-title">Company Details Master</div>
+      <button matButton="filled" (click)="onAdd()">
+        <mat-icon>add</mat-icon> Add Company
+      </button>
+    </mat-card-header>
+
+    <!-- Content: Table of company details -->
+    <mat-card-content class="page-card-content">
+      <div class="table-container">
+        <mat-table [dataSource]="dataSource">
+
+          <!-- Code -->
+          <ng-container matColumnDef="code">
+            <mat-header-cell *matHeaderCellDef>Code</mat-header-cell>
+            <mat-cell *matCellDef="let element">{{ element.brandOwnerCode }}</mat-cell>
+          </ng-container>
+
+          <!-- Name -->
+          <ng-container matColumnDef="name">
+            <mat-header-cell *matHeaderCellDef>Company Name</mat-header-cell>
+            <mat-cell *matCellDef="let element">{{ element.brandOwnerName }}</mat-cell>
+          </ng-container>
+
+          <!-- Email -->
+          <ng-container matColumnDef="email">
+            <mat-header-cell *matHeaderCellDef>Email</mat-header-cell>
+            <mat-cell *matCellDef="let element">{{ element.brandOwnerEmail || '-' }}</mat-cell>
+          </ng-container>
+
+          <!-- Mobile -->
+          <ng-container matColumnDef="mobile">
+            <mat-header-cell *matHeaderCellDef>Mobile No</mat-header-cell>
+            <mat-cell *matCellDef="let element">{{ element.brandOwnerMobileNo || '-' }}</mat-cell>
+          </ng-container>
+
+          <!-- Origin -->
+          <ng-container matColumnDef="origin">
+            <mat-header-cell *matHeaderCellDef>Origin</mat-header-cell>
+            <mat-cell *matCellDef="let element">{{ element.brandOwnerOrigin === 'I' ? 'India' : 'Foreign' }}</mat-cell>
+          </ng-container>
+
+          <!-- Type -->
+          <ng-container matColumnDef="type">
+            <mat-header-cell *matHeaderCellDef>Type</mat-header-cell>
+            <mat-cell *matCellDef="let element">{{ element.brandOwnerTypeDesc || '-' }}</mat-cell>
+          </ng-container>
+
+          <!-- Actions -->
+          <ng-container matColumnDef="actions">
+            <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
+            <mat-cell *matCellDef="let element">
+              <button matIconButton color="primary" (click)="onEdit(element)">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button matIconButton color="warn" (click)="onDelete(element)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </mat-cell>
+          </ng-container>
+
+          <!-- Table rows -->
+          <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+          <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+
+        </mat-table>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

@@ -5,6 +5,7 @@ export enum PatternConstants {
   PAN = '^[A-Z]{5}[0-9]{4}[A-Z]{1}$',
   AADHAR= '^[2-9]{1}[0-9]{3}\\s[0-9]{4}\\s[0-9]{4}$',
   CIN = '^[ULF]{1}[0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6}$',
+  GST = '^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$',
   CERTIFICATE_NUMBER = '^[A-Za-z0-9 \\.#/_-]*$',
   SIMPLETEXT = '^[a-z A-Z0-9 ,\\.:()]*$',
   STRING_SIMPLE_STRING_WITH_ENTER = '[a-zA-Z,& :\\.0-9\\n]+$',

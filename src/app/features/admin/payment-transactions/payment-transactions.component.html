@@ -59,7 +59,7 @@
             <input
               type="text"
               [(ngModel)]="searchQuery"
-              (ngModelChange)="onSearchChange()"
+              (keydown.enter)="triggerSearch()"
               placeholder="Search by UTR, Application ID, Username, or Amount..."
               class="search-input"
               aria-label="Search payment transactions"
@@ -74,7 +74,7 @@
             >
               <mat-icon>close</mat-icon>
             </button>
-            <div class="search-kbd-hint">
+            <div class="search-kbd-hint" (click)="triggerSearch()" title="Click to search">
               <kbd>Enter</kbd>
             </div>
           </div>
@@ -88,6 +88,62 @@
               <option value="F">Failed</option>
               <option value="P">Pending</option>
             </select>
+          </div>
+
+          <!-- Advanced Filters Toggle Button -->
+          <button type="button" class="advanced-filter-toggle" [class.active]="showAdvancedFilters" (click)="toggleAdvancedFilters()">
+            <mat-icon>{{ showAdvancedFilters ? 'filter_alt_off' : 'filter_alt' }}</mat-icon>
+            <span>Advanced Filters</span>
+          </button>
+        </div>
+
+        <!-- Advanced Filters Panel -->
+        <div class="advanced-filters-panel" *ngIf="showAdvancedFilters">
+          <div class="filters-grid">
+            <!-- Day Filter -->
+            <div class="filter-item">
+              <label>Day</label>
+              <select [(ngModel)]="filterDay" (change)="onFilterChange()" class="filter-select">
+                <option value="">All Days</option>
+                <option *ngFor="let day of daysList" [value]="day">{{ day }}</option>
+              </select>
+            </div>
+
+            <!-- Month Filter -->
+            <div class="filter-item">
+              <label>Month</label>
+              <select [(ngModel)]="filterMonth" (change)="onFilterChange()" class="filter-select">
+                <option value="">All Months</option>
+                <option *ngFor="let m of monthsList" [value]="m.value">{{ m.name }}</option>
+              </select>
+            </div>
+
+            <!-- Year Filter -->
+            <div class="filter-item">
+              <label>Year</label>
+              <select [(ngModel)]="filterYear" (change)="onFilterChange()" class="filter-select">
+                <option value="">All Years</option>
+                <option *ngFor="let y of yearsList" [value]="y">{{ y }}</option>
+              </select>
+            </div>
+
+            <!-- Module/Category Filter -->
+            <div class="filter-item">
+              <label>Module / Category</label>
+              <select [(ngModel)]="filterModule" (change)="onFilterChange()" class="filter-select">
+                <option value="">All Categories</option>
+                <option value="001">Application Fee</option>
+                <option value="002">Renewal Fee</option>
+                <option value="999">Wallet Recharge</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="filters-actions" *ngIf="filterDay || filterMonth || filterYear || filterModule">
+            <button type="button" class="reset-filters-btn" (click)="clearFilters()">
+              <mat-icon>filter_alt_off</mat-icon>
+              <span>Reset Filters</span>
+            </button>
           </div>
         </div>
 
@@ -116,8 +172,33 @@
       <p>{{ error }}</p>
     </div>
 
+    <!-- WHEN SEARCHED BUT NO TRANSACTION RECORDS FOUND -->
+    <div class="tab-content-panel placeholder-panel" *ngIf="hasSearched && transactions.length === 0 && !isLoading && !error" style="margin-top: 2rem;">
+      <div class="search-prompt-card not-found-card" style="max-width: 600px; margin: 0 auto; border-top: 4px solid #ef4444;">
+        <div class="glow-overlay red-glow"></div>
+        <div class="prompt-content">
+          <mat-icon class="prompt-icon red-icon" style="color: #ef4444; font-size: 56px; width: 56px; height: 56px; margin-bottom: 1.25rem;">search_off</mat-icon>
+          <h3 style="color: #0f172a; font-size: 1.4rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 0.75rem;">No Transactions Found</h3>
+          <p style="color: #475569; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.75rem; max-width: 480px; margin-left: auto; margin-right: auto;">
+            We couldn't find any BillDesk or Wallet payment records matching your search or filters.
+          </p>
+          <div class="prompt-tips" style="display: flex; flex-direction: column; align-items: flex-start; text-align: left; background: #fef2f2; border: 1px solid #fee2e2; border-radius: 12px; padding: 1.25rem; max-width: 450px; margin: 0 auto; gap: 0.5rem;">
+            <h4 style="color: #991b1b; font-weight: 700; font-size: 0.95rem; margin: 0; display: flex; align-items: center; gap: 0.25rem;">
+              <mat-icon style="font-size: 18px; width: 18px; height: 18px; color: #ef4444;">info</mat-icon>
+              Suggestions:
+            </h4>
+            <ul style="color: #b91c1c; font-size: 0.88rem; margin: 0; padding-left: 1.2rem; line-height: 1.6;">
+              <li>Verify the UTR or Order ID number you entered.</li>
+              <li>Double-check the Application/Licensee ID format.</li>
+              <li>Try broadening your date filter or clearing status filters.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Results Panel -->
-    <div class="tab-content-panel" *ngIf="!isLoading && !error">
+    <div class="tab-content-panel" *ngIf="hasSearched && transactions.length > 0 && !isLoading && !error">
       <div class="table-responsive-wrapper">
         <table class="premium-table">
           <thead>
@@ -228,6 +309,21 @@
         (page)="onPageChange($event)"
         class="premium-paginator">
       </mat-paginator>
+    </div>
+
+    <!-- Default Landing Search Prompt Placeholder (when not searched yet) -->
+    <div class="tab-content-panel placeholder-panel" *ngIf="!hasSearched && !isLoading && !error">
+      <div class="search-prompt-card">
+        <div class="glow-overlay"></div>
+        <mat-icon class="prompt-icon">payments</mat-icon>
+        <h3>Search Gateway Transactions</h3>
+        <p>
+          To protect server performance and load speeds, the transaction history is hidden by default. Please enter a UTR, Order ID, Application ID, or select a status filter above to look up transaction details.
+        </p>
+        <div class="prompt-tips">
+          <span class="tip-tag"><mat-icon>info</mat-icon> Tip: You can filter by Success, Failed, or Pending status directly</span>
+        </div>
+      </div>
     </div>
   </div>
 </div>

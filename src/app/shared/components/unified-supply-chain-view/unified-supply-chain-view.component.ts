@@ -15,9 +15,11 @@ import { SupplyChainService } from '../../../features/licensee/supplyChain/servi
 import { HologramDataService } from '../../../features/licensee/supplyChain/services/hologram-data.service';
 import { CompanyRegistrationService } from '../../../core/services/company-registration.service';
 import { CompanyCollaborationService } from '../../../core/services/company-collaboration.service';
+import { LabelRegistrationService } from '../../../core/services/label-registration.service';
 import { SalesmanBarmanRegistrationService } from '../../../core/services/salesman-barman-registration.service';
 import { LicenseApplicationService } from '../../../core/services/license-application.service';
 import { MasterService } from '../../../core/services/master.service';
+import { SpecialPermitService } from '../../../core/services/special-permit.service';
 import { ActionButtonConfig } from '../../../core/services/action-config.service';
 import { LicenseCategory } from '../../../core/models/license-category.model';
 import { LicenseFee } from '../../../core/models/license-fee.model';
@@ -54,6 +56,7 @@ export interface UnifiedApplicationData {
     referenceNo: string;
     submissionDate: Date;
     status: string;
+    members?: any[];
 
     // Workflow fields
     currentStage?: number;
@@ -61,6 +64,11 @@ export interface UnifiedApplicationData {
     workflowId?: number;
     allowedActions?: string[];
     allowedActionConfigs?: ActionButtonConfig[];
+    
+    // Additional tracking
+    isRevertedByCommissioner?: boolean;
+    commissionerRevertRemarks?: string;
+    latestRevert?: any;
 
     // Common computed fields (properly typed)
     distilleryName?: string;
@@ -171,6 +179,17 @@ export interface UnifiedApplicationData {
     policeStationName?: string;
     yearly_license_fee?: string | number;
     yearlyLicenseFee?: string | number;
+
+    // Company specific fields for new-license flow
+    company_name?: string;
+    company_address?: string;
+    company_gst?: string;
+    company_phone_number?: string;
+    company_email?: string;
+    companyAddress?: string;
+    companyGst?: string;
+    companyPhoneNumber?: string;
+    companyEmail?: string;
 
     // Company registration specific fields
     brandType?: string;
@@ -438,9 +457,11 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         private hologramDataService: HologramDataService,
         private companyRegistrationService: CompanyRegistrationService,
         private companyCollaborationService: CompanyCollaborationService,
+        private labelRegistrationService: LabelRegistrationService,
         private salesmanBarmanRegistrationService: SalesmanBarmanRegistrationService,
         private licenseApplicationService: LicenseApplicationService,
         private masterService: MasterService,
+        private specialPermitService: SpecialPermitService,
         private roleService: RoleService,
         private unifiedActionsService: UnifiedActionsService,
         private unifiedDashboardService: UnifiedDashboardService,
@@ -695,6 +716,23 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     brAmount: ['total_amount']
                 }
             },
+            'label-registration': {
+                service: this.labelRegistrationService,
+                listMethod: 'listLabelRegistrations',
+                detailMethod: 'getLabelRegistrationDetail',
+                workflowId: WORKFLOW_IDS[APPLICATION_TYPES.LABEL_REGISTRATION],
+                fieldMappings: {
+                    id: ['application_id', 'applicationId', 'id'],
+                    referenceNo: ['application_id', 'applicationId', 'referenceNo', 'reference_no', 'id'],
+                    submissionDate: ['created_at', 'createdAt', 'application_date', 'applicationDate'],
+                    status: ['current_stage_name', 'currentStageName', 'status'],
+                    currentStage: ['current_stage', 'currentStage', 'current_stage_id', 'currentStageId'],
+                    currentStageName: ['current_stage_name', 'currentStageName'],
+                    workflowId: ['workflow', 'workflow_id', 'workflowId'],
+                    distilleryName: ['product_details.brandName', 'productDetails.brandName', 'product_details.bottlerName', 'productDetails.bottlerName'],
+                    brAmount: ['total_amount']
+                }
+            },
             'salesman-barman-registration': {
                 service: this.salesmanBarmanRegistrationService,
                 listMethod: 'getSalesmanBarmanList',
@@ -707,6 +745,23 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     status: ['current_stage_name', 'current_stage', 'status'],
                     currentStageName: ['current_stage_name', 'currentStageName'],
                     distilleryName: ['license_category_name', 'licenseCategoryName', 'license_category']
+                }
+            },
+            'special-permit': {
+                service: this.specialPermitService,
+                listMethod: 'listSpecialPermits',
+                detailMethod: 'getSpecialPermitDetail',
+                workflowId: WORKFLOW_IDS[APPLICATION_TYPES.SPECIAL_PERMIT],
+                fieldMappings: {
+                    id: ['application_id', 'applicationId', 'id'],
+                    referenceNo: ['application_id', 'applicationId', 'referenceNo', 'reference_no', 'id'],
+                    submissionDate: ['created_at', 'createdAt', 'submitted_at', 'submittedAt'],
+                    status: ['current_stage_name', 'currentStageName', 'status'],
+                    currentStage: ['current_stage_id', 'currentStageId', 'current_stage', 'currentStage'],
+                    currentStageName: ['current_stage_name', 'currentStageName'],
+                    workflowId: ['workflow', 'workflow_id', 'workflowId'],
+                    distilleryName: ['license_category_name', 'licenseCategoryName', 'establishment_name', 'establishmentName'],
+                    brAmount: ['payment_amount', 'paymentAmount']
                 }
             }
         };
@@ -886,6 +941,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         const allowedActions = this.extractAllowedActions(apiData);
         const allowedActionConfigs = this.extractAllowedActionConfigs(apiData);
 
+        console.log('🔧 MAP APPLICATION DATA - apiData:', apiData);
+
         const mappedData: UnifiedApplicationData = {
             id: this.extractFieldValue(apiData, config.fieldMappings.id)?.toString() || '',
             referenceNo: this.extractFieldValue(apiData, config.fieldMappings.referenceNo)?.toString() || '',
@@ -895,7 +952,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             currentStageName: this.extractFieldValue(apiData, config.fieldMappings.currentStageName || []),
             workflowId: this.parseId(rawWorkflowId) || config.workflowId,
             allowedActions,
-            allowedActionConfigs
+            allowedActionConfigs,
+            isRevertedByCommissioner: apiData.isRevertedByCommissioner ?? apiData.is_reverted_by_commissioner ?? false,
+            commissionerRevertRemarks: apiData.commissionerRevertRemarks ?? apiData.commissioner_revert_remarks ?? '',
+            latestRevert: apiData.latestRevert ?? apiData.latest_revert ?? null
         };
 
         // For workflows where backend often sends generic "PENDING" or a raw stage ID,
@@ -903,7 +963,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         if (
             this.applicationType === 'salesman-barman-registration' ||
             this.applicationType === 'company-registration' ||
-            this.applicationType === 'company-collaboration'
+            this.applicationType === 'company-collaboration' ||
+            this.applicationType === 'label-registration'
         ) {
             // Stage ID → human-readable status name mapping
             const stageIdToStatusName: { [key: number]: string } = {
@@ -1420,6 +1481,24 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     this.parseNumericValue(feeStructure?.security_deposit)
                 );
                 break;
+            case 'label-registration':
+                const labelProductDetails = apiData?.product_details ?? apiData?.productDetails ?? {};
+                const labelPackagingDetails = apiData?.packaging_details ?? apiData?.packagingDetails ?? {};
+                const labelRows = Array.isArray(labelPackagingDetails?.packagingRows)
+                    ? labelPackagingDetails.packagingRows
+                    : [];
+                mappedData['distilleryName'] =
+                    labelProductDetails?.brandName ||
+                    labelProductDetails?.brand_name ||
+                    labelProductDetails?.bottlerName ||
+                    labelProductDetails?.bottler_name ||
+                    'Not specified';
+                mappedData['quantity'] = labelRows.length;
+                mappedData['brAmount'] = labelRows.reduce(
+                    (sum: number, row: any) => sum + this.parseNumericValue(row?.mrpPerBottle ?? row?.mrp),
+                    0
+                );
+                break;
             case 'salesman-barman-registration':
                 mappedData['distilleryName'] =
                     this.extractFieldValue(apiData, ['license_category_name', 'licenseCategoryName', 'license_category']) ||
@@ -1429,29 +1508,40 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     }
 
     private findItemByReference(items: any[], refNo: string, referenceFields: string[]): any {
-        const decodedRefNo = decodeURIComponent(refNo || '');
-        const targetRef = String(refNo || '');
-        const decodedTargetRef = String(decodedRefNo || '');
+        const rawTarget = String(refNo || '').trim();
+        if (!rawTarget) return null;
 
-        for (const field of referenceFields) {
-            const foundItem = items.find((item: any) =>
-                String(item[field] ?? '') === targetRef || String(item[field] ?? '') === decodedTargetRef
-            );
-            if (foundItem) return foundItem;
+        const targetRef = rawTarget.toLowerCase();
+        let decodedTarget = rawTarget;
+        try { decodedTarget = decodeURIComponent(rawTarget).trim(); } catch { /* ignore */ }
+        const decodedRef = decodedTarget.toLowerCase();
+
+        const allKeys = Array.from(new Set([
+            ...(referenceFields || []),
+            'application_id', 'applicationId', 'id', 'referenceNo', 'reference_no',
+            'ourRefNo', 'our_ref_no', 'refNo', 'ref_no', 'license_id', 'licenseId', 'old_license_id', 'oldLicenseId'
+        ]));
+
+        // 1. Exact match on any field or key
+        for (const item of items || []) {
+            if (!item) continue;
+            for (const key of allKeys) {
+                const val = String(item[key] ?? '').trim().toLowerCase();
+                if (val && (val === targetRef || val === decodedRef)) {
+                    return item;
+                }
+            }
         }
 
-        for (const field of referenceFields) {
-            const foundItem = items.find((item: any) =>
-                String(item[field] ?? '') && (
-                    String(item[field] ?? '').includes(targetRef) ||
-                    String(item[field] ?? '').includes(decodedTargetRef)
-                )
-            );
-            if (foundItem) return foundItem;
-        }
-
-        if (items.length > 0) {
-            return items[0];
+        // 2. Partial/includes match on any field or key
+        for (const item of items || []) {
+            if (!item) continue;
+            for (const key of allKeys) {
+                const val = String(item[key] ?? '').trim().toLowerCase();
+                if (val && (val.includes(targetRef) || targetRef.includes(val) || val.includes(decodedRef) || decodedRef.includes(val))) {
+                    return item;
+                }
+            }
         }
 
         return null;
@@ -1665,7 +1755,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     if ([
                         'APPROVE', 'REJECT', 'FORWARD', 'RAISE_OBJECTION', 'VERIFY', 'ISSUE',
                         'COMPLETE', 'ASSIGN_CARTONS', 'PAY',
-                        'SUBMITPAYSLIP', 'APPROVEPAYSLIP', 'REJECTPAYSLIP'
+                        'SUBMITPAYSLIP', 'APPROVEPAYSLIP', 'REJECTPAYSLIP', 'REVERT'
                     ].includes(action)) {
                         const currentId = this.applicationData?.id?.toString() || '';
                         const currentRef = this.applicationData?.referenceNo || '';
@@ -3302,6 +3392,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     isHologram(): boolean { return this.applicationType === 'hologram'; }
     isNewLicense(): boolean { return this.applicationType === 'new-license'; }
     isRenewal(): boolean { return this.applicationType === 'license-renewal'; }
+    isSpecialPermit(): boolean { return this.applicationType === 'special-permit'; }
     isSalesmanRenewal(): boolean {
         if (!this.applicationData) return false;
         const id = String(this.applicationData.referenceNo || this.applicationData.id || '').toUpperCase();
@@ -3315,11 +3406,43 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     isNewLicenseOrRenewal(): boolean {
         return this.isNewLicense() || this.isNewLicenseRenewal();
     }
+    isCompanyRegistrationRenewal(): boolean {
+        if (!this.applicationData) return false;
+        const data: any = this.applicationData as any;
+        const oldLicenseSourceType = String(data.old_license_source_type || data.oldLicenseSourceType || '').toLowerCase();
+        return this.applicationType === 'license-renewal' && oldLicenseSourceType === 'company_registration';
+    }
+    isCompanyCollaborationRenewal(): boolean {
+        if (!this.applicationData) return false;
+        const data: any = this.applicationData as any;
+        const oldLicenseSourceType = String(data.old_license_source_type || data.oldLicenseSourceType || '').toLowerCase();
+        const id = String(data.referenceNo || data.id || '').toUpperCase();
+        return this.applicationType === 'license-renewal' && (oldLicenseSourceType === 'company_collaboration' || id.startsWith('RCOL/'));
+    }
+    isCompanyType(): boolean {
+        if (!this.applicationData) return false;
+        const data: any = this.applicationData as any;
+        const typeName = String(
+            data.license_type_name || 
+            data.licenseTypeName || 
+            (data.license_type && data.license_type.license_type) ||
+            ''
+        ).toLowerCase();
+        const typeId = Number(
+            data.license_type_id ||
+            data.licenseTypeId ||
+            (data.license_type && (data.license_type.id || data.license_type)) ||
+            data.license_type ||
+            0
+        );
+        return typeName.includes('company') || typeId === 2;
+    }
     isSalesmanOrRenewal(): boolean {
         return this.isSalesmanBarmanRegistration() || this.isSalesmanRenewal();
     }
     isCompanyRegistration(): boolean { return this.applicationType === 'company-registration'; }
     isCompanyCollaboration(): boolean { return this.applicationType === 'company-collaboration'; }
+    isLabelRegistration(): boolean { return this.applicationType === 'label-registration'; }
     isSalesmanBarmanRegistration(): boolean { return this.applicationType === 'salesman-barman-registration'; }
     getValidUpToDate(): Date | null {
         if (!this.applicationData) return null;
@@ -3374,6 +3497,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             'license-renewal',
             'company-registration',
             'company-collaboration',
+            'label-registration',
             'salesman-barman-registration'
         ];
 
@@ -3423,7 +3547,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         // Do not rely on URL/query-param "source" to determine licensee UX.
         // Admin/Officer users can navigate from licensee-like routes but must still see real workflow stage.
         if (!this.roleService.isLicenseeRole()) return false;
-        return this.isNewLicense() || this.isSalesmanBarmanRegistration();
+        return this.isNewLicense() || this.isSalesmanBarmanRegistration() || this.isCompanyRegistration() || this.isSpecialPermit();
     }
 
     private simplifyStageForLicensee(stageValue: string, statusValue: string): 'Pending' | 'Awaiting Payment' | 'Approved' | 'Rejected' {
@@ -3675,6 +3799,13 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 { label: 'Residential Certificate', keys: ['residential_certificate', 'residentialCertificate'] },
                 { label: 'Date of Birth Proof', keys: ['dateof_birth_proof', 'dateofBirthProof'] }
             ];
+        } else if (this.applicationType === 'company-registration' || id.startsWith('COMP/')) {
+            docFields = [
+                { label: 'Excise License issued by the Excise Authority', keys: ['exciseLicense', 'excise_license'] },
+                { label: 'Deed of Partnership', keys: ['deedOfPartnership', 'deed_of_partnership'] },
+                { label: 'Memorandum & Article of Association', keys: ['memorandumOfAssociation', 'memorandum_of_association'] },
+                { label: 'Undertaking (Sikkim Excise Act, 1992)', keys: ['undertaking'] }
+            ];
         } else {
             return;
         }
@@ -3691,6 +3822,25 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     }
 
     printApplication(): void {
+        const stage = String(this.applicationData?.currentStageName || (this.applicationData as any)?.current_stage_name || '').toLowerCase();
+        const status = String(this.applicationData?.status || '').toLowerCase();
+        const isApproved = status.includes('approved') || stage.includes('approved');
+
+        if (this.applicationType === 'company-collaboration' && isApproved) {
+            Swal.fire({
+                title: 'Application Completed',
+                text: 'Your brand owner collaboration application has been approved and completed.',
+                icon: 'success',
+                confirmButtonColor: '#1C2B78'
+            }).then(() => {
+                this.executePrint();
+            });
+        } else {
+            this.executePrint();
+        }
+    }
+
+    private executePrint(): void {
         const printSection = document.getElementById('applicationPrintSection');
         if (!printSection) {
             console.error('Print section not found');

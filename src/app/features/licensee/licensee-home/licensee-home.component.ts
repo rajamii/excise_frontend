@@ -11,6 +11,7 @@ import { Account } from '../../../core/models/account.model';
 import { Subscription } from 'rxjs';
 import Swal from 'sweetalert2';
 import { SupplyChainProfileService } from '../../../core/services/supply-chain-profile.service';
+import { SidebarPendingBadgeService } from '../../../shared/services/sidebar-pending-badge.service';
 
 
 @Component({
@@ -24,13 +25,16 @@ export class LicenseeHomeComponent extends BaseComponent {
   account: any; // Raw account object (can be removed if not used)
   user?: Account | null; // Strongly-typed account model
   subscription?: Subscription; // For managing any active subscriptions
+  private sidebarBadgeSubscription?: Subscription;
   loaded = true; // Flag to track when data has loaded
   userName!: string; // Holds the display name of the user
   private profileService = inject(SupplyChainProfileService);
+  companyRegistrationPendingCount = 0;
 
   constructor(
     public baseDependancy: BaseDependency,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private sidebarPendingBadgeService: SidebarPendingBadgeService
   ) {
     // Call parent constructor to initialize services from BaseComponent
     super(baseDependancy);
@@ -83,6 +87,8 @@ export class LicenseeHomeComponent extends BaseComponent {
       // Mark component as fully loaded
       this.loaded = true;
     });
+
+    this.refreshSidebarBadges();
   }
 
   // Flag to track sidenav open/close state
@@ -107,6 +113,28 @@ export class LicenseeHomeComponent extends BaseComponent {
     dialogRef.afterClosed().subscribe((result) => {
       console.log('Dialog closed', result);
     });
+  }
+
+  private refreshSidebarBadges(): void {
+    if (this.sidebarBadgeSubscription) {
+      this.sidebarBadgeSubscription.unsubscribe();
+    }
+
+    this.sidebarBadgeSubscription = this.sidebarPendingBadgeService
+      .refresh(['company-registration'], true, { audience: 'licensee', mode: 'full' })
+      .subscribe({
+        next: (counts) => {
+          this.companyRegistrationPendingCount = Number(counts?.['company-registration'] || 0);
+        },
+        error: () => {
+          this.companyRegistrationPendingCount = 0;
+        }
+      });
+  }
+
+  override ngOnDestroy(): void {
+    this.sidebarBadgeSubscription?.unsubscribe();
+    super.ngOnDestroy();
   }
 
   navigateTo(route: string): void {

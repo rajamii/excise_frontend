@@ -21,7 +21,8 @@ export class RoleService {
     8: { name: 'sub_enquiry_officer', displayName: 'Role ID: 8', hierarchy: 5 },
     9: { name: 'joint_commissioner', displayName: 'Role ID: 9', hierarchy: 4 },
     10: { name: 'commissioner', displayName: 'Role ID: 10', hierarchy: 3 },
-    11: { name: 'secretary', displayName: 'Role ID: 11', hierarchy: 2 }
+    11: { name: 'secretary', displayName: 'Role ID: 11', hierarchy: 2 },
+    16: { name: 'distributor', displayName: 'Role ID: 16', hierarchy: 12 }
   };
 
   constructor() {
@@ -168,7 +169,7 @@ export class RoleService {
     const checkRoleId = roleId || this.getCurrentUser()?.roleId;
     if (!checkRoleId) return false;
 
-    const licenseeRoles = [2];
+    const licenseeRoles = [2, 16];
     return licenseeRoles.includes(checkRoleId);
   }
 
@@ -228,7 +229,8 @@ export class RoleService {
       4: ['dashboard.view', 'applications.view', 'applications.process', 'reports.view'],
       8: ['dashboard.view', 'applications.view', 'applications.process', 'reports.view'],
       9: ['dashboard.view', 'applications.view', 'applications.approve', 'reports.view'],
-      11: ['dashboard.view', 'applications.view', 'applications.approve', 'reports.view']
+      11: ['dashboard.view', 'applications.view', 'applications.approve', 'reports.view'],
+      16: ['dashboard.view', 'distributor_permit.view', 'distributor_permit.create', 'licensee.applications.view', 'licensee.applications.create']
     };
 
     return permissionMap[roleId] || [];

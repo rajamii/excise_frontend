@@ -1,18 +1,41 @@
-<div class="container-fluid">
-  <!-- Dialog heading based on mode -->
-  <h2 mat-dialog-title align="center">{{ isEditMode ? 'Edit' : 'Add' }} License Subcategory</h2>
+<div class="dialog-container">
+  <h2 mat-dialog-title class="dialog-title">
+    <mat-icon class="dialog-title-icon">subdirectory_arrow_right</mat-icon>
+    {{ isEditMode ? 'Edit' : 'Add' }} License Subcategory
+  </h2>
 
   <form #form="ngForm">
-    <mat-dialog-content>
+    <mat-dialog-content class="dialog-content">
 
-      <!-- Subcategory description input -->
-      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <!-- License Category Dropdown -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>License Category</mat-label>
+        <mat-icon matPrefix class="field-prefix-icon">list_alt</mat-icon>
+        <mat-select
+          name="category"
+          [(ngModel)]="licenseSubcategory.category"
+          required
+          #categoryModel="ngModel"
+        >
+          <mat-option *ngFor="let cat of licenseCategories" [value]="cat.id">
+            {{ cat.licenseCategory }}
+          </mat-option>
+        </mat-select>
+        <mat-error *ngIf="categoryModel.errors?.['required']">
+          Category is required
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Description Input -->
+      <mat-form-field appearance="outline" class="full-width">
         <mat-label>Description</mat-label>
+        <mat-icon matPrefix class="field-prefix-icon">description</mat-icon>
         <input
           matInput
           name="description"
-          required
           [(ngModel)]="licenseSubcategory.description"
+          required
+          placeholder="Enter subcategory description"
           #descriptionModel="ngModel"
         />
         <mat-error *ngIf="descriptionModel.errors?.['required']">
@@ -20,28 +43,16 @@
         </mat-error>
       </mat-form-field>
 
-      <!-- Category selection (dropdown) -->
-      <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label>License Category</mat-label>
-        <mat-select
-          [(ngModel)]="licenseSubcategory.category"
-          name="category"
-          required
-        >
-          <!-- Bind category list to dropdown -->
-          <mat-option *ngFor="let cat of categories" [value]="cat.id">
-            {{ cat.licenseCategory }}
-          </mat-option>
-        </mat-select>
-      </mat-form-field>
-
     </mat-dialog-content>
 
-    <!-- Action buttons -->
-    <mat-dialog-actions align="center">
-      <!-- Save button disabled if form is invalid -->
-      <button matButton="filled" color="primary" (click)="onSave()" [disabled]="form.invalid">Save</button>
-      <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+    <mat-dialog-actions class="dialog-actions">
+      <button mat-stroked-button class="btn-cancel" (click)="onCancel()">
+        Cancel
+      </button>
+      <button mat-flat-button color="primary" class="btn-save" (click)="onSave()" [disabled]="form.invalid">
+        <mat-icon>save</mat-icon>
+        {{ isEditMode ? 'Update' : 'Save' }}
+      </button>
     </mat-dialog-actions>
   </form>
 </div>

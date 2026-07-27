@@ -28,6 +28,19 @@ type FinalLicenseTemplateData = {
   validTo: string;
   generatedOn: string;
   applicationDateTime?: string;
+  applicationYear?: string;
+  financialYear?: string;
+  licenseSubTitle?: string;
+  // Company Collaboration specific
+  brandOwnerName?: string;
+  brandOwnerCode?: string;
+  licenseeAddress?: string;
+  collaborationFee?: string;
+  securityDeposit?: string;
+  securityDepositRef?: string;
+  securityDepositDate?: string;
+  brandsTable?: { sl_no: number; brand_name: string; pack_size: string }[];
+  brandsPages?: { sl_no: number; brand_name: string; pack_size: string }[][];
 };
 
 type TermsPage = {
@@ -68,7 +81,7 @@ export class FinalLicenseComponent implements OnDestroy {
   readonly freePrintLimit = 5;
   readonly paymentRequired = signal<boolean>(false);
 
-  private readonly resolvedApiType = signal<'new-license' | 'license-renewal' | 'salesman-barman' | ''>('');
+  private readonly resolvedApiType = signal<'new-license' | 'license-renewal' | 'salesman-barman' | 'company-registration' | 'company-collaboration' | ''>('');
 
   private passportObjectUrl: string | null = null;
   private qrObjectUrl: string | null = null;
@@ -92,7 +105,18 @@ export class FinalLicenseComponent implements OnDestroy {
     transactionDate: '',
     validFrom: '',
     validTo: '',
-    generatedOn: ''
+    generatedOn: '',
+    applicationYear: '',
+    licenseSubTitle: '',
+    brandOwnerName: '',
+    brandOwnerCode: '',
+    licenseeAddress: '',
+    collaborationFee: '',
+    securityDeposit: '',
+    securityDepositRef: '',
+    securityDepositDate: '',
+    brandsTable: [],
+    brandsPages: []
   });
 
   constructor(
@@ -130,7 +154,7 @@ export class FinalLicenseComponent implements OnDestroy {
     });
   }
 
-  private inferApiTypeFromId(applicationId: string): 'new-license' | 'license-renewal' | 'salesman-barman' | '' {
+  private inferApiTypeFromId(applicationId: string): 'new-license' | 'license-renewal' | 'salesman-barman' | 'company-registration' | 'company-collaboration' | '' {
     const id = String(applicationId || '').trim().toUpperCase();
     if (!id) return '';
 
@@ -139,6 +163,10 @@ export class FinalLicenseComponent implements OnDestroy {
     if (id.startsWith('LIC/')) return 'license-renewal';
     if (id.startsWith('SBM/')) return 'salesman-barman';
     if (id.startsWith('RSBM/')) return 'license-renewal';
+    if (id.startsWith('COMP/')) return 'company-registration';
+    if (id.startsWith('CCOL/')) return 'company-collaboration';
+    if (id.startsWith('RCOL/')) return 'company-collaboration';
+    if (id.startsWith('CC/')) return 'company-collaboration';
 
     // License-id prefixes (sometimes used by mistake in the query param)
     if (id.startsWith('NA/')) return 'new-license';
@@ -168,6 +196,20 @@ export class FinalLicenseComponent implements OnDestroy {
     return this.resolvedApiType() === 'salesman-barman';
   }
 
+  get isCompanyRegistration(): boolean {
+    const q = (this.queryAppType() || '').toLowerCase();
+    if (q === 'company-registration') return true;
+    if (q) return false;
+    return this.resolvedApiType() === 'company-registration';
+  }
+
+  get isCompanyCollaboration(): boolean {
+    const q = (this.queryAppType() || '').toLowerCase();
+    if (q === 'company-collaboration') return true;
+    if (q) return false;
+    return this.resolvedApiType() === 'company-collaboration';
+  }
+
   private loadFinalLicense(): void {
     const applicationId = this.queryAppId();
     if (!applicationId) return;
@@ -185,6 +227,8 @@ export class FinalLicenseComponent implements OnDestroy {
     const newReq$ = this.licenseAppService.getNewFinalLicenseData(applicationId);
     const oldReq$ = this.licenseAppService.getOldFinalLicenseData(applicationId);
     const salesmanReq$ = this.licenseAppService.getSalesmanBarmanFinalLicenseData(applicationId);
+    const companyReq$ = this.licenseAppService.getCompanyRegistrationFinalLicenseData(applicationId);
+    const collabReq$ = this.licenseAppService.getCompanyCollaborationFinalLicenseData(applicationId);
 
     let req$ = oldReq$;
     if (appType === 'new-license') {
@@ -193,6 +237,12 @@ export class FinalLicenseComponent implements OnDestroy {
     } else if (appType === 'salesman-barman' || appType === 'salesman-barman-registration') {
       this.resolvedApiType.set('salesman-barman');
       req$ = salesmanReq$;
+    } else if (appType === 'company-registration') {
+      this.resolvedApiType.set('company-registration');
+      req$ = companyReq$;
+    } else if (appType === 'company-collaboration') {
+      this.resolvedApiType.set('company-collaboration');
+      req$ = collabReq$;
     } else if (appType) {
       this.resolvedApiType.set('license-renewal');
       req$ = oldReq$;
@@ -203,8 +253,18 @@ export class FinalLicenseComponent implements OnDestroy {
           this.resolvedApiType.set('salesman-barman');
           return salesmanReq$.pipe(
             catchError(() => {
-              this.resolvedApiType.set('license-renewal');
-              return oldReq$;
+              this.resolvedApiType.set('company-registration');
+              return companyReq$.pipe(
+                catchError(() => {
+                  this.resolvedApiType.set('company-collaboration');
+                  return collabReq$.pipe(
+                    catchError(() => {
+                      this.resolvedApiType.set('license-renewal');
+                      return oldReq$;
+                    })
+                  );
+                })
+              );
             })
           );
         })
@@ -224,7 +284,7 @@ export class FinalLicenseComponent implements OnDestroy {
           .filter((t: string) => !!t);
         this.terms.set(normalizedTerms);
         this.termsPages.set([{ start: 1, items: normalizedTerms }]);
-        if (!this.isSalesmanBarman) void this.paginateTermsToPages();
+        if (!this.isSalesmanBarman && !this.isCompanyRegistration) void this.paginateTermsToPages();
 
         this.templateData.update(current => ({
           ...current,
@@ -245,7 +305,28 @@ export class FinalLicenseComponent implements OnDestroy {
           validFrom: String(data?.validFrom || current.validFrom || ''),
           validTo: String(data?.validTo || current.validTo || ''),
           generatedOn: String(data?.generatedOn || current.generatedOn || ''),
-          applicationDateTime: String(data?.applicationDateTime || data?.application_date_time || current.applicationDateTime || '')
+          applicationDateTime: String(data?.applicationDateTime || data?.application_date_time || current.applicationDateTime || ''),
+          applicationYear: String(data?.applicationYear || data?.application_year || current.applicationYear || ''),
+          financialYear: String(data?.financialYear || data?.financial_year || current.financialYear || ''),
+          licenseSubTitle: String(data?.licenseSubTitle || data?.license_sub_title || ''),
+          // Company Collaboration specific
+          brandOwnerName: String(data?.brandOwnerName || data?.brand_owner_name || current.brandOwnerName || ''),
+          brandOwnerCode: String(data?.brandOwnerCode || data?.brand_owner_code || current.brandOwnerCode || ''),
+          licenseeAddress: String(data?.licenseeAddress || data?.licensee_address || current.licenseeAddress || ''),
+          collaborationFee: String(data?.collaborationFee || data?.collaboration_fee || current.collaborationFee || ''),
+          securityDeposit: String(data?.securityDeposit || data?.security_deposit || current.securityDeposit || ''),
+          securityDepositRef: String(data?.securityDepositRef || data?.security_deposit_ref || current.securityDepositRef || ''),
+          securityDepositDate: String(data?.securityDepositDate || data?.security_deposit_date || current.securityDepositDate || ''),
+          brandsTable: Array.isArray(data?.brandsTable) ? data.brandsTable.map((row: any) => ({
+            sl_no: row.slNo ?? row.sl_no,
+            brand_name: row.brandName ?? row.brand_name,
+            pack_size: row.packSize ?? row.pack_size
+          })) : (current.brandsTable || []),
+          brandsPages: this.paginateBrandsTable(Array.isArray(data?.brandsTable) ? data.brandsTable.map((row: any) => ({
+            sl_no: row.slNo ?? row.sl_no,
+            brand_name: row.brandName ?? row.brand_name,
+            pack_size: row.packSize ?? row.pack_size
+          })) : (current.brandsTable || []))
         }));
 
         this.printCount.set(this.extractPrintCount(data));
@@ -266,9 +347,11 @@ export class FinalLicenseComponent implements OnDestroy {
             passportPhotoUrl: embeddedPhoto
           }));
           this.photoStatus.set('Photo: embedded');
-        } else {
+        } else if (!this.isCompanyRegistration && !this.isCompanyCollaboration) {
           this.photoStatus.set(data?.passportPhotoExists === false ? 'Photo: missing file' : '');
           this.loadPassportPhoto();
+        } else {
+          this.photoStatus.set('Photo: N/A');
         }
 
         void this.refreshPrintInfo();
@@ -373,12 +456,12 @@ export class FinalLicenseComponent implements OnDestroy {
   }
 
   get needsPayment(): boolean {
-    if (this.isSalesmanBarman) return false;
+    if (this.isSalesmanBarman || this.isCompanyRegistration || this.isCompanyCollaboration) return false;
     return this.printCount() >= this.freePrintLimit && !this.isPrintFeePaid();
   }
 
   get canPrint(): boolean {
-    if (this.isSalesmanBarman) return true;
+    if (this.isSalesmanBarman || this.isCompanyRegistration || this.isCompanyCollaboration) return true;
     if (this.printCount() < this.freePrintLimit) return true;
     return this.isPrintFeePaid();
   }
@@ -453,6 +536,10 @@ export class FinalLicenseComponent implements OnDestroy {
       ? this.licenseAppService.getNewFinalLicenseQrCode(applicationId)
       : this.isSalesmanBarman
         ? this.licenseAppService.getSalesmanBarmanFinalLicenseQrCode(applicationId)
+      : this.isCompanyRegistration
+        ? this.licenseAppService.getCompanyRegistrationFinalLicenseQrCode(applicationId)
+      : this.isCompanyCollaboration
+        ? this.licenseAppService.getCompanyCollaborationFinalLicenseQrCode(applicationId)
       : this.licenseAppService.getOldFinalLicenseQrCode(applicationId);
 
     try {
@@ -484,6 +571,10 @@ export class FinalLicenseComponent implements OnDestroy {
   private async rotateVerificationForPrint(): Promise<{ ok: boolean; reason?: 'payment' | 'not_allowed'; message?: string }> {
     const applicationId = this.queryAppId();
     if (!applicationId) return { ok: false, reason: 'not_allowed', message: 'Missing application id.' };
+
+    if (this.isCompanyRegistration || this.isCompanyCollaboration) {
+      return { ok: true };
+    }
 
     const identifier = this.getPrintIdentifier() || applicationId;
     const req$ = this.licenseService.printLicense(identifier);
@@ -547,6 +638,10 @@ export class FinalLicenseComponent implements OnDestroy {
       ? this.licenseAppService.getNewFinalLicenseData(applicationId)
       : this.isSalesmanBarman
         ? this.licenseAppService.getSalesmanBarmanFinalLicenseData(applicationId)
+      : this.isCompanyRegistration
+        ? this.licenseAppService.getCompanyRegistrationFinalLicenseData(applicationId)
+      : this.isCompanyCollaboration
+        ? this.licenseAppService.getCompanyCollaborationFinalLicenseData(applicationId)
       : this.licenseAppService.getOldFinalLicenseData(applicationId);
 
     try {
@@ -578,7 +673,7 @@ export class FinalLicenseComponent implements OnDestroy {
     const cleanup = () => {
       document.body.classList.remove('print-prep');
       window.removeEventListener('afterprint', cleanup);
-      if (!this.isSalesmanBarman) void this.paginateTermsToPages();
+      if (!this.isSalesmanBarman && !this.isCompanyRegistration && !this.isCompanyCollaboration) void this.paginateTermsToPages();
     };
 
     window.addEventListener('afterprint', cleanup);
@@ -612,7 +707,7 @@ export class FinalLicenseComponent implements OnDestroy {
 
       await this.waitForNextFrame();
       await this.waitForNextFrame();
-      if (!this.isSalesmanBarman) await this.paginateTermsToPages();
+      if (!this.isSalesmanBarman && !this.isCompanyRegistration && !this.isCompanyCollaboration) await this.paginateTermsToPages();
       await this.waitForTemplateAssets(7000);
       await this.waitForAssets(7000);
 
@@ -745,5 +840,16 @@ export class FinalLicenseComponent implements OnDestroy {
   ngOnDestroy(): void {
     if (this.passportObjectUrl) URL.revokeObjectURL(this.passportObjectUrl);
     if (this.qrObjectUrl) URL.revokeObjectURL(this.qrObjectUrl);
+  }
+
+  /** Splits a flat brands array into pages (max 15 rows per page for print layout). */
+  paginateBrandsTable(brands: { sl_no: number; brand_name: string; pack_size: string }[]): { sl_no: number; brand_name: string; pack_size: string }[][] {
+    if (!brands || brands.length === 0) return [[]];
+    const pageSize = 15;
+    const pages: { sl_no: number; brand_name: string; pack_size: string }[][] = [];
+    for (let i = 0; i < brands.length; i += pageSize) {
+      pages.push(brands.slice(i, i + pageSize));
+    }
+    return pages;
   }
 }

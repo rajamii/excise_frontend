@@ -680,9 +680,32 @@
 // Global Dialog Animations
 ::ng-deep .brand-details-dialog-panel {
   .mat-mdc-dialog-container {
-    border-radius: 12px;
+    border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 11px 15px -7px rgba(0,0,0,.2), 0 24px 38px 3px rgba(0,0,0,.14), 0 9px 46px 8px rgba(0,0,0,.12);
+    box-shadow: 0 25px 60px rgba(0,0,0,0.25), 0 8px 24px rgba(28,43,120,0.15);
+    padding: 0 !important;
+  }
+
+  .mat-mdc-dialog-surface {
+    padding: 0 !important;
+    border-radius: 16px !important;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mat-mdc-dialog-content {
+    padding: 24px 28px !important;
+    margin: 0 !important;
+    max-height: none !important;
+  }
+
+  .mat-mdc-dialog-actions {
+    padding: 14px 28px !important;
+    margin: 0 !important;
+    min-height: unset;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
   }
 }
 

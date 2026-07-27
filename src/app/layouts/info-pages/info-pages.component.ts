@@ -1,6 +1,7 @@
 import { Component, OnInit, OnChanges } from '@angular/core';
 import { MaterialModule } from '../../shared/material.module';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Location } from '@angular/common';
 import { MatTableDataSource } from '@angular/material/table';
 import { InfoPagesService } from '../../core/services/info-pages.service';
 import {
@@ -47,8 +48,8 @@ export class InfoPagesComponent implements OnInit {
   
   markdownContent: string = '';
 
-  commissionerColumns: string[] = ['name', 'designation', 'email'];
-  commissionerData = COMMISSIONER_DATA;
+  commissionerColumns: string[] = ['name', 'designation', 'email', 'fromDate', 'toDate'];
+  commissionerData: any[] = COMMISSIONER_DATA;
 
   nodalOfficer: NodalOfficer[] = [];
 
@@ -98,8 +99,18 @@ export class InfoPagesComponent implements OnInit {
     constructor(
       private route: ActivatedRoute, 
       private infoPagesService: InfoPagesService,
-      private http: HttpClient
+      private http: HttpClient,
+      private location: Location,
+      private router: Router
     ) {}
+
+    goBack(): void {
+      if (window.history.length > 1) {
+        this.location.back();
+      } else {
+        this.router.navigate(['/']);
+      }
+    }
 
     ngOnInit(): void {
       this.route.paramMap.subscribe(params => {
@@ -169,6 +180,36 @@ export class InfoPagesComponent implements OnInit {
     }
 
     loadMarkdown(page: string): void {
+      if (page === 'department' || page === 'objectives') {
+        this.infoPagesService.getAboutUs().subscribe({
+          next: (records) => {
+            const titleToFind = page === 'department' ? 'Department' : 'Objectives';
+            let record = records.find(r => r.title?.toLowerCase() === titleToFind.toLowerCase() || r.title?.toLowerCase() === page.toLowerCase());
+            
+            if (!record && records && records.length > 0) {
+              if (page === 'department') {
+                record = records[0];
+              } else if (page === 'objectives' && records.length > 1) {
+                record = records[1];
+              }
+            }
+
+            if (record && record.content) {
+              this.markdownContent = record.content;
+            } else {
+              this.markdownContent = '*Content not available.*';
+            }
+          },
+          error: () => {
+            this.markdownContent = '*Content not available.*';
+          }
+        });
+      } else {
+        this.loadFallbackMarkdown(page);
+      }
+    }
+
+    loadFallbackMarkdown(page: string): void {
       this.http.get(`assets/content/${page}.md`, { responseType: 'text' })
         .subscribe({
           next: data => this.markdownContent = data,

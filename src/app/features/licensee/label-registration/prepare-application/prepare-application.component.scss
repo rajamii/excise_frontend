@@ -16,6 +16,7 @@
 .maintenance-blurred {
   filter: blur(3px);
   pointer-events: none;
+  -webkit-user-select: none;
   user-select: none;
 }
 

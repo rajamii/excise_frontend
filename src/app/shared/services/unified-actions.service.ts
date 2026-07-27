@@ -1,18 +1,20 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
-import { catchError, map, switchMap } from 'rxjs/operators';
+import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { MatDialog } from '@angular/material/dialog';
 import { ObjectionDialogComponent, ObjectionDialogResult } from '../components/objection-dialog/objection-dialog.component';
 import { RejectionRemarksDialogComponent } from '../components/rejection-remarks-dialog';
+import Swal from 'sweetalert2';
 
 // Import existing services
 import { EnaRequisitionService } from '../../core/services/ena-requisition.service';
 import { SupplyChainService } from '../../features/licensee/supplyChain/services/supplychain.service';
 import { HologramDataService } from '../../features/licensee/supplyChain/services/hologram-data.service';
 import { ApplicationType } from '../constants/application.constants';
+import { SidebarPendingBadgeService } from './sidebar-pending-badge.service';
 
 export interface ActionResult {
   success: boolean;
@@ -36,13 +38,31 @@ export class UnifiedActionsService {
     private dialog: MatDialog,
     private enaRequisitionService: EnaRequisitionService,
     private supplyChainService: SupplyChainService,
-    private hologramService: HologramDataService
+    private hologramService: HologramDataService,
+    private sidebarPendingBadgeService: SidebarPendingBadgeService
   ) { }
 
   /**
    * Execute an action on an item based on item type and action
    */
   executeAction(
+    action: string,
+    item: any,
+    itemType: ApplicationType,
+    context?: string,
+    options?: ActionExecutionOptions
+  ): Observable<ActionResult> {
+    return this.executeActionInternal(action, item, itemType, context, options).pipe(
+      tap((result) => {
+        if (result && result.success !== false) {
+          console.log(`🔄 UNIFIED ACTIONS: Action ${action} executed successfully. Requesting sidebar pending badge refresh.`);
+          this.sidebarPendingBadgeService.triggerRefresh();
+        }
+      })
+    );
+  }
+
+  private executeActionInternal(
     action: string,
     item: any,
     itemType: ApplicationType,
@@ -120,6 +140,8 @@ export class UnifiedActionsService {
         return this.handleRaiseObjectionAction(item, itemType);
       case 'VIEW_REMARK':
         return this.handleViewRemarkAction(item, itemType);
+      case 'REVERT':
+        return this.handleRevertAction(item, itemType);
 
       default:
         return of({
@@ -290,7 +312,9 @@ export class UnifiedActionsService {
       case 'new-license':
       case 'company-registration':
       case 'company-collaboration':
+      case 'label-registration':
       case 'salesman-barman-registration':
+      case 'special-permit':
         return this.executeWorkflowAdvance(item, 'approve', 'Approved', options?.workflowContextData);
 
       case 'license-renewal':
@@ -370,7 +394,9 @@ export class UnifiedActionsService {
       case 'new-license':
       case 'company-registration':
       case 'company-collaboration':
+      case 'label-registration':
       case 'salesman-barman-registration':
+      case 'special-permit':
         return this.executeWorkflowReject(item, reason);
 
       case 'license-renewal':
@@ -447,7 +473,7 @@ export class UnifiedActionsService {
     if (itemType === 'hologram') {
       return this.performHologramWorkflowAction(item, 'forward', 'Forwarded', 'Forwarded');
     }
-    if (['new-license', 'company-registration', 'company-collaboration', 'salesman-barman-registration'].includes(itemType)) {
+    if (['new-license', 'company-registration', 'company-collaboration', 'label-registration', 'salesman-barman-registration', 'special-permit'].includes(itemType)) {
       return this.executeWorkflowAdvance(item, 'forward', 'Forwarded', options?.workflowContextData);
     }
 
@@ -578,6 +604,52 @@ export class UnifiedActionsService {
         return of({ success: true, message: 'Redirected to wallet for payment' });
       }
 
+      case 'license-renewal': {
+        const applicationId = this.getWorkflowApplicationId(item);
+        if (!applicationId) {
+          return of({ success: false, message: 'Application ID is required for payment' });
+        }
+        const licenseFee = Number(item?.license_fee_amount ?? item?.licenseFeeAmount ?? item?.yearly_license_fee ?? item?.yearlyLicenseFee ?? 0);
+        const securityFee = Number(item?.security_fee_amount ?? item?.securityFeeAmount ?? 0);
+        this.router.navigate(['/dashboard'], {
+          queryParams: {
+            section: 'wallet',
+            tab: 'license_fee',
+            id: applicationId,
+            type: 'license-renewal',
+            ref: applicationId,
+            referenceNo: applicationId,
+            amount: Number.isFinite(licenseFee) && licenseFee > 0 ? licenseFee : undefined,
+            securityAmount: Number.isFinite(securityFee) && securityFee > 0 ? securityFee : undefined,
+            action: 'pay',
+            source: 'license-renewal'
+          }
+        });
+        return of({ success: true, message: 'Redirected to wallet for payment' });
+      }
+
+      case 'special-permit': {
+        const applicationId = this.getWorkflowApplicationId(item);
+        if (!applicationId) {
+          return of({ success: false, message: 'Application ID is required for payment' });
+        }
+        const licenseFee = Number(item?.license_fee_amount ?? item?.licenseFeeAmount ?? item?.amount ?? item?.payment_amount ?? item?.paymentAmount ?? 0);
+        this.router.navigate(['/dashboard'], {
+          queryParams: {
+            section: 'wallet',
+            tab: 'license_fee',
+            id: applicationId,
+            type: 'special-permit',
+            ref: applicationId,
+            referenceNo: applicationId,
+            amount: Number.isFinite(licenseFee) && licenseFee > 0 ? licenseFee : undefined,
+            action: 'pay',
+            source: 'special-permit'
+          }
+        });
+        return of({ success: true, message: 'Redirected to wallet for payment' });
+      }
+
       case 'requisition':
       case 'revalidation':
       case 'cancellation':
@@ -589,6 +661,58 @@ export class UnifiedActionsService {
           success: true,
           message: `Redirected to wallet (${walletTab}) for payment`
         });
+      }
+
+      case 'company-registration': {
+        const applicationId = this.getWorkflowApplicationId(item);
+        if (!applicationId) {
+          return of({ success: false, message: 'Application ID is required for payment' });
+        }
+        const fee = Number(
+          item?.payment_amount ?? item?.paymentAmount ?? item?.amount ?? 0
+        );
+        this.router.navigate(['/dashboard'], {
+          queryParams: {
+            section: 'wallet',
+            tab: 'license_fee',
+            id: applicationId,
+            type: 'company-registration',
+            ref: applicationId,
+            referenceNo: applicationId,
+            amount: Number.isFinite(fee) && fee > 0 ? fee : undefined,
+            action: 'pay',
+            source: 'company-registration'
+          }
+        });
+        return of({ success: true, message: 'Redirected to wallet for payment' });
+      }
+
+      case 'company-collaboration': {
+        const applicationId = this.getWorkflowApplicationId(item);
+        if (!applicationId) {
+          return of({ success: false, message: 'Application ID is required for payment' });
+        }
+        const isLicenseFeePaid = item?.is_license_fee_paid || item?.isLicenseFeePaid || item?.is_fee_paid || item?.isFeePaid;
+        const targetTab = isLicenseFeePaid ? 'security_deposit' : 'license_fee';
+        const feeStructure = item?.fee_structure ?? item?.feeStructure ?? {};
+        const collabFee = isLicenseFeePaid
+          ? Number(feeStructure?.securityDeposit ?? feeStructure?.security_deposit ?? item?.security_amount ?? 25000)
+          : Number(feeStructure?.collaborationFee ?? feeStructure?.collaboration_fee ?? item?.amount ?? 25000);
+
+        this.router.navigate(['/dashboard'], {
+          queryParams: {
+            section: 'wallet',
+            tab: targetTab,
+            id: applicationId,
+            type: 'company-collaboration',
+            ref: applicationId,
+            referenceNo: applicationId,
+            amount: Number.isFinite(collabFee) && collabFee > 0 ? collabFee : 25000,
+            action: 'pay',
+            source: 'company-collaboration'
+          }
+        });
+        return of({ success: true, message: 'Redirected to wallet for payment' });
       }
 
       default:
@@ -665,7 +789,11 @@ export class UnifiedActionsService {
       item?.totalAmount,
       item?.total_amount,
       item?.totalCancellationAmount,
-      item?.total_cancellation_amount
+      item?.total_cancellation_amount,
+      item?.license_fee_amount,
+      item?.licenseFeeAmount,
+      item?.yearly_license_fee,
+      item?.yearlyLicenseFee
     ];
 
     for (const value of candidates) {
@@ -1040,7 +1168,7 @@ export class UnifiedActionsService {
   }
 
   private handleRaiseObjectionAction(item: any, itemType: string): Observable<ActionResult> {
-    if (!['new-license', 'company-registration', 'company-collaboration', 'salesman-barman-registration'].includes(itemType)) {
+    if (!['new-license', 'company-registration', 'company-collaboration', 'label-registration', 'salesman-barman-registration'].includes(itemType)) {
       return of({ success: false, message: `Raise objection not implemented for ${itemType}` });
     }
 
@@ -1063,7 +1191,7 @@ export class UnifiedActionsService {
 
   private executeWorkflowAdvance(
     item: any,
-    mode: 'approve' | 'reject' | 'forward',
+    mode: 'approve' | 'reject' | 'forward' | 'revert',
     remarks: string,
     workflowContextData?: Record<string, any>
   ): Observable<ActionResult> {
@@ -1141,6 +1269,57 @@ export class UnifiedActionsService {
     );
   }
 
+  private handleRevertAction(item: any, itemType: string): Observable<ActionResult> {
+    if (!item.id) {
+      return of({
+        success: false,
+        message: 'Item ID is required for revert'
+      });
+    }
+
+    if (itemType === 'new-license' || itemType === 'company-registration' || itemType === 'company-collaboration' || itemType === 'salesman-barman-registration' || itemType === 'special-permit') {
+      return new Observable<ActionResult>((subscriber) => {
+        Swal.fire({
+          title: 'Revert Application',
+          input: 'textarea',
+          inputLabel: 'Remarks (required)',
+          inputPlaceholder: 'Enter remarks for reverting...',
+          showCancelButton: true,
+          confirmButtonText: 'Revert Back',
+          cancelButtonText: 'Cancel',
+          confirmButtonColor: '#dc3545',
+          reverseButtons: true,
+          inputValidator: (value: any) => {
+            if (!value || !value.trim()) {
+              return 'Remarks are required!';
+            }
+            return null;
+          }
+        }).then((result: any) => {
+          if (result.isConfirmed && result.value) {
+            this.executeWorkflowAdvance(item, 'revert', result.value, { is_reverted: true }).subscribe({
+              next: (res) => {
+                subscriber.next(res);
+                subscriber.complete();
+              },
+              error: (err) => {
+                subscriber.error(err);
+              }
+            });
+          } else {
+            subscriber.next({ success: false, message: 'Revert cancelled.' });
+            subscriber.complete();
+          }
+        });
+      });
+    }
+
+    return of({
+      success: false,
+      message: `Revert not implemented for ${itemType}`
+    });
+  }
+
   private executeWorkflowObjection(
     item: any,
     objections: { field: string; remarks: string }[],
@@ -1205,7 +1384,7 @@ export class UnifiedActionsService {
 
   private pickWorkflowStage(
     stages: any[],
-    mode: 'approve' | 'reject' | 'forward' | 'objection'
+    mode: 'approve' | 'reject' | 'forward' | 'objection' | 'revert'
   ): any | null {
     if (!Array.isArray(stages) || stages.length === 0) return null;
 
@@ -1276,6 +1455,15 @@ export class UnifiedActionsService {
         byAction('OBJECTION') ||
         byConditionFlag('has_objections') ||
         byName('objection')
+      );
+    }
+
+    if (mode === 'revert') {
+      return (
+        byAction('REVERT') ||
+        byConditionFlag('is_reverted') ||
+        byConditionFlag('isReverted') ||
+        byName('revert')
       );
     }
 

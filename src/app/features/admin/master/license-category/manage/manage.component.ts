@@ -2,20 +2,24 @@ import { Component, Inject, OnInit } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import Swal from 'sweetalert2';
 import { MaterialModule } from '../../../../../shared/material.module';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { FormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
 import { LicenseCategory } from '../../../../../core/models/license-category.model';
 import { AdminService } from '../../../admin.service';
 
 @Component({
   selector: 'app-manage-license-category',
   standalone: true,
-  imports: [MaterialModule],
+  imports: [MaterialModule, MatSlideToggleModule, FormsModule, CommonModule],
   templateUrl: './manage.component.html',
   styleUrl: './manage.component.scss'
 })
 export class ManageComponent implements OnInit {
   licenseCategory: LicenseCategory = { 
     licenseCategory: '', 
-    description: '' 
+    description: '',
+    isSpecialPermitAllowed: false
   };
   isEditMode = false;
 
@@ -59,4 +63,4 @@ export class ManageComponent implements OnInit {
   onCancel(): void {
     this.dialogRef.close();
   }
-}
+}

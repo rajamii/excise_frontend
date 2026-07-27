@@ -92,12 +92,10 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
     initialGrantDate: { type: 'date' },
     renewedFrom: { type: 'date' },
     validUpTo: { type: 'date' },
-    incorporationDate: { type: 'date' },
     mobileNumber: { type: 'text', pattern: PatternConstants.MOBILE },
     pinCode: { type: 'text', pattern: PatternConstants.PINCODE },
-    companyPan: { type: 'text', pattern: PatternConstants.PAN },
     pan: { type: 'text', pattern: PatternConstants.PAN },
-    companyCin: { type: 'text', pattern: PatternConstants.CIN },
+    companyGst: { type: 'text', pattern: PatternConstants.GST },
     companyPhoneNumber: { type: 'text', pattern: PatternConstants.MOBILE },
     companyEmail: { type: 'text', pattern: PatternConstants.EMAIL },
     email: { type: 'text', pattern: PatternConstants.EMAIL },
@@ -174,9 +172,7 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
     longitude: 'Longitude',
     companyName: 'Company Name',
     companyAddress: 'Company Address',
-    companyPan: 'Company PAN',
-    companyCin: 'Company CIN',
-    incorporationDate: 'Incorporation Date',
+    companyGst: 'Company GST Number',
     companyPhoneNumber: 'Company Phone Number',
     companyEmail: 'Company Email ID',
     status: 'Status',
@@ -339,6 +335,21 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
       'current_stage', 'applicant', 'transactions', 'objections', 'type'
     ];
 
+    const licenseTypeName = String(this.application.license_type_name || this.application.licenseTypeName || '').toLowerCase();
+    const isCompany = licenseTypeName === 'company' || Number(this.application.license_type || this.application.licenseType) === 2;
+
+    const personalFields = [
+      'applicant_name', 'applicantname', 'first_name', 'firstname', 'middle_name', 'middlename', 'last_name', 'lastname',
+      'father_husband_name', 'fatherhusbandname', 'dob', 'gender', 'nationality', 'residential_status', 'residentialstatus',
+      'marital_status', 'maritalstatus', 'present_address', 'presentaddress', 'permanent_address', 'permanentaddress',
+      'pan', 'email', 'mobile_number', 'mobilenumber', 'has_sikkim_certificate', 'hassikkimcertificate',
+      'has_excise_license', 'hasexciselicense', 'existing_license_category_id', 'existinglicensecategoryid',
+      'existing_license_no', 'existinglicenseno', 'family_excise_license', 'familyexciselicense',
+      'family_license_category_id', 'familylicensecategoryid', 'family_license_no', 'familylicenseno',
+      'criminal_conviction', 'criminalconviction', 'co_i_rc_ss', 'coircss', 'coi_rc_ss',
+      'pass_photo', 'passphoto', 'pan_card', 'pancard', 'dob_proof', 'dobproof', 'sikkim_certificate', 'sikkimcertificate'
+    ];
+
     const displayList: FieldDisplay[] = [];
     const keys = Object.keys(this.application);
 
@@ -350,6 +361,11 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
       // (Simple heuristic: if 'foo_id' exists, maybe skip it? keeping it simple for now)
 
       let value = this.application[key];
+
+      // If company application, skip personal fields if they are null/empty/not provided
+      if (isCompany && personalFields.includes(key.toLowerCase()) && (value === undefined || value === null || value === '')) {
+        return;
+      }
 
       // Handle nested objects by converting to string or skipping
       if (typeof value === 'object' && value !== null) {

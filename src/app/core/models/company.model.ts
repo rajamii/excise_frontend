@@ -30,7 +30,8 @@ export class Company {
 
 //documents
 export class CompanyDocuments {
+    exciseLicense?: File;
+    deedOfPartnership?: File;
+    memorandumOfAssociation?: File;
     undertaking!: File;
 }
-  
-    

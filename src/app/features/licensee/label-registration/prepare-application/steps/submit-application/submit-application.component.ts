@@ -270,6 +270,9 @@ export class LabelRegistrationSubmitApplicationComponent implements OnInit, OnDe
         const mrpPerBottle = Number(mrpPerBottleRaw);
         const packageType = String(row?.packageType ?? row?.packagingType ?? '').trim();
         const purposeSale = String(row?.purposeSale ?? '').trim();
+        const labelHeightMm = Number(row?.labelHeightMm);
+        const labelWidthMm = Number(row?.labelWidthMm);
+        const gtin = String(row?.gtin ?? '').trim();
 
         return !(
           measureValueMl >= 1 &&
@@ -283,11 +286,14 @@ export class LabelRegistrationSubmitApplicationComponent implements OnInit, OnDe
           String(mrpPerBottleRaw).trim() !== '' &&
           mrpPerBottle >= 0 &&
           !!packageType &&
-          !!purposeSale
+          !!purposeSale &&
+          labelHeightMm >= 1 &&
+          labelWidthMm >= 1 &&
+          /^[0-9]{8,14}$/.test(gtin)
         );
       })
     ) {
-      missing.push('Package Details (fill all mandatory columns for each row)');
+      missing.push('Package Details (fill all mandatory columns, label dimensions, and GTIN for each row)');
     }
 
     const requiredDocuments = Array.isArray(this.uploadDetails?.documents)

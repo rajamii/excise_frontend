@@ -1102,7 +1102,26 @@
                 <p style="font-size: 0.85rem;">No payment gateway or wallet transactions found for this application.</p>
               </div>
 
-              <div class="phs-table-wrap" *ngIf="selectedWorkflowApp.payments && selectedWorkflowApp.payments.length > 0">
+              <!-- Search Input inside Payment Transaction History section -->
+              <div class="phs-search-bar" *ngIf="selectedWorkflowApp.payments && selectedWorkflowApp.payments.length > 0">
+                <mat-icon class="search-icon">search</mat-icon>
+                <input type="text" 
+                       [(ngModel)]="paymentSearchQuery" 
+                       (ngModelChange)="paymentCurrentPage = 1"
+                       placeholder="Search by Transaction ID / UTR, Amount, Date & Time, Remarks..." 
+                       class="search-input" />
+                <button class="clear-btn" *ngIf="paymentSearchQuery" (click)="paymentSearchQuery = ''; paymentCurrentPage = 1">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+
+              <!-- Search Query Fallback -->
+              <div class="no-records-fallback" *ngIf="selectedWorkflowApp.payments && selectedWorkflowApp.payments.length > 0 && getFilteredPayments().length === 0" style="padding: 2rem 1.5rem;">
+                <mat-icon style="font-size: 30px; width: 30px; height: 30px; margin-bottom: 0.5rem;">search_off</mat-icon>
+                <p style="font-size: 0.85rem;">No transactions matching your search query were found.</p>
+              </div>
+
+              <div class="phs-table-wrap" *ngIf="selectedWorkflowApp.payments && getFilteredPayments().length > 0">
                 <table class="phs-table">
                   <thead>
                     <tr>
@@ -1115,7 +1134,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr *ngFor="let p of selectedWorkflowApp.payments">
+                    <tr *ngFor="let p of getPagedPayments()">
                       <td><code class="txn-code">{{ p.transaction_id }}</code></td>
                       <td><span class="amt-chip">₹{{ p.amount }}</span></td>
                       <td><span class="ptype-chip">{{ p.payment_type }}</span></td>
@@ -1134,6 +1153,33 @@
                     </tr>
                   </tbody>
                 </table>
+              </div>
+
+              <!-- Pagination controls inside Payment Transaction History section -->
+              <div class="phs-pagination" *ngIf="selectedWorkflowApp.payments && getFilteredPayments().length > 0">
+                <div class="pagination-info">
+                  Showing {{ (paymentCurrentPage - 1) * paymentPageSize + 1 }} to {{ getMin(paymentCurrentPage * paymentPageSize, getFilteredPayments().length) }} of {{ getFilteredPayments().length }} transaction(s)
+                  <span *ngIf="paymentSearchQuery" class="search-indicator">(filtered)</span>
+                </div>
+                
+                <div class="pagination-actions">
+                  <button class="pag-btn" [disabled]="paymentCurrentPage === 1" (click)="paymentCurrentPage = paymentCurrentPage - 1">
+                    <mat-icon>chevron_left</mat-icon> Prev
+                  </button>
+                  
+                  <div class="pag-pages">
+                    <button *ngFor="let page of getPaymentPageNumbers()" 
+                            class="page-num-btn" 
+                            [class.active]="page === paymentCurrentPage"
+                            (click)="paymentCurrentPage = page">
+                      {{ page }}
+                    </button>
+                  </div>
+                  
+                  <button class="pag-btn" [disabled]="paymentCurrentPage === getTotalPaymentPages() || getTotalPaymentPages() === 0" (click)="paymentCurrentPage = paymentCurrentPage + 1">
+                    Next <mat-icon>chevron_right</mat-icon>
+                  </button>
+                </div>
               </div>
             </div>
 

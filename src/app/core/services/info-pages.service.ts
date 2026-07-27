@@ -10,7 +10,8 @@ import {
 } from '../../core/models/contact-us.model';
 import {
   ExciseSecretary,
-  HeadOfOrganisation
+  HeadOfOrganisation,
+  AboutUs
 } from '../../core/models/about-us.model';
 
 @Injectable({
@@ -125,6 +126,23 @@ export class InfoPagesService {
     return this.http.delete(`${this.aboutUsBaseUrl}/excisesecretaries/delete/${id}/`);
   }
 
+  // About Us Content
+  getAboutUs(): Observable<AboutUs[]> {
+    return this.http.get<AboutUs[]>(`${this.aboutUsBaseUrl}/content/list/`);
+  }
+
+  createAboutUs(data: Partial<AboutUs>): Observable<AboutUs> {
+    return this.http.post<AboutUs>(`${this.aboutUsBaseUrl}/content/create/`, this.toInfoPageFormData(data));
+  }
+
+  updateAboutUs(id: number, data: Partial<AboutUs>): Observable<AboutUs> {
+    return this.http.put<AboutUs>(`${this.aboutUsBaseUrl}/content/update/${id}/`, this.toInfoPageFormData(data));
+  }
+
+  deleteAboutUs(id: number): Observable<any> {
+    return this.http.delete(`${this.aboutUsBaseUrl}/content/delete/${id}/`);
+  }
+
   private toContactUsFormData(data: Record<string, any>): FormData {
     return this.toInfoPageFormData(data);
   }
@@ -133,14 +151,17 @@ export class InfoPagesService {
     const formData = new FormData();
 
     Object.entries(data).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        if (value instanceof File) {
-          formData.append(key, value, value.name);
-          return;
-        }
-
-        formData.append(key, String(value));
+      if (value instanceof File) {
+        formData.append(key, value, value.name);
+        return;
       }
+
+      // Always append non-file fields, including null/empty (send '' for null so backend can clear the field)
+      if (value === undefined) {
+        return;
+      }
+
+      formData.append(key, value === null ? '' : String(value));
     });
 
     return formData;

@@ -11,6 +11,12 @@
       <div class="table-container">
         <mat-table [dataSource]="licenseTitles">
 
+          <!-- Name -->
+          <ng-container matColumnDef="name">
+            <mat-header-cell *matHeaderCellDef> Name </mat-header-cell>
+            <mat-cell *matCellDef="let title"> {{ title.name }} </mat-cell>
+          </ng-container>
+          
           <!-- Description -->
           <ng-container matColumnDef="description">
             <mat-header-cell *matHeaderCellDef> Description </mat-header-cell>

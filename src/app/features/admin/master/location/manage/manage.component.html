@@ -1,0 +1,55 @@
+<div class="container-fluid p-0">
+  <h2 mat-dialog-title align="center">
+    {{ isEditMode ? 'Edit' : 'Add' }} Location
+  </h2>
+
+  <mat-dialog-content class="manage-form">
+    <!-- Location Code -->
+    <mat-form-field appearance="outline" class="w-100 mt-2">
+      <mat-label>Location Code</mat-label>
+      <input
+        matInput
+        type="number"
+        [(ngModel)]="location.locationCode"
+        [disabled]="isEditMode"
+        required
+        placeholder="e.g. 5001"
+      />
+    </mat-form-field>
+
+    <!-- Location Description -->
+    <mat-form-field appearance="outline" class="w-100 mt-2">
+      <mat-label>Description</mat-label>
+      <input
+        matInput
+        [(ngModel)]="location.locationDescription"
+        required
+        placeholder="e.g. Siliguri Retail Shop"
+      />
+    </mat-form-field>
+
+    <!-- District -->
+    <mat-form-field appearance="outline" class="w-100 mt-2">
+      <mat-label>District</mat-label>
+      <mat-select [(ngModel)]="location.districtCode" required>
+        @for (dist of districts; track dist.id) {
+          <mat-option [value]="dist.districtCode">
+            {{ dist.district }} ({{ dist.districtCode }})
+          </mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <!-- Active Status -->
+    <div class="mt-2 mb-2">
+      <mat-checkbox [(ngModel)]="location.isActive">
+        Active
+      </mat-checkbox>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="center">
+    <button matButton="filled" color="primary" (click)="onSave()">Save</button>
+    <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+  </mat-dialog-actions>
+</div>

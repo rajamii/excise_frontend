@@ -59,10 +59,10 @@ export class CompanyRegistrationService {
   }
 
   // Get applications grouped by status
-  getApplicationsByStatus(): Observable<any> {
+  getApplicationsByStatus(params?: any): Observable<any> {
     const url = `${this.baseUrl}/list-by-status/`;
     console.log(' Company Registration API Call:', url);
-    return this.http.get(url).pipe(
+    return this.http.get(url, { params }).pipe(
       tap(response => {
         console.log(' Company Registration Response:', response);
       }),
@@ -87,5 +87,11 @@ export class CompanyRegistrationService {
 
   clearCompanyDocuments(): void {
     this.companyDocs = {};
+  }
+
+  // Pay company registration fee via wallet
+  payCompanyRegistrationFee(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post(`${this.baseUrl}/pay-fee/${encodedId}/`, {});
   }
 }

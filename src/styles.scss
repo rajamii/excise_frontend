@@ -6,6 +6,61 @@
 
 * { font-family: 'Poppins', sans-serif; }
 body{ background-color: #EDF7FE; }
+/* Login route gets the deep amber-charcoal factory atmosphere */
+body.login-page { background-color: #f8fafc; }
+
+/* Remove any dropdown arrows or indicators that may appear */
+button::after,
+button::before,
+mat-icon-button::after,
+mat-icon-button::before,
+.mat-mdc-button::after,
+.mat-mdc-button::before {
+  content: none !important;
+}
+
+/* Specifically target any arrow indicators */
+button[class*="arrow"]::after,
+button[class*="indicator"]::after,
+button[class*="expand"]::after,
+button[class*="dropdown"]::after {
+  display: none !important;
+}
+
+/* Module dropdown panel — wider panel so long labels like "Hologram Procurement" fit on one line */
+.module-dropdown-panel {
+  min-width: 240px !important;
+  border-radius: 14px !important;
+  box-shadow:
+    0 10px 40px rgba(15, 23, 42, 0.14),
+    0 2px 8px rgba(15, 23, 42, 0.08) !important;
+  border: 1px solid rgba(99, 102, 241, 0.12) !important;
+  overflow: hidden;
+
+  .mat-mdc-option {
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 0 18px;
+    min-height: 44px;
+    white-space: nowrap;
+    border-radius: 0;
+    transition: background 0.15s ease;
+
+    &.mdc-list-item--selected:not(.mdc-list-item--disabled) {
+      background: linear-gradient(90deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.06) 100%);
+      color: #4f46e5;
+      font-weight: 700;
+
+      .mdc-list-item__primary-text {
+        color: #4f46e5 !important;
+      }
+    }
+
+    &:hover:not(.mdc-list-item--disabled) {
+      background: rgba(99, 102, 241, 0.06);
+    }
+  }
+}
 
 @media print {
   @page {
@@ -1439,4 +1494,542 @@ app-unified-action-buttons button[mat-icon-button][color="accent"]:hover,
   color: #9ca3af;
   font-style: italic;
   text-align: center;
+}
+
+// ── Objection Details dialog — global Material overrides ─────────────────────
+.objection-details-dialog {
+
+  // Strip the dialog surface's own padding so our wrapper controls layout fully
+  .mdc-dialog__surface,
+  .mat-mdc-dialog-surface {
+    padding: 0 !important;
+    overflow: hidden !important;
+    border-radius: 12px !important;
+  }
+
+  // Remove any inner container padding
+  .mat-mdc-dialog-container {
+    padding: 0 !important;
+  }
+
+  .mat-mdc-dialog-content {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}
+
+// ── Invalid Renewal Request — SweetAlert2 custom theme ────────────────────────
+.swal-renewal-invalid.swal2-popup {
+  border-radius: 16px !important;
+  border-top: 5px solid #dc2626 !important;
+  background: #fff5f5 !important;
+  padding-bottom: 28px !important;
+  box-shadow: 0 20px 60px rgba(220, 38, 38, 0.18), 0 4px 16px rgba(0,0,0,0.10) !important;
+}
+
+.swal-renewal-invalid-icon.swal2-icon.swal2-error {
+  border-color: #dc2626 !important;
+  color: #dc2626 !important;
+
+  .swal2-x-mark-line-left,
+  .swal2-x-mark-line-right {
+    background-color: #dc2626 !important;
+  }
+}
+
+.swal-renewal-invalid-title.swal2-title {
+  color: #991b1b !important;
+  font-size: 1.4rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.2px !important;
+}
+
+.swal-renewal-invalid-html.swal2-html-container {
+  color: #374151 !important;
+  font-size: 0.95rem !important;
+  line-height: 1.7 !important;
+
+  strong { color: #dc2626 !important; }
+
+  p:first-child {
+    background: #fee2e2;
+    border-left: 4px solid #dc2626;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+    color: #7f1d1d;
+    font-weight: 500;
+
+    // Date in green so it pops against the red background
+    strong {
+      color: #15803d !important;
+      background: #dcfce7;
+      padding: 1px 7px;
+      border-radius: 5px;
+      font-weight: 800;
+    }
+  }
+}
+
+.swal-renewal-invalid-btn.swal2-confirm {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
+  border-radius: 8px !important;
+  font-weight: 700 !important;
+  padding: 10px 32px !important;
+  font-size: 0.95rem !important;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35) !important;
+  letter-spacing: 0.3px !important;
+
+  &:hover {
+    background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%) !important;
+  }
+}
+
+
+// ── Simple Renew Confirmation popup (manufacturing / homestay) ──────────────
+.rl-swal-confirm {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  border-radius: 12px !important;
+  padding: 12px 28px !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.1px !important;
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #3730a3 0%, #4338ca 60%, #4f46e5 100%) !important;
+  border: none !important;
+  box-shadow: 0 4px 14px rgba(67, 56, 202, 0.30) !important;
+  transition: all 0.2s ease !important;
+
+  &:hover {
+    box-shadow: 0 6px 20px rgba(67, 56, 202, 0.40) !important;
+    transform: translateY(-1px) !important;
+    filter: brightness(1.07) !important;
+  }
+  &:active { transform: translateY(0) !important; }
+}
+
+.rl-swal-cancel {
+  border-radius: 12px !important;
+  padding: 12px 28px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #334155 !important;
+  background: #f1f5f9 !important;
+  border: 1.5px solid #cbd5e1 !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease !important;
+  opacity: 1 !important;
+
+  &:hover {
+    background: #e2e8f0 !important;
+    color: #1e293b !important;
+    border-color: #94a3b8 !important;
+    opacity: 1 !important;
+  }
+}
+
+// ── Info rows inside the simple renewal popup ────────────────────────────────
+.rl-info-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  border-radius: 10px;
+  margin-bottom: 12px;
+
+  .rl-info-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #5b21b6;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    white-space: nowrap;
+  }
+
+  .rl-info-value {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #1e293b;
+  }
+}
+
+.rl-confirm-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 14px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #0c4a6e;
+  line-height: 1.5;
+  margin-bottom: 4px;
+
+  svg { flex-shrink: 0; margin-top: 2px; }
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   RENEWAL SUCCESS POPUP (rs-) — Global styles
+   ════════════════════════════════════════════════════════════════ */
+
+.rs-swal-popup {
+  padding: 0 !important;
+  border-radius: 24px !important;
+  overflow: hidden !important;
+  width: 500px !important;
+  max-width: 96vw !important;
+  box-shadow:
+    0 0 0 1px rgba(16, 185, 129, 0.18),
+    0 32px 80px rgba(5, 120, 70, 0.18),
+    0 8px 24px rgba(15, 42, 30, 0.12) !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  animation: rsPopupIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both !important;
+}
+
+@keyframes rsPopupIn {
+  from { opacity: 0; transform: scale(0.88) translateY(16px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+// SweetAlert html container reset
+.rs-swal-popup .swal2-html-container {
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+}
+
+.rs-swal-actions {
+  padding: 0 32px 28px !important;
+  margin-top: 0 !important;
+  background: #f0fdf4 !important;
+  border-top: 1px solid #bbf7d0 !important;
+  justify-content: center !important;
+  padding-top: 18px !important;
+}
+
+.rs-swal-confirm {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  border-radius: 12px !important;
+  padding: 12px 32px !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.1px !important;
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #059669 0%, #10b981 60%, #34d399 100%) !important;
+  border: none !important;
+  box-shadow: 0 4px 16px rgba(5, 150, 105, 0.35) !important;
+  transition: all 0.2s ease !important;
+
+  &:hover {
+    box-shadow: 0 6px 22px rgba(5, 150, 105, 0.48) !important;
+    transform: translateY(-1px) !important;
+    filter: brightness(1.06) !important;
+  }
+  &:active { transform: translateY(0) !important; }
+}
+
+// ── Modal container ──────────────────────────────────────────────
+.rs-modal {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  text-align: center;
+  background: #f0fdf4;
+}
+
+// ── Animated checkmark ring ──────────────────────────────────────
+.rs-success-ring {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 0 10px;
+  background: linear-gradient(180deg, #dcfce7 0%, #f0fdf4 100%);
+}
+
+.rs-checkmark {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: block;
+  stroke-width: 2.5;
+  stroke: #10b981;
+  stroke-miterlimit: 10;
+  filter: drop-shadow(0 4px 16px rgba(16, 185, 129, 0.35));
+  animation: rsRingScale 0.4s ease-in-out 0.1s both;
+}
+
+@keyframes rsRingScale {
+  from { opacity: 0; transform: scale(0.7); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.rs-checkmark-circle {
+  stroke-dasharray: 166;
+  stroke-dashoffset: 166;
+  stroke-width: 2.5;
+  stroke-miterlimit: 10;
+  stroke: #10b981;
+  fill: #dcfce7;
+  animation: rsStroke 0.5s cubic-bezier(0.65, 0, 0.45, 1) 0.2s forwards;
+}
+
+.rs-checkmark-check {
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: rsStroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.6s forwards;
+}
+
+@keyframes rsStroke {
+  100% { stroke-dashoffset: 0; }
+}
+
+// ── Header ───────────────────────────────────────────────────────
+.rs-header {
+  background: linear-gradient(180deg, #f0fdf4 0%, #dcfce7 100%);
+  padding: 12px 28px 20px;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 130px; height: 130px;
+    background: radial-gradient(circle, rgba(52, 211, 153, 0.15) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+}
+
+.rs-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #065f46;
+  margin: 0 0 6px 0;
+  line-height: 1.25;
+  letter-spacing: -0.3px;
+  position: relative;
+  z-index: 1;
+}
+
+.rs-subtitle {
+  font-size: 13px;
+  color: #059669;
+  margin: 0;
+  font-weight: 500;
+  position: relative;
+  z-index: 1;
+}
+
+// ── App ID banner ─────────────────────────────────────────────────
+.rs-app-id-banner {
+  background: #ffffff;
+  border-top: 1px solid #a7f3d0;
+  border-bottom: 1px solid #a7f3d0;
+  padding: 16px 28px;
+}
+
+.rs-app-id-banner-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+  border: 1.5px solid #6ee7b7;
+  border-radius: 12px;
+  padding: 10px 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.rs-app-id-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: #065f46;
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+  white-space: nowrap;
+}
+
+.rs-app-id-code {
+  font-family: 'SFMono-Regular', 'Fira Code', 'Consolas', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: #047857;
+  background: #ffffff;
+  border: 1.5px solid #6ee7b7;
+  padding: 4px 14px;
+  border-radius: 8px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 1px 4px rgba(16, 185, 129, 0.12);
+}
+
+// ── Info note ────────────────────────────────────────────────────
+.rs-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 0;
+  padding: 14px 28px 20px;
+  background: #f0fdf4;
+  font-size: 12.5px;
+  color: #166534;
+  line-height: 1.55;
+  text-align: left;
+
+  svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: #10b981;
+  }
+}
+
+
+// ── Renewal success popup — inline close button ──────────────────────────────
+.rs-close-row {
+  display: flex;
+  justify-content: center;
+  padding: 16px 28px 28px;
+  background: #f0fdf4;
+  border-top: 1px solid #bbf7d0;
+}
+
+.rs-close-btn {
+  display: inline-block;
+  padding: 12px 48px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, #059669 0%, #10b981 60%, #34d399 100%);
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(5, 150, 105, 0.35);
+  transition: all 0.2s ease;
+  letter-spacing: 0.2px;
+  position: relative;
+  z-index: 9999;
+
+  &:hover {
+    box-shadow: 0 6px 22px rgba(5, 150, 105, 0.50);
+    transform: translateY(-1px);
+    filter: brightness(1.06);
+  }
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 3px 10px rgba(5, 150, 105, 0.30);
+  }
+}
+
+
+// ── Renewal success popup title & icon colour overrides ─────────────────────
+.swal-renewal-success-title {
+  color: #065f46 !important;
+  font-size: 1.45rem !important;
+  font-weight: 800 !important;
+  line-height: 1.25 !important;
+}
+
+.swal-renewal-success-icon {
+  border-color: #10b981 !important;
+  color: #10b981 !important;
+}
+
+.swal-renewal-success-icon .swal2-success-ring {
+  border-color: #a7f3d0 !important;
+}
+
+.swal-renewal-success-icon [class^='swal2-success-line'] {
+  background-color: #10b981 !important;
+}
+
+// ── Licensee dashboard stat card colored borders ──────────────────────────────
+.stat-card.applied   { border: 2px solid #93a8d4 !important; }
+.stat-card.pending   { border: 2px solid #f6c85e !important; }
+.stat-card.awaiting-payment { border: 2px solid #fdba74 !important; }
+.stat-card.objection { border: 2px solid #fdba74 !important; background: linear-gradient(135deg, rgba(255,247,237,0.35) 0%, rgba(255,237,213,0.35) 100%) !important; }
+.stat-card.approved  { border: 2px solid #6ee7b7 !important; }
+.stat-card.rejected  { border: 2px solid #fca5a5 !important; }
+
+
+// ── Logout SweetAlert2 Popup ─────────────────────────────────────────────────
+@keyframes pulse-red {
+  0%, 100% { box-shadow: 0 8px 28px rgba(220,38,38,0.4); transform: scale(1); }
+  50%       { box-shadow: 0 8px 40px rgba(220,38,38,0.65); transform: scale(1.05); }
+}
+
+@keyframes float-icon {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-6px); }
+}
+
+.logout-swal-popup.swal2-popup {
+  border-radius: 20px !important;
+  padding: 0 !important;
+  background: #fff !important;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.18) !important;
+  border: none !important;
+  width: 460px !important;
+  max-width: 94vw !important;
+  overflow: hidden !important;
+
+  .swal2-html-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+}
+
+.logout-swal-actions.swal2-actions {
+  gap: 12px !important;
+  margin: 0 !important;
+  padding: 0 28px 28px !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.logout-swal-confirm.swal2-confirm {
+  background: linear-gradient(135deg, #c0273a 0%, #a01a2e 100%) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 13px 20px !important;
+  font-size: 0.92rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.3px !important;
+  box-shadow: 0 4px 16px rgba(160,26,46,0.35) !important;
+  transition: all 0.2s ease !important;
+  flex: 1 !important;
+  margin: 0 !important;
+
+  &:hover {
+    background: linear-gradient(135deg, #e8304a 0%, #c0273a 100%) !important;
+    box-shadow: 0 6px 22px rgba(192,39,58,0.5) !important;
+    transform: translateY(-1px) !important;
+  }
+}
+
+.logout-swal-cancel.swal2-cancel {
+  background: #f4f4f5 !important;
+  color: #52525b !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 13px 20px !important;
+  font-size: 0.92rem !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+  flex: 1 !important;
+  margin: 0 !important;
+
+  &:hover {
+    background: #e4e4e7 !important;
+    color: #18181b !important;
+  }
 }

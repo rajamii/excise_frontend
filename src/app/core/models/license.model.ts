@@ -60,9 +60,7 @@ export class License {
   // unit details (only if licenseType = 'Company')
   companyName!: string;
   companyAddress!: string;
-  companyPan!: string;
-  companyCin!: string;
-  incorporationDate!: string;
+  companyGst!: string;
   companyPhoneNumber!: number;
   companyEmailId!: string;
 

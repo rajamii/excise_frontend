@@ -9,7 +9,6 @@ import { HologramService, DailyRegisterEntry } from '../../../../core/services/h
 import { DailyhologramrecordregisterComponent } from "../dailyhologramrecordregister/dailyhologramrecordregister.component";
 import { RequisitionComponent } from "../../../licensee/supplyChain/supplychaincomponents/requisition/requisition.component";
 import { CancellationComponent } from "../../../licensee/supplyChain/supplychaincomponents/cancellation/cancellation.component";
-import { TransitComponent } from "../../../licensee/supplyChain/supplychaincomponents/transit/transit.component";
 import { PaymentSlipsViewComponent } from "../payment-slips-view/payment-slips-view.component";
 import { HologramDetailsViewComponent } from "../hologram-details-view/hologram-details-view.component";
 import { HologramDataService } from "../../../licensee/supplyChain/services/hologram-data.service";
@@ -78,14 +77,15 @@ export interface CommissionerTableData {
 }
 
 @Component({
-  selector: "app-commissioner-dashboard-tabs",
+  selector: "app-commissioner-dashboard",
   standalone: true,
-  imports: [CommonModule, FormsModule, DailyhologramrecordregisterComponent, RequisitionComponent, CancellationComponent, TransitComponent, PaymentSlipsViewComponent, HologramDetailsViewComponent],
+  imports: [CommonModule, FormsModule, DailyhologramrecordregisterComponent, RequisitionComponent, CancellationComponent, PaymentSlipsViewComponent, HologramDetailsViewComponent],
   templateUrl: "./commissioner-dashboard.component.html",
   styleUrls: ["./commissioner-dashboard.component.scss"],
 })
 export class CommissionerDashboardComponent implements OnInit {
   @Input() embeddedHologramOnly = false;
+  @Input() supplyChainHologramPending = 0;
   Math = Math;
   activeTab = "requisition";
   private isBrowser = false;
@@ -445,6 +445,19 @@ export class CommissionerDashboardComponent implements OnInit {
 
   getHologramStatusCount(status: string): number {
     return this.filteredHologramData.filter(item => item.status === status).length;
+  }
+
+  getHologramSummaryCount(type: 'all' | 'pending' | 'approved' | 'rejected'): number {
+    if (type === 'all') {
+      return this.filteredHologramData.length;
+    }
+
+    return this.filteredHologramData.filter((item) => {
+      if (type === 'pending') return this.isHologramPendingStatus(item);
+      if (type === 'approved') return this.isHologramApprovedStatus(item);
+      if (type === 'rejected') return this.isHologramRejectedStatus(item);
+      return false;
+    }).length;
   }
 
   getUrgentHologramCount(): number {
@@ -829,15 +842,41 @@ export class CommissionerDashboardComponent implements OnInit {
     this.applyHologramFilters();
   }
 
-  private canCommissionerEditHologram(item: any): boolean {
-    const status = String(item?.status || '')
-      .toLowerCase()
-      .replace(/[_\s-]+/g, '');
-    const allowedActions = Array.isArray(item?.allowedActions || item?.allowed_actions)
-      ? (item.allowedActions || item.allowed_actions).map((action: string) => String(action || '').toLowerCase())
+  hasHologramAction(item: any, action: string): boolean {
+    const expected = String(action || '').toUpperCase();
+    const actions = Array.isArray(item?.allowedActions || item?.allowed_actions)
+      ? (item.allowedActions || item.allowed_actions)
       : [];
 
-    const hasCommissionerApprovalAction = allowedActions.includes('approve');
+    return actions.some((value: any) => String(value || '').toUpperCase() === expected);
+  }
+
+  canApproveHologram(item: any): boolean {
+    if (this.hasHologramAction(item, 'APPROVE')) {
+      return true;
+    }
+
+    const status = this.normalizeHologramStatus(item?.status);
+    const isFinal =
+      status.includes('approvedbycommissioner') ||
+      status.includes('cartoonassigned') ||
+      status.includes('cartonassigned') ||
+      status.includes('paymentcompleted') ||
+      status.includes('rejected') ||
+      status.includes('cancelled');
+
+    if (isFinal) {
+      return false;
+    }
+
+    return status.includes('forwardedtocommissioner') ||
+      status.includes('forwardedbyitcelltocommissioner') ||
+      (status.includes('forwarded') && status.includes('commissioner'));
+  }
+
+  private canCommissionerEditHologram(item: any): boolean {
+    const status = this.normalizeHologramStatus(item?.status);
+    const hasCommissionerApprovalAction = this.hasHologramAction(item, 'APPROVE');
     const reachedCommissionerAfterItCell =
       status.includes('verified') ||
       status.includes('approvedbyitcell') ||
@@ -845,6 +884,42 @@ export class CommissionerDashboardComponent implements OnInit {
       status.includes('forwardedbyitcelltocommissioner');
 
     return hasCommissionerApprovalAction && reachedCommissionerAfterItCell;
+  }
+
+  private isHologramPendingStatus(item: any): boolean {
+    const status = this.normalizeHologramStatus(item?.status);
+    if (!status || this.isHologramApprovedStatus(item) || this.isHologramRejectedStatus(item)) {
+      return false;
+    }
+
+    return this.hasHologramAction(item, 'APPROVE') ||
+      status.includes('pending') ||
+      status.includes('submitted') ||
+      status.includes('forwarded') ||
+      status.includes('underprocess') ||
+      status.includes('inreview') ||
+      status.includes('review') ||
+      status.includes('verify');
+  }
+
+  private isHologramApprovedStatus(item: any): boolean {
+    const status = this.normalizeHologramStatus(item?.status);
+    return status.includes('approved') ||
+      status.includes('issued') ||
+      status.includes('paymentcompleted') ||
+      status.includes('cartoonassigned') ||
+      status.includes('cartonassigned');
+  }
+
+  private isHologramRejectedStatus(item: any): boolean {
+    const status = this.normalizeHologramStatus(item?.status);
+    return status.includes('rejected') || status.includes('cancelled');
+  }
+
+  private normalizeHologramStatus(value: any): string {
+    return String(value || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '');
   }
 
 

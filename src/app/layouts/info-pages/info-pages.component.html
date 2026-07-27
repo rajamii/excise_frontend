@@ -1,4 +1,10 @@
 <div class="page-container">
+  <div class="back-button-container">
+    <button mat-button class="back-btn" (click)="goBack()">
+      <mat-icon>arrow_back</mat-icon>
+      <span>Back</span>
+    </button>
+  </div>
   <!--ABOUT US: Department-->
   @if (page === 'department') {
     <mat-card class = "department grid-card">
@@ -66,6 +72,14 @@
           <ng-container matColumnDef="email">
             <mat-header-cell *matHeaderCellDef> Email </mat-header-cell>
             <mat-cell *matCellDef="let com"> {{com.email}} </mat-cell>
+          </ng-container>
+          <ng-container matColumnDef="fromDate">
+            <mat-header-cell *matHeaderCellDef> From Date </mat-header-cell>
+            <mat-cell *matCellDef="let com"> {{ com['fromDate'] ? com['fromDate'] : '-' }} </mat-cell>
+          </ng-container>
+          <ng-container matColumnDef="toDate">
+            <mat-header-cell *matHeaderCellDef> To Date </mat-header-cell>
+            <mat-cell *matCellDef="let com"> {{ com['toDate'] ? com['toDate'] : '-' }} </mat-cell>
           </ng-container>
           <mat-header-row *matHeaderRowDef="commissionerColumns"></mat-header-row>
           <mat-row *matRowDef="let row; columns: commissionerColumns;"></mat-row>

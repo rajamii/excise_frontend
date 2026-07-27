@@ -15,9 +15,9 @@ import { of, Subscription } from 'rxjs';
 import { catchError, filter, map, switchMap, take } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 import { TimerConfig, TimerConfigService } from '../../../core/services/timer-config.service';
-import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../../environments/environment';
+import { RenewalConfigService } from '../../../core/services/renewal-config.service';
 import { forkJoin } from 'rxjs';
+import { MasterService } from '../../../core/services/master.service';
 
 @Component({
   selector: 'app-my-licenses',
@@ -41,9 +41,10 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     private licenseApplicationService: LicenseApplicationService,
     private salesmanBarmanService: SalesmanBarmanRegistrationService,
     private timerConfigService: TimerConfigService,
+    private masterService: MasterService,
+    private renewalConfigService: RenewalConfigService,
     private dialog: MatDialog,
-    private router: Router,
-    private http: HttpClient
+    private router: Router
   ) { }
 
   ngOnInit(): void {
@@ -67,9 +68,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     const summaryValidUpTo = this.extractValidUpToDate(application.raw || {});
     const resolvedType = this.resolveApplicationType(application);
 
-    const app$ = summaryValidUpTo
-      ? of(application)
-      : this.unifiedDashboardService.getApplicationDetail(application.applicationId, resolvedType).pipe(
+    const app$ = this.unifiedDashboardService.getApplicationDetail(application.applicationId, resolvedType).pipe(
           catchError(() => of(application))
         );
 
@@ -80,7 +79,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
           forkJoin({
             app: of(app),
             timer: this.timerConfigService.getTimerConfig(this.renewalReminderTimerCode, fallbackSeconds).pipe(take(1)),
-            renewalConfig: this.http.get<any>(`${environment.apiBaseUrl}/masters/core/renewal-application-config/`).pipe(catchError(() => of(null)), take(1))
+            renewalConfig: this.renewalConfigService.getConfig().pipe(take(1))
           })
         )
       )
@@ -137,13 +136,38 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
 
         if (validUpTo && !this.isRenewalAllowed(validUpTo, timer)) {
           const windowLabel = this.getTimerWindowLabel(timer);
+          
+          let windowMs = 0;
+          if (timer && timer.delay_seconds > 0) {
+            windowMs = Math.max(0, Number(timer.delay_ms ?? 0) || 0);
+          } else {
+            const validityDays = timer?.validity_period_days ?? null;
+            if (validityDays !== null && Number.isFinite(Number(validityDays)) && Number(validityDays) > 0) {
+              windowMs = Number(validityDays) * 24 * 60 * 60 * 1000;
+            }
+          }
+          
+          const openDate = new Date(validUpTo.getTime() - windowMs);
+          
           Swal.fire({
             icon: 'error',
             title: 'Invalid Renewal Request',
             html: `
-              <p>Renewal not allowed yet. License valid until ${this.formatDDMMYYYY(validUpTo)}.</p>
-              <p>You can renew within the last ${windowLabel} or after expiry.</p>
-            `
+              <p>Renewal not allowed yet. License valid until <strong>${this.formatDDMMYYYY(validUpTo)}</strong>.</p>
+              <p style="margin-top:10px;">🗓️ <strong>Renewal opens on:</strong> ${this.formatDDMMYYYY(openDate)}</p>
+              <p style="margin-top:10px;background:#dcfce7;border-left:4px solid #16a34a;border-radius:8px;padding:10px 14px;color:#166534;font-size:0.88em;font-weight:600;">✅ You can renew within the last ${windowLabel} or after expiry.</p>
+            `,
+            background: '#fff5f5',
+            color: '#1e293b',
+            confirmButtonText: 'OK, Got it',
+            confirmButtonColor: '#dc2626',
+            customClass: {
+              popup:          'swal-renewal-invalid',
+              title:          'swal-renewal-invalid-title',
+              htmlContainer:  'swal-renewal-invalid-html',
+              confirmButton:  'swal-renewal-invalid-btn',
+              icon:           'swal-renewal-invalid-icon',
+            }
           });
           return;
         }
@@ -209,19 +233,56 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
 
           if (isManufacturingOrHomestay) {
             Swal.fire({
-              title: 'Renew License?',
+              title: '',
               html: `
-                <div style="text-align: left; padding: 10px;">
-                  <p>Are you sure you want to renew this license?</p>
-                  <p><strong>License ID:</strong> ${renewalId}</p>
-                  <p><strong>Type:</strong> ${this.getTypeLabel(app)}</p>
+                <div class="rl-modal">
+                  <div class="rl-header">
+                    <div class="rl-header-icon">
+                      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="23 4 23 10 17 10"/>
+                        <polyline points="1 20 1 14 7 14"/>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                      </svg>
+                    </div>
+                    <div class="rl-header-text">
+                      <h2 class="rl-title">Renew License</h2>
+                      <p class="rl-subtitle">Review and confirm your renewal</p>
+                    </div>
+                  </div>
+
+                  <div class="rl-license-banner">
+                    <div class="rl-license-banner-icon">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+                    </div>
+                    <span class="rl-license-label">License ID</span>
+                    <code class="rl-license-id">${renewalId}</code>
+                  </div>
+
+                  <div class="rl-body">
+                    <div class="rl-info-row">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1c2b78" stroke-width="2.5"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><polyline points="16 3 12 7 8 3"/></svg>
+                      <span class="rl-info-label">Type</span>
+                      <span class="rl-info-value">${this.getTypeLabel(app)}</span>
+                    </div>
+                    <div class="rl-confirm-note">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0891b2" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      Are you sure you want to proceed with the renewal of this license?
+                    </div>
+                  </div>
                 </div>
               `,
-              icon: 'question',
               showCancelButton: true,
-              confirmButtonColor: '#3085d6',
-              cancelButtonColor: '#d33',
-              confirmButtonText: 'Yes, Renew License'
+              showConfirmButton: true,
+              confirmButtonText: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px;vertical-align:middle"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Yes, Renew',
+              cancelButtonText: 'Cancel',
+              customClass: {
+                popup:         'rl-swal-popup',
+                confirmButton: 'rl-swal-confirm',
+                cancelButton:  'rl-swal-cancel',
+                actions:       'rl-swal-actions',
+              },
+              buttonsStyling: false,
+              focusConfirm: false,
             }).then((result) => {
               if (result.isConfirmed) {
                 this.processRenewal(renewalId!, 'new-license');
@@ -357,49 +418,113 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
             const draughtBeerChecked = !!(raw.draught_beer ?? raw.draught_beer_flag ?? raw.draught_beer_selected ?? raw.draughtBeer);
 
             // ── Fee & location data ───────────────────────────────────────────
+            const selectedFee = raw.license_fee_selection ?? raw.licenseFeeSelection ?? {};
+            const unwrapId = (value: any): any => {
+              if (!value || typeof value !== 'object') return value;
+              return value.id ?? value.pk ?? value.value ?? value.location_code ?? value.locationCode ?? null;
+            };
+            const toAmount = (value: any): number => {
+              const normalized = String(value ?? '').replace(/,/g, '').trim();
+              const amount = Number(normalized);
+              return Number.isFinite(amount) ? amount : 0;
+            };
             const locationName: string = String(
-              raw.location_name ?? raw.locationName ?? raw.location_description ?? raw.locationDescription ?? ''
+              raw.location_name ??
+              raw.locationName ??
+              raw.location_description ??
+              raw.locationDescription ??
+              selectedFee.location_description ??
+              selectedFee.locationDescription ??
+              ''
             ).trim();
             const districtName: string = String(
-              raw.site_district_name ?? raw.siteDistrictName ?? raw.district_name ?? raw.districtName ?? ''
+              raw.site_district_name ??
+              raw.siteDistrictName ??
+              raw.district_name ??
+              raw.districtName ??
+              selectedFee.district_name ??
+              selectedFee.districtName ??
+              ''
             ).trim();
             const locationDisplay = [locationName, districtName].filter(Boolean).join(', ') || null;
 
             // yearly_license_fee is the TOTAL stored fee including previously-selected additional charges.
             // To get the base location fee, subtract the additional charges that were previously baked in.
-            const storedTotalFee: number = Number(
+            const storedTotalFee: number = toAmount(
               raw.yearly_license_fee ?? raw.yearlyLicenseFee ??
-              raw.license_fee_amount ?? raw.licenseFeeAmount ?? 0
+              raw.license_fee_amount ?? raw.licenseFeeAmount ??
+              raw.license_fee ?? raw.licenseFee ??
+              selectedFee.license_fee ?? selectedFee.licenseFee ??
+              raw.fee_amount ?? 0
             );
-            const renewalAmount: number = Number(
-              raw.renewal_amount ?? raw.renewalAmount ?? 0
+            const renewalAmount: number = toAmount(
+              raw.renewal_amount ?? raw.renewalAmount ??
+              selectedFee.renewal_amount ?? selectedFee.renewalAmount ?? 0
             );
-            const lateFee: number = Number(raw.late_fee ?? raw.lateFee ?? 0);
+            const lateFee: number = toAmount(
+              raw.late_fee ?? raw.lateFee ??
+              selectedFee.late_fee ?? selectedFee.lateFee ?? 0
+            );
             // Security deposit is NOT charged at renewal — excluded intentionally
+
+            const selectedFeeId = toAmount(
+              raw.selected_license_fee_id ??
+              raw.selectedLicenseFeeId ??
+              selectedFee.id ??
+              0
+            );
+            const feeSubcategoryId = toAmount(
+              unwrapId(raw.license_subcategory_id) ??
+              unwrapId(raw.license_sub_category_id) ??
+              unwrapId(raw.licenseSubcategoryId) ??
+              unwrapId(raw.licenseSubCategoryId) ??
+              unwrapId(raw.license_subcategory) ??
+              unwrapId(raw.license_sub_category) ??
+              unwrapId(raw.licenseSubcategory) ??
+              unwrapId(raw.licenseSubCategory) ??
+              selectedFee.license_subcategory_id ??
+              selectedFee.licenseSubcategoryId ??
+              0
+            );
+            const feeLocationCode = String(
+              unwrapId(raw.location_code) ??
+              unwrapId(raw.locationCode) ??
+              unwrapId(raw.location) ??
+              selectedFee.location_code ??
+              selectedFee.locationCode ??
+              ''
+            ).trim();
 
             // Subtract previously-included additional charges to get the pure base location fee
             const prevPachwai  = pachwaiChecked      ? 3000 : 0;
             const prevDraught  = draughtBeerChecked  ? 5000 : 0;
-            const locationFee: number = storedTotalFee - prevPachwai - prevDraught;
+            let locationFee: number = Math.max(0, storedTotalFee - prevPachwai - prevDraught);
+            if (resolvedType === 'company-registration' && locationFee <= 0) {
+              locationFee = 5000;
+            }
 
             // Estimated total is dynamic: base location fee + whatever the user selects now + late fee
             // (renewalAmount is added if present as a separate renewal processing fee)
             const additionalInitial = prevPachwai + prevDraught; // current selection
-            const fixedBase = locationFee + renewalAmount + lateFee;
-            const fixedTotal = fixedBase + additionalInitial; // = storedTotalFee + renewalAmount + lateFee
+            let dynamicLocationFee = locationFee;
+            const getFixedBase = () => dynamicLocationFee + renewalAmount + lateFee;
+            const fixedTotal = getFixedBase() + additionalInitial; // = storedTotalFee + renewalAmount + lateFee
 
-            // Build fee breakdown rows (only show non-zero)
+            // Keep the base fee row visible so the popup always shows the
+            // location-fee portion, even if the backend payload currently
+            // resolves the amount as 0.
             const feeRows: string[] = [];
-            if (locationFee > 0) {
-              feeRows.push(`
-                <div class="rl-fee-row">
-                  <span class="rl-fee-row-label">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                    Location Fee
-                  </span>
-                  <span class="rl-fee-row-amt">₹${locationFee.toLocaleString('en-IN')}</span>
-                </div>`);
-            }
+            const feeLabel = resolvedType === 'company-registration'
+              ? 'Company Registration Fee'
+              : 'Location Fee';
+            feeRows.push(`
+              <div class="rl-fee-row">
+                <span class="rl-fee-row-label">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  ${feeLabel}
+                </span>
+                <span class="rl-fee-row-amt" id="rl-location-fee-amount">₹${dynamicLocationFee.toLocaleString('en-IN')}</span>
+              </div>`);
             if (renewalAmount > 0) {
               feeRows.push(`
                 <div class="rl-fee-row">
@@ -421,18 +546,18 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                 </div>`);
             }
             if (feeRows.length > 1) {
-              const breakdownTotal = locationFee + renewalAmount + lateFee;
+              const breakdownTotal = getFixedBase();
               feeRows.push(`
                 <div class="rl-fee-row rl-fee-row--total">
                   <span class="rl-fee-row-label rl-fee-row-label--total">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                     Subtotal
                   </span>
-                  <span class="rl-fee-row-amt rl-fee-row-amt--total">₹${breakdownTotal.toLocaleString('en-IN')}</span>
+                  <span class="rl-fee-row-amt rl-fee-row-amt--total" id="rl-fee-subtotal">₹${breakdownTotal.toLocaleString('en-IN')}</span>
                 </div>`);
             }
 
-            const feeBreakdownHtml = (feeRows.length > 0 || locationDisplay) ? `
+            const feeBreakdownHtml = `
               <div class="rl-divider"></div>
               <div class="rl-field-group rl-fee-breakdown-group">
                 <label class="rl-field-label">
@@ -447,7 +572,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                 <div class="rl-fee-rows">
                   ${feeRows.length > 0 ? feeRows.join('') : '<div class="rl-fee-row-empty">Fees will be calculated on submission</div>'}
                 </div>
-              </div>` : '';
+              </div>`;
 
             Swal.fire({
               title: '',
@@ -482,7 +607,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                   <div class="rl-body">
 
                     <!-- Mode of Operation -->
-                    <div class="rl-field-group">
+                    <div class="rl-field-group" ${resolvedType === 'company-registration' ? 'style="display:none;"' : ''}>
                       <label class="rl-field-label">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
                         Mode of Operation
@@ -527,7 +652,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                     </div>
 
                     <!-- Additional Charges -->
-                    ${hasAdditionalCharges ? `
+                    ${(hasAdditionalCharges && resolvedType !== 'company-registration') ? `
                       <div class="rl-divider"></div>
                       <div class="rl-field-group">
                         <label class="rl-field-label">
@@ -619,11 +744,135 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                   const totalEl   = document.getElementById('rl-fee-total');
                   if (totalEl) {
                     const selectedAdditional = (pachwaiEl?.checked ? 3000 : 0) + (draughtEl?.checked ? 5000 : 0);
-                    totalEl.textContent = (fixedBase + selectedAdditional).toLocaleString('en-IN');
+                    totalEl.textContent = (getFixedBase() + selectedAdditional).toLocaleString('en-IN');
                   }
                 };
 
                 // ── Additional charge cards ───────────────────────────────────
+                const updateFeeBreakdown = () => {
+                  const subtotalEl = document.getElementById('rl-fee-subtotal');
+                  if (subtotalEl) {
+                    subtotalEl.textContent = `₹${getFixedBase().toLocaleString('en-IN')}`;
+                  }
+                };
+
+                const applyAssignedFee = (fee: any) => {
+                  const assignedFee = toAmount(
+                    fee?.licenseFee ??
+                    fee?.license_fee ??
+                    fee?.fee ??
+                    fee?.amount ??
+                    fee?.yearly_license_fee ??
+                    fee?.yearlyLicenseFee
+                  );
+                  if (assignedFee <= 0) return;
+                  dynamicLocationFee = assignedFee;
+                  const amountEl = document.getElementById('rl-location-fee-amount');
+                  if (amountEl) {
+                    amountEl.textContent = `₹${dynamicLocationFee.toLocaleString('en-IN')}`;
+                  }
+                  updateFeeBreakdown();
+                  updateFeeTotal();
+                };
+
+                const normalizeText = (value: any) => String(value ?? '').trim().toLowerCase();
+                const applyAssignedFeeFromMasterList = (response: any) => {
+                  const list = Array.isArray(response)
+                    ? response
+                    : (Array.isArray(response?.results) ? response.results : []);
+                  if (!list.length) return;
+
+                  const normalizedLocation = normalizeText(locationName);
+                  const normalizedDistrict = normalizeText(districtName);
+                  const normalizedCategory = normalizeText(catName);
+
+                  const matches = list.filter((fee: any) => {
+                    const feeCategoryId = toAmount(
+                      fee?.license_category ??
+                      fee?.licenseCategory ??
+                      fee?.license_category_id ??
+                      fee?.licenseCategoryId ??
+                      fee?.license_category?.id ??
+                      fee?.license_category?.pk ??
+                      fee?.licenseCategory?.id ??
+                      fee?.licenseCategory?.pk
+                    );
+                    const feeCategoryName = normalizeText(
+                      fee?.license_category_name ??
+                      fee?.licenseCategoryName ??
+                      fee?.category_name ??
+                      fee?.categoryName ??
+                      fee?.license_category?.license_category ??
+                      fee?.license_category?.name ??
+                      fee?.licenseCategory?.licenseCategory ??
+                      fee?.licenseCategory?.name
+                    );
+                    const feeLocation = normalizeText(
+                      fee?.location_description ??
+                      fee?.locationDescription ??
+                      fee?.location_name ??
+                      fee?.locationName ??
+                      fee?.location?.location_description ??
+                      fee?.location?.locationDescription ??
+                      fee?.location?.name
+                    );
+                    const feeDistrict = normalizeText(fee?.district_name ?? fee?.districtName);
+
+                    const categoryMatches = (catId > 0 && feeCategoryId === catId) ||
+                      (!!normalizedCategory && !!feeCategoryName && (
+                        feeCategoryName === normalizedCategory ||
+                        feeCategoryName.includes(normalizedCategory) ||
+                        normalizedCategory.includes(feeCategoryName)
+                      ));
+                    const locationMatches = !normalizedLocation || !feeLocation ||
+                      feeLocation === normalizedLocation ||
+                      feeLocation.includes(normalizedLocation) ||
+                      normalizedLocation.includes(feeLocation);
+                    const districtMatches = !normalizedDistrict || !feeDistrict ||
+                      feeDistrict === normalizedDistrict ||
+                      feeDistrict.includes(normalizedDistrict) ||
+                      normalizedDistrict.includes(feeDistrict);
+
+                    return categoryMatches && locationMatches && districtMatches;
+                  });
+
+                  if (matches.length) {
+                    applyAssignedFee(matches[0]);
+                  }
+                };
+
+                const loadAssignedFeeFromMasterList = () => {
+                  this.masterService.getLicenseFees()
+                    .pipe(take(1), catchError(() => of([])))
+                    .subscribe(applyAssignedFeeFromMasterList);
+                };
+
+                if (selectedFeeId > 0) {
+                  this.masterService.getLicenseFee(selectedFeeId)
+                    .pipe(take(1), catchError(() => of(null)))
+                    .subscribe((fee) => {
+                      const feeAny = fee as any;
+                      if (feeAny && toAmount(feeAny?.licenseFee ?? feeAny?.license_fee ?? feeAny?.fee ?? feeAny?.amount) > 0) {
+                        applyAssignedFee(feeAny);
+                      } else {
+                        loadAssignedFeeFromMasterList();
+                      }
+                    });
+                } else if (catId > 0 && feeSubcategoryId > 0 && feeLocationCode) {
+                  this.masterService.lookupLicenseFee(catId, feeSubcategoryId, feeLocationCode)
+                    .pipe(take(1), catchError(() => of(null)))
+                    .subscribe((fee) => {
+                      const feeAny = fee as any;
+                      if (feeAny && toAmount(feeAny?.licenseFee ?? feeAny?.license_fee ?? feeAny?.fee ?? feeAny?.amount) > 0) {
+                        applyAssignedFee(feeAny);
+                      } else {
+                        loadAssignedFeeFromMasterList();
+                      }
+                    });
+                } else {
+                  loadAssignedFeeFromMasterList();
+                }
+
                 ['rl-pachwai-card', 'rl-draught-card'].forEach(cardId => {
                   const card  = document.getElementById(cardId);
                   if (!card) return;
@@ -744,7 +993,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
 
   private resolveApplicationType(application: UnifiedApplication): UnifiedApplication['type'] {
     const explicit = (application as any)?.type;
-    if (explicit === 'license-renewal' || explicit === 'new-license' || explicit === 'salesman-barman' || explicit === 'company-registration') {
+    if (explicit === 'license-renewal' || explicit === 'new-license' || explicit === 'salesman-barman' || explicit === 'company-registration' || explicit === 'company-collaboration') {
       return explicit;
     }
 
@@ -752,8 +1001,12 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     if (id.startsWith('NLI/')) return 'new-license';
     if (id.startsWith('LIC/')) return 'license-renewal';
     if (id.startsWith('LRA/')) return 'license-renewal';
+    if (id.startsWith('RCR/')) return 'license-renewal';
     if (id.startsWith('RSBM/')) return 'license-renewal';
+    if (id.startsWith('RCOL/')) return 'license-renewal';
+    if (id.startsWith('RCC/')) return 'license-renewal';
     if (id.startsWith('SBM/')) return 'salesman-barman';
+    if (id.startsWith('CCOL/')) return 'company-collaboration';
     return 'new-license';
   }
 
@@ -790,9 +1043,17 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     const now = Date.now();
     if (!Number.isFinite(validMs)) return true;
 
-    const windowMs = Math.max(0, Number(timer?.delay_ms ?? 0) || 0);
-    if (!windowMs) return true;
+    let windowMs = 0;
+    if (timer && timer.delay_seconds > 0) {
+      windowMs = Math.max(0, Number(timer.delay_ms ?? 0) || 0);
+    } else {
+      const validityDays = timer?.validity_period_days ?? null;
+      if (validityDays !== null && Number.isFinite(Number(validityDays)) && Number(validityDays) > 0) {
+        windowMs = Number(validityDays) * 24 * 60 * 60 * 1000;
+      }
+    }
 
+    if (!windowMs) return true;
     if (now > validMs) return true;
 
     const eligibleFrom = validMs - windowMs;
@@ -815,26 +1076,43 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     }
 
     const seconds = Math.max(0, Number(timer?.delay_seconds ?? 0) || 0);
-    if (!seconds) return '0 days';
-    if (seconds % (24 * 60 * 60) === 0) {
-      const days = seconds / (24 * 60 * 60);
-      return `${days} day${days === 1 ? '' : 's'}`;
+    if (seconds > 0) {
+      if (seconds % (24 * 60 * 60) === 0) {
+        const days = seconds / (24 * 60 * 60);
+        return `${days} day${days === 1 ? '' : 's'}`;
+      }
+      if (seconds % (60 * 60) === 0) {
+        const hours = seconds / (60 * 60);
+        return `${hours} hour${hours === 1 ? '' : 's'}`;
+      }
+      if (seconds % 60 === 0) {
+        const minutes = seconds / 60;
+        return `${minutes} minute${minutes === 1 ? '' : 's'}`;
+      }
+      return `${seconds} second${seconds === 1 ? '' : 's'}`;
     }
-    return `${seconds} second${seconds === 1 ? '' : 's'}`;
+
+    const validityDays = timer?.validity_period_days ?? null;
+    if (validityDays !== null && Number.isFinite(Number(validityDays)) && Number(validityDays) > 0) {
+      return `${validityDays} days`;
+    }
+
+    return '0 days';
   }
 
-  loadMyLicenses(): void {
+  loadMyLicenses(forceRefresh = false): void {
     this.isLoading = true;
-    this.unifiedDashboardService.getUnifiedApplicationsByStatus(true).subscribe({
+    this.unifiedDashboardService.getUnifiedApplicationsByStatus(forceRefresh, undefined, true).subscribe({
       next: (result: any) => {
         this.allAppsResult = result;
         const approvedApps = result.approved || [];
         this.activeRenewalLicenseIds = this.collectActiveRenewalLicenseIds(result);
         
-        // Filter out LRA (License Renewal) and RSBM (Renewed Salesman Barman) applications
+        // Filter out LRA (License Renewal), RCR (Company Renewal), RCOL (Company Collaboration Renewal) and RSBM (Renewed Salesman Barman) applications,
+        // as well as DP (Dry Day Permit) and SP (Special Permit) applications.
         const filteredApps = approvedApps.filter((app: UnifiedApplication) => {
           const id = String(app.applicationId || '').trim().toUpperCase();
-          return !id.startsWith('LRA/') && !id.startsWith('RSBM/');
+          return !id.startsWith('LRA/') && !id.startsWith('RCR/') && !id.startsWith('RCOL/') && !id.startsWith('RCC/') && !id.startsWith('RSBM/') && !id.startsWith('DP/') && !id.startsWith('SP/');
         });
         
         // 🔍 DEBUG: Log the first approved app to see structure
@@ -872,16 +1150,25 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
 
-  getTypeLabel(application: UnifiedApplication): string {
-    const raw = application.raw || {};
-    if (application.type === 'salesman-barman') {
+  getTypeLabel(application: any): string {
+    const type = typeof application === 'string' ? application : (application?.type || '');
+    const raw = (typeof application === 'object' && application !== null) ? (application.raw || {}) : {};
+    
+    if (type === 'salesman-barman') {
       return raw.role || 'Salesman/Barman';
     }
-    return application.licenseCategoryName || raw.license_category_name || 'License';
+    if (type === 'company-collaboration') {
+      return 'Company Collaboration';
+    }
+    if (type === 'company-registration') {
+      return 'Company Registration';
+    }
+    return (application?.licenseCategoryName || raw.license_category_name || 'License');
   }
 
   getDisplayName(application: UnifiedApplication): string {
-    return application.establishmentName || application.applicantFullName || 'N/A';
+    const raw = application.raw || {};
+    return application.establishmentName || raw.brand_owner_name || raw.brandOwnerName || application.applicantFullName || 'N/A';
   }
 
   viewApplication(application: UnifiedApplication): void {
@@ -891,7 +1178,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
       data: { unifiedApp: application, tableType: 'approved' }
     });
     dialogRef.afterClosed().subscribe((result: boolean | undefined) => {
-      if (result === true) this.loadMyLicenses();
+      if (result === true) this.loadMyLicenses(true);
     });
   }
 
@@ -987,7 +1274,13 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
   canShowRenewButton(application: UnifiedApplication): boolean {
     const licenseId = this.extractLicenseId(application.raw || {}, application);
     if (!licenseId) return false;
-    return !this.activeRenewalLicenseIds.has(this.normalizeLicenseId(licenseId));
+    
+    // Hide renew button if there's already an active/pending renewal application for this license
+    const normalized = this.normalizeLicenseId(licenseId);
+    if (this.activeRenewalLicenseIds.has(normalized)) {
+      return false;
+    }
+    return true;
   }
 
   private collectActiveRenewalLicenseIds(result: any): Set<string> {
@@ -1054,6 +1347,32 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
           if (licenseId.startsWith(expectedPrefix)) {
             console.log('  ✅ Found id in renewalOf object:', licenseId);
             return licenseId;
+          }
+        }
+      }
+    }
+
+    // STRATEGY 0: Check for any field containing 'CR/' or 'COMP/' directly for company registration
+    if (application.type === 'company-registration') {
+      for (const key of ['license_id', 'licenseId', 'license', 'renewalOf', 'renewal_of', 'renewalOfLicenseId', 'renewal_of_license_id']) {
+        if (raw[key]) {
+          const val = String(typeof raw[key] === 'object' ? (raw[key].license_id || raw[key].id || '') : raw[key]).trim();
+          if (val.startsWith('CR/') || val.startsWith('COMP/')) {
+            console.log(`  ✅ Found company registration license ID in key "${key}":`, val);
+            return val;
+          }
+        }
+      }
+    }
+
+    // STRATEGY 0.1: Check for any field containing 'CC/' or 'CCOL/' directly for company collaboration
+    if (application.type === 'company-collaboration') {
+      for (const key of ['license_id', 'licenseId', 'license', 'renewalOf', 'renewal_of', 'renewalOfLicenseId', 'renewal_of_license_id']) {
+        if (raw[key]) {
+          const val = String(typeof raw[key] === 'object' ? (raw[key].license_id || raw[key].id || '') : raw[key]).trim();
+          if (val.startsWith('CC/') || val.startsWith('CCOL/')) {
+            console.log(`  ✅ Found company collaboration license ID in key "${key}":`, val);
+            return val;
           }
         }
       }
@@ -1135,6 +1454,12 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
         derivedLicenseId = appId.replace('NLI/', 'NA/');
       } else if (appId.startsWith('SBM/')) {
         derivedLicenseId = appId.replace('SBM/', 'SB/');
+      } else if (appId.startsWith('COMP/')) {
+        // District code for CR in database is 1101
+        derivedLicenseId = appId.replace('COMP/', 'CR/1101/');
+      } else if (appId.startsWith('CCOL/')) {
+        // District code for CC in database is 1101
+        derivedLicenseId = appId.replace('CCOL/', 'CC/1101/');
       }
       
       if (derivedLicenseId) {
@@ -1159,6 +1484,10 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
         return 'NA/';
       case 'salesman-barman':
         return 'SB/';
+      case 'company-registration':
+        return 'CR/';
+      case 'company-collaboration':
+        return 'CC/';
       default:
         return '';
     }
@@ -1180,7 +1509,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     } else if (type === 'license-renewal') {
       console.log('🔄 Using License Renewal (old) endpoint');
       renewalObservable = this.licenseApplicationService.renewLicense(renewalId);
-    } else if (type === 'new-license') {
+    } else if (type === 'new-license' || type === 'company-registration' || type === 'company-collaboration') {
       console.log('🔄 Using License Renewal Application (LRA) endpoint');
       renewalObservable = this.licenseApplicationService.initiateLicenseRenewalApplication(renewalId, options);
     } else {
@@ -1204,22 +1533,80 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
           response?.applicationId ||
           'N/A';
         
-        Swal.fire({ 
-          icon: 'success', 
-          title: 'Renewal Initiated Successfully!', 
+        Swal.fire({
+          icon: 'success',
+          title: 'Renewal Initiated Successfully!',
           html: `
-            <div style="text-align: left; padding: 10px;">
-              <p>Your license renewal application has been created and submitted.</p>
-              <p><strong>New Application ID:</strong> ${newAppId}</p>
-              <p style="margin-top: 15px; font-size: 0.9em; color: #666;">
-                You can track the status of your renewal application in your dashboard.
+            <div style="
+              margin: -16px -24px 0;
+              padding: 0 0 20px;
+              background: linear-gradient(180deg, #dcfce7 0%, #f0fdf4 100%);
+              border-bottom: 1px solid #a7f3d0;
+              text-align: center;
+            ">
+              <p style="margin:0 0 16px;font-size:13.5px;color:#166534;font-weight:500;padding: 0 20px;">
+                Your license renewal application has been created and submitted.
               </p>
+
+              <!-- App ID badge -->
+              <div style="
+                display:inline-flex;
+                align-items:center;
+                gap:10px;
+                background:#ffffff;
+                border:1.5px solid #6ee7b7;
+                border-radius:12px;
+                padding:10px 18px;
+                box-shadow:0 2px 8px rgba(16,185,129,0.12);
+                flex-wrap:wrap;
+                justify-content:center;
+              ">
+                <span style="
+                  font-size:9px;
+                  font-weight:800;
+                  color:#065f46;
+                  text-transform:uppercase;
+                  letter-spacing:1px;
+                  white-space:nowrap;
+                ">✅ New Application ID</span>
+                <code style="
+                  font-family:'Fira Code',monospace;
+                  font-size:13.5px;
+                  font-weight:700;
+                  color:#047857;
+                  background:#ecfdf5;
+                  border:1.5px solid #6ee7b7;
+                  padding:4px 14px;
+                  border-radius:8px;
+                  letter-spacing:0.5px;
+                ">${newAppId}</code>
+              </div>
             </div>
-          `, 
-          confirmButtonText: 'Back',
-          confirmButtonColor: '#3085d6',
-          allowOutsideClick: false
-        }).then(() => { 
+
+            <!-- Tracking note -->
+            <p style="
+              margin:18px 0 0;
+              font-size:12px;
+              color:#059669;
+              display:flex;
+              align-items:center;
+              justify-content:center;
+              gap:6px;
+            ">
+              <span>🗂️</span>
+              Track the status of your renewal in your dashboard.
+            </p>
+          `,
+          background: '#f0fdf4',
+          color: '#065f46',
+          confirmButtonText: 'Close',
+          confirmButtonColor: '#059669',
+          allowOutsideClick: true,
+          customClass: {
+            title: 'swal-renewal-success-title',
+            icon:  'swal-renewal-success-icon',
+          }
+        }).then(() => {
           this.closeDialog();
         });
       },
@@ -1242,9 +1629,28 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
             <p style="font-size: 0.85em; color: #999;">Attempted ID: ${renewalId}</p>
           `;
         } else if (error.status === 400) {
-          errorTitle = 'Invalid Renewal Request';
-          const detail = error.error?.detail || error.error?.message || '';
-          errorMessage = detail || 'The renewal request is not valid. Please check the license details.';
+          const errBody = error.error || {};
+          const detail = errBody?.detail || errBody?.message || '';
+          if (errBody?.window_not_open) {
+            // Renewal window not yet open — show a dedicated info dialog
+            const windowStart = errBody?.renewal_window_starts_on
+              ? new Date(errBody.renewal_window_starts_on).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+              : null;
+            const validUpTo = errBody?.license_valid_up_to
+              ? new Date(errBody.license_valid_up_to).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+              : null;
+            errorTitle = 'Renewal Window Not Open';
+            errorMessage = `
+              <p>${detail}</p>
+              ${windowStart ? `<p style="margin-top:10px;">🗓️ <strong>Renewal opens:</strong> ${windowStart}</p>` : ''}
+              ${validUpTo ? `<p>📅 <strong>License expires:</strong> ${validUpTo}</p>` : ''}
+              <p style="margin-top:10px;font-size:0.88em;color:#666;">You will be able to renew once the renewal window opens.</p>
+            `;
+          } else {
+            errorTitle = 'Invalid Renewal Request';
+            errorMessage = detail || 'The renewal request is not valid. Please check the license details.';
+          }
+
         } else if (error.status === 403) {
           errorTitle = 'Permission Denied';
           errorMessage = 'You do not have permission to renew this license.';

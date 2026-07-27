@@ -8,24 +8,27 @@ import { InfoPagesService } from '../../../../../core/services/info-pages.servic
 import { MaterialModule } from '../../../../../shared/material.module';
 import {
   ExciseSecretary,
-  HeadOfOrganisation
+  HeadOfOrganisation,
+  AboutUs
 } from '../../../../../core/models/about-us.model';
 import { ManageComponent } from '../manage/manage.component';
 
 type AboutUsCategoryKey =
   | 'headsOfOrganisations'
-  | 'exciseSecretaries';
+  | 'exciseSecretaries'
+  | 'aboutUsText';
 
 type AboutUsRecord =
   | HeadOfOrganisation
-  | ExciseSecretary;
+  | ExciseSecretary
+  | AboutUs;
 
 interface AboutUsFieldConfig {
   key: string;
   apiKey?: string;
   label: string;
   required?: boolean;
-  type?: 'text' | 'email' | 'file';
+  type?: 'text' | 'email' | 'file' | 'textarea' | 'date';
 }
 
 interface AboutUsCategoryConfig {
@@ -120,8 +123,11 @@ export class ListComponent implements OnInit {
       name: 'Name',
       designation: 'Designation',
       email: 'Email',
+      fromDate: 'From Date',
+      toDate: 'To Date',
       title: 'Title',
       image: 'Image',
+      content: 'Content',
       actions: 'Actions'
     };
 
@@ -131,6 +137,9 @@ export class ListComponent implements OnInit {
   getColumnValue(record: AboutUsRecord, column: string): string {
     const field = this.activeCategory.fields.find(item => item.key === column);
     const value = this.readValue(record, column, field?.apiKey);
+    if (column === 'content' && typeof value === 'string') {
+      return value.length > 100 ? value.substring(0, 100) + '...' : value;
+    }
     return value === '' ? '-' : String(value);
   }
 
@@ -174,16 +183,32 @@ export class ListComponent implements OnInit {
         key: 'exciseSecretaries',
         label: 'Excise Secretaries / Principal Secretaries',
         singularLabel: 'Excise Secretary / Principal Secretary',
-        displayedColumns: ['name', 'designation', 'email', 'actions'],
+        displayedColumns: ['name', 'designation', 'email', 'fromDate', 'toDate', 'actions'],
         fields: [
           { key: 'name', label: 'Name', required: true },
           { key: 'designation', label: 'Designation', required: true },
-          { key: 'email', label: 'Email', required: true, type: 'email' as const }
+          { key: 'email', label: 'Email', required: true, type: 'email' as const },
+          { key: 'fromDate', apiKey: 'from_date', label: 'From Date', type: 'date' as const },
+          { key: 'toDate', apiKey: 'to_date', label: 'To Date', type: 'date' as const }
         ],
         load: () => this.infoPagesService.getExciseSecretaries(),
         create: (data) => this.infoPagesService.createExciseSecretary(data),
         update: (id, data) => this.infoPagesService.updateExciseSecretary(id, data),
         delete: (id) => this.infoPagesService.deleteExciseSecretary(id)
+      },
+      {
+        key: 'aboutUsText',
+        label: 'Department Content',
+        singularLabel: 'Department Content',
+        displayedColumns: ['title', 'content', 'actions'],
+        fields: [
+          { key: 'title', label: 'Title', required: true },
+          { key: 'content', label: 'Content', required: true, type: 'textarea' as const }
+        ],
+        load: () => this.infoPagesService.getAboutUs(),
+        create: (data) => this.infoPagesService.createAboutUs(data),
+        update: (id, data) => this.infoPagesService.updateAboutUs(id, data),
+        delete: (id) => this.infoPagesService.deleteAboutUs(id)
       }
     ];
   }

@@ -27,9 +27,7 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
   errorMessages = {
     company_name: signal(''),
     company_address: signal(''),
-    company_pan: signal(''),
-    company_cin: signal(''),
-    incorporation_date: signal(''),
+    company_gst: signal(''),
     company_phone_number: signal(''),
     company_email: signal(''),
   };
@@ -40,9 +38,7 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
     this.unitDetailsForm = this.fb.group({
       company_name: new FormControl(storedValues.company_name, [Validators.required, Validators.pattern(PatternConstants.NAME)]),
       company_address: new FormControl(storedValues.company_address, [Validators.required]),
-      company_pan: new FormControl(storedValues.company_pan, [Validators.required, Validators.pattern(PatternConstants.PAN)]),
-      company_cin: new FormControl(storedValues.company_cin, [Validators.required, Validators.pattern(PatternConstants.CIN)]),
-      incorporation_date: new FormControl(storedValues.incorporation_date ?? null, [Validators.required]),
+      company_gst: new FormControl(storedValues.company_gst, [Validators.required, Validators.pattern(PatternConstants.GST)]),
       company_phone_number: new FormControl(storedValues.company_phone_number, [Validators.required, Validators.pattern(PatternConstants.MOBILE)]),
       company_email: new FormControl(storedValues.company_email, [Validators.required, Validators.pattern(PatternConstants.EMAIL)])
     });
@@ -54,8 +50,7 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    FormUtils.capitalize(this.unitDetailsForm.get('company_pan')!, this.destroy$);
-    FormUtils.capitalize(this.unitDetailsForm.get('company_cin')!, this.destroy$);
+    FormUtils.capitalize(this.unitDetailsForm.get('company_gst')!, this.destroy$);
   }
 
   ngOnDestroy() {
@@ -69,24 +64,13 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
   }
 
   private saveToSessionStorage() {
-    const formData: Partial<LicenseApplication> = this.unitDetailsForm.getRawValue();
+    const formData: any = this.unitDetailsForm.getRawValue();
     
-    // Convert date to YYYY-MM-DD format
-    let incorporationDate: string | null = null;
-    if (formData.incorporation_date) {
-      const date = new Date(formData.incorporation_date as string);
-      incorporationDate = !isNaN(date.getTime())
-        ? this.datePipe.transform(date, 'yyyy-MM-dd') ?? null
-        : null;
-    }
-
     // ✅ CRITICAL: Ensure numbers are stored as integers
     const cleanData = {
       company_name: formData.company_name,
       company_address: formData.company_address,
-      company_pan: formData.company_pan,
-      company_cin: formData.company_cin,
-      incorporation_date: incorporationDate,
+      company_gst: formData.company_gst,
       company_phone_number: formData.company_phone_number ? Number(formData.company_phone_number) : null,
       company_email: formData.company_email
     };

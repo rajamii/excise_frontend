@@ -29,6 +29,8 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
   companyDetails: Partial<CompanyCollaborationCompanyDetails> = {};
   selectedBrands: CompanyCollaborationBrand[] = [];
   feeStructure: CompanyCollaborationFeeStructure | null = null;
+  members: any[] = [];
+  documents: { key: string; name: string; file: File | null }[] = [];
 
   acceptTerms = false;
   isSubmitting = false;
@@ -51,7 +53,8 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
       bottler: sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.bottlerDetails),
       company: sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.companyDetails),
       brands: sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrands),
-      fees: sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.feeStructure)
+      fees: sessionStorage.getItem(COMPANY_COLLAB_STORAGE_KEYS.feeStructure),
+      members: sessionStorage.getItem('companyCollabMembersList')
     });
 
     if (currentData !== this.lastDataCheck) {
@@ -68,6 +71,14 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
       COMPANY_COLLAB_STORAGE_KEYS.feeStructure,
       null
     );
+    this.members = this.getStorageData('companyCollabMembersList', []);
+    const docs = this.collaborationService.getCollabDocuments();
+    this.documents = [
+      { key: 'exciseLicense', name: 'Excise License issued by the Excise Authority to company', file: docs['exciseLicense'] || null },
+      { key: 'deedOfPartnership', name: 'Deed of Partnership, if any', file: docs['deedOfPartnership'] || null },
+      { key: 'memorandumOfAssociation', name: 'Memorandum of Association & Article of Association', file: docs['memorandumOfAssociation'] || null },
+      { key: 'undertaking', name: 'Undertaking stating compliance', file: docs['undertaking'] || null }
+    ].filter(d => d.file !== null);
   }
 
   private getStorageData<T>(key: string, fallback: T): T {
@@ -87,11 +98,7 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
     if (!this.feeStructure) {
       return 0;
     }
-    return (
-      Number(this.feeStructure.applicationFee || 0) +
-      Number(this.feeStructure.collaborationFee || 0) +
-      Number(this.feeStructure.securityDeposit || 0)
-    );
+    return Number(this.feeStructure.collaborationFee || 0) + 25000;
   }
 
   getCurrentDate(): string {
@@ -181,11 +188,19 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
   }
 
   private isDataReadyForSubmit(): boolean {
-    const hasBottler = !!this.bottlerDetails?.brandOwner;
+    const b = this.bottlerDetails;
+    const hasBottler = !!b?.brandOwnerName && !!b?.brandOwnerPan && !!b?.brandOwnerOfficeAddress && !!b?.brandOwnerFactoryAddress && !!b?.brandOwnerMobile && !!b?.brandOwnerEmail && !!b?.brandType && !!b?.license && !!b?.country && !!b?.state && !!b?.pinCode;
     const hasCompany = !!this.companyDetails?.bottlerName && !!this.companyDetails?.bottlerId;
     const hasBrands = Array.isArray(this.selectedBrands) && this.selectedBrands.length > 0;
     const hasFee = !!this.feeStructure;
-    return hasBottler && hasCompany && hasBrands && hasFee;
+
+    const membersRaw = sessionStorage.getItem('companyCollabMembersList');
+    const hasMembers = !!membersRaw && JSON.parse(membersRaw).length > 0;
+
+    const docs = this.collaborationService.getCollabDocuments();
+    const hasRequiredDocs = !!docs['exciseLicense'] && !!docs['memorandumOfAssociation'] && !!docs['undertaking'];
+
+    return hasBottler && hasCompany && hasBrands && hasFee && hasMembers && hasRequiredDocs;
   }
 
   private buildFormData(): FormData {
@@ -194,7 +209,7 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
 
     formData.append('financial_year', String(this.bottlerDetails.financialYear || this.getCurrentFinancialYear()));
     formData.append('application_year', String(this.bottlerDetails.financialYear || this.getCurrentFinancialYear()));
-    formData.append('brand_owner', String(this.bottlerDetails.brandOwnerName || this.bottlerDetails.brandOwner || ''));
+    formData.append('brand_owner', String(this.bottlerDetails.brandOwnerName || ''));
     formData.append('brand_owner_code', String(this.bottlerDetails.brandOwnerCode || ''));
     formData.append('brand_owner_name', String(this.bottlerDetails.brandOwnerName || ''));
     formData.append('brand_owner_office_address', String(this.bottlerDetails.brandOwnerOfficeAddress || ''));
@@ -203,23 +218,53 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
     formData.append('brand_owner_mobile', String(this.bottlerDetails.brandOwnerMobile || ''));
     formData.append('brand_owner_email', String(this.bottlerDetails.brandOwnerEmail || ''));
 
+    // Registration specific fields
+    formData.append('brand_type', String(this.bottlerDetails.brandType || ''));
+    formData.append('brandType', String(this.bottlerDetails.brandType || ''));
+    formData.append('license', String(this.bottlerDetails.license || ''));
+    formData.append('country', String(this.bottlerDetails.country || ''));
+    formData.append('state', String(this.bottlerDetails.state || ''));
+    formData.append('pinCode', String(this.bottlerDetails.pinCode || ''));
+    formData.append('pin_code', String(this.bottlerDetails.pinCode || ''));
+
     formData.append('licensee_name', String(this.companyDetails.bottlerName || ''));
     formData.append('licensee_address', String(this.companyDetails.bottlerAddress || ''));
     formData.append('license_number', String(this.companyDetails.bottlerId || ''));
 
+    const enrichedFee = {
+      ...(this.feeStructure || {}),
+      companyRegistrationFee: 25000
+    };
     formData.append('selected_brand_ids', JSON.stringify(selectedBrandIds));
     formData.append('selected_brands', JSON.stringify(this.selectedBrands));
-    formData.append('fee_structure', JSON.stringify(this.feeStructure || {}));
+    formData.append('fee_structure', JSON.stringify(enrichedFee));
     formData.append(
       'overview_summary',
       JSON.stringify({
         totalBrands: selectedBrandIds.length,
         totalAmount: this.getTotalAmount(),
         applicationDate: new Date().toISOString().split('T')[0],
-        selectedBrands: this.selectedBrands
+        selectedBrands: this.selectedBrands,
+        feeStructure: enrichedFee
       })
     );
-    formData.append('undertaking', this.createUndertakingFile());
+
+    // Append members list
+    const membersRaw = sessionStorage.getItem('companyCollabMembersList') || '[]';
+    formData.append('members', membersRaw);
+
+    // Append documents from company collaboration service
+    const docs = this.collaborationService.getCollabDocuments();
+    for (const [k, file] of Object.entries(docs)) {
+      if (file instanceof File) {
+        formData.append(k, file);
+      }
+    }
+
+    // fallback undertaking if not uploaded
+    if (!docs['undertaking']) {
+      formData.append('undertaking', this.createUndertakingFile());
+    }
 
     return formData;
   }
@@ -308,6 +353,71 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
     this.back.emit();
   }
 
+  removeBrand(brandId: string | number): void {
+    // Filter out the brand from selectedBrands
+    this.selectedBrands = this.selectedBrands.filter((b) => String(b.id) !== String(brandId));
+    
+    // Update selected brand IDs in session storage
+    const selectedBrandIds = this.selectedBrands.map((b) => String(b.id));
+    sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrands, JSON.stringify(this.selectedBrands));
+    sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrandIds, JSON.stringify(selectedBrandIds));
+    this.collaborationService.setSelectedBrands(this.selectedBrands);
+
+    // Refresh the fee structure
+    this.refreshFeeStructure();
+  }
+
+  removeBrandSize(brandId: string | number, sizeLabel: string): void {
+    // Remove the specific size from selected brand
+    this.selectedBrands = this.selectedBrands.map((b) => {
+      if (String(b.id) === String(brandId)) {
+        if (b.selected_sizes) {
+          b.selected_sizes = b.selected_sizes.filter(s => s !== sizeLabel);
+        }
+      }
+      return b;
+    }).filter((b) => b.selected_sizes && b.selected_sizes.length > 0);
+
+    // Update session storage
+    const selectedBrandIds = this.selectedBrands.map((b) => String(b.id));
+    sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrands, JSON.stringify(this.selectedBrands));
+    sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.selectedBrandIds, JSON.stringify(selectedBrandIds));
+    this.collaborationService.setSelectedBrands(this.selectedBrands);
+
+    // Refresh the fee structure
+    this.refreshFeeStructure();
+  }
+
+  private refreshFeeStructure(): void {
+    if (this.selectedBrands.length === 0) {
+      this.feeStructure = null;
+      sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.feeStructure);
+      sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.overviewSummary);
+      return;
+    }
+
+    this.collaborationService.getFeeStructure().subscribe({
+      next: (fee) => {
+        this.feeStructure = fee;
+        sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.feeStructure, JSON.stringify(fee));
+        
+        // Update overview summary in session storage
+        sessionStorage.setItem(COMPANY_COLLAB_STORAGE_KEYS.overviewSummary, JSON.stringify({
+          totalBrands:     this.selectedBrands.length,
+          totalAmount:     this.getTotalAmount(),
+          applicationDate: this.getCurrentDate(),
+          selectedBrands:  this.selectedBrands
+        }));
+      },
+      error: (err) => {
+        console.error('Failed to load fee structure:', err);
+        this.feeStructure = null;
+        sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.feeStructure);
+      }
+    });
+  }
+
+
   private clearApplicationData(): void {
     sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.bottlerDetails);
     sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.companyDetails);
@@ -316,6 +426,8 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
     sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.feeStructure);
     sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.overviewSummary);
     sessionStorage.removeItem(COMPANY_COLLAB_STORAGE_KEYS.submission);
+    sessionStorage.removeItem('companyCollabMembersList');
     this.collaborationService.clearSelectedBrands();
+    this.collaborationService.clearCollabDocuments();
   }
 }

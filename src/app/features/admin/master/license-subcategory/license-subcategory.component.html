@@ -1,0 +1,158 @@
+<div class="lc-page">
+
+  <mat-tab-group class="outer-tabs" animationDuration="200ms">
+
+    <!-- ══════════════════════════════════════════
+         TAB 1 — LICENSE CATEGORY
+    ══════════════════════════════════════════ -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">list_alt</mat-icon>
+        <span class="tab-label-text">License Category</span>
+        <span class="count-badge">{{ licenseCategories.length }}</span>
+      </ng-template>
+
+      <div class="tab-body">
+        <div class="tab-toolbar">
+          <span class="toolbar-title">License Category Management</span>
+          <button mat-flat-button color="primary" (click)="onAddCategory()" class="add-btn">
+            <mat-icon>add</mat-icon> Add Category
+          </button>
+        </div>
+
+        <div class="table-wrapper">
+          <mat-table [dataSource]="licenseCategories" class="data-table">
+
+            <ng-container matColumnDef="sno">
+              <mat-header-cell *matHeaderCellDef class="sno-col">#</mat-header-cell>
+              <mat-cell *matCellDef="let row; let i = index" class="sno-col">{{ i + 1 }}</mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="licenseCategory">
+              <mat-header-cell *matHeaderCellDef>Category Name</mat-header-cell>
+              <mat-cell *matCellDef="let item">
+                <span class="cat-name-text" [class.cat-name--inactive]="item.isActive === false">
+                  {{ item.licenseCategory }}
+                </span>
+              </mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="specialPermit">
+              <mat-header-cell *matHeaderCellDef class="permit-col">Dry Day Permit</mat-header-cell>
+              <mat-cell *matCellDef="let item" class="permit-col">
+                <span class="status-badge" [class.status-badge--active]="item.isSpecialPermitAllowed"
+                      [class.status-badge--inactive]="!item.isSpecialPermitAllowed">
+                  <span class="status-dot"></span>
+                  {{ item.isSpecialPermitAllowed ? 'Active' : 'Inactive' }}
+                </span>
+              </mat-cell>
+            </ng-container>
+
+            <!-- Status -->
+            <ng-container matColumnDef="status">
+              <mat-header-cell *matHeaderCellDef class="status-col">Status</mat-header-cell>
+              <mat-cell *matCellDef="let item" class="status-col">
+                <span class="status-badge" [class.status-badge--active]="item.isActive !== false"
+                      [class.status-badge--inactive]="item.isActive === false">
+                  <span class="status-dot"></span>
+                  {{ item.isActive !== false ? 'Active' : 'Inactive' }}
+                </span>
+              </mat-cell>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+              <mat-header-cell *matHeaderCellDef class="actions-col-sm">Actions</mat-header-cell>
+              <mat-cell *matCellDef="let item" class="actions-col-sm">
+                <button mat-icon-button color="primary" matTooltip="Edit" (click)="onEditCategory(item)">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button
+                        [color]="item.isActive !== false ? 'warn' : 'accent'"
+                        [matTooltip]="item.isActive !== false ? 'Deactivate' : 'Activate'"
+                        (click)="onToggleCategoryActive(item)">
+                  <mat-icon>{{ item.isActive !== false ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+                </button>
+              </mat-cell>
+            </ng-container>
+
+            <mat-header-row *matHeaderRowDef="categoryColumns"></mat-header-row>
+            <mat-row *matRowDef="let row; columns: categoryColumns;"></mat-row>
+          </mat-table>
+
+          @if (licenseCategories.length === 0) {
+            <div class="empty-state">
+              <mat-icon>inbox</mat-icon>
+              <p>No license categories found.</p>
+            </div>
+          }
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- ══════════════════════════════════════════
+         TAB 2 — SUB CATEGORY
+         Shows all categories with sub-category count
+         + "View Sub Categories" button per row
+         that opens a detail popup with inline CRUD
+    ══════════════════════════════════════════ -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">subdirectory_arrow_right</mat-icon>
+        <span class="tab-label-text">Sub Category</span>
+        <span class="count-badge">{{ licenseSubcategories.length }}</span>
+      </ng-template>
+
+      <div class="tab-body">
+        <div class="tab-toolbar">
+          <span class="toolbar-title">License Sub Category Management</span>
+          <span class="toolbar-hint">
+            <mat-icon style="font-size:15px;height:15px;width:15px;vertical-align:middle;margin-right:4px;color:#64748b">info</mat-icon>
+            Click <strong>View Sub Categories</strong> on any row to manage its sub categories
+          </span>
+        </div>
+
+        <div class="table-wrapper">
+          <mat-table [dataSource]="licenseCategories" class="data-table">
+
+            <!-- # -->
+            <ng-container matColumnDef="sub_sno">
+              <mat-header-cell *matHeaderCellDef class="sno-col">#</mat-header-cell>
+              <mat-cell *matCellDef="let row; let i = index" class="sno-col">{{ i + 1 }}</mat-cell>
+            </ng-container>
+
+            <!-- Category Name -->
+            <ng-container matColumnDef="sub_categoryName">
+              <mat-header-cell *matHeaderCellDef>Category Name</mat-header-cell>
+              <mat-cell *matCellDef="let item">
+                <span class="cat-name-text">{{ item.licenseCategory }}</span>
+              </mat-cell>
+            </ng-container>
+
+            <!-- Actions -->
+            <ng-container matColumnDef="subActions">
+              <mat-header-cell *matHeaderCellDef class="sub-actions-col">Actions</mat-header-cell>
+              <mat-cell *matCellDef="let item" class="sub-actions-col">
+                <button class="view-sub-btn" (click)="onViewSubcategories(item)">
+                  <mat-icon class="view-sub-btn__icon">format_list_bulleted</mat-icon>
+                  <span class="view-sub-btn__label">View Sub Categories</span>
+                  <span class="view-sub-btn__count">{{ getSubCount(item.id) }}</span>
+                </button>
+              </mat-cell>
+            </ng-container>
+
+            <mat-header-row *matHeaderRowDef="subTabColumns"></mat-header-row>
+            <mat-row *matRowDef="let row; columns: subTabColumns;"></mat-row>
+          </mat-table>
+
+          @if (licenseCategories.length === 0) {
+            <div class="empty-state">
+              <mat-icon>inbox</mat-icon>
+              <p>No license categories found.</p>
+            </div>
+          }
+        </div>
+      </div>
+    </mat-tab>
+
+  </mat-tab-group>
+</div>

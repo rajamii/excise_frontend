@@ -1,4 +1,4 @@
-﻿<mat-card>
+<mat-card>
   <mat-card-header>
     <div class="heading">Submit Application</div>
     @if (!applicationId) {
@@ -117,6 +117,42 @@
         </div>
       }
 
+      <!-- Member Details -->
+      @if (members.length > 0) {
+        <div class="info-section">
+          <div class="section-header">
+            <mat-icon>people</mat-icon>
+            <h3>Member Details ({{ members.length }})</h3>
+          </div>
+          <div class="brands-review-container">
+            <table class="brands-review-table mat-elevation-z1">
+              <thead>
+                <tr>
+                  <th class="col-sl">Sl. No</th>
+                  <th>Member Name</th>
+                  <th>Designation</th>
+                  <th>Mobile Number</th>
+                  <th>Email ID</th>
+                  <th>Address</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (member of members; track member.memberName; let i = $index) {
+                  <tr>
+                    <td class="col-sl">{{ i + 1 }}</td>
+                    <td><strong>{{ member.memberName }}</strong></td>
+                    <td>{{ member.memberDesignation }}</td>
+                    <td>{{ member.memberMobileNumber }}</td>
+                    <td>{{ member.memberEmailId || 'N/A' }}</td>
+                    <td>{{ member.memberAddress }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+
       <!-- Step 3 - Selected Brands -->
       @if (selectedBrands.length > 0) {
         <div class="info-section">
@@ -124,20 +160,92 @@
             <mat-icon>inventory</mat-icon>
             <h3>Selected Brands ({{ selectedBrands.length }})</h3>
           </div>
-          <div class="brands-summary">
-            @for (brand of selectedBrands; track brand.id; let i = $index) {
-              <div class="brand-item">
-                <div class="brand-number">{{ i + 1 }}</div>
-                <div class="brand-details">
-                  <div class="brand-name">{{ brand.brand_name }}</div>
-                  <div class="brand-meta">
-                    <span>{{ brand.brand_code }}</span> |
-                    <span>{{ brand.category }}</span> |
-                    <span>{{ brand.type }}</span>
-                  </div>
-                </div>
-              </div>
-            }
+          <div class="brands-review-container">
+            <table class="brands-review-table mat-elevation-z1">
+              <thead>
+                <tr>
+                  <th class="col-sl">Sl. No</th>
+                  <th class="col-brand">Brand Name</th>
+                  <th class="col-sizes">Selected Sizes</th>
+                  <th class="col-cat">Category</th>
+                  <th class="col-kind">Kind</th>
+                  <th class="col-type">Type</th>
+                  <th class="col-action">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (brand of selectedBrands; track brand.id; let i = $index) {
+                  <tr>
+                    <td class="col-sl">{{ i + 1 }}</td>
+                    <td class="col-brand">
+                      <div class="brand-name">{{ brand.brand_name }}</div>
+                      <div class="brand-code">{{ brand.brand_code }}</div>
+                    </td>
+                    <td class="col-sizes">
+                      <div class="sizes-badges">
+                        @for (size of brand.selected_sizes; track size) {
+                          <span class="size-badge">
+                            {{ size }}
+                            <button class="remove-size-btn" type="button" (click)="removeBrandSize(brand.id, size)" title="Remove size">
+                              <mat-icon>close</mat-icon>
+                            </button>
+                          </span>
+                        } @empty {
+                          <span class="no-sizes-badge">No sizes selected</span>
+                        }
+                      </div>
+                    </td>
+                    <td class="col-cat">{{ brand.category }}</td>
+                    <td class="col-kind">{{ brand.kind }}</td>
+                    <td class="col-type">{{ brand.type }}</td>
+                    <td class="col-action">
+                      <button mat-icon-button color="warn" type="button"
+                        (click)="removeBrand(brand.id)"
+                        [attr.aria-label]="'Remove ' + brand.brand_name"
+                        title="Remove brand">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+
+      <!-- Uploaded Documents -->
+      @if (documents.length > 0) {
+        <div class="info-section">
+          <div class="section-header">
+            <mat-icon>description</mat-icon>
+            <h3>Uploaded Documents</h3>
+          </div>
+          <div class="brands-review-container">
+            <table class="brands-review-table mat-elevation-z1">
+              <thead>
+                <tr>
+                  <th class="col-sl">Sl. No</th>
+                  <th>Document Type</th>
+                  <th>File Name</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (doc of documents; track doc.key; let i = $index) {
+                  <tr>
+                    <td class="col-sl">{{ i + 1 }}</td>
+                    <td>{{ doc.name }}</td>
+                    <td><span class="file-name-text" style="font-family: monospace; color: #1c2b78; font-weight: 500;">{{ doc.file?.name }}</span></td>
+                    <td>
+                      <span class="status-badge" style="background-color: #e8f5e9; color: #2e7d32; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                        Uploaded
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
           </div>
         </div>
       }
@@ -151,20 +259,23 @@
           </div>
           <div class="fee-summary">
             <div class="fee-row">
-              <span class="fee-label">Application Fee:</span>
-              <span class="fee-value">&#8377;{{ feeStructure.applicationFee | number:'1.2-2' }}</span>
-            </div>
-            <div class="fee-row">
-              <span class="fee-label">Collaboration Fee:</span>
+              <span class="fee-label">Collaboration Fee (License Fee Wallet):</span>
               <span class="fee-value">&#8377;{{ feeStructure.collaborationFee | number:'1.2-2' }}</span>
             </div>
             <div class="fee-row">
-              <span class="fee-label">Security Deposit:</span>
-              <span class="fee-value">&#8377;{{ feeStructure.securityDeposit | number:'1.2-2' }}</span>
+              <span class="fee-label">Company Registration Fee (License Fee Wallet):</span>
+              <span class="fee-value">&#8377;25,000.00</span>
             </div>
             <div class="fee-row total">
               <span class="fee-label">Total Amount:</span>
               <span class="fee-value">&#8377;{{ getTotalAmount() | number:'1.2-2' }}</span>
+            </div>
+            <!-- Wallet specific notice -->
+            <div class="wallet-payment-notice" style="margin-top: 15px; padding: 10px 15px; background: #eef2fa; border-radius: 4px; border-left: 4px solid #1C2B78; font-size: 13px; text-align: left;">
+              <div style="font-weight: bold; color: #1C2B78; margin-bottom: 4px;">Wallet Wise Payment Breakout:</div>
+              <ul style="margin: 0; padding-left: 20px; line-height: 1.5; color: #333;">
+                <li><strong>License Fee Wallet:</strong> &#8377;50,000.00 (Collaboration Fee: &#8377;25,000.00 + Company Registration Fee: &#8377;25,000.00)</li>
+              </ul>
             </div>
           </div>
         </div>

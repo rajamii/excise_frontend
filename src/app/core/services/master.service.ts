@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { LicenseFee } from '../models/license-fee.model';
 /**
@@ -20,6 +20,7 @@ export class MasterService {
 
   // Base URL for all master data endpoints
   private readonly BASE_URL = `${environment.apiBaseUrl}/masters/core`;
+  private readonly MASTERS_URL = `${environment.apiBaseUrl}/masters`;
 
   // User endpoints (licensee profiles live here)
   private readonly USER_BASE_URL = `${environment.apiBaseUrl}/auth/users`;
@@ -37,13 +38,16 @@ export class MasterService {
   private readonly LICENSE_SUBCATEGORY_URL = `${this.BASE_URL}/license-subcategories`;
   private readonly LICENSE_TITLE_URL = `${this.BASE_URL}/license-titles`;
   private readonly ROAD_URL = `${this.BASE_URL}/roads`;
+  private readonly NOTIFICATION_URL = `${this.MASTERS_URL}/notification`;
   private readonly LOCATION_URL = `${this.BASE_URL}/locations`;
   private readonly LICENSE_FEE_URL = `${this.BASE_URL}/license-fees`;
+  private readonly FIXED_FEE_URL = `${this.BASE_URL}/fixed-fees`;
 
-  // ✅ NEW: Endpoints for the 3 new tables
   private readonly LOCATION_CATEGORY_URL = `${this.BASE_URL}/location-categories`;
   private readonly LOCATION_SUBCATEGORY_URL = `${this.BASE_URL}/location-subcategories`;
   private readonly WARD_URL = `${this.BASE_URL}/wards`;
+  private readonly BLOCK_URL = `${this.BASE_URL}/blocks`;
+  private readonly RURAL_WARD_URL = `${this.BASE_URL}/rural-wards`;
   private readonly HOLOGRAM_SUPPLIER_URL = `${environment.apiBaseUrl}/masters/supply_chain/hologram-suppliers`;
   private readonly BULK_SPIRIT_URL = `${environment.apiBaseUrl}/masters/supply_chain/bulk-spirit`;
   private readonly ENA_DISTILLERY_URL = `${environment.apiBaseUrl}/masters/supply_chain/ena-distillery-types`;
@@ -319,6 +323,54 @@ export class MasterService {
   }
 
   // =========================================================================
+  // NOTIFICATION ENDPOINTS
+  // =========================================================================
+
+  getNotifications(): Observable<any> {
+    return this.http.get<any[]>(`${this.NOTIFICATION_URL}/list/`).pipe(
+      map((data) => this.mapNotifications(data))
+    );
+  }
+
+  getPublicNotifications(limit?: number): Observable<any> {
+    const suffix = limit ? `?limit=${limit}` : '';
+    return this.http.get<any[]>(`${this.NOTIFICATION_URL}/public/${suffix}`).pipe(
+      map((data) => this.mapNotifications(data))
+    );
+  }
+
+  private mapNotifications(data: any): any[] {
+    if (!Array.isArray(data)) return [];
+    return data.map((notification) => this.mapNotification(notification));
+  }
+
+  private mapNotification(notification: any): any {
+    return {
+      ...notification,
+      notificationDate: notification.notificationDate ?? notification.notification_date,
+      notificationFile: notification.notificationFile ?? notification.notification_file,
+      notificationFileUrl: notification.notificationFileUrl ?? notification.notification_file_url,
+      notificationFileDownloadUrl: notification.notificationFileDownloadUrl ?? notification.notification_file_download_url,
+      isActive: notification.isActive ?? notification.is_active,
+    };
+  }
+  getNotification(id: number): Observable<any> {
+    return this.http.get(`${this.NOTIFICATION_URL}/detail/${id}/`);
+  }
+
+  createNotification(data: any): Observable<any> {
+    return this.http.post(`${this.NOTIFICATION_URL}/create/`, data);
+  }
+
+  updateNotification(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.NOTIFICATION_URL}/update/${id}/`, data);
+  }
+
+  deleteNotification(id: number): Observable<any> {
+    return this.http.delete(`${this.NOTIFICATION_URL}/delete/${id}/`);
+  }
+
+  // =========================================================================
   // LOCATION ENDPOINTS
   // =========================================================================
 
@@ -579,5 +631,45 @@ export class MasterService {
 
   getEnaDistilleries(): Observable<any> {
     return this.http.get(`${this.ENA_DISTILLERY_URL}/`);
+  }
+
+  // =========================================================================
+  // FIXED FEES ENDPOINTS
+  // =========================================================================
+
+  getFixedFees(): Observable<any> {
+    return this.http.get(`${this.FIXED_FEE_URL}/`);
+  }
+
+  getFixedFee(code: string): Observable<any> {
+    return this.http.get(`${this.FIXED_FEE_URL}/${code}/`);
+  }
+
+  updateFixedFee(code: string, data: any): Observable<any> {
+    return this.http.put(`${this.FIXED_FEE_URL}/${code}/update/`, data);
+  }
+
+  getBlocks(): Observable<any> {
+    return this.http.get(`${this.BLOCK_URL}/`);
+  }
+
+  getBlocksBySubcategory(subcategoryId: number | string): Observable<any> {
+    return this.http.get(`${this.BLOCK_URL}/?subcategory_id=${subcategoryId}`);
+  }
+
+  getWardsBySubcategory(subcategoryId: number | string): Observable<any> {
+    return this.http.get(`${this.WARD_URL}/?subcategory_id=${subcategoryId}`);
+  }
+
+  getRuralWards(): Observable<any> {
+    return this.http.get(`${this.RURAL_WARD_URL}/`);
+  }
+
+  getRuralWardsByBlock(blockId: number | string): Observable<any> {
+    return this.http.get(`${this.RURAL_WARD_URL}/?block_id=${blockId}`);
+  }
+
+  getLocationSubcategoriesBySubdivision(subdivisionId: number | string): Observable<any> {
+    return this.http.get(`${this.LOCATION_SUBCATEGORY_URL}/?sub_division_id=${subdivisionId}`);
   }
 }

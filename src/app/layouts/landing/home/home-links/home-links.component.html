@@ -1,28 +1,68 @@
 <div class="page-container">
+  <div class="back-button-container">
+    <button mat-button class="back-btn" (click)="goBack()">
+      <mat-icon>arrow_back</mat-icon>
+      <span>Back</span>
+    </button>
+  </div>
   <!--PREVENTIVE RAIDS-->
   @if (page === 'preventive-raids') {
-    <mat-card class = "preventive-raids grid-card">
+    <mat-card class="preventive-raids grid-card">
       <mat-card-header>Preventive Raids</mat-card-header>
-      <mat-card-content class = "card-container">
-        <table mat-table [dataSource]="dataSource">
-          <ng-container matColumnDef="photo">
-            <th mat-header-cell *matHeaderCellDef>Photograph Details</th>
-            <td mat-cell *matCellDef="let element">
-              <img [src]="element.photoUrl" alt="Excise Raid" class="photo">
-              <p class="published-date"><em>Published On</em> {{ element.publishedOn }}</p>
-            </td>
-          </ng-container>
-          <ng-container class = "caption" matColumnDef="caption">
-            <th mat-header-cell *matHeaderCellDef>Caption</th>
-            <td mat-cell *matCellDef="let element">
-              <h6>{{ element.caption }}</h6>
-              <p class="caption-link">{{ element.captionLink }}</p>
-            </td>
-          </ng-container>
-          <!-- Table Header & Row Definitions -->
-          <tr mat-header-row *matHeaderRowDef="raidsColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: raidsColumns;"></tr>
-        </table>
+      <mat-card-content class="card-container">
+
+        @if (!dataSource || dataSource.length === 0) {
+          <div class="raids-empty">
+            <mat-icon>security</mat-icon>
+            <p>No preventive raid records found.</p>
+          </div>
+        }
+
+        @for (element of dataSource; track element; let i = $index) {
+          <div class="raid-entry">
+
+            <!-- Entry header: index badge + title + date -->
+            <div class="raid-entry__header">
+              <span class="raid-entry__index">#{{ i + 1 }}</span>
+              <div class="raid-entry__meta">
+                <h3 class="raid-entry__title">{{ element.title }}</h3>
+                <span class="raid-entry__date">
+                  <mat-icon>calendar_today</mat-icon>
+                  Published On {{ element.date | date: 'dd/MM/yyyy' }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Two-column body: content left, images right -->
+            <div class="raid-entry__body">
+
+              <!-- Left: description -->
+              <div class="raid-entry__content">
+                @if (element.subject) {
+                  <p class="raid-entry__subject" [innerHTML]="renderBold(element.subject)"></p>
+                } @else {
+                  <p class="raid-entry__no-subject">No description provided.</p>
+                }
+              </div>
+
+              <!-- Right: photos -->
+              <div class="raid-entry__gallery">
+                @if (element.images && element.images.length > 0) {
+                  @for (img of element.images; track img) {
+                    <a [href]="getRaidImageUrl(img.image)" target="_blank" rel="noopener noreferrer" class="raid-entry__photo-link">
+                      <img [src]="getRaidImageUrl(img.image)" alt="{{ element.title }}" class="raid-entry__photo">
+                    </a>
+                  }
+                } @else {
+                  <p class="raid-entry__no-images">No images uploaded.</p>
+                }
+              </div>
+
+            </div>
+
+          </div>
+        }
+
       </mat-card-content>
     </mat-card>
   }
@@ -36,17 +76,25 @@
           <mat-radio-button value="act">Acts</mat-radio-button>
           <mat-radio-button value="rule">Rules</mat-radio-button>
           <mat-radio-button value="circular">Circulars</mat-radio-button>
+          <mat-radio-button value="license">Flash Notification</mat-radio-button>
           <mat-radio-button value="all">All</mat-radio-button>
         </mat-radio-group>
         <table mat-table [dataSource]="filteredNotifications" class="mat-elevation-z8">
           >
           <ng-container matColumnDef="date">
             <th mat-header-cell *matHeaderCellDef> Date </th>
-            <td mat-cell *matCellDef="let notification"> {{ notification.date }} </td>
+            <td mat-cell *matCellDef="let notification"> {{ notification.date | date: 'dd/MM/yyyy' }} </td>
           </ng-container>
           <ng-container matColumnDef="subject">
             <th mat-header-cell *matHeaderCellDef> Subject </th>
-            <td mat-cell *matCellDef="let notification"> {{ notification.subject }} </td>
+            <td mat-cell *matCellDef="let notification"> 
+              <div class="subject-cell">
+                <div class="subject-title">{{ notification.subject }}</div>
+                @if (notification.message) {
+                  <div class="subject-message" [innerHTML]="renderBold(notification.message)"></div>
+                }
+              </div>
+            </td>
           </ng-container>
           <ng-container matColumnDef="download">
             <th mat-header-cell *matHeaderCellDef></th>

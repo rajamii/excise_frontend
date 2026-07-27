@@ -15,6 +15,7 @@ import { LicenseTitle } from '../../../../../core/models/license-title.model';
 export class ManageComponent implements OnInit {
   licenseTitle: LicenseTitle = { 
     id: undefined,
+    name: '',
     description: '' 
   };
   isEditMode = false;

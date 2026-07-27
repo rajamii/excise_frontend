@@ -251,12 +251,8 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     companyname: 'Company Name',
     company_address: 'Company Address',
     companyaddress: 'Company Address',
-    company_pan: 'Company PAN',
-    companypan: 'Company PAN',
-    company_cin: 'Company CIN',
-    companycin: 'Company CIN',
-    incorporationdate: 'Incorporation Date',
-    incorporation_date: 'Incorporation Date',
+    company_gst: 'Company GST Number',
+    companygst: 'Company GST Number',
     company_phone_number: 'Company Phone Number',
     companyphonenumber: 'Company Phone Number',
     company_email: 'Company Email Id',
@@ -303,6 +299,10 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
   }
 
   private get selectedModeOfOperation(): string {
+    if (this.isCompanyType) {
+      const unitData = this.getParsedSession<any>('unitDetailsData');
+      return String(unitData?.mode_of_operation ?? unitData?.modeOfOperation ?? '').trim();
+    }
     const applicantData = this.getParsedSession<ApplicantDeclarationData>('applicantDetailsData');
     return String(applicantData?.mode_of_operation ?? applicantData?.modeOfOperation ?? '').trim();
   }
@@ -354,12 +354,12 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       { title: 'Application Type', data: this.selectLicenseData },
       { title: 'Basic Information', data: this.keyInfoData },
       { title: 'Applicant Details', data: this.applicantDetailsData },
-      { title: 'Site Details', data: this.siteDetailsData },
       {
         title: 'Company Details',
         data: this.unitDetailsData,
         condition: () => this.isCompanyType
-      }
+      },
+      { title: 'Site Details', data: this.siteDetailsData }
     ];
   }
 
@@ -370,6 +370,24 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     } catch (e) {
       console.error(`❌ Failed to parse session key ${key}:`, e);
       return null;
+    }
+  }
+
+  /**
+   * Subcategory IDs exempt from Trade License requirement:
+   * Foreign Liquor Retail Shop (10), Retail Sale of Denatured Spirit (11),
+   * Brewing/Sale of Pachwai by Retail (23), Brewing of Pachwai (24),
+   * Departmental Store (30)
+   */
+  private readonly TRADE_LICENSE_EXEMPT_SUBCATEGORY_IDS = new Set([10, 11, 23, 24, 30]);
+
+  private isTradeLicenseExempt(): boolean {
+    try {
+      const keyInfo = this.getParsedSession<any>('keyInfoData');
+      const subCatId = Number(keyInfo?.licenseSubCategory ?? keyInfo?.license_sub_category ?? 0);
+      return subCatId > 0 && this.TRADE_LICENSE_EXEMPT_SUBCATEGORY_IDS.has(subCatId);
+    } catch {
+      return false;
     }
   }
 
@@ -722,17 +740,62 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       if (!applicantData?.existing_license_category_id) {
         missingFields.push('Existing License Category');
       }
-      if (!applicantData?.existing_license_no) {
-        missingFields.push('Existing License Number');
-      }
-    }
 
-    if (applicantData?.family_excise_license === 'Yes') {
-      if (!applicantData?.family_license_category_id) {
-        missingFields.push('Family License Category');
+      if (!applicantData?.father_husband_name) {
+        console.error('Missing: Father/Husband Name');
+        missingFields.push('Father/Husband Name');
+      } else {
+        console.log('Father/Husband Name OK');
       }
-      if (!applicantData?.family_license_no) {
-        missingFields.push('Family License Number');
+
+      if (!applicantData?.dob) {
+        console.error('Missing: Date of Birth');
+        missingFields.push('Date of Birth');
+      } else {
+        console.log('DOB OK');
+      }
+
+      if (!applicantData?.gender) {
+        console.error('Missing: Gender');
+        missingFields.push('Gender');
+      } else {
+        console.log('Gender OK');
+      }
+
+      if (!applicantData?.email) {
+        console.error('Missing: Email');
+        missingFields.push('Email');
+      } else {
+        console.log('Email OK');
+      }
+
+      if (!applicantData?.mobile_number) {
+        console.error('Missing: Mobile Number');
+        missingFields.push('Mobile Number');
+      } else {
+        console.log('Mobile Number OK');
+      }
+
+      if (this.requiresNationalityDocument && !applicantData?.coi_rc_ss) {
+        missingFields.push('Certificate Type');
+      }
+
+      if (applicantData?.has_excise_license === 'Yes') {
+        if (!applicantData?.existing_license_category_id) {
+          missingFields.push('Existing License Category');
+        }
+        if (!applicantData?.existing_license_no) {
+          missingFields.push('Existing License Number');
+        }
+      }
+
+      if (applicantData?.family_excise_license === 'Yes') {
+        if (!applicantData?.family_license_category_id) {
+          missingFields.push('Family License Category');
+        }
+        if (!applicantData?.family_license_no) {
+          missingFields.push('Family License Number');
+        }
       }
     }
 
@@ -790,9 +853,22 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     } else {
     }
 
-    if (!siteData?.location) {
-      console.error('Missing: Location Name');
-      missingFields.push('Location Name');
+    const categoryId = siteData?.location_category;
+    let isRural = false;
+    if (categoryId) {
+      const categoriesRaw = sessionStorage.getItem('locationCategories');
+      const categories = categoriesRaw ? JSON.parse(categoriesRaw) : [];
+      const category = categories.find((c: any) => c.id === Number(categoryId));
+      isRural = category ? (category.isRural ?? category.is_rural ?? false) : false;
+    }
+
+    if (isRural) {
+      if (!siteData?.block) {
+        console.error('Missing: Block');
+        missingFields.push('Block');
+      } else {
+        console.log('Block OK');
+      }
     } else {
     }
 
@@ -826,9 +902,16 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     } else {
     }
 
-    if (!siteData?.trade_license_covered) {
-      console.error('Missing: Trade License Covered');
-      missingFields.push('Trade License Covered');
+    if (!this.isTradeLicenseExempt()) {
+      if (!siteData?.trade_license_covered) {
+        console.error('Missing: Trade License Covered');
+        missingFields.push('Trade License Covered');
+      } else {
+        console.log('Trade License Covered OK');
+      }
+      if (siteData?.trade_license_covered === 'No') {
+        missingFields.push('Trade License Covered');
+      }
     } else {
     }
     if (siteData?.trade_license_covered === 'No') {
@@ -875,7 +958,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       }
     }
 
-    if (siteData?.trade_license_covered === 'Yes' && !docs.get('trade_license')) {
+    if (!this.isTradeLicenseExempt() && siteData?.trade_license_covered === 'Yes' && !docs.get('trade_license')) {
       missingFields.push('Trade License');
     }
 

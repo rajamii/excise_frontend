@@ -1,0 +1,194 @@
+<div class="scd-wrapper">
+
+  <!-- ─── Header ─────────────────────────────────────────────────────── -->
+  <div class="scd-header">
+    <div class="scd-header__left">
+      <div class="scd-header__icon">
+        <mat-icon>subdirectory_arrow_right</mat-icon>
+      </div>
+      <div>
+        <h2 class="scd-header__title">Sub Categories</h2>
+        <p class="scd-header__subtitle">
+          <mat-icon class="scd-header__cat-icon">list_alt</mat-icon>
+          {{ category.licenseCategory }}
+          <span *ngIf="category.isActive === false" class="scd-inactive-badge">Inactive</span>
+        </p>
+      </div>
+    </div>
+    <div class="scd-header__right">
+      <span class="scd-count-badge">{{ subcategories.length }} items</span>
+      <button mat-icon-button class="scd-close-btn" (click)="close()" matTooltip="Close">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- ─── Toolbar ────────────────────────────────────────────────────── -->
+  <div class="scd-toolbar">
+    <span class="scd-toolbar__title">Sub Category List</span>
+    <button mat-flat-button color="primary" class="scd-add-btn"
+            (click)="openAddForm()" *ngIf="!showAddForm && editingId === null">
+      <mat-icon>add</mat-icon> Add Sub Category
+    </button>
+  </div>
+
+  <!-- ─── Inline Add Form ────────────────────────────────────────────── -->
+  <div class="scd-add-form" *ngIf="showAddForm" style="display: flex; flex-direction: column; gap: 8px; width: 100%">
+    <div style="display: flex; gap: 12px; width: 100%">
+      <mat-form-field appearance="outline" class="scd-add-form__field" [style.flex]="isDryDayPermittedCategory ? '2' : '1'">
+        <mat-label>New Sub Category Name</mat-label>
+        <mat-icon matPrefix style="color:#64748b;font-size:18px;height:18px;width:18px;margin-right:4px">subdirectory_arrow_right</mat-icon>
+        <input matInput [(ngModel)]="formDescription" placeholder="Enter subcategory name"
+               (keyup.enter)="saveNew()" autofocus />
+      </mat-form-field>
+      <mat-form-field appearance="outline" style="flex: 1" *ngIf="isDryDayPermittedCategory">
+        <mat-label>Dry Day Permit Type</mat-label>
+        <mat-select [(ngModel)]="formDryDayFeeType">
+          <mat-option [value]="null">None</mat-option>
+          <mat-option value="per_annum">Per Annum</mat-option>
+          <mat-option value="per_day">Per Day</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+    <div class="scd-add-form__actions" style="margin-top: 0">
+      <button mat-stroked-button (click)="cancelForm()" class="scd-btn-cancel">Cancel</button>
+      <button mat-flat-button color="primary" (click)="saveNew()"
+              [disabled]="!formDescription.trim() || isSaving" class="scd-btn-save">
+        <mat-spinner *ngIf="isSaving" diameter="16" style="margin-right:6px"></mat-spinner>
+        <mat-icon *ngIf="!isSaving">save</mat-icon>
+        {{ isSaving ? 'Saving...' : 'Save' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- ─── Loading ────────────────────────────────────────────────────── -->
+  <div class="scd-loading" *ngIf="isLoading">
+    <mat-spinner diameter="36"></mat-spinner>
+    <span>Loading subcategories...</span>
+  </div>
+
+  <!-- ─── Table ──────────────────────────────────────────────────────── -->
+  <div class="scd-table-wrapper" *ngIf="!isLoading">
+    <mat-table [dataSource]="subcategories" class="scd-table">
+
+      <!-- # Column -->
+      <ng-container matColumnDef="sno">
+        <mat-header-cell *matHeaderCellDef class="sno-col">#</mat-header-cell>
+        <mat-cell *matCellDef="let row; let i = index" class="sno-col">{{ i + 1 }}</mat-cell>
+      </ng-container>
+
+      <!-- Description Column -->
+      <ng-container matColumnDef="description">
+        <mat-header-cell *matHeaderCellDef>Sub Category Name</mat-header-cell>
+        <mat-cell *matCellDef="let row">
+
+          <ng-container *ngIf="editingId === row.id; else viewMode">
+            <input class="scd-edit-input"
+                   [(ngModel)]="formDescription"
+                   (keyup.enter)="saveEdit(row)"
+                   (keyup.escape)="cancelEdit()"
+                   placeholder="Sub category name"
+                   autofocus />
+          </ng-container>
+
+          <ng-template #viewMode>
+            <span class="scd-desc-text">{{ row.description }}</span>
+          </ng-template>
+
+        </mat-cell>
+      </ng-container>
+
+      <!-- Dry Day Fee Type Column -->
+      <ng-container matColumnDef="dryDay">
+        <mat-header-cell *matHeaderCellDef class="scd-dryday-col">Dry Day Permit</mat-header-cell>
+        <mat-cell *matCellDef="let row" class="scd-dryday-col">
+
+          <ng-container *ngIf="editingId === row.id; else dryDayView">
+            <select class="scd-edit-select" [(ngModel)]="formDryDayFeeType">
+              <option [ngValue]="null">None</option>
+              <option value="per_annum">Per Annum</option>
+              <option value="per_day">Per Day</option>
+            </select>
+          </ng-container>
+
+          <ng-template #dryDayView>
+            <span *ngIf="getDryDayFeeType(row) === 'per_annum'" class="scd-dryday-badge scd-dryday-badge--annum">
+              <mat-icon class="scd-dryday-badge__icon">calendar_today</mat-icon>
+              Annual
+            </span>
+            <span *ngIf="getDryDayFeeType(row) === 'per_day'" class="scd-dryday-badge scd-dryday-badge--day">
+              <mat-icon class="scd-dryday-badge__icon">today</mat-icon>
+              Per Day
+            </span>
+            <span *ngIf="!getDryDayFeeType(row)" class="scd-dryday-badge scd-dryday-badge--none">
+              <mat-icon class="scd-dryday-badge__icon">remove</mat-icon>
+              None
+            </span>
+          </ng-template>
+
+        </mat-cell>
+      </ng-container>
+
+      <!-- Status Column -->
+      <ng-container matColumnDef="status">
+        <mat-header-cell *matHeaderCellDef class="scd-status-col">Status</mat-header-cell>
+        <mat-cell *matCellDef="let row" class="scd-status-col">
+          <ng-container *ngIf="editingId !== row.id">
+            <span class="scd-status-badge"
+                  [class.scd-status-badge--active]="row.isActive !== false"
+                  [class.scd-status-badge--inactive]="row.isActive === false">
+              <span class="scd-status-dot"></span>
+              {{ row.isActive !== false ? 'Active' : 'Inactive' }}
+            </span>
+          </ng-container>
+        </mat-cell>
+      </ng-container>
+
+      <!-- Actions Column -->
+      <ng-container matColumnDef="actions">
+        <mat-header-cell *matHeaderCellDef class="scd-actions-col">Actions</mat-header-cell>
+        <mat-cell *matCellDef="let row" class="scd-actions-col">
+
+          <ng-container *ngIf="editingId === row.id; else normalActions">
+            <button mat-flat-button color="primary" class="scd-save-inline-btn"
+                    (click)="saveEdit(row)" [disabled]="!formDescription.trim() || isSaving">
+              <mat-spinner *ngIf="isSaving" diameter="14" style="margin-right:4px"></mat-spinner>
+              <mat-icon *ngIf="!isSaving" style="font-size:16px;height:16px;width:16px">save</mat-icon>
+              {{ isSaving ? '...' : 'Save' }}
+            </button>
+            <button mat-icon-button (click)="cancelEdit()" matTooltip="Cancel">
+              <mat-icon style="color:#94a3b8">close</mat-icon>
+            </button>
+          </ng-container>
+
+          <ng-template #normalActions>
+            <button mat-icon-button color="primary" matTooltip="Edit"
+                    (click)="startEdit(row)"
+                    [disabled]="showAddForm || (editingId !== null && editingId !== row.id)">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button
+                    [color]="row.isActive !== false ? 'warn' : 'accent'"
+                    [matTooltip]="row.isActive !== false ? 'Deactivate' : 'Activate'"
+                    (click)="onToggleActive(row)"
+                    [disabled]="showAddForm || editingId !== null">
+              <mat-icon>{{ row.isActive !== false ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+            </button>
+          </ng-template>
+
+        </mat-cell>
+      </ng-container>
+
+      <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+      <mat-row *matRowDef="let row; columns: displayedColumns;"
+               [class.scd-row--editing]="editingId === row.id"></mat-row>
+    </mat-table>
+
+    <!-- Empty state -->
+    <div class="scd-empty" *ngIf="subcategories.length === 0 && !showAddForm">
+      <mat-icon>inbox</mat-icon>
+      <p>No sub categories yet. Click <strong>Add Sub Category</strong> to get started.</p>
+    </div>
+  </div>
+
+</div>

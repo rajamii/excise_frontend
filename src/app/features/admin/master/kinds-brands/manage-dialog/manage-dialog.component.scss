@@ -1,0 +1,142 @@
+.container-fluid {
+  padding: 0;
+
+  h2[mat-dialog-title] {
+    color: #ffffff;
+    background-color: #1C2B78;
+    padding: 16px;
+    margin: 0;
+    font-size: 1.1rem;
+    letter-spacing: 0.04em;
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  mat-dialog-content {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 20px 24px 8px;
+    max-height: 62vh;
+    overflow-y: auto;
+  }
+
+  mat-form-field {
+    width: 100%;
+  }
+
+  // ── Pack Sizes Section ─────────────────────────────────────────────────────
+  .pack-sizes-section {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px;
+    background: linear-gradient(135deg, #f8faff 0%, #f0f4ff 100%);
+    margin-top: 4px;
+
+    .pack-sizes-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+
+      .section-icon {
+        color: #1C2B78;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+
+      .section-title {
+        font-weight: 700;
+        font-size: 0.9rem;
+        color: #1e293b;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+    }
+
+    .chips-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+      min-height: 36px;
+
+      .size-chip {
+        display: flex;
+        align-items: center;
+        background: linear-gradient(135deg, #1C2B78 0%, #2d4de0 100%);
+        color: #fff;
+        border-radius: 20px;
+        padding: 4px 8px 4px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(28, 43, 120, 0.22);
+        transition: box-shadow 0.2s;
+
+        &:hover {
+          box-shadow: 0 4px 12px rgba(28, 43, 120, 0.35);
+        }
+
+        .chip-remove-btn {
+          width: 22px;
+          height: 22px;
+          line-height: 22px;
+          padding: 0;
+          margin-left: 4px;
+          color: rgba(255, 255, 255, 0.7);
+
+          mat-icon {
+            font-size: 14px;
+            width: 14px;
+            height: 14px;
+          }
+
+          &:hover {
+            color: #ff6b6b;
+          }
+        }
+      }
+
+      .no-sizes-text {
+        color: #94a3b8;
+        font-style: italic;
+        font-size: 0.85rem;
+        padding: 6px 0;
+      }
+    }
+
+    .loading-sizes {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+
+      span {
+        font-size: 0.8rem;
+        color: #64748b;
+      }
+    }
+
+    .add-size-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      .size-input {
+        max-width: 160px;
+        flex-shrink: 0;
+      }
+    }
+  }
+
+  mat-dialog-actions {
+    padding: 12px 24px 20px;
+    border-top: 1px solid #f1f5f9;
+    margin-top: 0;
+  }
+}

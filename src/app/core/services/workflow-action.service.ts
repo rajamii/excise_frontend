@@ -32,7 +32,9 @@ export interface ApplicationWorkflowData {
     | 'license-renewal'
     | 'company-registration'
     | 'company-collaboration'
-    | 'salesman-barman-registration'; // Changed to type to match component
+    | 'label-registration'
+    | 'salesman-barman-registration'
+    | 'special-permit';
   status: string;
   referenceNo?: string;
   allowedActionConfigs?: WorkflowActionConfig[];
@@ -120,7 +122,9 @@ export class WorkflowActionService {
       case 'license-renewal':
       case 'company-registration':
       case 'company-collaboration':
+      case 'label-registration':
       case 'salesman-barman-registration':
+      case 'special-permit':
         if (!workflowApplicationId) {
           return of([]);
         }
@@ -150,6 +154,7 @@ export class WorkflowActionService {
     const hasSpecialConditionalFlag = (stage: any): boolean => {
       const condition = stage?.condition;
       if (!condition || typeof condition !== 'object') return false;
+      if (String(stage?.action || '').toUpperCase().trim() === 'REVERT') return false;
       return condition['is_reverted'] === true
         || condition['isReverted'] === true
         || condition['objections_resolved'] === true
@@ -231,6 +236,13 @@ export class WorkflowActionService {
         icon = 'visibility';
         color = 'info';
         tooltip = 'View details';
+        requiresConfirmation = false;
+      } else if (explicitAction === 'REVERT') {
+        action = 'REVERT';
+        label = 'Revert';
+        icon = 'undo';
+        color = 'warning';
+        tooltip = 'Revert this application';
         requiresConfirmation = false;
       } else if (explicitAction) {
         return null;
@@ -314,6 +326,7 @@ export class WorkflowActionService {
       case 'license-renewal':
       case 'company-registration':
       case 'company-collaboration':
+      case 'label-registration':
       case 'salesman-barman-registration':
         const workflowApplicationId = this.getWorkflowApplicationId(data);
         const targetStage = typeof actionConfig === 'string' ? undefined : actionConfig.targetStage;

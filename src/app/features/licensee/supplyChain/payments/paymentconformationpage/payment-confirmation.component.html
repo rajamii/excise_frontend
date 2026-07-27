@@ -5,9 +5,22 @@
     <div class="alert alert-warning d-flex align-items-start mb-4 shadow-sm border-warning" *ngIf="showSecurityRechargeAlert()" style="border-left: 5px solid #ffc107; background-color: #fffbeb;">
       <i class="bi bi-exclamation-triangle-fill me-3 text-warning" style="font-size: 1.5rem;"></i>
       <div>
-        <h5 class="alert-heading fw-bold mb-1" style="color: #856404 !important; font-size: 1.1rem;">Security Deposit Wallet Recharge Required</h5>
+        <h5 class="alert-heading fw-bold mb-1" style="color: #856404 !important; font-size: 1.1rem;">{{ getRechargeAlertTitle() }}</h5>
         <p class="mb-0" style="color: #856404; font-size: 0.95rem;">
-          To complete your new license application successfully, please recharge/add money to your <strong>Security Deposit Wallet</strong> below with the required amount. Recharging is sufficient to complete this payment, and the security deposit will remain in your wallet as active security balance (it will not be debited, and no manual "Pay Now" action is required).
+          <!-- Case 1: License fee paid, security deposit unpaid -->
+          <span *ngIf="isLicenseFeeCompleteForPendingNewLicenseAlert() && !isSecurityDepositCompleteForPendingNewLicenseAlert()">
+            <span style="color: #2e7d32; font-weight: 600;">You have paid the license fee for application <strong>{{ pendingNewLicenseRef }}</strong>.</span>
+            <span style="color: #c62828; font-weight: 600;"> Now recharge the security fee by Clicking on ADD MONEY Button on Security Deposit Wallet and complete the application successfully.</span>
+          </span>
+          <!-- Case 2: Security deposit paid, license fee unpaid -->
+          <span *ngIf="!isLicenseFeeCompleteForPendingNewLicenseAlert() && isSecurityDepositCompleteForPendingNewLicenseAlert()">
+            <span style="color: #2e7d32; font-weight: 600;">You have paid the security deposit for application <strong>{{ pendingNewLicenseRef }}</strong>.</span>
+            <span style="color: #c62828; font-weight: 600;"> Now recharge the license fee by Clicking on ADD MONEY Button on License Fee Wallet and complete the application successfully.</span>
+          </span>
+          <!-- Case 3: Both unpaid -->
+          <span *ngIf="!isLicenseFeeCompleteForPendingNewLicenseAlert() && !isSecurityDepositCompleteForPendingNewLicenseAlert()">
+            To complete your <span *ngIf="isCompanyCollaborationPendingRef()">company collaboration</span><span *ngIf="!isCompanyCollaborationPendingRef()">new license</span> application <strong *ngIf="pendingNewLicenseRef">({{ pendingNewLicenseRef }})</strong> successfully, please recharge/add money to your <strong>License Fee Wallet</strong> and <strong>Security Deposit Wallet</strong> below with the required amounts.
+          </span>
         </p>
       </div>
     </div>
@@ -109,6 +122,7 @@
           <span class="currency">&#8377;</span>{{ securityDepositBalance | number:'1.2-2' }}
         </div>
         <div class="wallet-summary-meta">Used for manufacturing license security deposit</div>
+
         <div class="wallet-summary-actions">
           <button class="btn btn-primary btn-sm" (click)="addMoney('security_deposit'); $event.stopPropagation()">
             <i class="bi bi-plus-circle me-1"></i>Add Money

@@ -332,7 +332,18 @@
       font-size: 0.7rem;
       font-weight: 700;
       margin-left: 8px;
-      pointer-events: none;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.1s ease, opacity 0.1s ease;
+
+      &:hover {
+        opacity: 0.85;
+        transform: scale(1.05);
+      }
+
+      &:active {
+        transform: scale(0.95);
+      }
     }
   }
 
@@ -976,5 +987,272 @@
 
   .txn-detail-section {
     padding: 10px 12px;
+  }
+}
+
+/* ── Advanced Filter Toggle Button ── */
+.advanced-filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 13px 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    color: #94a3b8;
+    transition: color 0.2s ease;
+  }
+
+  &:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #1e293b;
+    
+    mat-icon {
+      color: #64748b;
+    }
+  }
+
+  &.active {
+    background: rgba(99, 102, 241, 0.08);
+    border-color: #6366f1;
+    color: #6366f1;
+
+    mat-icon {
+      color: #6366f1;
+    }
+  }
+}
+
+/* ── Advanced Filters Panel ── */
+.advanced-filters-panel {
+  background: rgba(248, 250, 252, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  padding: 1.25rem;
+  margin-top: 1.25rem;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02), 0 4px 12px rgba(15, 23, 42, 0.05);
+  animation: slideDown 0.25s ease-out;
+
+  .filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    align-items: flex-end;
+  }
+
+  .filter-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+
+    label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      text-align: left;
+    }
+
+    .filter-select {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 0.55rem 0.75rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #1e293b;
+      outline: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2364748b' width='18px' height='18px'%3E%3Cpath d='M0 0h24v24H0z' fill='none'/%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      padding-right: 32px;
+
+      &:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+      }
+
+      &:hover {
+        border-color: #94a3b8;
+      }
+    }
+  }
+
+  .filters-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px dashed #e2e8f0;
+  }
+
+  .reset-filters-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: transparent;
+    border: 1px solid #fca5a5;
+    border-radius: 8px;
+    padding: 0.45rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #ef4444;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+
+    &:hover {
+      background: #fef2f2;
+      color: #dc2626;
+      border-color: #f87171;
+    }
+  }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Premium Search Prompt Placeholder Card styling */
+.placeholder-panel {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 3rem 1.5rem !important;
+  background: radial-gradient(circle at 50% 50%, rgba(248, 250, 252, 0.5) 0%, rgba(241, 245, 249, 0.2) 100%) !important;
+  border-radius: 16px;
+  border: 1px dashed #cbd5e1;
+  margin-top: 1rem;
+}
+
+.search-prompt-card {
+  position: relative;
+  max-width: 580px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 20px;
+  padding: 2.5rem 2rem;
+  text-align: center;
+  box-shadow: 0 10px 25px -5px rgba(148, 163, 184, 0.1), 0 8px 10px -6px rgba(148, 163, 184, 0.05);
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 25px -5px rgba(148, 163, 184, 0.15), 0 10px 10px -5px rgba(148, 163, 184, 0.08);
+    border-color: rgba(99, 102, 241, 0.4);
+
+    .prompt-icon {
+      transform: scale(1.1) rotate(5deg);
+      color: #4f46e5;
+    }
+  }
+
+  .glow-overlay {
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.03) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .prompt-content {
+    animation: fadeIn 0.4s ease-out;
+  }
+
+  .prompt-icon {
+    font-size: 56px;
+    width: 56px;
+    height: 56px;
+    color: #6366f1;
+    margin-bottom: 1.25rem;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  h3 {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 0.75rem;
+    letter-spacing: -0.02em;
+    border: none;
+    padding: 0;
+  }
+
+  p {
+    font-size: 0.95rem;
+    color: #475569;
+    line-height: 1.6;
+    margin-bottom: 1.75rem;
+  }
+
+  .prompt-tips {
+    display: inline-flex;
+    align-items: center;
+    background: #eef2ff;
+    border: 1px solid #e0e7ff;
+    border-radius: 30px;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #3730a3;
+    gap: 0.5rem;
+    margin: 0 auto;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      color: #6366f1;
+    }
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.search-prompt-card.not-found-card {
+  &:hover {
+    border-color: rgba(239, 68, 68, 0.4);
+    box-shadow: 0 20px 25px -5px rgba(239, 68, 68, 0.12), 0 10px 10px -5px rgba(239, 68, 68, 0.05);
+
+    .prompt-icon {
+      color: #dc2626 !important;
+      transform: scale(1.1) rotate(-5deg);
+    }
+  }
+
+  .glow-overlay.red-glow {
+    background: radial-gradient(circle, rgba(239, 68, 68, 0.05) 0%, transparent 60%);
   }
 }

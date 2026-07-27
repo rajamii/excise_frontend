@@ -1,0 +1,155 @@
+.container-fluid {
+  padding-top: 10px;
+}
+
+mat-card {
+  mat-card-header {
+    padding: 12px 20px;
+    background: linear-gradient(90deg, #1C2B78 0%, #2d3f9e 100%);
+    color: #ffffff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 4px 4px 0 0;
+
+    .page-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 20px;
+      font-weight: 600;
+      color: #ffffff;
+      letter-spacing: 0.3px;
+
+      mat-icon {
+        font-size: 22px;
+        width: 22px;
+        height: 22px;
+        color: rgba(255, 255, 255, 0.85);
+      }
+    }
+
+    button {
+      background: rgba(255, 255, 255, 0.15) !important;
+      border: 1px solid rgba(255, 255, 255, 0.3) !important;
+      color: #ffffff !important;
+      border-radius: 8px !important;
+      font-weight: 600 !important;
+      padding: 0 16px !important;
+      transition: all 0.2s ease !important;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.25) !important;
+        border-color: rgba(255, 255, 255, 0.5) !important;
+      }
+
+      mat-icon {
+        color: #ffffff !important;
+      }
+    }
+  }
+
+  mat-card-content {
+    padding: 16px 20px;
+
+    .table-container {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 2px 12px rgba(28, 43, 120, 0.07);
+      overflow: hidden;
+
+      mat-table {
+        min-width: 600px;
+        width: 100%;
+        background: transparent;
+      }
+
+      ::ng-deep {
+        mat-header-row {
+          background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%) !important;
+          min-height: 48px;
+        }
+
+        mat-header-cell {
+          font-size: 0.72rem !important;
+          font-weight: 800 !important;
+          text-transform: uppercase;
+          letter-spacing: 0.07em;
+          color: #e2e8f0 !important;
+          background: transparent !important;
+          border-bottom: 2px solid #334155 !important;
+
+          &::before {
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-right: 7px;
+            background: #34d399;
+            flex-shrink: 0;
+            vertical-align: middle;
+          }
+        }
+
+        mat-row {
+          border-bottom: 1px solid #f1f5f9;
+          transition: background 0.15s ease;
+
+          &:nth-child(even) { background: #f8fafc; }
+          &:hover { background: #eff6ff !important; }
+        }
+
+        mat-cell {
+          color: #334155;
+          font-size: 0.875rem;
+        }
+      }
+    }
+  }
+}
+
+// Image count chip
+.images-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(28, 43, 120, 0.08);
+  color: #1C2B78;
+  border: 1px solid rgba(28, 43, 120, 0.2);
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    line-height: 14px;
+  }
+}
+
+// Empty state
+.empty-state {
+  padding: 48px 32px;
+  text-align: center;
+  color: #718096;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    color: #cbd5e0;
+  }
+
+  p {
+    margin: 0;
+    font-style: italic;
+  }
+}

@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject, HostListener } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, HostListener, DOCUMENT } from '@angular/core';
 import {
   Router,
   NavigationCancel,
@@ -34,9 +34,10 @@ import { UiLoadingService } from './core/services/ui-loading.service';
 export class AppComponent implements OnInit, OnDestroy {
 
   title = 'excise_frontend';
-  //showHeaderFooter = true; // Default to showing header/footer
   showCarousel = false;
   isOffline = typeof navigator !== 'undefined' ? !navigator.onLine : false;
+  isLoginRoute = false;  // tracks if we're on /login so we can show the back button
+  isForgotPasswordRoute = false; // tracks if we're on /forgot-password to hide layout chrome
 
   @HostListener('window:offline')
   setNetworkOffline() {
@@ -56,11 +57,22 @@ export class AppComponent implements OnInit, OnDestroy {
   private dialog = inject(MatDialog);
   readonly loading = inject(UiLoadingService);
   private wasAuthenticated = false;
+  private doc = inject(DOCUMENT);
+  private preloaderRemoved = false;
   
   constructor() {
     // Listen for route changes to toggle header/footer visibility
     this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => {
       this.updateLayoutVisibility();
+      const path = this.normalizePath(this.router.url);
+      this.isLoginRoute = path.startsWith('/login');
+      this.isForgotPasswordRoute = path.startsWith('/forgot-password');
+      // Toggle body class for login-specific dark background
+      if (this.isLoginRoute || this.isForgotPasswordRoute) {
+        this.doc.body.classList.add('login-page');
+      } else {
+        this.doc.body.classList.remove('login-page');
+      }
     });
 
     this.router.events
@@ -69,7 +81,10 @@ export class AppComponent implements OnInit, OnDestroy {
         if (event instanceof NavigationStart) {
           if (this.shouldShowRouteLoader(event.url)) this.loading.setRouteLoading(true);
         }
-        if (event instanceof NavigationEnd) this.loading.setRouteLoading(false);
+        if (event instanceof NavigationEnd) {
+          this.loading.setRouteLoading(false);
+          this.removePreloader();
+        }
         if (event instanceof NavigationCancel) this.loading.setRouteLoading(false);
         if (event instanceof NavigationError) this.loading.setRouteLoading(false);
       });
@@ -102,6 +117,10 @@ export class AppComponent implements OnInit, OnDestroy {
     this.inactivityService.stopWatching();
   }
 
+  goToHome(): void {
+    this.router.navigate(['/']);
+  }
+
   private updateLayoutVisibility() {
     let currentRoute = this.route.firstChild;
     while (currentRoute?.firstChild) {
@@ -131,5 +150,20 @@ export class AppComponent implements OnInit, OnDestroy {
     const withoutHash = (url ?? '').split('#')[0] ?? '';
     const withoutQuery = withoutHash.split('?')[0] ?? '';
     return withoutQuery.trim();
+  }
+
+  private removePreloader(): void {
+    if (this.preloaderRemoved) return;
+    this.preloaderRemoved = true;
+
+    const preloader = this.doc.getElementById('app-preloader');
+    if (!preloader) return;
+
+    const runAfterPaint = globalThis.requestAnimationFrame ?? ((callback: () => void) => globalThis.setTimeout(callback, 16));
+
+    runAfterPaint(() => {
+      preloader.classList.add('is-leaving');
+      globalThis.setTimeout(() => preloader.remove(), 320);
+    });
   }
 }

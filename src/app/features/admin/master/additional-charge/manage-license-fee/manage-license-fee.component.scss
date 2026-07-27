@@ -1,0 +1,58 @@
+.container-fluid {
+    padding: 0;
+
+    h2 {
+        background: linear-gradient(120deg, #1C2B78 0%, #2d3f9e 60%, #4f46e5 100%);
+        color: #fff;
+        margin: 0;
+        padding: 20px 24px;
+        font-size: 18px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        position: relative;
+
+        &::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #06b6d4 0%, #34d399 50%, #f59e0b 100%);
+        }
+    }
+
+    mat-dialog-content {
+        padding: 20px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 540px;
+    }
+
+    mat-dialog-actions {
+        padding: 16px 24px;
+        gap: 12px;
+        border-top: 2px solid #f1f5f9;
+        background: #fafbff;
+        display: flex;
+        justify-content: center;
+
+        button {
+            min-width: 100px;
+            font-weight: 700 !important;
+            border-radius: 8px !important;
+
+            &[color="primary"] {
+                background: linear-gradient(135deg, #1C2B78 0%, #4f46e5 100%) !important;
+                color: #fff !important;
+            }
+
+            &[color="warn"] {
+                background: rgba(239, 68, 68, 0.1) !important;
+                color: #dc2626 !important;
+                border: 1px solid rgba(239, 68, 68, 0.3) !important;
+            }
+        }
+    }
+}

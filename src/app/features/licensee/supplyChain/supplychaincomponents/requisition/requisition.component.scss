@@ -944,6 +944,19 @@
   }
 }
 
+// Under Process summary card — shown only for commissioner
+.summary-card.underprocess-requests {
+  --summary-accent-start: #7c3aed;
+  --summary-accent-end: #6d28d9;
+  .card-icon {
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    color: white;
+  }
+  .card-value {
+    color: #7c3aed;
+  }
+}
+
 // Priority column
 .register-table {
   .priority {

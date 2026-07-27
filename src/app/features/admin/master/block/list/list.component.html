@@ -1,0 +1,41 @@
+<div class="card p-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Blocks</h3>
+    <button mat-raised-button color="primary" (click)="onAdd()">
+      <mat-icon>add</mat-icon> Add Block
+    </button>
+  </div>
+
+  <div class="table-container mat-elevation-z2">
+    <mat-table [dataSource]="blockDataSource">
+      <ng-container matColumnDef="blockName">
+        <mat-header-cell *matHeaderCellDef> Block Name </mat-header-cell>
+        <mat-cell *matCellDef="let element"> {{ element.blockName }} </mat-cell>
+      </ng-container>
+
+      <ng-container matColumnDef="subcategory">
+        <mat-header-cell *matHeaderCellDef> Location Subcategory </mat-header-cell>
+        <mat-cell *matCellDef="let element"> {{ element.subcategoryName || element.subcategory }} </mat-cell>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <mat-header-cell *matHeaderCellDef class="text-center"> Actions </mat-header-cell>
+        <mat-cell *matCellDef="let element" class="text-center">
+          <button mat-icon-button color="primary" (click)="onEdit(element)">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-icon-button color="warn" (click)="onDelete(element)">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </mat-cell>
+      </ng-container>
+
+      <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+      <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+    </mat-table>
+
+    <div *ngIf="blockDataSource.length === 0" class="text-center p-3 text-muted">
+      No blocks found.
+    </div>
+  </div>
+</div>

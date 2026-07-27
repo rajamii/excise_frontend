@@ -25,6 +25,7 @@ import Swal from 'sweetalert2';
 export class RegistrationManagementComponent implements OnInit {
   private readonly companyApiBase = `${environment.apiBaseUrl}/transactional/company-registration`;
   private readonly collaborationApiBase = `${environment.apiBaseUrl}/transactional/company-collaboration`;
+  private readonly labelApiBase = `${environment.apiBaseUrl}/transactional/label-registration`;
   private readonly salesmanApiBase = `${environment.apiBaseUrl}/transactional/salesman_barman`;
 
   currentSection = '';
@@ -106,7 +107,7 @@ export class RegistrationManagementComponent implements OnInit {
   }
 
   isLicenseeUser(): boolean {
-    return this.roleService.isLicenseeRole();
+    return this.roleService.isLicenseeRole() || this.roleService.getCurrentUser()?.roleId === 16;
   }
 
   isAdminUser(): boolean {
@@ -273,6 +274,18 @@ export class RegistrationManagementComponent implements OnInit {
       return;
     }
 
+    if (this.currentSection === 'label-registration') {
+      this.router.navigate(['/supply-chain-view'], {
+        queryParams: {
+          type: 'label-registration',
+          id: row.id || row.applicationId,
+          ref: row.applicationId,
+          source: 'licensee'
+        }
+      });
+      return;
+    }
+
     this.router.navigate(['/supply-chain-view'], {
       queryParams: {
         type: 'company-registration',
@@ -288,7 +301,16 @@ export class RegistrationManagementComponent implements OnInit {
     if (!applicationId) return;
 
     const encoded = encodeURIComponent(applicationId);
-    this.http.get<any>(`${this.salesmanApiBase}/detail/${encoded}/`).subscribe({
+    let apiBase = this.salesmanApiBase;
+    if (this.currentSection === 'company-registration') {
+      apiBase = this.companyApiBase;
+    } else if (this.currentSection === 'company-collaboration') {
+      apiBase = this.collaborationApiBase;
+    } else if (this.currentSection === 'label-registration') {
+      apiBase = this.labelApiBase;
+    }
+
+    this.http.get<any>(`${apiBase}/detail/${encoded}/`).subscribe({
       next: (res: any) => {
         this.dialog.open(ApplicationMovementComponent, {
           width: '700px',
@@ -305,7 +327,7 @@ export class RegistrationManagementComponent implements OnInit {
 
   viewObjectionDetails(row: { id: string; applicationId: string; statusGroup?: string; hasObjectionHistory?: boolean }): void {
     if (!this.isAdminUser()) return;
-    if (this.currentSection !== 'salesman-barman-registration') return;
+    if (this.currentSection !== 'salesman-barman-registration' && this.currentSection !== 'company-registration') return;
     const hasHistory = Boolean((row as any)?.hasObjectionHistory) || String((row as any)?.statusGroup || '').toLowerCase() === 'objection';
     if (!hasHistory) return;
 
@@ -315,25 +337,32 @@ export class RegistrationManagementComponent implements OnInit {
     this.dialog.open(ObjectionDetailsDialogComponent, {
       width: 'min(980px, 96vw)',
       maxWidth: '96vw',
+      panelClass: 'objection-details-dialog',
       data: { applicationId }
     });
   }
 
   fixObjections(row: { id: string; applicationId: string; statusGroup?: string }): void {
     if (!this.isLicenseeUser()) return;
-    if (this.currentSection !== 'salesman-barman-registration') return;
+    if (this.currentSection !== 'salesman-barman-registration' && this.currentSection !== 'company-registration') return;
     if (String((row as any)?.statusGroup || '').toLowerCase() !== 'objection') return;
 
     const applicationId = String(row.applicationId || row.id || '').trim();
     if (!applicationId) return;
 
+    const appType = this.currentSection === 'company-registration' ? 'company-registration' : 'salesman-barman';
+
     this.dialog.open(SalesmanBarmanResolveObjectionsDialogComponent, {
       width: 'min(1020px, 96vw)',
       maxWidth: '96vw',
-      data: { applicationId }
+      data: { applicationId, appType }
     }).afterClosed().subscribe((ok) => {
       if (ok) {
-        this.loadSalesmanBarmanData();
+        if (appType === 'company-registration') {
+          this.loadCompanyData();
+        } else {
+          this.loadSalesmanBarmanData();
+        }
       }
     });
   }
@@ -361,11 +390,13 @@ export class RegistrationManagementComponent implements OnInit {
       return;
     }
 
-    this.unifiedDashboardService.getApplicationDetail(appId, 'salesman-barman').subscribe({
+    const type = this.currentSection === 'salesman-barman-registration' ? 'salesman-barman' : 'company-registration';
+
+    this.unifiedDashboardService.getApplicationDetail(appId, type).subscribe({
       next: (fullApp: any) => {
         const formattedApp = {
           ...fullApp,
-          type: 'salesman-barman',
+          type: type,
           applicationId: appId,
           raw: fullApp
         };
@@ -378,7 +409,7 @@ export class RegistrationManagementComponent implements OnInit {
         console.error('Error fetching application details:', err);
         const formattedApp = {
           ...row,
-          type: 'salesman-barman',
+          type: type,
           applicationId: appId,
           raw: row
         };
@@ -396,6 +427,9 @@ export class RegistrationManagementComponent implements OnInit {
     }
     if (this.currentSection === 'company-collaboration') {
       return 'Company Collaboration Entries';
+    }
+    if (this.currentSection === 'label-registration') {
+      return 'Label Registration Entries';
     }
     return 'Company Registration Entries';
   }
@@ -422,29 +456,106 @@ export class RegistrationManagementComponent implements OnInit {
       return;
     }
 
+    if (this.currentSection === 'label-registration') {
+      this.loadLabelRegistrationData();
+      return;
+    }
+
     this.loadCompanyData();
+  }
+
+  private loadLabelRegistrationData(): void {
+    forkJoin({
+      countsResult: this.http
+        .get<any>(`${this.labelApiBase}/dashboard-counts/`)
+        .pipe(
+          map((data) => ({ data, error: null as any })),
+          catchError((error) => of({ data: null, error }))
+        ),
+      groupedResult: this.http
+        .get<any>(`${this.labelApiBase}/list-by-status/`)
+        .pipe(
+          map((data) => ({ data, error: null as any })),
+          catchError((error) => of({ data: null, error }))
+        ),
+      listResult: this.http
+        .get<any>(`${this.labelApiBase}/list/`)
+        .pipe(
+          map((data) => ({ data, error: null as any })),
+          catchError((error) => of({ data: null, error }))
+        )
+    }).subscribe({
+      next: ({ countsResult, groupedResult, listResult }) => {
+        const groupedRows = groupedResult.data
+          ? this.flattenLabelRegistrationGroupedData(groupedResult.data)
+          : [];
+        const fallbackRows = groupedRows.length === 0 && listResult.data
+          ? this.flattenLabelRegistrationListData(listResult.data)
+          : [];
+
+        this.allRows = groupedRows.length > 0 ? groupedRows : fallbackRows;
+
+        if (this.allRows.length === 0 && (groupedResult.error || listResult.error)) {
+          this.error = this.extractHttpErrorMessage(
+            groupedResult.error || listResult.error || countsResult.error,
+            'Failed to load label registration entries.'
+          );
+          this.filteredRows = [];
+          this.stageFilterOptions = [];
+          this.counts = this.resolveCounts([], countsResult.data || {});
+          this.isLoading = false;
+          return;
+        }
+
+        this.counts = this.resolveCounts(this.allRows, countsResult.data || {});
+        this.stageFilterOptions = this.getStageFilterOptions(this.allRows);
+        this.applyFilters();
+        this.isLoading = false;
+      },
+      error: () => {
+        this.error = 'Failed to load label registration entries.';
+        this.isLoading = false;
+      }
+    });
   }
 
   private loadCompanyData(): void {
     forkJoin({
       counts: this.http
         .get<any>(`${this.companyApiBase}/dashboard-counts/`)
-        .pipe(catchError(() => of({ approved: 0, pending: 0, rejected: 0, objection: 0 }))),
+        .pipe(catchError(() => of({ approved: 0, pending: 0, rejected: 0, objection: 0, awaiting_payment: 0 }))),
       grouped: this.http
         .get<any>(`${this.companyApiBase}/list-by-status/`)
-        .pipe(catchError(() => of({ applied: [], pending: [], approved: [], rejected: [], objection: [] })))
+        .pipe(catchError(() => of({ applied: [], pending: [], approved: [], rejected: [], objection: [], awaiting_payment: [] })))
     }).subscribe({
       next: ({ counts, grouped }) => {
         this.allRows = this.flattenCompanyGroupedData(grouped);
-        this.counts = {
-          newApplication: 0,
+        
+        // Normalize backend awaiting_payment to awaitingPayment for resolveCounts
+        const rawCounts = {
           approved: Number(counts?.approved || 0),
           pending: Number(counts?.pending || 0),
           objection: Number(counts?.objection || 0),
           rejected: Number(counts?.rejected || 0),
-          awaitingPayment: 0
+          awaitingPayment: Number(counts?.awaiting_payment || counts?.awaitingPayment || 0)
         };
+        this.counts = this.resolveCounts(this.allRows, rawCounts);
         this.stageFilterOptions = this.getStageFilterOptions(this.allRows);
+
+        // Auto-select active tab if default filter is not set
+        if (this.activeCardFilter === '') {
+          if (this.counts.pending > 0) {
+            this.activeCardFilter = 'pending';
+            this.statusFilter = 'pending';
+          } else if (this.counts.objection > 0) {
+            this.activeCardFilter = 'objection';
+            this.statusFilter = 'objection';
+          } else if (this.counts.awaitingPayment > 0) {
+            this.activeCardFilter = 'awaiting-payment';
+            this.statusFilter = 'awaiting-payment';
+          }
+        }
+
         this.applyFilters();
         this.isLoading = false;
       },
@@ -500,6 +611,21 @@ export class RegistrationManagementComponent implements OnInit {
 
         this.counts = this.resolveCounts(this.allRows, countsResult.data || {});
         this.stageFilterOptions = this.getStageFilterOptions(this.allRows);
+
+        // Auto-select active tab if default filter is not set
+        if (this.activeCardFilter === '') {
+          if (this.counts.pending > 0) {
+            this.activeCardFilter = 'pending';
+            this.statusFilter = 'pending';
+          } else if (this.counts.objection > 0) {
+            this.activeCardFilter = 'objection';
+            this.statusFilter = 'objection';
+          } else if (this.counts.awaitingPayment > 0) {
+            this.activeCardFilter = 'awaiting-payment';
+            this.statusFilter = 'awaiting-payment';
+          }
+        }
+
         this.applyFilters();
         this.isLoading = false;
       },
@@ -518,24 +644,48 @@ export class RegistrationManagementComponent implements OnInit {
     establishmentName: string;
     currentStage: string;
     currentStageRaw: string;
-    statusGroup: 'approved' | 'pending' | 'objection' | 'rejected';
+    statusGroup: 'approved' | 'pending' | 'objection' | 'rejected' | 'awaiting-payment';
+    hasObjectionHistory?: boolean;
+    hasObjectionUpdate?: boolean;
   }> {
     const mapGroup = (
       items: any[] | undefined,
-      statusGroup: 'approved' | 'pending' | 'objection' | 'rejected'
+      statusGroup: 'approved' | 'pending' | 'objection' | 'rejected' | 'awaiting-payment'
     ) => {
       if (!Array.isArray(items)) return [];
       return items.map((item: any) => {
         const rawStage = this.resolveCompanyStage(item);
+        const currentStageId = item?.current_stage_id ?? item?.currentStageId ?? item?.current_stage;
+
+        const computedStage = this.isLicenseeUser()
+          ? this.simplifyStageForLicensee(rawStage, statusGroup, currentStageId)
+          : this.formatStageName(rawStage || 'submitted');
+
+        let finalStatusGroup = statusGroup;
+        if (this.isLicenseeUser() && computedStage === 'Awaiting Payment') {
+          finalStatusGroup = 'awaiting-payment';
+        }
+
+        const transactions = Array.isArray(item?.transactions) ? item.transactions : [];
+        const txnText = (t: any) => `${t?.action ?? ''} ${t?.remarks ?? ''} ${t?.to_stage ?? ''} ${t?.to_stageName ?? ''} ${t?.to_stage_name ?? ''}`;
+        const hasHistoryFromTxn = transactions.some((t: any) => /objection/i.test(txnText(t)));
+        const hasUpdateFromTxn = transactions.some((t: any) => /resolve|correct|update/i.test(txnText(t)) && /objection/i.test(txnText(t)));
+        const hasObjectionHistory = statusGroup === 'objection' ||
+          Boolean(item?.has_objection_history ?? item?.hasObjectionHistory ?? item?.has_objection ?? item?.hasObjection ?? item?.has_objections ?? item?.hasObjections) ||
+          hasHistoryFromTxn;
+        const hasObjectionUpdate = Boolean(item?.has_objection_update ?? item?.hasObjectionUpdate) || hasUpdateFromTxn;
+
         return {
           id: String(item?.id ?? item?.applicationId ?? item?.application_id ?? ''),
           applicationId: String(item?.applicationId ?? item?.application_id ?? item?.id ?? 'N/A'),
           submittedOn: this.formatDate(item?.created_at ?? item?.createdAt ?? item?.paymentDate ?? item?.payment_date),
           applicantName: String(item?.memberName ?? item?.member_name ?? 'N/A'),
           establishmentName: String(item?.companyName ?? item?.company_name ?? 'N/A'),
-          currentStage: this.formatStageName(rawStage || 'submitted'),
+          currentStage: computedStage,
           currentStageRaw: String(rawStage || 'submitted'),
-          statusGroup
+          statusGroup: finalStatusGroup,
+          hasObjectionHistory,
+          hasObjectionUpdate
         };
       });
     };
@@ -545,7 +695,9 @@ export class RegistrationManagementComponent implements OnInit {
       ...mapGroup(grouped?.approved, 'approved'),
       ...mapGroup(grouped?.rejected, 'rejected'),
       ...mapGroup(grouped?.objection, 'objection'),
-      ...mapGroup(grouped?.applied, 'pending')
+      ...mapGroup(grouped?.applied, 'pending'),
+      ...mapGroup(grouped?.awaiting_payment, 'awaiting-payment'),
+      ...mapGroup(grouped?.awaitingPayment, 'awaiting-payment')
     ];
 
     const seen = new Set<string>();
@@ -582,15 +734,33 @@ export class RegistrationManagementComponent implements OnInit {
           'submitted'
         );
 
+        // For licensees: classify by actual stage name so internal officer stages
+        // (permit_section, commissioner) show as Pending, not Approved.
+        // Only use the API bucket as 'approved' when the stage truly is final.
+        const resolvedGroup = this.isLicenseeUser()
+          ? this.resolveStatusGroup(rawStage, statusGroup)
+          : statusGroup;
+
+        // Display: licensees see 'Under Review' for officer stages, 'Approved' only when final
+        let displayStage: string;
+        if (this.isLicenseeUser()) {
+          if (resolvedGroup === 'approved') displayStage = 'Approved';
+          else if (resolvedGroup === 'rejected') displayStage = 'Rejected';
+          else if (resolvedGroup === 'objection') displayStage = 'Objection';
+          else displayStage = 'Under Review';
+        } else {
+          displayStage = this.formatStageName(rawStage);
+        }
+
         return {
           id: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
           applicationId: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
           submittedOn: this.formatDate(item?.created_at ?? item?.createdAt ?? item?.updated_at ?? item?.updatedAt),
           applicantName: String(item?.licensee_name ?? item?.licenseeName ?? item?.applicant_name ?? item?.applicantName ?? 'N/A'),
           establishmentName: String(item?.brand_owner_name ?? item?.brandOwnerName ?? item?.brand_owner ?? item?.brandOwner ?? 'N/A'),
-          currentStage: this.formatStageName(rawStage),
+          currentStage: displayStage,
           currentStageRaw: rawStage,
-          statusGroup: this.resolveStatusGroup(rawStage, statusGroup)
+          statusGroup: resolvedGroup
         };
       });
     };
@@ -633,17 +803,106 @@ export class RegistrationManagementComponent implements OnInit {
         'submitted'
       );
 
+      const resolvedGroup = this.classifyStatus(rawStage);
+
+      // Licensees see 'Under Review' for internal officer stages (permit_section, commissioner)
+      let displayStage: string;
+      if (this.isLicenseeUser()) {
+        if (resolvedGroup === 'approved') displayStage = 'Approved';
+        else if (resolvedGroup === 'rejected') displayStage = 'Rejected';
+        else if (resolvedGroup === 'objection') displayStage = 'Objection';
+        else displayStage = 'Under Review';
+      } else {
+        displayStage = this.formatStageName(rawStage);
+      }
+
       return {
         id: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
         applicationId: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
         submittedOn: this.formatDate(item?.created_at ?? item?.createdAt ?? item?.updated_at ?? item?.updatedAt),
         applicantName: String(item?.licensee_name ?? item?.licenseeName ?? item?.applicant_name ?? item?.applicantName ?? 'N/A'),
         establishmentName: String(item?.brand_owner_name ?? item?.brandOwnerName ?? item?.brand_owner ?? item?.brandOwner ?? 'N/A'),
-        currentStage: this.formatStageName(rawStage),
+        currentStage: displayStage,
         currentStageRaw: rawStage,
-        statusGroup: this.classifyStatus(rawStage)
+        statusGroup: resolvedGroup
       };
     });
+  }
+
+  private flattenLabelRegistrationGroupedData(grouped: any): Array<{
+    id: string;
+    applicationId: string;
+    submittedOn: string;
+    applicantName: string;
+    establishmentName: string;
+    currentStage: string;
+    currentStageRaw: string;
+    statusGroup: 'approved' | 'pending' | 'objection' | 'rejected';
+  }> {
+    const mapGroup = (
+      items: any[] | undefined,
+      statusGroup: 'approved' | 'pending' | 'objection' | 'rejected'
+    ) => {
+      if (!Array.isArray(items)) return [];
+      return items.map((item: any) => this.mapLabelRegistrationRow(item, statusGroup));
+    };
+
+    const merged = [
+      ...mapGroup(grouped?.pending, 'pending'),
+      ...mapGroup(grouped?.approved, 'approved'),
+      ...mapGroup(grouped?.rejected, 'rejected'),
+      ...mapGroup(grouped?.objection, 'objection'),
+      ...mapGroup(grouped?.applied, 'pending'),
+      ...mapGroup(grouped?.in_review, 'pending')
+    ];
+
+    const seen = new Set<string>();
+    return merged.filter((row) => {
+      const key = String(row.applicationId || row.id || '').trim();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  private flattenLabelRegistrationListData(items: any): Array<{
+    id: string;
+    applicationId: string;
+    submittedOn: string;
+    applicantName: string;
+    establishmentName: string;
+    currentStage: string;
+    currentStageRaw: string;
+    statusGroup: 'approved' | 'pending' | 'objection' | 'rejected';
+  }> {
+    return this.unwrapArrayResponse(items).map((item: any) => this.mapLabelRegistrationRow(item));
+  }
+
+  private mapLabelRegistrationRow(
+    item: any,
+    fallback: 'approved' | 'pending' | 'objection' | 'rejected' = 'pending'
+  ) {
+    const rawStage = String(
+      item?.current_stage_name ??
+      item?.currentStageName ??
+      item?.current_stage ??
+      item?.currentStage ??
+      item?.status ??
+      'submitted'
+    );
+    const licensee = item?.licensee_details ?? item?.licenseeDetails ?? {};
+    const product = item?.product_details ?? item?.productDetails ?? {};
+
+    return {
+      id: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
+      applicationId: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
+      submittedOn: this.formatDate(item?.created_at ?? item?.createdAt ?? item?.application_date ?? item?.applicationDate),
+      applicantName: String(licensee?.applicantType ?? item?.applicant_name ?? item?.applicantName ?? 'N/A'),
+      establishmentName: String(product?.brandName ?? product?.brand_name ?? product?.bottlerName ?? product?.bottler_name ?? 'N/A'),
+      currentStage: this.formatStageName(rawStage),
+      currentStageRaw: rawStage,
+      statusGroup: this.resolveStatusGroup(rawStage, fallback)
+    };
   }
 
   private loadSalesmanBarmanData(): void {
@@ -676,15 +935,15 @@ export class RegistrationManagementComponent implements OnInit {
         this.companyOptions = this.getCompanyOptions(this.allRows);
 
         if (this.activeCardFilter === '') {
-          if (objectionCount > 0) {
+          if (pendingCount > 0) {
+            this.activeCardFilter = 'pending';
+            this.statusFilter = 'pending';
+          } else if (objectionCount > 0) {
             this.activeCardFilter = 'objection';
             this.statusFilter = 'objection';
           } else if (awaitingPaymentCount > 0) {
             this.activeCardFilter = 'awaiting-payment';
             this.statusFilter = 'awaiting-payment';
-          } else if (pendingCount > 0) {
-            this.activeCardFilter = 'pending';
-            this.statusFilter = 'pending';
           }
         }
 
@@ -828,9 +1087,12 @@ export class RegistrationManagementComponent implements OnInit {
     stageValue: string,
     fallback: 'approved' | 'pending' | 'objection' | 'rejected'
   ): 'approved' | 'pending' | 'objection' | 'rejected' {
-    if (fallback === 'approved' || fallback === 'rejected') {
+    if (fallback === 'rejected') {
       return fallback;
     }
+    // Always classify by actual stage name so that items at officer stages
+    // (permit_section, commissioner) show as 'pending' from licensee's view,
+    // not as 'approved' just because the API placed them in the approved bucket.
     return this.classifyStatus(stageValue);
   }
 
@@ -838,7 +1100,9 @@ export class RegistrationManagementComponent implements OnInit {
     const value = String(stageValue || '').toLowerCase();
     if (value.includes('reject')) return 'rejected';
     if (value.includes('object')) return 'objection';
-    if (value.includes('approve')) return 'approved';
+    if (value === 'approved' || value.includes('final_approved') || value.includes('issued') || value.includes('complete') || value === 'active') {
+      return 'approved';
+    }
     return 'pending';
   }
 
@@ -863,7 +1127,7 @@ export class RegistrationManagementComponent implements OnInit {
       pending: Number(rawCounts?.pending || rawCounts?.applied || 0),
       objection: Number(rawCounts?.objection || 0),
       rejected: Number(rawCounts?.rejected || 0),
-      awaitingPayment: Number(rawCounts?.awaitingPayment || 0)
+      awaitingPayment: Number(rawCounts?.awaitingPayment || rawCounts?.awaiting_payment || 0)
     };
   }
 
@@ -876,8 +1140,11 @@ export class RegistrationManagementComponent implements OnInit {
   } {
     return rows.reduce(
       (acc, row) => {
-        if (row.statusGroup in acc) {
-          (acc as any)[row.statusGroup] += 1;
+        const group = String(row.statusGroup || '').toLowerCase();
+        if (group === 'awaiting-payment' || group === 'awaiting_payment') {
+          acc.awaitingPayment += 1;
+        } else if (group === 'approved' || group === 'pending' || group === 'objection' || group === 'rejected') {
+          (acc as any)[group] += 1;
         }
         return acc;
       },

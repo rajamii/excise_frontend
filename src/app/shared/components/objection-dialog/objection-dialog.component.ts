@@ -174,6 +174,8 @@ export class ObjectionDialogComponent implements OnInit {
       'created_at', 'updated_at', 'createdAt', 'updatedAt',
       'application_id', 'applicationId', 'applicationID',
       'referenceNo', 'reference_no',
+      'applicationYear', 'application_year', 'ApplicationYear',
+      'brAmount', 'br_amount', 'BrAmount',
 
       // ── Computed / auto-assigned — user never enters these ──────────────────
       // Applicant identity (derived from the user account, not the form)
@@ -275,7 +277,47 @@ export class ObjectionDialogComponent implements OnInit {
       const value = source[key];
 
       // Skip large / complex shapes.
-      if (Array.isArray(value)) continue;
+      if (Array.isArray(value)) {
+        if (key === 'members' || key === 'memberList' || key === 'membersList') {
+          value.forEach((m: any, idx: number) => {
+            const name = m.name || m.memberName || m.member_name || '';
+            const desig = m.designation || m.memberDesignation || m.member_designation || '';
+            
+            const identParts = [];
+            if (name) identParts.push(name);
+            if (desig && desig.toLowerCase() !== name.toLowerCase()) {
+              identParts.push(`(${desig})`);
+            }
+            const ident = identParts.length > 0 ? identParts.join(' ') : `Member ${idx + 1}`;
+
+            const fieldsToCheck = [
+              { prop: 'name', alias: ['name', 'memberName', 'member_name'], label: 'Name' },
+              { prop: 'designation', alias: ['designation', 'memberDesignation', 'member_designation'], label: 'Designation' },
+              { prop: 'mobile', alias: ['mobile', 'mobileNumber', 'memberMobileNumber', 'member_mobile_number'], label: 'Mobile' },
+              { prop: 'email', alias: ['email', 'emailId', 'memberEmailId', 'member_email_id'], label: 'Email' },
+              { prop: 'address', alias: ['address', 'memberAddress', 'member_address'], label: 'Address' }
+            ];
+
+            fieldsToCheck.forEach(f => {
+              let fieldVal = '';
+              for (const a of f.alias) {
+                if (m[a] !== undefined && m[a] !== null) {
+                  fieldVal = String(m[a]).trim();
+                  break;
+                }
+              }
+              if (fieldVal) {
+                candidates.push({
+                  field: `${key}::${idx}::${f.prop}`,
+                  label: `Member [${idx + 1}] - ${f.label} (${ident})`,
+                  value: fieldVal
+                });
+              }
+            });
+          });
+        }
+        continue;
+      }
 
       const keyStr = String(key || '');
       const keyLower = keyStr.toLowerCase();
@@ -308,8 +350,7 @@ export class ObjectionDialogComponent implements OnInit {
    *  AND no row is in an incomplete state (remark filled but checkbox unticked). */
   get canSubmit(): boolean {
     if (this.candidates.length === 0) {
-      // No field candidates — require general remarks
-      return String(this.form.get('generalRemarks')?.value || '').trim().length > 0;
+      return false; // no candidates, nothing to submit
     }
 
     let hasValidRow = false;
@@ -345,26 +386,16 @@ export class ObjectionDialogComponent implements OnInit {
   onSubmit(): void {
     const objections: Array<{ field: string; remarks: string }> = [];
 
-    if (this.candidates.length) {
-      this.candidates.forEach((c, idx) => {
-        const row = this.rows.at(idx) as FormGroup;
-        const selected = !!row.get('selected')?.value;
-        const remarks = String(row.get('remarks')?.value || '').trim();
-        if (!selected) return;
-        if (!remarks) return;
-        objections.push({ field: c.field, remarks });
-      });
-    }
+    this.candidates.forEach((c, idx) => {
+      const row = this.rows.at(idx) as FormGroup;
+      const selected = !!row.get('selected')?.value;
+      const remarks = String(row.get('remarks')?.value || '').trim();
+      if (!selected || !remarks) return;
+      objections.push({ field: c.field, remarks });
+    });
 
-    const generalRemarks = String(this.form.get('generalRemarks')?.value || '').trim();
-    if (objections.length === 0) {
-      if (!generalRemarks) {
-        this.form.get('generalRemarks')?.setErrors({ required: true });
-        return;
-      }
-      objections.push({ field: 'general', remarks: generalRemarks });
-    }
+    if (objections.length === 0) return;
 
-    this.dialogRef.close({ objections, generalRemarks });
+    this.dialogRef.close({ objections });
   }
 }

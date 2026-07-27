@@ -6,8 +6,10 @@
     </mat-card-header>
 
     <mat-card-content>
+      @if (!isCompanyApplication || shouldShowModeOfOperationDropdown()) {
       <h5 class="section-title">Personal Information</h5>
       <div class="form-field-container">
+        @if (!isCompanyApplication) {
         <mat-form-field appearance="outline">
           <mat-label>First Name</mat-label>
           <input matInput placeholder="Enter First Name" formControlName="firstName" required />
@@ -183,6 +185,7 @@
             {{ getErrorMessage('pan') }}
           </mat-error>
         </mat-form-field>
+        }
 
         @if (shouldShowModeOfOperationDropdown()) {
         <mat-form-field appearance="outline">
@@ -195,7 +198,9 @@
         </mat-form-field>
         }
       </div>
+      }
 
+      @if (!isCompanyApplication) {
       <h5 class="section-title">Eligibility Questions</h5>
       <div class="radio-questions-container">
         <div class="radio-question">
@@ -356,6 +361,7 @@
           }
         }
       </div>
+      }
     </mat-card-content>
 
     <mat-card-actions>

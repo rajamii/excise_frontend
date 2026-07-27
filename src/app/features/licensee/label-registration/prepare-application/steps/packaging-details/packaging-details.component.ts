@@ -1,5 +1,6 @@
-import { Component, EventEmitter, OnDestroy, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
 import { FormArray, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
+import { MatTable } from '@angular/material/table';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { SupplyChainService } from '../../../../supplyChain/services/supplychain.service';
@@ -13,6 +14,8 @@ import { MaterialModule } from '../../../../../../shared/material.module';
   styleUrl: './packaging-details.component.scss'
 })
 export class LabelRegistrationPackagingDetailsComponent implements OnInit, OnDestroy {
+  @ViewChild(MatTable) table?: MatTable<FormGroup>;
+
   @Output() readonly next = new EventEmitter<void>();
   @Output() readonly back = new EventEmitter<void>();
 
@@ -38,6 +41,10 @@ export class LabelRegistrationPackagingDetailsComponent implements OnInit, OnDes
     'importPerCase',
     'exportPerCase',
     'mrpRange',
+    'labelHeightMm',
+    'labelWidthMm',
+    'isMonoCarton',
+    'gtin',
     'action'
   ];
 
@@ -75,6 +82,7 @@ export class LabelRegistrationPackagingDetailsComponent implements OnInit, OnDes
 
   addPackagingRow(): void {
     this.packagingRows.push(this.createPackagingRow());
+    this.refreshPackagingTable();
   }
 
   removePackagingRow(index: number): void {
@@ -82,6 +90,7 @@ export class LabelRegistrationPackagingDetailsComponent implements OnInit, OnDes
       return;
     }
     this.packagingRows.removeAt(index);
+    this.refreshPackagingTable();
   }
 
   private createPackagingRow(data: any = {}): FormGroup {
@@ -96,7 +105,11 @@ export class LabelRegistrationPackagingDetailsComponent implements OnInit, OnDes
       bottlingFeePerCase: new FormControl(data.bottlingFeePerCase ?? '', [Validators.min(0)]),
       importPerCase: new FormControl(data.importPerCase ?? '', [Validators.min(0)]),
       exportPerCase: new FormControl(data.exportPerCase ?? '', [Validators.min(0)]),
-      mrpRange: new FormControl(data.mrpRange ?? '')
+      mrpRange: new FormControl(data.mrpRange ?? ''),
+      labelHeightMm: new FormControl(data.labelHeightMm ?? '', [Validators.required, Validators.min(1)]),
+      labelWidthMm: new FormControl(data.labelWidthMm ?? '', [Validators.required, Validators.min(1)]),
+      isMonoCarton: new FormControl(Boolean(data.isMonoCarton ?? data.monoCarton ?? false)),
+      gtin: new FormControl(data.gtin ?? '', [Validators.required, Validators.pattern(/^[0-9]{8,14}$/)])
     });
   }
 
@@ -128,6 +141,7 @@ export class LabelRegistrationPackagingDetailsComponent implements OnInit, OnDes
       this.packagingRows.removeAt(0);
     }
     this.packagingRows.push(this.createPackagingRow());
+    this.refreshPackagingTable();
   }
 
   goBack(): void {
@@ -181,5 +195,10 @@ export class LabelRegistrationPackagingDetailsComponent implements OnInit, OnDes
           this.purposeSaleOptions = [...this.fallbackPurposeSaleOptions];
         }
       });
+  }
+
+  private refreshPackagingTable(): void {
+    this.table?.renderRows();
+    this.saveToSessionStorage();
   }
 }
