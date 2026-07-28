@@ -113,7 +113,7 @@ export class NewLicenseDashboardComponent implements OnInit {
     return Array.from(new Set(numbers));
   }
 
-  
+
 
   ngOnInit(): void {
     this.loadData();
@@ -379,83 +379,43 @@ export class NewLicenseDashboardComponent implements OnInit {
   }
 
   private startBilldeskInitiation(applicationId: string): void {
-  void Swal.fire({
-    title: 'Redirecting to BillDesk',
-    text: 'Preparing application fee payment...',
-    allowOutsideClick: false,
-    didOpen: () => Swal.showLoading(),
-  });
-
-  this.paymentIntegrationService
-    .initiateNewLicenseFee(String(applicationId).trim(), 500)
-    .pipe(timeout(30000))
-    .subscribe({
-      next: (initRes: any) => {
-        Swal.close();
-        this.paymentIntegrationService.clearRetryState(applicationId);
-
-        // Check for SDK parameters (handles both casing styles)[cite: 2]
-        const hasSDK = (initRes?.bdOrderId || initRes?.bd_order_id) && 
-                       (initRes?.authToken || initRes?.auth_token);
-
-        if (hasSDK) {
-          try {
-            // Use the single shared method from your service
-            this.paymentIntegrationService.launchBillDeskSDK(initRes, (txn) => {
-              if (txn.status === 'success' || txn.status === '0300') {
-                // Success: Refresh data to reflect the new payment status[cite: 2]
-                this.loadData();
-                Swal.fire('Success', 'Payment processed successfully.', 'success');
-              } else {
-                Swal.fire('Payment Incomplete', 'Payment was cancelled or declined.', 'info');
-              }
-            });
-          } catch (err) {
-            void Swal.fire('Error', 'Payment SDK failed to load. Please refresh.', 'error');
-          }
-        } else {
-          this.paymentIntegrationService.recordBilldeskFailure(applicationId);
-          void Swal.fire('Error', 'Missing SDK gateway parameters.', 'error');
-        }
-      },
-      error: (err: any) => {
-        this.paymentIntegrationService.handleInitiationError(err, applicationId);
-      },
+    void Swal.fire({
+      title: 'Redirecting to SBI ePay', // Updated text
+      text: 'Preparing application fee payment...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
     });
-}
 
-  private submitToBillDesk(url: string, requestMsg: string): void {
-    try {
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = url;
+    this.paymentIntegrationService
+      .initiateNewLicenseFee(String(applicationId).trim(), 500)
+      .pipe(timeout(30000))
+      .subscribe({
+        next: (initRes: any) => {
+          Swal.close();
 
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = 'msg';
-      input.value = requestMsg;
+          // Keep this if it still exists in your service
+          if (this.paymentIntegrationService.clearRetryState) {
+            this.paymentIntegrationService.clearRetryState(applicationId);
+          }
 
-      form.appendChild(input);
-      document.body.appendChild(form);
-      form.submit();
-    } catch {
-      void Swal.fire('Error', 'Unable to redirect to BillDesk. Please try again.', 'error');
-    }
+          // Extract the redirect URL returned by the SBI ePay initiation endpoint
+          const redirectUrl = String(initRes?.transactionUrl || initRes?.transaction_url || '').trim();
+
+          if (redirectUrl) {
+            // Redirect directly to the gateway
+            window.location.href = redirectUrl;
+          } else {
+            // FIXED: Removed this.paymentIntegrationService.recordBilldeskFailure(applicationId);
+            void Swal.fire('Error', 'Missing SBI ePay gateway redirection URL.', 'error');
+          }
+        },
+        error: (err: any) => {
+          Swal.close();
+          // FIXED: Removed the second argument (applicationId) to resolve TS2554
+          this.paymentIntegrationService.handleInitiationError(err);
+        },
+      });
   }
-
-  private extractRetryAfterSeconds(err: any): number {
-    const httpStatus = Number(err?.status || 0);
-    if (httpStatus !== 409) return 0;
-    const raw = err?.error?.retry_after_seconds || err?.error?.retryAfterSeconds || 0;
-    const seconds = Number(raw);
-    return Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
-  }
-
- 
-
-  
-
-  
 
   private getDetailViewSource(): string {
     const roleId = Number(this.roleService.getCurrentUser()?.roleId || 0);
@@ -527,7 +487,7 @@ export class NewLicenseDashboardComponent implements OnInit {
         let finalStatusGroup: NewLicenseItem['statusGroup'] = statusGroup;
         if (this.isLicenseeUser()) {
           const rawLower = currentStageRaw.toLowerCase();
-          const isAwaiting = 
+          const isAwaiting =
             rawLower.includes('awaiting') && rawLower.includes('payment') ||
             rawLower.includes('payment') ||
             canPayNow ||

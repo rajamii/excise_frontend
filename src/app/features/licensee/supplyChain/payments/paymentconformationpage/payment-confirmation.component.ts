@@ -152,9 +152,7 @@ interface PendingWalletPaymentPreview {
   shortfall: number;
 }
 
-// Per payment logic document:
-// - License fee HOA: 0039-00-800-45-02
-// - Security deposit: no HOA (backend stores sentinel like "non")
+
 const SECURITY_DEPOSIT_HOA_SENTINEL = 'non';
 const LEGACY_SECURITY_DEPOSIT_HOA = '0088-00-888-88-88';
 const LICENSE_FEE_HOA = '0039-00-800-45-02';
@@ -1302,13 +1300,6 @@ private initializeWalletContextAndLoadData(): void {
   loadHologramDataFromApi(): void {
     this.hologramService.getProcurements().subscribe({
       next: (data) => {
-        console.log('Fetched Hologram Procurements for Payment:', data);
-        // IMPORTANT:
-        // - For licensee users, the backend already scopes procurements to the logged-in user.
-        // - Many deployments do NOT include `licensee_id` / `user_id` fields in procurement rows
-        //   (often they only have numeric `licensee` ids), so client-side filtering via
-        //   `isForActiveLicense()` can incorrectly hide all rows and the Hologram tab stays empty.
-        // Keep filtering only when an explicit `licenseeId` was requested via query param (admin-style view).
         const explicitLicenseeId = String(this.route.snapshot.queryParams['licenseeId'] || '').trim();
         const procurements = (data || []) as any[];
         const filtered = explicitLicenseeId ? procurements.filter(item => this.isForActiveLicense(item)) : procurements;
@@ -1400,8 +1391,6 @@ private initializeWalletContextAndLoadData(): void {
     const context = this.pendingWalletPaymentContext;
     if (!context) return;
 
-    // License fee / security deposit: clear the synthetic "Pending Payment" row after we observe a
-    // successful debit/utilization for the same reference *and* wallet type in wallet history.
     if (context.tab === 'license_fee' || context.tab === 'security_deposit') {
       const ref = String(context.referenceNo || '').trim().toUpperCase();
       if (!ref) return;
@@ -1644,11 +1633,6 @@ private initializeWalletContextAndLoadData(): void {
     const isForwardedPaySlip = value.includes('forward') && value.includes('payslip');
     return isCancellationFlow && isCommissionerFlow && (isApproved || isForwardedPaySlip);
   }
-
-  // Process hologram payment - called when user completes payment
-  // Process hologram payment - called when user completes payment
-  // Legacy method using localStorage - deprecated for API integration
-  // processHologramPayment(hologramItem: HologramItem): void { ... }
 
   // Wallet history (utilization and additions)
   selectedWalletForHistory: WalletHistoryCategory | null = null;
@@ -2081,38 +2065,6 @@ private initializeWalletContextAndLoadData(): void {
     );
   }
 
-  private getCompanyCollabSecurityAmountFromApp(app: any): number {
-    const feeDetails = this.parseObjectLike(app?.fee_details ?? app?.feeDetails);
-    const amount = this.toNumber(
-      app?.security_fee_amount ??
-      app?.securityFeeAmount ??
-      app?.security_deposit_amount ??
-      app?.securityDepositAmount ??
-      app?.security_fee ??
-      app?.securityFee ??
-      app?.security_deposit ??
-      app?.securityDeposit ??
-      feeDetails?.securityDeposit ??
-      feeDetails?.security_deposit ??
-      feeDetails?.security_fee ??
-      feeDetails?.securityFee ??
-      0
-    );
-    return amount > 0 ? amount : 25000;
-  }
-
-  private parseObjectLike(value: any): any {
-    if (!value) return {};
-    if (typeof value === 'object') return value;
-    if (typeof value !== 'string') return {};
-    try {
-      const parsed = JSON.parse(value);
-      return parsed && typeof parsed === 'object' ? parsed : {};
-    } catch {
-      return {};
-    }
-  }
-
   private isCompanyCollabSecurityPaidForRef(referenceNo: string): boolean {
     return this.paidCompanyCollabSecurityRefs.has(this.normalizeApplicationReference(referenceNo));
   }
@@ -2153,8 +2105,6 @@ private initializeWalletContextAndLoadData(): void {
     const referenceNo = String(params?.['referenceNo'] || params?.['ref'] || params?.['refNo'] || id || '-');
 
     if (!id || !tab) {
-      // For hologram makePayment deep-link we may only receive refNo;
-      // context gets built later from loaded hologram data.
       if (action === 'makepayment') {
         return;
       }
@@ -2163,7 +2113,6 @@ private initializeWalletContextAndLoadData(): void {
       return;
     }
 
-    // New license / renewal flow: amount can be missing/0 in deep-link; we will resolve from backend.
     if (this.isLicenseFeeWorkflowPaymentType(type)) {
       this.pendingNewLicenseApplicationId = id;
       this.pendingNewLicenseReferenceNo = referenceNo;
@@ -3362,42 +3311,35 @@ private initializeWalletContextAndLoadData(): void {
     }, 300);
   }
 
-
   onProceedPayment(amount: number): void {
     if (amount <= 0 || !this.modalContext) return;
-
     const type = this.modalContext.walletType;
     const licenseeId = String(this.activeLicenseeId || this.resolveActiveLicenseeIdFromSession() || '').trim();
-
     if (!licenseeId) {
       this.showErrorMessage('Unable to proceed: licensee id not found.');
       return;
     }
 
-    let apiCall$;
+    let apiCall$: Observable<any>;
 
     // BRANCHING LOGIC: Determine which backend "door" to open
     if (type === 'license_fee') {
-      // Hits: /billdesk/initiate/license-fee/
-      apiCall$ = this.paymentIntegrationService.initiateBilldeskLicenseFee({
+      apiCall$ = this.paymentIntegrationService.initiateSBIePayLicenseFee({
         transaction_id: this.currentTxnId,
         amount: amount,
         payer_id: licenseeId,
         payment_module_code: '002' // Standard for License Fee
       });
     } else if (type === 'security_deposit') {
-      // Hits: /billdesk/initiate/security-deposit/
-      apiCall$ = this.paymentIntegrationService.initiateBilldeskSecurityDeposit({
+      apiCall$ = this.paymentIntegrationService.initiateSBIePaySecurityDeposit({
         transaction_id: this.currentTxnId,
         amount: amount,
         licensee_id: licenseeId,
         licensee_name: this.activeLicenseeName || licenseeId,
-        bank_fdr_code: 'SIKFDR',
         payment_module_code: '002' // Standard for Manufacturing/Security
       });
     } else {
-      // Hits: /billdesk/initiate/ (The generic door)
-      apiCall$ = this.paymentIntegrationService.initiateBilldeskWalletRecharge({
+      apiCall$ = this.paymentIntegrationService.initiateSBIePayWalletRecharge({
         transaction_id: this.currentTxnId,
         amount: amount,
         wallet_type: type,
@@ -3413,72 +3355,22 @@ private initializeWalletContextAndLoadData(): void {
           Swal.fire('Pending', 'A transaction is already pending.', 'warning');
           return;
         }
-
         this.closeAddMoneyModal();
-
-        // Launch SDK with updated callback for the Success Receipt
-        this.paymentIntegrationService.launchBillDeskSDK(response, (txnResult: any) => {
-          const isSuccess = txnResult && txnResult.auth_status === '0300';
-
-          // Pass queryParams so your success component isn't blank
-          this.router.navigate(['/dashboard/wallet-recharge/success'], {
-            queryParams: {
-              transactionId: response.transaction_id || this.currentTxnId,
-              walletType: type,
-              hoa: this.modalContext?.hoa || '',
-              amount: amount,
-              status: isSuccess ? 'success' : 'failed',
-              createdAt: new Date().toISOString()
-            }
-          });
-        });
+        
+        // Direct redirect to SBI ePay Gateway URL
+        const redirectUrl = String(response?.transactionUrl || response?.transaction_url || '').trim();
+        if (redirectUrl) {
+          window.location.href = redirectUrl;
+        } else {
+          this.showErrorMessage('SBI ePay initiation failed: missing gateway redirection URL.');
+        }
       },
-      error: (err) => {
+      error: (err: any) => {
         this.closeAddMoneyModal();
-        this.paymentIntegrationService.handleInitiationError(err, this.currentTxnId);
+        // Fixed: Removed the second argument
+        this.paymentIntegrationService.handleInitiationError(err);
       }
     });
-  }
-
-  private normalizeAddMoneyWalletType(walletType: string): AddMoneyWalletType | null {
-    switch (walletType) {
-      case 'excise':
-      case 'education':
-      case 'hologram':
-      case 'brewery':
-      case 'security_deposit':
-      case 'license_fee':
-        return walletType;
-      default:
-        return null;
-    }
-  }
-
-  private openUnifiedAddMoneyView(walletType: AddMoneyWalletType): void {
-    this.cleanupModalArtifacts();
-    this.selectedAddMoneyContext = this.getAddMoneyContext(walletType);
-    this.addMoneyTransactionId = this.generateWalletTransactionId(walletType);
-    const refNo = this.pendingNewLicenseRef;
-    if (walletType === 'license_fee') {
-      const isPaid = refNo ? this.isFeePaid('license_fee', refNo) : false;
-      this.addMoneyAmount = isPaid ? 0 : this.getRequiredLicenseFeeAmount();
-    } else if (walletType === 'security_deposit') {
-      const isPaid = refNo ? this.isFeePaid('security_deposit', refNo) : false;
-      this.addMoneyAmount = isPaid ? 0 : this.getRequiredSecurityDepositAmount();
-    } else {
-      this.addMoneyAmount = 0;
-    }
-
-    const modalEl = document.getElementById('addMoneyModal');
-    if (modalEl) {
-      if (modalEl.parentNode !== document.body) {
-        document.body.appendChild(modalEl);
-      }
-
-      const modal = new (window as any).bootstrap.Modal(modalEl);
-      modal.show();
-      modalEl.addEventListener('hidden.bs.modal', () => this.cleanupModalArtifacts(), { once: true });
-    }
   }
 
   private getAddMoneyContext(walletType: AddMoneyWalletType): AddMoneyViewContext {
@@ -3618,7 +3510,7 @@ private initializeWalletContextAndLoadData(): void {
     }
 
     Swal.fire({
-      title: 'Redirecting to BillDesk',
+      title: 'Redirecting to SBI ePay',
       text: 'Preparing payment request...',
       allowOutsideClick: false,
       didOpen: () => Swal.showLoading()
@@ -3628,71 +3520,46 @@ private initializeWalletContextAndLoadData(): void {
 
     const request$ =
       context.walletType === 'license_fee'
-        ? this.paymentIntegrationService.initiateBilldeskLicenseFee({
-          transaction_id: transactionId,
-          amount,
-          payer_id: licenseeId,
-          payment_module_code: LICENSE_RENEWAL_MODULE_CODE
-        })
-        : context.walletType === 'security_deposit'
-          ? this.paymentIntegrationService.initiateBilldeskSecurityDeposit({
+        ? this.paymentIntegrationService.initiateSBIePayLicenseFee({
             transaction_id: transactionId,
             amount,
-            licensee_id: licenseeId,
-            licensee_name: this.activeLicenseeName || licenseeId,
-            bank_fdr_code: 'SIKFDR',
-            payment_module_code: LICENSE_RENEWAL_MODULE_CODE
+            payer_id: licenseeId,
+            payment_module_code: '002' // Replaced LICENSE_RENEWAL_MODULE_CODE with direct value if unimported
           })
-          : this.paymentIntegrationService.initiateBilldeskWalletRecharge({
-             transaction_id: transactionId,
-             wallet_type: walletType,
-             licensee_id: licenseeId,
-             payer_id: licenseeId,
-             head_of_account: String(context.hoa || '').trim(),
-             amount
-           });
+        : context.walletType === 'security_deposit'
+          ? this.paymentIntegrationService.initiateSBIePaySecurityDeposit({
+              transaction_id: transactionId,
+              amount,
+              licensee_id: licenseeId,
+              licensee_name: this.activeLicenseeName || licenseeId,
+              payment_module_code: '002'
+            })
+          : this.paymentIntegrationService.initiateSBIePayWalletRecharge({
+              transaction_id: transactionId,
+              wallet_type: walletType,
+              licensee_id: licenseeId,
+              payer_id: licenseeId,
+              head_of_account: String(context.hoa || '').trim(),
+              amount
+            });
 
     request$.pipe(timeout(30000)).subscribe({
-      next: (response) => {
+      next: (response: any) => {
         Swal.close();
         this.closeUnifiedAddMoneyView();
 
-        const merchantId = String((response as any)?.merchantId || (response as any)?.merchant_id || '').trim();
-        const bdOrderId = String((response as any)?.bdOrderId || (response as any)?.bd_order_id || '').trim();
-        const authToken = String((response as any)?.authToken || (response as any)?.auth_token || '').trim();
-
-        // Prefer BillDesk Web SDK when possible so we get a responseHandler callback in the SPA.
-        if (merchantId && bdOrderId && authToken) {
-          this.paymentIntegrationService.launchBillDeskSDK(response as any, (txn: any) => {
-            const isSuccess = txn && String(txn.auth_status || '').trim() === '0300';
-            this.router.navigate(['/dashboard/wallet-recharge/success'], {
-              queryParams: {
-                transactionId: String((response as any)?.transaction_id || (response as any)?.transactionId || this.addMoneyTransactionId || '').trim(),
-                walletType: context.walletType,
-                hoa: String(context.hoa || '').trim(),
-                amount,
-                status: isSuccess ? 'success' : 'failed',
-                createdAt: new Date().toISOString()
-              }
-            });
-            // Refresh wallet after callback (server should have credited on success).
-            setTimeout(() => this.refreshWalletData(), 800);
-          });
-          return;
+        const redirectUrl = String(response?.transactionUrl || response?.transaction_url || '').trim();
+        
+        if (redirectUrl) {
+          // Direct redirect to SBI ePay Gateway URL
+          window.location.href = redirectUrl;
+        } else {
+          this.showErrorMessage('SBI ePay initiation failed: missing gateway parameters.');
         }
-
-        const billdeskUrl = String((response as any)?.billdeskUrl || (response as any)?.billdesk_url || '').trim();
-        const requestMsg = String((response as any)?.requestMsg || (response as any)?.request_msg || '').trim();
-        if (!billdeskUrl || !requestMsg) {
-          this.showErrorMessage('BillDesk initiation failed: missing gateway parameters.');
-          return;
-        }
-
-        this.submitToBillDesk(billdeskUrl, requestMsg);
       },
-      error: (err) => {
+      error: (err: any) => {
         Swal.close();
-        console.error('BillDesk initiate failed:', err);
+        console.error('SBIePay initiate failed:', err);
 
         const retrySecondsFromServer = this.extractRetryAfterSeconds(err);
         if (retrySecondsFromServer > 0) {
@@ -3704,47 +3571,21 @@ private initializeWalletContextAndLoadData(): void {
         }
 
         if (String(err?.name || '').toLowerCase() === 'timeouterror') {
-          this.showErrorMessage('BillDesk initiation timed out. Please check server/network and try again.');
+          this.showErrorMessage('SBI ePay initiation timed out. Please check server/network and try again.');
           this.refreshWalletData();
           return;
         }
+
         const errorMessage =
           err?.error?.detail ||
           err?.error?.error ||
           err?.error?.message ||
           err?.message ||
           'Recharge failed';
+
         this.showErrorMessage(String(errorMessage));
       }
     });
-  }
-
-  private submitToBillDesk(url: string, requestMsg: string): void {
-    if (!this.isBrowser) {
-      this.showErrorMessage('Unable to redirect: browser environment not available.');
-      return;
-    }
-
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = url;
-    form.target = 'billdeskChildWindow';
-
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = 'msg';
-    input.value = requestMsg;
-
-    form.appendChild(input);
-    document.body.appendChild(form);
-
-    try {
-      // Ensure the payment runs in a child window so the SPA doesn't get replaced/closed by gateway pages.
-      window.open('', 'billdeskChildWindow', 'noopener,noreferrer');
-    } catch {
-      // ignore; form submit will still work (may reuse same tab depending on browser policy)
-    }
-    form.submit();
   }
 
   private mapAddMoneyWalletTypeToApi(walletType: AddMoneyWalletType): string {
