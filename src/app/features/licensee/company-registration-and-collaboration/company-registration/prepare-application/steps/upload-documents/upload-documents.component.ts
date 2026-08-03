@@ -2,6 +2,7 @@ import { Component, EventEmitter, Output, OnDestroy } from '@angular/core';
 import { Subject } from 'rxjs';
 import { MaterialModule } from '../../../../../../../shared/material.module';
 import { CompanyRegistrationService } from '../../../../../../../core/services/company-registration.service';
+import { validateUploadedFile } from '../../../../../../../shared/utils/file-upload-validation';
 
 @Component({
   selector: 'app-upload-documents',
@@ -11,6 +12,9 @@ import { CompanyRegistrationService } from '../../../../../../../core/services/c
   styleUrl: './upload-documents.component.scss'
 })
 export class UploadDocumentsComponent implements OnDestroy {
+  private readonly maxFileSizeBytes = 5 * 1024 * 1024;
+  private readonly allowedFileExtensions = ['pdf', 'png', 'jpg', 'jpeg'];
+  private readonly allowedMimeTypes = ['application/pdf', 'image/png', 'image/jpeg'];
 
   @Output() readonly next = new EventEmitter<void>();
   @Output() readonly back = new EventEmitter<void>();
@@ -69,8 +73,21 @@ export class UploadDocumentsComponent implements OnDestroy {
 
   /** Handle file selection and update the service */
   onFileSelect(event: any, document: any) {
-    const file = event.target.files[0];
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
     if (file) {
+      const validationError = validateUploadedFile(file, {
+        allowedExtensions: this.allowedFileExtensions,
+        allowedMimeTypes: this.allowedMimeTypes,
+        maxFileSizeBytes: this.maxFileSizeBytes,
+        label: document.name || 'Document'
+      });
+
+      if (validationError) {
+        input.value = '';
+        return;
+      }
+
       document.file = file;
       document.fileUrl = URL.createObjectURL(file);
       this.companyRegistrationService.setCompanyDocuments({ [document.key]: file });

@@ -16,6 +16,7 @@ import { UnifiedApplication } from '../../../../../core/models/unified-applicati
 import { MatProgressSpinner } from "@angular/material/progress-spinner";
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
 import { SalesmanBarmanRegistrationService } from '../../../../../core/services/salesman-barman-registration.service';
+import { validateUploadedFile } from '../../../../../shared/utils/file-upload-validation';
 
 export interface FieldDisplay {
   key: string;
@@ -536,10 +537,21 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
 
   onPhotoSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (file) {
-      this.resolveObjectionForm.get('photo')?.setValue(file);
+    const file = input.files?.[0] ?? null;
+    const validationError = validateUploadedFile(file, {
+      allowedExtensions: ['png', 'jpg', 'jpeg', 'webp'],
+      allowedMimeTypes: ['image/png', 'image/jpeg', 'image/webp'],
+      maxFileSizeBytes: 5 * 1024 * 1024,
+      label: 'Profile photo'
+    });
+
+    if (validationError) {
+      input.value = '';
+      this.resolveObjectionForm.get('photo')?.setErrors({ invalidFile: validationError });
+      return;
     }
+
+    this.resolveObjectionForm.get('photo')?.setValue(file);
   }
 
   loadDropdownOptions(): Observable<any> {

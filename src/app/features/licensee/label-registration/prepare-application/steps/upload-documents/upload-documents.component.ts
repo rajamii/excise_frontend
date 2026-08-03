@@ -2,6 +2,7 @@ import { Component, EventEmitter, OnDestroy, OnInit, Output } from '@angular/cor
 import { LabelRegistrationUploadDetails } from '../../../../../../core/models/label-registration.model';
 import { LabelRegistrationService } from '../../../../../../core/services/label-registration.service';
 import { MaterialModule } from '../../../../../../shared/material.module';
+import { validateUploadedFile } from '../../../../../../shared/utils/file-upload-validation';
 
 type UploadDocumentRow = {
   key: string;
@@ -25,6 +26,9 @@ type UploadDocumentRow = {
   styleUrl: './upload-documents.component.scss'
 })
 export class LabelRegistrationUploadDocumentsComponent implements OnInit, OnDestroy {
+  private readonly maxFileSizeBytes = 5 * 1024 * 1024;
+  private readonly allowedFileExtensions = ['pdf'];
+  private readonly allowedMimeTypes = ['application/pdf'];
   @Output() readonly next = new EventEmitter<void>();
   @Output() readonly back = new EventEmitter<void>();
 
@@ -166,6 +170,19 @@ export class LabelRegistrationUploadDocumentsComponent implements OnInit, OnDest
     const file = input?.files?.[0] ?? null;
 
     if (!file) {
+      return;
+    }
+
+    const validationError = validateUploadedFile(file, {
+      allowedExtensions: this.allowedFileExtensions,
+      allowedMimeTypes: this.allowedMimeTypes,
+      maxFileSizeBytes: this.maxFileSizeBytes,
+      label: document.name
+    });
+    if (validationError) {
+      if (input) {
+        input.value = '';
+      }
       return;
     }
 

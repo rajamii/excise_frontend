@@ -5,6 +5,7 @@ import { takeUntil } from 'rxjs/operators';
 import { MaterialModule } from '../../../../../../../shared/material.module';
 import { PatternConstants } from '../../../../../../../shared/constants/pattern.constants';
 import { CompanyCollaborationService } from '../../../../../../../core/services/company-collaboration.service';
+import { validateUploadedFile } from '../../../../../../../shared/utils/file-upload-validation';
 
 export interface MemberEntry {
   memberName: string;
@@ -22,6 +23,9 @@ export interface MemberEntry {
   styleUrl: './collab-member-details.component.scss'
 })
 export class CollabMemberDetailsComponent implements OnInit, OnDestroy {
+  private readonly maxFileSizeBytes = 5 * 1024 * 1024;
+  private readonly allowedFileExtensions = ['pdf', 'png', 'jpg', 'jpeg'];
+  private readonly allowedMimeTypes = ['application/pdf', 'image/png', 'image/jpeg'];
   memberDetailsForm: FormGroup;
   members: MemberEntry[] = [];
   isFormOpen = true;
@@ -116,8 +120,21 @@ export class CollabMemberDetailsComponent implements OnInit, OnDestroy {
 
   // Document upload logic
   onFileSelect(event: any, document: any) {
-    const file = event.target.files[0];
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
     if (file) {
+      const validationError = validateUploadedFile(file, {
+        allowedExtensions: this.allowedFileExtensions,
+        allowedMimeTypes: this.allowedMimeTypes,
+        maxFileSizeBytes: this.maxFileSizeBytes,
+        label: document.name || 'Document'
+      });
+
+      if (validationError) {
+        input.value = '';
+        return;
+      }
+
       document.file = file;
       document.fileUrl = URL.createObjectURL(file);
       this.collaborationService.setCollabDocuments({ [document.key]: file });

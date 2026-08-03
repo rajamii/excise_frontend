@@ -8,6 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatStepperModule } from '@angular/material/stepper';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { validateUploadedFile } from '../../utils/file-upload-validation';
 
 interface SiteEnquiryDialogData {
   applicationId: string;
@@ -32,6 +33,10 @@ interface SiteEnquiryDialogData {
   styleUrl: './site-enquiry-form-dialog.component.scss'
 })
 export class SiteEnquiryFormDialogComponent implements OnInit {
+  private readonly maxFileSizeBytes = 5 * 1024 * 1024;
+  private readonly allowedFileExtensions = ['jpg', 'jpeg', 'png', 'webp', 'pdf'];
+  private readonly allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+
   readonly form: FormGroup;
   readonly applicationId: string;
   selectedFileName = '';
@@ -213,6 +218,21 @@ export class SiteEnquiryFormDialogComponent implements OnInit {
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] ?? null;
+    const validationError = validateUploadedFile(file, {
+      allowedExtensions: this.allowedFileExtensions,
+      allowedMimeTypes: this.allowedMimeTypes,
+      maxFileSizeBytes: this.maxFileSizeBytes,
+      label: 'Shop image document'
+    });
+
+    if (validationError) {
+      this.selectedFileName = '';
+      input.value = '';
+      this.form.patchValue({ shop_image_document: null });
+      this.form.get('shop_image_document')?.setErrors({ invalidFile: validationError });
+      return;
+    }
+
     this.selectedFileName = file?.name || '';
     this.form.patchValue({ shop_image_document: file });
     this.form.get('shop_image_document')?.updateValueAndValidity();

@@ -10,6 +10,7 @@ import { DatePipe } from '@angular/common';
 import { SalesmanBarmanRegistrationService } from '../../../../../core/services/salesman-barman-registration.service';
 import { AccountService } from '../../../../../core/services/account.service';
 import { MasterService } from '../../../../../core/services/master.service';
+import { validateUploadedFile } from '../../../../../shared/utils/file-upload-validation';
 
 @Component({
   selector: 'app-details',
@@ -20,6 +21,9 @@ import { MasterService } from '../../../../../core/services/master.service';
   providers: [DatePipe]
 })
 export class DetailsComponent implements OnInit, OnDestroy {
+  private readonly maxFileSizeBytes = 5 * 1024 * 1024;
+  private readonly allowedFileExtensions = ['pdf', 'png', 'jpg', 'jpeg'];
+  private readonly allowedMimeTypes = ['application/pdf', 'image/png', 'image/jpeg'];
   detailsForm: FormGroup;
   nationalities: string[] = ['Indian', 'Foreign'];
 
@@ -277,8 +281,21 @@ export class DetailsComponent implements OnInit, OnDestroy {
   }
 
   onFileSelect(event: any, document: any) {
-    const file = event.target.files[0];
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
     if (file) {
+      const validationError = validateUploadedFile(file, {
+        allowedExtensions: this.allowedFileExtensions,
+        allowedMimeTypes: this.allowedMimeTypes,
+        maxFileSizeBytes: this.maxFileSizeBytes,
+        label: document.name || 'Document'
+      });
+
+      if (validationError) {
+        input.value = '';
+        return;
+      }
+
       // Clear old URL if exists
       if (document.fileUrl) {
         URL.revokeObjectURL(document.fileUrl);
