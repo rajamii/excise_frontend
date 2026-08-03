@@ -3,7 +3,6 @@ export interface PaymentGateway {
   paymentGatewayName: string;
   merchantid: string;
   securityid: string;
-  encryptionKey: string;
   returnUrl: string;
   isActive: string;
 }
