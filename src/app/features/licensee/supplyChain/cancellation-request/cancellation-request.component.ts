@@ -522,12 +522,12 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
         this.walletDeclarationAccepted = false;
         this.showSuccessModal = true;
         this.successMessage =
-          `${response.message || 'Cancellation request submitted successfully.'}<br>` +
-          `Permit amount credited back: <strong>${this.formatCurrency(refundedAmount)}</strong><br>` +
-          `Cancellation charge deducted: <strong>${this.formatCurrency(deductedAmount)}</strong><br>` +
-          `Balance after proceed: <strong>${this.formatCurrency(balanceAfter)}</strong>` +
-          (refundTxnId ? `<br>Refund txn ID: <strong>${refundTxnId}</strong>` : '') +
-          (feeTxnId ? `<br>Fee txn ID: <strong>${feeTxnId}</strong>` : '');
+          `${String(response.message || 'Cancellation request submitted successfully.').trim()} ` +
+          `Permit amount credited back: ${this.formatCurrency(refundedAmount)}. ` +
+          `Cancellation charge deducted: ${this.formatCurrency(deductedAmount)}. ` +
+          `Balance after proceed: ${this.formatCurrency(balanceAfter)}.` +
+          (refundTxnId ? ` Refund txn ID: ${refundTxnId}.` : '') +
+          (feeTxnId ? ` Fee txn ID: ${feeTxnId}.` : '');
 
         this.loadData();
         this.newlySelectedPermits = [];

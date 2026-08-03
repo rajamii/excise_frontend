@@ -1152,20 +1152,31 @@ export class CancellationComponent implements OnInit {
   private showNotification(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info'): void {
     if (!this.isBrowser) return;
 
-    // Create notification element
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
-    notification.innerHTML = `
-      <div class="notification-content">
-        <i class="bi ${this.getNotificationIcon(type)}"></i>
-        <span>${message}</span>
-        <button class="notification-close" onclick="this.parentElement.parentElement.remove()">
-          <i class="bi bi-x"></i>
-        </button>
-      </div>
-    `;
+    const content = document.createElement('div');
+    content.className = 'notification-content';
 
-    // Add styles
+    const icon = document.createElement('i');
+    icon.className = `bi ${this.getNotificationIcon(type)}`;
+
+    const text = document.createElement('span');
+    text.textContent = message;
+
+    const closeButton = document.createElement('button');
+    closeButton.className = 'notification-close';
+    closeButton.type = 'button';
+    closeButton.addEventListener('click', () => notification.remove());
+
+    const closeIcon = document.createElement('i');
+    closeIcon.className = 'bi bi-x';
+
+    closeButton.appendChild(closeIcon);
+    content.appendChild(icon);
+    content.appendChild(text);
+    content.appendChild(closeButton);
+    notification.appendChild(content);
+
     notification.style.cssText = `
       position: fixed;
       top: 20px;
@@ -1182,10 +1193,8 @@ export class CancellationComponent implements OnInit {
       font-weight: 500;
     `;
 
-    // Add to body
     document.body.appendChild(notification);
 
-    // Auto remove after 5 seconds
     setTimeout(() => {
       if (notification.parentElement) {
         notification.style.animation = 'slideOut 0.3s ease-in';

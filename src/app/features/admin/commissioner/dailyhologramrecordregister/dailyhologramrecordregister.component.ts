@@ -150,15 +150,11 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
   private updateApprovalDeadlineBreaches(now: Date = new Date()): void {
     let dismissed: string[] = [];
     try {
-      let stored = localStorage.getItem('dismissedOverdueHolograms');
-      if (!stored) {
-        const match = document.cookie.match(new RegExp('(^| )dismissedOverdueHolograms=([^;]+)'));
-        if (match) stored = decodeURIComponent(match[2]);
-      }
+      const stored = localStorage.getItem('dismissedOverdueHolograms');
       if (stored) {
-        dismissed = JSON.parse(stored);
-        if (!localStorage.getItem('dismissedOverdueHolograms')) {
-          localStorage.setItem('dismissedOverdueHolograms', stored);
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          dismissed = parsed.filter((value) => typeof value === 'string' && value.trim().length > 0);
         }
       }
     } catch (e) {}
@@ -628,21 +624,13 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
     this.showApprovalDeadlineBreachAlert = false;
 
     try {
-      let stored = localStorage.getItem('dismissedOverdueHolograms');
-      if (!stored) {
-        const match = document.cookie.match(new RegExp('(^| )dismissedOverdueHolograms=([^;]+)'));
-        if (match) stored = decodeURIComponent(match[2]);
-      }
+      const stored = localStorage.getItem('dismissedOverdueHolograms');
       const dismissed: string[] = stored ? JSON.parse(stored) : [];
       this.approvalDeadlineBreaches.forEach(b => {
         if (!dismissed.includes(b.referenceNo)) dismissed.push(b.referenceNo);
       });
       const newVal = JSON.stringify(dismissed);
       localStorage.setItem('dismissedOverdueHolograms', newVal);
-      
-      const d = new Date();
-      d.setTime(d.getTime() + (30 * 24 * 60 * 60 * 1000));
-      document.cookie = "dismissedOverdueHolograms=" + encodeURIComponent(newVal) + ";expires=" + d.toUTCString() + ";path=/";
     } catch (e) {
       console.error('Failed to save dismissed holograms', e);
     }
