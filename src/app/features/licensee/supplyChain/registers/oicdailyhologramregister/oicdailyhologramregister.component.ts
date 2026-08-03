@@ -522,7 +522,7 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
             }
 
             // Create unique ID for tracking (use saved entry ID if available, otherwise use index)
-            const uniqueId = saved.id || saved.Id || `${reqRef}_${index}_${Date.now()}`;
+            const uniqueId = saved.id || saved.Id || `${reqRef}_${index}_${secureRandomToken(8)}`;
 
             // Determine if this roll was marked as "Not In Use"
             // If issued and wastage are both 0, and it's a saved entry, it's effectively "Not In Use"
@@ -2825,7 +2825,7 @@ After editing, click "Lock" to save your changes.`);
 
   // Generate unique ID for brand
   private generateBrandId(): string {
-    return `brand_${Date.now()}_${secureRandomToken(9)}`;
+    return `brand_${secureRandomToken(12)}`;
   }
 
   // Check if roll is using multi-brand mode

@@ -625,7 +625,7 @@ export class HologramDataService {
    * Generates a unique ID for new entries
    */
   generateId(): string {
-    return Date.now().toString(36) + secureRandomToken(12);
+    return secureRandomToken(20);
   }
 
   /**

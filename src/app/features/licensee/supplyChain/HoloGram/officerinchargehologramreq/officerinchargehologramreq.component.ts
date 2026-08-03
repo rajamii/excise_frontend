@@ -1864,7 +1864,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     console.log('=== CREATING ISSUED HOLOGRAM ENTRIES ===');
 
     const issuedEntries = this.allocationResult.allocations.map((allocation, index) => ({
-      id: Date.now() + index,
+      id: secureRandomToken(12),
       referenceNo: this.selectedRequest!.referenceNo, // Use reference number instead of batch number
       brandName: this.selectedRequest!.brandDetails.brandName,
       fromSerial: allocation.fromSerial,
@@ -1927,13 +1927,13 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     const totalQuantity = this.allocationResult.allocations.reduce((sum, alloc) => sum + alloc.quantity, 0);
 
     const entry = {
-      id: `AUTO_${Date.now()}`,
+      id: `AUTO_${secureRandomToken(10)}`,
       date: new Date().toISOString().split('T')[0],
       hologramType: this.selectedRequest!.hologramType,
 
       // Store ALL allocations in the entry
       issuedEntries: this.allocationResult.allocations.map((allocation, index) => ({
-        id: `ISSUED_${Date.now()}_${index}`,
+        id: `ISSUED_${secureRandomToken(10)}_${index}`,
         fromSerial: allocation.fromSerial,
         toSerial: allocation.toSerial,
         quantity: allocation.quantity,
@@ -2069,8 +2069,8 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   addSampleInventory(): void {
     const sampleInventory = [
       {
-        id: Date.now(),
-        cartoonNumber: `CTN${String(Date.now()).slice(-3)}`,
+        id: secureRandomToken(12),
+        cartoonNumber: `CTN${secureRandomToken(3).toUpperCase()}`,
         type: 'LOCAL',
         fromSerial: 'HG1001',
         toSerial: 'HG1500',
@@ -2084,8 +2084,8 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         newUntil: Date.now() + (60 * 60 * 1000) // 1 hour from now
       },
       {
-        id: Date.now() + 1,
-        cartoonNumber: `CTN${String(Date.now() + 1).slice(-3)}`,
+        id: secureRandomToken(12),
+        cartoonNumber: `CTN${secureRandomToken(3).toUpperCase()}`,
         type: 'EXPORT',
         fromSerial: 'HG002001',
         toSerial: 'HG002300',

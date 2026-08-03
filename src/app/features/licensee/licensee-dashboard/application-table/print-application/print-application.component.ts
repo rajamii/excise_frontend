@@ -5,6 +5,7 @@ import { LicenseApplicationService } from '../../../../../core/services/license-
 import { LicenseService } from '../../../../../core/services/license.service';
 import { Router } from '@angular/router';
 import Swal from 'sweetalert2';
+import { secureRandomToken } from '../../../../../core/utils/secure-random';
 
 @Component({
   selector: 'app-print-application',
@@ -233,7 +234,7 @@ export class PrintApplicationComponent {
     printObservable.subscribe({
       next: (res: any) => {
         const updatedCount = res?.print_count ?? res?.printCount;
-        const prePrintToken = String(res?.nonce || res?.verificationId || Date.now());
+        const prePrintToken = String(res?.nonce || res?.verificationId || secureRandomToken(12));
         if (updatedCount !== undefined) {
           this.application.print_count = updatedCount;
           if (this.raw) this.raw.print_count = updatedCount;

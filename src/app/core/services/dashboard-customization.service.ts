@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { DashboardWidget, DashboardConfig } from '../models/dashboard.models';
+import { secureRandomToken } from '../utils/secure-random';
 
 interface CustomDashboardLayout {
   userId: number;
@@ -158,7 +159,7 @@ export class DashboardCustomizationService {
     if (!currentLayout) return;
 
     widget.isCustom = true;
-    widget.id = `custom_${Date.now()}`;
+    widget.id = `custom_${secureRandomToken(12)}`;
     currentLayout.widgets.push(widget);
     this.saveCustomLayout(currentLayout);
   }

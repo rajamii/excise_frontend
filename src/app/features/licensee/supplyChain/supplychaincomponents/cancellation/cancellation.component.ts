@@ -6,6 +6,7 @@ import { SupplyChainService } from "../../services/supplychain.service";
 import { AccountService } from "../../../../../core/services/account.service";
 import { UnifiedActionButtonsComponent } from '../../../../../shared/components/unified-action-buttons/unified-action-buttons.component';
 import { UnifiedActionsService } from '../../../../../shared/services/unified-actions.service';
+import { secureRandomToken } from '../../../../../core/utils/secure-random';
 
 interface TableData {
   id?: string | number;
@@ -145,7 +146,7 @@ export class CancellationComponent implements OnInit {
 
         this.cancellationData = data.map((item: any, index: number) => {
           const mappedItem = {
-            id: item.id || item.pk || `fallback-${index}-${Date.now()}`, // Ensure unique ID
+            id: item.id || item.pk || `fallback-${index}-${secureRandomToken(8)}`, // Ensure unique ID
             referenceNo: item.ourRefNo || item.our_ref_no || 'N/A',
             submissionDate: item.cancellationDate ? new Date(item.cancellationDate).toLocaleDateString('en-GB') :
               (item.cancellation_date ? new Date(item.cancellation_date).toLocaleDateString('en-GB') :
@@ -338,7 +339,7 @@ export class CancellationComponent implements OnInit {
     // Keep existing sample data as fallback with unique IDs
     this.cancellationData = [
       {
-        id: 'sample-1-' + Date.now(),
+        id: 'sample-1-' + secureRandomToken(8),
         referenceNo: "CAN/001/2025",
         submissionDate: "20-Sep-2025",
         requestDate: "20-Sep-2025",
@@ -351,7 +352,7 @@ export class CancellationComponent implements OnInit {
         allowedActions: ['APPROVE', 'REJECT']
       },
       {
-        id: 'sample-2-' + Date.now(),
+        id: 'sample-2-' + secureRandomToken(8),
         referenceNo: "CAN/002/2025",
         submissionDate: "19-Sep-2025",
         requestDate: "19-Sep-2025",

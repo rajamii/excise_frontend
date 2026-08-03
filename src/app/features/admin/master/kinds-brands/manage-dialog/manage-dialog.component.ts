@@ -3,6 +3,7 @@ import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import Swal from 'sweetalert2';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { CompanyCollaborationService } from '../../../../../core/services/company-collaboration.service';
+import { secureRandomToken } from '../../../../../core/utils/secure-random';
 
 @Component({
   selector: 'app-manage-dialog',
@@ -142,7 +143,7 @@ export class ManageDialogComponent implements OnInit {
         Swal.fire('Duplicate', 'This size is already in the list.', 'warning');
         return;
       }
-      this.packSizes.push({ measureValue: val, label: `${val} Ml`, tempId: Date.now() });
+      this.packSizes.push({ measureValue: val, label: `${val} Ml`, tempId: secureRandomToken(12) });
       this.newSizeInput = null;
     }
   }

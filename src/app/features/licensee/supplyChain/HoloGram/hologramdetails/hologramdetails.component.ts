@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HologramDataService } from '../../services/hologram-data.service';
+import { secureRandomToken } from '../../../../../core/utils/secure-random';
 
 export interface HologramRecord {
   id: number;
@@ -876,7 +877,7 @@ export class HologramdetailsComponent implements OnInit {
       }
     }
 
-    const uniqueId = Date.now(); // Use timestamp as unique ID
+    const uniqueId = secureRandomToken(12); // Use secure random ID
 
     // CRITICAL: Load allocated ranges from allocation data
     const allocationData = JSON.parse(
