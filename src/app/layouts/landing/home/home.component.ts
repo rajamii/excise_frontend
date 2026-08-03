@@ -388,14 +388,14 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       const type = particleTypes[i % particleTypes.length];
       const colorBase = secureRandomChoice(colors);
       const particle: Particle3D = {
-        x: (secureRandomFloat() - 0.5) * canvas.width * 1.5,
-        y: (secureRandomFloat() - 0.5) * canvas.height * 1.5,
+        x: (secureRandomFloat() - 0.5) * 1.5,
+        y: (secureRandomFloat() - 0.5) * 1.5,
         z: secureRandomFloat() * 600 + 150,
-        vx: (secureRandomFloat() - 0.5) * 0.45,
-        vy: (secureRandomFloat() - 0.5) * 0.45,
-        vz: (secureRandomFloat() - 0.5) * 0.25,
+        vx: 0,
+        vy: 0,
+        vz: 0,
         rx: secureRandomFloat() * Math.PI * 2,
-        vrx: (secureRandomFloat() - 0.5) * 0.015,
+        vrx: 0,
         type: type,
         color: colorBase,
         scale: type === 'truck' ? 36 : type === 'rupee' ? 32 : type === 'number' ? 1.0 : 28,
@@ -426,26 +426,9 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         const depthRatio = 1 - (p.z - 150) / 600;
         const projScale = focalLength / p.z;
 
-        // Regular background particles drift freely
-        p.x += p.vx;
-        p.y += p.vy;
-        p.z += p.vz;
-        p.rx += p.vrx;
-
-        // Wrap around screen boundaries
-        const xLimit = canvas.width * 0.75 + 100;
-        const yLimit = canvas.height * 0.75 + 100;
-
-        if (p.x < -xLimit) p.x = xLimit;
-        if (p.x > xLimit) p.x = -xLimit;
-        if (p.y < -yLimit) p.y = yLimit;
-        if (p.y > yLimit) p.y = -yLimit;
-        if (p.z < 150) p.z = 750;
-        if (p.z > 750) p.z = 150;
-
-        // Project center of object to screen (no camera parallax offsets!)
-        const wx = p.x;
-        const wy = p.y;
+        // Project center of object to screen (no camera parallax offsets!) using normalized coordinates
+        const wx = p.x * canvas.width;
+        const wy = p.y * canvas.height;
         const wz = p.z;
 
         if (wz <= 50) continue; 
