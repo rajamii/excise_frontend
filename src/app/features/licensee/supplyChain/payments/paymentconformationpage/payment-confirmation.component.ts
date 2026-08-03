@@ -22,6 +22,7 @@ import {
   AddMoneyWalletType,
   UnifiedAddMoneyModalComponent
 } from '../../../../../shared/components/unified-add-money-modal/unified-add-money-modal.component';
+import { secureRandomInt } from '../../../../../core/utils/secure-random';
 
 interface PaymentItem {
   id: string;
@@ -3572,7 +3573,7 @@ private initializeWalletContextAndLoadData(): void {
     };
 
     const timestamp = Date.now().toString();
-    const randomBlock = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+    const randomBlock = secureRandomInt(1000000).toString().padStart(6, '0');
     return `BILLDESK${prefixByWallet[walletType]}${timestamp}${randomBlock}`;
   }
 

@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HologramDataService, HologramRequest as ApiHologramRequest } from '../../services/hologram-data.service';
 import Swal from 'sweetalert2';
+import { secureRandomToken } from '../../../../../core/utils/secure-random';
 
 interface HologramRequest {
   id: string;
@@ -912,7 +913,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
           // Basic validation
           if (!roll.carton_number && !roll.cartonNumber) continue;
 
-          const uniqueId = roll.id || Math.random();
+          const uniqueId = roll.id || secureRandomToken(12);
           const availableQty = roll.available !== undefined ? roll.available : (roll.available_count || 0);
           
           // Use the available_range field from backend (already calculated)
@@ -1035,7 +1036,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
           for (const roll of scopedRolls) {
             if (!roll.carton_number && !roll.cartonNumber) continue;
             
-            const uniqueId = roll.id || Math.random();
+            const uniqueId = roll.id || secureRandomToken(12);
             const availableQty = roll.available !== undefined ? roll.available : (roll.available_count || 0);
             
             // Use the available_range field from backend (already calculated)

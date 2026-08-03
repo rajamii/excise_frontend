@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, map, of } from 'rxjs';
 import { SupplyChainService } from '../../services/supplychain.service';
 import { environment } from '../../../../../../environments/environment';
+import { secureRandomInt } from '../../../../../core/utils/secure-random';
 
 interface CancellationFinalLetterData {
   id: string;
@@ -610,7 +611,7 @@ export class UnifiedfinalletterviewComponent implements OnInit {
     const year = currentDate.getFullYear();
     const month = String(currentDate.getMonth() + 1).padStart(2, '0');
     const day = String(currentDate.getDate()).padStart(2, '0');
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    const random = secureRandomInt(1000).toString().padStart(3, '0');
     
     return `${random}/Excise`;
   }
@@ -618,7 +619,7 @@ export class UnifiedfinalletterviewComponent implements OnInit {
   private generateFileNumber(): string {
     const currentDate = new Date();
     const year = currentDate.getFullYear();
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    const random = secureRandomInt(1000).toString().padStart(3, '0');
     
     return `GOS/${random}/Ex/HQ ${year}-25`;
   }

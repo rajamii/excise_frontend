@@ -10,6 +10,7 @@ import { InfoPagesService } from '../../../core/services/info-pages.service';
 import { PreventiveRaidsService } from '../../../core/services/preventive-raids.service';
 import { PreventiveRaid } from '../../../core/models/preventive-raids.model';
 import { environment } from '../../../../environments/environment';
+import { secureRandomChoice, secureRandomFloat } from '../../../core/utils/secure-random';
 
 interface Particle3D {
   x: number;
@@ -385,16 +386,16 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     const bgCount = 125;
     for (let i = 0; i < bgCount; i++) {
       const type = particleTypes[i % particleTypes.length];
-      const colorBase = colors[Math.floor(Math.random() * colors.length)];
+      const colorBase = secureRandomChoice(colors);
       const particle: Particle3D = {
-        x: (Math.random() - 0.5) * canvas.width * 1.5,
-        y: (Math.random() - 0.5) * canvas.height * 1.5,
-        z: Math.random() * 600 + 150,
-        vx: (Math.random() - 0.5) * 0.45,
-        vy: (Math.random() - 0.5) * 0.45,
-        vz: (Math.random() - 0.5) * 0.25,
-        rx: Math.random() * Math.PI * 2,
-        vrx: (Math.random() - 0.5) * 0.015,
+        x: (secureRandomFloat() - 0.5) * canvas.width * 1.5,
+        y: (secureRandomFloat() - 0.5) * canvas.height * 1.5,
+        z: secureRandomFloat() * 600 + 150,
+        vx: (secureRandomFloat() - 0.5) * 0.45,
+        vy: (secureRandomFloat() - 0.5) * 0.45,
+        vz: (secureRandomFloat() - 0.5) * 0.25,
+        rx: secureRandomFloat() * Math.PI * 2,
+        vrx: (secureRandomFloat() - 0.5) * 0.015,
         type: type,
         color: colorBase,
         scale: type === 'truck' ? 36 : type === 'rupee' ? 32 : type === 'number' ? 1.0 : 28,
@@ -402,8 +403,8 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       };
 
       if (type === 'number') {
-        particle.textVal = numbersList[Math.floor(Math.random() * numbersList.length)];
-        particle.scale = 14 + Math.random() * 8;
+        particle.textVal = secureRandomChoice(numbersList);
+        particle.scale = 14 + secureRandomFloat() * 8;
       }
 
       this.particles.push(particle);

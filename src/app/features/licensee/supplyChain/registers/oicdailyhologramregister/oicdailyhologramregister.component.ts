@@ -7,6 +7,7 @@ import { BrandWarehouseService } from '../../services/brand-warehouse.service';
 import { SupplyChainProfileService } from '../../../../../core/services/supply-chain-profile.service';
 import { forkJoin, Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
+import { secureRandomToken } from '../../../../../core/utils/secure-random';
 
 
 interface RollRange {
@@ -2824,7 +2825,7 @@ After editing, click "Lock" to save your changes.`);
 
   // Generate unique ID for brand
   private generateBrandId(): string {
-    return `brand_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `brand_${Date.now()}_${secureRandomToken(9)}`;
   }
 
   // Check if roll is using multi-brand mode

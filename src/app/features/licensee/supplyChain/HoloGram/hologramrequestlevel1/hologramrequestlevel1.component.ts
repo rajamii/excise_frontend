@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HologramDataService } from '../../services/hologram-data.service';
 import { SupplyChainProfileService } from '../../../../../core/services/supply-chain-profile.service';
+import { secureRandomInt } from '../../../../../core/utils/secure-random';
 
 interface HologramRequest {
   totalHolograms: number;
@@ -129,7 +130,7 @@ export class Hologramrequestlevel1Component implements OnInit {
 
   private generateReferenceNumber(): string {
     const financialYear = this.getFinancialYear();
-    const random = Math.floor(Math.random() * 9999) + 1;
+    const random = secureRandomInt(9999) + 1;
     return `HQR/1101/${financialYear}/${String(random).padStart(4, '0')}`;
   }
 

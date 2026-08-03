@@ -23,6 +23,7 @@ import { RoleService } from '../../core/services/role.service';
 import { TimerConfigService } from '../../core/services/timer-config.service';
 import { RenewalConfigService } from '../../core/services/renewal-config.service';
 import { DashboardConfigService } from '../../core/services/dashboard-config.service';
+import { secureRandomFloat, secureRandomInt } from '../../core/utils/secure-random';
 import { UnifiedDashboardService } from '../../core/services/unified-dashboard.service';
 import { LicenseMeService } from '../../core/services/license-me.service';
 import { UnifiedApplication } from '../../core/models/unified-application.model';
@@ -1561,7 +1562,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private createBubble(width: number, height: number, initSpreading = false): any {
-    const r = Math.random();
+    const r = secureRandomFloat();
     let layer: 1 | 2 | 3 = 2;
     let size = 12;
     let opacity = 0.3;
@@ -1570,41 +1571,41 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (r < 0.35) {
       // Layer 1: background bubbles
       layer = 1;
-      size = 6 + Math.random() * 6; // 6px to 12px
-      opacity = 0.22 + Math.random() * 0.08; // 0.22 to 0.30
-      speedY = 0.3 + Math.random() * 0.3;
+      size = 6 + secureRandomFloat() * 6; // 6px to 12px
+      opacity = 0.22 + secureRandomFloat() * 0.08; // 0.22 to 0.30
+      speedY = 0.3 + secureRandomFloat() * 0.3;
     } else if (r < 0.85) {
       // Layer 2: midground bubbles
       layer = 2;
-      size = 12 + Math.random() * 10; // 12px to 22px
-      opacity = 0.32 + Math.random() * 0.13; // 0.32 to 0.45
-      speedY = 0.5 + Math.random() * 0.4;
+      size = 12 + secureRandomFloat() * 10; // 12px to 22px
+      opacity = 0.32 + secureRandomFloat() * 0.13; // 0.32 to 0.45
+      speedY = 0.5 + secureRandomFloat() * 0.4;
     } else {
       // Layer 3: foreground large sharp bubbles
       layer = 3;
-      size = 22 + Math.random() * 10; // 22px to 32px
-      opacity = 0.48 + Math.random() * 0.15; // 0.48 to 0.63
-      speedY = 0.8 + Math.random() * 0.5;
+      size = 22 + secureRandomFloat() * 10; // 22px to 32px
+      opacity = 0.48 + secureRandomFloat() * 0.15; // 0.48 to 0.63
+      speedY = 0.8 + secureRandomFloat() * 0.5;
     }
 
     const startY = initSpreading 
-      ? Math.random() * height 
-      : height + 20 + Math.random() * 50;
+      ? secureRandomFloat() * height 
+      : height + 20 + secureRandomFloat() * 50;
 
     return {
-      x: Math.random() * width,
+      x: secureRandomFloat() * width,
       y: startY,
       size,
       speedY,
-      speedX: (Math.random() - 0.5) * 0.15,
-      amplitude: 15 + Math.random() * 20,
-      frequency: 0.01 + Math.random() * 0.02,
-      swayOffset: Math.random() * Math.PI * 2,
+      speedX: (secureRandomFloat() - 0.5) * 0.15,
+      amplitude: 15 + secureRandomFloat() * 20,
+      frequency: 0.01 + secureRandomFloat() * 0.02,
+      swayOffset: secureRandomFloat() * Math.PI * 2,
       opacity,
       layer,
-      wobble: Math.random() * Math.PI * 2,
-      wobbleSpeed: 0.03 + Math.random() * 0.04,
-      wobbleFactor: 0.5 + Math.random() * 0.5
+      wobble: secureRandomFloat() * Math.PI * 2,
+      wobbleSpeed: 0.03 + secureRandomFloat() * 0.04,
+      wobbleFactor: 0.5 + secureRandomFloat() * 0.5
     };
   }
 
@@ -1647,26 +1648,26 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const canvas = this.bubbleCanvasRef?.nativeElement;
     if (!canvas) return;
     
-    const burstCount = 6 + Math.floor(Math.random() * 4);
+    const burstCount = 6 + secureRandomInt(4);
     for (let i = 0; i < burstCount; i++) {
-      const size = 3 + Math.random() * 6;
-      const opacity = 0.15 + Math.random() * 0.1;
-      const angle = (Math.PI * 2 / burstCount) * i + (Math.random() - 0.5) * 0.4;
-      const speed = 1.5 + Math.random() * 2;
+      const size = 3 + secureRandomFloat() * 6;
+      const opacity = 0.15 + secureRandomFloat() * 0.1;
+      const angle = (Math.PI * 2 / burstCount) * i + (secureRandomFloat() - 0.5) * 0.4;
+      const speed = 1.5 + secureRandomFloat() * 2;
       
       const burstBubble = {
         x: clickX,
         y: clickY,
         size,
-        speedY: 0.8 + Math.random() * 0.6,
+        speedY: 0.8 + secureRandomFloat() * 0.6,
         speedX: Math.cos(angle) * speed,
-        amplitude: 5 + Math.random() * 10,
-        frequency: 0.02 + Math.random() * 0.03,
-        swayOffset: Math.random() * Math.PI * 2,
+        amplitude: 5 + secureRandomFloat() * 10,
+        frequency: 0.02 + secureRandomFloat() * 0.03,
+        swayOffset: secureRandomFloat() * Math.PI * 2,
         opacity,
         layer: 3,
-        wobble: Math.random() * Math.PI * 2,
-        wobbleSpeed: 0.08 + Math.random() * 0.08,
+        wobble: secureRandomFloat() * Math.PI * 2,
+        wobbleSpeed: 0.08 + secureRandomFloat() * 0.08,
         wobbleFactor: 1.5
       };
 

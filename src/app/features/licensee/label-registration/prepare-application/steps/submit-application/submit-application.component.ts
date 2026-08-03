@@ -6,6 +6,7 @@ import Swal from 'sweetalert2';
 import { LabelRegistrationUploadDetails, LabelRegistrationUploadedDocument } from '../../../../../../core/models/label-registration.model';
 import { LabelRegistrationService } from '../../../../../../core/services/label-registration.service';
 import { MaterialModule } from '../../../../../../shared/material.module';
+import { secureRandomInt } from '../../../../../../core/utils/secure-random';
 
 @Component({
   selector: 'app-label-registration-submit-application',
@@ -349,7 +350,7 @@ export class LabelRegistrationSubmitApplicationComponent implements OnInit, OnDe
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
-    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    const random = secureRandomInt(10000).toString().padStart(4, '0');
     return `LBL/${year}${month}${day}/${random}`;
   }
 

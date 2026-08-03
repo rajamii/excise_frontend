@@ -18,6 +18,7 @@ import { StatsOverviewComponent } from '../widgets/stats-overview/stats-overview
 import { ChartWidgetComponent } from '../widgets/chart-widget/chart-widget.component';
 import { TableWidgetComponent } from '../widgets/table-widget/table-widget.component';
 import { ApplicationStatsComponent } from '../widgets/application-stats/application-stats.component';
+import { secureRandomInt } from '../../../../core/utils/secure-random';
 
 @Component({
   selector: 'app-dashboard-container',
@@ -132,12 +133,12 @@ export class DashboardContainerComponent implements OnInit, OnDestroy {
     switch (widget.type) {
       case 'stats-overview':
         return {
-          applied: Math.floor(Math.random() * 100) + 50,
-          pending: Math.floor(Math.random() * 50) + 20,
-          approved: Math.floor(Math.random() * 80) + 30,
-          rejected: Math.floor(Math.random() * 20) + 5,
-          executed: Math.floor(Math.random() * 60) + 25,
-          total: Math.floor(Math.random() * 200) + 100
+          applied: secureRandomInt(100) + 50,
+          pending: secureRandomInt(50) + 20,
+          approved: secureRandomInt(80) + 30,
+          rejected: secureRandomInt(20) + 5,
+          executed: secureRandomInt(60) + 25,
+          total: secureRandomInt(200) + 100
         };
       
       case 'chart-widget':
