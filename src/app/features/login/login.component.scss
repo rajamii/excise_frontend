@@ -238,10 +238,17 @@ $warn-text:     #92400e;
 
 .factory-bg {
   position: fixed;
-  inset: 0;
+  inset: -10px;
   z-index: 1;
   pointer-events: none;
   overflow: hidden;
+  filter: blur(8px);
+  transform: scale(1.02);
+
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
 // ── Industrial sky gradient ────────────────────────────
