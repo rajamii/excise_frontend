@@ -14,6 +14,7 @@ import { Objection } from '../../../../../core/models/license-application.model'
 import { FormDataUtil } from '../../../../../shared/utils/form-data.util';
 import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
 import { environment } from '../../../../../../environments/environment';
+import { validateUploadedFile } from '../../../../../shared/utils/file-upload-validation';
 
 export interface SalesmanBarmanResolveObjectionsDialogData {
   applicationId: string;
@@ -79,7 +80,7 @@ export interface SalesmanBarmanResolveObjectionsDialogData {
             </div>
 
             <div class="file-upload-row my-2" *ngIf="isFileField(obj.fieldName, currentValue(obj.fieldName))">
-              <input type="file" (change)="onFileSelected(obj.fieldName, $event)" class="form-control" />
+              <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx" (change)="onFileSelected(obj.fieldName, $event)" class="form-control" />
             </div>
 
             <mat-form-field appearance="outline" class="w-100" *ngIf="!isFileField(obj.fieldName, currentValue(obj.fieldName))">
@@ -133,6 +134,17 @@ export interface SalesmanBarmanResolveObjectionsDialogData {
   `]
 })
 export class SalesmanBarmanResolveObjectionsDialogComponent implements OnInit {
+  private readonly allowedFileExtensions = ['jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx'];
+  private readonly allowedMimeTypes = [
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ];
+  private readonly maxFileSizeBytes = 5 * 1024 * 1024;
+
   isLoading = true;
   error: string | null = null;
 
@@ -308,6 +320,17 @@ export class SalesmanBarmanResolveObjectionsDialogComponent implements OnInit {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] || null;
     if (!file) return;
+    const validationError = validateUploadedFile(file, {
+      allowedExtensions: this.allowedFileExtensions,
+      allowedMimeTypes: this.allowedMimeTypes,
+      maxFileSizeBytes: this.maxFileSizeBytes,
+      label: this.label(fieldName)
+    });
+    if (validationError) {
+      input.value = '';
+      void Swal.fire('Invalid File', validationError, 'error');
+      return;
+    }
     const ctrl = this.form.get(fieldName) as FormControl<any> | null;
     ctrl?.setValue(file);
     ctrl?.markAsDirty();

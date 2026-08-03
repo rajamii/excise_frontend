@@ -10,6 +10,7 @@ import { MasterService } from '../../../../../core/services/master.service';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
 import { DatePipe } from '@angular/common';
 import { MatStepper } from '@angular/material/stepper';
+import { validateUploadedFile } from '../../../../../shared/utils/file-upload-validation';
 
 @Component({
   selector: 'app-unit-details',
@@ -373,17 +374,21 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      alert('File size must be less than 5 MB.');
-      input.value = '';
-      return;
-    }
-
-    const allowedExtensions = this.panCardDoc.formats.split(',').map(f => f.trim());
-    const extension = `.${file.name.split('.').pop()?.toLowerCase()}`;
-    if (!allowedExtensions.includes(extension)) {
-      alert(`Allowed formats: ${this.panCardDoc.formats}`);
+    const allowedExtensions = this.panCardDoc.formats
+      .split(',')
+      .map((format) => format.trim().replace(/^\./, '').toLowerCase())
+      .filter(Boolean);
+    const allowedMimeTypes = allowedExtensions.includes('pdf')
+      ? ['image/jpeg', 'image/png', 'application/pdf']
+      : ['image/jpeg', 'image/png'];
+    const validationError = validateUploadedFile(file, {
+      allowedExtensions,
+      allowedMimeTypes,
+      maxFileSizeBytes: 5 * 1024 * 1024,
+      label: this.panCardDoc.label
+    });
+    if (validationError) {
+      alert(validationError);
       input.value = '';
       return;
     }

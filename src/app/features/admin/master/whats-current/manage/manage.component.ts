@@ -5,6 +5,7 @@ import Swal from 'sweetalert2';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { WhatsCurrent } from '../../../../../core/models/whats-current.model';
 import { WhatsCurrentService } from '../../../../../core/services/whats-current.service';
+import { validateUploadedFile } from '../../../../../shared/utils/file-upload-validation';
 
 interface ManageDialogData {
   record: WhatsCurrent | null;
@@ -18,6 +19,10 @@ interface ManageDialogData {
   styleUrl: './manage.component.scss'
 })
 export class ManageComponent implements OnInit {
+  private readonly allowedFileExtensions = ['pdf'];
+  private readonly allowedMimeTypes = ['application/pdf'];
+  private readonly maxFileSizeBytes = 2 * 1024 * 1024;
+
   @ViewChild('messageArea') messageArea!: ElementRef<HTMLTextAreaElement>;
 
   record: Partial<WhatsCurrent> = {
@@ -50,10 +55,23 @@ export class ManageComponent implements OnInit {
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
-    if (file) {
-      this.selectedFile = file;
-      this.selectedFileName = file.name;
+    if (!file) return;
+
+    const validationError = validateUploadedFile(file, {
+      allowedExtensions: this.allowedFileExtensions,
+      allowedMimeTypes: this.allowedMimeTypes,
+      maxFileSizeBytes: this.maxFileSizeBytes,
+      label: 'Whats Current file'
+    });
+
+    if (validationError) {
+      input.value = '';
+      Swal.fire('Invalid File', validationError, 'error');
+      return;
     }
+
+    this.selectedFile = file;
+    this.selectedFileName = file.name;
   }
 
   getFileDisplay(): string {

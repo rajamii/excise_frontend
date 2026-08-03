@@ -8,6 +8,7 @@ import { FormUtils } from '../../../../../shared/utils/capitalize.util';
 import { LicenseApplication } from '../../../../../core/models/license-application.model';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
 import { AccountService } from '../../../../../core/services/account.service';
+import { validateUploadedFile } from '../../../../../shared/utils/file-upload-validation';
 
 @Component({
   selector: 'app-member-details',
@@ -177,15 +178,15 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
     const file = input.files?.[0];
 
     if (file) {
-      const validTypes = ['image/png', 'image/jpg', 'image/jpeg'];
-      if (!validTypes.includes(file.type)) {
-        alert('Please upload a PNG or JPG image');
-        return;
-      }
-
-      const maxSize = 5 * 1024 * 1024;
-      if (file.size > maxSize) {
-        alert('File size must be less than 5MB');
+      const validationError = validateUploadedFile(file, {
+        allowedExtensions: ['png', 'jpg', 'jpeg'],
+        allowedMimeTypes: ['image/png', 'image/jpg', 'image/jpeg'],
+        maxFileSizeBytes: 5 * 1024 * 1024,
+        label: 'Passport photo'
+      });
+      if (validationError) {
+        alert(validationError);
+        input.value = '';
         return;
       }
 

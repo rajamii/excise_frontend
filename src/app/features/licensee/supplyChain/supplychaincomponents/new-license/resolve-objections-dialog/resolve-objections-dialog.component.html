@@ -41,7 +41,7 @@
 
           @if (isFileField(obj.fieldName, currentValue(obj.fieldName))) {
             <div class="file-row">
-              <input type="file" (change)="onFileSelected(obj.fieldName, $event)" />
+              <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx" (change)="onFileSelected(obj.fieldName, $event)" />
             </div>
            } @else {
              <mat-form-field appearance="outline" class="field-input">

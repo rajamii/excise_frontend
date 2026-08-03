@@ -16,6 +16,7 @@ import { environment } from '../../../../../../../environments/environment';
 import { UnifiedDashboardService } from '../../../../../../core/services/unified-dashboard.service';
 import { LicenseApplicationService } from '../../../../../../core/services/license-application.service';
 import { PatternConstants } from '../../../../../../shared/constants/pattern.constants';
+import { validateUploadedFile } from '../../../../../../shared/utils/file-upload-validation';
 
 export interface ResolveObjectionsDialogData {
   applicationId: string;
@@ -38,6 +39,17 @@ export interface ResolveObjectionsDialogData {
   styleUrls: ['./resolve-objections-dialog.component.scss']
 })
 export class ResolveObjectionsDialogComponent implements OnInit {
+  private readonly allowedFileExtensions = ['jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx'];
+  private readonly allowedMimeTypes = [
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ];
+  private readonly maxFileSizeBytes = 5 * 1024 * 1024;
+
   isLoading = true;
   error: string | null = null;
 
@@ -219,6 +231,17 @@ export class ResolveObjectionsDialogComponent implements OnInit {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] || null;
     if (!file) return;
+    const validationError = validateUploadedFile(file, {
+      allowedExtensions: this.allowedFileExtensions,
+      allowedMimeTypes: this.allowedMimeTypes,
+      maxFileSizeBytes: this.maxFileSizeBytes,
+      label: this.label(fieldName)
+    });
+    if (validationError) {
+      input.value = '';
+      void Swal.fire('Invalid File', validationError, 'error');
+      return;
+    }
     const ctrl = this.form.get(fieldName) as FormControl<File | null> | null;
     ctrl?.setValue(file);
     ctrl?.markAsDirty();

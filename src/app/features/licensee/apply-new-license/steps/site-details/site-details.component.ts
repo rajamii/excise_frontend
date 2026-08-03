@@ -16,6 +16,7 @@ import { LocationSubcategory } from '../../../../../core/models/location-subcate
 import { Ward } from '../../../../../core/models/ward.model';
 import { Block } from '../../../../../core/models/block.model';
 import { RuralWard } from '../../../../../core/models/rural-ward.model';
+import { validateUploadedFile } from '../../../../../shared/utils/file-upload-validation';
 
 interface Location {
   id: number;
@@ -1238,15 +1239,21 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     if (!file) return;
     const doc = this.documents.find(d => d.name === docName);
     if (!doc) return;
-    if (file.size > 5 * 1024 * 1024) {
-      alert('File size must be less than 5 MB');
-      event.target.value = '';
-      return;
-    }
-    const allowed = doc.formats.split(',').map(f => f.trim());
-    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
-    if (!allowed.includes(ext)) {
-      alert(`Allowed formats: ${doc.formats}`);
+    const allowedExtensions = doc.formats
+      .split(',')
+      .map((format) => format.trim().replace(/^\./, '').toLowerCase())
+      .filter(Boolean);
+    const allowedMimeTypes = allowedExtensions.includes('pdf')
+      ? ['application/pdf', 'image/jpeg', 'image/png']
+      : ['image/jpeg', 'image/png'];
+    const validationError = validateUploadedFile(file, {
+      allowedExtensions,
+      allowedMimeTypes,
+      maxFileSizeBytes: 5 * 1024 * 1024,
+      label: doc.label
+    });
+    if (validationError) {
+      alert(validationError);
       event.target.value = '';
       return;
     }

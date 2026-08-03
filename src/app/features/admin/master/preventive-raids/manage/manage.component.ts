@@ -6,6 +6,7 @@ import { MaterialModule } from '../../../../../shared/material.module';
 import { PreventiveRaid, PreventiveRaidImage } from '../../../../../core/models/preventive-raids.model';
 import { PreventiveRaidsService } from '../../../../../core/services/preventive-raids.service';
 import { environment } from '../../../../../../environments/environment';
+import { validateUploadedFile } from '../../../../../shared/utils/file-upload-validation';
 
 interface PreventiveRaidDialogData {
   record: PreventiveRaid | null;
@@ -20,6 +21,9 @@ interface PreventiveRaidDialogData {
 })
 export class ManageComponent implements OnInit {
   @ViewChild('subjectArea') subjectArea!: ElementRef<HTMLTextAreaElement>;
+  private readonly allowedImageExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+  private readonly allowedImageMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  private readonly maxImageSizeBytes = 5 * 1024 * 1024;
 
   record: Partial<PreventiveRaid> = {
     title: '',
@@ -50,6 +54,20 @@ export class ManageComponent implements OnInit {
     const input = event.target as HTMLInputElement;
     if (input.files) {
       const newFiles = Array.from(input.files);
+      for (const file of newFiles) {
+        const validationError = validateUploadedFile(file, {
+          allowedExtensions: this.allowedImageExtensions,
+          allowedMimeTypes: this.allowedImageMimeTypes,
+          maxFileSizeBytes: this.maxImageSizeBytes,
+          label: 'Preventive raid image'
+        });
+        if (validationError) {
+          input.value = '';
+          Swal.fire('Invalid File', validationError, 'error');
+          return;
+        }
+      }
+
       this.selectedFiles = [...this.selectedFiles, ...newFiles];
       this.selectedFileNames = this.selectedFiles.map(file => file.name);
       input.value = ''; // Reset input to allow selecting same files again if deleted

@@ -19,6 +19,7 @@ import { MaterialModule } from '../../../../../shared/material.module';
 import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
 import { AccountService } from '../../../../../core/services/account.service';
+import { validateUploadedFile } from '../../../../../shared/utils/file-upload-validation';
 import { MasterService } from '../../../../../core/services/master.service';
 
 interface MemberDocumentUpload {
@@ -299,17 +300,21 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
     if (!file) {
       return;
     }
-
-    if (file.size > 5 * 1024 * 1024) {
-      alert('File size must be less than 5 MB.');
-      input.value = '';
-      return;
-    }
-
-    const allowedExtensions = document.accept.split(',').map((value) => value.trim());
-    const extension = `.${file.name.split('.').pop()?.toLowerCase()}`;
-    if (!allowedExtensions.includes(extension)) {
-      alert(`Allowed formats: ${document.format}`);
+    const allowedExtensions = document.accept
+      .split(',')
+      .map((value) => value.trim().replace(/^\./, '').toLowerCase())
+      .filter(Boolean);
+    const allowedMimeTypes = allowedExtensions.includes('pdf')
+      ? ['image/jpeg', 'image/png', 'application/pdf']
+      : ['image/jpeg', 'image/png'];
+    const validationError = validateUploadedFile(file, {
+      allowedExtensions,
+      allowedMimeTypes,
+      maxFileSizeBytes: 5 * 1024 * 1024,
+      label: document.name
+    });
+    if (validationError) {
+      alert(validationError);
       input.value = '';
       return;
     }

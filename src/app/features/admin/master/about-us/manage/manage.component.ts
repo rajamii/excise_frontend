@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import Swal from 'sweetalert2';
 import { MaterialModule } from '../../../../../shared/material.module';
+import { validateUploadedFile } from '../../../../../shared/utils/file-upload-validation';
 import {
   ExciseSecretary,
   HeadOfOrganisation,
@@ -43,6 +44,10 @@ interface AboutUsDialogData {
   styleUrl: './manage.component.scss'
 })
 export class ManageComponent implements OnInit {
+  private readonly allowedImageExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+  private readonly allowedImageMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  private readonly maxImageSizeBytes = 2 * 1024 * 1024;
+
   record: Partial<AboutUsRecord> = {};
   isEditMode = false;
   selectedFileNames: Record<string, string> = {};
@@ -130,6 +135,19 @@ export class ManageComponent implements OnInit {
     const file = input.files?.[0];
 
     if (!file) {
+      return;
+    }
+
+    const validationError = validateUploadedFile(file, {
+      allowedExtensions: this.allowedImageExtensions,
+      allowedMimeTypes: this.allowedImageMimeTypes,
+      maxFileSizeBytes: this.maxImageSizeBytes,
+      label: field.label
+    });
+
+    if (validationError) {
+      input.value = '';
+      Swal.fire('Invalid File', validationError, 'error');
       return;
     }
 
