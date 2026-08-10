@@ -23,10 +23,7 @@ interface DryDayGroup {
 })
 export class ListComponent implements OnInit {
   // ── All Fees tab ────────────────────────────────────────────────────────────
-  displayedColumns: string[] = [
-    'feeCode', 'feeDesc', 'licenseCategoryName', 'licenseSubcategoryName',
-    'mode', 'feeType', 'amount', 'status', 'actions'
-  ];
+  displayedColumns: string[] = ['feeCode', 'feeDesc', 'amount', 'status', 'actions'];
   fixedFees: FixedFee[] = [];
   allFeeSearch = '';
 
@@ -111,8 +108,12 @@ export class ListComponent implements OnInit {
   }
 
   onEdit(fee: FixedFee): void {
-    this.dialog.open(ManageComponent, { width: '500px', data: fee })
-      .afterClosed().subscribe(r => { if (r) this.loadFixedFees(); });
+    // Determine if this fee is a dry-day type (full dialog) or a simple service fee
+    const isDryDay = !!(fee.feeType) || (fee.feeCode ?? '').toUpperCase().startsWith('DRY_DAY');
+    this.dialog.open(ManageComponent, {
+      width: '500px',
+      data: { ...fee, simpleMode: !isDryDay }
+    }).afterClosed().subscribe(r => { if (r) this.loadFixedFees(); });
   }
 
   onDelete(fee: FixedFee): void {

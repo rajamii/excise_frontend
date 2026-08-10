@@ -25,6 +25,7 @@ export class ManageComponent implements OnInit {
     feeType: null
   };
   isEdit = false;
+  simpleMode = false;   // true = All Fees tab edit — hide optional fields
   categories: any[] = [];
   subcategories: any[] = [];
 
@@ -38,6 +39,7 @@ export class ManageComponent implements OnInit {
     this.loadCategories();
     this.loadSubcategories();
     if (this.data) {
+      this.simpleMode = !!(this.data as any).simpleMode;
       this.feeRecord = { ...this.data };
       if (this.data.fee_type && !this.data.feeType) {
         this.feeRecord.feeType = this.data.fee_type;
