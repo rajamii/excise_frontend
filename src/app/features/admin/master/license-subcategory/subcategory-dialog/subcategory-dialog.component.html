@@ -11,7 +11,9 @@
         <p class="scd-header__subtitle">
           <mat-icon class="scd-header__cat-icon">list_alt</mat-icon>
           {{ category.licenseCategory }}
-          <span *ngIf="category.isActive === false" class="scd-inactive-badge">Inactive</span>
+          @if (category.isActive === false) {
+            <span class="scd-inactive-badge">Inactive</span>
+          }
         </p>
       </div>
     </div>
@@ -26,255 +28,204 @@
   <!-- ─── Toolbar ────────────────────────────────────────────────────── -->
   <div class="scd-toolbar">
     <span class="scd-toolbar__title">Sub Category List</span>
-    <button mat-flat-button color="primary" class="scd-add-btn"
-            (click)="openAddForm()" *ngIf="!showAddForm && editingId === null">
-      <mat-icon>add</mat-icon> Add Sub Category
-    </button>
+    @if (!showAddForm && editingId === null) {
+      <button mat-flat-button color="primary" class="scd-add-btn" (click)="openAddForm()">
+        <mat-icon>add</mat-icon> Add Sub Category
+      </button>
+    }
   </div>
 
   <!-- ─── Inline Add Form ────────────────────────────────────────────── -->
-  <div class="scd-add-form" *ngIf="showAddForm" style="display: flex; flex-direction: column; gap: 8px; width: 100%">
-    <div style="display: flex; gap: 12px; width: 100%">
-      <mat-form-field appearance="outline" class="scd-add-form__field" [style.flex]="isDryDayPermittedCategory ? '2' : '1'">
-        <mat-label>New Sub Category Name</mat-label>
-        <mat-icon matPrefix style="color:#64748b;font-size:18px;height:18px;width:18px;margin-right:4px">subdirectory_arrow_right</mat-icon>
-        <input matInput [(ngModel)]="formDescription" placeholder="Enter subcategory name"
-               (keyup.enter)="saveNew()" autofocus />
-      </mat-form-field>
-      <mat-form-field appearance="outline" style="flex: 1" *ngIf="isDryDayPermittedCategory">
-        <mat-label>Dry Day Permit Type</mat-label>
-        <mat-select [(ngModel)]="formDryDayFeeType">
-          <mat-option [value]="null">None</mat-option>
-          <mat-option value="per_annum">Per Annum</mat-option>
-          <mat-option value="per_day">Per Day</mat-option>
-        </mat-select>
-      </mat-form-field>
+  @if (showAddForm) {
+    <div class="scd-add-form">
+      <div class="scd-add-form__row">
+        <mat-form-field appearance="outline" class="scd-add-form__field" [style.flex]="isDryDayPermittedCategory ? '2' : '1'">
+          <mat-label>New Sub Category Name</mat-label>
+          <mat-icon matPrefix style="color:#64748b;font-size:18px;height:18px;width:18px;margin-right:4px">subdirectory_arrow_right</mat-icon>
+          <input matInput [(ngModel)]="formDescription" placeholder="Enter subcategory name"
+                 (keyup.enter)="saveNew()" autofocus />
+        </mat-form-field>
+        @if (isDryDayPermittedCategory) {
+          <mat-form-field appearance="outline" style="flex: 1">
+            <mat-label>Dry Day Permit Type</mat-label>
+            <mat-select [(ngModel)]="formDryDayFeeType">
+              <mat-option [value]="null">None</mat-option>
+              <mat-option value="per_annum">Per Annum</mat-option>
+              <mat-option value="per_day">Per Day</mat-option>
+            </mat-select>
+          </mat-form-field>
+        }
+      </div>
+      <div class="scd-add-form__actions">
+        <button mat-stroked-button (click)="cancelForm()" class="scd-btn-cancel">Cancel</button>
+        <button mat-flat-button color="primary" (click)="saveNew()"
+                [disabled]="!formDescription.trim() || isSaving" class="scd-btn-save">
+          @if (isSaving) { <mat-spinner diameter="16" style="margin-right:6px"></mat-spinner> }
+          @if (!isSaving) { <mat-icon>save</mat-icon> }
+          {{ isSaving ? 'Saving...' : 'Save' }}
+        </button>
+      </div>
     </div>
-    <div style="display: flex; gap: 12px; width: 100%" *ngIf="isDryDayPermittedCategory && formDryDayFeeType">
-      <mat-form-field appearance="outline" style="flex: 1">
-        <mat-label>Rural Fee (₹)</mat-label>
-        <input matInput type="number" [(ngModel)]="formRuralFee" placeholder="Rural amount" />
-      </mat-form-field>
-      <mat-form-field appearance="outline" style="flex: 1">
-        <mat-label>Urban Fee (₹)</mat-label>
-        <input matInput type="number" [(ngModel)]="formUrbanFee" placeholder="Urban amount" />
-      </mat-form-field>
-      <mat-form-field appearance="outline" style="flex: 1">
-        <mat-label>Non Fee (₹)</mat-label>
-        <input matInput type="number" [(ngModel)]="formNonFee" placeholder="Non amount" />
-      </mat-form-field>
-    </div>
-    <div class="scd-add-form__actions" style="margin-top: 0">
-      <button mat-stroked-button (click)="cancelForm()" class="scd-btn-cancel">Cancel</button>
-      <button mat-flat-button color="primary" (click)="saveNew()"
-              [disabled]="!formDescription.trim() || isSaving" class="scd-btn-save">
-        <mat-spinner *ngIf="isSaving" diameter="16" style="margin-right:6px"></mat-spinner>
-        <mat-icon *ngIf="!isSaving">save</mat-icon>
-        {{ isSaving ? 'Saving...' : 'Save' }}
-      </button>
-    </div>
-  </div>
+  }
 
   <!-- ─── Loading ────────────────────────────────────────────────────── -->
-  <div class="scd-loading" *ngIf="isLoading">
-    <mat-spinner diameter="36"></mat-spinner>
-    <span>Loading subcategories...</span>
-  </div>
+  @if (isLoading) {
+    <div class="scd-loading">
+      <mat-spinner diameter="36"></mat-spinner>
+      <span>Loading subcategories...</span>
+    </div>
+  }
 
   <!-- ─── Table ──────────────────────────────────────────────────────── -->
-  <div class="scd-table-wrapper" *ngIf="!isLoading">
-    <mat-table [dataSource]="subcategories" class="scd-table">
+  @if (!isLoading) {
+    <div class="scd-table-wrapper">
+      <mat-table [dataSource]="subcategories" class="scd-table">
 
-      <!-- # Column -->
-      <ng-container matColumnDef="sno">
-        <mat-header-cell *matHeaderCellDef class="sno-col">#</mat-header-cell>
-        <mat-cell *matCellDef="let row; let i = index" class="sno-col">{{ i + 1 }}</mat-cell>
-      </ng-container>
+        <!-- # Column -->
+        <ng-container matColumnDef="sno">
+          <mat-header-cell *matHeaderCellDef class="sno-col">#</mat-header-cell>
+          <mat-cell *matCellDef="let row; let i = index" class="sno-col">{{ i + 1 }}</mat-cell>
+        </ng-container>
 
-      <!-- Description Column -->
-      <ng-container matColumnDef="description">
-        <mat-header-cell *matHeaderCellDef>Sub Category Name</mat-header-cell>
-        <mat-cell *matCellDef="let row">
+        <!-- Description Column -->
+        <ng-container matColumnDef="description">
+          <mat-header-cell *matHeaderCellDef>Sub Category Name</mat-header-cell>
+          <mat-cell *matCellDef="let row">
+            @if (editingId === row.id) {
+              <input class="scd-edit-input"
+                     [(ngModel)]="formDescription"
+                     (keyup.enter)="saveEdit(row)"
+                     (keyup.escape)="cancelEdit()"
+                     placeholder="Sub category name"
+                     autofocus />
+            } @else {
+              <span class="scd-desc-text">{{ row.description }}</span>
+            }
+          </mat-cell>
+        </ng-container>
 
-          <ng-container *ngIf="editingId === row.id; else viewMode">
-            <input class="scd-edit-input"
-                   [(ngModel)]="formDescription"
-                   (keyup.enter)="saveEdit(row)"
-                   (keyup.escape)="cancelEdit()"
-                   placeholder="Sub category name"
-                   autofocus />
-          </ng-container>
+        <!-- Dry Day Fee Type Column -->
+        <ng-container matColumnDef="dryDay">
+          <mat-header-cell *matHeaderCellDef class="scd-dryday-col">Dry Day Permit</mat-header-cell>
+          <mat-cell *matCellDef="let row" class="scd-dryday-col">
+            @if (editingId === row.id) {
+              <select class="scd-edit-select" [(ngModel)]="formDryDayFeeType">
+                <option [ngValue]="null">None</option>
+                <option value="per_annum">Per Annum</option>
+                <option value="per_day">Per Day</option>
+              </select>
+            } @else {
+              @if (getDryDayFeeType(row) === 'per_annum') {
+                <span class="scd-dryday-badge scd-dryday-badge--annum">
+                  <mat-icon class="scd-dryday-badge__icon">calendar_today</mat-icon>
+                  Annual
+                </span>
+              }
+              @if (getDryDayFeeType(row) === 'per_day') {
+                <span class="scd-dryday-badge scd-dryday-badge--day">
+                  <mat-icon class="scd-dryday-badge__icon">today</mat-icon>
+                  Per Day
+                </span>
+              }
+              @if (!getDryDayFeeType(row)) {
+                <span class="scd-dryday-badge scd-dryday-badge--none">
+                  <mat-icon class="scd-dryday-badge__icon">remove</mat-icon>
+                  None
+                </span>
+              }
+            }
+          </mat-cell>
+        </ng-container>
 
-          <ng-template #viewMode>
-            <span class="scd-desc-text">{{ row.description }}</span>
-          </ng-template>
+        <!-- ── Grouped Mode of Fee Column ─────────────────────────────── -->
+        <ng-container matColumnDef="fees">
+          <mat-header-cell *matHeaderCellDef class="scd-fees-header-cell">
+            <div class="fees-group">
+              <div class="fees-group__title">Mode of Fee</div>
+              <div class="fees-group__subheaders">
+                <span class="fees-sub fees-sub--rural">Rural</span>
+                <span class="fees-sub fees-sub--urban">Urban</span>
+                <span class="fees-sub fees-sub--non">Non</span>
+              </div>
+            </div>
+          </mat-header-cell>
+          <mat-cell *matCellDef="let row" class="scd-fees-cell">
+            <div class="fees-row">
+              <span class="fee-val fee-val--rural"
+                    [class.fee-val--has]="getFeeForMode(row, 'rural') !== '-'">
+                {{ getFeeForMode(row, 'rural') }}
+              </span>
+              <span class="fee-val fee-val--urban"
+                    [class.fee-val--has]="getFeeForMode(row, 'urban') !== '-'">
+                {{ getFeeForMode(row, 'urban') }}
+              </span>
+              <span class="fee-val fee-val--non"
+                    [class.fee-val--has]="getFeeForMode(row, 'non') !== '-'">
+                {{ getFeeForMode(row, 'non') }}
+              </span>
+            </div>
+          </mat-cell>
+        </ng-container>
 
-        </mat-cell>
-      </ng-container>
+        <!-- Status Column -->
+        <ng-container matColumnDef="status">
+          <mat-header-cell *matHeaderCellDef class="scd-status-col">Status</mat-header-cell>
+          <mat-cell *matCellDef="let row" class="scd-status-col">
+            @if (editingId !== row.id) {
+              <span class="scd-status-badge"
+                    [class.scd-status-badge--active]="row.isActive !== false"
+                    [class.scd-status-badge--inactive]="row.isActive === false">
+                <span class="scd-status-dot"></span>
+                {{ row.isActive !== false ? 'Active' : 'Inactive' }}
+              </span>
+            }
+          </mat-cell>
+        </ng-container>
 
-      <!-- Dry Day Fee Type Column -->
-      <ng-container matColumnDef="dryDay">
-        <mat-header-cell *matHeaderCellDef class="scd-dryday-col">Dry Day Permit</mat-header-cell>
-        <mat-cell *matCellDef="let row" class="scd-dryday-col">
+        <!-- Actions Column -->
+        <ng-container matColumnDef="actions">
+          <mat-header-cell *matHeaderCellDef class="scd-actions-col">Actions</mat-header-cell>
+          <mat-cell *matCellDef="let row" class="scd-actions-col">
+            @if (editingId === row.id) {
+              <button mat-flat-button color="primary" class="scd-save-inline-btn"
+                      (click)="saveEdit(row)" [disabled]="!formDescription.trim() || isSaving">
+                @if (isSaving) { <mat-spinner diameter="14" style="margin-right:4px"></mat-spinner> }
+                @if (!isSaving) { <mat-icon style="font-size:16px;height:16px;width:16px">save</mat-icon> }
+                {{ isSaving ? '...' : 'Save' }}
+              </button>
+              <button mat-icon-button (click)="cancelEdit()" matTooltip="Cancel">
+                <mat-icon style="color:#94a3b8">close</mat-icon>
+              </button>
+            } @else {
+              <button mat-icon-button color="primary" matTooltip="Edit"
+                      (click)="startEdit(row)"
+                      [disabled]="showAddForm || (editingId !== null && editingId !== row.id)">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button
+                      [color]="row.isActive !== false ? 'warn' : 'accent'"
+                      [matTooltip]="row.isActive !== false ? 'Deactivate' : 'Activate'"
+                      (click)="onToggleActive(row)"
+                      [disabled]="showAddForm || editingId !== null">
+                <mat-icon>{{ row.isActive !== false ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+              </button>
+            }
+          </mat-cell>
+        </ng-container>
 
-          <ng-container *ngIf="editingId === row.id; else dryDayView">
-            <select class="scd-edit-select" [(ngModel)]="formDryDayFeeType">
-              <option [ngValue]="null">None</option>
-              <option value="per_annum">Per Annum</option>
-              <option value="per_day">Per Day</option>
-            </select>
-          </ng-container>
+        <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+        <mat-row *matRowDef="let row; columns: displayedColumns;"
+                 [class.scd-row--editing]="editingId === row.id"></mat-row>
+      </mat-table>
 
-          <ng-template #dryDayView>
-            <span *ngIf="getDryDayFeeType(row) === 'per_annum'" class="scd-dryday-badge scd-dryday-badge--annum">
-              <mat-icon class="scd-dryday-badge__icon">calendar_today</mat-icon>
-              Annual
-            </span>
-            <span *ngIf="getDryDayFeeType(row) === 'per_day'" class="scd-dryday-badge scd-dryday-badge--day">
-              <mat-icon class="scd-dryday-badge__icon">today</mat-icon>
-              Per Day
-            </span>
-            <span *ngIf="!getDryDayFeeType(row)" class="scd-dryday-badge scd-dryday-badge--none">
-              <mat-icon class="scd-dryday-badge__icon">remove</mat-icon>
-              None
-            </span>
-          </ng-template>
-
-        </mat-cell>
-      </ng-container>
-
-      <!-- Rural Fee Column -->
-      <ng-container matColumnDef="ruralFee">
-        <mat-header-cell *matHeaderCellDef class="scd-fee-col scd-fee-header scd-fee-header--rural">
-          <div class="scd-header-cell-group">
-            <span class="scd-header-cell-group__mode">Rural</span>
-            <span class="scd-header-cell-group__title">Rural Fee</span>
-          </div>
-        </mat-header-cell>
-        <mat-cell *matCellDef="let row" class="scd-fee-col">
-          <ng-container *ngIf="editingId === row.id; else viewRural">
-            <input class="scd-fee-edit-input"
-                   type="number"
-                   [(ngModel)]="formRuralFee"
-                   [disabled]="!formDryDayFeeType"
-                   placeholder="Rural fee" />
-          </ng-container>
-          <ng-template #viewRural>
-            <span class="fee-amount" [ngStyle]="{'color': getFeeForMode(row, 'rural') !== '-' ? '#2e7d32' : '#94a3b8', 'font-weight': getFeeForMode(row, 'rural') !== '-' ? '600' : 'normal'}">
-              {{ getFeeForMode(row, 'rural') }}
-            </span>
-          </ng-template>
-        </mat-cell>
-      </ng-container>
-
-      <!-- Urban Fee Column -->
-      <ng-container matColumnDef="urbanFee">
-        <mat-header-cell *matHeaderCellDef class="scd-fee-col scd-fee-header scd-fee-header--urban">
-          <div class="scd-header-cell-group">
-            <span class="scd-header-cell-group__mode">Urban</span>
-            <span class="scd-header-cell-group__title">Urban Fee</span>
-          </div>
-        </mat-header-cell>
-        <mat-cell *matCellDef="let row" class="scd-fee-col">
-          <ng-container *ngIf="editingId === row.id; else viewUrban">
-            <input class="scd-fee-edit-input"
-                   type="number"
-                   [(ngModel)]="formUrbanFee"
-                   [disabled]="!formDryDayFeeType"
-                   placeholder="Urban fee" />
-          </ng-container>
-          <ng-template #viewUrban>
-            <span class="fee-amount" [ngStyle]="{'color': getFeeForMode(row, 'urban') !== '-' ? '#1565c0' : '#94a3b8', 'font-weight': getFeeForMode(row, 'urban') !== '-' ? '600' : 'normal'}">
-              {{ getFeeForMode(row, 'urban') }}
-            </span>
-          </ng-template>
-        </mat-cell>
-      </ng-container>
-
-      <!-- Non Fee Column -->
-      <ng-container matColumnDef="nonFee">
-        <mat-header-cell *matHeaderCellDef class="scd-fee-col scd-fee-header scd-fee-header--non">
-          <div class="scd-header-cell-group">
-            <span class="scd-header-cell-group__mode">Non</span>
-            <span class="scd-header-cell-group__title">Non Fee</span>
-          </div>
-        </mat-header-cell>
-        <mat-cell *matCellDef="let row" class="scd-fee-col">
-          <ng-container *ngIf="editingId === row.id; else viewNon">
-            <input class="scd-fee-edit-input"
-                   type="number"
-                   [(ngModel)]="formNonFee"
-                   [disabled]="!formDryDayFeeType"
-                   placeholder="Non fee" />
-          </ng-container>
-          <ng-template #viewNon>
-            <span class="fee-amount" [ngStyle]="{'color': getFeeForMode(row, 'non') !== '-' ? '#374151' : '#94a3b8', 'font-weight': getFeeForMode(row, 'non') !== '-' ? '600' : 'normal'}">
-              {{ getFeeForMode(row, 'non') }}
-            </span>
-          </ng-template>
-        </mat-cell>
-      </ng-container>
-
-      <!-- Status Column -->
-      <ng-container matColumnDef="status">
-        <mat-header-cell *matHeaderCellDef class="scd-status-col">Status</mat-header-cell>
-        <mat-cell *matCellDef="let row" class="scd-status-col">
-          <ng-container *ngIf="editingId !== row.id">
-            <span class="scd-status-badge"
-                  [class.scd-status-badge--active]="row.isActive !== false"
-                  [class.scd-status-badge--inactive]="row.isActive === false">
-              <span class="scd-status-dot"></span>
-              {{ row.isActive !== false ? 'Active' : 'Inactive' }}
-            </span>
-          </ng-container>
-        </mat-cell>
-      </ng-container>
-
-      <!-- Actions Column -->
-      <ng-container matColumnDef="actions">
-        <mat-header-cell *matHeaderCellDef class="scd-actions-col">Actions</mat-header-cell>
-        <mat-cell *matCellDef="let row" class="scd-actions-col">
-
-          <ng-container *ngIf="editingId === row.id; else normalActions">
-            <button mat-flat-button color="primary" class="scd-save-inline-btn"
-                    (click)="saveEdit(row)" [disabled]="!formDescription.trim() || isSaving">
-              <mat-spinner *ngIf="isSaving" diameter="14" style="margin-right:4px"></mat-spinner>
-              <mat-icon *ngIf="!isSaving" style="font-size:16px;height:16px;width:16px">save</mat-icon>
-              {{ isSaving ? '...' : 'Save' }}
-            </button>
-            <button mat-icon-button (click)="cancelEdit()" matTooltip="Cancel">
-              <mat-icon style="color:#94a3b8">close</mat-icon>
-            </button>
-          </ng-container>
-
-          <ng-template #normalActions>
-            <button mat-icon-button color="primary" matTooltip="Edit"
-                    (click)="startEdit(row)"
-                    [disabled]="showAddForm || (editingId !== null && editingId !== row.id)">
-              <mat-icon>edit</mat-icon>
-            </button>
-            <button mat-icon-button
-                    [color]="row.isActive !== false ? 'warn' : 'accent'"
-                    [matTooltip]="row.isActive !== false ? 'Deactivate' : 'Activate'"
-                    (click)="onToggleActive(row)"
-                    [disabled]="showAddForm || editingId !== null">
-              <mat-icon>{{ row.isActive !== false ? 'toggle_on' : 'toggle_off' }}</mat-icon>
-            </button>
-          </ng-template>
-
-        </mat-cell>
-      </ng-container>
-
-      <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
-      <mat-row *matRowDef="let row; columns: displayedColumns;"
-               [class.scd-row--editing]="editingId === row.id"></mat-row>
-    </mat-table>
-
-    <!-- Empty state -->
-    <div class="scd-empty" *ngIf="subcategories.length === 0 && !showAddForm">
-      <mat-icon>inbox</mat-icon>
-      <p>No sub categories yet. Click <strong>Add Sub Category</strong> to get started.</p>
+      <!-- Empty state -->
+      @if (subcategories.length === 0 && !showAddForm) {
+        <div class="scd-empty">
+          <mat-icon>inbox</mat-icon>
+          <p>No sub categories yet. Click <strong>Add Sub Category</strong> to get started.</p>
+        </div>
+      }
     </div>
-  </div>
+  }
 
 </div>

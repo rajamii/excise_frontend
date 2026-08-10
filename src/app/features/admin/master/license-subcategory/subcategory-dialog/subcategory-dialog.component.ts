@@ -34,7 +34,7 @@ export class SubcategoryDialogComponent implements OnInit {
   formNonFee: number | string = '';
   isSaving = false;
 
-  displayedColumns = ['sno', 'description', 'dryDay', 'ruralFee', 'urbanFee', 'nonFee', 'status', 'actions'];
+  displayedColumns = ['sno', 'description', 'dryDay', 'fees', 'status', 'actions'];
   fixedFees: any[] = [];
 
   get isDryDayPermittedCategory(): boolean {
@@ -54,7 +54,7 @@ export class SubcategoryDialogComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.isDryDayPermittedCategory) {
-      this.displayedColumns = ['sno', 'description', 'dryDay', 'ruralFee', 'urbanFee', 'nonFee', 'status', 'actions'];
+      this.displayedColumns = ['sno', 'description', 'dryDay', 'fees', 'status', 'actions'];
     } else {
       this.displayedColumns = ['sno', 'description', 'status', 'actions'];
     }
