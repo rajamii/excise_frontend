@@ -1,93 +1,297 @@
-.container-fluid {
-  padding-top: 10px;
-}
+.container-fluid { padding: 16px; }
 
+// ── Card ──────────────────────────────────────────────────────────────────────
 mat-card {
-  mat-card-header {
-    padding: 12px;
-    background-color: #1C2B78;
-    color: #ffffff;
-    font-size: 24px;
-    font-weight: 500;
-    justify-content: center;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0,14,31,0.1) !important;
+
+  mat-card-header.page-card-header {
+    background: linear-gradient(135deg, #1C2B78 0%, #2a3d9e 100%);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .page-title {
+      color: #fff;
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
   }
 
-  mat-card-content {
-    padding: 15px;
+  mat-card-content.page-card-content {
+    padding: 0;
+    background: #f4f6fb;
 
-    .table-container {
-      width: 100%;
-      overflow-x: auto;
-      border-radius: 12px;
-      border: 1px solid #e2e8f0;
-      box-shadow: 0 2px 12px rgba(28, 43, 120, 0.07);
-      overflow: hidden;
-
-      mat-table {
-        min-width: 800px;
+    // Tab group
+    ::ng-deep {
+      .mat-mdc-tab-group { background: #ffffff; }
+      .mat-mdc-tab-header { background: #ffffff; border-bottom: 2px solid #e4e8f2; }
+      .mat-mdc-tab { font-weight: 600; font-size: 13.5px; color: #64748b; opacity: 1; }
+      .mat-mdc-tab.mdc-tab--active { color: #1C2B78 !important; }
+      .mdc-tab-indicator__content--underline {
+        border-color: #1C2B78 !important;
+        border-top-width: 3px !important;
       }
-
-      ::ng-deep {
-        mat-header-row {
-          background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%) !important;
-          min-height: 48px;
-        }
-
-        mat-header-cell {
-          font-size: 0.72rem !important;
-          font-weight: 800 !important;
-          text-transform: uppercase;
-          letter-spacing: 0.07em;
-          color: #e2e8f0 !important;
-          background: transparent !important;
-          border-bottom: 2px solid #334155 !important;
-
-          &::before {
-            content: '';
-            display: inline-block;
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            margin-right: 7px;
-            background: #34d399;
-            flex-shrink: 0;
-            vertical-align: middle;
-          }
-        }
-
-        mat-row {
-          border-bottom: 1px solid #f1f5f9;
-          transition: background 0.15s ease;
-
-          &:nth-child(even) { background: #f8fafc; }
-          &:hover { background: #eff6ff !important; }
-        }
-
-        mat-cell {
-          color: #334155;
-          font-size: 0.875rem;
-        }
-      }
+      .mat-mdc-tab-body-content { padding: 20px; }
     }
   }
 }
 
-.status-badge {
-  padding: 4px 10px;
-  border-radius: 20px;
+// ── Add button ────────────────────────────────────────────────────────────────
+.add-fee-btn {
+  background: rgba(255,255,255,0.15) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,0.35) !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+  &:hover { background: rgba(255,255,255,0.25) !important; }
+}
+
+// ── Tab toolbar (search + count) ──────────────────────────────────────────────
+.tab-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.fee-search-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1.5px solid #d0d8f0;
+  border-radius: 30px;
+  padding: 6px 14px;
+  flex: 1;
+  max-width: 420px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:focus-within {
+    border-color: #1C2B78;
+    box-shadow: 0 0 0 3px rgba(28,43,120,0.1);
+  }
+
+  .fee-search-icon { color: #1C2B78; font-size: 20px; width: 20px; height: 20px; flex-shrink: 0; }
+
+  .fee-search-input {
+    border: none; background: transparent; outline: none;
+    flex: 1; font-size: 13.5px; color: #333;
+    &::placeholder { color: #9aa3be; }
+  }
+
+  .fee-search-clear {
+    background: none; border: none; cursor: pointer; padding: 0;
+    color: #9aa3be; display: flex; align-items: center;
+    mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    &:hover { color: #1C2B78; }
+  }
+}
+
+.tab-count {
+  font-size: 13px; color: #64748b; font-weight: 500; white-space: nowrap;
+}
+
+// ── Tab pill badge ────────────────────────────────────────────────────────────
+.tab-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: #1C2B78;
+  color: #fff;
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+  margin-left: 6px;
+}
+
+// ── Shared table container ────────────────────────────────────────────────────
+.table-container {
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px solid #e4e8f2;
+  box-shadow: 0 2px 10px rgba(28,43,120,0.06);
+  overflow: hidden;
+
+  ::ng-deep {
+    mat-header-row {
+      background: linear-gradient(90deg, #1C2B78 0%, #243390 100%) !important;
+      min-height: 44px;
+    }
+    mat-header-cell {
+      font-size: 11.5px !important;
+      font-weight: 700 !important;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #e2e8f0 !important;
+      border-bottom: none !important;
+    }
+    mat-row {
+      border-bottom: 1px solid #f0f2f8 !important;
+      transition: background 0.12s ease;
+      min-height: 50px;
+      &:last-child { border-bottom: none !important; }
+      &:nth-child(even) { background: #f9faff; }
+      &:hover { background: #eef1ff !important; }
+    }
+    mat-cell { color: #334155; font-size: 13px; }
+  }
+}
+
+// ── Action buttons ────────────────────────────────────────────────────────────
+.action-btns { display: flex; align-items: center; gap: 2px; }
+.edit-btn   { color: #2563eb !important; &:hover { background: #eff6ff !important; } }
+.delete-btn { color: #ef4444 !important; &:hover { background: #fef2f2 !important; } }
+
+// ── Cell badges ───────────────────────────────────────────────────────────────
+.code-chip {
   display: inline-block;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  font-family: monospace;
+  word-break: break-all;
+  max-width: 200px;
 
-  &.active {
-    background-color: #ecfdf5;
-    color: #10b981;
+  &--sm { font-size: 11px; padding: 2px 6px; }
+}
+
+.cat-badge {
+  display: inline-block;
+  background: #f5f3ff; color: #6d28d9;
+  font-size: 12px; font-weight: 500;
+  padding: 3px 9px; border-radius: 20px;
+  border: 1px solid #ddd6fe;
+}
+
+.mode-badge {
+  display: inline-block;
+  font-size: 12px; font-weight: 600;
+  padding: 3px 10px; border-radius: 20px;
+  white-space: nowrap;
+  &--rural { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+  &--urban { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+  &--non   { background: #f9fafb; color: #6b7280; border: 1px solid #e5e7eb; }
+}
+
+.feetype-badge {
+  display: inline-block;
+  font-size: 11.5px; font-weight: 700;
+  padding: 3px 10px; border-radius: 20px;
+  white-space: nowrap;
+  &--annum { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+  &--day   { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+}
+
+.amount-val {
+  font-family: 'Roboto Mono', monospace, sans-serif;
+  font-weight: 700;
+  color: #1C2B78;
+  font-size: 13px;
+}
+
+.status-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 20px;
+  font-size: 11.5px; font-weight: 700; white-space: nowrap;
+  &.active   { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+  &.inactive { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+}
+
+.muted { color: #94a3b8; font-size: 12px; }
+
+// ── Dry Day tab ───────────────────────────────────────────────────────────────
+.dry-day-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.dry-day-intro {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0 0 4px;
+  padding: 10px 14px;
+  background: #fffbeb;
+  border-radius: 8px;
+  border-left: 4px solid #f59e0b;
+}
+
+.dry-day-group {
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px solid #e4e8f2;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(28,43,120,0.05);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 18px;
+    background: linear-gradient(90deg, #1e293b 0%, #334155 100%);
+    flex-wrap: wrap;
   }
 
-  &.inactive {
-    background-color: #fef2f2;
-    color: #ef4444;
+  &__cat {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #f8fafc;
+    font-weight: 700;
+    font-size: 13.5px;
+    mat-icon { font-size: 18px; width: 18px; height: 18px; color: #7dd3fc; }
   }
+
+  &__sub {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #94a3b8;
+    font-size: 13px;
+    mat-icon { font-size: 16px; width: 16px; height: 16px; color: #64748b; }
+  }
+
+  &__count {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(255,255,255,0.12);
+    color: #e2e8f0;
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+
+  // Nested table — remove outer border/shadow (group card provides it)
+  .table-container {
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+  }
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60px 24px;
+  color: #94a3b8;
+  gap: 10px;
+  mat-icon { font-size: 48px; width: 48px; height: 48px; opacity: 0.3; }
+  p { margin: 0; font-size: 14px; color: #64748b; }
 }
