@@ -23,18 +23,34 @@ export class ManagePachwaiExcessComponent implements OnInit {
   licenseCategories: LicenseCategory[] = [];
   isEditMode = false;
 
+  chargeTypeOptions = [
+    { value: 'pachwai', label: 'Pachwai' },
+    { value: 'draught_beer', label: 'Draught Beer' },
+    { value: 'mini_bar', label: 'Mini Bar' }
+  ];
+
   constructor(
     private adminService: AdminService,
     private masterService: MasterService,
     public dialogRef: MatDialogRef<ManagePachwaiExcessComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: AdditionalChargeConfig | null
+    @Inject(MAT_DIALOG_DATA) public data: any | null
   ) {}
+
+  get dialogTitle(): string {
+    if (this.isEditMode) return 'Edit Configuration';
+    if (this.config.chargeType === 'mini_bar') return 'Add Mini Bar Configuration';
+    return 'Add Pachwai / Draught Beer Configuration';
+  }
 
   ngOnInit(): void {
     this.loadCategories();
-    if (this.data) {
+    if (this.data && this.data.id) {
+      // Editing an existing config
       this.config = { ...this.data };
       this.isEditMode = true;
+    } else if (this.data && this.data._defaultChargeType) {
+      // New config from a specific tab — set the default charge type
+      this.config.chargeType = this.data._defaultChargeType;
     }
   }
 

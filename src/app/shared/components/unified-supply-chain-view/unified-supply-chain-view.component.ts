@@ -3720,6 +3720,16 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         return data?.draught_beer ?? data?.draughtBeer ?? data?.draughtbeer;
     }
 
+    getMiniBarSelected(): any {
+        const data: any = this.applicationData as any;
+        return data?.mini_bar ?? data?.miniBar ?? data?.minibar;
+    }
+
+    getMiniBarQuantity(): number {
+        const data: any = this.applicationData as any;
+        return Number(data?.mini_bar_quantity ?? data?.miniBarQuantity ?? data?.minibarquantity ?? 0);
+    }
+
     getFileUrl(value: unknown): string {
         if (!this.hasText(value)) return '#';
         const valueStr = String(value).trim();

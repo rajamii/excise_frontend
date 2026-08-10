@@ -409,6 +409,14 @@ export class LicenseApplicationService {
       if (typeof draughtBeer === 'boolean') {
         formData.append('draught_beer', draughtBeer ? 'true' : 'false');
       }
+      const miniBar = keyInfoData.miniBar ?? keyInfoData.mini_bar;
+      if (typeof miniBar === 'boolean') {
+        formData.append('mini_bar', miniBar ? 'true' : 'false');
+      }
+      const miniBarQuantity = keyInfoData.miniBarQuantity ?? keyInfoData.mini_bar_quantity;
+      if (miniBarQuantity !== undefined && miniBarQuantity !== null) {
+        formData.append('mini_bar_quantity', String(miniBarQuantity));
+      }
     }
 
     // ✅ 3. APPLICANT DETAILS

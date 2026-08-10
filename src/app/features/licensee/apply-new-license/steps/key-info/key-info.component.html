@@ -89,6 +89,22 @@
                     Draught Beer (₹{{ draughtBeerAmount() }})
                   </mat-checkbox>
                 }
+                @if (showMiniBar()) {
+                  <div class="mini-bar-charge-container" style="display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-left: 10px;">
+                    <mat-checkbox formControlName="miniBar" style="margin-right: 4px;">
+                      Mini Bar (₹{{ miniBarAmount() }})
+                    </mat-checkbox>
+                    @if (keyInfoForm.get('miniBar')?.value) {
+                      <mat-form-field appearance="outline" style="width: 100px; margin-bottom: -1.25em; font-size: 13px;">
+                        <mat-label>Qty</mat-label>
+                        <input matInput type="number" formControlName="miniBarQuantity" min="1" required>
+                        @if (keyInfoForm.controls['miniBarQuantity'].invalid && keyInfoForm.controls['miniBarQuantity'].touched) {
+                          <mat-error>Req.</mat-error>
+                        }
+                      </mat-form-field>
+                    }
+                  </div>
+                }
               </div>
             </div>
           }

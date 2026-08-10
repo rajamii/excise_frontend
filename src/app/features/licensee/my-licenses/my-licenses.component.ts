@@ -416,6 +416,8 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
 
             const pachwaiChecked = !!(raw.pachwai ?? raw.pachwai_flag ?? raw.pachwai_selected);
             const draughtBeerChecked = !!(raw.draught_beer ?? raw.draught_beer_flag ?? raw.draught_beer_selected ?? raw.draughtBeer);
+            const miniBarChecked = !!(raw.mini_bar ?? raw.miniBar ?? raw.minibar);
+            const miniBarQty = Number(raw.mini_bar_quantity ?? raw.miniBarQuantity ?? raw.minibarquantity ?? 0);
 
             // ── Fee & location data ───────────────────────────────────────────
             const selectedFee = raw.license_fee_selection ?? raw.licenseFeeSelection ?? {};
@@ -498,14 +500,15 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
             // Subtract previously-included additional charges to get the pure base location fee
             const prevPachwai  = pachwaiChecked      ? 3000 : 0;
             const prevDraught  = draughtBeerChecked  ? 5000 : 0;
-            let locationFee: number = Math.max(0, storedTotalFee - prevPachwai - prevDraught);
+            const prevMiniBar  = miniBarChecked      ? 1000 * miniBarQty : 0;
+            let locationFee: number = Math.max(0, storedTotalFee - prevPachwai - prevDraught - prevMiniBar);
             if (resolvedType === 'company-registration' && locationFee <= 0) {
               locationFee = 5000;
             }
 
             // Estimated total is dynamic: base location fee + whatever the user selects now + late fee
             // (renewalAmount is added if present as a separate renewal processing fee)
-            const additionalInitial = prevPachwai + prevDraught; // current selection
+            const additionalInitial = prevPachwai + prevDraught + prevMiniBar; // current selection
             let dynamicLocationFee = locationFee;
             const getFixedBase = () => dynamicLocationFee + renewalAmount + lateFee;
             const fixedTotal = getFixedBase() + additionalInitial; // = storedTotalFee + renewalAmount + lateFee

@@ -1,6 +1,6 @@
 <div class="container-fluid p-0">
   <h2 mat-dialog-title align="center">
-    {{ isEditMode ? 'Edit' : 'Add' }} Pachwai Excess Configuration
+    {{ dialogTitle }}
   </h2>
 
   <mat-dialog-content class="manage-form">
@@ -20,8 +20,9 @@
     <mat-form-field appearance="outline" class="w-100 mt-2">
       <mat-label>Charge Type</mat-label>
       <mat-select [(ngModel)]="config.chargeType" [disabled]="isEditMode" required>
-        <mat-option value="pachwai">Pachwai</mat-option>
-        <mat-option value="draught_beer">Draught Beer</mat-option>
+        @for (opt of chargeTypeOptions; track opt.value) {
+          <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+        }
       </mat-select>
     </mat-form-field>
 

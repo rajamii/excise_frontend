@@ -3,58 +3,123 @@
 
     <!-- Header: Title and Add button -->
     <mat-card-header>
-      <div class="page-title">Pachwai Excess</div>
+      <div class="page-title">Pachwai &amp; M Bar Express</div>
       <button matButton="filled" (click)="onAdd()">
         <mat-icon>add</mat-icon> Add Configuration
       </button>
     </mat-card-header>
 
-    <!-- Content: Table -->
+    <!-- Content: Tabs -->
     <mat-card-content>
-      <div class="table-container">
-        <mat-table [dataSource]="configs">
+      <mat-tab-group [(selectedIndex)]="activeTabIndex" animationDuration="200ms">
 
-          <ng-container matColumnDef="categoryName">
-            <mat-header-cell *matHeaderCellDef>License Category</mat-header-cell>
-            <mat-cell *matCellDef="let item">{{ item.categoryName }}</mat-cell>
-          </ng-container>
+        <!-- Tab 1: Pachwai & Draught Beer -->
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="tab-icon">local_bar</mat-icon>
+            Pachwai &amp; Draught Beer
+          </ng-template>
 
-          <ng-container matColumnDef="chargeType">
-            <mat-header-cell *matHeaderCellDef>Charge Type</mat-header-cell>
-            <mat-cell *matCellDef="let item">{{ getChargeTypeDisplay(item.chargeType) }}</mat-cell>
-          </ng-container>
+          <div class="table-container">
+            <mat-table [dataSource]="pachwaiDraughtConfigs">
 
-          <ng-container matColumnDef="isActive">
-            <mat-header-cell *matHeaderCellDef>Status</mat-header-cell>
-            <mat-cell *matCellDef="let item">
-              <span class="status-badge" [class.active]="item.isActive">
-                {{ item.isActive ? 'Active' : 'Inactive' }}
-              </span>
-            </mat-cell>
-          </ng-container>
+              <ng-container matColumnDef="categoryName">
+                <mat-header-cell *matHeaderCellDef>License Category</mat-header-cell>
+                <mat-cell *matCellDef="let item">{{ item.categoryName }}</mat-cell>
+              </ng-container>
 
-          <ng-container matColumnDef="actions">
-            <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
-            <mat-cell *matCellDef="let item">
-              <button matIconButton color="primary" (click)="onEdit(item)" title="Edit">
-                <mat-icon>edit</mat-icon>
-              </button>
-              <button matIconButton color="warn" (click)="onDelete(item)" title="Delete">
-                <mat-icon>delete</mat-icon>
-              </button>
-            </mat-cell>
-          </ng-container>
+              <ng-container matColumnDef="chargeType">
+                <mat-header-cell *matHeaderCellDef>Charge Type</mat-header-cell>
+                <mat-cell *matCellDef="let item">{{ getChargeTypeDisplay(item.chargeType) }}</mat-cell>
+              </ng-container>
 
-          <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
-          <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
-        </mat-table>
+              <ng-container matColumnDef="isActive">
+                <mat-header-cell *matHeaderCellDef>Status</mat-header-cell>
+                <mat-cell *matCellDef="let item">
+                  <span class="status-badge" [class.active]="item.isActive">
+                    {{ item.isActive ? 'Active' : 'Inactive' }}
+                  </span>
+                </mat-cell>
+              </ng-container>
 
-        @if (configs.length === 0) {
-          <div class="empty-state">
-            No configurations found. Click "Add Configuration" to create one.
+              <ng-container matColumnDef="actions">
+                <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
+                <mat-cell *matCellDef="let item">
+                  <button matIconButton color="primary" (click)="onEdit(item)" title="Edit">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button matIconButton color="warn" (click)="onDelete(item)" title="Delete">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </mat-cell>
+              </ng-container>
+
+              <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+              <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+            </mat-table>
+
+            @if (pachwaiDraughtConfigs.length === 0) {
+              <div class="empty-state">
+                No Pachwai / Draught Beer configurations found. Click "Add Configuration" to create one.
+              </div>
+            }
           </div>
-        }
-      </div>
+        </mat-tab>
+
+        <!-- Tab 2: Mini Bar -->
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="tab-icon">kitchen</mat-icon>
+            Mini Bar
+          </ng-template>
+
+          <div class="table-container">
+            <mat-table [dataSource]="miniBarConfigs">
+
+              <ng-container matColumnDef="categoryName">
+                <mat-header-cell *matHeaderCellDef>License Category</mat-header-cell>
+                <mat-cell *matCellDef="let item">{{ item.categoryName }}</mat-cell>
+              </ng-container>
+
+              <ng-container matColumnDef="chargeType">
+                <mat-header-cell *matHeaderCellDef>Charge Type</mat-header-cell>
+                <mat-cell *matCellDef="let item">{{ getChargeTypeDisplay(item.chargeType) }}</mat-cell>
+              </ng-container>
+
+              <ng-container matColumnDef="isActive">
+                <mat-header-cell *matHeaderCellDef>Status</mat-header-cell>
+                <mat-cell *matCellDef="let item">
+                  <span class="status-badge" [class.active]="item.isActive">
+                    {{ item.isActive ? 'Active' : 'Inactive' }}
+                  </span>
+                </mat-cell>
+              </ng-container>
+
+              <ng-container matColumnDef="actions">
+                <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
+                <mat-cell *matCellDef="let item">
+                  <button matIconButton color="primary" (click)="onEdit(item)" title="Edit">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button matIconButton color="warn" (click)="onDelete(item)" title="Delete">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </mat-cell>
+              </ng-container>
+
+              <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+              <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+            </mat-table>
+
+            @if (miniBarConfigs.length === 0) {
+              <div class="empty-state">
+                No Mini Bar configurations found. Click "Add Configuration" to create one.
+              </div>
+            }
+          </div>
+        </mat-tab>
+
+      </mat-tab-group>
     </mat-card-content>
   </mat-card>
 </div>

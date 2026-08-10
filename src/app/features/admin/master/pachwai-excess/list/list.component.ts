@@ -16,7 +16,21 @@ import { ManagePachwaiExcessComponent } from '../manage/manage.component';
 })
 export class PachwaiExcessListComponent implements OnInit {
   displayedColumns: string[] = ['categoryName', 'chargeType', 'isActive', 'actions'];
-  configs: AdditionalChargeConfig[] = [];
+
+  // All configs from API
+  allConfigs: AdditionalChargeConfig[] = [];
+
+  // Filtered per tab
+  get pachwaiDraughtConfigs(): AdditionalChargeConfig[] {
+    return this.allConfigs.filter(c => c.chargeType === 'pachwai' || c.chargeType === 'draught_beer');
+  }
+
+  get miniBarConfigs(): AdditionalChargeConfig[] {
+    return this.allConfigs.filter(c => c.chargeType === 'mini_bar');
+  }
+
+  // Active tab index: 0 = Pachwai & Draught Beer, 1 = Mini Bar
+  activeTabIndex = 0;
 
   constructor(
     private adminService: AdminService,
@@ -29,18 +43,23 @@ export class PachwaiExcessListComponent implements OnInit {
 
   loadConfigs(): void {
     this.adminService.getAdditionalChargeConfigs().subscribe({
-      next: (data) => this.configs = data,
-      error: () => Swal.fire('Error', 'Failed to load Pachwai Excess configurations.', 'error')
+      next: (data) => this.allConfigs = data,
+      error: () => Swal.fire('Error', 'Failed to load configurations.', 'error')
     });
   }
 
   getChargeTypeDisplay(type: string): string {
-    return type === 'pachwai' ? 'Pachwai' : 'Draught Beer';
+    if (type === 'pachwai') return 'Pachwai';
+    if (type === 'draught_beer') return 'Draught Beer';
+    if (type === 'mini_bar') return 'Mini Bar';
+    return type;
   }
 
   onAdd(): void {
+    const defaultChargeType = this.activeTabIndex === 1 ? 'mini_bar' : 'pachwai';
     const dialogRef = this.dialog.open(ManagePachwaiExcessComponent, {
       width: '500px',
+      data: { _defaultChargeType: defaultChargeType }
     });
     dialogRef.afterClosed().subscribe(result => {
       if (result) this.loadConfigs();
@@ -60,7 +79,7 @@ export class PachwaiExcessListComponent implements OnInit {
   onDelete(config: AdditionalChargeConfig): void {
     Swal.fire({
       title: 'Are you sure?',
-      text: `Delete Pachwai Excess configuration for category "${config.categoryName}"?`,
+      text: `Delete configuration for category "${config.categoryName}"?`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Delete',

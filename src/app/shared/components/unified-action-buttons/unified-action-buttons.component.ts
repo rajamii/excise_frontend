@@ -945,13 +945,20 @@ private getTransitRejectSummary(): {
 
       const pachwaiSelected = this.toBool(amountSource?.pachwai ?? amountSource?.pachwai_flag ?? amountSource?.pachwai_selected);
       const draughtSelected = this.toBool(amountSource?.draught_beer ?? amountSource?.draughtBeer ?? amountSource?.draughtbeer);
+      const miniBarSelected = this.toBool(amountSource?.mini_bar ?? amountSource?.miniBar ?? amountSource?.minibar);
+      const miniBarQty = this.toNumber(amountSource?.mini_bar_quantity ?? amountSource?.miniBarQuantity ?? amountSource?.minibarquantity ?? 0);
 
       let pachwaiFee = 0;
       let draughtFee = 0;
+      let miniBarFee = 0;
       if (pachwaiSelected) pachwaiFee = await this.getPaymentModuleFee('NLI_ADD_PACHWAI', 3000);
       if (draughtSelected) draughtFee = await this.getPaymentModuleFee('NLI_ADD_DRAUGHT_BEER', 5000);
+      if (miniBarSelected) {
+        const miniBarPrice = await this.getPaymentModuleFee('NLI_ADD_MINI_BAR', 1000);
+        miniBarFee = (miniBarPrice || 0) * (miniBarQty || 1);
+      }
 
-      const additionalTotal = (pachwaiFee || 0) + (draughtFee || 0);
+      const additionalTotal = (pachwaiFee || 0) + (draughtFee || 0) + (miniBarFee || 0);
       const hasAdditional = additionalTotal > 0;
       const baseLicenseFee = Math.max(0, licenseFee - additionalTotal);
       const baseSecurityFee = Math.max(0, securityFee - additionalTotal);
@@ -975,6 +982,7 @@ private getTransitRejectSummary(): {
               ${feeRow('Base License Fee', baseLicenseFee)}
               ${pachwaiSelected ? feeRow('Pachwai (Additional)', pachwaiFee) : ''}
               ${draughtSelected ? feeRow('Draught Beer (Additional)', draughtFee) : ''}
+              ${miniBarSelected ? feeRow(`Mini Bar (Additional x${miniBarQty || 1})`, miniBarFee) : ''}
             </div>
             <div style="padding:6px 14px 10px; font-size:11.5px; color:#6b7280; font-style:italic;">
               &#9432; Additional charges are applied to both License Fee and Security Deposit.

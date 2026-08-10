@@ -24,9 +24,11 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
   // Additional charges (from master additional charge configurations)
   showPachwai = signal(false);
   showDraughtBeer = signal(false);
+  showMiniBar = signal(false);
   pachwaiAmount = signal<number>(3000);
   draughtBeerAmount = signal<number>(5000);
-  shouldShowAdditionalCharges = computed(() => this.showPachwai() || this.showDraughtBeer());
+  miniBarAmount = signal<number>(1000);
+  shouldShowAdditionalCharges = computed(() => this.showPachwai() || this.showDraughtBeer() || this.showMiniBar());
   
   // Store ALL subcategories from API
   private allSubCategories: LicenseSubcategory[] = [];
@@ -45,7 +47,8 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     licenseSubCategory: signal(''),
     establishmentName: signal(''),
     siteType: signal(''),
-    existingSiteLicense: signal('')
+    existingSiteLicense: signal(''),
+    miniBarQuantity: signal('')
   };
 
   constructor(
@@ -66,6 +69,8 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
       ),
       pachwai: new FormControl(!!(storedValues['pachwai'] ?? storedValues['pachwai_flag'] ?? storedValues['pachwai_selected'])),
       draughtBeer: new FormControl(!!(storedValues['draughtBeer'] ?? storedValues['draught_beer'])),
+      miniBar: new FormControl(!!(storedValues['miniBar'] ?? storedValues['mini_bar'])),
+      miniBarQuantity: new FormControl(storedValues['miniBarQuantity'] ?? storedValues['mini_bar_quantity'] ?? 0),
       establishmentName: new FormControl(storedValues['establishmentName'] ?? '', [
         Validators.required,
         Validators.maxLength(150),
@@ -76,6 +81,27 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     });
 
     this.setupSiteTypeValidation();
+
+    const qtyCtrl = this.keyInfoForm.get('miniBarQuantity');
+    this.keyInfoForm.get('miniBar')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(miniBar => {
+        if (miniBar) {
+          qtyCtrl?.setValidators([Validators.required, Validators.min(1)]);
+          if (!qtyCtrl?.value) {
+            qtyCtrl?.setValue(1, { emitEvent: false });
+          }
+        } else {
+          qtyCtrl?.clearValidators();
+          qtyCtrl?.setValue(0, { emitEvent: false });
+        }
+        qtyCtrl?.updateValueAndValidity({ emitEvent: false });
+      });
+
+    if (this.keyInfoForm.get('miniBar')?.value) {
+      qtyCtrl?.setValidators([Validators.required, Validators.min(1)]);
+      qtyCtrl?.updateValueAndValidity({ emitEvent: false });
+    }
 
     this.keyInfoForm.valueChanges
       .pipe(takeUntil(this.destroy$))
@@ -276,6 +302,8 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
       existingSiteLicense: formData.siteType === 'Existing' ? formData.existingSiteLicense : null,
       pachwai: !!formData.pachwai,
       draughtBeer: !!formData.draughtBeer,
+      miniBar: !!formData.miniBar,
+      miniBarQuantity: formData.miniBar ? Number(formData.miniBarQuantity || 0) : 0,
        
       // Backend field names (PrimaryKeyRelatedField expects IDs)
       license_category: formData.licenseCategory,
@@ -288,6 +316,8 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
       pachwai_flag: !!formData.pachwai,
       pachwai_selected: !!formData.pachwai,
       draught_beer: !!formData.draughtBeer,
+      mini_bar: !!formData.miniBar,
+      mini_bar_quantity: formData.miniBar ? Number(formData.miniBarQuantity || 0) : 0,
     };
     
     console.log('Saving Key Info:', backendData);
@@ -298,7 +328,8 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     if (!categoryId) {
       this.showPachwai.set(false);
       this.showDraughtBeer.set(false);
-      this.keyInfoForm.patchValue({ pachwai: false, draughtBeer: false }, { emitEvent: false });
+      this.showMiniBar.set(false);
+      this.keyInfoForm.patchValue({ pachwai: false, draughtBeer: false, miniBar: false, miniBarQuantity: 0 }, { emitEvent: false });
       return;
     }
 
@@ -306,6 +337,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
       next: (configs: any[]) => {
         let hasPachwai = false;
         let hasDraughtBeer = false;
+        let hasMiniBar = false;
 
         configs.forEach(config => {
           if (config.chargeType === 'pachwai') {
@@ -322,6 +354,13 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
             } else {
               this.showDraughtBeer.set(false);
             }
+          } else if (config.chargeType === 'mini_bar') {
+            if (config.isActive) {
+              this.showMiniBar.set(true);
+              hasMiniBar = true;
+            } else {
+              this.showMiniBar.set(false);
+            }
           }
         });
 
@@ -334,6 +373,10 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
           this.showDraughtBeer.set(false);
           this.keyInfoForm.patchValue({ draughtBeer: false }, { emitEvent: false });
         }
+        if (!hasMiniBar) {
+          this.showMiniBar.set(false);
+          this.keyInfoForm.patchValue({ miniBar: false, miniBarQuantity: 0 }, { emitEvent: false });
+        }
 
         this.cdr.detectChanges();
       },
@@ -341,7 +384,8 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
         console.error('Failed to load additional charge configs', err);
         this.showPachwai.set(false);
         this.showDraughtBeer.set(false);
-        this.keyInfoForm.patchValue({ pachwai: false, draughtBeer: false }, { emitEvent: false });
+        this.showMiniBar.set(false);
+        this.keyInfoForm.patchValue({ pachwai: false, draughtBeer: false, miniBar: false, miniBarQuantity: 0 }, { emitEvent: false });
       }
     });
   }
@@ -463,6 +507,16 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.draughtBeerAmount.set(5000);
+      }
+    });
+
+    this.paymentService.getPaymentModule('NLI_ADD_MINI_BAR').subscribe({
+      next: (res: any) => {
+        const amount = Number(res?.license_fee ?? res?.licenseFee ?? res?.fee ?? res?.amount);
+        if (isFinite(amount) && amount > 0) this.miniBarAmount.set(amount);
+      },
+      error: () => {
+        this.miniBarAmount.set(1000);
       }
     });
   }

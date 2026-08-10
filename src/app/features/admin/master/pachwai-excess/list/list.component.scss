@@ -37,7 +37,51 @@ mat-card {
     }
 
     mat-card-content {
-        padding: 15px;
+        padding: 0;
+
+        ::ng-deep {
+            // Tab group styling
+            mat-tab-group {
+                .mat-mdc-tab-header {
+                    background: #f8fafc;
+                    border-bottom: 2px solid #e2e8f0;
+                }
+
+                .mat-mdc-tab-label-container {
+                    padding: 0 16px;
+                }
+
+                .mat-mdc-tab {
+                    min-width: 180px;
+                    font-weight: 600;
+                    font-size: 0.9rem;
+                    color: #64748b;
+                    opacity: 1;
+
+                    &.mdc-tab--active {
+                        color: #1C2B78;
+                    }
+                }
+
+                .mat-mdc-tab-body-content {
+                    padding: 16px;
+                }
+
+                .mdc-tab-indicator__content--underline {
+                    border-color: #1C2B78 !important;
+                    border-width: 3px;
+                    border-radius: 3px 3px 0 0;
+                }
+            }
+        }
+
+        .tab-icon {
+            margin-right: 6px;
+            font-size: 18px;
+            height: 18px;
+            width: 18px;
+            vertical-align: middle;
+        }
 
         .table-container {
             width: 100%;
@@ -48,7 +92,7 @@ mat-card {
             overflow: hidden;
 
             mat-table {
-                min-width: 800px;
+                min-width: 700px;
             }
 
             ::ng-deep {

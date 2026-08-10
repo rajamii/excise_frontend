@@ -957,6 +957,12 @@
                                     <td class="fw-semibold bg-light">Draught Beer</td>
                                     <td>{{ asYesNo(getDraughtBeerSelected()) }}</td>
                                 </tr>
+                                @if (asYesNo(getMiniBarSelected()) === 'Yes') {
+                                    <tr>
+                                        <td class="fw-semibold bg-light">Mini Bar</td>
+                                        <td>Yes (Quantity: {{ getMiniBarQuantity() }})</td>
+                                    </tr>
+                                }
                                 <tr>
                                     <td class="fw-semibold bg-light">Site District</td>
                                     <td>{{ applicationData.site_district_name || applicationData.siteDistrictName || 'Not available' }}</td>
