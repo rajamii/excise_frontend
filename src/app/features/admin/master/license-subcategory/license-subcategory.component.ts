@@ -115,8 +115,8 @@ export class LicenseSubcategoryComponent implements OnInit {
 
   onViewSubcategories(category: LicenseCategory): void {
     const ref = this.dialog.open(SubcategoryDialogComponent, {
-      width: '780px',
-      maxWidth: '95vw',
+      width: '95vw',
+      maxWidth: '1200px',
       maxHeight: '90vh',
       data: { category },
       panelClass: 'scd-panel'

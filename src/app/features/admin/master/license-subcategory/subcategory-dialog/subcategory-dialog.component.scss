@@ -5,9 +5,9 @@
 .scd-wrapper {
   display: flex;
   flex-direction: column;
-  min-width: 680px;
-  max-width: 900px;
-  max-height: 80vh;
+  width: 100%;
+  min-width: 0;
+  max-height: 85vh;
 }
 
 // ─── Header ───────────────────────────────────────────────────────────
@@ -414,5 +414,76 @@
     font-size: 0.9rem;
     margin: 0;
     strong { color: #64748b; }
+  }
+}
+
+.scd-fee-col {
+  min-width: 110px;
+  flex: 1;
+  justify-content: flex-end;
+  text-align: right;
+  padding-right: 12px;
+}
+
+.fee-amount {
+  font-family: 'Roboto Mono', monospace, sans-serif;
+  font-size: 0.85rem;
+}
+
+.scd-fee-edit-input {
+  width: 90px;
+  padding: 6px 8px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: right;
+  color: #1e293b;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+
+  &:focus:not([disabled]) {
+    border-color: #1C2B78;
+    box-shadow: 0 0 0 2px rgba(28, 43, 120, 0.15);
+  }
+
+  &[disabled] {
+    background-color: #f1f5f9;
+    color: #94a3b8;
+    border-color: #e2e8f0;
+    cursor: not-allowed;
+  }
+}
+
+.scd-header-cell-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  width: 100%;
+
+  &__mode {
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 2px;
+  }
+
+  &__title {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #cbd5e1;
+  }
+}
+
+.scd-fee-header {
+  &--rural .scd-header-cell-group__mode {
+    color: #4ade80 !important;
+  }
+  &--urban .scd-header-cell-group__mode {
+    color: #60a5fa !important;
+  }
+  &--non .scd-header-cell-group__mode {
+    color: #fda4af !important;
   }
 }

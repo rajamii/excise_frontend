@@ -1,22 +1,78 @@
 <div class="container-fluid p-0">
   <h2 mat-dialog-title align="center">
-    Update Service Fee Amount
+    {{ isEdit ? 'Update Service Fee' : 'Add Service/Fixed Fee Configuration' }}
   </h2>
 
   <mat-dialog-content class="manage-form">
-    <!-- Description (Disabled) -->
+    <!-- Fee Code -->
+    <mat-form-field appearance="outline" class="w-100 mt-2">
+      <mat-label>Fee Code</mat-label>
+      <input
+        matInput
+        [(ngModel)]="feeRecord.feeCode"
+        [disabled]="isEdit"
+        required
+        placeholder="e.g. DRY_DAY_ANNUAL_RURAL"
+      />
+    </mat-form-field>
+
+    <!-- Description -->
     <mat-form-field appearance="outline" class="w-100 mt-2">
       <mat-label>Description</mat-label>
       <input
         matInput
         [(ngModel)]="feeRecord.feeDesc"
-        [disabled]="true"
+        required
         placeholder="Description"
       />
     </mat-form-field>
 
-    <!-- Amount -->
+    <!-- License Category -->
     <mat-form-field appearance="outline" class="w-100 mt-2">
+      <mat-label>License Category (Optional)</mat-label>
+      <mat-select [(ngModel)]="feeRecord.licenseCategory">
+        <mat-option [value]="null">-- None --</mat-option>
+        <mat-option *ngFor="let cat of categories" [value]="cat.id">
+          {{ cat.license_category }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <!-- License Subcategory -->
+    <mat-form-field appearance="outline" class="w-100 mt-2">
+      <mat-label>License Subcategory (Optional)</mat-label>
+      <mat-select [(ngModel)]="feeRecord.licenseSubcategory">
+        <mat-option [value]="null">-- None --</mat-option>
+        <mat-option *ngFor="let sub of subcategories" [value]="sub.id">
+          {{ sub.description }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <!-- Mode -->
+    <mat-form-field appearance="outline" class="w-100 mt-2">
+      <mat-label>Mode (Optional)</mat-label>
+      <mat-select [(ngModel)]="feeRecord.mode">
+        <mat-option [value]="null">-- None --</mat-option>
+        <mat-option value="rural">Rural</mat-option>
+        <mat-option value="urban">Urban</mat-option>
+        <mat-option value="non">Non</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <!-- Fee Type -->
+    <mat-form-field appearance="outline" class="w-100 mt-2">
+      <mat-label>Fee Type (Optional)</mat-label>
+      <mat-select [(ngModel)]="feeRecord.feeType">
+        <mat-option [value]="null">-- Not Specified --</mat-option>
+        <mat-option value="per_annum">Per Annum (Annual)</mat-option>
+        <mat-option value="per_day">Per Day</mat-option>
+      </mat-select>
+      <mat-hint>Set only for Dry Day permit fees to distinguish annual vs per-day rates</mat-hint>
+    </mat-form-field>
+
+    <!-- Amount -->
+    <mat-form-field appearance="outline" class="w-100 mt-3">
       <mat-label>Amount (₹)</mat-label>
       <input
         matInput

@@ -50,6 +50,20 @@
         </mat-select>
       </mat-form-field>
     </div>
+    <div style="display: flex; gap: 12px; width: 100%" *ngIf="isDryDayPermittedCategory && formDryDayFeeType">
+      <mat-form-field appearance="outline" style="flex: 1">
+        <mat-label>Rural Fee (₹)</mat-label>
+        <input matInput type="number" [(ngModel)]="formRuralFee" placeholder="Rural amount" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" style="flex: 1">
+        <mat-label>Urban Fee (₹)</mat-label>
+        <input matInput type="number" [(ngModel)]="formUrbanFee" placeholder="Urban amount" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" style="flex: 1">
+        <mat-label>Non Fee (₹)</mat-label>
+        <input matInput type="number" [(ngModel)]="formNonFee" placeholder="Non amount" />
+      </mat-form-field>
+    </div>
     <div class="scd-add-form__actions" style="margin-top: 0">
       <button mat-stroked-button (click)="cancelForm()" class="scd-btn-cancel">Cancel</button>
       <button mat-flat-button color="primary" (click)="saveNew()"
@@ -126,6 +140,78 @@
             </span>
           </ng-template>
 
+        </mat-cell>
+      </ng-container>
+
+      <!-- Rural Fee Column -->
+      <ng-container matColumnDef="ruralFee">
+        <mat-header-cell *matHeaderCellDef class="scd-fee-col scd-fee-header scd-fee-header--rural">
+          <div class="scd-header-cell-group">
+            <span class="scd-header-cell-group__mode">Rural</span>
+            <span class="scd-header-cell-group__title">Rural Fee</span>
+          </div>
+        </mat-header-cell>
+        <mat-cell *matCellDef="let row" class="scd-fee-col">
+          <ng-container *ngIf="editingId === row.id; else viewRural">
+            <input class="scd-fee-edit-input"
+                   type="number"
+                   [(ngModel)]="formRuralFee"
+                   [disabled]="!formDryDayFeeType"
+                   placeholder="Rural fee" />
+          </ng-container>
+          <ng-template #viewRural>
+            <span class="fee-amount" [ngStyle]="{'color': getFeeForMode(row, 'rural') !== '-' ? '#2e7d32' : '#94a3b8', 'font-weight': getFeeForMode(row, 'rural') !== '-' ? '600' : 'normal'}">
+              {{ getFeeForMode(row, 'rural') }}
+            </span>
+          </ng-template>
+        </mat-cell>
+      </ng-container>
+
+      <!-- Urban Fee Column -->
+      <ng-container matColumnDef="urbanFee">
+        <mat-header-cell *matHeaderCellDef class="scd-fee-col scd-fee-header scd-fee-header--urban">
+          <div class="scd-header-cell-group">
+            <span class="scd-header-cell-group__mode">Urban</span>
+            <span class="scd-header-cell-group__title">Urban Fee</span>
+          </div>
+        </mat-header-cell>
+        <mat-cell *matCellDef="let row" class="scd-fee-col">
+          <ng-container *ngIf="editingId === row.id; else viewUrban">
+            <input class="scd-fee-edit-input"
+                   type="number"
+                   [(ngModel)]="formUrbanFee"
+                   [disabled]="!formDryDayFeeType"
+                   placeholder="Urban fee" />
+          </ng-container>
+          <ng-template #viewUrban>
+            <span class="fee-amount" [ngStyle]="{'color': getFeeForMode(row, 'urban') !== '-' ? '#1565c0' : '#94a3b8', 'font-weight': getFeeForMode(row, 'urban') !== '-' ? '600' : 'normal'}">
+              {{ getFeeForMode(row, 'urban') }}
+            </span>
+          </ng-template>
+        </mat-cell>
+      </ng-container>
+
+      <!-- Non Fee Column -->
+      <ng-container matColumnDef="nonFee">
+        <mat-header-cell *matHeaderCellDef class="scd-fee-col scd-fee-header scd-fee-header--non">
+          <div class="scd-header-cell-group">
+            <span class="scd-header-cell-group__mode">Non</span>
+            <span class="scd-header-cell-group__title">Non Fee</span>
+          </div>
+        </mat-header-cell>
+        <mat-cell *matCellDef="let row" class="scd-fee-col">
+          <ng-container *ngIf="editingId === row.id; else viewNon">
+            <input class="scd-fee-edit-input"
+                   type="number"
+                   [(ngModel)]="formNonFee"
+                   [disabled]="!formDryDayFeeType"
+                   placeholder="Non fee" />
+          </ng-container>
+          <ng-template #viewNon>
+            <span class="fee-amount" [ngStyle]="{'color': getFeeForMode(row, 'non') !== '-' ? '#374151' : '#94a3b8', 'font-weight': getFeeForMode(row, 'non') !== '-' ? '600' : 'normal'}">
+              {{ getFeeForMode(row, 'non') }}
+            </span>
+          </ng-template>
         </mat-cell>
       </ng-container>
 

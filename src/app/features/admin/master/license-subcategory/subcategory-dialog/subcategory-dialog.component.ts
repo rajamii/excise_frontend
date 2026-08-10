@@ -29,9 +29,13 @@ export class SubcategoryDialogComponent implements OnInit {
   editingId: number | null = null;
   formDescription = '';
   formDryDayFeeType: string | null = null;
+  formRuralFee: number | string = '';
+  formUrbanFee: number | string = '';
+  formNonFee: number | string = '';
   isSaving = false;
 
-  displayedColumns = ['sno', 'description', 'dryDay', 'status', 'actions'];
+  displayedColumns = ['sno', 'description', 'dryDay', 'ruralFee', 'urbanFee', 'nonFee', 'status', 'actions'];
+  fixedFees: any[] = [];
 
   get isDryDayPermittedCategory(): boolean {
     // Dynamic: use the is_special_permit_allowed flag set by admin on the License Category.
@@ -50,7 +54,7 @@ export class SubcategoryDialogComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.isDryDayPermittedCategory) {
-      this.displayedColumns = ['sno', 'description', 'dryDay', 'status', 'actions'];
+      this.displayedColumns = ['sno', 'description', 'dryDay', 'ruralFee', 'urbanFee', 'nonFee', 'status', 'actions'];
     } else {
       this.displayedColumns = ['sno', 'description', 'status', 'actions'];
     }
@@ -59,6 +63,30 @@ export class SubcategoryDialogComponent implements OnInit {
 
   loadSubcategories(): void {
     this.isLoading = true;
+    this.masterService.getFixedFees().subscribe({
+      next: (fees: any[]) => {
+        this.fixedFees = (fees || []).map((item: any) => ({
+          feeCode: item.feeCode || item.fee_code,
+          feeDesc: item.feeDesc || item.fee_desc,
+          amount: item.amount,
+          isActive: item.isActive !== undefined ? item.isActive : item.is_active,
+          licenseCategory: item.licenseCategory !== undefined ? item.licenseCategory : item.license_category,
+          licenseSubcategory: item.licenseSubcategory !== undefined ? item.licenseSubcategory : item.license_subcategory,
+          mode: item.mode,
+          feeType: item.feeType || item.fee_type,
+          licenseCategoryName: item.licenseCategoryName || item.license_category_name,
+          licenseSubcategoryName: item.licenseSubcategoryName || item.license_subcategory_name
+        }));
+        this.fetchSubcategories();
+      },
+      error: () => {
+        console.error('Failed to load fixed fees.');
+        this.fetchSubcategories();
+      }
+    });
+  }
+
+  private fetchSubcategories(): void {
     this.masterService.getLicenseSubcategories().subscribe({
       next: (all: LicenseSubcategory[]) => {
         // Filter subcategories belonging to this category
@@ -77,6 +105,58 @@ export class SubcategoryDialogComponent implements OnInit {
     });
   }
 
+  getFeeForMode(sub: LicenseSubcategory, mode: string): string {
+    const feeType = this.getDryDayFeeType(sub);
+    if (!feeType) return '-';
+
+    // Find fixed fee matching category, subcategory, mode and feeType
+    const match = this.fixedFees.find(f => {
+      const catId = typeof f.licenseCategory === 'object' ? (f.licenseCategory as any)?.id : f.licenseCategory;
+      const subId = typeof f.licenseSubcategory === 'object' ? (f.licenseSubcategory as any)?.id : f.licenseSubcategory;
+      return catId === this.category.id && subId === sub.id && f.mode === mode && f.feeType === feeType;
+    });
+
+    if (match) {
+      return `₹${Number(match.amount).toFixed(2)}`;
+    }
+
+    // Try fallback without specific feeType
+    const matchFallback = this.fixedFees.find(f => {
+      const catId = typeof f.licenseCategory === 'object' ? (f.licenseCategory as any)?.id : f.licenseCategory;
+      const subId = typeof f.licenseSubcategory === 'object' ? (f.licenseSubcategory as any)?.id : f.licenseSubcategory;
+      return catId === this.category.id && subId === sub.id && f.mode === mode && !f.feeType;
+    });
+
+    if (matchFallback) {
+      return `₹${Number(matchFallback.amount).toFixed(2)}`;
+    }
+
+    return '-';
+  }
+
+  getFeeValueForMode(sub: LicenseSubcategory, mode: string): string {
+    const feeType = this.getDryDayFeeType(sub);
+    if (!feeType) return '';
+
+    const match = this.fixedFees.find(f => {
+      const catId = typeof f.licenseCategory === 'object' ? (f.licenseCategory as any)?.id : f.licenseCategory;
+      const subId = typeof f.licenseSubcategory === 'object' ? (f.licenseSubcategory as any)?.id : f.licenseSubcategory;
+      return catId === this.category.id && subId === sub.id && f.mode === mode && f.feeType === feeType;
+    });
+
+    if (match) return String(match.amount);
+
+    const matchFallback = this.fixedFees.find(f => {
+      const catId = typeof f.licenseCategory === 'object' ? (f.licenseCategory as any)?.id : f.licenseCategory;
+      const subId = typeof f.licenseSubcategory === 'object' ? (f.licenseSubcategory as any)?.id : f.licenseSubcategory;
+      return catId === this.category.id && subId === sub.id && f.mode === mode && !f.feeType;
+    });
+
+    if (matchFallback) return String(matchFallback.amount);
+
+    return '';
+  }
+
   // ─── Dry Day Fee Type helper — handles camelCase from API ────────────────
 
   getDryDayFeeType(sub: LicenseSubcategory): string | null {
@@ -91,6 +171,9 @@ export class SubcategoryDialogComponent implements OnInit {
     this.editingId = null;
     this.formDescription = '';
     this.formDryDayFeeType = null;
+    this.formRuralFee = '';
+    this.formUrbanFee = '';
+    this.formNonFee = '';
   }
 
   cancelForm(): void {
@@ -98,6 +181,9 @@ export class SubcategoryDialogComponent implements OnInit {
     this.editingId = null;
     this.formDescription = '';
     this.formDryDayFeeType = null;
+    this.formRuralFee = '';
+    this.formUrbanFee = '';
+    this.formNonFee = '';
   }
 
   saveNew(): void {
@@ -106,13 +192,39 @@ export class SubcategoryDialogComponent implements OnInit {
     const payload = {
       description: this.formDescription.trim(),
       category: this.category.id,
-      dryDayFeeType: this.formDryDayFeeType   // camelCase for DRF camel_case parser
+      dryDayFeeType: this.formDryDayFeeType
     };
     this.adminService.addLicenseSubcategory(payload as any).subscribe({
-      next: () => {
-        this.isSaving = false;
-        this.cancelForm();
-        this.loadSubcategories();
+      next: (createdSub: any) => {
+        if (createdSub && createdSub.id) {
+          this.saveFeesForSubcategory(createdSub, this.formDryDayFeeType).then(() => {
+            this.isSaving = false;
+            this.cancelForm();
+            this.loadSubcategories();
+          });
+        } else {
+          this.masterService.getLicenseSubcategories().subscribe({
+            next: (all: LicenseSubcategory[]) => {
+              const matched = all.find(s => s.description === payload.description);
+              if (matched) {
+                this.saveFeesForSubcategory(matched, this.formDryDayFeeType).then(() => {
+                  this.isSaving = false;
+                  this.cancelForm();
+                  this.loadSubcategories();
+                });
+              } else {
+                this.isSaving = false;
+                this.cancelForm();
+                this.loadSubcategories();
+              }
+            },
+            error: () => {
+              this.isSaving = false;
+              this.cancelForm();
+              this.loadSubcategories();
+            }
+          });
+        }
       },
       error: () => {
         this.isSaving = false;
@@ -128,25 +240,110 @@ export class SubcategoryDialogComponent implements OnInit {
     this.formDescription = sub.description || '';
     this.formDryDayFeeType = this.getDryDayFeeType(sub);
     this.showAddForm = false;
+    this.formRuralFee = this.getFeeValueForMode(sub, 'rural');
+    this.formUrbanFee = this.getFeeValueForMode(sub, 'urban');
+    this.formNonFee = this.getFeeValueForMode(sub, 'non');
   }
 
   cancelEdit(): void {
     this.editingId = null;
     this.formDescription = '';
     this.formDryDayFeeType = null;
+    this.formRuralFee = '';
+    this.formUrbanFee = '';
+    this.formNonFee = '';
+  }
+
+  saveFeesForSubcategory(sub: LicenseSubcategory, feeType: string | null): Promise<void> {
+    if (!feeType) {
+      return Promise.resolve();
+    }
+
+    const catId = this.category.id;
+    const subId = sub.id!;
+    const modes = ['rural', 'urban', 'non'];
+    const promises: Promise<any>[] = [];
+
+    const feeInputs: { [key: string]: any } = {
+      rural: this.formRuralFee,
+      urban: this.formUrbanFee,
+      non: this.formNonFee
+    };
+
+    modes.forEach(mode => {
+      const inputVal = feeInputs[mode];
+      const feeCode = `DRY_DAY_C${catId}_S${subId}_${mode.toUpperCase()}_${feeType.toUpperCase()}`;
+      
+      const existing = this.fixedFees.find(f => {
+        const cId = typeof f.licenseCategory === 'object' ? (f.licenseCategory as any)?.id : f.licenseCategory;
+        const sId = typeof f.licenseSubcategory === 'object' ? (f.licenseSubcategory as any)?.id : f.licenseSubcategory;
+        return (f.feeCode === feeCode) || 
+               (cId === catId && sId === subId && f.mode === mode && f.feeType === feeType);
+      });
+
+      const actualCode = existing ? existing.feeCode : feeCode;
+
+      if (inputVal === null || inputVal === undefined || String(inputVal).trim() === '') {
+        if (existing) {
+          promises.push(new Promise((resolve, reject) => {
+            this.masterService.deleteFixedFee(actualCode).subscribe({
+              next: resolve,
+              error: reject
+            });
+          }));
+        }
+      } else {
+        const amount = Number(inputVal);
+        if (isNaN(amount) || amount < 0) {
+          return;
+        }
+
+        const payload = {
+          fee_code: actualCode,
+          fee_desc: `Dry-Day Override for Category: ${this.category.licenseCategory}, Subcategory: ${sub.description} (${mode.toUpperCase()})`,
+          amount: amount,
+          is_active: true,
+          license_category: catId,
+          license_subcategory: subId,
+          mode: mode,
+          fee_type: feeType
+        };
+
+        if (existing) {
+          promises.push(new Promise((resolve, reject) => {
+            this.masterService.updateFixedFee(actualCode, payload).subscribe({
+              next: resolve,
+              error: reject
+            });
+          }));
+        } else {
+          promises.push(new Promise((resolve, reject) => {
+            this.masterService.createFixedFee(payload).subscribe({
+              next: resolve,
+              error: reject
+            });
+          }));
+        }
+      }
+    });
+
+    return Promise.all(promises).then(() => {
+      console.log('All dry day fees updated successfully.');
+    }).catch(err => {
+      console.error('Error saving subcategory mode fees:', err);
+      Swal.fire('Error', 'Failed to save dry day fees. ' + (err?.error?.detail || JSON.stringify(err?.error || err)), 'error');
+      throw err;
+    });
   }
 
   saveEdit(sub: LicenseSubcategory): void {
     if (!this.formDescription.trim()) return;
     this.isSaving = true;
 
-    // Build minimal PATCH payload — only send what we need to update
-    // Using camelCase keys so djangorestframework_camel_case parser converts them correctly
     const payload: any = {
       dryDayFeeType: this.formDryDayFeeType ?? null
     };
 
-    // Only include description if it actually changed
     const originalDesc = sub.description || '';
     if (this.formDescription.trim() !== originalDesc.trim()) {
       payload['description'] = this.formDescription.trim();
@@ -154,9 +351,13 @@ export class SubcategoryDialogComponent implements OnInit {
 
     this.adminService.updateLicenseSubcategory(sub.id!, payload).subscribe({
       next: () => {
-        this.isSaving = false;
-        this.cancelEdit();
-        this.loadSubcategories();
+        this.saveFeesForSubcategory(sub, this.formDryDayFeeType).then(() => {
+          this.isSaving = false;
+          this.cancelEdit();
+          this.loadSubcategories();
+        }).catch(() => {
+          this.isSaving = false;
+        });
       },
       error: (err) => {
         this.isSaving = false;

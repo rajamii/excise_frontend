@@ -1,8 +1,11 @@
 <div class="container-fluid">
   <mat-card>
 
-    <mat-card-header class="page-card-header">
-      <div class="page-title" style="width:100%; text-align:center;">Service & Fixed Fees Configurations</div>
+    <mat-card-header class="page-card-header d-flex align-items-center justify-content-between">
+      <div class="page-title" style="flex-grow: 1; text-align: center; margin-left: 100px;">Service & Fixed Fees Configurations</div>
+      <button mat-raised-button color="primary" (click)="onAdd()">
+        <mat-icon>add</mat-icon> Add Fee Config
+      </button>
     </mat-card-header>
 
     <mat-card-content class="page-card-content">
@@ -19,6 +22,44 @@
           <ng-container matColumnDef="feeDesc">
             <mat-header-cell *matHeaderCellDef> Description </mat-header-cell>
             <mat-cell *matCellDef="let item"> {{ item.feeDesc }} </mat-cell>
+          </ng-container>
+
+          <!-- Category Name -->
+          <ng-container matColumnDef="licenseCategoryName">
+            <mat-header-cell *matHeaderCellDef> License Category </mat-header-cell>
+            <mat-cell *matCellDef="let item"> {{ item.licenseCategoryName || '-' }} </mat-cell>
+          </ng-container>
+
+          <!-- Subcategory Name -->
+          <ng-container matColumnDef="licenseSubcategoryName">
+            <mat-header-cell *matHeaderCellDef> License Subcategory </mat-header-cell>
+            <mat-cell *matCellDef="let item"> {{ item.licenseSubcategoryName || '-' }} </mat-cell>
+          </ng-container>
+
+          <!-- Mode -->
+          <ng-container matColumnDef="mode">
+            <mat-header-cell *matHeaderCellDef> Mode </mat-header-cell>
+            <mat-cell *matCellDef="let item"> 
+              <span class="status-badge active" style="text-transform: capitalize;" *ngIf="item.mode">
+                {{ item.mode }}
+              </span>
+              <span *ngIf="!item.mode">-</span>
+            </mat-cell>
+          </ng-container>
+
+          <!-- Fee Type -->
+          <ng-container matColumnDef="feeType">
+            <mat-header-cell *matHeaderCellDef> Fee Type </mat-header-cell>
+            <mat-cell *matCellDef="let item">
+              <span class="status-badge" 
+                    [ngStyle]="{'background': item.feeType === 'per_annum' ? '#e8f5e9' : item.feeType === 'per_day' ? '#e3f2fd' : 'transparent',
+                                'color': item.feeType === 'per_annum' ? '#2e7d32' : item.feeType === 'per_day' ? '#1565c0' : '#777',
+                                'border': item.feeType ? 'none' : '1px dashed #ccc'}"
+                    *ngIf="item.feeType">
+                {{ item.feeType === 'per_annum' ? 'Per Annum' : 'Per Day' }}
+              </span>
+              <span style="color:#aaa;" *ngIf="!item.feeType">-</span>
+            </mat-cell>
           </ng-container>
 
           <!-- Amount -->
@@ -43,8 +84,11 @@
           <ng-container matColumnDef="actions">
             <mat-header-cell *matHeaderCellDef> Actions </mat-header-cell>
             <mat-cell *matCellDef="let item">
-              <button matIconButton color="primary" (click)="onEdit(item)" matTooltip="Edit Amount">
+              <button matIconButton color="primary" (click)="onEdit(item)" matTooltip="Edit Config">
                 <mat-icon>edit</mat-icon>
+              </button>
+              <button matIconButton color="warn" (click)="onDelete(item)" matTooltip="Delete Config">
+                <mat-icon>delete</mat-icon>
               </button>
             </mat-cell>
           </ng-container>

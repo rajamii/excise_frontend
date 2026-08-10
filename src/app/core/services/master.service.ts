@@ -649,6 +649,14 @@ export class MasterService {
     return this.http.put(`${this.FIXED_FEE_URL}/${code}/update/`, data);
   }
 
+  createFixedFee(data: any): Observable<any> {
+    return this.http.post(`${this.FIXED_FEE_URL}/create/`, data);
+  }
+
+  deleteFixedFee(code: string): Observable<any> {
+    return this.http.delete(`${this.FIXED_FEE_URL}/${code}/delete/`);
+  }
+
   getBlocks(): Observable<any> {
     return this.http.get(`${this.BLOCK_URL}/`);
   }
