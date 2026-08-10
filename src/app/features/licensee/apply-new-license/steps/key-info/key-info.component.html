@@ -102,6 +102,11 @@
                           <mat-error>Req.</mat-error>
                         }
                       </mat-form-field>
+                      @if (miniBarTotal > 0) {
+                        <span class="mini-bar-total-badge">
+                          = ₹{{ miniBarTotal | number }}
+                        </span>
+                      }
                     }
                   </div>
                 }

@@ -151,6 +151,26 @@ mat-card {
       }
     }
 
+    .mini-bar-total-badge {
+      display: inline-flex;
+      align-items: center;
+      background: linear-gradient(135deg, #1C2B78 0%, #2d3f9e 100%);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 20px;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(28, 43, 120, 0.25);
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateX(-6px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
     .radio-questions-container {
       padding: 20px 0;
       display: flex;

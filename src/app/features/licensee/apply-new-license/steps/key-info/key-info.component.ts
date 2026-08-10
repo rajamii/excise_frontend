@@ -29,6 +29,13 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
   draughtBeerAmount = signal<number>(5000);
   miniBarAmount = signal<number>(1000);
   shouldShowAdditionalCharges = computed(() => this.showPachwai() || this.showDraughtBeer() || this.showMiniBar());
+
+  get miniBarTotal(): number {
+    const checked = this.keyInfoForm?.get('miniBar')?.value;
+    if (!checked) return 0;
+    const qty = Number(this.keyInfoForm?.get('miniBarQuantity')?.value) || 0;
+    return qty * this.miniBarAmount();
+  }
   
   // Store ALL subcategories from API
   private allSubCategories: LicenseSubcategory[] = [];
