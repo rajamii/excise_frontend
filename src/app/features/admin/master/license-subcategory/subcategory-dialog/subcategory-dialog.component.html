@@ -56,6 +56,22 @@
           </mat-form-field>
         }
       </div>
+      @if (isDryDayPermittedCategory && formDryDayFeeType) {
+        <div class="scd-add-form__row">
+          <mat-form-field appearance="outline" style="flex: 1">
+            <mat-label>Rural Fee (₹)</mat-label>
+            <input matInput type="number" min="0" [(ngModel)]="formRuralFee" placeholder="Enter rural fee" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" style="flex: 1">
+            <mat-label>Urban Fee (₹)</mat-label>
+            <input matInput type="number" min="0" [(ngModel)]="formUrbanFee" placeholder="Enter urban fee" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" style="flex: 1">
+            <mat-label>Non Fee (₹)</mat-label>
+            <input matInput type="number" min="0" [(ngModel)]="formNonFee" placeholder="Enter non-urban/non-rural fee" />
+          </mat-form-field>
+        </div>
+      }
       <div class="scd-add-form__actions">
         <button mat-stroked-button (click)="cancelForm()" class="scd-btn-cancel">Cancel</button>
         <button mat-flat-button color="primary" (click)="saveNew()"
@@ -151,18 +167,30 @@
           </mat-header-cell>
           <mat-cell *matCellDef="let row" class="scd-fees-cell">
             <div class="fees-row">
-              <span class="fee-val fee-val--rural"
-                    [class.fee-val--has]="getFeeForMode(row, 'rural') !== '-'">
-                {{ getFeeForMode(row, 'rural') }}
-              </span>
-              <span class="fee-val fee-val--urban"
-                    [class.fee-val--has]="getFeeForMode(row, 'urban') !== '-'">
-                {{ getFeeForMode(row, 'urban') }}
-              </span>
-              <span class="fee-val fee-val--non"
-                    [class.fee-val--has]="getFeeForMode(row, 'non') !== '-'">
-                {{ getFeeForMode(row, 'non') }}
-              </span>
+              @if (editingId === row.id) {
+                <div class="fee-val">
+                  <input type="number" min="0" class="scd-fee-edit-input" [(ngModel)]="formRuralFee" [disabled]="!formDryDayFeeType" placeholder="Rural" />
+                </div>
+                <div class="fee-val">
+                  <input type="number" min="0" class="scd-fee-edit-input" [(ngModel)]="formUrbanFee" [disabled]="!formDryDayFeeType" placeholder="Urban" />
+                </div>
+                <div class="fee-val">
+                  <input type="number" min="0" class="scd-fee-edit-input" [(ngModel)]="formNonFee" [disabled]="!formDryDayFeeType" placeholder="Non" />
+                </div>
+              } @else {
+                <span class="fee-val fee-val--rural"
+                      [class.fee-val--has]="getFeeForMode(row, 'rural') !== '-'">
+                  {{ getFeeForMode(row, 'rural') }}
+                </span>
+                <span class="fee-val fee-val--urban"
+                      [class.fee-val--has]="getFeeForMode(row, 'urban') !== '-'">
+                  {{ getFeeForMode(row, 'urban') }}
+                </span>
+                <span class="fee-val fee-val--non"
+                      [class.fee-val--has]="getFeeForMode(row, 'non') !== '-'">
+                  {{ getFeeForMode(row, 'non') }}
+                </span>
+              }
             </div>
           </mat-cell>
         </ng-container>
