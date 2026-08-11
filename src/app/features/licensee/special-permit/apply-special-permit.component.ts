@@ -34,11 +34,10 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
     licenseCategory: [{ value: '', disabled: true }, Validators.required],
     licenseSubCategory: [{ value: '', disabled: true }, Validators.required],
     licensee: ['', Validators.required],
-    financialYear: ['', Validators.required],
     selectedDates: [[] as string[]]
   });
 
-  readonly financialYears = this.buildFinancialYears();
+  readonly currentYear = String(new Date().getFullYear());
   licenses: any[] = [];
   selectedLicense: any | null = null;
   isLoadingLicenses = false;
@@ -59,14 +58,7 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadLicenses();
-    this.form.patchValue({ financialYear: this.financialYears[0] });
     this.loadAllowedDates();
-
-    this.form.controls.financialYear.valueChanges
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(() => {
-        this.loadAllowedDates();
-      });
   }
 
   ngOnDestroy(): void {
@@ -76,6 +68,16 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
 
   get isPerDayCategory(): boolean {
     return this.permissionDuration === 'per_day';
+  }
+
+  get feeNotConfigured(): boolean {
+    if (!this.selectedLicense) return false;
+    const feeType = this.selectedLicense.dryDayFeeType || this.selectedLicense.dry_day_fee_type;
+    const fee = this.selectedLicense.dryDayFee || this.selectedLicense.dry_day_fee;
+    // Not configured if fee type is missing/null or fee amount is 0/null
+    const noFeeType = !feeType || feeType === 'none';
+    const noFee = !fee || Number(fee) <= 0;
+    return noFeeType || noFee;
   }
 
   onLicenseChange(licenseKey: string): void {
@@ -100,7 +102,7 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
     const raw = this.form.getRawValue();
     const payload = {
       license_id: this.getLicenseId(this.selectedLicense),
-      financial_year: raw.financialYear,
+      financial_year: this.currentYear,
       permission_duration: this.permissionDuration,
       selected_dates: this.isPerDayCategory ? raw.selectedDates : null
     };
@@ -172,7 +174,7 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
     return [id, name].filter(Boolean).join(' - ') || 'License';
   }
 
-  getErrorMessage(field: 'licensee' | 'financialYear'): string {
+  getErrorMessage(field: 'licensee' | 'calendarYear'): string {
     const control = this.form.get(field);
     if (control?.hasError('required')) {
       return 'This field is required';
@@ -244,11 +246,8 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
   }
 
   loadAllowedDates(): void {
-    const fy = this.form.controls.financialYear.value;
-    if (!fy) return;
-
     this.isLoadingAllowedDates = true;
-    this.specialPermitService.getDryDayCalendar(fy).subscribe({
+    this.specialPermitService.getDryDayCalendar(this.currentYear).subscribe({
       next: (res) => {
         this.allowedDryDayDates = res?.allowedDates || res?.allowed_dates || [];
         this.isLoadingAllowedDates = false;
@@ -495,13 +494,4 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
     return String(value).trim();
   }
 
-  private buildFinancialYears(): string[] {
-    const today = new Date();
-    const currentYear = today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1;
-    return Array.from({ length: 5 }, (_, index) => {
-      const start = currentYear - index;
-      const end = String(start + 1).slice(-2);
-      return `${start}-${end}`;
-    });
-  }
 }

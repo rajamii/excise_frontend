@@ -58,8 +58,8 @@
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>Financial Year</mat-label>
-              <input matInput [value]="form.controls.financialYear.value" readonly />
+              <mat-label>Year</mat-label>
+              <input matInput [value]="currentYear" readonly />
               <mat-icon matPrefix>calendar_today</mat-icon>
             </mat-form-field>
 
@@ -82,7 +82,7 @@
                 } @else if (!allowedDryDayDates.length) {
                   <div class="dry-day-empty">
                     <mat-icon>event_busy</mat-icon>
-                    <span>No Dry Day dates configured for <strong>{{ form.controls.financialYear.value }}</strong>. Please contact Site Admin.</span>
+                    <span>No Dry Day dates configured for <strong>{{ currentYear }}</strong>. Please contact Site Admin.</span>
                   </div>
                 } @else {
                   <div class="dry-day-picker">
@@ -194,8 +194,21 @@
 
           <p class="form-note">** Data Once Submitted Can not be changed. Please verify all Details before submitting</p>
 
+          <!-- Fee not configured warning -->
+          @if (selectedLicense && feeNotConfigured) {
+            <div class="fee-not-configured-alert">
+              <mat-icon class="fee-not-configured-alert__icon">error_outline</mat-icon>
+              <div>
+                <strong>Fee Not Configured</strong>
+                <p>The Dry Day Permit fee or fee type has not been set up for your license subcategory. Please contact the Site Admin to configure it before applying.</p>
+              </div>
+            </div>
+          }
+
           <div class="action-row">
-            <button mat-flat-button color="primary" type="button" (click)="saveAndProceedToPayment()" [disabled]="isSubmitting || form.invalid">
+            <button mat-flat-button color="primary" type="button"
+                    (click)="saveAndProceedToPayment()"
+                    [disabled]="isSubmitting || form.invalid || feeNotConfigured">
               <mat-icon>send</mat-icon> Save &amp; Submit for Approval
             </button>
           </div>
