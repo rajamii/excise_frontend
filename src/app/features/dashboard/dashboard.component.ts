@@ -615,6 +615,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return sourceCounts.pending || 0;
     }
     if (status === 'awaitingPayment') {
+      if (this.selectedChartModule === 'all') {
+        return (this.dashboardCounts.awaitingPayment || 0) + this.getSupplyChainAwaitingPaymentTotal();
+      }
       return sourceCounts.awaitingPayment || 0;
     }
     if (status === 'approved') {
@@ -747,7 +750,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             }
             return combined.includes('rejected') || combined.includes('cancelled');
           }).length;
-          this.supplyChainModuleCounts['requisition'] = { applied: items.length, pending: pending + awaitingPayment, approved, objection: 0, rejected };
+          this.supplyChainModuleCounts['requisition'] = {
+            applied: items.length,
+            pending: pending + awaitingPayment,
+            approved,
+            objection: 0,
+            rejected,
+            awaitingPayment: awaitingPayment
+          };
           // feed badge counts too
           this.supplyChainPendingCounts['requisition'] = pending;
           if (this.isLicenseeUser()) {
@@ -826,7 +836,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
                        t.includes('paymentcompleted') || t.includes('cartoonassigned') || t.includes('cartonassigned');
               }).length;
           const rejected = items.filter(x => { const s = String(x.status||'').toLowerCase(); return s.includes('rejected') || s.includes('cancelled'); }).length;
-          this.supplyChainModuleCounts['hologram'] = { applied: items.length, pending: pending + awaitingPayment, approved, objection: 0, rejected };
+          this.supplyChainModuleCounts['hologram'] = {
+            applied: items.length,
+            pending: pending + awaitingPayment,
+            approved,
+            objection: 0,
+            rejected,
+            awaitingPayment: awaitingPayment
+          };
           if (this.isLicenseeUser()) {
             this.supplyChainPendingCounts['hologram'] = pending;
             this.supplyChainPendingCounts['hologram:payment'] = awaitingPayment;
@@ -2337,6 +2354,13 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
            this.getSupplyChainPendingCount('cancellation') +
            this.getSupplyChainPendingCount('hologram') +
            (isCommissioner ? 0 : this.getSupplyChainPendingCount('transit'));
+  }
+
+  getSupplyChainAwaitingPaymentTotal(): number {
+    const isCommissioner = this.isCommissionerUser();
+    if (isCommissioner) return 0;
+    return (this.supplyChainModuleCounts['requisition']?.awaitingPayment || 0) +
+           (this.supplyChainModuleCounts['hologram']?.awaitingPayment || 0);
   }
 
   getSupplyChainAppliedTotal(): number {
@@ -3857,6 +3881,13 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   getAwaitingPaymentBreakdownText(): string {
+    if (this.selectedChartModule === 'requisition') {
+      return 'Requisition';
+    }
+    if (this.selectedChartModule === 'hologram') {
+      return 'Hologram';
+    }
+
     const parts: string[] = [];
     if (this.awaitingPaymentBreakdown.newLicense > 0) {
       parts.push('New License');
@@ -3876,6 +3907,17 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if ((this.awaitingPaymentBreakdown as any).specialPermit > 0) {
       parts.push('Dry Day Permit');
     }
+
+    // Add supply chain modules awaiting payment to the "All Modules" list
+    if (this.selectedChartModule === 'all') {
+      if ((this.supplyChainModuleCounts['requisition']?.awaitingPayment || 0) > 0) {
+        parts.push('Requisition');
+      }
+      if ((this.supplyChainModuleCounts['hologram']?.awaitingPayment || 0) > 0) {
+        parts.push('Hologram');
+      }
+    }
+
     return parts.length > 0 ? parts.join(', ') : 'Fees pending';
   }
 
