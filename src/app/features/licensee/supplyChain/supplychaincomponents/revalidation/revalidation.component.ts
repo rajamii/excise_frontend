@@ -372,6 +372,17 @@ export class RevalidationComponent implements OnInit {
   }
 
   private isPendingLikeStatus(item: TableData): boolean {
+    // For commissioner: pending = action required RIGHT NOW (allowedActions has APPROVE)
+    if (this.isCommissioner()) {
+      const actions: string[] = item?.allowedActions ?? [];
+      return Array.isArray(actions) && actions.includes('APPROVE');
+    }
+    // For permit section: same — only pending when action is needed right now
+    if (this.isPermitSection()) {
+      const actions: string[] = item?.allowedActions ?? [];
+      return Array.isArray(actions) && (actions.includes('APPROVE') || actions.includes('REJECT') ||
+             actions.includes('FORWARD') || actions.includes('VERIFY'));
+    }
     if (this.isInvalidLikeStatus(item) || this.isApprovedLikeStatus(item) || this.isActionRequiredLikeStatus(item)) {
       return false;
     }

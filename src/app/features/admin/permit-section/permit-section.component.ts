@@ -6,6 +6,7 @@ import { Subscription } from "rxjs";
 import { filter } from "rxjs/operators";
 import { RequisitionComponent } from "../../licensee/supplyChain/supplychaincomponents/requisition/requisition.component";
 import { RevalidationComponent } from "../../licensee/supplyChain/supplychaincomponents/revalidation/revalidation.component";
+import { CancellationComponent } from "../../licensee/supplyChain/supplychaincomponents/cancellation/cancellation.component";
 
 
 interface PermitData {
@@ -14,7 +15,7 @@ interface PermitData {
   distilleryName: string;
   status: string;
   amount: number;
-  type: "requisition" | "revalidation" | "transit";
+  type: "requisition" | "revalidation" | "cancellation" | "transit";
 
   allowedActions?: string[];
   id?: number;
@@ -25,7 +26,7 @@ interface PermitData {
 @Component({
   selector: "app-permit-section",
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterOutlet, RequisitionComponent, RevalidationComponent],
+  imports: [CommonModule, FormsModule, RouterOutlet, RequisitionComponent, RevalidationComponent, CancellationComponent],
   templateUrl: "./permit-section.component.html",
   styleUrls: ["./permit-section.component.scss"],
 })
@@ -56,6 +57,7 @@ export class PermitSectionComponent implements OnInit, OnDestroy {
           event.urlAfterRedirects.includes("/app-permit-section/") &&
           (event.urlAfterRedirects.includes("/requisition/") ||
             event.urlAfterRedirects.includes("/revalidation/") ||
+            event.urlAfterRedirects.includes("/cancellation/") ||
             event.urlAfterRedirects.includes("/transit/")
           );
       });
@@ -64,6 +66,7 @@ export class PermitSectionComponent implements OnInit, OnDestroy {
       this.router.url.includes("/app-permit-section/") &&
       (this.router.url.includes("/requisition/") ||
         this.router.url.includes("/revalidation/") ||
+        this.router.url.includes("/cancellation/") ||
         this.router.url.includes("/transit/"));
 
   }
@@ -167,6 +170,12 @@ export class PermitSectionComponent implements OnInit, OnDestroy {
       case "revalidation":
         this.router.navigate([
           "/app-permit-section/revalidation",
+          permit.referenceNo,
+        ]);
+        break;
+      case "cancellation":
+        this.router.navigate([
+          "/app-permit-section/cancellation",
           permit.referenceNo,
         ]);
         break;

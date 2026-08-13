@@ -667,26 +667,20 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     // Build observables — reuse prefetched data where available to avoid duplicate HTTP calls.
     const req$ = prefetched?.requisition
       ? of(prefetched.requisition)
-      : (isLicensee)
-        ? of([] as any[])
-        : this.enaRequisitionService.getRequisitions().pipe(
-            map((r: any) => Array.isArray(r) ? r : (r?.results || [])),
-            catchError(() => of([]))
-          );
+      : this.enaRequisitionService.getRequisitions().pipe(
+          map((r: any) => Array.isArray(r) ? r : (r?.results || [])),
+          catchError(() => of([]))
+        );
 
-    const rev$ = (isPermitSection || isLicensee)
-      ? (prefetched?.revalidation ? of(prefetched.revalidation) : of([] as any[]))
-      : prefetched?.revalidation
-        ? of(prefetched.revalidation)
-        : this.supplyChainService.getRevalidationData().pipe(catchError(() => of([])));
+    const rev$ = prefetched?.revalidation
+      ? of(prefetched.revalidation)
+      : this.supplyChainService.getRevalidationData().pipe(catchError(() => of([])));
 
-    const can$ = (isPermitSection || isLicensee)
-      ? (prefetched?.cancellation ? of(prefetched.cancellation) : of([] as any[]))
-      : prefetched?.cancellation
-        ? of(prefetched.cancellation)
-        : this.supplyChainService.getCancellationData().pipe(catchError(() => of([])));
+    const can$ = prefetched?.cancellation
+      ? of(prefetched.cancellation)
+      : this.supplyChainService.getCancellationData().pipe(catchError(() => of([])));
 
-    const tra$ = (skipTransit || isLicensee)
+    const tra$ = (skipTransit)
       ? (prefetched?.transit ? of(prefetched.transit) : of([] as any[]))
       : prefetched?.transit
         ? of(prefetched.transit)
@@ -755,38 +749,34 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           }).length;
           this.supplyChainModuleCounts['requisition'] = { applied: items.length, pending: pending + awaitingPayment, approved, objection: 0, rejected };
           // feed badge counts too
+          this.supplyChainPendingCounts['requisition'] = pending;
           if (this.isLicenseeUser()) {
-            this.supplyChainPendingCounts['requisition'] = pending;
             this.supplyChainPendingCounts['requisition:payment'] = awaitingPayment;
           }
         }
 
         // ── REVALIDATIONS ─────────────────────────────────────────────────────
-        if (isPermitSection) {
-          this.supplyChainModuleCounts['revalidation'] = { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
-        } else {
+        {
           const items: any[] = Array.isArray(rev) ? rev : [];
-          const pending = isCommissioner
-            ? this.sidebarPendingBadgeService.countActionable(items, ['APPROVE', 'REJECT'])
+          const pending = (isCommissioner || isPermitSection)
+            ? this.sidebarPendingBadgeService.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY'])
             : this.sidebarPendingBadgeService.countLicenseePendingItems(items);
           const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
           const rejected = items.filter(x => { const s = String(x.status||'').toLowerCase(); return s.includes('rejected') || s.includes('cancelled'); }).length;
           this.supplyChainModuleCounts['revalidation'] = { applied: items.length, pending, approved, objection: 0, rejected };
-          if (this.isLicenseeUser()) this.supplyChainPendingCounts['revalidation'] = pending;
+          this.supplyChainPendingCounts['revalidation'] = pending;
         }
 
         // ── CANCELLATIONS ─────────────────────────────────────────────────────
-        if (isPermitSection) {
-          this.supplyChainModuleCounts['cancellation'] = { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
-        } else {
+        {
           const items: any[] = Array.isArray(can) ? can : [];
-          const pending = isCommissioner
-            ? this.sidebarPendingBadgeService.countActionable(items, ['APPROVE', 'REJECT'])
+          const pending = (isCommissioner || isPermitSection)
+            ? this.sidebarPendingBadgeService.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'APPROVEPAYSLIP', 'REJECTPAYSLIP'])
             : this.sidebarPendingBadgeService.countLicenseePendingItems(items);
           const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
           const rejected = items.filter(x => { const s = String(x.status||'').toLowerCase(); return s.includes('rejected') || s.includes('cancelled'); }).length;
           this.supplyChainModuleCounts['cancellation'] = { applied: items.length, pending, approved, objection: 0, rejected };
-          if (this.isLicenseeUser()) this.supplyChainPendingCounts['cancellation'] = pending;
+          this.supplyChainPendingCounts['cancellation'] = pending;
         }
 
         // ── TRANSIT PERMITS ───────────────────────────────────────────────────

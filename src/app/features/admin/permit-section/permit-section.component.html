@@ -41,6 +41,11 @@
           </button>
         </li>
         <li class="nav-item">
+          <button class="nav-link" [class.active]="activeTab === 'cancellation'" (click)="setActiveTab('cancellation')">
+            <i class="bi bi-x-circle me-2"></i> CANCELLATION
+          </button>
+        </li>
+        <li class="nav-item">
           <button class="nav-link" [class.active]="activeTab === 'transit'" (click)="setActiveTab('transit')">
             <i class="bi bi-truck me-2"></i> TRANSIT
           </button>
@@ -64,8 +69,13 @@
       <app-revalidation></app-revalidation>
       }
 
+      <!-- Use shared Cancellation Component for cancellation tab -->
+      @if (activeTab === 'cancellation') {
+      <app-cancellation></app-cancellation>
+      }
+
       <!-- Original permit section code for other tabs -->
-      @if (activeTab !== 'requisition' && activeTab !== 'revalidation') {
+      @if (activeTab !== 'requisition' && activeTab !== 'revalidation' && activeTab !== 'cancellation') {
       <!-- Permit Register Header -->
       <div class="permit-register-header">
         <div class="d-flex justify-content-between align-items-center mb-4">

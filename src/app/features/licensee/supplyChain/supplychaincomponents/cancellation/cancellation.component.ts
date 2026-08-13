@@ -303,6 +303,20 @@ export class CancellationComponent implements OnInit {
     );
   }
 
+  private isActionablePending(item: TableData): boolean {
+    if (this.isCommissioner()) {
+      const actions: string[] = item?.allowedActions ?? [];
+      return Array.isArray(actions) && actions.includes('APPROVE');
+    }
+    if (this.isPermitSection()) {
+      const actions: string[] = item?.allowedActions ?? [];
+      return Array.isArray(actions) && (actions.includes('APPROVE') || actions.includes('REJECT') ||
+             actions.includes('FORWARD') || actions.includes('VERIFY') ||
+             actions.includes('APPROVEPAYSLIP') || actions.includes('REJECTPAYSLIP'));
+    }
+    return this.isPendingLikeStatus(item.status);
+  }
+
   private isPendingSummaryStatus(status: string | null | undefined): boolean {
     const value = this.normalizeStatus(status);
     if (!value) return true;
@@ -420,7 +434,9 @@ export class CancellationComponent implements OnInit {
 
         // Handle different status variations
         if (filterStatus === 'pending') {
-          return this.isPendingSummaryStatus(item.status);
+          return (this.isCommissioner() || this.isPermitSection())
+            ? this.isActionablePending(item)
+            : this.isPendingSummaryStatus(item.status);
         } else if (filterStatus === 'approved') {
           return this.isApprovedStatus(item.status);
         } else if (filterStatus === 'rejected') {
@@ -462,7 +478,10 @@ export class CancellationComponent implements OnInit {
   // Summary methods
   getCancellationStatusCount(status: string): number {
     if (status === 'PENDING') {
-      return this.summaryCancellationData.filter(item => this.isPendingSummaryStatus(item.status)).length;
+      const predicate = (this.isCommissioner() || this.isPermitSection())
+        ? (item: TableData) => this.isActionablePending(item)
+        : (item: TableData) => this.isPendingSummaryStatus(item.status);
+      return this.summaryCancellationData.filter(predicate).length;
     } else if (status === 'APPROVED') {
       return this.summaryCancellationData.filter(item => this.isApprovedStatus(item.status)).length;
     } else if (status === 'REJECTED') {
@@ -1100,13 +1119,15 @@ export class CancellationComponent implements OnInit {
 
   // Role detection methods
   isCommissioner(): boolean {
-    const hasRole = this.accountService.hasAnyRole('commissioner');
+    const hasRole = this.accountService.hasAnyRole(['commissioner', 'commissioner', 'Commissioner']);
     const isCommissionerRoute = this.isBrowser && window.location.pathname.includes('commissioner');
     return hasRole || isCommissionerRoute;
   }
 
   isPermitSection(): boolean {
-    return this.isBrowser && (window.location.pathname.includes('permit-section') || window.location.pathname.includes('app-permit-section'));
+    const hasRole = this.accountService.hasAnyRole(['permit-section', 'permit section', 'permit_section', 'Permit Section']);
+    const isPermitSectionRoute = this.isBrowser && (window.location.pathname.includes('permit-section') || window.location.pathname.includes('app-permit-section'));
+    return hasRole || isPermitSectionRoute;
   }
 
   getUserType(): 'commissioner' | 'permit-section' | 'licensee' {

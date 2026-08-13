@@ -27,6 +27,17 @@ const routes: Routes = [
     },
   },
   {
+    path: 'cancellation',
+    loadComponent: () =>
+      import('./permit-section.component').then(
+        (m) => m.PermitSectionComponent
+      ),
+    canActivate: [UserRouteAccessService],
+    data: {
+      requiredPermission: 'permit.cancellation.view',
+    },
+  },
+  {
     path: 'transit',
     loadComponent: () =>
       import('./permit-section.component').then(

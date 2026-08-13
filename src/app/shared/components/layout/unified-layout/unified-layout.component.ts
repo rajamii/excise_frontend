@@ -110,8 +110,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     { section: 'license-renewal', label: 'License Renewal', icon: 'autorenew', hideForSiteAdmin: true, hideForPermitSection: true, hideForItCell: true, hideForOic: true },
     { section: 'special-permit', label: 'Dry Day Permit', icon: 'assignment_turned_in', hideForSiteAdmin: true, hideForPermitSection: true, hideForItCell: true, hideForOic: true },
     { section: 'requisition', label: 'Requisition', icon: 'description', group: 'Bulk Spirit' },
-    { section: 'revalidation', label: 'Revalidation', icon: 'refresh', group: 'Bulk Spirit', hideForPermitSection: true },
-    { section: 'cancellation', label: 'Cancellation', icon: 'cancel', group: 'Bulk Spirit', hideForPermitSection: true },
+    { section: 'revalidation', label: 'Revalidation', icon: 'refresh', group: 'Bulk Spirit' },
+    { section: 'cancellation', label: 'Cancellation', icon: 'cancel', group: 'Bulk Spirit' },
     { section: 'transit', label: 'Transit Permit', icon: 'local_shipping', hideForCommissioner: true, hideForPermitSection: true },
     { section: 'transit-applications', label: 'Transit Applications', icon: 'local_shipping', hideForPermitSection: true },
     { section: 'bl-details', label: 'Bulk Spirit Details', icon: 'water_drop', showOnlyForOic: true },
@@ -1686,7 +1686,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return false;
     }
 
-    if (this.isPermitSectionUser() && (section === 'new-license' || section === 'license-renewal' || section === 'transit-applications' || section === 'cancellation' || section === 'transit')) {
+    if (this.isPermitSectionUser() && (section === 'new-license' || section === 'license-renewal' || section === 'transit-applications' || section === 'transit')) {
       return false;
     }
 

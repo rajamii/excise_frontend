@@ -446,7 +446,22 @@ export class CommissionerDashboardComponent implements OnInit {
 
   // Status count methods
   getRevalidationStatusCount(status: string): number {
-    return this.filteredRevalidationData.filter(item => item.status === status).length;
+    const filter = String(status || '').trim().toLowerCase();
+    if (filter === 'pending') {
+      return this.filteredRevalidationData.filter(item => {
+        const s = String(item.status || '').toLowerCase();
+        if (s.includes('approved') || s.includes('rejected') || s.includes('cancelled')) return false;
+        const actions = item.allowedActions || [];
+        return actions.includes('APPROVE') || s.includes('pending') || s.includes('forward');
+      }).length;
+    }
+    if (filter === 'approved') {
+      return this.filteredRevalidationData.filter(item => {
+        const s = String(item.status || '').toLowerCase();
+        return s.includes('approved') && !s.includes('reject');
+      }).length;
+    }
+    return this.filteredRevalidationData.filter(item => String(item.status || '').toLowerCase().includes(filter)).length;
   }
 
   getUrgentRevalidationCount(): number {
@@ -530,7 +545,19 @@ export class CommissionerDashboardComponent implements OnInit {
     }
 
     if (this.revalidationStatusFilter) {
-      filtered = filtered.filter(item => item.status === this.revalidationStatusFilter);
+      const filter = String(this.revalidationStatusFilter).trim().toLowerCase();
+      filtered = filtered.filter(item => {
+        const s = String(item.status || '').toLowerCase();
+        if (filter === 'pending') {
+          if (s.includes('approved') || s.includes('rejected') || s.includes('cancelled')) return false;
+          const actions = item.allowedActions || [];
+          return actions.includes('APPROVE') || s.includes('pending') || s.includes('forward');
+        } else if (filter === 'approved') {
+          return s.includes('approved') && !s.includes('reject');
+        } else {
+          return s.includes(filter);
+        }
+      });
     }
 
     if (this.revalidationPriorityFilter) {
