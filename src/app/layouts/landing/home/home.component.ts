@@ -342,6 +342,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private init3DBackground(): void {
+    if (!this.canvasRef) return;
     const canvas = this.canvasRef.nativeElement;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
