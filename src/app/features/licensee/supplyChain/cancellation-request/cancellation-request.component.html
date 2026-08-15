@@ -38,8 +38,9 @@
           <label class="form-check-label" [for]="'chkPermit_' + permit.number">
             Permit No. {{ permit.number }} - {{ formatCurrency(permit.amount) }}
             <span class="text-muted ms-1">({{ getPerPermitQuantityLabel() || 'per permit' }})</span>
-            <span *ngIf="permit.isCancelled">(Cancelled)</span>
-            <span *ngIf="!permit.isCancelled && permit.isLocked">({{ permit.lockReason }})</span>
+            <span *ngIf="permit.isCancelled" class="badge bg-secondary ms-1">Cancelled</span>
+            <span *ngIf="!permit.isCancelled && permit.isLocked && permit.lockReason === 'Under revalidation'" class="badge bg-warning text-dark ms-1">Revalidated</span>
+            <span *ngIf="!permit.isCancelled && permit.isLocked && permit.lockReason !== 'Under revalidation'" class="badge bg-danger ms-1">{{ permit.lockReason }}</span>
           </label>
         </div>
       </div>
@@ -73,6 +74,12 @@
                 {{ selectedPermits.join(", ") }}
               </span>
               <ng-template #noPermits><em class="text-muted">None selected</em></ng-template>
+            </td>
+          </tr>
+          <tr *ngIf="getRevalidatedPermitsList().length > 0">
+            <td><strong>Revalidated Permit(s)</strong></td>
+            <td>
+              <span class="badge bg-warning text-dark" style="font-size: 0.85rem;">{{ getRevalidatedPermitsList().join(", ") }}</span>
             </td>
           </tr>
           <tr>

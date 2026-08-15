@@ -459,6 +459,10 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
     return 0;
   }
 
+  getRevalidatedPermitsList(): string[] {
+    return Array.from(this.revalPermitNumbers || []);
+  }
+
   openWalletConfirmation() {
     if (this.isSubmittingCancellation) {
       return;

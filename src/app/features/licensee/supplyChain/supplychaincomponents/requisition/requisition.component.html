@@ -431,6 +431,16 @@
           </div>
         </div>
 
+        <!-- Revalidated Permits Information Box -->
+        <div class="alert alert-warning d-flex align-items-center mb-4 border-0 shadow-sm" *ngIf="getRevalidatedPermitsForCurrentArrival().length > 0" style="background-color: #fef3c7; color: #92400e; border-left: 4px solid #f59e0b !important;">
+          <i class="bi bi-exclamation-triangle-fill fs-5 me-3"></i>
+          <div>
+            <div class="fw-bold text-dark">Revalidated Permit(s):</div>
+            <div class="fw-semibold" style="letter-spacing: 0.2px;">{{ getRevalidatedPermitsForCurrentArrival().join(', ') }}</div>
+            <div class="small text-muted mt-1">These permits have gone to revalidation and cannot be updated for arrival.</div>
+          </div>
+        </div>
+
         <div class="tanker-entry-section mb-4">
           <div class="section-header">
             <i class="bi bi-list-check"></i>
@@ -458,9 +468,11 @@
                                 ? ' (cancelled - pending)'
                             : (getArrivalPermitServerStatus(permitNo) === 'CANCELLED'
                                 ? ' (cancelled)'
-                                : (getArrivalPermitServerStatus(permitNo) === 'REJECTED'
-                                    ? ' (rejected)'
-                                    : (isArrivalPermitSaved(permitNo) ? ' (saved)' : '')))))
+                            : (getArrivalPermitServerStatus(permitNo) === 'REJECTED'
+                                ? ' (rejected)'
+                            : (activeRevalidationPermitNumbers.has(permitNo)
+                                ? ' (revalidated)'
+                                : (isArrivalPermitSaved(permitNo) ? ' (saved)' : ''))))))
                      }}
                   </option>
                 </select>
@@ -478,7 +490,9 @@
                             ? 'Cancelled (Pending)'
                         : (getArrivalPermitServerStatus(selectedArrivalPermitNo) === 'CANCELLED'
                             ? 'Cancelled'
-                            : 'Submitted to OIC (Pending)'))
+                        : (activeRevalidationPermitNumbers.has(selectedArrivalPermitNo)
+                            ? 'Revalidated'
+                            : 'Submitted to OIC (Pending)')))
                      }}
                   </strong>
                 </div>

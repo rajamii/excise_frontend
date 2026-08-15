@@ -120,7 +120,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   summaryRequisitionData: TableData[] = [];
   private revalidationApprovedDateByRef: Record<string, string> = {};
   private revalidationActiveByRef: Record<string, boolean> = {};
-  private activeRevalidationPermitNumbers = new Set<string>();
+  public activeRevalidationPermitNumbers = new Set<string>();
 
   // Filter properties
   requisitionDateFilter: string = '';
@@ -2249,11 +2249,11 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   shouldShowRevalidatedBadge(item: TableData): boolean {
-    // Badge is for licensee view only.
-    if (this.isCommissioner() || this.isPermitSection()) {
-      return false;
-    }
-    return this.isRevalidationApprovedByCommissioner(item);
+    return this.hasActiveRevalidationOnSameRef(item);
+  }
+
+  getRevalidatedPermitsForCurrentArrival(): string[] {
+    return this.arrivalPermitNumbers.filter(p => this.activeRevalidationPermitNumbers.has(p));
   }
 
   private hasActiveRevalidationOnSameRef(item: TableData): boolean {
