@@ -120,6 +120,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   summaryRequisitionData: TableData[] = [];
   private revalidationApprovedDateByRef: Record<string, string> = {};
   private revalidationActiveByRef: Record<string, boolean> = {};
+  private activeRevalidationPermitNumbers = new Set<string>();
 
   // Filter properties
   requisitionDateFilter: string = '';
@@ -273,6 +274,27 @@ export class RequisitionComponent implements OnInit, OnDestroy {
         this.revalidationApprovedDateByRef = this.buildRevalidationApprovedDateIndex(revalidations || []);
         this.revalidationActiveByRef = this.buildRevalidationActiveRefIndex(revalidations || []);
 
+        this.activeRevalidationPermitNumbers.clear();
+        (revalidations || []).forEach((row: any) => {
+          const status = this.normalizeStageToken(row?.status);
+          const stageName = this.normalizeStageToken(row?.current_stage_name || row?.currentStageName);
+          const statusCode = this.normalizeStageToken(row?.status_code || row?.statusCode);
+          const combined = `${status} ${stageName} ${statusCode}`;
+          const isRejectedOrCancelled =
+            combined.includes('reject') ||
+            combined.includes('cancel');
+
+          if (!isRejectedOrCancelled) {
+            const permitsRaw = String(row?.detailsPermitsNumber || row?.details_permits_number || '');
+            permitsRaw.split(',').forEach((p) => {
+              const token = p.trim();
+              if (token) {
+                this.activeRevalidationPermitNumbers.add(token);
+              }
+            });
+          }
+        });
+
         this.requisitionData = (data || []).map((item: any) => {
           // Format date properly
           const dateVal = item.submissionDate || item.submission_date || item.requisitionDate || item.requisition_date || item.date || item.created_at;
@@ -392,6 +414,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
         this.filteredRequisitionData = [];
         this.revalidationApprovedDateByRef = {};
         this.revalidationActiveByRef = {};
+        this.activeRevalidationPermitNumbers.clear();
       }
     });
   }
@@ -1895,7 +1918,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
   isArrivalPermitLocked(permitNo: string): boolean {
     const status = this.getArrivalPermitServerStatus(permitNo);
-    return status === 'PENDING' || status === 'APPROVED' || status === 'CANCELLED' || status === 'CANCEL_REQUESTED';
+    const isLockedByServer = status === 'PENDING' || status === 'APPROVED' || status === 'CANCELLED' || status === 'CANCEL_REQUESTED';
+    const isLockedByReval = this.activeRevalidationPermitNumbers.has(permitNo);
+    return isLockedByServer || isLockedByReval;
   }
 
   markArrivalPermitDirty(): void {
