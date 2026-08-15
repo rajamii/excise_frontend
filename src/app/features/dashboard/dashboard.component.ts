@@ -715,9 +715,30 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         // ── REQUISITIONS ──────────────────────────────────────────────────────
         {
           const items: any[] = Array.isArray(req) ? req : [];
-          const pending = (isCommissioner || isPermitSection)
+          let pending = (isCommissioner || isPermitSection)
             ? this.sidebarPendingBadgeService.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY'])
             : this.sidebarPendingBadgeService.countRequisitionPendingReview(items, false);
+          // For Permit Section: PENDING status = application just submitted, awaiting PS review.
+          // The backend may not populate allowedActions at this initial stage, so countActionable
+          // can return 0 even when there are actionable records. Add any plain-PENDING items that
+          // were not already counted by countActionable (allowedActions is empty).
+          if (isPermitSection) {
+            const actionableIds = new Set(
+              items
+                .filter(x => {
+                  const acts: string[] = (x.allowedActions ?? x.allowed_actions ?? []).map((a: any) => String(a).toUpperCase());
+                  return acts.some(a => ['APPROVE','REJECT','FORWARD','VERIFY'].includes(a));
+                })
+                .map(x => x.id)
+            );
+            const extraPending = items.filter(x => {
+              if (actionableIds.has(x.id)) return false; // already counted
+              const st = String(x.status || x.current_stage_name || x.currentStageName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+              // Include if status is plainly PENDING and not already final/approved/rejected
+              return st === 'pending' && !st.includes('approved') && !st.includes('rejected') && !st.includes('cancelled');
+            }).length;
+            pending += extraPending;
+          }
           const awaitingPayment = (isCommissioner || isPermitSection)
             ? 0
             : this.sidebarPendingBadgeService.countRequisitionAwaitingPayment(items);

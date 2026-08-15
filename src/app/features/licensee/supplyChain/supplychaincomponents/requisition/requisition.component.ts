@@ -600,6 +600,11 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     if (this.isCommissioner() && combined.includes('commissioner')) return true;
     if (this.isPermitSection() && combined.includes('permitsection')) return true;
 
+    // For Permit Section: PENDING status means the application was just submitted by the
+    // licensee and is awaiting Permit Section review — this IS their stage.
+    // Show these records even when the backend hasn't yet populated allowedActions.
+    if (this.isPermitSection() && combined.includes('pending')) return true;
+
     // Record hasn't reached this admin's stage yet → hide it
     return false;
   }
@@ -2572,11 +2577,19 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       const actions: string[] = item?.allowedActions ?? [];
       return Array.isArray(actions) && actions.includes('APPROVE');
     }
-    // For permit section: same — only pending when action is needed right now
+    // For permit section: pending = action required (via allowedActions) OR the record
+    // has status PENDING (just submitted by licensee, awaiting PS review — backend may
+    // not populate allowedActions at this early stage yet).
     if (this.isPermitSection()) {
       const actions: string[] = item?.allowedActions ?? [];
-      return Array.isArray(actions) && (actions.includes('APPROVE') || actions.includes('REJECT') ||
+      const hasActionableAction = Array.isArray(actions) && (actions.includes('APPROVE') || actions.includes('REJECT') ||
              actions.includes('FORWARD') || actions.includes('VERIFY'));
+      if (hasActionableAction) return true;
+      // Also treat a plain PENDING status as pending for Permit Section
+      const statusToken = this.normalizeStageToken(item?.status);
+      const stageToken = this.normalizeStageToken(item?.currentStageName);
+      if (statusToken === 'pending' || stageToken === 'pending') return true;
+      return false;
     }
     if (this.isApprovedCommissionerAwaitingPayment(item)) {
       return true;

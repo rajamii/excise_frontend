@@ -599,11 +599,23 @@ export class PermitSectionDashboardComponent implements OnInit {
 
   private getActionablePendingCount(): number {
     // Prefer DB workflow metadata (allowed actions) so pending count stays correct even when stage names change.
-    return this.allPermits.filter((permit) => {
+    const countedByActions = this.allPermits.filter((permit) => {
       const actions = Array.isArray(permit?.allowedActions) ? permit.allowedActions : [];
       const upper = actions.map((a) => String(a || '').toUpperCase());
       return upper.includes('APPROVE') || upper.includes('REJECT');
-    }).length;
+    });
+
+    const countedIds = new Set(countedByActions.map(p => p.id));
+
+    // Fallback: also count plain PENDING status items (just submitted, backend may not
+    // have populated allowedActions at this initial Permit Section stage yet).
+    const countedByStatus = this.allPermits.filter((permit) => {
+      if (countedIds.has(permit.id)) return false; // already counted above
+      const st = String(permit.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      return st === 'pending';
+    });
+
+    return countedByActions.length + countedByStatus.length;
   }
 
   // Unified action handler
