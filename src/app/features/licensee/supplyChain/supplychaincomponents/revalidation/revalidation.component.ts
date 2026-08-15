@@ -386,8 +386,7 @@ export class RevalidationComponent implements OnInit {
     if (this.isInvalidLikeStatus(item) || this.isApprovedLikeStatus(item) || this.isActionRequiredLikeStatus(item)) {
       return false;
     }
-    const status = this.normalizeStageToken(item?.status);
-    return status.includes('pending');
+    return true;
   }
 
   private isUnderProcessLikeStatus(item: TableData): boolean {

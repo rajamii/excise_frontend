@@ -35,7 +35,7 @@
       </div>
     </div>
 
-    <div class="summary-card action-required-requests summary-card-clickable" role="button" tabindex="0"
+    <div *ngIf="isCommissioner() || isPermitSection()" class="summary-card action-required-requests summary-card-clickable" role="button" tabindex="0"
       (click)="onSummaryCardClick('ACTION_REQUIRED')" [class.active]="activeSummaryFilter === 'ACTION_REQUIRED'">
       <div class="card-icon">
         <i class="bi bi-exclamation-circle"></i>
