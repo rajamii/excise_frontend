@@ -191,9 +191,15 @@ export class SidebarPendingBadgeService {
             map((items) => this.countRequisitionPendingReview(items))
           );
         }
+        // For officer roles (Permit Section / Commissioner): count items that are actionable
+        // via allowedActions PLUS items where the backend didn't populate allowedActions but
+        // the status clearly routes the item to this officer's stage:
+        //  • plain "PENDING" (just submitted)
+        //  • "FORWARDED PAYSLIP PERMIT SECTION" (back at PS after payment)
+        //  • "FORWARDED COMMISSIONER" (at commissioner stage)
         return this.enaRequisitionService.getRequisitions().pipe(
           map((response) => this.toArray(response)),
-          map((items) => this.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY']))
+          map((items) => this.countActionableWithStatusFallback(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY']))
         );
 
       case 'revalidation':
@@ -491,6 +497,41 @@ export class SidebarPendingBadgeService {
       if (isFinalish(item)) return false;
       return statusText.includes('pending') || statusText.includes('under') || statusText.includes('submitted');
     }).length;
+  }
+
+  /**
+   * Like countActionable but also adds items whose status indicates they are routed
+   * to an officer's stage even when the backend hasn't set allowedActions.
+   * Used for Permit Section and Commissioner sidebar badge counts.
+   */
+  public countActionableWithStatusFallback(items: any[], actionableActions: string[]): number {
+    const actionable = new Set(this.toUpperActions(actionableActions));
+
+    // First pass: items with matching allowedActions
+    const countedByActions = (items || []).filter((item) => {
+      const actions = this.extractAllowedActions(item);
+      return actions.some((action) => actionable.has(action));
+    });
+    const countedIds = new Set(countedByActions.map((item) => item?.id));
+
+    // Second pass: items with no allowedActions but status clearly routes to this officer
+    const countedByStatus = (items || []).filter((item) => {
+      if (countedIds.has(item?.id)) return false; // already counted
+      const st = this.normalizeStageToken(item?.status ?? item?.current_stage_name ?? item?.currentStageName ?? '');
+      if (!st) return false;
+      if (st.includes('approv') || st.includes('reject') || st.includes('cancel') ||
+          st.includes('complete') || st.includes('terminate')) return false;
+      // Plain PENDING (just submitted, awaiting first officer review)
+      if (st === 'pending') return true;
+      // Forwarded back to Permit Section for payslip action
+      if (st.includes('permitsection') &&
+          (st.includes('forward') || st.includes('payslip') || st.includes('submit'))) return true;
+      // Forwarded to Commissioner for review
+      if (st.includes('commissioner') && st.includes('forward')) return true;
+      return false;
+    });
+
+    return countedByActions.length + countedByStatus.length;
   }
 
   private normalizeStageToken(value: any): string {
