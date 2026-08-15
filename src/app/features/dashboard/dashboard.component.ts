@@ -718,11 +718,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           let pending = (isCommissioner || isPermitSection)
             ? this.sidebarPendingBadgeService.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY'])
             : this.sidebarPendingBadgeService.countRequisitionPendingReview(items, false);
-          // For Permit Section: PENDING status = application just submitted, awaiting PS review.
+          // For Permit Section / Commissioner: PENDING status = application just submitted, awaiting review.
           // The backend may not populate allowedActions at this initial stage, so countActionable
           // can return 0 even when there are actionable records. Add any plain-PENDING items that
           // were not already counted by countActionable (allowedActions is empty).
-          if (isPermitSection) {
+          if (isPermitSection || isCommissioner) {
             const actionableIds = new Set(
               items
                 .filter(x => {

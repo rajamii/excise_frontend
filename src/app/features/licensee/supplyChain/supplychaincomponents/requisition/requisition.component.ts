@@ -600,10 +600,10 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     if (this.isCommissioner() && combined.includes('commissioner')) return true;
     if (this.isPermitSection() && combined.includes('permitsection')) return true;
 
-    // For Permit Section: PENDING status means the application was just submitted by the
-    // licensee and is awaiting Permit Section review — this IS their stage.
+    // For Permit Section / Commissioner: PENDING status means the application was just submitted by the
+    // licensee and is awaiting admin review — this IS their stage (backend returns these via API).
     // Show these records even when the backend hasn't yet populated allowedActions.
-    if (this.isPermitSection() && combined.includes('pending')) return true;
+    if ((this.isPermitSection() || this.isCommissioner()) && combined.includes('pending')) return true;
 
     // Record hasn't reached this admin's stage yet → hide it
     return false;
@@ -2572,10 +2572,17 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   private isPendingLikeStatus(item: TableData): boolean {
-    // For commissioner: pending = action required RIGHT NOW (allowedActions has APPROVE)
+    // For commissioner: pending = action required (via allowedActions APPROVE) OR the record
+    // has plain PENDING status (just submitted, awaiting commissioner review — backend may
+    // not populate allowedActions at this initial stage yet).
     if (this.isCommissioner()) {
       const actions: string[] = item?.allowedActions ?? [];
-      return Array.isArray(actions) && actions.includes('APPROVE');
+      if (Array.isArray(actions) && actions.includes('APPROVE')) return true;
+      // Also treat a plain PENDING status as pending for Commissioner
+      const statusToken = this.normalizeStageToken(item?.status);
+      const stageToken = this.normalizeStageToken(item?.currentStageName);
+      if (statusToken === 'pending' || stageToken === 'pending') return true;
+      return false;
     }
     // For permit section: pending = action required (via allowedActions) OR the record
     // has status PENDING (just submitted by licensee, awaiting PS review — backend may

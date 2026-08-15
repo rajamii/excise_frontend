@@ -1236,13 +1236,29 @@ export class CommissionerDashboardComponent implements OnInit {
   // Dashboard statistics methods
   getDashboardStatistics() {
     // Non-hologram actionable pending (requisitions, revalidations, etc.)
-    const otherPending = this.allApplications
+    // Count items with allowedActions APPROVE/REJECT (commissioner has action to take)
+    const countedByActions = this.allApplications
       .filter(app => app.type !== 'hologram')
       .filter(app => {
         const actions = Array.isArray(app?.allowedActions) ? app.allowedActions : [];
         const upper = actions.map((a: any) => String(a || '').toUpperCase());
         return upper.includes('APPROVE') || upper.includes('REJECT');
-      }).length;
+      });
+
+    const countedIds = new Set(countedByActions.map(app => app.id));
+
+    // Also count plain PENDING items with no allowedActions — these are applications
+    // that the backend returns to the commissioner (via requiresCommissionerReview)
+    // but for which allowedActions hasn't been populated yet at this early stage.
+    const countedByStatus = this.allApplications
+      .filter(app => app.type !== 'hologram')
+      .filter(app => {
+        if (countedIds.has(app.id)) return false;
+        const st = String(app?.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        return st === 'pending';
+      });
+
+    const otherPending = countedByActions.length + countedByStatus.length;
 
     // Use the maximum of our computed count vs the parent-supplied count
     // (parent uses sidebar badge service which is most accurate)
@@ -1260,11 +1276,22 @@ export class CommissionerDashboardComponent implements OnInit {
 
   private getActionablePendingCount(): number {
     // Prefer DB workflow metadata (allowed actions) so pending count stays correct even when stage names change.
-    return this.allApplications.filter((application) => {
+    const countedByActions = this.allApplications.filter((application) => {
       const actions = Array.isArray(application?.allowedActions) ? application.allowedActions : [];
       const upper = actions.map((a: any) => String(a || '').toUpperCase());
       return upper.includes('APPROVE') || upper.includes('REJECT');
-    }).length;
+    });
+
+    const countedIds = new Set(countedByActions.map(a => a.id));
+
+    // Fallback: also count plain PENDING status items with no allowedActions.
+    const countedByStatus = this.allApplications.filter((application) => {
+      if (countedIds.has(application.id)) return false;
+      const st = String(application?.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      return st === 'pending';
+    });
+
+    return countedByActions.length + countedByStatus.length;
   }
 
   getFilterOptions() {
