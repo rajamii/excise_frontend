@@ -1247,15 +1247,18 @@ export class CommissionerDashboardComponent implements OnInit {
 
     const countedIds = new Set(countedByActions.map(app => app.id));
 
-    // Also count plain PENDING items with no allowedActions — these are applications
-    // that the backend returns to the commissioner (via requiresCommissionerReview)
-    // but for which allowedActions hasn't been populated yet at this early stage.
+    // Also count items with no allowedActions that are at the commissioner's stage:
+    // plain PENDING (just submitted) or forwarded to commissioner (e.g. "FORWARDED COMMISSIONER").
     const countedByStatus = this.allApplications
       .filter(app => app.type !== 'hologram')
       .filter(app => {
         if (countedIds.has(app.id)) return false;
         const st = String(app?.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        return st === 'pending';
+        if (st.includes('approv') || st.includes('reject') || st.includes('cancel')) return false;
+        if (st === 'pending') return true;
+        // Forwarded to commissioner for review
+        if (st.includes('commissioner') && st.includes('forward')) return true;
+        return false;
       });
 
     const otherPending = countedByActions.length + countedByStatus.length;
@@ -1284,11 +1287,14 @@ export class CommissionerDashboardComponent implements OnInit {
 
     const countedIds = new Set(countedByActions.map(a => a.id));
 
-    // Fallback: also count plain PENDING status items with no allowedActions.
+    // Fallback: also count items at commissioner's stage with no allowedActions.
     const countedByStatus = this.allApplications.filter((application) => {
       if (countedIds.has(application.id)) return false;
       const st = String(application?.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-      return st === 'pending';
+      if (st.includes('approv') || st.includes('reject') || st.includes('cancel')) return false;
+      if (st === 'pending') return true;
+      if (st.includes('commissioner') && st.includes('forward')) return true;
+      return false;
     });
 
     return countedByActions.length + countedByStatus.length;

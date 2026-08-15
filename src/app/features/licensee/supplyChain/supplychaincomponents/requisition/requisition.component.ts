@@ -2574,28 +2574,46 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   private isPendingLikeStatus(item: TableData): boolean {
     // For commissioner: pending = action required (via allowedActions APPROVE) OR the record
     // has plain PENDING status (just submitted, awaiting commissioner review — backend may
-    // not populate allowedActions at this initial stage yet).
+    // not populate allowedActions at this initial stage yet), OR the status indicates
+    // the item has been forwarded to the commissioner (e.g. "FORWARDED COMMISSIONER").
     if (this.isCommissioner()) {
       const actions: string[] = item?.allowedActions ?? [];
       if (Array.isArray(actions) && actions.includes('APPROVE')) return true;
-      // Also treat a plain PENDING status as pending for Commissioner
       const statusToken = this.normalizeStageToken(item?.status);
       const stageToken = this.normalizeStageToken(item?.currentStageName);
+      const combined = `${statusToken} ${stageToken}`;
+      // Plain PENDING = just submitted
       if (statusToken === 'pending' || stageToken === 'pending') return true;
+      // Forwarded to commissioner and not yet approved/rejected by commissioner
+      if (combined.includes('commissioner') &&
+          combined.includes('forward') &&
+          !combined.includes('approv') &&
+          !combined.includes('reject')) return true;
       return false;
     }
     // For permit section: pending = action required (via allowedActions) OR the record
     // has status PENDING (just submitted by licensee, awaiting PS review — backend may
-    // not populate allowedActions at this early stage yet).
+    // not populate allowedActions at this early stage yet), OR the status indicates
+    // the item is currently at the PS stage (e.g. "FORWARDED PAYSLIP PERMIT SECTION"
+    // means the payslip came back to PS for approval after the licensee paid).
     if (this.isPermitSection()) {
       const actions: string[] = item?.allowedActions ?? [];
       const hasActionableAction = Array.isArray(actions) && (actions.includes('APPROVE') || actions.includes('REJECT') ||
              actions.includes('FORWARD') || actions.includes('VERIFY'));
       if (hasActionableAction) return true;
-      // Also treat a plain PENDING status as pending for Permit Section
       const statusToken = this.normalizeStageToken(item?.status);
       const stageToken = this.normalizeStageToken(item?.currentStageName);
+      const combined = `${statusToken} ${stageToken}`;
+      // Plain PENDING = just submitted by licensee
       if (statusToken === 'pending' || stageToken === 'pending') return true;
+      // Status indicates the item is currently AT the Permit Section stage:
+      //  • "FORWARDED PAYSLIP PERMIT SECTION" → payslip back at PS for approval
+      //  • Any other "forwarded * permit section" or "payslip * permit section" variant
+      // Condition: contains 'permitsection' + (a forwarding/payslip indicator) AND not yet approved/rejected
+      if (combined.includes('permitsection') &&
+          (combined.includes('forward') || combined.includes('payslip') || combined.includes('submit')) &&
+          !combined.includes('approv') &&
+          !combined.includes('reject')) return true;
       return false;
     }
     if (this.isApprovedCommissionerAwaitingPayment(item)) {
@@ -2614,6 +2632,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       combined.includes('forward')
     );
   }
+
 
   private isCancellationLikeStatus(item: TableData): boolean {
     const status = this.normalizeStageToken(item?.status);

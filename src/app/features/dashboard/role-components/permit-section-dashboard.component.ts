@@ -607,12 +607,18 @@ export class PermitSectionDashboardComponent implements OnInit {
 
     const countedIds = new Set(countedByActions.map(p => p.id));
 
-    // Fallback: also count plain PENDING status items (just submitted, backend may not
-    // have populated allowedActions at this initial Permit Section stage yet).
+    // Fallback: also count items at the PS stage with no allowedActions:
+    //  • plain PENDING (just submitted, backend may not have populated allowedActions yet)
+    //  • "FORWARDED PAYSLIP PERMIT SECTION" (payslip returned to PS for approval)
     const countedByStatus = this.allPermits.filter((permit) => {
       if (countedIds.has(permit.id)) return false; // already counted above
       const st = String(permit.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-      return st === 'pending';
+      if (st.includes('approv') || st.includes('reject') || st.includes('cancel')) return false;
+      if (st === 'pending') return true;
+      // Payslip/forwarded back to Permit Section for action
+      if (st.includes('permitsection') &&
+          (st.includes('forward') || st.includes('payslip') || st.includes('submit'))) return true;
+      return false;
     });
 
     return countedByActions.length + countedByStatus.length;

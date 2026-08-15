@@ -720,8 +720,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             : this.sidebarPendingBadgeService.countRequisitionPendingReview(items, false);
           // For Permit Section / Commissioner: PENDING status = application just submitted, awaiting review.
           // The backend may not populate allowedActions at this initial stage, so countActionable
-          // can return 0 even when there are actionable records. Add any plain-PENDING items that
-          // were not already counted by countActionable (allowedActions is empty).
+          // can return 0 even when there are actionable records. Add any items not already
+          // counted that are at this role's stage (plain PENDING or forwarded-to-role status).
           if (isPermitSection || isCommissioner) {
             const actionableIds = new Set(
               items
@@ -734,8 +734,15 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             const extraPending = items.filter(x => {
               if (actionableIds.has(x.id)) return false; // already counted
               const st = String(x.status || x.current_stage_name || x.currentStageName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-              // Include if status is plainly PENDING and not already final/approved/rejected
-              return st === 'pending' && !st.includes('approved') && !st.includes('rejected') && !st.includes('cancelled');
+              if (st.includes('approv') || st.includes('reject') || st.includes('cancel')) return false;
+              // Plain PENDING (just submitted)
+              if (st === 'pending') return true;
+              // Permit Section: payslip forwarded back to PS for action (e.g. "FORWARDED PAYSLIP PERMIT SECTION")
+              if (isPermitSection && st.includes('permitsection') &&
+                  (st.includes('forward') || st.includes('payslip') || st.includes('submit'))) return true;
+              // Commissioner: forwarded to commissioner for review (e.g. "FORWARDED COMMISSIONER")
+              if (isCommissioner && st.includes('commissioner') && st.includes('forward')) return true;
+              return false;
             }).length;
             pending += extraPending;
           }
