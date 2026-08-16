@@ -89,6 +89,7 @@ export interface UnifiedApplicationData {
     newPurpose?: string;
     revalidationAmount?: number;
     detailsPermitsNumber?: string;
+    cancelledPermitNumber?: string;
     cancellationAmount?: number;
     refundAmount?: number;
     refundStatus?: string;
@@ -1223,8 +1224,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 break;
 
             case 'cancellation':
-                const cancelledPermitNumber = this.extractFieldValue(apiData, ['cancelledPermitNumber', 'cancelled_permit_number']);
+                const cancelledPermitNumber = this.extractFieldValue(apiData, ['cancelledPermitNumber', 'cancelled_permit_number', 'details_permits_number', 'detailsPermitsNumber']);
                 if (cancelledPermitNumber) {
+                    mappedData['cancelledPermitNumber'] = cancelledPermitNumber;
+                    mappedData['detailsPermitsNumber'] = cancelledPermitNumber;
                     mappedData['originalPermitNo'] = cancelledPermitNumber;
                 } else {
                     mappedData['originalPermitNo'] = mappedData.referenceNo;
@@ -1509,6 +1512,14 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     this.extractFieldValue(apiData, ['license_category_name', 'licenseCategoryName', 'license_category']) ||
                     'Not specified';
                 break;
+        }
+        // Dynamically compute numberOfPermits if detailsPermitsNumber/cancelledPermitNumber contains specific permit numbers
+        const activePermitsStr = mappedData['detailsPermitsNumber'] || mappedData['cancelledPermitNumber'] || '';
+        if (activePermitsStr && typeof activePermitsStr === 'string' && activePermitsStr.trim() !== '') {
+            const permitsList = activePermitsStr.split(',').map(p => p.trim()).filter(p => p.length > 0);
+            if (permitsList.length > 0) {
+                mappedData['numberOfPermits'] = permitsList.length;
+            }
         }
     }
 

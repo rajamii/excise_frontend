@@ -122,7 +122,12 @@
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Number of Permits</td>
-                                    <td>{{ applicationData.numberOfPermits }}</td>
+                                    <td>
+                                        {{ applicationData.numberOfPermits }}
+                                        <span *ngIf="applicationData.detailsPermitsNumber || applicationData.cancelledPermitNumber" class="text-muted ms-2">
+                                            (Permit No(s): {{ applicationData.detailsPermitsNumber || applicationData.cancelledPermitNumber }})
+                                        </span>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Total Quantity</td>
@@ -316,7 +321,12 @@
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Number of Permits</td>
-                                    <td>{{ applicationData.numberOfPermits }}</td>
+                                    <td>
+                                        {{ applicationData.numberOfPermits }}
+                                        <span *ngIf="applicationData.detailsPermitsNumber || applicationData.cancelledPermitNumber" class="text-muted ms-2">
+                                            (Permit No(s): {{ applicationData.detailsPermitsNumber || applicationData.cancelledPermitNumber }})
+                                        </span>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Strength</td>
