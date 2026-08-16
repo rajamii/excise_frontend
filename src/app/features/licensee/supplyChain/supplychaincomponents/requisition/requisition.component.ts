@@ -2407,6 +2407,14 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       }
     }
 
+    // Check if any candidate starts with REV/ and convert REV/ -> REQ/
+    for (const value of candidates) {
+      const ref = String(value || '').trim();
+      if (ref.toUpperCase().startsWith('REV/')) {
+        return ref.toUpperCase().replace('REV/', 'REQ/');
+      }
+    }
+
     // fallback
     return String(candidates.find((v) => String(v || '').trim()) || '').trim();
   }
