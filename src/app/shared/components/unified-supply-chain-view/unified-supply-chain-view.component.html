@@ -240,7 +240,12 @@
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Number of Permits</td>
-                                    <td>{{ applicationData.numberOfPermits }}</td>
+                                    <td>
+                                        {{ applicationData.numberOfPermits }}
+                                        <span *ngIf="applicationData.detailsPermitsNumber" class="text-muted ms-2">
+                                            (Permit No(s): {{ applicationData.detailsPermitsNumber }})
+                                        </span>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Strength</td>

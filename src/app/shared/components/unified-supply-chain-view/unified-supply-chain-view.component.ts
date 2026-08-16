@@ -88,6 +88,7 @@ export interface UnifiedApplicationData {
     newQuantity?: number;
     newPurpose?: string;
     revalidationAmount?: number;
+    detailsPermitsNumber?: string;
     cancellationAmount?: number;
     refundAmount?: number;
     refundStatus?: string;
@@ -295,6 +296,7 @@ interface FieldMapping {
     newQuantity?: string[];
     newPurpose?: string[];
     revalidationAmount?: string[];
+    detailsPermitsNumber?: string[];
     // Cancellation specific
     cancellationAmount?: string[];
     refundAmount?: string[];
@@ -1210,6 +1212,9 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
                 mappedData['newQuantity'] = mappedData['quantity'];
                 mappedData['newPurpose'] = mappedData['purpose'];
+                if (config.fieldMappings.detailsPermitsNumber) {
+                    mappedData['detailsPermitsNumber'] = this.extractFieldValue(apiData, config.fieldMappings.detailsPermitsNumber) || '';
+                }
 
                 if (!mappedData['checkpostEntry'] || mappedData['checkpostEntry'] === '') {
                     const revalidationState = this.extractFieldValue(apiData, ['state']);
