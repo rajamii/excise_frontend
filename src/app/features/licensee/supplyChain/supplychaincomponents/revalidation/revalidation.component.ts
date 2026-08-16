@@ -33,6 +33,8 @@ interface TableData {
   currentStage?: number;
   currentStageIsFinal?: boolean | string; // Indicates if current stage is final approval
   allowedActionConfigs?: any[];
+  detailsPermitsNumber?: string;
+  requisitionNumberOfPermits?: number;
 }
 
 @Component({
@@ -137,7 +139,9 @@ export class RevalidationComponent implements OnInit {
           allowedActions: item.allowedActions || item.allowed_actions || [],
           allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
           workflowId: item.workflow || item.workflow_id || item.workflowId,
-          currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId
+          currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,
+          detailsPermitsNumber: item.detailsPermitsNumber || item.details_permits_number || '',
+          requisitionNumberOfPermits: item.requisitionNumberOfPermits || item.requisition_number_of_permits || item.requisiton_number_of_permits || 0
         }
       });
 
@@ -323,6 +327,16 @@ export class RevalidationComponent implements OnInit {
       return;
     }
     this.activeSummaryFilter = '';
+  }
+
+  getPermitsDisplay(item: TableData): string {
+    const rawPermits = item.detailsPermitsNumber || '';
+    if (!rawPermits || rawPermits.trim() === '') {
+      return '-';
+    }
+    const permitsList = rawPermits.split(',').map(p => p.trim()).filter(Boolean);
+    const count = permitsList.length;
+    return `${count} (Permit No(s): ${permitsList.join(', ')})`;
   }
 
   private normalizeStageToken(value: any): string {
