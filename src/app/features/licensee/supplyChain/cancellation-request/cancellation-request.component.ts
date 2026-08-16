@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { SupplyChainService } from '../services/supplychain.service';
 import { SupplyChainProfileService } from '../../../../core/services/supply-chain-profile.service';
 import { PaymentIntegrationService } from '../../../../core/services/payment-integration.service';
@@ -49,6 +51,7 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
   selectedPermits: string[] = [];
   newlySelectedPermits: string[] = [];
   revalPermitNumbers = new Set<string>();
+  arrivedPermitNumbers = new Set<string>();
 
   showDeclarationModal = false;
   showWalletConfirmationModal = false;
@@ -125,6 +128,7 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
     this.newlySelectedPermits = [];
     this.permits = [];
     this.revalPermitNumbers = new Set<string>();
+    this.arrivedPermitNumbers = new Set<string>();
 
     this.http
       .get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-requisitions/?our_ref_no=${this.referenceNo}`)
@@ -134,9 +138,12 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
           if (Array.isArray(reqData) && reqData.length > 0) {
             this.requisitionData = reqData[0];
             
-            // Fetch revalidation data to find permits under revalidation
-            this.supplyChainService.getRevalidationData().subscribe({
-              next: (revals) => {
+            const reval$ = this.supplyChainService.getRevalidationData().pipe(catchError(() => of([])));
+            const arrival$ = this.http.get<any>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-requisitions/${this.requisitionData.id}/arrival-bulk-liter-details/`).pipe(catchError(() => of(null)));
+            
+            forkJoin({ revals: reval$, arrival: arrival$ }).subscribe({
+              next: ({ revals, arrival }) => {
+                // Populate revalPermitNumbers
                 (revals || []).forEach((r: any) => {
                   const status = String(r.status || '').toLowerCase();
                   if (status.includes('reject') || status.includes('invalid') || status.includes('expire')) {
@@ -148,10 +155,20 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
                     if (token) this.revalPermitNumbers.add(token);
                   });
                 });
+
+                // Populate arrivedPermitNumbers
+                const statuses = arrival?.data?.permit_statuses ?? arrival?.data?.permitStatuses ?? {};
+                Object.keys(statuses).forEach((permitNo) => {
+                  const status = String(statuses[permitNo] || '').toUpperCase();
+                  if (status === 'PENDING' || status === 'APPROVED') {
+                    this.arrivedPermitNumbers.add(permitNo.trim());
+                  }
+                });
+
                 this.fetchExistingCancellations();
               },
               error: (err) => {
-                console.error('Error fetching revalidation data:', err);
+                console.error('Error fetching dependency data:', err);
                 this.fetchExistingCancellations();
               }
             });
@@ -282,12 +299,25 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
     if (explicitPermitNumbers.length > 0) {
       this.permits = explicitPermitNumbers.map((num: string) => {
         const isUnderReval = this.revalPermitNumbers.has(num);
+        const isArrived = this.arrivedPermitNumbers.has(num);
+        
+        let isLocked = permitStateMap.get(num)?.isLocked || false;
+        let lockReason = permitStateMap.get(num)?.lockReason || '';
+        
+        if (isUnderReval) {
+          isLocked = true;
+          lockReason = 'Under revalidation';
+        } else if (isArrived) {
+          isLocked = true;
+          lockReason = 'Arrived';
+        }
+        
         return {
           number: num,
           amount: perPermitRefundAmount,
           isCancelled: permitStateMap.get(num)?.isCancelled || false,
-          isLocked: permitStateMap.get(num)?.isLocked || isUnderReval || false,
-          lockReason: isUnderReval ? 'Under revalidation' : (permitStateMap.get(num)?.lockReason || ''),
+          isLocked: isLocked,
+          lockReason: lockReason,
           isSelected: false
         };
       });
@@ -316,12 +346,25 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
     for (let i = 1; i <= count; i++) {
       const numStr = i.toString();
       const isUnderReval = this.revalPermitNumbers.has(numStr);
+      const isArrived = this.arrivedPermitNumbers.has(numStr);
+      
+      let isLocked = permitStateMap.get(numStr)?.isLocked || false;
+      let lockReason = permitStateMap.get(numStr)?.lockReason || '';
+      
+      if (isUnderReval) {
+        isLocked = true;
+        lockReason = 'Under revalidation';
+      } else if (isArrived) {
+        isLocked = true;
+        lockReason = 'Arrived';
+      }
+      
       this.permits.push({
         number: numStr,
         amount: perPermitRefundAmount,
         isCancelled: permitStateMap.get(numStr)?.isCancelled || false,
-        isLocked: permitStateMap.get(numStr)?.isLocked || isUnderReval || false,
-        lockReason: isUnderReval ? 'Under revalidation' : (permitStateMap.get(numStr)?.lockReason || ''),
+        isLocked: isLocked,
+        lockReason: lockReason,
         isSelected: false
       });
     }
@@ -461,6 +504,10 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
 
   getRevalidatedPermitsList(): string[] {
     return Array.from(this.revalPermitNumbers || []);
+  }
+
+  getArrivedPermitsList(): string[] {
+    return Array.from(this.arrivedPermitNumbers || []);
   }
 
   openWalletConfirmation() {

@@ -40,7 +40,8 @@
             <span class="text-muted ms-1">({{ getPerPermitQuantityLabel() || 'per permit' }})</span>
             <span *ngIf="permit.isCancelled" class="badge bg-secondary ms-1">Cancelled</span>
             <span *ngIf="!permit.isCancelled && permit.isLocked && permit.lockReason === 'Under revalidation'" class="badge bg-warning text-dark ms-1">Revalidated</span>
-            <span *ngIf="!permit.isCancelled && permit.isLocked && permit.lockReason !== 'Under revalidation'" class="badge bg-danger ms-1">{{ permit.lockReason }}</span>
+            <span *ngIf="!permit.isCancelled && permit.isLocked && permit.lockReason === 'Arrived'" class="badge bg-success text-white ms-1">Arrived</span>
+            <span *ngIf="!permit.isCancelled && permit.isLocked && permit.lockReason !== 'Under revalidation' && permit.lockReason !== 'Arrived'" class="badge bg-danger ms-1">{{ permit.lockReason }}</span>
           </label>
         </div>
       </div>
@@ -80,6 +81,12 @@
             <td><strong>Revalidated Permit(s)</strong></td>
             <td>
               <span class="badge bg-warning text-dark" style="font-size: 0.85rem;">{{ getRevalidatedPermitsList().join(", ") }}</span>
+            </td>
+          </tr>
+          <tr *ngIf="getArrivedPermitsList().length > 0">
+            <td><strong>Arrived Permit(s)</strong></td>
+            <td>
+              <span class="badge bg-success text-white" style="font-size: 0.85rem;">{{ getArrivedPermitsList().join(", ") }}</span>
             </td>
           </tr>
           <tr>
