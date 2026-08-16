@@ -136,7 +136,6 @@
               <th class="sl-no">Sl. No.</th>
               <th class="ref-number">Reference No</th>
               <th class="submission-date">App. Sub. Date</th>
-              <th class="distillery-name">{{ getCompanyColumnLabel() }}</th>
               <th class="reval-permits">Number of Permits</th>
               <th class="status">Status</th>
               <th class="revalidation-extension">Revalidation Extended (From-To)</th>
@@ -162,9 +161,6 @@
               </td>
               <td class="submission-date">
                 <span class="date-text">{{ item.submissionDate }}</span>
-              </td>
-              <td class="distillery-name">
-                <span class="company-name">{{ getCompanyDisplayName(item) }}</span>
               </td>
               <td class="reval-permits">
                 <span class="ref-text text-dark fw-semibold">{{ getPermitsDisplay(item) }}</span>
