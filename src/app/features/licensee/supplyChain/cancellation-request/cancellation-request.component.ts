@@ -138,6 +138,14 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
           if (Array.isArray(reqData) && reqData.length > 0) {
             this.requisitionData = reqData[0];
             
+            const rawPermits = this.requisitionData?.details_permits_number || this.requisitionData?.detailsPermitsNumber || '';
+            const requisitionPermitSet = new Set(
+              String(rawPermits)
+                .split(',')
+                .map((p) => p.trim())
+                .filter((p) => p.length > 0)
+            );
+
             const reval$ = this.supplyChainService.getRevalidationData().pipe(catchError(() => of([])));
             const arrival$ = this.http.get<any>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-requisitions/${this.requisitionData.id}/arrival-bulk-liter-details/`).pipe(catchError(() => of(null)));
             
@@ -149,11 +157,16 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
                   if (status.includes('reject') || status.includes('invalid') || status.includes('expire')) {
                     return;
                   }
-                  const permitsRaw = String(r.detailsPermitsNumber || r.details_permits_number || '');
-                  permitsRaw.split(',').forEach((p) => {
-                    const token = p.trim();
-                    if (token) this.revalPermitNumbers.add(token);
-                  });
+                  
+                  if (this.isRevalidationLinkedToRequisition(r, this.referenceNo)) {
+                    const permitsRaw = String(r.detailsPermitsNumber || r.details_permits_number || '');
+                    permitsRaw.split(',').forEach((p) => {
+                      const token = p.trim();
+                      if (token && requisitionPermitSet.has(token)) {
+                        this.revalPermitNumbers.add(token);
+                      }
+                    });
+                  }
                 });
 
                 // Populate arrivedPermitNumbers
@@ -183,6 +196,36 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
           this.isLoading = false;
         }
       });
+  }
+
+  isRevalidationLinkedToRequisition(row: any, requisitionRef: string): boolean {
+    const candidates = [
+      row?.requisition_ref_no,
+      row?.requisitionRefNo,
+      row?.original_requisition_ref,
+      row?.originalRequisitionRef,
+      row?.reference_no,
+      row?.referenceNo,
+      row?.ref_no,
+      row?.refNo,
+      row?.our_ref_no,
+      row?.ourRefNo
+    ];
+
+    const targetRef = String(requisitionRef || '').toUpperCase().trim();
+    if (!targetRef) return false;
+
+    for (const value of candidates) {
+      const ref = String(value || '').trim().toUpperCase();
+      if (!ref) continue;
+      if (ref === targetRef) {
+        return true;
+      }
+      if (ref.replace('REV/', 'REQ/') === targetRef) {
+        return true;
+      }
+    }
+    return false;
   }
 
   fetchExistingCancellations() {
