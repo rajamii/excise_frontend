@@ -1573,11 +1573,17 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
   getArrivalViewPermitLabelSuffix(permitNo: string): string {
     const status = this.getArrivalViewPermitServerStatus(permitNo);
-    if (status === 'APPROVED') return ' (approved)';
-    if (status === 'PENDING') return ' (submitted)';
+    const isRevalidated = this.activeRevalidationPermitNumbers.has(permitNo);
+    
+    if (status === 'APPROVED') return isRevalidated ? ' (approved, revalidated)' : ' (approved)';
+    if (status === 'PENDING') return isRevalidated ? ' (submitted, revalidated)' : ' (submitted)';
     if (status === 'CANCEL_REQUESTED') return ' (cancelled - pending)';
     if (status === 'CANCELLED') return ' (cancelled)';
     if (status === 'REJECTED') return ' (rejected)';
+    
+    // If no arrival status but is revalidated, show revalidated only
+    if (isRevalidated) return ' (revalidated)';
+    
     return '';
   }
 
