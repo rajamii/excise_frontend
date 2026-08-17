@@ -932,40 +932,15 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
         // ── BULK SPIRIT DETAILS (OIC) ─────────────────────────────────────────
         if (this.isOicUser()) {
-          const rawBld: any[] = Array.isArray(bld) ? bld : [];
-          const scopedBld = this.filterByOicScopedLicense(rawBld);
-          const pending = scopedBld.filter(x => {
-            const s = String(x.approvalStatus || x.approval_status || x.review_status || x.reviewStatus || x.status || '').toLowerCase();
-            return s.includes('pending') || s === '';
-          }).length;
-          const approved = scopedBld.filter(x => {
-            const s = String(x.approvalStatus || x.approval_status || x.review_status || x.reviewStatus || x.status || '').toLowerCase();
-            return s.includes('approved') || s.includes('completed');
-          }).length;
-          const rejected = scopedBld.filter(x => {
-            const s = String(x.approvalStatus || x.approval_status || x.review_status || x.reviewStatus || x.status || '').toLowerCase();
-            return s.includes('rejected') || s.includes('cancelled');
-          }).length;
-          this.supplyChainModuleCounts['bldetails'] = { applied: scopedBld.length, pending, approved, objection: 0, rejected };
-        }
-
-        // ── HOLOGRAM REQUESTS (OIC) ───────────────────────────────────────────
-        if (this.isOicUser()) {
-          const rawHolReq: any[] = Array.isArray(holReq) ? holReq : [];
-          const scopedHolReq = this.filterByOicScopedLicense(rawHolReq);
-          const pending = scopedHolReq.filter(x => {
-            const s = String(x.currentStageName || x.current_stage_name || x.status || '').toLowerCase();
-            return s.includes('pending') || s.includes('under') || s.includes('submitted');
-          }).length;
-          const approved = scopedHolReq.filter(x => {
-            const s = String(x.currentStageName || x.current_stage_name || x.status || '').toLowerCase();
-            return s.includes('approved') || s.includes('complete') || s.includes('issued');
-          }).length;
-          const rejected = scopedHolReq.filter(x => {
-            const s = String(x.currentStageName || x.current_stage_name || x.status || '').toLowerCase();
-            return s.includes('rejected') || s.includes('cancelled');
-          }).length;
-          this.supplyChainModuleCounts['hologramRequests'] = { applied: scopedHolReq.length, pending, approved, objection: 0, rejected };
+          this.rawOicData = {
+            transit: Array.isArray(tra) ? tra : [],
+            bldetails: Array.isArray(bld) ? bld : [],
+            hologram: Array.isArray(hol) ? hol : [],
+            hologramRequests: Array.isArray(holReq) ? holReq : []
+          };
+          const month = this.selectedChartMonth !== '' ? Number(this.selectedChartMonth) : undefined;
+          const year = this.selectedChartYear !== '' ? Number(this.selectedChartYear) : undefined;
+          this.recalculateOicStats(month, year);
         }
 
         // ── COMPANY REGISTRATION (Permit Section only) ────────────────────────
@@ -1025,6 +1000,13 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const year  = this.selectedChartYear  !== '' ? Number(this.selectedChartYear)  : undefined;
     const isITCell = this.currentUser?.roleId === 6;
     this.isChartLoading = true;
+
+    if (this.isOicUser()) {
+      this.recalculateOicStats(month, year);
+      this.updateSingleWindowChart();
+      this.isChartLoading = false;
+      return;
+    }
 
     if (isITCell) {
       // IT Cell: filter hologram items client-side by month/year then recount
@@ -2558,6 +2540,111 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     ).toLowerCase();
     const normalized = roleName.replace(/[^a-z0-9]/g, '');
     return normalized.includes('officerincharge') || normalized.includes('officer') || normalized === 'oic' || normalized === 'offcierincharge';
+  }
+
+  private rawOicData = {
+    transit: [] as any[],
+    bldetails: [] as any[],
+    hologram: [] as any[],
+    hologramRequests: [] as any[]
+  };
+
+  private matchesDateFilter(item: any, month?: number, year?: number): boolean {
+    if (month === undefined && year === undefined) return true;
+    const rawDate =
+      item?.date || item?.created_at || item?.createdAt ||
+      item?.submissionDate || item?.submittedAt || item?.submission_date || item?.submitted_at ||
+      item?.created_on || item?.issue_date || item?.issued_at || '';
+    if (!rawDate) return true;
+    const d = new Date(rawDate);
+    if (isNaN(d.getTime())) return true;
+    if (month !== undefined && (d.getMonth() + 1) !== month) return false;
+    if (year !== undefined && d.getFullYear() !== year) return false;
+    return true;
+  }
+
+  private recalculateOicStats(month?: number, year?: number): void {
+    if (!this.isOicUser()) return;
+
+    // Filter Transit Permits by month and year
+    let tra = this.filterByOicScopedLicense(this.rawOicData.transit || []);
+    if (month !== undefined || year !== undefined) {
+      tra = tra.filter(x => this.matchesDateFilter(x, month, year));
+    }
+    const billNos = new Set<string>();
+    const traItems: any[] = [];
+    tra.forEach(item => {
+      const billNo = item.billNo || item.bill_no;
+      if (billNo && !billNos.has(billNo)) { billNos.add(billNo); traItems.push(item); }
+      else if (!billNo) { traItems.push(item); }
+    });
+    const traPending = traItems.filter(x => {
+      const s = String(x.status || '').toLowerCase();
+      return !s.includes('approved') && !s.includes('issued') && !s.includes('terminated') && !s.includes('cancelled');
+    }).length;
+    const traApproved = traItems.filter(x => {
+      const s = String(x.status || '').toLowerCase();
+      return s.includes('approved') || s.includes('issued');
+    }).length;
+    const traRejected = traItems.filter(x => {
+      const s = String(x.status || '').toLowerCase();
+      return s.includes('rejected') || s.includes('cancelled') || s.includes('terminated');
+    }).length;
+    this.supplyChainModuleCounts['transit'] = { applied: traItems.length, pending: traPending, approved: traApproved, objection: 0, rejected: traRejected };
+
+    // Filter Hologram Procurement by month and year
+    let hol = this.filterByOicScopedLicense(this.rawOicData.hologram || []);
+    if (month !== undefined || year !== undefined) {
+      hol = hol.filter(x => this.matchesDateFilter(x, month, year));
+    }
+    const holPending = this.sidebarPendingBadgeService.countHologramPendingReview(hol);
+    const holApproved = hol.filter(x => {
+      const t = String(x.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      return t.includes('approved') || t.includes('issued') || t.includes('paymentcompleted') || t.includes('cartoonassigned') || t.includes('cartonassigned');
+    }).length;
+    const holRejected = hol.filter(x => {
+      const s = String(x.status || '').toLowerCase();
+      return s.includes('rejected') || s.includes('cancelled');
+    }).length;
+    this.supplyChainModuleCounts['hologram'] = { applied: hol.length, pending: holPending, approved: holApproved, objection: 0, rejected: holRejected };
+
+    // Filter Bulk Spirit Details by month and year
+    let bld = this.filterByOicScopedLicense(this.rawOicData.bldetails || []);
+    if (month !== undefined || year !== undefined) {
+      bld = bld.filter(x => this.matchesDateFilter(x, month, year));
+    }
+    const bldPending = bld.filter(x => {
+      const s = String(x.approvalStatus || x.approval_status || x.review_status || x.reviewStatus || x.status || '').toLowerCase();
+      return s.includes('pending') || s === '';
+    }).length;
+    const bldApproved = bld.filter(x => {
+      const s = String(x.approvalStatus || x.approval_status || x.review_status || x.reviewStatus || x.status || '').toLowerCase();
+      return s.includes('approved') || s.includes('completed');
+    }).length;
+    const bldRejected = bld.filter(x => {
+      const s = String(x.approvalStatus || x.approval_status || x.review_status || x.reviewStatus || x.status || '').toLowerCase();
+      return s.includes('rejected') || s.includes('cancelled');
+    }).length;
+    this.supplyChainModuleCounts['bldetails'] = { applied: bld.length, pending: bldPending, approved: bldApproved, objection: 0, rejected: bldRejected };
+
+    // Filter Hologram Requests by month and year
+    let holReq = this.filterByOicScopedLicense(this.rawOicData.hologramRequests || []);
+    if (month !== undefined || year !== undefined) {
+      holReq = holReq.filter(x => this.matchesDateFilter(x, month, year));
+    }
+    const holReqPending = holReq.filter(x => {
+      const s = String(x.currentStageName || x.current_stage_name || x.status || '').toLowerCase();
+      return s.includes('pending') || s.includes('under') || s.includes('submitted');
+    }).length;
+    const holReqApproved = holReq.filter(x => {
+      const s = String(x.currentStageName || x.current_stage_name || x.status || '').toLowerCase();
+      return s.includes('approved') || s.includes('complete') || s.includes('issued');
+    }).length;
+    const holReqRejected = holReq.filter(x => {
+      const s = String(x.currentStageName || x.current_stage_name || x.status || '').toLowerCase();
+      return s.includes('rejected') || s.includes('cancelled');
+    }).length;
+    this.supplyChainModuleCounts['hologramRequests'] = { applied: holReq.length, pending: holReqPending, approved: holReqApproved, objection: 0, rejected: holReqRejected };
   }
 
   private resolveOicScopedLicenseId(): string {
