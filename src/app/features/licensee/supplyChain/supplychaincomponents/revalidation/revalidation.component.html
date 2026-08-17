@@ -137,8 +137,8 @@
               <th class="ref-number">Reference No</th>
               <th class="submission-date">App. Sub. Date</th>
               <th class="reval-permits">Number of Permits</th>
-              <th class="status">Status</th>
               <th class="revalidation-extension">Revalidation Extended (From-To)</th>
+              <th class="status">Status</th>
               <th class="actions">Action</th>
             </tr>
           </thead>
@@ -165,13 +165,13 @@
               <td class="reval-permits">
                 <span class="ref-text text-dark fw-semibold">{{ getPermitsDisplay(item) }}</span>
               </td>
+              <td class="revalidation-extension">
+                <span class="date-text">{{ getRevalidationExtensionRange(item) }}</span>
+              </td>
               <td class="status">
                 <span class="status-badge {{ getStatusBadgeClass(item) }}">
                   {{ item.status }}
                 </span>
-              </td>
-              <td class="revalidation-extension">
-                <span class="date-text">{{ getRevalidationExtensionRange(item) }}</span>
               </td>
               <td class="actions">
                 <!-- Unified Action Buttons Component -->

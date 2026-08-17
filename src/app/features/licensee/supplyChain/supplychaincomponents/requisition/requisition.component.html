@@ -192,8 +192,8 @@
             <th class="ref-number">Ref. No</th>
             <th class="dates-column">Dates</th>
             <th class="permit-status">Permit Status</th>
-            <th class="status">Status</th>
             <th class="amount">{{ isCommissioner() ? 'Amount' : 'Imp. Pass Fee Amt.' }}</th>
+            <th class="status">Status</th>
             <th class="actions">Actions</th>
           </tr>
         </thead>
@@ -259,6 +259,9 @@
                 }
               </div>
             </td>
+            <td class="amount">
+              <span class="amount-value">₹{{ item.amount }}</span>
+            </td>
             <td class="status">
               <span
                 class="status-badge status-{{ (!isCommissioner() && !isPermitSection() && isApprovedCommissionerAwaitingPayment(item)) ? 'pending' :
@@ -270,9 +273,6 @@
                                               item.status.toLowerCase().includes('processing') ? 'processing' : 'default' }}">
                 {{ item.status }}
               </span>
-            </td>
-            <td class="amount">
-              <span class="amount-value">₹{{ item.amount }}</span>
             </td>
             <td class="actions" (click)="$event.stopPropagation()" style="position: relative; z-index: 1000;">
               <!-- Unified Action Buttons Component -->
