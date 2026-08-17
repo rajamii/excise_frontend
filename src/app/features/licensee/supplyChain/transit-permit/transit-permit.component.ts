@@ -129,8 +129,8 @@ export class TransitPermitComponent implements OnInit {
   // ML Per Case Data for Info Box
   mlPerCaseData: any[] = [];
 
-  // Sidebar toggle state - Default to open
-  isMlInfoSidebarExpanded: boolean = true;
+  // Sidebar toggle state - Default to closed
+  isMlInfoSidebarExpanded: boolean = false;
   mlBodyHasMoreBelow = false;
 
   @ViewChild('mlSidebarBody') mlSidebarBodyRef?: ElementRef<HTMLDivElement>;
