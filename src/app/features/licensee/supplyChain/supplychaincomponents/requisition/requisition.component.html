@@ -192,7 +192,7 @@
             <th class="ref-number">Ref. No</th>
             <th class="submission-date">{{ isCommissioner() ? 'Submission Date' : 'App. Sub. Date' }}</th>
             <th class="approval-date">Approval Date</th>
-            <th class="distillery-name">{{ isCommissioner() || isPermitSection() ? 'Factory Name' : 'Distillery Name' }}</th>
+            <th class="permit-status">Permit Status</th>
             <th class="status">Status</th>
             <th class="amount">{{ isCommissioner() ? 'Amount' : 'Imp. Pass Fee Amt.' }}</th>
             <th class="actions">Actions</th>
@@ -216,8 +216,41 @@
             <td class="approval-date">
               <span class="date-text">{{ getCommissionerApprovalDate(item) }}</span>
             </td>
-            <td class="distillery-name">
-              <span class="company-name">{{ isCommissioner() || isPermitSection() ? (item.establishmentName || 'N/A') : item.distilleryName }}</span>
+            <td class="permit-status">
+              <div class="d-flex flex-column gap-1 align-items-start">
+                <!-- Show current requisition permit numbers -->
+                @if (item.detailsPermitsNumber) {
+                  <div class="permit-numbers-list">
+                    <small class="text-muted fw-semibold">Permit Numbers:</small>
+                    <span class="permit-number-text">{{ item.detailsPermitsNumber }}</span>
+                  </div>
+                }
+                
+                <!-- Show cancelled permits with specific numbers -->
+                @if (getCancelledPermitNumbers(item)) {
+                  <span class="permit-status-badge cancelled-badge">
+                    <i class="bi bi-x-circle me-1"></i>Cancelled: {{ getCancelledPermitNumbers(item) }}
+                  </span>
+                }
+                
+                <!-- Show revalidated status with specific permit numbers -->
+                @if (getRevalidatedPermitNumbers(item)) {
+                  <span class="permit-status-badge revalidated-badge">
+                    <i class="bi bi-arrow-repeat me-1"></i>Revalidated: {{ getRevalidatedPermitNumbers(item) }}
+                  </span>
+                }
+                
+                <!-- Show arrived permits with specific numbers -->
+                @if (getArrivedPermitNumbers(item)) {
+                  <span class="permit-status-badge arrived-badge">
+                    <i class="bi bi-check-circle me-1"></i>Arrived: {{ getArrivedPermitNumbers(item) }}
+                  </span>
+                }
+                
+                @if (!item.detailsPermitsNumber && !getCancelledPermitNumbers(item) && !getRevalidatedPermitNumbers(item) && !getArrivedPermitNumbers(item)) {
+                  <span class="text-muted">—</span>
+                }
+              </div>
             </td>
             <td class="status">
               <span

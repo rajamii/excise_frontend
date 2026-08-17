@@ -59,6 +59,8 @@ interface TableData {
   arrivalRejectedPermitsCount?: number;
   arrivalCancelledPermitsCount?: number;
   arrivalRemainingPermitsCount?: number;
+  arrivalApprovedPermitNumbers?: string;
+  arrivalCancelledPermitNumbers?: string;
 }
 
 
@@ -391,7 +393,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
             arrivalPendingPermitsCount: Number(item.arrival_pending_permits_count ?? item.arrivalPendingPermitsCount ?? item.arrival_pending_permits ?? 0) || 0,
             arrivalRejectedPermitsCount: Number(item.arrival_rejected_permits_count ?? item.arrivalRejectedPermitsCount ?? item.arrival_rejected_permits ?? 0) || 0,
             arrivalCancelledPermitsCount: Number(item.arrival_cancelled_permits_count ?? item.arrivalCancelledPermitsCount ?? item.arrival_cancelled_permits ?? 0) || 0,
-            arrivalRemainingPermitsCount: Number(item.arrival_remaining_permits_count ?? item.arrivalRemainingPermitsCount ?? item.arrival_remaining_permits ?? 0) || 0
+            arrivalRemainingPermitsCount: Number(item.arrival_remaining_permits_count ?? item.arrivalRemainingPermitsCount ?? item.arrival_remaining_permits ?? 0) || 0,
+            arrivalApprovedPermitNumbers: String(item.arrival_approved_permit_numbers || item.arrivalApprovedPermitNumbers || ''),
+            arrivalCancelledPermitNumbers: String(item.arrival_cancelled_permit_numbers || item.arrivalCancelledPermitNumbers || '')
           };
         });
 
@@ -2256,9 +2260,35 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     return this.arrivalPermitNumbers.filter(p => this.activeRevalidationPermitNumbers.has(p));
   }
 
-  private hasActiveRevalidationOnSameRef(item: TableData): boolean {
+  hasActiveRevalidationOnSameRef(item: TableData): boolean {
     const refKey = this.normalizeRefToken(item.referenceNo);
     return Boolean(refKey && this.revalidationActiveByRef[refKey]);
+  }
+
+  /**
+   * Get comma-separated list of cancelled permit numbers
+   */
+  getCancelledPermitNumbers(item: TableData): string {
+    return item.arrivalCancelledPermitNumbers || '';
+  }
+
+  /**
+   * Get comma-separated list of arrived permit numbers  
+   */
+  getArrivedPermitNumbers(item: TableData): string {
+    return item.arrivalApprovedPermitNumbers || '';
+  }
+
+  /**
+   * Get list of permit numbers that went to revalidation
+   */
+  getRevalidatedPermitNumbers(item: TableData): string {
+    if (!item.detailsPermitsNumber) return '';
+    
+    const permits = item.detailsPermitsNumber.split(',').map(p => p.trim()).filter(Boolean);
+    const revalidatedPermits = permits.filter(p => this.activeRevalidationPermitNumbers.has(p));
+    
+    return revalidatedPermits.join(', ');
   }
 
   getCommissionerApprovalDate(item: TableData): string {
