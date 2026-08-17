@@ -1,9 +1,10 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SupplyChainService } from '../../licensee/supplyChain/services/supplychain.service';
 import { AccountService } from '../../../core/services/account.service';
+import { MatIconModule } from '@angular/material/icon';
 import { EnaRequisitionService } from '../../../core/services/ena-requisition.service';
 import { DashboardStatisticsComponent } from '../../../shared/components/dashboard-statistics/dashboard-statistics.component';
 import { UnifiedActionButtonsComponent } from '../../../shared/components/unified-action-buttons/unified-action-buttons.component';
@@ -33,6 +34,7 @@ interface OfficerData {
   imports: [
     CommonModule,
     FormsModule,
+    MatIconModule,
     DashboardStatisticsComponent,
     UnifiedActionButtonsComponent
   ],
@@ -128,6 +130,40 @@ interface OfficerData {
     .officer-in-charge-dashboard {
       padding: 1rem;
     }
+
+    .oic-workspace-cards {
+      margin-top: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .module-card {
+      border-radius: 1rem;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      background: white;
+      border: 1px solid #e5e7eb !important;
+    }
+
+    .module-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08) !important;
+      border-color: #3b82f6 !important;
+    }
+
+    .icon-bubble {
+      width: 2.75rem;
+      height: 2.75rem;
+      border-radius: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .bg-primary-soft { background: #eff6ff; color: #2563eb; }
+    .bg-info-soft { background: #f0fdf4; color: #0284c7; }
+    .bg-purple-soft { background: #f5f3ff; color: #7c3aed; }
+    .bg-success-soft { background: #f0fdf4; color: #16a34a; }
+    .text-purple { color: #7c3aed; }
 
     .data-table-section {
       margin-top: 2rem;
@@ -231,15 +267,15 @@ export class OfficerInChargeDashboardComponent implements OnInit {
   filteredApplications: OfficerData[] = [];
   selectedApplicationType: string = 'all';
   private currentScopedLicenseId = '';
-  private hologramRequestCounts: Record<HologramRequestCategory, number> = {
+  public hologramRequestCounts: Record<HologramRequestCategory, number> = {
     PENDING: 0,
     UNDER_PROCESS: 0,
     APPROVED: 0,
     REJECTED: 0,
   };
-  private hologramProcurementPendingCount = 0;
-  private blDetailsPendingCount = 0;
-  private dailyEntryPendingCount = 0;
+  public hologramProcurementPendingCount = 0;
+  public blDetailsPendingCount = 0;
+  public dailyEntryPendingCount = 0;
 
   // Pagination
   currentPage: number = 1;
@@ -330,27 +366,71 @@ export class OfficerInChargeDashboardComponent implements OnInit {
     }
   }
 
+  @Input() selectedModule: string = 'all';
+  @Input() moduleCounts: Record<string, any> = {};
+
   // Dashboard statistics methods
   getDashboardStatistics() {
-    const hologramPending = (this.hologramRequestCounts.PENDING || 0);
-    // For OIC, "Transit Applications" pending should not include finalized ones.
-    const transitPending = Array.isArray(this.allApplications) 
+    if (this.selectedModule && this.selectedModule !== 'all' && this.moduleCounts[this.selectedModule]) {
+      const counts = this.moduleCounts[this.selectedModule];
+      return {
+        applied: counts.applied || 0,
+        pending: counts.pending || 0,
+        approved: counts.approved || 0,
+        rejected: counts.rejected || 0,
+        dailyEntry: this.dailyEntryPendingCount
+      };
+    }
+
+    const hologramReqPending = (this.hologramRequestCounts.PENDING || 0);
+    const hologramReqApproved = (this.hologramRequestCounts.APPROVED || 0);
+    const hologramReqRejected = (this.hologramRequestCounts.REJECTED || 0);
+    const hologramReqApplied = hologramReqPending + (this.hologramRequestCounts.UNDER_PROCESS || 0) + hologramReqApproved + hologramReqRejected;
+
+    const transitApplied = Array.isArray(this.allApplications) ? this.allApplications.length : 0;
+    const transitPending = this.getTransitPendingCount();
+    const transitApproved = this.getTransitApprovedCount();
+    const transitRejected = Array.isArray(this.allApplications) ? this.allApplications.filter(app => {
+      const s = (app.status || '').toLowerCase();
+      return s.includes('terminated') || s.includes('cancelled') || s.includes('rejected');
+    }).length : 0;
+
+    const bldApplied = this.blDetailsAllCount || 0;
+    const bldPending = this.blDetailsPendingCount || 0;
+    const bldApproved = this.blDetailsApprovedCount || 0;
+    const bldRejected = this.blDetailsRejectedCount || 0;
+
+    const holProcPending = this.hologramProcurementPendingCount || 0;
+
+    return {
+      applied: transitApplied + hologramReqApplied + bldApplied,
+      pending: transitPending + hologramReqPending + holProcPending + bldPending,
+      approved: transitApproved + hologramReqApproved + bldApproved,
+      rejected: transitRejected + hologramReqRejected + bldRejected,
+      dailyEntry: this.dailyEntryPendingCount
+    };
+  }
+
+  getTransitPendingCount(): number {
+    return Array.isArray(this.allApplications) 
       ? this.allApplications.filter(app => {
           const s = (app.status || '').toLowerCase();
           return !s.includes('approved') && !s.includes('issued') && !s.includes('terminated') && !s.includes('cancelled');
         }).length 
       : 0;
+  }
 
-    return {
-      applied: 0,
-      pending: transitPending +
-        hologramPending +
-        (this.hologramProcurementPendingCount || 0) +
-        (this.blDetailsPendingCount || 0),
-      approved: this.getStatusCount('APPROVED') + this.getStatusCount('ISSUED'),
-      rejected: this.getStatusCount('TERMINATED') + this.getStatusCount('CANCELLED'),
-      dailyEntry: this.dailyEntryPendingCount
-    };
+  getTransitApprovedCount(): number {
+    return Array.isArray(this.allApplications)
+      ? this.allApplications.filter(app => {
+          const s = (app.status || '').toLowerCase();
+          return s.includes('approved') || s.includes('issued');
+        }).length
+      : 0;
+  }
+
+  openDailyRegister(): void {
+    this.router.navigate(['/dashboard'], { queryParams: { section: 'hologram-daily-entry' } });
   }
 
   private loadHologramProcurementPendingCount(): void {
@@ -403,14 +483,36 @@ export class OfficerInChargeDashboardComponent implements OnInit {
     }).length;
   }
 
+  public blDetailsAllCount = 0;
+
+  public blDetailsApprovedCount = 0;
+
+  public blDetailsRejectedCount = 0;
+
   private loadBlDetailsPendingCount(): void {
-    this.enaRequisitionService.getRequisitionArrivalDetailsByStatus('PENDING').subscribe({
+    this.enaRequisitionService.getRequisitionArrivalDetailsByStatus('ALL').subscribe({
       next: (response: any) => {
-        const rows = Array.isArray(response?.data) ? response.data : [];
-        this.blDetailsPendingCount = rows.length;
+        const rows = Array.isArray(response?.data) ? response.data : (Array.isArray(response) ? response : []);
+        const scoped = this.filterByCurrentLicense(rows);
+        this.blDetailsAllCount = scoped.length;
+        this.blDetailsPendingCount = scoped.filter((r: any) => {
+          const s = String(r?.approvalStatus || r?.approval_status || r?.review_status || r?.reviewStatus || r?.status || '').toUpperCase();
+          return s.includes('PENDING') || s === '';
+        }).length;
+        this.blDetailsApprovedCount = scoped.filter((r: any) => {
+          const s = String(r?.approvalStatus || r?.approval_status || r?.review_status || r?.reviewStatus || r?.status || '').toUpperCase();
+          return s.includes('APPROV') || s.includes('COMPLET');
+        }).length;
+        this.blDetailsRejectedCount = scoped.filter((r: any) => {
+          const s = String(r?.approvalStatus || r?.approval_status || r?.review_status || r?.reviewStatus || r?.status || '').toUpperCase();
+          return s.includes('REJECT') || s.includes('CANCEL');
+        }).length;
       },
       error: () => {
+        this.blDetailsAllCount = 0;
         this.blDetailsPendingCount = 0;
+        this.blDetailsApprovedCount = 0;
+        this.blDetailsRejectedCount = 0;
       }
     });
   }

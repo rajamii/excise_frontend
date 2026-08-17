@@ -416,6 +416,25 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   updateSingleWindowChart(): void {
+    if (this.isOicUser()) {
+      this.singleWindowChartData = {
+        ...this.singleWindowChartData,
+        datasets: [
+          {
+            ...this.singleWindowChartData.datasets[0],
+            data: [
+              this.getFilteredCount('applied'),
+              this.getFilteredCount('pending'),
+              this.getFilteredCount('approved'),
+              this.getFilteredCount('objection'),
+              this.getFilteredCount('rejected')
+            ]
+          }
+        ]
+      };
+      return;
+    }
+
     const isITCell = this.currentUser?.roleId === 6;
     const isPermitSection = Number(this.currentUser?.roleId || 0) === 5;
     const isCommissioner  = this.isCommissionerUser();
@@ -529,6 +548,19 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
+    // Officer in Charge handles ONLY: Transit Applications, Bulk Spirit Details, Hologram Procurement, Hologram Requests
+    const isOIC = this.isOicUser();
+    if (isOIC) {
+      this.availableChartModules = [
+        { value: 'all', label: 'All Modules' },
+        { value: 'transit', label: 'Transit Applications' },
+        { value: 'bldetails', label: 'Bulk Spirit Details' },
+        { value: 'hologram', label: 'Hologram Procurement' },
+        { value: 'hologramRequests', label: 'Hologram Requests' }
+      ];
+      return;
+    }
+
     const modules = [
       { value: 'all', label: 'All Modules' },
       { value: 'newLicense', label: 'New Licenses' },
@@ -552,12 +584,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       );
     }
 
-    // Brewery/Distillery supply chain items: Transit, Hologram
-    // Commissioner does not handle transit permits — exclude from their module list
-    if (isAdmin || this.showBreweryOrDistilleryMenus) {
-      modules.push({ value: 'transit', label: 'Transit Permits' });
+    // Brewery/Distillery/OIC supply chain items: Transit, Hologram
+    if (isAdmin || isOIC || this.showBreweryOrDistilleryMenus) {
+      modules.push({ value: 'transit', label: 'Transit Applications' });
     }
-    if (isAdmin || isCommissioner || this.showBreweryOrDistilleryMenus) {
+    if (isAdmin || isCommissioner || isOIC || this.showBreweryOrDistilleryMenus) {
       modules.push({ value: 'hologram', label: 'Hologram Procurement' });
     }
     if (this.showSpecialPermitChartOption) {
@@ -567,6 +598,15 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   public getFilteredCount(status: string): number {
+    if (this.isOicUser()) {
+      if (this.selectedChartModule === 'all') {
+        const oicModules = ['transit', 'bldetails', 'hologram', 'hologramRequests'];
+        return oicModules.reduce((sum, m) => sum + ((this.supplyChainModuleCounts[m] as any)?.[status] || 0), 0);
+      }
+      const sourceCounts = this.supplyChainModuleCounts[this.selectedChartModule] || { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
+      return (sourceCounts as any)[status] || 0;
+    }
+
     let sourceCounts = this.dashboardCounts;
     if (this.selectedChartModule === 'newLicense') {
       sourceCounts = this.detailedCounts.newLicense;
@@ -694,12 +734,24 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       ? this.companyCollaborationService.getDashboardCounts().pipe(catchError(() => of(null)))
       : of(null as any);
 
-    forkJoin({ req: req$, rev: rev$, can: can$, tra: tra$, hol: hol$, comp: comp$, collab: collab$ })
+    const isOIC = this.isOicUser();
+    const bld$ = isOIC
+      ? this.enaRequisitionService.getRequisitionArrivalDetailsByStatus('ALL').pipe(
+          map((res: any) => Array.isArray(res) ? res : (res?.data || res?.results || [])),
+          catchError(() => of([]))
+        )
+      : of([] as any[]);
+
+    const holReq$ = isOIC
+      ? this.hologramService.getRequests().pipe(catchError(() => of([])))
+      : of([] as any[]);
+
+    forkJoin({ req: req$, rev: rev$, can: can$, tra: tra$, hol: hol$, comp: comp$, collab: collab$, bld: bld$, holReq: holReq$ })
       .pipe(
         takeUntil(this.destroy$),
         finalize(() => onComplete?.())
       )
-      .subscribe(({ req, rev, can, tra, hol, comp, collab }) => {
+      .subscribe(({ req, rev, can, tra, hol, comp, collab, bld, holReq }) => {
 
         // ── REQUISITIONS ──────────────────────────────────────────────────────
         {
@@ -810,25 +862,36 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         if (skipTransit) {
           this.supplyChainModuleCounts['transit'] = { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
         } else {
-          const raw: any[] = Array.isArray(tra) ? tra : [];
+          let raw: any[] = Array.isArray(tra) ? tra : [];
+          if (this.isOicUser()) {
+            raw = this.filterByOicScopedLicense(raw);
+          }
           const billNos = new Set<string>();
           const items: any[] = [];
           raw.forEach(item => {
             const billNo = item.billNo || item.bill_no;
             if (billNo && !billNos.has(billNo)) { billNos.add(billNo); items.push(item); }
           });
-          const pending  = this.sidebarPendingBadgeService.countLicenseePendingItems(items);
-          const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
-          const rejected = items.filter(x => { const s = String(x.status||'').toLowerCase(); return s.includes('rejected') || s.includes('cancelled'); }).length;
+          const pending  = this.isOicUser()
+            ? items.filter(x => {
+                const s = String(x.status || '').toLowerCase();
+                return !s.includes('approved') && !s.includes('issued') && !s.includes('terminated') && !s.includes('cancelled');
+              }).length
+            : this.sidebarPendingBadgeService.countLicenseePendingItems(items);
+          const approved = items.filter(x => { const s = String(x.status || '').toLowerCase(); return s.includes('approved') || s.includes('issued'); }).length;
+          const rejected = items.filter(x => { const s = String(x.status||'').toLowerCase(); return s.includes('rejected') || s.includes('cancelled') || s.includes('terminated'); }).length;
           this.supplyChainModuleCounts['transit'] = { applied: items.length, pending, approved, objection: 0, rejected };
-          if (this.isLicenseeUser()) this.supplyChainPendingCounts['transit'] = pending;
+          if (this.isLicenseeUser() || this.isOicUser()) this.supplyChainPendingCounts['transit'] = pending;
         }
 
         // ── HOLOGRAMS ─────────────────────────────────────────────────────────
         if (isPermitSection) {
           this.supplyChainModuleCounts['hologram'] = { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
         } else {
-          const items: any[] = Array.isArray(hol) ? hol : [];
+          let items: any[] = Array.isArray(hol) ? hol : [];
+          if (this.isOicUser()) {
+            items = this.filterByOicScopedLicense(items);
+          }
           let pending: number;
           if (isITCell) {
             pending = items.filter(item => {
@@ -865,6 +928,44 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             this.supplyChainPendingCounts['hologram'] = pending;
             this.supplyChainPendingCounts['hologram:payment'] = awaitingPayment;
           }
+        }
+
+        // ── BULK SPIRIT DETAILS (OIC) ─────────────────────────────────────────
+        if (this.isOicUser()) {
+          const rawBld: any[] = Array.isArray(bld) ? bld : [];
+          const scopedBld = this.filterByOicScopedLicense(rawBld);
+          const pending = scopedBld.filter(x => {
+            const s = String(x.approvalStatus || x.approval_status || x.review_status || x.reviewStatus || x.status || '').toLowerCase();
+            return s.includes('pending') || s === '';
+          }).length;
+          const approved = scopedBld.filter(x => {
+            const s = String(x.approvalStatus || x.approval_status || x.review_status || x.reviewStatus || x.status || '').toLowerCase();
+            return s.includes('approved') || s.includes('completed');
+          }).length;
+          const rejected = scopedBld.filter(x => {
+            const s = String(x.approvalStatus || x.approval_status || x.review_status || x.reviewStatus || x.status || '').toLowerCase();
+            return s.includes('rejected') || s.includes('cancelled');
+          }).length;
+          this.supplyChainModuleCounts['bldetails'] = { applied: scopedBld.length, pending, approved, objection: 0, rejected };
+        }
+
+        // ── HOLOGRAM REQUESTS (OIC) ───────────────────────────────────────────
+        if (this.isOicUser()) {
+          const rawHolReq: any[] = Array.isArray(holReq) ? holReq : [];
+          const scopedHolReq = this.filterByOicScopedLicense(rawHolReq);
+          const pending = scopedHolReq.filter(x => {
+            const s = String(x.currentStageName || x.current_stage_name || x.status || '').toLowerCase();
+            return s.includes('pending') || s.includes('under') || s.includes('submitted');
+          }).length;
+          const approved = scopedHolReq.filter(x => {
+            const s = String(x.currentStageName || x.current_stage_name || x.status || '').toLowerCase();
+            return s.includes('approved') || s.includes('complete') || s.includes('issued');
+          }).length;
+          const rejected = scopedHolReq.filter(x => {
+            const s = String(x.currentStageName || x.current_stage_name || x.status || '').toLowerCase();
+            return s.includes('rejected') || s.includes('cancelled');
+          }).length;
+          this.supplyChainModuleCounts['hologramRequests'] = { applied: scopedHolReq.length, pending, approved, objection: 0, rejected };
         }
 
         // ── COMPANY REGISTRATION (Permit Section only) ────────────────────────
@@ -2418,12 +2519,103 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   isOicUser(): boolean {
-    const roleId = Number(this.currentUser?.roleId || 0);
+    const roleId = Number(
+      this.currentUser?.roleId ||
+      this.currentUser?.role?.id ||
+      (this.accountService?.getCurrentUser() as any)?.roleId ||
+      (this.accountService?.getCurrentUser() as any)?.role?.id ||
+      0
+    );
     if (roleId === 7) return true;
 
-    const roleName = String(this.currentUser?.role?.name || this.currentUser?.role?.displayName || '').toLowerCase();
+    if (typeof window !== 'undefined') {
+      const storedRole = String(localStorage.getItem('role') || sessionStorage.getItem('role') || '').trim().toLowerCase();
+      if (storedRole === '7' || storedRole.includes('officerincharge') || storedRole.includes('oic')) return true;
+
+      const sources = [
+        sessionStorage.getItem('currentUser'),
+        localStorage.getItem('currentUser'),
+        sessionStorage.getItem('user'),
+        localStorage.getItem('user')
+      ];
+      for (const raw of sources) {
+        if (!raw) continue;
+        try {
+          const parsed = JSON.parse(raw);
+          const rId = Number(parsed?.roleId || parsed?.role?.id || parsed?.user?.roleId || parsed?.user?.role?.id || 0);
+          if (rId === 7) return true;
+          const rName = String(parsed?.role?.name || parsed?.role?.displayName || parsed?.role_name || parsed?.user?.role?.name || '').toLowerCase();
+          const norm = rName.replace(/[^a-z0-9]/g, '');
+          if (norm.includes('officerincharge') || norm.includes('officer') || norm === 'oic' || norm === 'offcierincharge') return true;
+        } catch {}
+      }
+    }
+
+    const roleName = String(
+      this.currentUser?.role?.name ||
+      this.currentUser?.role?.displayName ||
+      ''
+    ).toLowerCase();
     const normalized = roleName.replace(/[^a-z0-9]/g, '');
-    return normalized.includes('officerincharge') || normalized === 'oic' || normalized === 'offcierincharge';
+    return normalized.includes('officerincharge') || normalized.includes('officer') || normalized === 'oic' || normalized === 'offcierincharge';
+  }
+
+  private resolveOicScopedLicenseId(): string {
+    if (typeof window === 'undefined') return '';
+    const userFromAccount: any = this.accountService?.getCurrentUser() || {};
+    const directFromAccount = this.extractOicLicenseIdFromObject(userFromAccount);
+    if (directFromAccount) return directFromAccount;
+
+    const sources = [
+      sessionStorage.getItem('currentUser'),
+      localStorage.getItem('currentUser'),
+      sessionStorage.getItem('user'),
+      localStorage.getItem('user')
+    ];
+    for (const raw of sources) {
+      if (!raw) continue;
+      try {
+        const parsed = JSON.parse(raw);
+        const resolved = this.extractOicLicenseIdFromObject(parsed);
+        if (resolved) return resolved;
+      } catch {}
+    }
+    return '';
+  }
+
+  private extractOicLicenseIdFromObject(payload: any): string {
+    if (!payload || typeof payload !== 'object') return '';
+    const direct = payload.license_id || payload.licenseId || payload.licensee_id || payload.licenseeId;
+    if (direct && String(direct).trim()) return String(direct).trim();
+    const nestedCandidates = [
+      payload.user, payload.profile, payload.supply_chain_profile,
+      payload.supplyChainProfile, payload.oic_assignment, payload.oicAssignment, payload.assignment
+    ];
+    for (const nested of nestedCandidates) {
+      const nestedId = this.extractOicLicenseIdFromObject(nested);
+      if (nestedId) return nestedId;
+    }
+    return '';
+  }
+
+  private expandOicLicenseAliases(licenseId: string): string[] {
+    const normalized = String(licenseId || '').trim();
+    if (!normalized) return [];
+    const aliases = [normalized];
+    if (normalized.startsWith('NLI/')) aliases.push(`NA/${normalized.slice(4)}`);
+    if (normalized.startsWith('NA/')) aliases.push(`NLI/${normalized.slice(3)}`);
+    return aliases;
+  }
+
+  private filterByOicScopedLicense(rows: any[]): any[] {
+    const scopedLicense = this.resolveOicScopedLicenseId();
+    if (!scopedLicense) return rows || [];
+    const allowed = new Set(this.expandOicLicenseAliases(scopedLicense));
+    return (rows || []).filter((row: any) => {
+      const rowLicense = row?.license_id || row?.licenseId || row?.licensee_id || row?.licenseeId;
+      if (!rowLicense) return false;
+      return this.expandOicLicenseAliases(rowLicense).some((alias) => allowed.has(alias));
+    });
   }
 
   private refreshSupplyChainPendingCounts(force = false): void {

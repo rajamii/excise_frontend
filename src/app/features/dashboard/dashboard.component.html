@@ -49,7 +49,10 @@
       <app-itcell-dashboard *ngIf="currentUser?.roleId === 6"></app-itcell-dashboard>
 
       <!-- Officer in Charge Dashboard -->
-      <app-officer-in-charge-dashboard *ngIf="currentUser?.roleId === 7"></app-officer-in-charge-dashboard>
+      <app-officer-in-charge-dashboard *ngIf="currentUser?.roleId === 7"
+        [selectedModule]="selectedChartModule"
+        [moduleCounts]="supplyChainModuleCounts">
+      </app-officer-in-charge-dashboard>
     </div>
 
     <!-- Supply Chain Section Content -->
