@@ -346,6 +346,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     company: DashboardCount & { awaitingPayment?: number };
     companyCollaboration: DashboardCount & { awaitingPayment?: number };
     specialPermit: DashboardCount & { awaitingPayment?: number };
+    labelRegistration?: DashboardCount & { awaitingPayment?: number };
   } = {
     total: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 },
     newLicense: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 },
@@ -353,7 +354,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     salesman: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 },
     company: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 },
     companyCollaboration: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 },
-    specialPermit: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 }
+    specialPermit: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 },
+    labelRegistration: { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 }
   };
 
   public showSpecialPermitChartOption = false;
@@ -394,6 +396,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       sourceCounts = hasSc ? sc : this.detailedCounts.companyCollaboration;
     } else if (moduleName === 'specialPermit') {
       sourceCounts = this.detailedCounts.specialPermit;
+    } else if (moduleName === 'label-registration' || moduleName === 'labelRegistration') {
+      sourceCounts = this.detailedCounts.labelRegistration || { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
     } else if (this.supplyChainModuleCounts[moduleName]) {
       sourceCounts = this.supplyChainModuleCounts[moduleName];
     }
@@ -439,6 +443,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       sourceCounts = this.detailedCounts.companyCollaboration;
     } else if (effectiveModule === 'specialPermit') {
       sourceCounts = this.detailedCounts.specialPermit;
+    } else if (effectiveModule === 'label-registration') {
+      sourceCounts = this.detailedCounts.labelRegistration || { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
     } else if (this.supplyChainModuleCounts[effectiveModule]) {
       sourceCounts = this.supplyChainModuleCounts[effectiveModule];
     }
@@ -451,7 +457,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     // the API returns applied=0 (admin/officer roles) by summing all statuses.
     // For supply chain modules, always use the stored count (0 if not yet loaded).
     const appliedValue = isAllModules
-      ? this.getModuleTotal('all')
+      ? this.getModuleTotal('all') + this.getSupplyChainAppliedTotal()
       : this.getModuleTotal(effectiveModule);
 
     this.singleWindowChartData = {
@@ -529,7 +535,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       { value: 'renewal', label: 'Renewals' },
       { value: 'salesman', label: 'Salesman / Barman' },
       { value: 'company', label: 'Company Reg.' },
-      { value: 'company-collaboration', label: 'Company Collab.' }
+      { value: 'company-collaboration', label: 'Company Collab.' },
+      { value: 'label-registration', label: 'Label Reg.' }
     ];
 
     const isAdmin = roleId === 1 || roleId === 3;
@@ -578,11 +585,16 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       sourceCounts = this.detailedCounts.companyCollaboration;
     } else if (this.selectedChartModule === 'specialPermit') {
       sourceCounts = this.detailedCounts.specialPermit;
+    } else if (this.selectedChartModule === 'label-registration') {
+      sourceCounts = this.detailedCounts.labelRegistration || { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
     } else if (this.supplyChainModuleCounts[this.selectedChartModule]) {
       sourceCounts = this.supplyChainModuleCounts[this.selectedChartModule];
     }
 
     if (status === 'applied') {
+      if (this.selectedChartModule === 'all') {
+        return this.getModuleTotal('all') + this.getSupplyChainAppliedTotal();
+      }
       return this.getModuleTotal(this.selectedChartModule);
     }
     if (status === 'pending') {
@@ -981,7 +993,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             salesman: res.salesman,
             company: res.company,
             companyCollaboration: (res as any).companyCollaboration || { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 },
-            specialPermit: res.specialPermit
+            specialPermit: res.specialPermit,
+            labelRegistration: res.labelRegistration || { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 }
           };
           this.dashboardCounts = {
             applied: res.total.applied || 0,
@@ -2473,7 +2486,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             salesman: res.salesman,
             company: res.company,
             companyCollaboration: (res as any).companyCollaboration || { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 },
-            specialPermit: res.specialPermit
+            specialPermit: res.specialPermit,
+            labelRegistration: res.labelRegistration || { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 }
           };
           this.dashboardCounts = {
             applied: res.total.applied || 0,
@@ -2628,7 +2642,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             salesman: getCountsForType('salesman-barman'),
             company: getCountsForType('company-registration'),
             companyCollaboration: getCountsForType('company-collaboration'),
-            specialPermit: getCountsForType('special-permit')
+            specialPermit: getCountsForType('special-permit'),
+            labelRegistration: getCountsForType('label-registration')
           };
 
           this.dashboardCounts = {

@@ -143,7 +143,7 @@ export class UnifiedDashboardService {
   }
 
     getUnifiedDashboardCounts(config?: DashboardConfig, forceRefresh = false): Observable<DashboardCount> {
-    const enabledTypes = Array.from(new Set([...this.inferEnabledTypesFromConfig(config), 'license-renewal', 'company-registration', 'company-collaboration', 'salesman-barman', 'new-license', 'special-permit']));
+    const enabledTypes = Array.from(new Set([...this.inferEnabledTypesFromConfig(config), 'license-renewal', 'company-registration', 'company-collaboration', 'salesman-barman', 'new-license', 'special-permit', 'label-registration']));
     const cacheKey = enabledTypes.slice().sort().join('|');
     if (!forceRefresh && this.unifiedCountsCache$ && this.unifiedCountsCacheKey === cacheKey) {
       return this.unifiedCountsCache$;
@@ -220,6 +220,17 @@ export class UnifiedDashboardService {
       );
     }
 
+    if (enabledTypes.includes('label-registration')) {
+      tasks.push(
+        this.http.get<DashboardCount>(getUrl(`${this.endpoints.label}/dashboard-counts/`)).pipe(
+          catchError((err) => {
+            console.error(' Label registration counts error:', err);
+            return of(empty);
+          })
+        )
+      );
+    }
+
     if (!tasks.length) {
       this.unifiedCountsCacheKey = cacheKey;
       this.unifiedCountsCache$ = of(empty).pipe(shareReplay({ bufferSize: 1, refCount: false }));
@@ -261,8 +272,9 @@ export class UnifiedDashboardService {
     company: DashboardCount;
     companyCollaboration: DashboardCount;
     specialPermit: DashboardCount;
+    labelRegistration?: DashboardCount;
   }> {
-    const enabledTypes = Array.from(new Set([...this.inferEnabledTypesFromConfig(config), 'license-renewal', 'company-registration', 'company-collaboration', 'salesman-barman', 'new-license', 'special-permit']));
+    const enabledTypes = Array.from(new Set([...this.inferEnabledTypesFromConfig(config), 'license-renewal', 'company-registration', 'company-collaboration', 'salesman-barman', 'new-license', 'special-permit', 'label-registration']));
     const cacheKey = [
       enabledTypes.slice().sort().join('|'),
       `month:${month ?? 'all'}`,
@@ -303,6 +315,9 @@ export class UnifiedDashboardService {
         : of(empty),
       specialPermit: enabledTypes.includes('special-permit')
         ? this.http.get<DashboardCount>(buildUrl(`${this.endpoints.specialPermit}/dashboard-counts/`)).pipe(catchError(() => of(empty)))
+        : of(empty),
+      labelRegistration: enabledTypes.includes('label-registration')
+        ? this.http.get<DashboardCount>(buildUrl(`${this.endpoints.label}/dashboard-counts/`)).pipe(catchError(() => of(empty)))
         : of(empty)
     }).pipe(
       map((res) => {
@@ -319,19 +334,21 @@ export class UnifiedDashboardService {
         if (res.company) res.company.applied = getApplied(res.company);
         if (res.companyCollaboration) res.companyCollaboration.applied = getApplied(res.companyCollaboration);
         if (res.specialPermit) res.specialPermit.applied = getApplied(res.specialPermit);
+        if (res.labelRegistration) res.labelRegistration.applied = getApplied(res.labelRegistration);
 
         const total = {
-          applied: (res.newLicense.applied || 0) + (res.renewal.applied || 0) + (res.salesman.applied || 0) + (res.company.applied || 0) + (res.companyCollaboration.applied || 0) + (res.specialPermit.applied || 0),
-          pending: (res.newLicense.pending || 0) + (res.renewal.pending || 0) + (res.salesman.pending || 0) + (res.company.pending || 0) + (res.companyCollaboration.pending || 0) + (res.specialPermit.pending || 0),
-          objection: (res.newLicense.objection || 0) + (res.renewal.objection || 0) + (res.salesman.objection || 0) + (res.company.objection || 0) + (res.companyCollaboration.objection || 0) + (res.specialPermit.objection || 0),
-          approved: (res.newLicense.approved || 0) + (res.renewal.approved || 0) + (res.salesman.approved || 0) + (res.company.approved || 0) + (res.companyCollaboration.approved || 0) + (res.specialPermit.approved || 0),
-          rejected: (res.newLicense.rejected || 0) + (res.renewal.rejected || 0) + (res.salesman.rejected || 0) + (res.company.rejected || 0) + (res.companyCollaboration.rejected || 0) + (res.specialPermit.rejected || 0),
+          applied: (res.newLicense.applied || 0) + (res.renewal.applied || 0) + (res.salesman.applied || 0) + (res.company.applied || 0) + (res.companyCollaboration.applied || 0) + (res.specialPermit.applied || 0) + (res.labelRegistration.applied || 0),
+          pending: (res.newLicense.pending || 0) + (res.renewal.pending || 0) + (res.salesman.pending || 0) + (res.company.pending || 0) + (res.companyCollaboration.pending || 0) + (res.specialPermit.pending || 0) + (res.labelRegistration.pending || 0),
+          objection: (res.newLicense.objection || 0) + (res.renewal.objection || 0) + (res.salesman.objection || 0) + (res.company.objection || 0) + (res.companyCollaboration.objection || 0) + (res.specialPermit.objection || 0) + (res.labelRegistration.objection || 0),
+          approved: (res.newLicense.approved || 0) + (res.renewal.approved || 0) + (res.salesman.approved || 0) + (res.company.approved || 0) + (res.companyCollaboration.approved || 0) + (res.specialPermit.approved || 0) + (res.labelRegistration.approved || 0),
+          rejected: (res.newLicense.rejected || 0) + (res.renewal.rejected || 0) + (res.salesman.rejected || 0) + (res.company.rejected || 0) + (res.companyCollaboration.rejected || 0) + (res.specialPermit.rejected || 0) + (res.labelRegistration.rejected || 0),
           awaitingPayment: (res.newLicense.awaitingPayment || (res.newLicense as any).awaiting_payment || 0) +
                            (res.renewal.awaitingPayment || (res.renewal as any).awaiting_payment || 0) +
                            (res.salesman.awaitingPayment || (res.salesman as any).awaiting_payment || 0) +
                            (res.company.awaitingPayment || (res.company as any).awaiting_payment || 0) +
                            (res.companyCollaboration.awaitingPayment || (res.companyCollaboration as any).awaiting_payment || 0) +
-                           (res.specialPermit.awaitingPayment || (res.specialPermit as any).awaiting_payment || 0)
+                           (res.specialPermit.awaitingPayment || (res.specialPermit as any).awaiting_payment || 0) +
+                           (res.labelRegistration.awaitingPayment || (res.labelRegistration as any).awaiting_payment || 0)
         } as DashboardCount;
         return {
           total,
@@ -340,7 +357,8 @@ export class UnifiedDashboardService {
           salesman: res.salesman,
           company: res.company,
           companyCollaboration: res.companyCollaboration,
-          specialPermit: res.specialPermit
+          specialPermit: res.specialPermit,
+          labelRegistration: res.labelRegistration
         };
       })
     ).pipe(shareReplay({ bufferSize: 1, refCount: false })) as any;
