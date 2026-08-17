@@ -2,6 +2,7 @@ import { Component, OnInit, Inject, PLATFORM_ID, ViewChild, ElementRef } from '@
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { firstValueFrom, of } from 'rxjs';
 import { SupplyChainService } from '../services/supplychain.service';
 import { DistRow, LiquorRates } from '../models/supply-chain.models';
 import { trigger, transition, style, animate, query, stagger } from '@angular/animations';
@@ -277,7 +278,7 @@ export class TransitPermitComponent implements OnInit {
       licenseFilter 
     ).subscribe({ 
       next: (data) => { 
-        this.warehouseCatalogData = data || []; 
+        this.mergeIntoWarehouseCatalog(data || []);
         this.brandWarehouseData = data || []; 
         if (!this.resolvedLicenseId) { 
           const inferred = this.resolveEffectiveLicenseIdForPayment();
@@ -372,6 +373,31 @@ export class TransitPermitComponent implements OnInit {
   private getWarehouseCurrentStock(entry: any): number {
     const value = Number(entry?.currentStock ?? entry?.current_stock ?? 0);
     return Number.isFinite(value) ? value : 0;
+  }
+
+  private mergeIntoWarehouseCatalog(entries: any[]): void {
+    if (!Array.isArray(entries) || entries.length === 0) return;
+    const catalog = Array.isArray(this.warehouseCatalogData) ? [...this.warehouseCatalogData] : [];
+
+    for (const newEntry of entries) {
+      const newBrand = this.getWarehouseBrandName(newEntry).toLowerCase().trim();
+      const newSize = this.getWarehouseCapacitySize(newEntry);
+      if (!newBrand || !newSize) continue;
+
+      const existingIdx = catalog.findIndex(e => {
+        const b = this.getWarehouseBrandName(e).toLowerCase().trim();
+        const s = this.getWarehouseCapacitySize(e);
+        return (b === newBrand || b.includes(newBrand) || newBrand.includes(b)) && s === newSize;
+      });
+
+      if (existingIdx >= 0) {
+        catalog[existingIdx] = { ...catalog[existingIdx], ...newEntry };
+      } else {
+        catalog.push(newEntry);
+      }
+    }
+
+    this.warehouseCatalogData = catalog;
   }
 
   private getPiecesPerCase(sizeMl: number): number {
@@ -564,6 +590,7 @@ export class TransitPermitComponent implements OnInit {
       .subscribe({ 
         next: (data) => { 
           console.log('Stock Data for Brand (raw response):', data); 
+          this.mergeIntoWarehouseCatalog(data || []);
           this.brandWarehouseData = data || []; 
           this.updateStockSummary(selectedBrandBasic);
         },
@@ -1038,8 +1065,59 @@ export class TransitPermitComponent implements OnInit {
     this.paymentConfirmAgreed = false;
     this.paymentPreviewError = '';
     this.startPaymentPreviewLoading();
-    this.buildStockDeductionPreview();
-    this.loadWalletDeductionPreviewAndOpenModal();
+
+    this.ensureStockDataForProducts()
+      .then(() => {
+        this.buildStockDeductionPreview();
+        this.loadWalletDeductionPreviewAndOpenModal();
+      })
+      .catch(() => {
+        this.buildStockDeductionPreview();
+        this.loadWalletDeductionPreviewAndOpenModal();
+      });
+  }
+
+  private async ensureStockDataForProducts(): Promise<void> {
+    const missingBrands = new Set<string>();
+    const catalog = [
+      ...(Array.isArray(this.warehouseCatalogData) ? this.warehouseCatalogData : []),
+      ...(Array.isArray(this.brandWarehouseData) ? this.brandWarehouseData : [])
+    ];
+
+    for (const prod of this.products) {
+      const brandName = String(prod.brand || '').trim();
+      const sizeMl = Number(prod.size || 0);
+      if (!brandName || !sizeMl) continue;
+
+      const hasMatch = catalog.some(entry => {
+        const entryBrand = this.getWarehouseBrandName(entry).toLowerCase().trim();
+        const pBrand = brandName.toLowerCase();
+        const brandMatch = entryBrand === pBrand || entryBrand.includes(pBrand) || pBrand.includes(entryBrand);
+        return brandMatch && this.getWarehouseCapacitySize(entry) === sizeMl;
+      });
+
+      if (!hasMatch) {
+        missingBrands.add(brandName);
+      }
+    }
+
+    if (missingBrands.size === 0) return;
+
+    const licenseFilter = this.shouldSendExplicitLicenseId(this.resolvedLicenseId)
+      ? this.resolvedLicenseId
+      : undefined;
+
+    const promises = Array.from(missingBrands).map(brand => {
+      return firstValueFrom(this.supplyChainService.getBrandWarehouseStock(undefined, brand, licenseFilter))
+        .then(data => {
+          if (data && data.length) {
+            this.mergeIntoWarehouseCatalog(data);
+          }
+        })
+        .catch(() => {});
+    });
+
+    await Promise.all(promises);
   }
 
   private startPaymentPreviewLoading(): void {
@@ -1134,14 +1212,16 @@ export class TransitPermitComponent implements OnInit {
 
   private buildStockDeductionPreview(): void {
     const grouped = new Map<string, StockDeductionPreview>();
-    const catalog = Array.isArray(this.warehouseCatalogData) ? this.warehouseCatalogData : [];
+    const catalog = [
+      ...(Array.isArray(this.warehouseCatalogData) ? this.warehouseCatalogData : []),
+      ...(Array.isArray(this.brandWarehouseData) ? this.brandWarehouseData : [])
+    ];
 
     for (const product of this.products) {
       const sizeMl = Number(product.size || 0);
       if (!product.brand || !sizeMl) continue;
 
-      const conversion = this.brandMlConversionData.find((x: any) => Number(x.ml) === sizeMl);
-      const piecesPerCase = Number(conversion?.pieces_in_case ?? conversion?.piecesInCase ?? 0);
+      const piecesPerCase = this.getPiecesPerCase(sizeMl);
       const requiredPieces = piecesPerCase > 0 ? Number(product.cases || 0) * piecesPerCase : 0;
 
       const matchedEntry = catalog.find((entry: any) => {
