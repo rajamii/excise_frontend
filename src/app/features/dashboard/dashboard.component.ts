@@ -445,30 +445,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     const isAllModules = this.selectedChartModule === 'all' && !isITCell;
 
-    // For Permit Section / Commissioner in All Modules view:
-    // dashboardCounts already includes company/collab data from the unified API.
-    // Adding getSupplyChain*Total() (which also has company/collab from supplyChainModuleCounts)
-    // would double-count. Instead, use supplyChainModuleCounts directly.
-    if (isAllModules && (isPermitSection || isCommissioner)) {
-      const compCounts   = this.supplyChainModuleCounts['company']              || { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
-      const collabCounts = this.supplyChainModuleCounts['company-collaboration'] || { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
-      const psApplied  = (compCounts.applied  || 0) + (collabCounts.applied  || 0);
-      const psPending  = (compCounts.pending  || 0) + (collabCounts.pending  || 0);
-      const psApproved = (compCounts.approved || 0) + (collabCounts.approved || 0);
-      const psObjection = (compCounts.objection || 0) + (collabCounts.objection || 0);
-      const psRejected = (compCounts.rejected || 0) + (collabCounts.rejected || 0);
 
-      this.singleWindowChartData = {
-        ...this.singleWindowChartData,
-        datasets: [
-          {
-            ...this.singleWindowChartData.datasets[0],
-            data: [psApplied, psPending, psApproved, psObjection, psRejected]
-          }
-        ]
-      };
-      return;
-    }
 
     // For the Applied bar, use getModuleTotal() which accounts for roles where
     // the API returns applied=0 (admin/officer roles) by summing all statuses.

@@ -304,15 +304,24 @@ export class CancellationComponent implements OnInit {
   }
 
   private isActionablePending(item: TableData): boolean {
+    const actions: string[] = item?.allowedActions ?? [];
+    const hasActions = Array.isArray(actions) && actions.length > 0;
+
     if (this.isCommissioner()) {
-      const actions: string[] = item?.allowedActions ?? [];
-      return Array.isArray(actions) && actions.includes('APPROVE');
+      if (hasActions) {
+        return actions.includes('APPROVE') || actions.includes('APPROVEPAYSLIP');
+      }
+      const st = this.normalizeStatus(item.status);
+      return (st.includes('commissioner') && st.includes('forward')) || st === 'pending';
     }
     if (this.isPermitSection()) {
-      const actions: string[] = item?.allowedActions ?? [];
-      return Array.isArray(actions) && (actions.includes('APPROVE') || actions.includes('REJECT') ||
-             actions.includes('FORWARD') || actions.includes('VERIFY') ||
-             actions.includes('APPROVEPAYSLIP') || actions.includes('REJECTPAYSLIP'));
+      if (hasActions) {
+        return actions.includes('APPROVE') || actions.includes('REJECT') ||
+               actions.includes('FORWARD') || actions.includes('VERIFY') ||
+               actions.includes('APPROVEPAYSLIP') || actions.includes('REJECTPAYSLIP');
+      }
+      const st = this.normalizeStatus(item.status);
+      return st === 'pending' || (st.includes('permitsection') && (st.includes('forward') || st.includes('payslip') || st.includes('submit')));
     }
     return this.isPendingLikeStatus(item.status);
   }

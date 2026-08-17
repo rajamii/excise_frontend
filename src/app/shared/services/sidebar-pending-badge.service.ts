@@ -225,7 +225,7 @@ export class SidebarPendingBadgeService {
         }
         return this.supplyChainService.getCancellationData().pipe(
           map((items) => this.toArray(items)),
-          map((items) => this.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'APPROVEPAYSLIP', 'REJECTPAYSLIP']))
+          map((items) => this.countActionableWithStatusFallback(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'APPROVEPAYSLIP', 'REJECTPAYSLIP']))
         );
 
       case 'transit':
