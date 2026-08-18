@@ -16,7 +16,7 @@ export class LicenseApplicationService {
   private readonly renewalLicenseUrl = `${environment.apiBaseUrl}/transactional/license_renewal_application`;
   private readonly siteEnquiryUrl = `${environment.apiBaseUrl}/transactional/site_enquiry`;
   private readonly workflowUrl = `${environment.apiBaseUrl}/auth`;
-  private readonly cacheTtlMs = 60_000;
+  private readonly cacheTtlMs = 0;
   private readonly responseCache = new Map<string, { value: unknown; fetchedAt: number }>();
   private readonly inflightRequests = new Map<string, Observable<unknown>>();
 
