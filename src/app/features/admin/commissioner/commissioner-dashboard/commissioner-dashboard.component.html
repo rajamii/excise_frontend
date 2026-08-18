@@ -393,7 +393,7 @@
               <div class="hologram-register-header mb-3">
                 <div class="row g-3">
                   <div class="col-md-3">
-                    <div class="summary-card total-requests">
+                    <div class="summary-card total-requests" [class.active]="selectedHologramFilter === 'all'" (click)="setHologramFilter('all')">
                       <div class="card-icon">
                         <i class="bi bi-list-ul"></i>
                       </div>
@@ -404,7 +404,7 @@
                     </div>
                   </div>
                   <div class="col-md-3">
-                    <div class="summary-card pending-requests">
+                    <div class="summary-card pending-requests" [class.active]="selectedHologramFilter === 'pending'" (click)="setHologramFilter('pending')">
                       <div class="card-icon">
                         <i class="bi bi-clock"></i>
                       </div>
@@ -415,7 +415,7 @@
                     </div>
                   </div>
                   <div class="col-md-3">
-                    <div class="summary-card approved-requests">
+                    <div class="summary-card approved-requests" [class.active]="selectedHologramFilter === 'approved'" (click)="setHologramFilter('approved')">
                       <div class="card-icon">
                         <i class="bi bi-check-circle"></i>
                       </div>
@@ -426,7 +426,7 @@
                     </div>
                   </div>
                   <div class="col-md-3">
-                    <div class="summary-card rejected-requests">
+                    <div class="summary-card rejected-requests" [class.active]="selectedHologramFilter === 'rejected'" (click)="setHologramFilter('rejected')">
                       <div class="card-icon">
                         <i class="bi bi-x-circle"></i>
                       </div>
@@ -436,6 +436,54 @@
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              <!-- Compact Filter Section for Hologram -->
+              <div class="compact-filter-section mb-3">
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                  <div class="filter-label-text">
+                    <i class="bi bi-funnel me-1"></i>
+                    <small class="text-muted">Filters:</small>
+                  </div>
+
+                  <!-- Search by Application ID -->
+                  <div class="compact-filter" style="min-width: 200px;">
+                    <input type="text" class="form-control form-control-sm" [(ngModel)]="hologramSearchIdFilter"
+                      (input)="applyHologramFilters()" placeholder="Search by Application ID...">
+                  </div>
+
+                  <!-- Company Filter -->
+                  <div class="compact-filter" style="min-width: 180px;">
+                    <select class="form-select form-select-sm" [(ngModel)]="hologramCompanyFilter"
+                      (change)="applyHologramFilters()">
+                      <option value="">All Company</option>
+                      <option *ngFor="let company of getUniqueHologramCompanies()" [value]="company">{{ company }}</option>
+                    </select>
+                  </div>
+
+                  <!-- Month Filter -->
+                  <div class="compact-filter" style="min-width: 140px;">
+                    <select class="form-select form-select-sm" [(ngModel)]="hologramMonthFilter"
+                      (change)="applyHologramFilters()">
+                      <option value="">All Month</option>
+                      <option *ngFor="let m of monthsList" [value]="m.value">{{ m.label }}</option>
+                    </select>
+                  </div>
+
+                  <!-- Date Filter -->
+                  <div class="compact-filter">
+                    <input type="date" class="form-control form-control-sm" [(ngModel)]="hologramDateFilter"
+                      (change)="applyHologramFilters()" title="Filter by date">
+                  </div>
+
+                  <!-- Clear Button -->
+                  <button class="btn btn-outline-danger btn-sm" (click)="clearHologramFilters()"
+                    *ngIf="hologramSearchIdFilter || hologramCompanyFilter || hologramMonthFilter || hologramDateFilter"
+                    title="Clear all filters">
+                    <i class="bi bi-x-circle me-1"></i>
+                    Clear
+                  </button>
                 </div>
               </div>
 

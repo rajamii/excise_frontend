@@ -101,6 +101,25 @@ export class CommissionerDashboardComponent implements OnInit {
   hologramDateFilter: string = '';
   hologramStatusFilter: string = '';
   hologramTypeFilter: string = '';
+  selectedHologramFilter: 'all' | 'pending' | 'approved' | 'rejected' = 'all';
+  hologramSearchIdFilter: string = '';
+  hologramCompanyFilter: string = '';
+  hologramMonthFilter: string = '';
+
+  monthsList = [
+    { value: '0', label: 'January' },
+    { value: '1', label: 'February' },
+    { value: '2', label: 'March' },
+    { value: '3', label: 'April' },
+    { value: '4', label: 'May' },
+    { value: '5', label: 'June' },
+    { value: '6', label: 'July' },
+    { value: '7', label: 'August' },
+    { value: '8', label: 'September' },
+    { value: '9', label: 'October' },
+    { value: '10', label: 'November' },
+    { value: '11', label: 'December' }
+  ];
 
   // Filtered data arrays
   filteredRevalidationData: CommissionerTableData[] = [];
@@ -476,10 +495,10 @@ export class CommissionerDashboardComponent implements OnInit {
 
   getHologramSummaryCount(type: 'all' | 'pending' | 'approved' | 'rejected'): number {
     if (type === 'all') {
-      return this.filteredHologramData.length;
+      return this.hologramData.length;
     }
 
-    return this.filteredHologramData.filter((item) => {
+    return this.hologramData.filter((item) => {
       if (type === 'pending') return this.isHologramPendingStatus(item);
       if (type === 'approved') return this.isHologramApprovedStatus(item);
       if (type === 'rejected') return this.isHologramRejectedStatus(item);
@@ -585,11 +604,52 @@ export class CommissionerDashboardComponent implements OnInit {
     this.hologramDateFilter = '';
     this.hologramStatusFilter = '';
     this.hologramTypeFilter = '';
+    this.hologramSearchIdFilter = '';
+    this.hologramCompanyFilter = '';
+    this.hologramMonthFilter = '';
+    this.selectedHologramFilter = 'all';
     this.applyHologramFilters();
   }
 
-  private applyHologramFilters(): void {
+  setHologramFilter(filterType: 'all' | 'pending' | 'approved' | 'rejected'): void {
+    this.selectedHologramFilter = filterType;
+    this.applyHologramFilters();
+  }
+
+  getUniqueHologramCompanies(): string[] {
+    const companies = this.hologramData.map(item => item.distilleryName || '').filter(name => name !== '');
+    return Array.from(new Set(companies)).sort();
+  }
+
+  applyHologramFilters(): void {
     let filtered = [...this.hologramData];
+
+    if (this.selectedHologramFilter && this.selectedHologramFilter !== 'all') {
+      filtered = filtered.filter(item => {
+        if (this.selectedHologramFilter === 'pending') return this.isHologramPendingStatus(item);
+        if (this.selectedHologramFilter === 'approved') return this.isHologramApprovedStatus(item);
+        if (this.selectedHologramFilter === 'rejected') return this.isHologramRejectedStatus(item);
+        return true;
+      });
+    }
+
+    if (this.hologramSearchIdFilter) {
+      const search = this.hologramSearchIdFilter.trim().toLowerCase();
+      filtered = filtered.filter(item => 
+        String(item.referenceNo || '').toLowerCase().includes(search)
+      );
+    }
+
+    if (this.hologramCompanyFilter) {
+      filtered = filtered.filter(item => item.distilleryName === this.hologramCompanyFilter);
+    }
+
+    if (this.hologramMonthFilter) {
+      filtered = filtered.filter(item => {
+        const itemDate = this.parseDate(item.submissionDate);
+        return itemDate.getMonth().toString() === this.hologramMonthFilter;
+      });
+    }
 
     if (this.hologramDateFilter) {
       filtered = filtered.filter(item => {
