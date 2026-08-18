@@ -20,6 +20,10 @@
           </div>
           <div class="welcome-banner__subtitle">
             Signed in as <span class="welcome-banner__role">{{ userRoleDisplayName }}</span>
+            <span *ngIf="userDistrictDisplayName" class="welcome-banner__role welcome-banner__role--district" [title]="'Assigned District: ' + userDistrictDisplayName">
+              <mat-icon aria-hidden="true" class="district-badge-icon">place</mat-icon>
+              {{ userDistrictDisplayName }}
+            </span>
           </div>
         </div>
 

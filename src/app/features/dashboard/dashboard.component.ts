@@ -1950,6 +1950,77 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  get userDistrictDisplayName(): string {
+    const roleId = this.getCurrentRoleId();
+    if (roleId !== 4 && roleId !== 8) {
+      return '';
+    }
+
+    const districtCodeMap: { [key: string]: string } = {
+      '1': 'Gangtok', '225': 'Gangtok', 'gangtok': 'Gangtok',
+      '2': 'Namchi', '226': 'Namchi', 'namchi': 'Namchi',
+      '3': 'Gyalshing', '227': 'Gyalshing', 'gyalshing': 'Gyalshing', 'geyzing': 'Gyalshing',
+      '4': 'Mangan', '228': 'Mangan', 'mangan': 'Mangan',
+      '5': 'Pakyong', '229': 'Pakyong', 'pakyong': 'Pakyong',
+      '6': 'Soreng', '230': 'Soreng', 'soreng': 'Soreng'
+    };
+
+    const extractName = (d: any): string => {
+      if (d === null || d === undefined) return '';
+      if (typeof d === 'number' || (typeof d === 'string' && /^\d+$/.test(d.trim()))) {
+        const key = String(d).trim();
+        if (districtCodeMap[key]) return districtCodeMap[key];
+      }
+      if (typeof d === 'string') {
+        const trimmed = d.trim();
+        const low = trimmed.toLowerCase();
+        if (districtCodeMap[low]) return districtCodeMap[low];
+        return trimmed;
+      }
+      if (typeof d === 'object') {
+        const name = d.district || d.district_name || d.districtName || d.name || d.district_code || d.districtCode || d.code;
+        if (name) return extractName(name);
+      }
+      return '';
+    };
+
+    const candidates = [
+      (this.currentUser as any)?.district,
+      (this.currentUser as any)?.district_name,
+      (this.currentUser as any)?.districtName,
+      (this.currentUser as any)?.district_id,
+      (this.currentUser as any)?.districtId,
+      (this.currentUser as any)?.district_code,
+      (this.currentUser as any)?.districtCode,
+      (this.accountService?.getCurrentUser() as any)?.district,
+      (this.accountService?.getCurrentUser() as any)?.district_name,
+      (this.accountService?.getCurrentUser() as any)?.districtName,
+    ];
+
+    for (const cand of candidates) {
+      const resolved = extractName(cand);
+      if (resolved) return resolved;
+    }
+
+    if (typeof window !== 'undefined') {
+      const storageKeys = ['currentUser', 'user', 'account'];
+      for (const key of storageKeys) {
+        for (const storage of [sessionStorage, localStorage]) {
+          const raw = storage.getItem(key);
+          if (!raw) continue;
+          try {
+            const parsed = JSON.parse(raw);
+            const d = parsed?.district || parsed?.district_name || parsed?.districtName || parsed?.district_id || parsed?.district_code || parsed?.user?.district;
+            const resolved = extractName(d);
+            if (resolved) return resolved;
+          } catch {}
+        }
+      }
+    }
+
+    return '';
+  }
+
   private humanizeRoleName(value: string): string {
     const cleaned = String(value || '').trim();
     if (!cleaned) return '';

@@ -122,6 +122,10 @@ export class AccountService {
             localStorage.setItem('firstName', account.firstName);
             localStorage.setItem('lastName', account.lastName);
             localStorage.setItem('has_active_license', String(account.hasActiveLicense ?? false));
+            if (account?.district) {
+              localStorage.setItem('district', typeof account.district === 'string' ? account.district : JSON.stringify(account.district));
+            }
+            localStorage.setItem('currentUser', JSON.stringify(account));
 
             // Auto logout
             const access = localStorage.getItem('access');
