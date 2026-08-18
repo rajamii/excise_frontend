@@ -460,3 +460,65 @@ tr.row-needs-action {
     transform: translateY(0) !important;
   }
 }
+
+// ── Fees Payment column ──────────────────────────────────────────────────────
+.fee-status-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 160px;
+}
+
+.fee-status-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 8px;
+  border-radius: 8px;
+  border: 1.5px solid transparent;
+  transition: background 0.15s ease;
+
+  // ── Paid state ─── solid green
+  &--paid {
+    background: #dcfce7;
+    border-color: #4ade80;
+
+    .fee-status-icon { color: #15803d; }
+    .fee-status-value { color: #14532d; }
+    .fee-status-label { color: #166534; }
+  }
+
+  // ── Unpaid / Pending state ─── solid amber-orange
+  &--unpaid {
+    background: #fef9c3;
+    border-color: #facc15;
+
+    .fee-status-icon { color: #ca8a04; }
+    .fee-status-value { color: #92400e; }
+    .fee-status-label { color: #92400e; }
+  }
+
+  .fee-status-icon {
+    font-size: 15px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .fee-status-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+  }
+
+  .fee-status-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .fee-status-value {
+    font-size: 12.5px;
+    font-weight: 800;
+  }
+}
