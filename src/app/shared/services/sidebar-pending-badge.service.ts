@@ -262,7 +262,7 @@ export class SidebarPendingBadgeService {
         }
         return this.hologramService.getProcurements().pipe(
           map((items) => this.toArray(items)),
-          map((items) => this.countActionable(items, ['VERIFY', 'FORWARD', 'APPROVE', 'REJECT']))
+          map((items) => this.countActionableWithStatusFallback(items, ['VERIFY', 'FORWARD', 'APPROVE', 'REJECT']))
         );
 
       case 'hologram-request':
@@ -528,6 +528,8 @@ export class SidebarPendingBadgeService {
           (st.includes('forward') || st.includes('payslip') || st.includes('submit'))) return true;
       // Forwarded to Commissioner for review
       if (st.includes('commissioner') && st.includes('forward')) return true;
+      // IT Cell: forwarded to IT Cell for review (e.g. "UNDER IT CELL REVIEW")
+      if (st.includes('itcell') || st.includes('itreview') || st.includes('submittedhp')) return true;
       return false;
     });
 

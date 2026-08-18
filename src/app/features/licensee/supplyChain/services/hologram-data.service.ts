@@ -282,7 +282,10 @@ export class HologramDataService {
 
   // --- Procurement APIs ---
 
-  getProcurements(): Observable<HologramProcurement[]> {
+  getProcurements(force = false): Observable<HologramProcurement[]> {
+    if (force) {
+      this.invalidateCache('procurements:list');
+    }
     return this.getCachedOrFetch('procurements:list', () =>
       this.http.get<HologramProcurement[]>(`${this.apiUrl}/procurement/`)
     );

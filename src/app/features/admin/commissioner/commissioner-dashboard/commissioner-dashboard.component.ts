@@ -217,7 +217,7 @@ export class CommissionerDashboardComponent implements OnInit {
 
   ngOnInit(): void {
     // Load hologram applications from Backend
-    this.loadHologramApplications();
+    this.loadHologramApplications(true);
 
     // Fetch real revalidation data from backend
     this.fetchRevalidationData();
@@ -260,14 +260,14 @@ export class CommissionerDashboardComponent implements OnInit {
       setInterval(() => {
         if (this.activeTab === 'hologram') {
           console.log('🔄 Auto-refresh: Reloading Commissioner hologram data...');
-          this.loadHologramApplications();
+          this.loadHologramApplications(true);
         }
       }, 30000); // 30 seconds
     }
   }
 
-  loadHologramApplications(): void {
-    this.hologramService.getProcurements().subscribe({
+  loadHologramApplications(forceRefresh = false): void {
+    this.hologramService.getProcurements(forceRefresh).subscribe({
       next: (data) => {
         console.log('Fetched Hologram Procurements for Commissioner:', data);
 
