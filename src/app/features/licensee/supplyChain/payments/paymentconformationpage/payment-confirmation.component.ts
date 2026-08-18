@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy, inject, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -185,7 +185,18 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   private readonly optimisticPaymentStorageKey = 'wallet.optimistic.payments';
   private readonly pendingPaymentStorageKey = 'wallet.pending.payment.context';
   private readonly isBrowser = typeof window !== 'undefined';
-  walletViewMode: WalletViewMode = 'wallets';
+  private _walletViewMode: WalletViewMode = 'wallets';
+  @Input()
+  set walletViewMode(mode: WalletViewMode) {
+    if (mode && this._walletViewMode !== mode) {
+      this._walletViewMode = mode;
+      this.ensureActiveTabAllowed();
+    }
+  }
+  get walletViewMode(): WalletViewMode {
+    return this._walletViewMode;
+  }
+  @Output() walletViewModeChange = new EventEmitter<WalletViewMode>();
   activeTab: WalletTableTab = 'requisition';
   tablePageSizeOptions: number[] = [5, 10, 15];
 
@@ -1917,26 +1928,53 @@ private initializeWalletContextAndLoadData(): void {
     const ref = String(referenceNo || '').trim().toUpperCase();
     if (!ref) return false;
 
-    // For company collaboration, check the flag loaded from backend directly
-    const isCollabRef = ref.startsWith('CCOL/');
-    if (isCollabRef) {
-      if (walletType === 'security_deposit') return this.isCompanyCollabSecurityPaidForRef(ref);
-      if (walletType === 'license_fee' && this.isCompanyCollabLicensePaidForRef(ref)) return true;
-      if (walletType === 'license_fee') {
-        // Check optimistic / history for a license_fee debit on this ref
-        const merged = [...(this.optimisticPaymentHistory || []), ...(this.historyData || [])];
-        return merged.some((txn) => {
-          const txnRef = String(txn?.reference || '').trim().toUpperCase();
-          if (txnRef !== ref) return false;
-          const txnWalletType = String((txn as any)?.walletType || '').trim().toLowerCase();
-          if (txnWalletType && txnWalletType !== 'license_fee') return false;
-          const type = String(txn?.type || '').toLowerCase();
-          return type.includes('utilization') || type.includes('utilized') || type.includes('debit');
-        });
+    const norm = (raw: string): string => {
+      const s = String(raw || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+      if (s === 'licensefee' || s === 'license_fee' || s === 'license' || s === 'licensee_fee' || s === 'license_fee_wallet') return 'license_fee';
+      if (s === 'securitydeposit' || s === 'security_deposit' || s === 'security' || s === 'security_deposit_wallet') return 'security_deposit';
+      return s;
+    };
+
+    const targetType = norm(walletType);
+
+    // 1. Check history & optimistic transactions first
+    const merged = [...(this.optimisticPaymentHistory || []), ...(this.historyData || [])];
+    const hasPaidTxn = merged.some((txn) => {
+      const txnRef = String(txn?.reference || (txn as any)?.referenceNo || '').trim().toUpperCase();
+      if (txnRef !== ref) return false;
+
+      const status = String(txn?.status || '').toLowerCase();
+      const isSuccessful = status.includes('success') || status.includes('paid') || status.includes('completed');
+      if (!isSuccessful) return false;
+
+      const type = String(txn?.type || '').toLowerCase();
+      const isDebitLike = type.includes('utilization') || type.includes('utilized') || type.includes('debit') || type.includes('paid');
+      if (!isDebitLike) return false;
+
+      const rawWalletType = String((txn as any)?.walletType || (txn as any)?.wallet_type || '').trim();
+      const normWalletType = norm(rawWalletType);
+      if (normWalletType) return normWalletType === targetType;
+
+      const paymentFor = String(txn?.paymentFor || (txn as any)?.payment_for || '').toLowerCase();
+      if (targetType === 'license_fee') {
+        return paymentFor.includes('license') || paymentFor.includes('collaboration') || paymentFor.includes('fee');
       }
+      if (targetType === 'security_deposit') {
+        return paymentFor.includes('security') || paymentFor.includes('deposit');
+      }
+      return true;
+    });
+
+    if (hasPaidTxn) return true;
+
+    // 2. For company collaboration, check the flag loaded from backend
+    if (ref.startsWith('CCOL/')) {
+      if (targetType === 'security_deposit') return this.isCompanyCollabSecurityPaidForRef(ref);
+      if (targetType === 'license_fee' && this.isCompanyCollabLicensePaidForRef(ref)) return true;
       return false;
     }
 
+    // 3. For new license or renewal, check pending flags loaded from backend
     const isNewLicenseOrRenewalRef =
       ref.startsWith('NLI/') ||
       ref.startsWith('NLA/') ||
@@ -1946,41 +1984,9 @@ private initializeWalletContextAndLoadData(): void {
       ref.startsWith('RCR/') ||
       ref.startsWith('RSBM/');
     if (isNewLicenseOrRenewalRef) {
-      if (walletType === 'license_fee' && this.pendingNewLicenseIsLicenseFeePaid) return true;
-      if (walletType === 'security_deposit') {
-        if (this.pendingNewLicenseIsSecurityFeePaid) return true;
-        if (this.pendingNewLicenseApplicationId || this.pendingNewLicenseReferenceNo) return false;
-      }
+      if (targetType === 'license_fee' && this.pendingNewLicenseIsLicenseFeePaid) return true;
+      if (targetType === 'security_deposit' && this.pendingNewLicenseIsSecurityFeePaid) return true;
     }
-
-    const merged = [...(this.optimisticPaymentHistory || []), ...(this.historyData || [])];
-    const hasPaidTxn = merged.some((txn) => {
-      const txnRef = String(txn?.reference || '').trim().toUpperCase();
-      if (txnRef !== ref) return false;
-
-      const status = String(txn?.status || '').toLowerCase();
-      const isSuccessful = status.includes('success') || status.includes('paid') || status.includes('completed');
-      if (!isSuccessful) return false;
-
-      const type = String(txn?.type || '').toLowerCase();
-      if (walletType === 'security_deposit') {
-        const isTxnOk = type.includes('utilization') || type.includes('utilized') || type.includes('debit');
-        if (!isTxnOk) return false;
-      } else {
-        const isDebitLike = type.includes('utilization') || type.includes('utilized') || type.includes('debit');
-        if (!isDebitLike) return false;
-      }
-
-      const txnWalletType = String((txn as any)?.walletType || '').trim().toLowerCase();
-      if (txnWalletType) return txnWalletType === walletType;
-
-      const paymentFor = String(txn?.paymentFor || '').toLowerCase();
-      if (walletType === 'license_fee') return paymentFor.includes('license') || paymentFor.includes('collaboration');
-      if (walletType === 'security_deposit') return paymentFor.includes('security');
-      return true;
-    });
-
-    if (hasPaidTxn) return true;
 
     return false;
   }
@@ -2302,12 +2308,13 @@ private initializeWalletContextAndLoadData(): void {
   }
 
   get pendingNewLicenseRef(): string {
-    return this.pendingWalletPaymentContext?.referenceNo || this.pendingNewLicenseReferenceNo || '';
+    return this.pendingWalletPaymentContext?.referenceNo ||
+      this.pendingNewLicenseReferenceNo ||
+      (this.isBrowser ? sessionStorage.getItem('pendingNewLicenseReferenceNo') || '' : '');
   }
 
   showSecurityRechargeAlert(): boolean {
     if (this.isCompanyCollaborationPendingRef()) return false;
-    if (!this.pendingWalletPaymentContext) return false;
     const refNo = this.pendingNewLicenseRef;
     if (!refNo) return false;
 
@@ -2315,12 +2322,12 @@ private initializeWalletContextAndLoadData(): void {
     const isNewLicense = !refNoUpper.startsWith('LRA/') && !refNoUpper.startsWith('RCR/') && !refNoUpper.startsWith('RCOL/') && !refNoUpper.startsWith('RSBM/');
     if (!isNewLicense) return false;
 
-    const type = this.pendingWalletPaymentContext?.itemType || (refNoUpper.startsWith('CCOL/') ? 'company-collaboration' : 'new-license');
-    const isLicenseFee = this.isLicenseFeeWorkflowPaymentType(type)
-      && String(type).trim().toLowerCase() !== 'license-renewal';
-    if (!isLicenseFee) return false;
+    const licensePaid = this.isFeePaid('license_fee', refNo);
+    const securityPaid = this.isFeePaid('security_deposit', refNo);
 
-    return !this.isFeePaid('security_deposit', refNo) || !this.isFeePaid('license_fee', refNo);
+    if (licensePaid && securityPaid) return false;
+
+    return true;
   }
 
   isLicenseFeePaidForPendingNewLicense(): boolean {

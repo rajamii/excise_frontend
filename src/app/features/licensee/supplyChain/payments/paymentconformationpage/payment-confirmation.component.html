@@ -2,7 +2,7 @@
   <!-- Wallet Cards Section -->
   <div class="container-fluid py-4">
     <!-- Security Deposit Recharge Warning Alert -->
-    <div class="alert alert-warning d-flex align-items-start mb-4 shadow-sm border-warning" *ngIf="showSecurityRechargeAlert()" style="border-left: 5px solid #ffc107; background-color: #fffbeb;">
+    <div class="alert alert-warning d-flex align-items-start mb-4 shadow-sm border-warning" *ngIf="showSecurityRechargeAlert() && walletViewMode === 'others'" style="border-left: 5px solid #ffc107; background-color: #fffbeb;">
       <i class="bi bi-exclamation-triangle-fill me-3 text-warning" style="font-size: 1.5rem;"></i>
       <div>
         <h5 class="alert-heading fw-bold mb-1" style="color: #856404 !important; font-size: 1.1rem;">{{ getRechargeAlertTitle() }}</h5>

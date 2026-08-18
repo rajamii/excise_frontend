@@ -135,7 +135,7 @@
         <app-hologramprocurement
           *ngIf="selectedSupplyChainSection === 'hologram' && !isCommissionerUser()"></app-hologramprocurement>
         <app-hologramrequest *ngIf="selectedSupplyChainSection === 'hologram-request'"></app-hologramrequest>
-        <app-payment-confirmation *ngIf="selectedSupplyChainSection === 'wallet'"></app-payment-confirmation>
+        <app-payment-confirmation *ngIf="selectedSupplyChainSection === 'wallet'" [walletViewMode]="walletViewMode" (walletViewModeChange)="walletViewMode = $event"></app-payment-confirmation>
       <app-registration-management
         *ngIf="selectedSupplyChainSection === 'company-registration' || selectedSupplyChainSection === 'company-collaboration' || selectedSupplyChainSection === 'salesman-barman-registration' || selectedSupplyChainSection === 'label-registration'">
       </app-registration-management>
