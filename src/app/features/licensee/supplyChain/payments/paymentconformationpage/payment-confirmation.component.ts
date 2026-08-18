@@ -2453,22 +2453,24 @@ private initializeWalletContextAndLoadData(): void {
   }
 
   getPendingApplicationType(): 'company-collaboration' | 'new-license' | 'license-renewal' | 'other' {
-    if (!this.pendingWalletPaymentContext) {
-      const ref = String(this.pendingNewLicenseReferenceNo || '').toUpperCase();
-      if (ref.startsWith('CCOL/')) return 'company-collaboration';
-      return 'other';
-    }
-    const ctxType = String(this.pendingWalletPaymentContext.itemType || '').toLowerCase();
-    const ctxRef = String(this.pendingWalletPaymentContext.referenceNo || '').toUpperCase();
+    const ref = String(this.pendingNewLicenseRef || '').toUpperCase();
+    if (ref.startsWith('CCOL/')) return 'company-collaboration';
+    if (ref.startsWith('NLI/') || ref.startsWith('NLA/') || ref.startsWith('NA/') || ref.startsWith('LIC/')) return 'new-license';
+    if (ref.startsWith('LRA/') || ref.startsWith('RCR/') || ref.startsWith('RCOL/') || ref.startsWith('RSBM/')) return 'license-renewal';
 
-    if (ctxType === 'company-collaboration' || ctxRef.startsWith('CCOL/')) {
-      return 'company-collaboration';
-    }
-    if (ctxType === 'new-license' || ctxRef.startsWith('NA/') || ctxRef.startsWith('NLI/') || ctxRef.startsWith('NLA/') || ctxRef.startsWith('LIC/')) {
-      return 'new-license';
-    }
-    if (ctxType === 'license-renewal' || ctxRef.startsWith('LRA/') || ctxRef.startsWith('RCR/') || ctxRef.startsWith('RCOL/') || ctxRef.startsWith('RSBM/')) {
-      return 'license-renewal';
+    if (this.pendingWalletPaymentContext) {
+      const ctxType = String(this.pendingWalletPaymentContext.itemType || '').toLowerCase();
+      const ctxRef = String(this.pendingWalletPaymentContext.referenceNo || '').toUpperCase();
+
+      if (ctxType === 'company-collaboration' || ctxRef.startsWith('CCOL/')) {
+        return 'company-collaboration';
+      }
+      if (ctxType === 'new-license' || ctxRef.startsWith('NA/') || ctxRef.startsWith('NLI/') || ctxRef.startsWith('NLA/') || ctxRef.startsWith('LIC/')) {
+        return 'new-license';
+      }
+      if (ctxType === 'license-renewal' || ctxRef.startsWith('LRA/') || ctxRef.startsWith('RCR/') || ctxRef.startsWith('RCOL/') || ctxRef.startsWith('RSBM/')) {
+        return 'license-renewal';
+      }
     }
     return 'other';
   }
@@ -2494,14 +2496,15 @@ private initializeWalletContextAndLoadData(): void {
       return 0;
     }
     if (appType === 'new-license' || appType === 'license-renewal') {
-      const ctxAmount = Number(this.pendingWalletPaymentContext?.amount || 0);
+      const storedSec = this.isBrowser ? Number(sessionStorage.getItem('pendingNewLicenseSecurityFeeAmount') || 0) : 0;
       const secAmount = Number((this.pendingWalletPaymentContext as any)?.securityAmount || 0);
       if (secAmount > 0) return secAmount;
       if (this.pendingNewLicenseSecurityFeeAmount > 0) return this.pendingNewLicenseSecurityFeeAmount;
+      if (storedSec > 0) return storedSec;
       if (this.chainedNewLicenseSecurityAmount > 0) return this.chainedNewLicenseSecurityAmount;
+      const ctxAmount = Number(this.pendingWalletPaymentContext?.amount || 0);
       if (ctxAmount > 0 && this.pendingWalletPaymentContext?.tab === 'security_deposit') return ctxAmount;
-      if (this.pendingNewLicenseLicenseFeeAmount > 0) return this.pendingNewLicenseLicenseFeeAmount;
-      return ctxAmount > 0 ? ctxAmount : 0;
+      return 10000;
     }
     const ctxAmount = Number(this.pendingWalletPaymentContext?.amount || 0);
     return ctxAmount > 0 ? ctxAmount : 0;
