@@ -36,6 +36,8 @@ interface NewLicenseItem {
   establishmentName: string;
   submittedOn: string;
   paymentStatus: string;
+  isLicenseFeePaid?: boolean;
+  isSecurityFeePaid?: boolean;
   canView: boolean;
   canPayNow: boolean;
   currentStage: string;
@@ -558,6 +560,9 @@ export class NewLicenseDashboardComponent implements OnInit {
         const isApproved = Boolean(item?.is_approved ?? item?.isApproved ?? statusGroup === 'approved');
         const licenseNumber = this.deriveNewLicenseNaNumber(applicationId, item);
 
+        const isLicenseFeePaid = Boolean(item?.is_license_fee_paid ?? item?.isLicenseFeePaid ?? item?.is_fee_paid ?? item?.isFeePaid);
+        const isSecurityFeePaid = Boolean(item?.is_security_fee_paid ?? item?.isSecurityFeePaid ?? item?.is_security_deposit_paid ?? item?.isSecurityDepositPaid);
+
         return ({
           id: applicationId,
           applicationId,
@@ -568,6 +573,8 @@ export class NewLicenseDashboardComponent implements OnInit {
           establishmentName: String(item?.establishment_name || item?.establishmentName || 'N/A'),
           submittedOn,
           paymentStatus,
+          isLicenseFeePaid,
+          isSecurityFeePaid,
           canView,
           canPayNow,
           currentStageRaw,

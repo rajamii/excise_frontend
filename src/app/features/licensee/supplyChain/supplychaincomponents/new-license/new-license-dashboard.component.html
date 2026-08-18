@@ -119,6 +119,7 @@
             <th>Application ID</th>
             <th>Submitted On</th>
             <th>Payment</th>
+            <th>Fees Payment</th>
             <th>Applicant</th>
             <th>Establishment</th>
             <th>Current Stage</th>
@@ -145,6 +146,26 @@
               >
                 {{ row.paymentStatus }}
               </span>
+            </td>
+            <td>
+              <div class="d-flex flex-column gap-1">
+                <span
+                  class="badge px-2 py-1"
+                  [ngClass]="row.isLicenseFeePaid ? 'bg-success text-white' : 'bg-danger text-white'"
+                  style="font-size: 0.75rem; font-weight: 600;"
+                >
+                  <i class="bi me-1" [ngClass]="row.isLicenseFeePaid ? 'bi-check-circle-fill' : 'bi-x-circle-fill'"></i>
+                  License Fee: {{ row.isLicenseFeePaid ? 'Paid' : 'Unpaid' }}
+                </span>
+                <span
+                  class="badge px-2 py-1"
+                  [ngClass]="row.isSecurityFeePaid ? 'bg-success text-white' : 'bg-danger text-white'"
+                  style="font-size: 0.75rem; font-weight: 600;"
+                >
+                  <i class="bi me-1" [ngClass]="row.isSecurityFeePaid ? 'bi-check-circle-fill' : 'bi-x-circle-fill'"></i>
+                  Security Deposit: {{ row.isSecurityFeePaid ? 'Paid' : 'Unpaid' }}
+                </span>
+              </div>
             </td>
              <td>{{ row.applicantName }}</td>
              <td>{{ row.establishmentName }}</td>
