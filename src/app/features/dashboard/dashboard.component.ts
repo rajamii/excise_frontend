@@ -523,6 +523,18 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
+    // District User only handles: New License, License Renewal, Dry Day Permit, Salesman/Barman Registration
+    if (roleId === 4) {
+      this.availableChartModules = [
+        { value: 'all', label: 'All Modules' },
+        { value: 'newLicense', label: 'New Licenses' },
+        { value: 'renewal', label: 'Renewals' },
+        { value: 'specialPermit', label: 'Dry Day Permits' },
+        { value: 'salesman', label: 'Salesman / Barman' }
+      ];
+      return;
+    }
+
     // Joint Commissioner only handles license-related modules (no supply chain)
     if (isJointCommissioner) {
       this.availableChartModules = [
@@ -1081,6 +1093,21 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       .pipe(finalize(() => { this.isChartLoading = false; }))
       .subscribe({
         next: (res) => {
+          const isDistrictUser = Number(this.currentUser?.roleId || 0) === 4;
+          if (isDistrictUser) {
+            res.company = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
+            res.companyCollaboration = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
+            res.labelRegistration = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
+            const allowed = [res.newLicense, res.renewal, res.salesman, res.specialPermit];
+            res.total = {
+              applied: allowed.reduce((sum, item) => sum + (item?.applied || 0), 0),
+              pending: allowed.reduce((sum, item) => sum + (item?.pending || 0), 0),
+              objection: allowed.reduce((sum, item) => sum + (item?.objection || 0), 0),
+              approved: allowed.reduce((sum, item) => sum + (item?.approved || 0), 0),
+              rejected: allowed.reduce((sum, item) => sum + (item?.rejected || 0), 0),
+              awaitingPayment: allowed.reduce((sum, item) => sum + (item?.awaitingPayment || (item as any)?.awaiting_payment || 0), 0)
+            } as any;
+          }
           this.detailedCounts = {
             total: res.total,
             newLicense: res.newLicense,
@@ -2770,6 +2797,21 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       .pipe(finalize(() => { this.isLoading = false; }))
       .subscribe({
         next: (res) => {
+          const isDistrictUser = Number(this.currentUser?.roleId || 0) === 4;
+          if (isDistrictUser) {
+            res.company = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
+            res.companyCollaboration = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
+            res.labelRegistration = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
+            const allowed = [res.newLicense, res.renewal, res.salesman, res.specialPermit];
+            res.total = {
+              applied: allowed.reduce((sum, item) => sum + (item?.applied || 0), 0),
+              pending: allowed.reduce((sum, item) => sum + (item?.pending || 0), 0),
+              objection: allowed.reduce((sum, item) => sum + (item?.objection || 0), 0),
+              approved: allowed.reduce((sum, item) => sum + (item?.approved || 0), 0),
+              rejected: allowed.reduce((sum, item) => sum + (item?.rejected || 0), 0),
+              awaitingPayment: allowed.reduce((sum, item) => sum + (item?.awaitingPayment || (item as any)?.awaiting_payment || 0), 0)
+            } as any;
+          }
           this.detailedCounts = {
             total: res.total,
             newLicense: res.newLicense,
