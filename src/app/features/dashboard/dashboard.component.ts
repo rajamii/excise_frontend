@@ -877,7 +877,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         {
           const items: any[] = Array.isArray(can) ? can : [];
           const pending = (isCommissioner || isPermitSection)
-            ? this.sidebarPendingBadgeService.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'APPROVEPAYSLIP', 'REJECTPAYSLIP'])
+            ? this.sidebarPendingBadgeService.countActionableWithStatusFallback(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'APPROVEPAYSLIP', 'REJECTPAYSLIP'])
             : this.sidebarPendingBadgeService.countLicenseePendingItems(items);
           const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
           const rejected = items.filter(x => { const s = String(x.status||'').toLowerCase(); return s.includes('rejected') || s.includes('cancelled'); }).length;
