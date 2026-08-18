@@ -820,7 +820,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             return combined.includes('rejected') || combined.includes('cancelled');
           }).length;
           this.supplyChainModuleCounts['requisition'] = {
-            applied: items.length,
+            applied: (isCommissioner || isPermitSection) ? (pending + approved + rejected) : items.length,
             pending: pending + awaitingPayment,
             approved,
             objection: 0,
@@ -842,7 +842,13 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             : this.sidebarPendingBadgeService.countLicenseePendingItems(items);
           const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
           const rejected = items.filter(x => { const s = String(x.status||'').toLowerCase(); return s.includes('rejected') || s.includes('cancelled'); }).length;
-          this.supplyChainModuleCounts['revalidation'] = { applied: items.length, pending, approved, objection: 0, rejected };
+          this.supplyChainModuleCounts['revalidation'] = { 
+            applied: (isCommissioner || isPermitSection) ? (pending + approved + rejected) : items.length, 
+            pending, 
+            approved, 
+            objection: 0, 
+            rejected 
+          };
           this.supplyChainPendingCounts['revalidation'] = pending;
         }
 
@@ -854,7 +860,13 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             : this.sidebarPendingBadgeService.countLicenseePendingItems(items);
           const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
           const rejected = items.filter(x => { const s = String(x.status||'').toLowerCase(); return s.includes('rejected') || s.includes('cancelled'); }).length;
-          this.supplyChainModuleCounts['cancellation'] = { applied: items.length, pending, approved, objection: 0, rejected };
+          this.supplyChainModuleCounts['cancellation'] = { 
+            applied: (isCommissioner || isPermitSection) ? (pending + approved + rejected) : items.length, 
+            pending, 
+            approved, 
+            objection: 0, 
+            rejected 
+          };
           this.supplyChainPendingCounts['cancellation'] = pending;
         }
 
@@ -917,7 +929,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
               }).length;
           const rejected = items.filter(x => { const s = String(x.status||'').toLowerCase(); return s.includes('rejected') || s.includes('cancelled'); }).length;
           this.supplyChainModuleCounts['hologram'] = {
-            applied: items.length,
+            applied: (isCommissioner || isITCell) ? (pending + approved + rejected) : items.length,
             pending: pending + awaitingPayment,
             approved,
             objection: 0,
