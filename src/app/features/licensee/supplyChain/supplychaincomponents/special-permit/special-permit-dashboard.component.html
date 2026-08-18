@@ -92,7 +92,7 @@
               <th>Sl. No.</th>
               <th>Application ID</th>
               <th>Submitted On</th>
-              <th>Applicant</th>
+              <th *ngIf="!isLicenseeUser">Applicant</th>
               <th>Establishment</th>
               <th>Current Stage</th>
               <th>Action</th>
@@ -103,7 +103,7 @@
               <td>{{ (pageIndex * pageSize) + i + 1 }}</td>
               <td class="fw-semibold">{{ row.applicationId }}</td>
               <td>{{ row.submittedOn }}</td>
-              <td>{{ row.applicantName }}</td>
+              <td *ngIf="!isLicenseeUser">{{ row.applicantName }}</td>
               <td>{{ row.establishmentName }}</td>
               <td>
                 <span class="status-badge {{ row.statusGroup }}">

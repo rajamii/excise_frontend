@@ -120,7 +120,7 @@
             <th>Submitted On</th>
             <th>Payment</th>
             <th>Fees Payment</th>
-            <th>Applicant</th>
+            <th *ngIf="!isLicenseeUser()">Applicant</th>
             <th>Establishment</th>
             <th>Current Stage</th>
             <th>Action</th>
@@ -169,7 +169,7 @@
                 </div>
               </div>
             </td>
-             <td>{{ row.applicantName }}</td>
+             <td *ngIf="!isLicenseeUser()">{{ row.applicantName }}</td>
              <td>{{ row.establishmentName }}</td>
               <td>
                 <span class="status-badge {{ row.statusGroup }}">
