@@ -510,7 +510,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   public updateAvailableChartModules(): void {
-    const roleId = Number(this.currentUser?.roleId || 0);
+    const roleId = this.getCurrentRoleId();
     const isITCell = roleId === 6;
     const isJointCommissioner = roleId === 9;
 
@@ -519,6 +519,17 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       this.availableChartModules = [
         { value: 'all', label: 'All Modules' },
         { value: 'hologram', label: 'Hologram Procurement' }
+      ];
+      return;
+    }
+
+    // Site Inquiry Officer only handles: New License, License Renewal, Salesman/Barman
+    if (roleId === 8) {
+      this.availableChartModules = [
+        { value: 'all', label: 'All Modules' },
+        { value: 'newLicense', label: 'New Licenses' },
+        { value: 'renewal', label: 'Renewals' },
+        { value: 'salesman', label: 'Salesman / Barman' }
       ];
       return;
     }
@@ -1093,12 +1104,38 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       .pipe(finalize(() => { this.isChartLoading = false; }))
       .subscribe({
         next: (res) => {
-          const isDistrictUser = Number(this.currentUser?.roleId || 0) === 4;
+          const roleId = this.getCurrentRoleId();
+          const isDistrictUser = roleId === 4;
+          const isSiteInquiryOfficer = roleId === 8;
           if (isDistrictUser) {
             res.company = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
             res.companyCollaboration = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
             res.labelRegistration = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
             const allowed = [res.newLicense, res.renewal, res.salesman, res.specialPermit];
+            res.total = {
+              applied: allowed.reduce((sum, item) => sum + (item?.applied || 0), 0),
+              pending: allowed.reduce((sum, item) => sum + (item?.pending || 0), 0),
+              objection: allowed.reduce((sum, item) => sum + (item?.objection || 0), 0),
+              approved: allowed.reduce((sum, item) => sum + (item?.approved || 0), 0),
+              rejected: allowed.reduce((sum, item) => sum + (item?.rejected || 0), 0),
+              awaitingPayment: allowed.reduce((sum, item) => sum + (item?.awaitingPayment || (item as any)?.awaiting_payment || 0), 0)
+            } as any;
+          }
+          if (isSiteInquiryOfficer) {
+            res.company = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
+            res.companyCollaboration = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
+            res.specialPermit = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
+            res.labelRegistration = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
+            // Officer APIs don't return `applied`, so compute it from pending+approved+rejected
+            const fixApplied = (item: any) => {
+              if (!item) return { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 };
+              const a = (item.applied || 0) || ((item.pending || 0) + (item.approved || 0) + (item.rejected || 0) + (item.objection || 0));
+              return { ...item, applied: a };
+            };
+            res.newLicense = fixApplied(res.newLicense);
+            res.renewal = fixApplied(res.renewal);
+            res.salesman = fixApplied(res.salesman);
+            const allowed = [res.newLicense, res.renewal, res.salesman];
             res.total = {
               applied: allowed.reduce((sum, item) => sum + (item?.applied || 0), 0),
               pending: allowed.reduce((sum, item) => sum + (item?.pending || 0), 0),
@@ -2539,19 +2576,24 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     return modules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.objection || 0), 0);
   }
 
-  isOicUser(): boolean {
-    const roleId = Number(
+  getCurrentRoleId(): number {
+    return Number(
       this.currentUser?.roleId ||
       this.currentUser?.role?.id ||
       (this.accountService?.getCurrentUser() as any)?.roleId ||
       (this.accountService?.getCurrentUser() as any)?.role?.id ||
       0
     );
+  }
+
+  isOicUser(): boolean {
+    const roleId = this.getCurrentRoleId();
     if (roleId === 7) return true;
+    if (roleId === 8 || roleId === 4) return false;
 
     if (typeof window !== 'undefined') {
       const storedRole = String(localStorage.getItem('role') || sessionStorage.getItem('role') || '').trim().toLowerCase();
-      if (storedRole === '7' || storedRole.includes('officerincharge') || storedRole.includes('oic')) return true;
+      if (storedRole === '7' || storedRole.includes('officerincharge') || storedRole === 'oic') return true;
 
       const sources = [
         sessionStorage.getItem('currentUser'),
@@ -2565,9 +2607,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           const parsed = JSON.parse(raw);
           const rId = Number(parsed?.roleId || parsed?.role?.id || parsed?.user?.roleId || parsed?.user?.role?.id || 0);
           if (rId === 7) return true;
+          if (rId === 8 || rId === 4) return false;
           const rName = String(parsed?.role?.name || parsed?.role?.displayName || parsed?.role_name || parsed?.user?.role?.name || '').toLowerCase();
           const norm = rName.replace(/[^a-z0-9]/g, '');
-          if (norm.includes('officerincharge') || norm.includes('officer') || norm === 'oic' || norm === 'offcierincharge') return true;
+          if (norm.includes('officerincharge') || norm === 'oic' || norm === 'offcierincharge') return true;
         } catch {}
       }
     }
@@ -2578,7 +2621,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       ''
     ).toLowerCase();
     const normalized = roleName.replace(/[^a-z0-9]/g, '');
-    return normalized.includes('officerincharge') || normalized.includes('officer') || normalized === 'oic' || normalized === 'offcierincharge';
+    return normalized.includes('officerincharge') || normalized === 'oic' || normalized === 'offcierincharge';
   }
 
   private rawOicData = {
@@ -2797,12 +2840,38 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       .pipe(finalize(() => { this.isLoading = false; }))
       .subscribe({
         next: (res) => {
-          const isDistrictUser = Number(this.currentUser?.roleId || 0) === 4;
+          const roleId = this.getCurrentRoleId();
+          const isDistrictUser = roleId === 4;
+          const isSiteInquiryOfficer = roleId === 8;
           if (isDistrictUser) {
             res.company = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
             res.companyCollaboration = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
             res.labelRegistration = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
             const allowed = [res.newLicense, res.renewal, res.salesman, res.specialPermit];
+            res.total = {
+              applied: allowed.reduce((sum, item) => sum + (item?.applied || 0), 0),
+              pending: allowed.reduce((sum, item) => sum + (item?.pending || 0), 0),
+              objection: allowed.reduce((sum, item) => sum + (item?.objection || 0), 0),
+              approved: allowed.reduce((sum, item) => sum + (item?.approved || 0), 0),
+              rejected: allowed.reduce((sum, item) => sum + (item?.rejected || 0), 0),
+              awaitingPayment: allowed.reduce((sum, item) => sum + (item?.awaitingPayment || (item as any)?.awaiting_payment || 0), 0)
+            } as any;
+          }
+          if (isSiteInquiryOfficer) {
+            res.company = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
+            res.companyCollaboration = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
+            res.specialPermit = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
+            res.labelRegistration = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
+            // Officer APIs don't return `applied`, compute it from pending+approved+rejected
+            const fixApplied = (item: any) => {
+              if (!item) return { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 };
+              const a = (item.applied || 0) || ((item.pending || 0) + (item.approved || 0) + (item.rejected || 0) + (item.objection || 0));
+              return { ...item, applied: a };
+            };
+            res.newLicense = fixApplied(res.newLicense);
+            res.renewal = fixApplied(res.renewal);
+            res.salesman = fixApplied(res.salesman);
+            const allowed = [res.newLicense, res.renewal, res.salesman];
             res.total = {
               applied: allowed.reduce((sum, item) => sum + (item?.applied || 0), 0),
               pending: allowed.reduce((sum, item) => sum + (item?.pending || 0), 0),
