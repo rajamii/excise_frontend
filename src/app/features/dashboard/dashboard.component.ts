@@ -546,15 +546,13 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
-    // Joint Commissioner only handles license-related modules (no supply chain)
+    // Joint Commissioner only handles: New License, License Renewal, Salesman/Barman
     if (isJointCommissioner) {
       this.availableChartModules = [
         { value: 'all', label: 'All Modules' },
         { value: 'newLicense', label: 'New Licenses' },
         { value: 'renewal', label: 'Renewals' },
-        { value: 'salesman', label: 'Salesman / Barman' },
-        { value: 'company', label: 'Company Reg.' },
-        { value: 'company-collaboration', label: 'Company Collab.' }
+        { value: 'salesman', label: 'Salesman / Barman' }
       ];
       return;
     }
@@ -1106,7 +1104,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         next: (res) => {
           const roleId = this.getCurrentRoleId();
           const isDistrictUser = roleId === 4;
-          const isSiteInquiryOfficer = roleId === 8;
+          const isScopedOfficer = roleId === 8 || roleId === 9;
           if (isDistrictUser) {
             res.company = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
             res.companyCollaboration = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
@@ -1121,7 +1119,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
               awaitingPayment: allowed.reduce((sum, item) => sum + (item?.awaitingPayment || (item as any)?.awaiting_payment || 0), 0)
             } as any;
           }
-          if (isSiteInquiryOfficer) {
+          if (isScopedOfficer) {
             res.company = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
             res.companyCollaboration = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
             res.specialPermit = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
@@ -2525,6 +2523,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   getSupplyChainPendingTotal(): number {
+    const roleId = this.getCurrentRoleId();
+    if (roleId === 4 || roleId === 8 || roleId === 9) return 0;
     const isCommissioner = this.isCommissionerUser();
     return this.getSupplyChainPendingCount('requisition') +
            this.getSupplyChainPendingCount('revalidation') +
@@ -2534,6 +2534,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   getSupplyChainAwaitingPaymentTotal(): number {
+    const roleId = this.getCurrentRoleId();
+    if (roleId === 4 || roleId === 8 || roleId === 9) return 0;
     const isCommissioner = this.isCommissionerUser();
     if (isCommissioner) return 0;
     return (this.supplyChainModuleCounts['requisition']?.awaitingPayment || 0) +
@@ -2541,6 +2543,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   getSupplyChainAppliedTotal(): number {
+    const roleId = this.getCurrentRoleId();
+    if (roleId === 4 || roleId === 8 || roleId === 9) return 0;
     const isCommissioner = this.isCommissionerUser();
     const modules = ['requisition', 'revalidation', 'cancellation', 'hologram'];
     if (!isCommissioner) {
@@ -2550,6 +2554,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   getSupplyChainApprovedTotal(): number {
+    const roleId = this.getCurrentRoleId();
+    if (roleId === 4 || roleId === 8 || roleId === 9) return 0;
     const isCommissioner = this.isCommissionerUser();
     const modules = ['requisition', 'revalidation', 'cancellation', 'hologram'];
     if (!isCommissioner) {
@@ -2559,6 +2565,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   getSupplyChainRejectedTotal(): number {
+    const roleId = this.getCurrentRoleId();
+    if (roleId === 4 || roleId === 8 || roleId === 9) return 0;
     const isCommissioner = this.isCommissionerUser();
     const modules = ['requisition', 'revalidation', 'cancellation', 'hologram'];
     if (!isCommissioner) {
@@ -2568,6 +2576,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   getSupplyChainObjectionTotal(): number {
+    const roleId = this.getCurrentRoleId();
+    if (roleId === 4 || roleId === 8 || roleId === 9) return 0;
     const isCommissioner = this.isCommissionerUser();
     const modules = ['requisition', 'revalidation', 'cancellation', 'hologram'];
     if (!isCommissioner) {
@@ -2577,13 +2587,37 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   getCurrentRoleId(): number {
-    return Number(
+    const direct = Number(
       this.currentUser?.roleId ||
       this.currentUser?.role?.id ||
       (this.accountService?.getCurrentUser() as any)?.roleId ||
       (this.accountService?.getCurrentUser() as any)?.role?.id ||
       0
     );
+    if (direct > 0) return direct;
+
+    if (typeof window !== 'undefined') {
+      const storedRole = String(localStorage.getItem('role') || sessionStorage.getItem('role') || '').trim();
+      const parsedRole = Number(storedRole);
+      if (!isNaN(parsedRole) && parsedRole > 0) return parsedRole;
+
+      const sources = [
+        sessionStorage.getItem('currentUser'),
+        localStorage.getItem('currentUser'),
+        sessionStorage.getItem('user'),
+        localStorage.getItem('user')
+      ];
+      for (const raw of sources) {
+        if (!raw) continue;
+        try {
+          const parsed = JSON.parse(raw);
+          const rId = Number(parsed?.roleId || parsed?.role?.id || parsed?.user?.roleId || parsed?.user?.role?.id || 0);
+          if (rId > 0) return rId;
+        } catch {}
+      }
+    }
+
+    return 0;
   }
 
   isOicUser(): boolean {
@@ -2842,7 +2876,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         next: (res) => {
           const roleId = this.getCurrentRoleId();
           const isDistrictUser = roleId === 4;
-          const isSiteInquiryOfficer = roleId === 8;
+          const isScopedOfficer = roleId === 8 || roleId === 9;
           if (isDistrictUser) {
             res.company = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
             res.companyCollaboration = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
@@ -2857,7 +2891,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
               awaitingPayment: allowed.reduce((sum, item) => sum + (item?.awaitingPayment || (item as any)?.awaiting_payment || 0), 0)
             } as any;
           }
-          if (isSiteInquiryOfficer) {
+          if (isScopedOfficer) {
             res.company = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
             res.companyCollaboration = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
             res.specialPermit = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
@@ -3272,10 +3306,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   isCommissionerUser(): boolean {
-    const roleId = Number(this.currentUser?.roleId || 0);
-    if (roleId === 10) {
-      return true;
-    }
+    const roleId = this.getCurrentRoleId();
+    if (roleId === 10) return true;
+    if (roleId === 9) return false;
 
     const roleName = String(
       this.currentUser?.role?.name ||
@@ -3283,7 +3316,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       ''
     ).toLowerCase();
     const normalized = roleName.replace(/[^a-z0-9]/g, '');
-    return normalized.includes('commissioner');
+    return normalized === 'commissioner' || normalized === 'excisecommissioner';
   }
 
   canRenderWalletSection(): boolean {
