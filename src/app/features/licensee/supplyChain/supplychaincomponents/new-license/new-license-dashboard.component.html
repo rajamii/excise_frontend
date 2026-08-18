@@ -119,9 +119,9 @@
             <th>Application ID</th>
             <th>Submitted On</th>
             <th>Payment</th>
-            <th>Fees Payment</th>
-            <th *ngIf="!isLicenseeUser()">Applicant</th>
             <th>License Category</th>
+            <th *ngIf="!isLicenseeUser()">Applicant</th>
+            <th>Fees Payment</th>
             <th>Current Stage</th>
             <th>Action</th>
           </tr>
@@ -135,18 +135,27 @@
               <span *ngIf="row.siteEnquiryIsReverted" class="badge bg-warning text-dark ms-2">REVERTED</span>
             </td>
             <td>{{ row.submittedOn }}</td>
+            <!-- Payment -->
             <td>
-              <span
-                class="badge"
+              <span class="badge"
                 [ngClass]="{
                   'bg-success': row.paymentStatus === 'Successful',
                   'bg-danger': row.paymentStatus === 'Failed',
                   'bg-warning text-dark': row.paymentStatus === 'Pending'
-                }"
-              >
+                }">
                 {{ row.paymentStatus }}
               </span>
             </td>
+            <!-- License Category -->
+            <td>
+              <div class="fw-semibold text-dark" style="font-size: 0.88rem;">{{ row.licenseCategoryName }}</div>
+              <small *ngIf="row.licenseSubCategoryName" class="text-muted d-block mt-1" style="font-size: 0.78rem;">
+                - {{ row.licenseSubCategoryName }}
+              </small>
+            </td>
+            <!-- Applicant (admin only) -->
+            <td *ngIf="!isLicenseeUser()">{{ row.applicantName }}</td>
+            <!-- Fees Payment -->
             <td>
               <div class="fee-status-group">
                 <div class="fee-status-item" [class.fee-status-item--paid]="row.isLicenseFeePaid" [class.fee-status-item--unpaid]="!row.isLicenseFeePaid">
@@ -169,29 +178,21 @@
                 </div>
               </div>
             </td>
-             <td *ngIf="!isLicenseeUser()">{{ row.applicantName }}</td>
-             <td>
-               <div class="fw-semibold text-dark" style="font-size: 0.88rem;">{{ row.licenseCategoryName }}</div>
-               <small *ngIf="row.licenseSubCategoryName" class="text-muted d-block mt-1" style="font-size: 0.78rem;">
-                 - {{ row.licenseSubCategoryName }}
-               </small>
-             </td>
-              <td>
-                <span class="status-badge {{ row.statusGroup }}">
-                  {{ row.currentStage }}
+            <!-- Current Stage -->
+            <td>
+              <span class="status-badge {{ row.statusGroup }}">
+                {{ row.currentStage }}
+              </span>
+              <span *ngIf="isLicenseeUser() && row.statusGroup === 'objection'" class="badge bg-warning text-dark ms-2">
+                ACTION REQUIRED
+              </span>
+              <ng-container *ngIf="!isLicenseeUser() && (row.updatedObjectionFields?.length || row.hasObjectionUpdate)">
+                <span class="badge bg-info text-dark ms-2"
+                  [title]="row.updatedObjectionFields?.length ? ('Updated fields: ' + (row.updatedObjectionFields ?? []).join(', ')) : 'Updated'">
+                  UPDATED
                 </span>
-                <span *ngIf="isLicenseeUser() && row.statusGroup === 'objection'" class="badge bg-warning text-dark ms-2">
-                  ACTION REQUIRED
-                </span>
-                <ng-container *ngIf="!isLicenseeUser() && (row.updatedObjectionFields?.length || row.hasObjectionUpdate)">
-                  <span
-                    class="badge bg-info text-dark ms-2"
-                    [title]="row.updatedObjectionFields?.length ? ('Updated fields: ' + (row.updatedObjectionFields ?? []).join(', ')) : 'Updated'"
-                  >
-                    UPDATED
-                  </span>
-                </ng-container>
-                </td>
+              </ng-container>
+            </td>
               <td>
                 <button *ngIf="row.canView" class="btn btn-link p-0 action-eye me-2" title="View Details" (click)="viewApplication(row)">
                   <i class="bi bi-eye-fill"></i>
