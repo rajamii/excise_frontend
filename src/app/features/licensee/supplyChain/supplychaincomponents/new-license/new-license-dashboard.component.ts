@@ -34,6 +34,8 @@ interface NewLicenseItem {
   licenseNumber?: string;
   applicantName: string;
   establishmentName: string;
+  licenseCategoryName: string;
+  licenseSubCategoryName: string;
   submittedOn: string;
   paymentStatus: string;
   isLicenseFeePaid?: boolean;
@@ -563,6 +565,24 @@ export class NewLicenseDashboardComponent implements OnInit {
         const isLicenseFeePaid = Boolean(item?.is_license_fee_paid ?? item?.isLicenseFeePaid ?? item?.is_fee_paid ?? item?.isFeePaid);
         const isSecurityFeePaid = Boolean(item?.is_security_fee_paid ?? item?.isSecurityFeePaid ?? item?.is_security_deposit_paid ?? item?.isSecurityDepositPaid);
 
+        const categoryName = String(
+          item?.license_category_name ||
+          item?.licenseCategoryName ||
+          item?.license_category?.name ||
+          item?.license_category ||
+          item?.license_type_name ||
+          item?.licenseTypeName ||
+          'N/A'
+        ).trim();
+
+        const subCategoryName = String(
+          item?.license_sub_category_name ||
+          item?.licenseSubCategoryName ||
+          item?.license_sub_category?.name ||
+          item?.license_sub_category ||
+          ''
+        ).trim();
+
         return ({
           id: applicationId,
           applicationId,
@@ -571,6 +591,8 @@ export class NewLicenseDashboardComponent implements OnInit {
           licenseNumber,
           applicantName: this.getApplicantName(item),
           establishmentName: String(item?.establishment_name || item?.establishmentName || 'N/A'),
+          licenseCategoryName: categoryName,
+          licenseSubCategoryName: subCategoryName,
           submittedOn,
           paymentStatus,
           isLicenseFeePaid,

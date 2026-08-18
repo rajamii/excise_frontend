@@ -92,6 +92,7 @@
             <th>Submitted On</th>
             <th *ngIf="!isLicenseeUser()">Applicant</th>
             <th>Old License</th>
+            <th>License Category</th>
             <th>Current Stage</th>
             <th>Action</th>
           </tr>
@@ -103,6 +104,12 @@
             <td>{{ row.submittedOn }}</td>
             <td *ngIf="!isLicenseeUser()">{{ row.applicantName }}</td>
             <td>{{ row.oldLicenseId }}</td>
+            <td>
+              <div class="fw-semibold text-dark" style="font-size: 0.88rem;">{{ row.licenseCategoryName }}</div>
+              <small *ngIf="row.licenseSubCategoryName" class="text-muted d-block mt-1" style="font-size: 0.78rem;">
+                - {{ row.licenseSubCategoryName }}
+              </small>
+            </td>
             <td>
               <span class="status-badge {{ row.statusGroup }}">
                 {{ row.currentStage }}

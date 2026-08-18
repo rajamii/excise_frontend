@@ -22,6 +22,8 @@ interface RenewalItem {
   applicationId: string;
   applicantName: string;
   oldLicenseId: string;
+  licenseCategoryName: string;
+  licenseSubCategoryName: string;
   submittedOn: string;
   currentStage: string;
   currentStageRaw: string;
@@ -206,11 +208,31 @@ export class LicenseRenewalDashboardComponent implements OnInit {
           finalStatusGroup = 'awaiting-payment';
         }
 
+        const categoryName = String(
+          raw?.license_category_name ||
+          raw?.licenseCategoryName ||
+          raw?.license_category?.name ||
+          raw?.license_category ||
+          raw?.license_type_name ||
+          raw?.licenseTypeName ||
+          '-'
+        ).trim();
+
+        const subCategoryName = String(
+          raw?.license_sub_category_name ||
+          raw?.licenseSubCategoryName ||
+          raw?.license_sub_category?.name ||
+          raw?.license_sub_category ||
+          ''
+        ).trim();
+
         output.push({
           id: appId,
           applicationId: appId,
           applicantName: String(raw?.applicant_name || raw?.applicantName || '').trim() || '-',
           oldLicenseId: String(raw?.old_license_id || raw?.oldLicenseId || '').trim() || '-',
+          licenseCategoryName: categoryName,
+          licenseSubCategoryName: subCategoryName,
           submittedOn: this.formatDate(raw?.submitted_on || raw?.submittedOn || raw?.submitted_at || raw?.submittedAt || raw?.created_at || raw?.createdAt || raw?.updated_at || raw?.updatedAt),
           currentStage: this.computeCurrentStageLabel(finalStatusGroup, currentStageRaw),
           currentStageRaw: currentStageRaw || '-',
