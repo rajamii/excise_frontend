@@ -42,13 +42,21 @@
               <i class="bi bi-bar-chart me-2"></i>
               Hologram Quantity Breakdown
             </h6>
+
+            <!-- Yellow Warning Alert for Lakhs Entry -->
+            <div class="alert alert-warning mb-3 py-2 px-3 small d-flex align-items-center" *ngIf="isEditingQuantity">
+              <i class="bi bi-exclamation-triangle-fill me-2 fs-5 text-warning"></i>
+              <div>
+                <strong>Please enter quantities in Lakhs only.</strong> (e.g. Enter <code>2</code> for 200,000 / 2 Lakhs, <code>0.5</code> for 50,000 / 0.5 Lakhs, <code>3</code> for 300,000 / 3 Lakhs).
+              </div>
+            </div>
             
             <div class="table-responsive">
               <table class="table table-bordered">
                 <thead>
                   <tr>
                     <th class="series-header">Series Type</th>
-                    <th class="quantity-header text-center">Quantity (Pieces)</th>
+                    <th class="quantity-header text-center">Quantity {{ isEditingQuantity ? '(in Lakhs)' : '(Pieces)' }}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -58,6 +66,12 @@
                       <ng-container *ngIf="isEditingQuantity; else localView">
                         <input type="number" class="form-control form-control-sm text-center" 
                                [(ngModel)]="editedLocalQty" min="0">
+                        <div class="text-muted small mt-1" *ngIf="editedLocalQty < 1000">
+                          = {{ (editedLocalQty * 100000) | number:'1.0-0' }} pieces
+                        </div>
+                        <div class="text-danger small mt-1" *ngIf="editedLocalQty >= 1000">
+                          Enter in Lakhs (e.g. 2, not 200000)
+                        </div>
                       </ng-container>
                       <ng-template #localView>
                         {{ application.localQtyLakh | number:'1.0-0' }}
@@ -70,6 +84,12 @@
                       <ng-container *ngIf="isEditingQuantity; else exportView">
                         <input type="number" class="form-control form-control-sm text-center" 
                                [(ngModel)]="editedExportQty" min="0">
+                        <div class="text-muted small mt-1" *ngIf="editedExportQty < 1000">
+                          = {{ (editedExportQty * 100000) | number:'1.0-0' }} pieces
+                        </div>
+                        <div class="text-danger small mt-1" *ngIf="editedExportQty >= 1000">
+                          Enter in Lakhs (e.g. 2, not 200000)
+                        </div>
                       </ng-container>
                       <ng-template #exportView>
                         {{ application.exportQtyLakh | number:'1.0-0' }}
@@ -82,6 +102,12 @@
                       <ng-container *ngIf="isEditingQuantity; else defenceView">
                         <input type="number" class="form-control form-control-sm text-center" 
                                [(ngModel)]="editedDefenceQty" min="0">
+                        <div class="text-muted small mt-1" *ngIf="editedDefenceQty < 1000">
+                          = {{ (editedDefenceQty * 100000) | number:'1.0-0' }} pieces
+                        </div>
+                        <div class="text-danger small mt-1" *ngIf="editedDefenceQty >= 1000">
+                          Enter in Lakhs (e.g. 2, not 200000)
+                        </div>
                       </ng-container>
                       <ng-template #defenceView>
                         {{ application.defenceQtyLakh | number:'1.0-0' }}
@@ -93,7 +119,7 @@
                     <td class="quantity-value text-center">
                       <strong>
                         <ng-container *ngIf="isEditingQuantity; else totalView">
-                          {{ (editedLocalQty + editedExportQty + editedDefenceQty) | number:'1.0-0' }}
+                          {{ (editedLocalQty + editedExportQty + editedDefenceQty) * 100000 | number:'1.0-0' }} ({{ (editedLocalQty + editedExportQty + editedDefenceQty) | number:'1.1-2' }} Lakhs)
                         </ng-container>
                         <ng-template #totalView>
                           {{ application.totalQtyLakh | number:'1.0-0' }}

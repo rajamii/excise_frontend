@@ -70,10 +70,10 @@ export class HologramDetailsViewComponent {
     this.originalExportQty = this.application.exportQtyLakh || 0;
     this.originalDefenceQty = this.application.defenceQtyLakh || 0;
     
-    // Set editable values
-    this.editedLocalQty = this.originalLocalQty;
-    this.editedExportQty = this.originalExportQty;
-    this.editedDefenceQty = this.originalDefenceQty;
+    // Set editable values (convert to Lakhs)
+    this.editedLocalQty = this.originalLocalQty / 100000;
+    this.editedExportQty = this.originalExportQty / 100000;
+    this.editedDefenceQty = this.originalDefenceQty / 100000;
   }
   
   // Cancel edit mode
@@ -90,12 +90,17 @@ export class HologramDetailsViewComponent {
       alert('Error: Application ID not found. Cannot update quantities.');
       return;
     }
+
+    // Convert edited Lakhs values back to absolute pieces for comparison and API payload
+    const newLocalQty = this.editedLocalQty * 100000;
+    const newExportQty = this.editedExportQty * 100000;
+    const newDefenceQty = this.editedDefenceQty * 100000;
     
     // Check if any quantity changed
     const hasChanges = 
-      this.editedLocalQty !== this.originalLocalQty ||
-      this.editedExportQty !== this.originalExportQty ||
-      this.editedDefenceQty !== this.originalDefenceQty;
+      newLocalQty !== this.originalLocalQty ||
+      newExportQty !== this.originalExportQty ||
+      newDefenceQty !== this.originalDefenceQty;
     
     if (!hasChanges) {
       alert('No changes detected.');
@@ -108,23 +113,29 @@ export class HologramDetailsViewComponent {
       alert('Quantities cannot be negative.');
       return;
     }
+
+    // Enforce entry in lakhs (block absolute numbers like 100000)
+    if (this.editedLocalQty >= 1000 || this.editedExportQty >= 1000 || this.editedDefenceQty >= 1000) {
+      alert('Error: Please enter quantities in Lakhs only (e.g. 2 instead of 200,000).');
+      return;
+    }
     
-    // Call backend API to update quantities
+    // Call backend API to update quantities with absolute pieces
     this.hologramService.updateProcurementQuantities(
       Number(applicationId),
-      this.editedLocalQty,
-      this.editedExportQty,
-      this.editedDefenceQty
+      newLocalQty,
+      newExportQty,
+      newDefenceQty
     ).subscribe({
       next: (response) => {
         console.log('Quantities updated successfully:', response);
         
         // Update current modal data with response
         if (this.application) {
-          this.application.localQtyLakh = this.editedLocalQty;
-          this.application.exportQtyLakh = this.editedExportQty;
-          this.application.defenceQtyLakh = this.editedDefenceQty;
-          this.application.totalQtyLakh = this.editedLocalQty + this.editedExportQty + this.editedDefenceQty;
+          this.application.localQtyLakh = newLocalQty;
+          this.application.exportQtyLakh = newExportQty;
+          this.application.defenceQtyLakh = newDefenceQty;
+          this.application.totalQtyLakh = newLocalQty + newExportQty + newDefenceQty;
           
           // Update payment amount
           const newPaymentAmount = response.new_payment_amount || (this.application.totalQtyLakh * 0.15);
@@ -142,10 +153,10 @@ export class HologramDetailsViewComponent {
       error: (error) => {
         console.error('Error updating quantities:', error);
         alert('Failed to update quantities: ' + (error.error?.error || error.message || 'Unknown error'));
-        // Revert to original values
-        this.editedLocalQty = this.originalLocalQty;
-        this.editedExportQty = this.originalExportQty;
-        this.editedDefenceQty = this.originalDefenceQty;
+        // Revert to original Lakhs values
+        this.editedLocalQty = this.originalLocalQty / 100000;
+        this.editedExportQty = this.originalExportQty / 100000;
+        this.editedDefenceQty = this.originalDefenceQty / 100000;
       }
     });
   }
