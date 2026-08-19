@@ -381,7 +381,8 @@
             <table class="dp-table dp-table--brands">
               <thead>
                 <tr>
-                  <th>Brand / Size</th>
+                  <th>Brand Name</th>
+                  <th>Size / Package</th>
                   <th>Cases</th>
                   <th>EDP</th>
                   <th>Import Pass Fee</th>
@@ -397,11 +398,23 @@
               <tbody>
                 <tr *ngFor="let row of lineItemControls.controls; let i = index; trackBy: trackByIndex" [formGroup]="$any(row)">
                   <td>
-                    <mat-form-field appearance="outline" class="dp-brand-field">
-                      <mat-label>Brand</mat-label>
-                      <mat-select formControlName="brandKey" (selectionChange)="onBrandChange(i)">
-                        <mat-option *ngFor="let brand of brandMaster" [value]="getBrandKey(brand)">
-                          {{ getBrandLabel(brand) }}
+                    <mat-form-field appearance="outline" class="dp-brand-name-field">
+                      <mat-label>Select Brand</mat-label>
+                      <mat-select formControlName="selectedBrandName" (selectionChange)="onBrandNameChange(i)">
+                        <mat-option value="">Select Brand</mat-option>
+                        <mat-option *ngFor="let brandName of getUniqueBrandNames()" [value]="brandName">
+                          {{ brandName }}
+                        </mat-option>
+                      </mat-select>
+                    </mat-form-field>
+                  </td>
+                  <td>
+                    <mat-form-field appearance="outline" class="dp-size-field">
+                      <mat-label>Select Size</mat-label>
+                      <mat-select formControlName="brandKey" (selectionChange)="onSizeChange(i)">
+                        <mat-option value="">Select Size</mat-option>
+                        <mat-option *ngFor="let sizeOpt of getAvailableSizesForBrand(row.value.selectedBrandName)" [value]="getBrandKey(sizeOpt)">
+                          {{ getSizeLabel(sizeOpt) }}
                         </mat-option>
                       </mat-select>
                     </mat-form-field>

@@ -290,6 +290,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   addLineItem(): void {
     this.lineItems.push(this.fb.group({
+      selectedBrandName: ['', Validators.required],
       brandKey: ['', Validators.required],
       cases: [1, [Validators.required, Validators.min(1)]]
     }) as FormGroup);
@@ -304,12 +305,18 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.syncBrandStepValidity();
   }
 
-  onBrandChange(index: number): void {
+  onBrandNameChange(index: number): void {
+    const row = this.lineItems.at(index);
+    row.patchValue({ brandKey: '' }, { emitEvent: false });
+    this.syncBrandStepValidity();
+  }
+
+  onSizeChange(index: number): void {
     const row = this.lineItems.at(index);
     const value = row.value as any;
     const master = this.getBrandMasterByKey(value.brandKey);
     if (master) {
-      row.patchValue({ cases: value.cases || 1 }, { emitEvent: false });
+      row.patchValue({ selectedBrandName: master.brandName }, { emitEvent: false });
     }
     this.syncBrandStepValidity();
   }
@@ -481,6 +488,25 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return this.getLineAdditionalEd(index);
   }
 
+  getUniqueBrandNames(): string[] {
+    const names = new Set<string>();
+    (this.brandMaster || []).forEach((b) => {
+      if (b.brandName) names.add(b.brandName);
+    });
+    return Array.from(names).sort();
+  }
+
+  getAvailableSizesForBrand(brandName: string): DistributorBrandMaster[] {
+    if (!brandName) return [];
+    return (this.brandMaster || []).filter(
+      (b) => b.brandName?.toLowerCase() === brandName.toLowerCase()
+    );
+  }
+
+  getSizeLabel(option: DistributorBrandMaster): string {
+    return `${option.sizeMl} ml (${option.piecesPerCase || 0} pcs/case)`;
+  }
+
   getBrandLabel(option: DistributorBrandMaster): string {
     return `${option.brandName} | ${option.sizeMl} ml | ${option.piecesPerCase || 0} pcs/case`;
   }
@@ -591,8 +617,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           this.applications = applications || [];
           this.applyFilters();
           this.routeForm.controls.destination.setValue(premises?.destination || '', { emitEvent: false });
+          this.populateDefaultBrandRows();
           this.isLoading = false;
-          this.syncBrandStepValidity();
         },
         error: () => {
           this.isLoading = false;
@@ -725,9 +751,13 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     });
 
     this.reviewForm.reset({ declarationAccepted: false });
+    this.populateDefaultBrandRows();
+    this.loadApplicantDefaults();
+  }
+
+  populateDefaultBrandRows(): void {
     this.lineItems.clear();
     this.addLineItem();
-    this.loadApplicantDefaults();
   }
 
   private isBrandStepValid(): boolean {
@@ -737,9 +767,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
     return this.lineItems.controls.every((control) => {
       const value = control.value as any;
-      const hasBrand = !!this.getBrandMasterByKey(String(value.brandKey || ''));
+      const hasBrandName = !!value.selectedBrandName;
+      const hasBrandKey = !!this.getBrandMasterByKey(String(value.brandKey || ''));
       const cases = Number(value.cases || 0);
-      return hasBrand && cases > 0 && control.valid;
+      return hasBrandName && hasBrandKey && cases > 0 && control.valid;
     });
   }
 
