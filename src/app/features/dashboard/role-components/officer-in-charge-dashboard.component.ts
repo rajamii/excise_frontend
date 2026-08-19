@@ -1,4 +1,5 @@
-import { Component, OnInit, Input, inject } from '@angular/core';
+import { Component, OnInit, Input, inject, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -283,8 +284,26 @@ export class OfficerInChargeDashboardComponent implements OnInit {
 
   constructor() {}
 
+  private destroyRef = inject(DestroyRef);
+
   ngOnInit(): void {
     this.currentScopedLicenseId = this.resolveCurrentScopedLicenseId();
+    this.refreshDashboardCounts();
+
+    this.hologramService.requestUpdate$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.refreshDashboardCounts());
+
+    this.hologramService.dailyRegisterUpdate$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.refreshDashboardCounts());
+
+    this.sidebarPendingBadgeService.refreshNeeded$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.refreshDashboardCounts());
+  }
+
+  private refreshDashboardCounts(): void {
     setTimeout(() => {
       this.loadTransitApplications();
       this.loadHologramRequestsCounts();

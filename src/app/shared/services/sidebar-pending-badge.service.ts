@@ -32,7 +32,20 @@ export class SidebarPendingBadgeService {
     private enaRequisitionService: EnaRequisitionService,
     private supplyChainService: SupplyChainService,
     private hologramService: HologramDataService
-  ) {}
+  ) {
+    this.hologramService.requestUpdate$.subscribe(() => {
+      console.log('🔄 BADGE SERVICE: Received hologram request update notification, triggering sidebar refresh');
+      this.triggerRefresh();
+    });
+    this.hologramService.dailyRegisterUpdate$.subscribe(() => {
+      console.log('🔄 BADGE SERVICE: Received daily register update notification, triggering sidebar refresh');
+      this.triggerRefresh();
+    });
+    this.hologramService.arrivalUpdate$.subscribe(() => {
+      console.log('🔄 BADGE SERVICE: Received hologram arrival update notification, triggering sidebar refresh');
+      this.triggerRefresh();
+    });
+  }
 
   refresh(
     sections: string[],

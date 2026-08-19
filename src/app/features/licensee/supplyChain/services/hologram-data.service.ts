@@ -363,7 +363,10 @@ export class HologramDataService {
       target_stage: targetStage,
       remarks: remarks
     }).pipe(
-      tap(() => this.invalidateCache('requests:list'))
+      tap(() => {
+        this.invalidateCache('requests:list');
+        this.requestUpdateSubject.next();
+      })
     );
   }
 
