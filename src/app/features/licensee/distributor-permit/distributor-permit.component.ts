@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormArray, FormBuilder, FormGroup, FormsModule, Validators } from '@angular/forms';
-import { Subject, forkJoin, of, takeUntil } from 'rxjs';
+import { Subject, catchError, forkJoin, of, takeUntil } from 'rxjs';
 import Swal from 'sweetalert2';
 
 import { AccountService } from '../../../core/services/account.service';
@@ -604,10 +604,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.loadError = '';
 
     forkJoin({
-      suppliers: this.permitService.getSuppliers(),
-      brands: this.permitService.getBrandMaster(),
-      premises: this.permitService.getPremises(),
-      applications: this.permitService.listApplications()
+      suppliers: this.permitService.getSuppliers().pipe(catchError(() => of([] as DistributorSupplier[]))),
+      brands: this.permitService.getBrandMaster().pipe(catchError(() => of({ success: true, data: [] as DistributorBrandMaster[], total: 0 }))),
+      premises: this.permitService.getPremises().pipe(catchError(() => of({ destination: '' } as any))),
+      applications: this.permitService.listApplications().pipe(catchError(() => of([] as DistributorPermitApplication[])))
     })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
