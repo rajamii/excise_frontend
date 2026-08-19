@@ -2833,6 +2833,8 @@ export class HologramMonthlyReportComponent implements OnInit {
   ): number {
     const arrivalByMonth = new Map<string, number>();
     const arrivalsByMonthAndRef = new Map<string, Map<string, any[]>>();
+    const refsWithRolls = new Set<string>();
+
     const addArrivalItem = (mk: string, ref: string, item: any) => {
       if (!mk || !ref) return;
       if (!arrivalsByMonthAndRef.has(mk)) {
@@ -2858,7 +2860,11 @@ export class HologramMonthlyReportComponent implements OnInit {
       if (!this.matchesSelectedManufacturingUnit(roll)) {
         continue;
       }
-      const ref = this.normalizeReferenceNo(this.extractReferenceNo(roll) || `ROLL-${roll?.id || ''}`);
+      const rawRef = this.extractReferenceNo(roll);
+      const ref = this.normalizeReferenceNo(rawRef || `ROLL-${roll?.id || ''}`);
+      if (rawRef) {
+        refsWithRolls.add(this.normalizeReferenceNo(rawRef));
+      }
       addArrivalItem(rollMonthKey, ref, roll);
     }
 
@@ -2877,19 +2883,36 @@ export class HologramMonthlyReportComponent implements OnInit {
       if (!this.matchesSelectedManufacturingUnit(procurement)) {
         continue;
       }
+      const rawRef = this.extractReferenceNo(procurement);
+      const ref = this.normalizeReferenceNo(rawRef || `PROC-${procurement?.id || ''}`);
+
+      // If rolls already exist for this procurement reference, skip the procurement fallback to prevent double-counting!
+      if (rawRef && refsWithRolls.has(this.normalizeReferenceNo(rawRef))) {
+        continue;
+      }
+      const byRefForMonth = arrivalsByMonthAndRef.get(procurementMonthKey);
+      if (byRefForMonth && byRefForMonth.has(ref)) {
+        continue;
+      }
+
+      // Only use procurement fallback if it has actual arrived carton details
+      const cartonDetails = this.normalizeCartonDetails(procurement);
+      if (!cartonDetails || cartonDetails.length === 0) {
+        continue;
+      }
+
       const qty = this.getProcurementQtyForSelectedType(procurement);
       if (qty <= 0) {
         continue;
       }
       // Procurement fallback: keep it as an "arrival item" so totals derive from serial ranges
       // when carton details are available (or from qty otherwise).
-      const ref = this.normalizeReferenceNo(this.extractReferenceNo(procurement) || `PROC-${procurement?.id || ''}`);
       addArrivalItem(procurementMonthKey, ref, {
         ...procurement,
-        procurement_ref: this.extractReferenceNo(procurement),
+        procurement_ref: rawRef,
         total_count: qty,
         totalCount: qty,
-        carton_details: this.normalizeCartonDetails(procurement)
+        carton_details: cartonDetails
       });
     }
 
@@ -3381,7 +3404,7 @@ export class HologramMonthlyReportComponent implements OnInit {
     const toSerial = String(source?.to_serial || source?.toSerial || source?.to || '').trim();
     const rawQty = source?.quantity ?? source?.qty ?? source?.total_count ?? source?.totalCount ?? 0;
     const quantity = this.normalizeArrivalQuantity(fromSerial, toSerial, rawQty);
-    if (cartoonNumber || fromSerial || toSerial || quantity > 0) {
+    if ((cartoonNumber || fromSerial || toSerial) && quantity > 0) {
       ranges.push({ cartoonNumber, fromSerial, toSerial, quantity });
     }
 
