@@ -3052,15 +3052,12 @@ export class HologramMonthlyReportComponent implements OnInit {
       const effectiveCartonDetails =
         cartonDetailsFromProcurement.length > 0
           ? cartonDetailsFromProcurement
-          : (cartonDetailsFromOverview.length > 0
-              ? cartonDetailsFromOverview
-              : [{
-                  rollNumber: '',
-                  cartoonNumber: '',
-                  fromSerial: '-',
-                  toSerial: '-',
-                  quantity: qty
-                }]);
+          : cartonDetailsFromOverview;
+
+      // Only include procurements where OIC has updated arrival details (confirmed roll/carton details exist)!
+      if (!effectiveCartonDetails || effectiveCartonDetails.length === 0) {
+        continue;
+      }
 
       arrivals.push({
         id: procurement?.id || arrivals.length + 1,
