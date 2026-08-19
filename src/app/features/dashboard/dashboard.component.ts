@@ -1197,6 +1197,27 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           const roleId = this.getCurrentRoleId();
           const isDistrictUser = roleId === 4;
           const isScopedOfficer = roleId === 8 || roleId === 9;
+          if (this.isDistributorUser()) {
+            res.newLicense = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
+            res.renewal = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
+            res.specialPermit = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
+            
+            const allowed = [res.company, res.companyCollaboration, res.salesman, res.labelRegistration];
+            const getAppCount = (item: any) => {
+              if (!item) return 0;
+              if (item.applied != null && item.applied > 0) return item.applied;
+              return (item.pending || 0) + (item.approved || 0) + (item.objection || 0) + (item.rejected || 0);
+            };
+
+            res.total = {
+              applied: allowed.reduce((sum, item) => sum + getAppCount(item), 0),
+              pending: allowed.reduce((sum, item) => sum + (item?.pending || 0), 0),
+              objection: allowed.reduce((sum, item) => sum + (item?.objection || 0), 0),
+              approved: allowed.reduce((sum, item) => sum + (item?.approved || 0), 0),
+              rejected: allowed.reduce((sum, item) => sum + (item?.rejected || 0), 0),
+              awaitingPayment: allowed.reduce((sum, item) => sum + (item?.awaitingPayment || (item as any)?.awaiting_payment || 0), 0)
+            } as any;
+          }
           if (isDistrictUser) {
             res.company = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
             res.companyCollaboration = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
@@ -2660,7 +2681,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // If no specific section is selected, load dashboard stats
     if (!this.selectedSupplyChainSection) {
-      if (this.isLicenseeUser()) {
+      if (this.isDistributorUser()) {
+        this.loadDashboardStatsLight(forceRefresh);
+      } else if (this.isLicenseeUser()) {
         this.loadDashboardStats(forceRefresh);
       } else {
         this.loadDashboardStatsLight(forceRefresh);
@@ -2709,6 +2732,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   getSupplyChainAppliedTotal(): number {
     const roleId = this.getCurrentRoleId();
     if (roleId === 4 || roleId === 8 || roleId === 9) return 0;
+    if (this.isDistributorUser()) {
+      return (this.supplyChainModuleCounts['distributor-permit-requisition']?.applied || 0) +
+             (this.supplyChainModuleCounts['distributor-permit-revalidation']?.applied || 0) +
+             (this.supplyChainModuleCounts['distributor-permit-cancellation']?.applied || 0);
+    }
     const isCommissioner = this.isCommissionerUser();
     const modules = ['requisition', 'revalidation', 'cancellation', 'hologram'];
     if (!isCommissioner) {
@@ -2720,6 +2748,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   getSupplyChainApprovedTotal(): number {
     const roleId = this.getCurrentRoleId();
     if (roleId === 4 || roleId === 8 || roleId === 9) return 0;
+    if (this.isDistributorUser()) {
+      return (this.supplyChainModuleCounts['distributor-permit-requisition']?.approved || 0) +
+             (this.supplyChainModuleCounts['distributor-permit-revalidation']?.approved || 0) +
+             (this.supplyChainModuleCounts['distributor-permit-cancellation']?.approved || 0);
+    }
     const isCommissioner = this.isCommissionerUser();
     const modules = ['requisition', 'revalidation', 'cancellation', 'hologram'];
     if (!isCommissioner) {
@@ -2731,6 +2764,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   getSupplyChainRejectedTotal(): number {
     const roleId = this.getCurrentRoleId();
     if (roleId === 4 || roleId === 8 || roleId === 9) return 0;
+    if (this.isDistributorUser()) {
+      return (this.supplyChainModuleCounts['distributor-permit-requisition']?.rejected || 0) +
+             (this.supplyChainModuleCounts['distributor-permit-revalidation']?.rejected || 0) +
+             (this.supplyChainModuleCounts['distributor-permit-cancellation']?.rejected || 0);
+    }
     const isCommissioner = this.isCommissionerUser();
     const modules = ['requisition', 'revalidation', 'cancellation', 'hologram'];
     if (!isCommissioner) {
@@ -2742,6 +2780,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   getSupplyChainObjectionTotal(): number {
     const roleId = this.getCurrentRoleId();
     if (roleId === 4 || roleId === 8 || roleId === 9) return 0;
+    if (this.isDistributorUser()) {
+      return (this.supplyChainModuleCounts['distributor-permit-requisition']?.objection || 0) +
+             (this.supplyChainModuleCounts['distributor-permit-revalidation']?.objection || 0) +
+             (this.supplyChainModuleCounts['distributor-permit-cancellation']?.objection || 0);
+    }
     const isCommissioner = this.isCommissionerUser();
     const modules = ['requisition', 'revalidation', 'cancellation', 'hologram'];
     if (!isCommissioner) {
@@ -3026,13 +3069,34 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.isChartLoading = true;
 
     this.unifiedDashboardService
-      .getDetailedUnifiedDashboardCounts(this.dashboardConfig, forceRefresh)
+      .getDetailedUnifiedDashboardCounts(this.dashboardConfig, forceRefresh || this.isDistributorUser())
       .pipe(finalize(() => { this.isLoading = false; }))
       .subscribe({
         next: (res) => {
           const roleId = this.getCurrentRoleId();
           const isDistrictUser = roleId === 4;
           const isScopedOfficer = roleId === 8 || roleId === 9;
+          if (this.isDistributorUser()) {
+            res.newLicense = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
+            res.renewal = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
+            res.specialPermit = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
+            
+            const allowed = [res.company, res.companyCollaboration, res.salesman, res.labelRegistration];
+            const getAppCount = (item: any) => {
+              if (!item) return 0;
+              if (item.applied != null && item.applied > 0) return item.applied;
+              return (item.pending || 0) + (item.approved || 0) + (item.objection || 0) + (item.rejected || 0);
+            };
+
+            res.total = {
+              applied: allowed.reduce((sum, item) => sum + getAppCount(item), 0),
+              pending: allowed.reduce((sum, item) => sum + (item?.pending || 0), 0),
+              objection: allowed.reduce((sum, item) => sum + (item?.objection || 0), 0),
+              approved: allowed.reduce((sum, item) => sum + (item?.approved || 0), 0),
+              rejected: allowed.reduce((sum, item) => sum + (item?.rejected || 0), 0),
+              awaitingPayment: allowed.reduce((sum, item) => sum + (item?.awaitingPayment || (item as any)?.awaiting_payment || 0), 0)
+            } as any;
+          }
           if (isDistrictUser) {
             res.company = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
             res.companyCollaboration = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
@@ -3484,13 +3548,29 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   isLicenseeUser(): boolean {
-    return this.currentUser?.roleId === 2 || this.currentUser?.roleId === 16;
+    const roleId = this.getCurrentRoleId();
+    if (roleId === 2) return true;
+    if (roleId === 16) return false;
+    const user = this.currentUser || this.accountService?.getCurrentUser();
+    const roleName = String(
+      (user as any)?.role?.name ||
+      (user as any)?.role?.displayName ||
+      (user as any)?.role_name ||
+      ''
+    ).toLowerCase().replace(/[^a-z0-9]/g, '');
+    return (roleName === 'licensee' || roleName === 'licenseuser') && !roleName.includes('distributor');
   }
 
   isDistributorUser(): boolean {
+    const user = this.currentUser || this.accountService?.getCurrentUser();
+    const roleId = Number((user as any)?.roleId || (user as any)?.role?.id || this.getCurrentRoleId() || 0);
+    if (roleId === 16) return true;
+
     const roleName = String(
-      this.currentUser?.role?.name ||
-      this.currentUser?.role?.displayName ||
+      (user as any)?.role?.name ||
+      (user as any)?.role?.displayName ||
+      (user as any)?.role_name ||
+      (user as any)?.role ||
       ''
     ).toLowerCase();
     const normalized = roleName.replace(/[^a-z0-9]/g, '');
