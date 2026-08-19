@@ -16,39 +16,4 @@
       </button>
     </div>
   </div>
-
-  <nav class="imfl-tabs-bar">
-    <button
-      class="imfl-tab-btn"
-      [class.active]="activeTab === 'requisition'"
-      (click)="selectTab('requisition')"
-      type="button"
-    >
-      <mat-icon>assignment</mat-icon>
-      <span>IMFL Requisition</span>
-      <span class="imfl-tab-badge" *ngIf="pendingCounts['requisition']">{{ pendingCounts['requisition'] }}</span>
-    </button>
-
-    <button
-      class="imfl-tab-btn"
-      [class.active]="activeTab === 'revalidation'"
-      (click)="selectTab('revalidation')"
-      type="button"
-    >
-      <mat-icon>update</mat-icon>
-      <span>IMFL Revalidation</span>
-      <span class="imfl-tab-badge" *ngIf="pendingCounts['revalidation']">{{ pendingCounts['revalidation'] }}</span>
-    </button>
-
-    <button
-      class="imfl-tab-btn"
-      [class.active]="activeTab === 'cancellation'"
-      (click)="selectTab('cancellation')"
-      type="button"
-    >
-      <mat-icon>cancel</mat-icon>
-      <span>IMFL Cancellation</span>
-      <span class="imfl-tab-badge" *ngIf="pendingCounts['cancellation']">{{ pendingCounts['cancellation'] }}</span>
-    </button>
-  </nav>
 </div>
