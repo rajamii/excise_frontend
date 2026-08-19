@@ -399,7 +399,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return Number(this.pendingBadgeCounts?.[key] || 0);
   }
 
-  imflPermitExpanded = true;
+  imflPermitExpanded = false;
 
   navigateToImflPermitTab(tab: string): void {
     this.router.navigate(['/dashboard'], {
