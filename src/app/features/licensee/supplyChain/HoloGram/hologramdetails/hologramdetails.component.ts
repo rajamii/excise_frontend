@@ -406,14 +406,10 @@ export class HologramdetailsComponent implements OnInit {
 
   // Update arrival methods
   canUpdateRecord(record: HologramRecord): boolean {
-    if (!this.isPaymentCompleted(record)) {
-      return false;
-    }
     if (this.isArrivedStage(record)) {
       return false;
     }
-    const backendAllowsAssign = this.hasAllowedAction(record, 'assign_cartons');
-    return backendAllowsAssign || this.isPendingArrivalStage(record);
+    return this.isPaymentCompleted(record) || this.hasAllowedAction(record, 'assign_cartons');
   }
 
   private hasAllowedAction(record: HologramRecord, action: string): boolean {
@@ -425,11 +421,17 @@ export class HologramdetailsComponent implements OnInit {
   }
 
   isPendingArrivalStage(record: HologramRecord): boolean {
-    return this.hasAllowedAction(record, 'assign_cartons') && !this.hasRollDetails(record);
+    if (this.hasRollDetails(record)) {
+      return false;
+    }
+    return this.isPaymentCompleted(record) || this.hasAllowedAction(record, 'assign_cartons');
   }
 
   isPendingApprovalStage(record: HologramRecord): boolean {
-    return !record.isFinalStage && !this.hasAllowedAction(record, 'assign_cartons') && !this.hasRollDetails(record);
+    if (this.hasRollDetails(record) || this.isPaymentCompleted(record) || this.isPendingArrivalStage(record)) {
+      return false;
+    }
+    return !record.isFinalStage;
   }
 
   isArrivedStage(record: HologramRecord): boolean {
@@ -439,14 +441,8 @@ export class HologramdetailsComponent implements OnInit {
   // Check if payment has been COMPLETED for this hologram record
   // This is different from paymentSlipUploaded - payment must be actually made
   private isPaymentCompleted(record: HologramRecord): boolean {
-    // console.log(`🔍 Checking payment completion for ${record.ourRefNo} (${record.procurementType})`);
-
-    // Check in supply chain data if payment is completed
     if (record.supplyChainData) {
-      // console.log(`  - supplyChainData.paymentCompleted:`, record.supplyChainData.paymentCompleted);
-      // Check if paymentCompleted flag is set
       if (record.supplyChainData.paymentCompleted === true) {
-        // console.log(`  ✅ Payment completed (from supplyChainData)`);
         return true;
       }
 
@@ -460,39 +456,45 @@ export class HologramdetailsComponent implements OnInit {
       if (paymentStatus === 'completed' || paymentStatus === 'success' || paymentStatus === 'paid') {
         return true;
       }
+
+      const stageId = Number(
+        record.supplyChainData.current_stage ??
+        record.supplyChainData.currentStage ??
+        record.supplyChainData.stage_id ??
+        record.supplyChainData.stageId ??
+        record.stageId ??
+        -1
+      );
+      const statusToken = String(record.status || record.supplyChainData.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (stageId === 80 || statusToken.includes('paymentcompleted')) {
+        return true;
+      }
     }
+
+    if (record.stageId === 80) return true;
+    const recStatusToken = String(record.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (recStatusToken.includes('paymentcompleted')) return true;
 
     // Check local storage if available (browser only)
     if (typeof localStorage !== 'undefined') {
-      // Also check in hologramApplications storage
       const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
       const matchingApp = applications.find((app: any) =>
         app.refNo === record.ourRefNo &&
         app.procurementType === record.procurementType
       );
 
-      // console.log(`  - hologramApplications match:`, matchingApp ? 'found' : 'not found');
-
-      // ONLY check paymentCompleted flag (not paymentSlipUploaded)
       if (matchingApp && matchingApp.paymentCompleted === true) {
-        // console.log(`  ✅ Payment completed (from hologramApplications)`);
         return true;
       }
 
-      // Check in hologramRequests storage
       const requests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
       const matchingReq = requests.find((req: any) => req.refNo === record.ourRefNo);
 
-      // console.log(`  - hologramRequests match:`, matchingReq ? 'found' : 'not found');
-
-      // ONLY check paymentCompleted flag (not paymentSlipUploaded)
       if (matchingReq && matchingReq.paymentCompleted === true) {
-        // console.log(`  ✅ Payment completed (from hologramRequests)`);
         return true;
       }
     }
 
-    // console.log(`  ❌ Payment NOT completed - button should be DISABLED`);
     return false;
   }
 
@@ -512,7 +514,19 @@ export class HologramdetailsComponent implements OnInit {
       ''
     ).toLowerCase().trim();
 
-    return paymentStatus === 'completed' || paymentStatus === 'success' || paymentStatus === 'paid';
+    if (paymentStatus === 'completed' || paymentStatus === 'success' || paymentStatus === 'paid') {
+      return true;
+    }
+
+    const stageId = Number(
+      procurement.current_stage ??
+      procurement.currentStage ??
+      procurement.stage_id ??
+      procurement.stageId ??
+      -1
+    );
+    const statusToken = String(procurement.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    return stageId === 80 || statusToken.includes('paymentcompleted');
   }
 
   // Legacy: kept for backward compatibility with older UI paths.
