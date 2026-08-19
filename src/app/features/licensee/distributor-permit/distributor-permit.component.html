@@ -297,14 +297,7 @@
     </section>
 
     <section class="dp-form-view" *ngIf="isFormView">
-      <div class="dp-form-toolbar">
-        <button mat-stroked-button type="button" (click)="showList()">
-          <mat-icon>arrow_back</mat-icon>
-          Back to Applications
-        </button>
-      </div>
-
-      <mat-horizontal-stepper class="dp-stepper">
+      <mat-horizontal-stepper class="dp-stepper" #stepper>
         <mat-step>
           <ng-template matStepLabel>Applicant Details</ng-template>
           <form [formGroup]="applicantForm" class="dp-form-grid dp-form-grid--card">
