@@ -84,6 +84,7 @@ import { LabelRegistrationPrepareApplicationComponent } from '../licensee/label-
 import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-new-license.component';
 import { ApplySpecialPermitComponent } from '../licensee/special-permit/apply-special-permit.component';
 import { DistributorPermitComponent } from '../licensee/distributor-permit/distributor-permit.component';
+import { DistributorPermitService } from '../../core/services/distributor-permit.service';
 import { SingleWindowComponent } from '../single-window/single-window.component';
 import { SingleWindowDetailComponent } from '../single-window/single-window-detail.component';
 import { PaymentTransactionsComponent } from '../admin/payment-transactions/payment-transactions.component';
@@ -582,6 +583,23 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
+    // Distributor user handles: New Licenses, Renewals, IMFL Requisition, IMFL Revalidation, IMFL Cancellation, Company Reg, Company Collab, Salesman/Barman, Label Reg
+    if (this.isDistributorUser()) {
+      this.availableChartModules = [
+        { value: 'all', label: 'All Modules' },
+        { value: 'newLicense', label: 'New Licenses' },
+        { value: 'renewal', label: 'Renewals' },
+        { value: 'distributor-permit-requisition', label: 'IMFL Requisition' },
+        { value: 'distributor-permit-revalidation', label: 'IMFL Revalidation' },
+        { value: 'distributor-permit-cancellation', label: 'IMFL Cancellation' },
+        { value: 'company', label: 'Company Reg.' },
+        { value: 'company-collaboration', label: 'Company Collab.' },
+        { value: 'salesman', label: 'Salesman / Barman' },
+        { value: 'label-registration', label: 'Label Reg.' }
+      ];
+      return;
+    }
+
     const modules = [
       { value: 'all', label: 'All Modules' },
       { value: 'newLicense', label: 'New Licenses' },
@@ -595,6 +613,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const isAdmin = roleId === 1 || roleId === 3;
     // isCommissioner here means the full Commissioner (roleId 10), not Joint Commissioner
     const isCommissioner = roleId === 10;
+
+    if (isAdmin || isCommissioner || this.isDistributorUser()) {
+      modules.push(
+        { value: 'distributor-permit-requisition', label: 'IMFL Requisition' },
+        { value: 'distributor-permit-revalidation', label: 'IMFL Revalidation' },
+        { value: 'distributor-permit-cancellation', label: 'IMFL Cancellation' }
+      );
+    }
 
     // Distillery-only supply chain items: Requisition, Revalidation, Cancellation
     if (isAdmin || isCommissioner || this.showDistilleryMenus) {
@@ -767,12 +793,16 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       ? this.hologramService.getRequests().pipe(catchError(() => of([])))
       : of([] as any[]);
 
-    forkJoin({ req: req$, rev: rev$, can: can$, tra: tra$, hol: hol$, comp: comp$, collab: collab$, bld: bld$, holReq: holReq$ })
+    const dist$ = (this.isDistributorUser() || isAdminOrOfficer)
+      ? this.distributorPermitService.listApplications().pipe(catchError(() => of([] as any[])))
+      : of([] as any[]);
+
+    forkJoin({ req: req$, rev: rev$, can: can$, tra: tra$, hol: hol$, comp: comp$, collab: collab$, bld: bld$, holReq: holReq$, dist: dist$ })
       .pipe(
         takeUntil(this.destroy$),
         finalize(() => onComplete?.())
       )
-      .subscribe(({ req, rev, can, tra, hol, comp, collab, bld, holReq }) => {
+      .subscribe(({ req, rev, can, tra, hol, comp, collab, bld, holReq, dist }) => {
 
         // ── REQUISITIONS ──────────────────────────────────────────────────────
         {
@@ -1033,6 +1063,58 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           };
         }
 
+        // ── DISTRIBUTOR PERMIT ────────────────────────────────────────────────
+        {
+          const distApps: any[] = Array.isArray(dist) ? dist : [];
+          let reqApplied = distApps.length;
+          let reqPending = 0;
+          let reqApproved = 0;
+          let reqObjection = 0;
+          let reqRejected = 0;
+
+          distApps.forEach((app: any) => {
+            const st = String(app.status || app.current_stage || '').toLowerCase();
+            if (st.includes('approved')) {
+              reqApproved++;
+            } else if (st.includes('reject')) {
+              reqRejected++;
+            } else if (st.includes('object')) {
+              reqObjection++;
+            } else {
+              reqPending++;
+            }
+          });
+
+          const reqStats = {
+            applied: reqApplied,
+            pending: reqPending,
+            approved: reqApproved,
+            objection: reqObjection,
+            rejected: reqRejected
+          };
+
+          this.supplyChainModuleCounts['distributor-permit'] = reqStats;
+          this.supplyChainModuleCounts['distributor-permit-requisition'] = reqStats;
+          this.supplyChainModuleCounts['distributor-permit-revalidation'] = {
+            applied: 0,
+            pending: 0,
+            approved: 0,
+            objection: 0,
+            rejected: 0
+          };
+          this.supplyChainModuleCounts['distributor-permit-cancellation'] = {
+            applied: 0,
+            pending: 0,
+            approved: 0,
+            objection: 0,
+            rejected: 0
+          };
+
+          if (this.isDistributorUser()) {
+            this.supplyChainPendingCounts['distributor-permit'] = reqPending;
+          }
+        }
+
         this.supplyChainModuleStatsLoaded = true;
         this.updateSingleWindowChart();
       });
@@ -1228,6 +1310,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   public showDistilleryMenus = false;
   public showBreweryOrDistilleryMenus = false;
   public supplyChainService = inject(SupplyChainService);
+  public distributorPermitService = inject(DistributorPermitService);
   public enaRequisitionService = inject(EnaRequisitionService);
   private companyRegistrationService = inject(CompanyRegistrationService);
   private companyCollaborationService = inject(CompanyCollaborationService);
