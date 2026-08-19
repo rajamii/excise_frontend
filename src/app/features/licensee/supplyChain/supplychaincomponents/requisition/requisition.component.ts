@@ -282,11 +282,14 @@ export class RequisitionComponent implements OnInit, OnDestroy {
           const stageName = this.normalizeStageToken(row?.current_stage_name || row?.currentStageName);
           const statusCode = this.normalizeStageToken(row?.status_code || row?.statusCode);
           const combined = `${status} ${stageName} ${statusCode}`;
-          const isRejectedOrCancelled =
+          const isFinished =
             combined.includes('reject') ||
-            combined.includes('cancel');
+            combined.includes('cancel') ||
+            combined.includes('approv') ||
+            combined.includes('rv09');
 
-          if (!isRejectedOrCancelled) {
+          // Only unapproved/pending revalidations lock permits
+          if (!isFinished) {
             const permitsRaw = String(row?.detailsPermitsNumber || row?.details_permits_number || '');
             permitsRaw.split(',').forEach((p) => {
               const token = p.trim();

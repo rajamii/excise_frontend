@@ -154,7 +154,8 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
                 // Populate revalPermitNumbers
                 (revals || []).forEach((r: any) => {
                   const status = String(r.status || '').toLowerCase();
-                  if (status.includes('reject') || status.includes('invalid') || status.includes('expire')) {
+                  const statusCode = String(r.status_code || r.statusCode || '').toLowerCase();
+                  if (status.includes('reject') || status.includes('invalid') || status.includes('expire') || status.includes('approv') || statusCode === 'rv_09') {
                     return;
                   }
                   
