@@ -339,7 +339,10 @@ export class HologramDataService {
 
   // --- Request APIs ---
 
-  getRequests(): Observable<HologramRequest[]> {
+  getRequests(force = false): Observable<HologramRequest[]> {
+    if (force) {
+      this.invalidateCache('requests:list');
+    }
     return this.getCachedOrFetch('requests:list', () =>
       this.http.get<HologramRequest[]>(`${this.apiUrl}/request/`)
     );

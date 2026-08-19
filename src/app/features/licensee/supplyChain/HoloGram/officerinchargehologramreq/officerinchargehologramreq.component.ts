@@ -178,8 +178,8 @@ export class OfficerinchargehologramreqComponent implements OnInit {
             originalId: req.id,
             referenceNo: req.refNo || 'N/A',
             licenseId: String(req.license_id || req.licenseId || '').trim(),
-            submissionDate: req.submissionDate || new Date().toISOString(),
-            usageDate: req.usageDate || new Date().toISOString(),
+            submissionDate: req.submissionDate || req.submission_date || new Date().toISOString(),
+            usageDate: req.usageDate || req.usage_date || new Date().toISOString(),
             submittedBy: req.licenseeName || 'Unknown',
             updatedBy: req.production_updated_by || req.productionUpdatedBy || '',
             requestType: 'NEW_ALLOCATION',
@@ -268,6 +268,13 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
     // 1. Check Dynamic Actions (Backend)
     const actions = this.toUpperActions(request.allowedActions || request.allowed_actions || []);
+
+    // Prefer backend-driven actions when present, but be resilient:
+    // If actions array is empty (e.g. initial load before cache refresh), allow approval for PENDING requests on usage date
+    if (actions.length === 0) {
+      return true;
+    }
+
     return actions.includes('ISSUE') || actions.includes('APPROVE');
   }
 
