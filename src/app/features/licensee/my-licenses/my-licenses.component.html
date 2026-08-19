@@ -46,11 +46,11 @@
 
           <!-- Application ID Column -->
           <ng-container matColumnDef="applicationId">
-            <mat-header-cell *matHeaderCellDef class="app-id-col">License ID</mat-header-cell>
+            <mat-header-cell *matHeaderCellDef class="app-id-col">LICENSE ID</mat-header-cell>
             <mat-cell *matCellDef="let element" class="app-id-col">
               <div class="application-id">
                 <mat-icon class="id-icon">badge</mat-icon>
-                {{ element.applicationId }}
+                {{ getDisplayLicenseId(element) }}
               </div>
             </mat-cell>
           </ng-container>

@@ -1103,12 +1103,52 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     return '0 days';
   }
 
+  isTrulyApproved(app: UnifiedApplication): boolean {
+    if (!app) return false;
+
+    const raw = app.raw || {};
+    const stageId = Number(raw.current_stage_id || raw.currentStageId || raw.current_stage?.id || raw.currentStage?.id || raw.stage_id || raw.stageId || 0);
+    const stageName = String(app.currentStageName || app.currentStage || raw.current_stage_name || raw.currentStageName || raw.current_stage?.name || raw.status || '')
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]/g, '');
+
+    const isFinal = Boolean(raw.current_stage_is_final ?? raw.currentStageIsFinal ?? raw.current_stage?.is_final ?? raw.is_final ?? false);
+    const isApprovedFlag = app.isApproved ?? raw.is_approved ?? raw.isApproved ?? false;
+
+    // Explicit non-approved / intermediate stages that are not final license approvals
+    const unapprovedStageTokens = [
+      'applicantapplied',
+      'submitted',
+      'permitsection',
+      'commissioner',
+      'finalcommissionerreview',
+      'awaitingpayment',
+      'objection',
+      'permitsectionobjection',
+      'commissionerobjection',
+      'rejected',
+      'draft'
+    ];
+
+    if (unapprovedStageTokens.includes(stageName)) {
+      return false;
+    }
+
+    if (stageId === 145) return true;
+    if (stageName === 'approved' || stageName === 'applicationapproved' || stageName === 'licenseissued') return true;
+    if (isFinal && isApprovedFlag) return true;
+    if (isFinal && !stageName.includes('reject')) return true;
+
+    return false;
+  }
+
   loadMyLicenses(forceRefresh = false): void {
     this.isLoading = true;
     this.unifiedDashboardService.getUnifiedApplicationsByStatus(forceRefresh, undefined, true).subscribe({
       next: (result: any) => {
         this.allAppsResult = result;
-        const approvedApps = result.approved || [];
+        const approvedApps = (result.approved || []).filter((app: UnifiedApplication) => this.isTrulyApproved(app));
         this.activeRenewalLicenseIds = this.collectActiveRenewalLicenseIds(result);
         
         // Filter out LRA (License Renewal), RCR (Company Renewal), RCOL (Company Collaboration Renewal) and RSBM (Renewed Salesman Barman) applications,
@@ -1474,6 +1514,36 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
 
     console.log('  ❌ No valid license ID found');
     return null;
+  }
+
+  getDisplayLicenseId(application: UnifiedApplication): string {
+    const extracted = this.extractLicenseId(application.raw || {}, application);
+    if (extracted) {
+      if (extracted.startsWith('NLI/')) return extracted.replace('NLI/', 'NA/');
+      if (extracted.startsWith('NLA/')) return extracted.replace('NLA/', 'NA/');
+      return extracted;
+    }
+
+    const appId = String(application.applicationId || '').trim();
+    if (appId.startsWith('NLI/')) {
+      return appId.replace('NLI/', 'NA/');
+    }
+    if (appId.startsWith('NLA/')) {
+      return appId.replace('NLA/', 'NA/');
+    }
+    if (appId.startsWith('LIC/')) {
+      return appId.replace('LIC/', 'LA/');
+    }
+    if (appId.startsWith('SBM/')) {
+      return appId.replace('SBM/', 'SB/');
+    }
+    if (appId.startsWith('COMP/')) {
+      return appId.replace('COMP/', 'CR/1101/');
+    }
+    if (appId.startsWith('CCOL/')) {
+      return appId.replace('CCOL/', 'CC/1101/');
+    }
+    return appId;
   }
 
   /**
