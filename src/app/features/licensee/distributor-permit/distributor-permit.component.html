@@ -10,14 +10,6 @@
   </div>
 
   <ng-container *ngIf="!isLoading">
-    <!-- IMFL Sub-Header with Tabs -->
-    <app-imfl-header
-      [activeTab]="activeTab"
-      [isFormView]="isFormView"
-      [pendingCounts]="{ requisition: counts.pending, revalidation: 0, cancellation: 0 }"
-      (tabChange)="onTabChange($event)"
-      (applyNew)="openApplyForm()"
-    ></app-imfl-header>
 
     <!-- Active Tab 1: IMFL Requisition -->
     <ng-container *ngIf="activeTab === 'requisition'">
@@ -170,13 +162,13 @@
 
       <div class="register-table">
         <div class="register-container">
-          <div class="register-header-bar">
-            <h5 class="register-table-title">
+          <div class="register-header-bar" style="background:#0f172a; border-radius:8px 8px 0 0; padding: 12px 18px;">
+            <h5 class="register-table-title" style="color:#f1f5f9; margin:0;">
               <i class="bi bi-grid-3x3-gap me-2"></i>
               Import Permit Application Entries
             </h5>
             <div class="register-info">
-              <span class="entries-count">{{ filteredRows.length }} Entries</span>
+              <span class="entries-count" style="background:rgba(255,255,255,0.12); color:#e2e8f0; border:1px solid rgba(255,255,255,0.2);">{{ filteredRows.length }} Entries</span>
             </div>
           </div>
 

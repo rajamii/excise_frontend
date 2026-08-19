@@ -3998,7 +3998,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return this.isLicenseeUser() ? 'License Activity' : 'Officer Activity';
     }
     if (this.selectedSupplyChainSection === 'distributor-permit') {
-      return this.distributorPermitMode === 'apply' ? 'Apply for Import Permit' : 'Import Permit Management';
+      if (this.distributorPermitMode === 'apply') return 'Apply for Import Permit';
+      const tab = this.route.snapshot.queryParamMap.get('tab') || 'requisition';
+      const tabLabels: Record<string, string> = {
+        requisition:  'IMFL / Requisition',
+        revalidation: 'IMFL / Revalidation',
+        cancellation: 'IMFL / Cancellation',
+      };
+      return tabLabels[tab] ?? 'IMFL Requisition / Cancellation';
     }
     const titles: { [key: string]: string } = {
       // Common sections
@@ -4026,7 +4033,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       'license-renewal': 'License Renewal Management',
       'special-permit': 'Dry Day Permit',
       'special-permit-apply': 'Prepare Dry Day Permit Application',
-      'distributor-permit': 'Import Permit Management',
+      'distributor-permit': 'IMFL Requisition / Cancellation',
 
       // SPA Forms
       'transit-permit': 'Apply Transit Permit',

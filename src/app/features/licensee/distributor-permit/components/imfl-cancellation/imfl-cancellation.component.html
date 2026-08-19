@@ -1,4 +1,37 @@
 <div class="imfl-sub-container">
+  <!-- Stats Row -->
+  <div class="row g-3 mb-4 stats-row">
+    <div class="col-xl-4 col-lg-4 col-md-4">
+      <div class="summary-card total-application-requests">
+        <div class="card-icon"><i class="bi bi-list-ul"></i></div>
+        <div class="card-content">
+          <h3 class="card-value">{{ totalCount }}</h3>
+          <p class="card-label">Total Applications</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-4 col-lg-4 col-md-4">
+      <div class="summary-card pending-requests">
+        <div class="card-icon"><i class="bi bi-clock-history"></i></div>
+        <div class="card-content">
+          <h3 class="card-value">{{ pendingCount }}</h3>
+          <p class="card-label">Pending</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-4 col-lg-4 col-md-4">
+      <div class="summary-card approved-requests">
+        <div class="card-icon"><i class="bi bi-check-circle"></i></div>
+        <div class="card-content">
+          <h3 class="card-value">{{ approvedCount }}</h3>
+          <p class="card-label">Approved</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="register-container">
     <div class="register-header-bar">
       <h5 class="register-table-title">

@@ -2,6 +2,87 @@
   width: 100%;
 }
 
+// Stats Row
+.stats-row {
+  margin-bottom: 1.5rem;
+}
+
+.summary-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #e3e7ef;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+
+  .card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+
+  .card-content {
+    flex: 1;
+
+    .card-value {
+      font-size: 2rem;
+      font-weight: 700;
+      margin: 0;
+      line-height: 1;
+    }
+
+    .card-label {
+      font-size: 0.9rem;
+      color: #64748b;
+      margin: 6px 0 0 0;
+      font-weight: 500;
+    }
+  }
+
+  &.total-application-requests {
+    .card-icon {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    .card-value {
+      color: #1e40af;
+    }
+  }
+
+  &.pending-requests {
+    .card-icon {
+      background: #fef3c7;
+      color: #d97706;
+    }
+    .card-value {
+      color: #d97706;
+    }
+  }
+
+  &.approved-requests {
+    .card-icon {
+      background: #dcfce7;
+      color: #15803d;
+    }
+    .card-value {
+      color: #15803d;
+    }
+  }
+}
+
 .register-container {
   border: 1px solid #e3e7ef;
   border-radius: 12px;
@@ -10,29 +91,31 @@
 }
 
 .register-header-bar {
-  background: #f1f5f9;
-  color: #0f172a;
-  border-bottom: 1px solid #e2e8f0;
-  padding: 12px 16px;
+  background: #0f172a;
+  color: #f1f5f9;
+  border-bottom: 1px solid #1e293b;
+  padding: 12px 18px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  border-radius: 8px 8px 0 0;
 }
 
 .register-table-title {
   margin: 0;
   font-size: 1.2rem;
   font-weight: 700;
-  color: #0f172a;
+  color: #f1f5f9;
 }
 
 .entries-count {
-  background: #e2e8f0;
-  color: #334155;
+  background: rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
   padding: 4px 12px;
   border-radius: 999px;
   font-size: 0.82rem;
   font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .status-badge {

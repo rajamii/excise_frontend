@@ -17,6 +17,25 @@ export class ImflCancellationComponent implements OnInit {
   filteredRows: any[] = [];
   selectedApp: any = null;
 
+  // Stats counts
+  get totalCount(): number {
+    return this.applications.length;
+  }
+
+  get pendingCount(): number {
+    return this.applications.filter(app => 
+      (app.status || '').toLowerCase().includes('pending') || 
+      (app.currentStage || '').toLowerCase().includes('pending')
+    ).length;
+  }
+
+  get approvedCount(): number {
+    return this.applications.filter(app => 
+      (app.status || '').toLowerCase() === 'approved' || 
+      (app.currentStage || '').toLowerCase() === 'approved'
+    ).length;
+  }
+
   ngOnInit(): void {
     this.applyFilter();
   }
