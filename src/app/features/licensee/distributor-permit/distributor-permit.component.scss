@@ -217,9 +217,10 @@
 }
 
 .register-header-bar {
-  background: #0d1730;
-  color: #fff;
-  padding: 10px 14px;
+  background: #f1f5f9;
+  color: #0f172a;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 12px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -227,15 +228,18 @@
 
 .register-table-title {
   margin: 0;
-  font-size: 1.55rem;
+  font-size: 1.35rem;
   font-weight: 700;
+  color: #0f172a;
 }
 
 .entries-count {
-  background: rgba(255, 255, 255, 0.15);
-  padding: 4px 10px;
+  background: #e2e8f0;
+  color: #334155;
+  padding: 4px 12px;
   border-radius: 999px;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 
 .table-wrapper {

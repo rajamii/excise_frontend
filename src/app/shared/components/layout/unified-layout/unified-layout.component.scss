@@ -767,29 +767,37 @@
       order: 4;
     }
 
-    // Bulk Spirit toggle button — sits right after Wallet (order 3.5 → 4)
-    > .bulk-spirit-nav-item {
+    > .imfl-permit-nav-item {
       order: 5;
     }
 
-    > .bulk-spirit-sub-item {
+    > .imfl-permit-sub-item {
       order: 6;
     }
 
-    > .transit-nav-item {
+    // Bulk Spirit toggle button — sits right after IMFL Permit
+    > .bulk-spirit-nav-item {
       order: 7;
     }
 
-    > .hologram-nav-item {
+    > .bulk-spirit-sub-item {
       order: 8;
     }
 
-    > .hologram-sub-item {
+    > .transit-nav-item {
       order: 9;
     }
 
-    > .stock-inventory-nav-item {
+    > .hologram-nav-item {
       order: 10;
+    }
+
+    > .hologram-sub-item {
+      order: 11;
+    }
+
+    > .stock-inventory-nav-item {
+      order: 12;
     }
 
     > .company-registration-nav-item {

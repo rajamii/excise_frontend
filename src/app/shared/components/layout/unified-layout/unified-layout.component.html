@@ -66,7 +66,7 @@
 
             <!-- Distributor IMFL Permit Group (Requisition, Revalidation, Cancellation) -->
             <ng-container *ngIf="isDistributorUser()">
-              <button class="nav-item bulk-spirit-nav-item imfl-permit-nav-item" (click)="imflPermitExpanded = !imflPermitExpanded"
+              <button class="nav-item imfl-permit-nav-item" (click)="imflPermitExpanded = !imflPermitExpanded"
                 [class.active]="imflPermitExpanded && isDashboardSectionActive('distributor-permit')"
                 [class.group-expanded]="imflPermitExpanded">
                 <mat-icon class="nav-icon">local_shipping</mat-icon>
