@@ -920,11 +920,21 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         // ── HOLOGRAMS ─────────────────────────────────────────────────────────
         if (isPermitSection) {
           this.supplyChainModuleCounts['hologram'] = { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
+        } else if (this.isOicUser()) {
+          let items: any[] = Array.isArray(hol) ? hol : [];
+          items = this.filterByOicScopedLicense(items);
+          const oicCounts = this.countOicHologramProcurementStatus(items);
+          this.supplyChainModuleCounts['hologram'] = {
+            applied: oicCounts.applied,
+            pending: oicCounts.pending,
+            approved: oicCounts.approved,
+            objection: 0,
+            rejected: oicCounts.rejected,
+            awaitingPayment: 0
+          };
+          this.supplyChainPendingCounts['hologram'] = oicCounts.pending;
         } else {
           let items: any[] = Array.isArray(hol) ? hol : [];
-          if (this.isOicUser()) {
-            items = this.filterByOicScopedLicense(items);
-          }
           let pending: number;
           if (isITCell) {
             pending = items.filter(item => {
@@ -2784,16 +2794,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (month !== undefined || year !== undefined) {
       hol = hol.filter(x => this.matchesDateFilter(x, month, year));
     }
-    const holPending = this.sidebarPendingBadgeService.countHologramPendingReview(hol);
-    const holApproved = hol.filter(x => {
-      const t = String(x.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-      return t.includes('approved') || t.includes('issued') || t.includes('paymentcompleted') || t.includes('cartoonassigned') || t.includes('cartonassigned');
-    }).length;
-    const holRejected = hol.filter(x => {
-      const s = String(x.status || '').toLowerCase();
-      return s.includes('rejected') || s.includes('cancelled');
-    }).length;
-    this.supplyChainModuleCounts['hologram'] = { applied: hol.length, pending: holPending, approved: holApproved, objection: 0, rejected: holRejected };
+    const oicHolCounts = this.countOicHologramProcurementStatus(hol);
+    this.supplyChainModuleCounts['hologram'] = { applied: oicHolCounts.applied, pending: oicHolCounts.pending, approved: oicHolCounts.approved, objection: 0, rejected: oicHolCounts.rejected };
 
     // Filter Bulk Spirit Details by month and year
     let bld = this.filterByOicScopedLicense(this.rawOicData.bldetails || []);
@@ -3030,7 +3032,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     // Use the unified dashboard service for all roles
     forkJoin({
       applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus(forceRefresh, this.dashboardConfig),
-      hologramProcurements: this.isLicenseeUser()
+      hologramProcurements: (this.isLicenseeUser() || this.isOicUser())
         ? (
             !forceRefresh && this.licenseeHologramProcurementsCache
               ? of(this.licenseeHologramProcurementsCache)
@@ -3171,7 +3173,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             specialPermit: filteredApplications.awaitingPayment.filter(app => app.type === 'special-permit').length
           };
 
-          // Licensee UX: include hologram procurement workflow (circulating for approvals) in Pending/Approved totals.
+          // Licensee & OIC UX: include hologram procurement workflow in Pending/Approved totals.
           if (this.isLicenseeUser()) {
             const hologramCounts = this.countLicenseeHologramProcurements(result.hologramProcurements || []);
             this.dashboardCounts = {
@@ -3179,6 +3181,15 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
               pending: (this.dashboardCounts.pending || 0) + hologramCounts.pending,
               approved: (this.dashboardCounts.approved || 0) + hologramCounts.approved,
               rejected: (this.dashboardCounts.rejected || 0) + hologramCounts.rejected
+            };
+          } else if (this.isOicUser()) {
+            const oicHologramCounts = this.countOicHologramProcurementStatus(result.hologramProcurements || []);
+            this.dashboardCounts = {
+              ...this.dashboardCounts,
+              applied: (this.dashboardCounts.applied || 0) + oicHologramCounts.applied,
+              pending: (this.dashboardCounts.pending || 0) + oicHologramCounts.pending,
+              approved: (this.dashboardCounts.approved || 0) + oicHologramCounts.approved,
+              rejected: (this.dashboardCounts.rejected || 0) + oicHologramCounts.rejected
             };
           }
 
@@ -3217,7 +3228,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     forkJoin({
       applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus(forceRefresh, this.dashboardConfig),
-      hologramProcurements: this.isLicenseeUser()
+      hologramProcurements: (this.isLicenseeUser() || this.isOicUser())
         ? (
             !forceRefresh && this.licenseeHologramProcurementsCache
               ? of(this.licenseeHologramProcurementsCache)
@@ -3343,6 +3354,33 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     return { pending, approved, rejected };
+  }
+
+  private countOicHologramProcurementStatus(procurements: any[]): { applied: number; pending: number; approved: number; rejected: number } {
+    const rows = Array.isArray(procurements) ? procurements : [];
+    let pending = 0;
+    let approved = 0;
+    let rejected = 0;
+
+    for (const row of rows) {
+      const statusToken = this.normalizeStageToken(row?.status);
+      const stageId = Number(row?.stage_id ?? row?.stageId ?? row?.current_stage ?? row?.currentStage ?? 0);
+      const isPaymentDone = stageId === 80 || (statusToken && statusToken.includes('paymentcompleted')) || String(row?.payment_status || row?.paymentStatus || '').toLowerCase() === 'completed';
+
+      const details = row?.carton_details ?? row?.cartoon_details ?? row?.cartonDetails ?? row?.cartoonDetails ?? [];
+      const hasDetails = Array.isArray(details) && details.length > 0;
+
+      if (statusToken.includes('reject') || statusToken.includes('cancel')) {
+        rejected += 1;
+      } else if (hasDetails || statusToken.includes('cartonassigned') || statusToken.includes('cartoonassigned')) {
+        approved += 1;
+      } else {
+        // Stage 80 / Payment Completed or pending OIC arrival update -> PENDING for OIC!
+        pending += 1;
+      }
+    }
+
+    return { applied: rows.length, pending, approved, rejected };
   }
 
   private normalizeStageToken(value: any): string {

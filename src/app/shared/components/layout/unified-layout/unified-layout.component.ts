@@ -1695,7 +1695,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     }
 
     // Allow OIC-only sections even if DB navigation tokens are incomplete.
-    if ((section === 'hologram-inventory' || section === 'oic-hologram-requests' || section === 'bl-details') && this.isOicUser()) {
+    if ((section === 'hologram-inventory' || section === 'oic-hologram-requests' || section === 'bl-details' || section === 'hologram-register' || section === 'hologram-daily-entry') && this.isOicUser()) {
       return true;
     }
 

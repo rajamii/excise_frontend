@@ -312,17 +312,18 @@ export class SidebarPendingBadgeService {
 
       // OIC hologram procurement register view (carton assignment / arrival confirmations).
       case 'hologram-register':
-        if (mode === 'light') return of(0);
         return this.hologramService.getProcurements().pipe(
           map((items) => this.toArray(items)),
-          map((items) => this.countOicHologramProcurementPending(items))
+          map((items) => this.countOicHologramProcurementPending(items)),
+          catchError(() => of(0))
         );
 
       case 'itcell-hologram':
         if (mode === 'light') return of(0);
         return this.hologramService.getProcurements().pipe(
           map((items) => this.toArray(items).filter((x) => this.requiresItCellReview(String(x?.status || '')))),
-          map((items) => this.countActionable(items, ['VERIFY', 'FORWARD', 'REJECT', 'APPROVE']))
+          map((items) => this.countActionable(items, ['VERIFY', 'FORWARD', 'REJECT', 'APPROVE'])),
+          catchError(() => of(0))
         );
 
       // OIC hologram requests page (badge should show anything not finalized)
@@ -341,15 +342,16 @@ export class SidebarPendingBadgeService {
 
               return true;
             }).length
-          )
+          ),
+          catchError(() => of(0))
         );
 
       case 'bl-details':
-        if (mode === 'light') return of(0);
         // ENA arrival bulk-liter submissions awaiting OIC review.
         return this.enaRequisitionService.getRequisitionArrivalDetailsByStatus('PENDING').pipe(
           map((response) => (Array.isArray(response?.data) ? response.data : [])),
-          map((items) => items.length)
+          map((items) => items.length),
+          catchError(() => of(0))
         );
 
       default:
@@ -709,10 +711,17 @@ export class SidebarPendingBadgeService {
     // Fallback when backend doesn't return allowed actions consistently.
     return rows.filter((row) => {
       const statusToken = this.normalizeStageToken(row?.status);
-      if (!statusToken) return false;
+      const stageId = Number(row?.stage_id ?? row?.stageId ?? row?.current_stage ?? row?.currentStage ?? 0);
+      const isPaymentDone = stageId === 80 || (statusToken && statusToken.includes('paymentcompleted')) || String(row?.payment_status || row?.paymentStatus || '').toLowerCase() === 'completed';
 
-      // Completed / not actionable.
-      if (statusToken.includes('paymentcompleted')) return false;
+      const details = row?.carton_details ?? row?.cartoon_details ?? row?.cartonDetails ?? row?.cartoonDetails ?? [];
+      const hasDetails = Array.isArray(details) && details.length > 0;
+
+      // Stage 80 / Payment Completed without arrived cartons IS pending OIC update arrival action!
+      if (isPaymentDone && !hasDetails) return true;
+
+      // Completed / arrived or rejected.
+      if (isPaymentDone && hasDetails) return false;
       if (statusToken.includes('cartonassigned') || statusToken.includes('cartoonassigned')) return false;
       if (statusToken.includes('rejected') || statusToken.includes('reject')) return false;
 
