@@ -1,0 +1,45 @@
+.imfl-sub-container {
+  width: 100%;
+}
+
+.register-container {
+  border: 1px solid #e3e7ef;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.register-header-bar {
+  background: #0d1730;
+  color: #fff;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.register-table-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.entries-count {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+
+  &--approved {
+    background: #dcfce7;
+    color: #15803d;
+  }
+}

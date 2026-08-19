@@ -64,12 +64,35 @@
               <span class="nav-text">Wallet</span>
             </button>
 
-            <!-- Distributor Import Permit (IMFL) -->
-            <button class="nav-item distributor-permit-nav-item" *ngIf="isDistributorUser()" (click)="navigateToSupplyChain('distributor-permit')" [class.active]="isDashboardSectionActive('distributor-permit')">
-              <mat-icon class="nav-icon">assignment</mat-icon>
-              <span class="nav-text">Import Permit</span>
-              <span class="nav-badge" *ngIf="getPendingCount('distributor-permit') as pending">{{ pending }}</span>
-            </button>
+            <!-- Distributor IMFL Permit Group (IMFL Requisition, IMFL Revalidation, IMFL Cancellation) -->
+            <ng-container *ngIf="isDistributorUser()">
+              <button class="nav-item bulk-spirit-nav-item imfl-permit-nav-item" (click)="imflPermitExpanded = !imflPermitExpanded"
+                [class.active]="imflPermitExpanded && isDashboardSectionActive('distributor-permit')"
+                [class.group-expanded]="imflPermitExpanded">
+                <mat-icon class="nav-icon">local_shipping</mat-icon>
+                <span class="nav-text">IMFL Permit</span>
+                <span class="nav-badge nav-badge--group" *ngIf="!imflPermitExpanded && getPendingCount('distributor-permit') > 0">{{ getPendingCount('distributor-permit') }}</span>
+                <mat-icon class="nav-chevron">{{ imflPermitExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+
+              <ng-container *ngIf="imflPermitExpanded">
+                <button class="nav-item nav-item--sub imfl-permit-sub-item" (click)="navigateToImflPermitTab('requisition')" [class.active]="isDashboardSectionActive('distributor-permit') && isImflTabActive('requisition')">
+                  <mat-icon class="nav-icon">assignment</mat-icon>
+                  <span class="nav-text">IMFL Requisition</span>
+                  <span class="nav-badge" *ngIf="getPendingCount('distributor-permit') as pending">{{ pending }}</span>
+                </button>
+
+                <button class="nav-item nav-item--sub imfl-permit-sub-item" (click)="navigateToImflPermitTab('revalidation')" [class.active]="isDashboardSectionActive('distributor-permit') && isImflTabActive('revalidation')">
+                  <mat-icon class="nav-icon">update</mat-icon>
+                  <span class="nav-text">IMFL Revalidation</span>
+                </button>
+
+                <button class="nav-item nav-item--sub imfl-permit-sub-item" (click)="navigateToImflPermitTab('cancellation')" [class.active]="isDashboardSectionActive('cancellation') || (isDashboardSectionActive('distributor-permit') && isImflTabActive('cancellation'))">
+                  <mat-icon class="nav-icon">cancel</mat-icon>
+                  <span class="nav-text">IMFL Cancellation</span>
+                </button>
+              </ng-container>
+            </ng-container>
 
             <!-- Distillery-only supply chain items — grouped under "Bulk Spirit" -->
             <ng-container *ngIf="showDistilleryMenus">

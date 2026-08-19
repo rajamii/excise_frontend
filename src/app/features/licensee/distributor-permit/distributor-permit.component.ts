@@ -14,6 +14,9 @@ import {
 } from '../../../core/models/distributor-permit.model';
 import { DistributorPermitService } from '../../../core/services/distributor-permit.service';
 import { MaterialModule } from '../../../shared/material.module';
+import { ImflHeaderComponent, ImflTabType } from './components/imfl-header/imfl-header.component';
+import { ImflRevalidationComponent } from './components/imfl-revalidation/imfl-revalidation.component';
+import { ImflCancellationComponent } from './components/imfl-cancellation/imfl-cancellation.component';
 
 type DistributorPermitStatusFilter = 'all' | 'approved' | 'pending' | 'objection' | 'rejected';
 type DistributorPermitStatusGroup = Exclude<DistributorPermitStatusFilter, 'all'>;
@@ -34,7 +37,14 @@ interface DistributorPermitRow {
 @Component({
   selector: 'app-distributor-permit',
   standalone: true,
-  imports: [CommonModule, FormsModule, MaterialModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    MaterialModule,
+    ImflHeaderComponent,
+    ImflRevalidationComponent,
+    ImflCancellationComponent
+  ],
   templateUrl: './distributor-permit.component.html',
   styleUrl: './distributor-permit.component.scss'
 })
@@ -89,6 +99,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   error: string | null = null;
   isFormView = false;
 
+  activeTab: ImflTabType = 'requisition';
+
   activeCardFilter: DistributorPermitStatusFilter = 'all';
   searchFilter = '';
   dateFromFilter = '';
@@ -108,6 +120,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe((params) => {
         this.isFormView = String(params?.['mode'] || '').toLowerCase() === 'apply';
+        const tabParam = String(params?.['tab'] || '').toLowerCase() as ImflTabType;
+        if (['requisition', 'revalidation', 'cancellation'].includes(tabParam)) {
+          this.activeTab = tabParam;
+        }
       });
 
     this.supplierForm.controls.selectedSupplierId.valueChanges
@@ -123,6 +139,24 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.lineItems.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => this.syncBrandStepValidity());
+  }
+
+  onTabChange(tab: ImflTabType): void {
+    this.activeTab = tab;
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab },
+      queryParamsHandling: 'merge'
+    });
+  }
+
+  openApplyForm(): void {
+    this.isFormView = true;
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { mode: 'apply' },
+      queryParamsHandling: 'merge'
+    });
   }
 
   ngOnDestroy(): void {

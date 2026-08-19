@@ -10,7 +10,18 @@
   </div>
 
   <ng-container *ngIf="!isLoading">
-    <section class="registration-management-container" *ngIf="!isFormView">
+    <!-- IMFL Sub-Header with Tabs -->
+    <app-imfl-header
+      [activeTab]="activeTab"
+      [isFormView]="isFormView"
+      [pendingCounts]="{ requisition: counts.pending, revalidation: 0, cancellation: 0 }"
+      (tabChange)="onTabChange($event)"
+      (applyNew)="openApplyForm()"
+    ></app-imfl-header>
+
+    <!-- Active Tab 1: IMFL Requisition -->
+    <ng-container *ngIf="activeTab === 'requisition'">
+      <section class="registration-management-container" *ngIf="!isFormView">
       <div class="new-license-register-header">
         <div class="row g-3 mb-4 stats-row">
           <div class="col-xl col-lg-6 col-md-6">
@@ -584,5 +595,18 @@
         </mat-step>
       </mat-horizontal-stepper>
     </section>
+    </ng-container>
+
+    <!-- Active Tab 2: IMFL Revalidation -->
+    <app-imfl-revalidation
+      *ngIf="activeTab === 'revalidation'"
+      [applications]="rows"
+    ></app-imfl-revalidation>
+
+    <!-- Active Tab 3: IMFL Cancellation -->
+    <app-imfl-cancellation
+      *ngIf="activeTab === 'cancellation'"
+      [applications]="rows"
+    ></app-imfl-cancellation>
   </ng-container>
 </div>

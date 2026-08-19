@@ -400,6 +400,23 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return Number(this.pendingBadgeCounts?.[key] || 0);
   }
 
+  imflPermitExpanded = true;
+
+  navigateToImflPermitTab(tab: string): void {
+    this.router.navigate(['/dashboard'], {
+      queryParams: { section: 'distributor-permit', tab }
+    });
+    this.closeSidenav();
+  }
+
+  isImflTabActive(tab: string): boolean {
+    const url = this.router.url || '';
+    if (tab === 'requisition') {
+      return !url.includes('tab=revalidation') && !url.includes('tab=cancellation');
+    }
+    return url.includes(`tab=${tab}`);
+  }
+
   /** Total pending badge count across all Bulk Spirit sub-sections visible to the current user */
   getBulkSpiritTotalBadge(): number {
     const sections = this.officerSectionItems
