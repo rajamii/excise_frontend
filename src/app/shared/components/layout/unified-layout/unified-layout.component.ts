@@ -1732,6 +1732,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return true;
     }
 
+    if ((roleId === 5 || roleId === 10 || this.isPermitSectionUser() || this.isCommissionerUser()) && (section === 'distributor-permit' || section === 'imfl-permit')) {
+      return true;
+    }
+
 
     const sectionRouteToken = String(section || '').trim().toLowerCase();
     if (this.dbNavigationRoutes.has(sectionRouteToken)) {
