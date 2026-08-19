@@ -64,6 +64,13 @@
               <span class="nav-text">Wallet</span>
             </button>
 
+            <!-- Distributor Import Permit (IMFL) -->
+            <button class="nav-item distributor-permit-nav-item" *ngIf="isDistributorUser()" (click)="navigateToSupplyChain('distributor-permit')" [class.active]="isDashboardSectionActive('distributor-permit')">
+              <mat-icon class="nav-icon">assignment</mat-icon>
+              <span class="nav-text">Import Permit</span>
+              <span class="nav-badge" *ngIf="getPendingCount('distributor-permit') as pending">{{ pending }}</span>
+            </button>
+
             <!-- Distillery-only supply chain items — grouped under "Bulk Spirit" -->
             <ng-container *ngIf="showDistilleryMenus">
               <button class="nav-item bulk-spirit-nav-item" (click)="bulkSpiritExpanded = !bulkSpiritExpanded"

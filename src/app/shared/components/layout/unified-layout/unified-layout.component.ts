@@ -1598,6 +1598,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   isDistributorUser(): boolean {
+    const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
+    if (roleId === 16) {
+      return true;
+    }
     const normalized = this.getNormalizedRoleName();
     return normalized === 'distributor' || normalized.includes('distributor');
   }
