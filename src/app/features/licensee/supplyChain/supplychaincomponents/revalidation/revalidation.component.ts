@@ -20,6 +20,7 @@ interface TableData {
   approvalDateRaw?: string;
   updatedAtRaw?: string;
   expiryDateRaw?: string;
+  validUpToRaw?: string;
   validityPeriodDays?: number;
   distilleryName: string;
   factoryName?: string;
@@ -128,6 +129,7 @@ export class RevalidationComponent implements OnInit {
           approvalDateRaw: item.approvalDate || item.approval_date || '',
           updatedAtRaw: item.updatedAt || item.updated_at || '',
           expiryDateRaw: item.expiryDate || item.expiry_date || '',
+          validUpToRaw: item.validUpTo || item.valid_up_to || '',
           validityPeriodDays: Number(item.validityPeriodDays || item.validity_period_days || 45),
           factoryName: item.establishment_name || item.establishmentName || item.factory_name || item.factoryName || '',
           distilleryName: item.distilleryName || item.distillery_name,
@@ -784,7 +786,7 @@ export class RevalidationComponent implements OnInit {
       return '-';
     }
 
-    const toDateFromApi = this.parseDate(item.expiryDateRaw);
+    const toDateFromApi = this.parseDate(item.expiryDateRaw) || this.parseDate(item.validUpToRaw);
     if (toDateFromApi) {
       return `${this.formatDisplayDate(fromDate)} to ${this.formatDisplayDate(toDateFromApi)}`;
     }
