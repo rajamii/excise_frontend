@@ -15,6 +15,7 @@ import { CompanyRegistrationService } from '../../../../../core/services/company
 import { CompanyCollaborationService } from '../../../../../core/services/company-collaboration.service';
 import { UnifiedDashboardService } from '../../../../../core/services/unified-dashboard.service';
 import { SpecialPermitService } from '../../../../../core/services/special-permit.service';
+import { SidebarPendingBadgeService } from '../../../../../shared/services/sidebar-pending-badge.service';
 import { environment } from '../../../../../../environments/environment';
 import Swal from 'sweetalert2';
 import {
@@ -182,6 +183,7 @@ const DEFAULT_WALLET_HOA_BY_TYPE: Record<AddMoneyWalletType, string> = {
 })
 export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDestroy {
   Math = Math;
+  private sidebarBadgeService = inject(SidebarPendingBadgeService);
   private readonly optimisticPaymentStorageKey = 'wallet.optimistic.payments';
   private readonly pendingPaymentStorageKey = 'wallet.pending.payment.context';
   private readonly isBrowser = typeof window !== 'undefined';
@@ -1312,7 +1314,7 @@ private initializeWalletContextAndLoadData(): void {
   }
 
   loadHologramDataFromApi(): void {
-    this.hologramService.getProcurements().subscribe({
+    this.hologramService.getProcurements(true).subscribe({
       next: (data) => {
         console.log('Fetched Hologram Procurements for Payment:', data);
         // IMPORTANT:
@@ -2664,6 +2666,8 @@ private initializeWalletContextAndLoadData(): void {
         this.closePendingWalletPaymentConfirmation();
         this.loadCancellationDataFromApi();
         this.loadHologramDataFromApi();
+        this.hologramService.invalidateProcurementCache();
+        this.sidebarBadgeService.triggerRefresh();
         this.unifiedDashboardService.clearUnifiedAppsCache();
         // New-license / renewal convenience: chain payments bidirectionally if one is unpaid
         const refNo = this.pendingNewLicenseReferenceNo || context.referenceNo;
@@ -4127,6 +4131,7 @@ private initializeWalletContextAndLoadData(): void {
         this.closeMultiTypePaymentModal();
         this.showSuccessMessage(`Successfully processed payment totaling Rs ${totalAmount.toFixed(2)}.`);
         this.loadHologramDataFromApi();
+        this.sidebarBadgeService.triggerRefresh();
         this.refreshWalletData();
       },
       error: (err) => {

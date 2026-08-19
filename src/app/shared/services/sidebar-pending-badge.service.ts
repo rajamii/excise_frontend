@@ -663,8 +663,13 @@ export class SidebarPendingBadgeService {
       ).toLowerCase().replace(/[^a-z0-9]/g, '');
       const combined = `${status} ${stageName}`;
 
-      // Exclude post-payment stages
-      if (combined.includes('paymentcompleted') || combined.includes('cartoonassigned') || combined.includes('cartonassigned')) {
+      const paymentStatus = String(item?.paymentStatus ?? item?.payment_status ?? '').toLowerCase();
+      const isPaid = paymentStatus === 'completed' || paymentStatus === 'success' || paymentStatus === 'paid' || item?.paymentCompleted === true;
+      const paymentDetails = item?.paymentDetails || item?.payment_details || {};
+      const hasPaidDetails = Boolean(paymentDetails?.paid_at || paymentDetails?.transaction_id || String(paymentDetails?.status || '').toLowerCase() === 'completed');
+
+      // Exclude post-payment stages or completed payments
+      if (isPaid || hasPaidDetails || combined.includes('paymentcompleted') || combined.includes('cartoonassigned') || combined.includes('cartonassigned') || combined.includes('paymentdone')) {
         return false;
       }
 

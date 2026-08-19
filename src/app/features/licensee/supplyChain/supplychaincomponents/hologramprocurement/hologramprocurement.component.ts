@@ -72,21 +72,33 @@ export class HologramprocurementComponent implements OnInit {
     if (this.isBrowser) {
       this.loadPersistentPaymentRefs();
       this.isLoading = true;
+
+      // Automatically refresh when payment or workflow actions complete
+      this.hologramService.requestUpdate$.subscribe(() => {
+        console.log('🔔 Received hologram update signal, refreshing list...');
+        this.loadHolograms(true);
+      });
+
+      // Refresh data when browser tab regains focus
+      window.addEventListener('focus', () => {
+        this.loadHolograms(true);
+      });
+
       this.profileService.getProfile().subscribe({
         next: (res) => {
           console.log('📋 Profile service response:', res);
           if (res.data) {
             this.currentUnitName = res.data.manufacturingUnitName;
             console.log('✅ Current unit name:', this.currentUnitName);
-            this.loadHolograms();
+            this.loadHolograms(true);
           } else {
             console.warn('⚠️ No profile data found, loading holograms anyway');
-            this.loadHolograms();
+            this.loadHolograms(true);
           }
         },
         error: (err) => {
           console.error('❌ Error loading profile, loading holograms anyway:', err);
-          this.loadHolograms();
+          this.loadHolograms(true);
         }
       });
     } else {
@@ -94,10 +106,10 @@ export class HologramprocurementComponent implements OnInit {
     }
   }
 
-  private loadHolograms(): void {
-    console.log('🔄 Starting to load holograms...');
+  private loadHolograms(force = true): void {
+    console.log('🔄 Starting to load holograms (force=' + force + ')...');
     this.isLoading = true;
-    this.hologramService.getProcurements().subscribe({
+    this.hologramService.getProcurements(force).subscribe({
       next: (data) => {
         console.log('📦 Loading hologram data from API:', data.length, 'items');
         this.isLoading = false;

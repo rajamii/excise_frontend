@@ -364,11 +364,19 @@ export class HologramDataService {
     );
   }
 
+  invalidateProcurementCache(): void {
+    this.invalidateCache('procurements:list', 'requests:list');
+    this.requestUpdateSubject.next();
+  }
+
   // Generic Workflow Action
   performAction(endpoint: 'procurement' | 'request', id: number, action: string, remarks: string = '', data: any = {}): Observable<any> {
     const url = endpoint === 'procurement' ? this.procurementApiUrl : this.requestApiUrl;
     return this.http.post<any>(`${url}/${id}/perform_action/`, { action, remarks, ...data }).pipe(
-      tap(() => this.invalidateCache(endpoint === 'procurement' ? 'procurements:list' : 'requests:list'))
+      tap(() => {
+        this.invalidateCache(endpoint === 'procurement' ? 'procurements:list' : 'requests:list');
+        this.requestUpdateSubject.next();
+      })
     );
   }
 
