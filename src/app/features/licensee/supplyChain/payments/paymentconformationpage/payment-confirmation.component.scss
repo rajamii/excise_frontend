@@ -1145,6 +1145,14 @@
   background: linear-gradient(145deg, #fff5f5 0%, #fef2f2 100%);
 }
 
+.wallet-balance-card.after.insufficient .wallet-balance-caption {
+  color: #991b1b;
+}
+
+.wallet-balance-card.after.insufficient .wallet-balance-amount {
+  color: #dc2626;
+}
+
 .wallet-balance-amount {
   display: block;
   margin-top: 0.45rem;

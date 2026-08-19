@@ -832,13 +832,6 @@
     <div class="wallet-deduction-footer">
       <button type="button" class="btn btn-outline-secondary" (click)="closePendingWalletPaymentConfirmation()">Back</button>
       <button
-        *ngIf="(pendingWalletPaymentPreview?.shortfall || 0) > 0"
-        type="button"
-        class="btn btn-warning"
-        (click)="goToAddMoneyForPendingPayment()">
-        <i class="bi bi-plus-circle me-1"></i>Add Money
-      </button>
-      <button
         type="button"
         class="btn btn-success"
         (click)="proceedPendingWalletPayment()"
