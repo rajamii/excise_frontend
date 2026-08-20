@@ -69,7 +69,10 @@ export interface ActionButtonConfig {
           <button 
             mat-raised-button 
             type="button"
-            [color]="button.color"
+            [class.mat-success]="button.color === 'success'"
+            [class.mat-danger]="button.color === 'danger' || button.color === 'warn'"
+            [class.mat-warning]="button.color === 'warning'"
+            [class.mat-primary]="button.color === 'primary' || !button.color"
             class="action-btn"
             (click)="onActionClick(button)"
             (mousedown)="onActionClick(button)">
@@ -140,13 +143,23 @@ export interface ActionButtonConfig {
 
     /* Color overrides for raised buttons */
     .mat-mdc-raised-button.mat-success {
-      background-color: #388e3c;
-      color: white;
+      background-color: #2e7d32 !important;
+      color: white !important;
     }
 
     .mat-mdc-raised-button.mat-danger {
-      background-color: #d32f2f;
-      color: white;
+      background-color: #d32f2f !important;
+      color: white !important;
+    }
+
+    .mat-mdc-raised-button.mat-warning {
+      background-color: #ef6c00 !important;
+      color: white !important;
+    }
+
+    .mat-mdc-raised-button.mat-primary {
+      background-color: #1565c0 !important;
+      color: white !important;
     }
   `]
 })
@@ -173,23 +186,32 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
 
   private isCurrentUserLicensee(): boolean {
     const roleFromIdentity = String(this.accountService.getUserProfileSync()?.role?.name ?? '').trim().toLowerCase();
-    if (roleFromIdentity) return roleFromIdentity === 'licensee';
+    const isLicenseeRole = (role: string) => {
+      const r = role.toLowerCase();
+      return r === 'licensee' || r === 'distributor' || r.includes('licensee') || r.includes('distributor');
+    };
+
+    if (roleFromIdentity) return isLicenseeRole(roleFromIdentity);
     const roleFromStorage = String(localStorage.getItem('role') ?? '').trim().toLowerCase();
-    if (roleFromStorage) return roleFromStorage === 'licensee';
+    if (roleFromStorage) return isLicenseeRole(roleFromStorage);
 
-    // Fallback: some flows only persist `role_id` early (or `role` may be missing until `/me` resolves).
     const roleId = String(localStorage.getItem('role_id') ?? '').trim();
-    if (roleId) return roleId === '2';
+    if (roleId) {
+      const officerRoleIds = new Set(['5', '6', '7', '9', '10', '12']);
+      return !officerRoleIds.has(roleId);
+    }
 
-    // Last-resort: decode JWT payload (if present) and infer role.
     try {
       const access = String(localStorage.getItem('access') ?? '').trim();
       if (!access || !access.includes('.')) return false;
       const payload = JSON.parse(atob(access.split('.')[1] ?? ''));
       const jwtRole = String(payload?.role ?? payload?.role_name ?? payload?.roleName ?? '').trim().toLowerCase();
-      if (jwtRole) return jwtRole === 'licensee';
+      if (jwtRole) return isLicenseeRole(jwtRole);
       const jwtRoleId = String(payload?.role_id ?? payload?.roleId ?? payload?.roleid ?? '').trim();
-      if (jwtRoleId) return jwtRoleId === '2';
+      if (jwtRoleId) {
+        const officerRoleIds = new Set(['5', '6', '7', '9', '10', '12']);
+        return !officerRoleIds.has(jwtRoleId);
+      }
     } catch {
       // ignore
     }
@@ -1911,6 +1933,12 @@ private getTransitRejectSummary(): {
       const action = this.normalizeActionName(config?.action);
       if (action === 'REQUEST_CANCELLATION' && this.context !== 'licensee') {
         return false;
+      }
+      if (this.context === 'licensee' || this.isCurrentUserLicensee()) {
+        const officerActions = new Set(['FORWARD', 'APPROVE', 'REJECT', 'RAISE_OBJECTION', 'VERIFY', 'SUBMITPAYSLIP', 'APPROVEPAYSLIP', 'REJECTPAYSLIP']);
+        if (officerActions.has(action)) {
+          return false;
+        }
       }
       return true;
     });

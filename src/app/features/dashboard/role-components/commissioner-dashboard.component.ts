@@ -974,6 +974,11 @@ export class CommissionerDashboardComponent implements OnInit {
         const cancs: CommissionerData[] = [];
 
         list.forEach((item: any) => {
+          const status = String(item.status || '').toUpperCase();
+          const stage = String(item.current_stage || item.currentStage || '').toLowerCase();
+          if (status === 'SUBMITTED' || status === 'DRAFT' || stage === 'permit_section') {
+            return;
+          }
           const ref = String(item.reference_no || item.referenceNo || '').toUpperCase();
           const mapped: CommissionerData = {
             id: item.id || item.reference_no || item.referenceNo,

@@ -723,7 +723,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     onComplete?: () => void
   ): void {
     const isAdminOrOfficer = [1, 3, 5, 6, 7, 9, 10].includes(Number(this.currentUser?.roleId || 0));
-    if (!this.isLicenseeUser() && !isAdminOrOfficer) {
+    if (!this.isLicenseeUser() && !this.isDistributorUser() && !isAdminOrOfficer) {
       onComplete?.();
       return;
     }
@@ -739,10 +739,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const isITCell        = this.currentUser?.roleId === 6;
     const skipTransit     = isCommissioner || isJointComm || isPermitSection;
 
-    // For a licensee user, skip all full-list supply chain fetches on login.
+    // For a licensee/distributor user, skip all full-list supply chain fetches on login.
     // Data is only fetched lazily when the user selects a specific chart module.
     // If prefetched data is provided (from lazy load), use it directly.
-    const isLicensee = this.isLicenseeUser();
+    const isLicensee = this.isLicenseeUser() || this.isDistributorUser();
 
     // Build observables — reuse prefetched data where available to avoid duplicate HTTP calls.
     const req$ = prefetched?.requisition

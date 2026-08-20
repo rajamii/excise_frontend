@@ -1786,6 +1786,18 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     getUserContext(): UserContext {
         const source = this.route.snapshot.queryParamMap.get('source');
 
+        // Verify if user is an officer (Role 5, 10, 12, etc.)
+        const isOfficer = this.roleService.hasRole(5) || 
+                          this.roleService.hasRole(10) || 
+                          this.roleService.hasRole(12) || 
+                          this.roleService.hasRole(6) || 
+                          this.roleService.hasRole(7) || 
+                          this.roleService.hasRole(9);
+
+        if (!isOfficer) {
+            return USER_CONTEXTS.LICENSEE;
+        }
+
         const contextMap: { [key: string]: UserContext } = {
             'commissioner-dashboard': USER_CONTEXTS.COMMISSIONER,
             'commissioner': USER_CONTEXTS.COMMISSIONER,

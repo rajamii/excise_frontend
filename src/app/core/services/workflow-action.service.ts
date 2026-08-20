@@ -336,8 +336,12 @@ export class WorkflowActionService {
 
     switch (data.type) {
       case 'requisition':
-        // Requisition uses APIView with hyphen
-        endpoint = `${environment.apiBaseUrl}/transactional/supply_chain/ena-requisitions/${data.id}/perform-action/`;
+        // Requisition can be ENA Requisition or IMFL Requisition (Distributor Permit)
+        if (String(data.id || '').toUpperCase().startsWith('IMFL') || String(data.referenceNo || '').toUpperCase().startsWith('IMFL')) {
+          endpoint = `${environment.apiBaseUrl}/transactional/distributor-permit/${data.id}/perform-action/`;
+        } else {
+          endpoint = `${environment.apiBaseUrl}/transactional/supply_chain/ena-requisitions/${data.id}/perform-action/`;
+        }
         break;
       case 'revalidation':
         // Revalidation uses ViewSet with underscore
