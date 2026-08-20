@@ -1,0 +1,188 @@
+import { Component, OnInit, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import Swal from 'sweetalert2';
+import { MaterialModule } from '../../../../../shared/material.module';
+import { TimerConfig, TimerService } from '../../../../../core/services/timer.service';
+
+@Component({
+  selector: 'app-timer-list',
+  standalone: true,
+  imports: [CommonModule, FormsModule, MaterialModule],
+  templateUrl: './list.component.html',
+  styleUrl: './list.component.scss'
+})
+export class ListComponent implements OnInit {
+  private timerService = inject(TimerService);
+
+  timers: TimerConfig[] = [];
+  isLoading = false;
+  searchQuery = '';
+
+  // Modal State
+  showModal = false;
+  isEditMode = false;
+  editingId: number | null = null;
+
+  formCode = '';
+  formDescription = '';
+  formDelayValue: number = 10;
+  formDelayUnit = 'minute';
+  formValidityDays: number | null = null;
+  formIsActive = true;
+  isSubmitting = false;
+
+  unitOptions = [
+    { value: 'second', label: 'Seconds' },
+    { value: 'minute', label: 'Minutes' },
+    { value: 'hour', label: 'Hours' },
+    { value: 'day', label: 'Days' },
+    { value: 'month', label: 'Months' },
+    { value: 'year', label: 'Years' }
+  ];
+
+  ngOnInit(): void {
+    this.loadTimers();
+  }
+
+  loadTimers(): void {
+    this.isLoading = true;
+    this.timerService.getTimers().subscribe({
+      next: (data) => {
+        this.isLoading = false;
+        this.timers = data || [];
+      },
+      error: (err) => {
+        this.isLoading = false;
+        console.error('Error loading timers:', err);
+        Swal.fire('Error', 'Failed to load timer configurations.', 'error');
+      }
+    });
+  }
+
+  get filteredTimers(): TimerConfig[] {
+    const q = this.searchQuery.trim().toLowerCase();
+    if (!q) return this.timers;
+    return this.timers.filter(t =>
+      (t.code || '').toLowerCase().includes(q) ||
+      (t.description || '').toLowerCase().includes(q) ||
+      (t.delay_unit || '').toLowerCase().includes(q)
+    );
+  }
+
+  openCreateModal(): void {
+    this.isEditMode = false;
+    this.editingId = null;
+    this.formCode = '';
+    this.formDescription = '';
+    this.formDelayValue = 10;
+    this.formDelayUnit = 'minute';
+    this.formValidityDays = null;
+    this.formIsActive = true;
+    this.showModal = true;
+  }
+
+  openEditModal(timer: TimerConfig): void {
+    this.isEditMode = true;
+    this.editingId = timer.id || null;
+    this.formCode = timer.code;
+    this.formDescription = timer.description || '';
+    this.formDelayValue = timer.delay_value;
+    this.formDelayUnit = timer.delay_unit || 'minute';
+    this.formValidityDays = timer.validity_period_days ?? null;
+    this.formIsActive = timer.is_active;
+    this.showModal = true;
+  }
+
+  closeModal(): void {
+    if (this.isSubmitting) return;
+    this.showModal = false;
+  }
+
+  saveTimer(): void {
+    if (!this.formCode.trim()) {
+      Swal.fire('Warning', 'Timer code is required.', 'warning');
+      return;
+    }
+
+    const payload: Partial<TimerConfig> = {
+      code: this.formCode.trim().toUpperCase(),
+      description: this.formDescription.trim(),
+      delay_value: Number(this.formDelayValue) || 0,
+      delay_unit: this.formDelayUnit,
+      validity_period_days: this.formValidityDays !== null && this.formValidityDays !== undefined ? Number(this.formValidityDays) : null,
+      is_active: this.formIsActive
+    };
+
+    this.isSubmitting = true;
+
+    if (this.isEditMode && this.editingId) {
+      this.timerService.updateTimer(this.editingId, payload).subscribe({
+        next: () => {
+          this.isSubmitting = false;
+          this.closeModal();
+          Swal.fire('Success', 'Timer updated successfully.', 'success');
+          this.loadTimers();
+        },
+        error: (err) => {
+          this.isSubmitting = false;
+          console.error('Error updating timer:', err);
+          Swal.fire('Error', 'Failed to update timer.', 'error');
+        }
+      });
+    } else {
+      this.timerService.createTimer(payload).subscribe({
+        next: () => {
+          this.isSubmitting = false;
+          this.closeModal();
+          Swal.fire('Success', 'Timer created successfully.', 'success');
+          this.loadTimers();
+        },
+        error: (err) => {
+          this.isSubmitting = false;
+          console.error('Error creating timer:', err);
+          Swal.fire('Error', 'Failed to create timer.', 'error');
+        }
+      });
+    }
+  }
+
+  toggleActive(timer: TimerConfig): void {
+    if (!timer.id) return;
+    this.timerService.toggleActive(timer.id).subscribe({
+      next: (updated) => {
+        timer.is_active = updated.is_active;
+      },
+      error: (err) => {
+        console.error('Error toggling active state:', err);
+        Swal.fire('Error', 'Failed to update timer active state.', 'error');
+      }
+    });
+  }
+
+  deleteTimer(timer: TimerConfig): void {
+    if (!timer.id) return;
+
+    Swal.fire({
+      title: 'Delete Timer Config?',
+      text: `Are you sure you want to delete timer "${timer.code}"?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete'
+    }).then((res) => {
+      if (res.isConfirmed) {
+        this.timerService.deleteTimer(timer.id!).subscribe({
+          next: () => {
+            Swal.fire('Deleted!', 'Timer config has been deleted.', 'success');
+            this.loadTimers();
+          },
+          error: (err) => {
+            console.error('Error deleting timer:', err);
+            Swal.fire('Error', 'Failed to delete timer config.', 'error');
+          }
+        });
+      }
+    });
+  }
+}

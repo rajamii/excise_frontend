@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormArray, FormBuilder, FormGroup, FormsModule, Validators } from '@angular/forms';
-import { Subject, catchError, forkJoin, of, takeUntil } from 'rxjs';
+import { Subject, catchError, finalize, forkJoin, of, takeUntil } from 'rxjs';
 import Swal from 'sweetalert2';
 
 import { AccountService } from '../../../core/services/account.service';
@@ -1012,21 +1012,31 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       suppliers: this.permitService.getSuppliers().pipe(catchError(() => of([] as DistributorSupplier[]))),
       brands: this.permitService.getBrandMaster().pipe(catchError(() => of({ success: true, data: [] as DistributorBrandMaster[], total: 0 }))),
       premises: this.permitService.getPremises().pipe(catchError(() => of({ destination: '' } as any))),
-      applications: this.permitService.listApplications().pipe(catchError(() => of([] as DistributorPermitApplication[])))
+      requisitions: this.permitService.listApplications().pipe(catchError(() => of([] as any[]))),
+      revalidations: this.permitService.getRevalidations().pipe(catchError(() => of([] as any[]))),
+      cancellations: this.permitService.getCancellations().pipe(catchError(() => of([] as any[])))
     })
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => {
+          this.isLoading = false;
+        })
+      )
       .subscribe({
-        next: ({ suppliers, brands, premises, applications }) => {
-          this.suppliers = suppliers || [];
-          this.brandMaster = brands?.data || [];
-          this.applications = applications || [];
-          this.applyFilters();
-          this.routeForm.controls.destination.setValue(premises?.destination || '', { emitEvent: false });
-          this.populateDefaultBrandRows();
-          this.isLoading = false;
+        next: ({ suppliers, brands, premises, requisitions, revalidations, cancellations }) => {
+          try {
+            this.suppliers = Array.isArray(suppliers) ? suppliers : [];
+            this.brandMaster = Array.isArray(brands?.data) ? brands.data : (Array.isArray(brands) ? brands : []);
+            this.routeForm.controls.destination.setValue(premises?.destination || '', { emitEvent: false });
+            this.populateDefaultBrandRows();
+
+            this.processLoadedApplications(requisitions, revalidations, cancellations);
+          } catch (err) {
+            console.error('Error processing permit initial data:', err);
+          }
         },
-        error: () => {
-          this.isLoading = false;
+        error: (err) => {
+          console.error('Error loading initial permit data:', err);
           this.loadError = 'Unable to load distributor permit details.';
         }
       });
@@ -1040,39 +1050,63 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     })
       .pipe(takeUntil(this.destroy$))
       .subscribe(({ requisitions, revalidations, cancellations }) => {
-        const mappedRevalidations = (revalidations || []).map((r: any) => ({
-          ...r,
-          id: r.reference_no || r.id,
-          referenceNo: r.reference_no || r.referenceNo,
-          submitted_at: r.submitted_at || r.created_at,
-          current_stage: r.current_stage || { name: r.status || 'Forwarded To Commissioner' },
-          status: r.status || 'Forwarded To Commissioner',
-          supplier_company_name: r.distributor_permit_detail?.supplier_company_name || r.supplier_company_name || 'N/A',
-          applicant_name: r.applicant_name || r.applicantName || 'N/A'
-        }));
-
-        const mappedCancellations = (cancellations || []).map((c: any) => ({
-          ...c,
-          id: c.reference_no || c.id,
-          referenceNo: c.reference_no || c.referenceNo,
-          submitted_at: c.submitted_at || c.created_at,
-          current_stage: c.current_stage || { name: c.status || 'Forwarded To Commissioner' },
-          status: c.status || 'Forwarded To Commissioner',
-          supplier_company_name: c.distributor_permit_detail?.supplier_company_name || c.supplier_company_name || 'N/A',
-          applicant_name: c.applicant_name || c.applicantName || 'N/A'
-        }));
-
-        this.applications = [
-          ...(requisitions || []),
-          ...mappedRevalidations,
-          ...mappedCancellations
-        ];
-        this.applyFilters();
-        const refParam = this.route.snapshot.queryParams['ref'] || this.route.snapshot.queryParams['id'];
-        if (refParam) {
-          this.openRefWhenApplicationsLoaded(String(refParam));
-        }
+        this.processLoadedApplications(requisitions, revalidations, cancellations);
       });
+  }
+
+  private processLoadedApplications(requisitions: any, revalidations: any, cancellations: any): void {
+    const reqList = Array.isArray(requisitions) ? requisitions : (requisitions?.results || requisitions?.data || []);
+    const revList = Array.isArray(revalidations) ? revalidations : (revalidations?.results || revalidations?.data || []);
+    const canList = Array.isArray(cancellations) ? cancellations : (cancellations?.results || cancellations?.data || []);
+
+    // Normalize revalidations to match DistributorPermitApplication camelCase shape
+    const mappedRevalidations = revList.map((r: any) => {
+      const refNo = r?.reference_no || r?.referenceNo || '';
+      const dateVal = r?.submitted_at || r?.submittedAt || r?.created_at || '';
+      const stageName = r?.current_stage?.name || r?.current_stage_name || r?.status || 'Pending';
+      return {
+        ...r,
+        referenceNo: refNo,
+        submittedAt: dateVal,
+        createdAt: dateVal,
+        applicantName: r?.applicant_name || r?.applicantName || 'N/A',
+        supplierCompanyName: r?.distributor_permit_detail?.supplier_company_name || r?.supplier_company_name || r?.supplierCompanyName || 'N/A',
+        status: stageName,
+        reference_no: refNo,
+        submitted_at: dateVal,
+        current_stage: r?.current_stage || { name: stageName },
+      };
+    });
+
+    // Normalize cancellations to match DistributorPermitApplication camelCase shape
+    const mappedCancellations = canList.map((c: any) => {
+      const refNo = c?.reference_no || c?.referenceNo || '';
+      const dateVal = c?.submitted_at || c?.submittedAt || c?.created_at || '';
+      const stageName = c?.current_stage?.name || c?.current_stage_name || c?.status || 'Pending';
+      return {
+        ...c,
+        referenceNo: refNo,
+        submittedAt: dateVal,
+        createdAt: dateVal,
+        applicantName: c?.applicant_name || c?.applicantName || 'N/A',
+        supplierCompanyName: c?.distributor_permit_detail?.supplier_company_name || c?.supplier_company_name || c?.supplierCompanyName || 'N/A',
+        status: stageName,
+        reference_no: refNo,
+        submitted_at: dateVal,
+        current_stage: c?.current_stage || { name: stageName },
+      };
+    });
+
+    this.applications = [
+      ...reqList,
+      ...mappedRevalidations,
+      ...mappedCancellations
+    ];
+    this.applyFilters();
+    const refParam = this.route.snapshot.queryParams['ref'] || this.route.snapshot.queryParams['id'];
+    if (refParam) {
+      this.openRefWhenApplicationsLoaded(String(refParam));
+    }
   }
 
   private openRefWhenApplicationsLoaded(ref: string): void {

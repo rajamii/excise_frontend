@@ -216,6 +216,15 @@ const routes: Routes = [
             },
           },
           {
+            path: 'timer',
+            loadComponent: () =>
+              import('./master/timer/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: ['site_admin'] },
+          },
+          {
             path: 'hologram-suppliers',
             loadComponent: () =>
               import('./master/hologram-supplier/list/list.component').then(
