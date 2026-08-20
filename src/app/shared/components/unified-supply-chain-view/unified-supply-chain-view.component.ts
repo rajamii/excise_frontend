@@ -3344,12 +3344,48 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         return stageId === 151 || isFinal || stage.includes('approved');
     }
 
-    openAuthorityLetterModal(): void {
-        if (this.applicationData) {
-            localStorage.setItem('finalImflPermitData', JSON.stringify(this.applicationData));
-            const ref = this.applicationData['referenceNo'] || this.applicationData['reference_no'] || this.applicationData['id'] || '';
-            this.router.navigate(['/unified-letter-view/imfl-permit'], { queryParams: { ref } });
+    get canViewAuthorityLetter(): boolean {
+        const current = this.roleService.getCurrentUser();
+        let roleId = Number(current?.roleId || (current as any)?.role?.id || 0);
+        if (!roleId) {
+            try {
+                const cached = localStorage.getItem('currentUser') || localStorage.getItem('user');
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    roleId = Number(parsed?.roleId || parsed?.role?.id || parsed?.user?.roleId || parsed?.user?.role?.id || 0);
+                }
+            } catch {}
         }
+        return roleId === 10 || roleId === 5 || roleId === 1 || roleId === 3;
+    }
+
+    openAuthorityLetterModal(): void {
+        const app = this.applicationData;
+        const ref = app?.['referenceNo'] || app?.['reference_no'] || app?.['id'] || '';
+        if (app) {
+            const cleanApp = {
+                reference_no: ref,
+                referenceNo: ref,
+                applicant_name: app['applicant_name'] || app['applicantName'] || '',
+                supplier_company_name: app['supplier_company_name'] || app['supplierName'] || '',
+                source_address: app['source_address'] || app['applicantAddress'] || '',
+                origin: app['origin'] || '',
+                destination: app['destination'] || '',
+                route_details: app['route_details'] || app['routeDetails'] || '',
+                submitted_at: app['submitted_at'] || app['created_at'] || '',
+                status: app['status'] || 'Approved',
+                line_items: Array.isArray(app['line_items']) ? app['line_items']
+                         : Array.isArray(app['lineItems'])   ? app['lineItems']
+                         : []
+            };
+
+            try {
+                localStorage.setItem('finalImflPermitData', JSON.stringify(cleanApp));
+            } catch (err) {
+                console.warn('Could not save permit data to localStorage:', err);
+            }
+        }
+        this.router.navigate(['/unified-letter-view/imfl-permit'], { queryParams: { ref } });
     }
 
     closeAuthorityLetterModal(): void {

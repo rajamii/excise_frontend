@@ -230,8 +230,9 @@
                         class="btn btn-sm btn-success fw-semibold"
                         type="button"
                         title="View & Print Authority Letter"
-                        *ngIf="isApproved(row)"
-                        (click)="openAuthorityLetter(row)"
+                        *ngIf="isApproved(row) && canViewAuthorityLetter"
+                        (click)="openAuthorityLetter(row, $event)"
+                        (mousedown)="$event.stopPropagation()"
                       >
                         <i class="bi bi-file-earmark-pdf-fill me-1"></i>
                         <span>Authority Letter</span>

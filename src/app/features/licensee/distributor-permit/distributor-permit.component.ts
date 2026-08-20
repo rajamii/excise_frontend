@@ -259,13 +259,54 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return stageId === 151 || isFinal || stage.includes('approved');
   }
 
-  openAuthorityLetter(row: DistributorPermitRow | any): void {
-    const app = row.application || row;
-    if (app) {
-      localStorage.setItem('finalImflPermitData', JSON.stringify(app));
-      const ref = app.referenceNo || app.reference_no || app.id || '';
-      this.router.navigate(['/unified-letter-view/imfl-permit'], { queryParams: { ref } });
+  get canViewAuthorityLetter(): boolean {
+    const user = this.accountService.getCurrentUser() as any;
+    let roleId = Number(user?.role?.id || user?.roleId || 0);
+    if (!roleId) {
+      try {
+        const cached = localStorage.getItem('currentUser') || localStorage.getItem('user');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          roleId = Number(parsed?.roleId || parsed?.role?.id || parsed?.user?.roleId || parsed?.user?.role?.id || 0);
+        }
+      } catch {}
     }
+    // Authority letter visible to Commissioner (10), Permit Section (5), and Admin (1, 3)
+    return roleId === 10 || roleId === 5 || roleId === 1 || roleId === 3;
+  }
+
+  openAuthorityLetter(row: DistributorPermitRow | any, event?: Event): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    const app = row?.application || row;
+    const ref = app?.referenceNo || app?.reference_no || app?.id || (row as any)?.applicationId || '';
+
+    // Build a clean, serializable object to avoid circular-reference errors
+    const cleanApp = {
+      reference_no: ref,
+      referenceNo: ref,
+      applicant_name: app?.applicant_name || app?.applicantName || (row as any)?.applicantName || '',
+      supplier_company_name: app?.supplier_company_name || app?.supplierName || (row as any)?.supplierName || '',
+      source_address: app?.source_address || app?.applicantAddress || '',
+      origin: app?.origin || '',
+      destination: app?.destination || '',
+      route_details: app?.route_details || app?.routeDetails || '',
+      submitted_at: app?.submitted_at || app?.created_at || (row as any)?.submittedOn || '',
+      status: app?.status || (row as any)?.currentStage || 'Approved',
+      line_items: Array.isArray(app?.line_items) ? app.line_items
+               : Array.isArray(app?.lineItems)   ? app.lineItems
+               : []
+    };
+
+    try {
+      localStorage.setItem('finalImflPermitData', JSON.stringify(cleanApp));
+    } catch (err) {
+      console.warn('Could not save permit data to localStorage:', err);
+    }
+
+    this.router.navigate(['/unified-letter-view/imfl-permit'], { queryParams: { ref } });
   }
 
   closeAuthorityLetterModal(): void {

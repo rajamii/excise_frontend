@@ -2022,7 +2022,7 @@
                             <i class="bi bi-printer me-2"></i>Print Application
                         </button>
 
-                        <button class="btn btn-success btn-lg application-footer-actions__print" type="button" *ngIf="isImflDistributorPermitSource() && isApprovedApplication()" (click)="openAuthorityLetterModal()">
+                        <button class="btn btn-success btn-lg application-footer-actions__print" type="button" *ngIf="isImflDistributorPermitSource() && isApprovedApplication() && canViewAuthorityLetter" (click)="openAuthorityLetterModal()">
                             <i class="bi bi-file-earmark-pdf-fill me-2"></i>Authority Letter (Import Pass)
                         </button>
                     </div>
