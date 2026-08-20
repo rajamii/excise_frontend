@@ -1111,8 +1111,13 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             rejected: 0
           };
 
+          // Set sidebar badge count for 'distributor-permit' (IMFL Permit)
+          // for distributors (own apps), and officer roles (pending = apps awaiting their action)
           if (this.isDistributorUser()) {
             this.supplyChainPendingCounts['distributor-permit'] = reqPending;
+          } else {
+            // For Commissioner / Permit Section: pending = total pending + objection apps visible to them
+            this.supplyChainPendingCounts['distributor-permit'] = reqPending + reqObjection;
           }
         }
 
@@ -2727,6 +2732,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
            this.getSupplyChainPendingCount('revalidation') +
            this.getSupplyChainPendingCount('cancellation') +
            this.getSupplyChainPendingCount('hologram') +
+           this.getSupplyChainPendingCount('distributor-permit-requisition') +
+           this.getSupplyChainPendingCount('distributor-permit-revalidation') +
+           this.getSupplyChainPendingCount('distributor-permit-cancellation') +
            (isCommissioner ? 0 : this.getSupplyChainPendingCount('transit'));
   }
 
@@ -2752,7 +2760,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return modules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.applied || 0), 0);
     }
     const isCommissioner = this.isCommissionerUser();
-    const modules = ['requisition', 'revalidation', 'cancellation', 'hologram'];
+    const modules = ['requisition', 'revalidation', 'cancellation', 'hologram',
+                     'distributor-permit-requisition', 'distributor-permit-revalidation', 'distributor-permit-cancellation'];
     if (!isCommissioner) {
       modules.push('transit');
     }
@@ -2772,11 +2781,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return modules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.approved || 0), 0);
     }
     const isCommissioner = this.isCommissionerUser();
-    const modules = ['requisition', 'revalidation', 'cancellation', 'hologram'];
+    const approvedModules = ['requisition', 'revalidation', 'cancellation', 'hologram',
+                             'distributor-permit-requisition', 'distributor-permit-revalidation', 'distributor-permit-cancellation'];
     if (!isCommissioner) {
-      modules.push('transit');
+      approvedModules.push('transit');
     }
-    return modules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.approved || 0), 0);
+    return approvedModules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.approved || 0), 0);
   }
 
   getSupplyChainRejectedTotal(): number {
@@ -2792,11 +2802,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return modules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.rejected || 0), 0);
     }
     const isCommissioner = this.isCommissionerUser();
-    const modules = ['requisition', 'revalidation', 'cancellation', 'hologram'];
+    const rejectedModules = ['requisition', 'revalidation', 'cancellation', 'hologram',
+                             'distributor-permit-requisition', 'distributor-permit-revalidation', 'distributor-permit-cancellation'];
     if (!isCommissioner) {
-      modules.push('transit');
+      rejectedModules.push('transit');
     }
-    return modules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.rejected || 0), 0);
+    return rejectedModules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.rejected || 0), 0);
   }
 
   getSupplyChainObjectionTotal(): number {
@@ -2812,11 +2823,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return modules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.objection || 0), 0);
     }
     const isCommissioner = this.isCommissionerUser();
-    const modules = ['requisition', 'revalidation', 'cancellation', 'hologram'];
+    const objectionModules = ['requisition', 'revalidation', 'cancellation', 'hologram',
+                              'distributor-permit-requisition', 'distributor-permit-revalidation', 'distributor-permit-cancellation'];
     if (!isCommissioner) {
-      modules.push('transit');
+      objectionModules.push('transit');
     }
-    return modules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.objection || 0), 0);
+    return objectionModules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.objection || 0), 0);
   }
 
   getCurrentRoleId(): number {
