@@ -180,7 +180,7 @@
           </div>
 
           <div class="table-wrapper" *ngIf="!error && filteredRows.length > 0">
-            <table class="table table-hover align-middle">
+            <table class="table align-middle dp-entries-table">
               <thead>
                 <tr>
                   <th>Sl. No.</th>
@@ -215,7 +215,7 @@
                     </span>
                   </td>
                   <td class="dp-action-cell" (click)="$event.stopPropagation()">
-                    <div class="d-flex gap-1 justify-content-end">
+                    <div class="dp-action-buttons">
                       <button
                         class="btn dp-action-button"
                         type="button"

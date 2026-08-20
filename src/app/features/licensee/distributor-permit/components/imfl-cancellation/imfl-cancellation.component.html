@@ -46,7 +46,7 @@
       </div>
 
       <div class="table-wrapper" *ngIf="filteredRows.length > 0">
-        <table class="table table-hover align-middle">
+        <table class="table align-middle">
           <thead>
             <tr>
               <th>Sl. No.</th>
@@ -68,14 +68,16 @@
                   {{ row.status || 'Approved' }}
                 </span>
               </td>
-              <td>
-                <button
-                  class="btn btn-sm btn-outline-danger"
-                  type="button"
-                  (click)="openCancellationModal(row)"
-                >
-                  <i class="bi bi-x-circle me-1"></i> Request Cancellation
-                </button>
+              <td class="imfl-action-cell">
+                <div class="imfl-action-buttons">
+                  <button
+                    class="btn btn-sm btn-outline-danger"
+                    type="button"
+                    (click)="openCancellationModal(row)"
+                  >
+                    <i class="bi bi-x-circle me-1"></i> Request Cancellation
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>

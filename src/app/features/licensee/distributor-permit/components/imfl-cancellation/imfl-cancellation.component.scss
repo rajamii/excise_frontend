@@ -186,6 +186,23 @@
   border-bottom: 1px solid #e5ebf5;
 }
 
+.imfl-action-cell {
+  min-width: 190px;
+}
+
+.imfl-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  justify-content: flex-end;
+}
+
+@media (max-width: 768px) {
+  .imfl-action-buttons {
+    justify-content: flex-start;
+  }
+}
+
 .status-badge {
   display: inline-block;
   padding: 3px 10px;

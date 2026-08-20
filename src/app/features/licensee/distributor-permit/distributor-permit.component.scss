@@ -299,6 +299,13 @@
   pointer-events: auto !important;
 }
 
+.dp-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+
 .dp-action-button {
   display: inline-flex;
   align-items: center;
@@ -863,9 +870,17 @@
   position: relative;
   z-index: 3;
   pointer-events: auto !important;
-  transition: background-color 0.15s ease-in-out;
-  &:hover {
-    background-color: #f1f5f9 !important;
+}
+
+.dp-entries-table tbody tr,
+.dp-entries-table tbody tr:hover {
+  background-color: transparent;
+  transition: none;
+}
+
+@media (max-width: 768px) {
+  .dp-action-buttons {
+    justify-content: flex-start;
   }
 }
 
