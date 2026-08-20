@@ -3345,8 +3345,11 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     }
 
     openAuthorityLetterModal(): void {
-        this.authorityLetterModalOpen = true;
-        this.cdr.detectChanges();
+        if (this.applicationData) {
+            localStorage.setItem('finalImflPermitData', JSON.stringify(this.applicationData));
+            const ref = this.applicationData['referenceNo'] || this.applicationData['reference_no'] || this.applicationData['id'] || '';
+            this.router.navigate(['/unified-letter-view/imfl-permit'], { queryParams: { ref } });
+        }
     }
 
     closeAuthorityLetterModal(): void {

@@ -260,8 +260,12 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   openAuthorityLetter(row: DistributorPermitRow | any): void {
-    this.authorityLetterData = row.application || row;
-    this.authorityLetterModalOpen = true;
+    const app = row.application || row;
+    if (app) {
+      localStorage.setItem('finalImflPermitData', JSON.stringify(app));
+      const ref = app.referenceNo || app.reference_no || app.id || '';
+      this.router.navigate(['/unified-letter-view/imfl-permit'], { queryParams: { ref } });
+    }
   }
 
   closeAuthorityLetterModal(): void {

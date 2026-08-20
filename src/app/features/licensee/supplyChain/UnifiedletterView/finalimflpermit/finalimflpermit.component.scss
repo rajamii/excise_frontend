@@ -1,0 +1,264 @@
+$primary-blue: #1e3a8a;
+$text-dark: #1a1a1a;
+$border-color: #333333;
+
+.toolbar {
+  max-width: 210mm;
+  margin: 0 auto 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+
+  .color-options {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    label {
+      font-weight: bold;
+    }
+
+    mat-radio-group {
+      display: flex;
+      gap: 15px;
+    }
+  }
+
+  @media print {
+    display: none;
+  }
+}
+
+.permit-container {
+  margin: 20px auto;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+  position: relative;
+  box-sizing: border-box;
+
+  &.yellow-bg {
+    .permit-page {
+      background: #ffff99 !important;
+
+      .permit-content {
+        background: #ffff99 !important;
+      }
+    }
+  }
+}
+
+.permit-page {
+  max-width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto 40px auto;
+  background: white;
+  padding: 40px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+  position: relative;
+  box-sizing: border-box;
+  page-break-after: always;
+
+  &:last-child {
+    margin-bottom: 20px;
+  }
+}
+
+.permit-content {
+  position: relative;
+  z-index: 1;
+  color: $text-dark;
+  font-family: 'Times New Roman', Times, serif;
+  background: white;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.5;
+
+  .bill-type {
+    position: absolute;
+    top: -10px;
+    right: 0;
+    font-weight: bold;
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    color: #444;
+    text-transform: uppercase;
+  }
+
+  .header {
+    .dept-title {
+      font-size: 22px;
+      font-weight: bold;
+      letter-spacing: 1.5px;
+      color: $primary-blue;
+      text-transform: uppercase;
+    }
+
+    .state-title {
+      font-size: 14px;
+      font-weight: bold;
+      color: #334155;
+    }
+  }
+
+  .pass-title-box {
+    border-top: 2px solid $primary-blue;
+    border-bottom: 2px solid $primary-blue;
+
+    .pass-title {
+      font-size: 14px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: $primary-blue;
+    }
+  }
+
+  .info-row {
+    font-size: 13px;
+    font-weight: bold;
+
+    .underlined {
+      text-decoration: underline;
+    }
+  }
+
+  .auth-paragraph {
+    font-size: 13px;
+    line-height: 1.65;
+    text-align: justify;
+  }
+
+  .table-heading {
+    font-size: 13px;
+    font-weight: bold;
+    text-decoration: underline;
+  }
+
+  .liquor-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-top: 5px;
+
+    th, td {
+      border: 1px solid $border-color;
+      padding: 6px 10px;
+    }
+
+    th {
+      background-color: #f8fafc;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    tfoot {
+      td {
+        background-color: #f8fafc;
+        font-weight: bold;
+      }
+    }
+  }
+
+  .signature-seal-block {
+    .round-seal {
+      width: 95px;
+      height: 95px;
+      border: 2px dashed $primary-blue;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: $primary-blue;
+      font-size: 10px;
+      font-weight: bold;
+      text-transform: uppercase;
+      transform: rotate(-8deg);
+      text-align: center;
+    }
+
+    .script-sig {
+      font-family: 'Brush Script MT', cursive;
+      font-size: 24px;
+      color: $primary-blue;
+      margin-bottom: 2px;
+    }
+
+    .sig-title {
+      font-weight: bold;
+      font-size: 13px;
+    }
+
+    .sig-subtitle {
+      font-weight: bold;
+      font-size: 12px;
+      color: #444;
+    }
+
+    .sig-dept, .sig-gov {
+      font-size: 11px;
+      color: #555;
+    }
+  }
+
+  .hash-text {
+    font-size: 9px;
+    font-family: monospace;
+    color: #888;
+  }
+
+  .conditions-section {
+    border-top: 1px solid #cbd5e1;
+    font-size: 11px;
+
+    .conditions-title {
+      font-weight: bold;
+      text-transform: uppercase;
+      text-decoration: underline;
+    }
+
+    .conditions-list {
+      padding-left: 18px;
+      margin-bottom: 8px;
+      line-height: 1.4;
+
+      li {
+        margin-bottom: 3px;
+      }
+    }
+
+    .statutory-note {
+      font-style: italic;
+      color: #64748b;
+      font-size: 10px;
+    }
+  }
+}
+
+@media print {
+  body {
+    background: white;
+    padding: 0;
+  }
+
+  .toolbar {
+    display: none !important;
+  }
+
+  .permit-container {
+    margin: 0;
+    padding: 0;
+  }
+
+  .permit-page {
+    margin: 0;
+    padding: 30px;
+    box-shadow: none;
+    border: none;
+    width: 210mm;
+    min-height: 297mm;
+    page-break-after: always;
+  }
+}

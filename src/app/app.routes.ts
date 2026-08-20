@@ -210,6 +210,22 @@ export const routes: Routes = [
       ).then((m) => m.FinaltransitpermitComponent),
   },
   {
+    path: "unified-letter-view/imfl-permit",
+    canActivate: [UserRouteAccessService],
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/UnifiedletterView/finalimflpermit/finalimflpermit.component"
+      ).then((m) => m.FinalimflpermitComponent),
+  },
+  {
+    path: "dev-final-imfl-permit-view",
+    canActivate: [UserRouteAccessService],
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/UnifiedletterView/finalimflpermit/finalimflpermit.component"
+      ).then((m) => m.FinalimflpermitComponent),
+  },
+  {
     path: "dev-payment-receipt",
     canActivate: [UserRouteAccessService],
     data: { devOnly: true, requiredPermission: "licensee.module.view" },
