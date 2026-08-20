@@ -1059,7 +1059,25 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const revList = Array.isArray(revalidations) ? revalidations : (revalidations?.results || revalidations?.data || []);
     const canList = Array.isArray(cancellations) ? cancellations : (cancellations?.results || cancellations?.data || []);
 
-    // Normalize revalidations to match DistributorPermitApplication camelCase shape
+    const mappedRequisitions = reqList.map((req: any) => {
+      const refNo = req?.reference_no || req?.referenceNo || '';
+      const dateVal = req?.submitted_at || req?.submittedAt || req?.created_at || req?.createdAt || '';
+      const stageName = req?.current_stage?.name || req?.current_stage_name || req?.status || 'Pending';
+      return {
+        ...req,
+        referenceNo: refNo,
+        reference_no: refNo,
+        submittedAt: dateVal,
+        submitted_at: dateVal,
+        createdAt: dateVal,
+        created_at: dateVal,
+        applicantName: req?.applicant_name || req?.applicantName || req?.applicant?.full_name || this.applicantDisplayName,
+        supplierCompanyName: req?.supplier_company_name || req?.supplierCompanyName || 'N/A',
+        status: stageName,
+        current_stage: req?.current_stage || { name: stageName }
+      };
+    });
+
     const mappedRevalidations = revList.map((r: any) => {
       const refNo = r?.reference_no || r?.referenceNo || '';
       const dateVal = r?.submitted_at || r?.submittedAt || r?.created_at || '';
@@ -1067,18 +1085,17 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       return {
         ...r,
         referenceNo: refNo,
+        reference_no: refNo,
         submittedAt: dateVal,
+        submitted_at: dateVal,
         createdAt: dateVal,
         applicantName: r?.applicant_name || r?.applicantName || 'N/A',
         supplierCompanyName: r?.distributor_permit_detail?.supplier_company_name || r?.supplier_company_name || r?.supplierCompanyName || 'N/A',
         status: stageName,
-        reference_no: refNo,
-        submitted_at: dateVal,
-        current_stage: r?.current_stage || { name: stageName },
+        current_stage: r?.current_stage || { name: stageName }
       };
     });
 
-    // Normalize cancellations to match DistributorPermitApplication camelCase shape
     const mappedCancellations = canList.map((c: any) => {
       const refNo = c?.reference_no || c?.referenceNo || '';
       const dateVal = c?.submitted_at || c?.submittedAt || c?.created_at || '';
@@ -1086,19 +1103,19 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       return {
         ...c,
         referenceNo: refNo,
+        reference_no: refNo,
         submittedAt: dateVal,
+        submitted_at: dateVal,
         createdAt: dateVal,
         applicantName: c?.applicant_name || c?.applicantName || 'N/A',
         supplierCompanyName: c?.distributor_permit_detail?.supplier_company_name || c?.supplier_company_name || c?.supplierCompanyName || 'N/A',
         status: stageName,
-        reference_no: refNo,
-        submitted_at: dateVal,
-        current_stage: c?.current_stage || { name: stageName },
+        current_stage: c?.current_stage || { name: stageName }
       };
     });
 
     this.applications = [
-      ...reqList,
+      ...mappedRequisitions,
       ...mappedRevalidations,
       ...mappedCancellations
     ];
@@ -1195,19 +1212,24 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.syncBrandStepValidity();
   }
 
-  private mapApplicationRow(application: DistributorPermitApplication): DistributorPermitRow {
-    const dateValue = application.submittedAt || application.createdAt || '';
+  private mapApplicationRow(application: any): DistributorPermitRow {
+    const refNo = application?.referenceNo || application?.reference_no || application?.id || '';
+    const dateValue = application?.submittedAt || application?.submitted_at || application?.createdAt || application?.created_at || '';
     const submittedDate = this.parseDate(dateValue);
+    const applicantName = application?.applicantName || application?.applicant_name || application?.applicant?.full_name || this.applicantDisplayName;
+    const supplierName = application?.supplierCompanyName || application?.supplier_company_name || application?.distributor_permit_detail?.supplier_company_name || 'N/A';
+    const stageStr = application?.current_stage?.name || application?.current_stage || application?.status || 'Pending';
+
     return {
-      id: application.referenceNo || '',
-      applicationId: application.referenceNo || 'N/A',
+      id: refNo,
+      applicationId: refNo || 'N/A',
       submittedOn: this.formatDate(dateValue),
       submittedDate,
-      paymentStatus: 'Pending',
-      applicantName: application.applicantName || this.applicantDisplayName,
-      supplierName: application.supplierCompanyName || 'N/A',
-      currentStage: this.getCurrentStage(application.status),
-      statusGroup: this.getStatusGroup(application.status),
+      paymentStatus: application?.is_excise_duty_fee_paid ? 'Paid' : 'Pending',
+      applicantName,
+      supplierName,
+      currentStage: this.getCurrentStage(stageStr),
+      statusGroup: this.getStatusGroup(stageStr),
       application
     };
   }
@@ -1285,7 +1307,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     if (!value) {
       return null;
     }
-    const date = new Date(value);
+    const isoStr = String(value).trim().replace(' ', 'T');
+    const date = new Date(isoStr);
     return Number.isNaN(date.getTime()) ? null : date;
   }
 
