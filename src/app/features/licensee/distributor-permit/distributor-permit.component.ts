@@ -129,6 +129,16 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         const tabParam = String(params?.['tab'] || '').toLowerCase() as ImflTabType;
         if (['requisition', 'revalidation', 'cancellation'].includes(tabParam)) {
           this.activeTab = tabParam;
+        } else {
+          // Also resolve from the 'section' param (e.g. distributor-permit-cancellation)
+          const sectionParam = String(params?.['section'] || '').toLowerCase();
+          if (sectionParam.includes('cancellation')) {
+            this.activeTab = 'cancellation';
+          } else if (sectionParam.includes('revalidation')) {
+            this.activeTab = 'revalidation';
+          } else if (sectionParam.includes('requisition') || sectionParam.includes('distributor-permit')) {
+            this.activeTab = 'requisition';
+          }
         }
         const refParam = params?.['ref'] || params?.['id'];
         if (refParam) {
@@ -182,8 +192,22 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return this.applications.map((application) => this.mapApplicationRow(application));
   }
 
+  get activeTabRows(): DistributorPermitRow[] {
+    return this.rows.filter((row) => {
+      const ref = String(row.applicationId || '').toUpperCase();
+      if (this.activeTab === 'requisition') {
+        return !ref.startsWith('IMFLREV') && !ref.startsWith('IMFLCAN');
+      } else if (this.activeTab === 'revalidation') {
+        return ref.startsWith('IMFLREV');
+      } else if (this.activeTab === 'cancellation') {
+        return ref.startsWith('IMFLCAN');
+      }
+      return true;
+    });
+  }
+
   get counts(): Record<DistributorPermitStatusGroup, number> & { total: number } {
-    return this.rows.reduce(
+    return this.activeTabRows.reduce(
       (acc, row) => {
         acc.total += 1;
         if (acc[row.statusGroup] !== undefined) {
@@ -200,17 +224,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const fromDate = this.dateFromFilter ? new Date(this.dateFromFilter) : null;
     const toDate = this.dateToFilter ? new Date(this.dateToFilter) : null;
 
-    return this.rows.filter((row) => {
-      const ref = String(row.applicationId || '').toUpperCase();
-
-      if (this.activeTab === 'requisition') {
-        if (ref.startsWith('IMFLREV') || ref.startsWith('IMFLCAN')) return false;
-      } else if (this.activeTab === 'revalidation') {
-        if (!ref.startsWith('IMFLREV')) return false;
-      } else if (this.activeTab === 'cancellation') {
-        if (!ref.startsWith('IMFLCAN')) return false;
-      }
-
+    return this.activeTabRows.filter((row) => {
       const matchesStatus = this.activeCardFilter === 'all' || row.statusGroup === this.activeCardFilter;
       const matchesSearch = !q ||
         row.applicationId.toLowerCase().includes(q) ||
@@ -273,6 +287,83 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }
     // Authority letter visible to Commissioner (10), Permit Section (5), and Admin (1, 3)
     return roleId === 10 || roleId === 5 || roleId === 1 || roleId === 3;
+  }
+
+  get isDistributorUser(): boolean {
+    const user = this.accountService.getCurrentUser() as any;
+    let roleId = Number(user?.role?.id || user?.roleId || 0);
+    if (!roleId) {
+      try {
+        const cached = localStorage.getItem('currentUser') || localStorage.getItem('user');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          roleId = Number(parsed?.roleId || parsed?.role?.id || parsed?.user?.roleId || parsed?.user?.role?.id || 0);
+        }
+      } catch {}
+    }
+    const officerRoles = [1, 3, 5, 6, 7, 8, 9, 10];
+    if (officerRoles.includes(roleId)) {
+      return false;
+    }
+    return true;
+  }
+
+  showCancellationModal = false;
+  cancellationTargetRow: DistributorPermitRow | null = null;
+  cancellationReasonType = 'Non-availability of tankers / Transport issues';
+  cancellationReasonDetails = '';
+  cancellationDeclarationAccepted = false;
+  isSubmittingCancellation = false;
+
+  onCancelPermit(row: DistributorPermitRow | any, event?: Event): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    this.cancellationTargetRow = row;
+    this.cancellationReasonType = 'Non-availability of tankers / Transport issues';
+    this.cancellationReasonDetails = '';
+    this.cancellationDeclarationAccepted = false;
+    this.showCancellationModal = true;
+  }
+
+  closeCancellationModal(): void {
+    if (this.isSubmittingCancellation) return;
+    this.showCancellationModal = false;
+    this.cancellationTargetRow = null;
+  }
+
+  confirmCancellationSubmit(): void {
+    if (!this.cancellationTargetRow) return;
+    if (!this.cancellationDeclarationAccepted) {
+      alert('Please accept the declaration to proceed.');
+      return;
+    }
+    if (!this.cancellationReasonDetails.trim()) {
+      alert('Please enter detailed remarks/reason for cancellation.');
+      return;
+    }
+
+    const appId = this.cancellationTargetRow.applicationId;
+    const fullReason = `${this.cancellationReasonType}: ${this.cancellationReasonDetails.trim()}`;
+
+    this.isSubmittingCancellation = true;
+    this.permitService.createCancellation({
+      distributor_permit: appId,
+      cancellation_reason: fullReason
+    }).subscribe({
+      next: (res: any) => {
+        this.isSubmittingCancellation = false;
+        this.closeCancellationModal();
+        alert(`Permit cancellation request submitted successfully. Reference No: ${res.reference_no || res.id}`);
+        this.loadApplications();
+      },
+      error: (err: any) => {
+        this.isSubmittingCancellation = false;
+        console.error('Error submitting cancellation request:', err);
+        alert('Failed to submit cancellation request: ' + (err?.error?.message || err?.message || 'Server error'));
+      }
+    });
   }
 
   openAuthorityLetter(row: DistributorPermitRow | any, event?: Event): void {
@@ -939,10 +1030,40 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   private loadApplications(): void {
-    this.permitService.listApplications()
+    forkJoin({
+      requisitions: this.permitService.listApplications().pipe(catchError(() => of([]))),
+      revalidations: this.permitService.getRevalidations().pipe(catchError(() => of([]))),
+      cancellations: this.permitService.getCancellations().pipe(catchError(() => of([])))
+    })
       .pipe(takeUntil(this.destroy$))
-      .subscribe((rows) => {
-        this.applications = rows || [];
+      .subscribe(({ requisitions, revalidations, cancellations }) => {
+        const mappedRevalidations = (revalidations || []).map((r: any) => ({
+          ...r,
+          id: r.reference_no || r.id,
+          referenceNo: r.reference_no || r.referenceNo,
+          submitted_at: r.submitted_at || r.created_at,
+          current_stage: r.current_stage || { name: r.status || 'Forwarded To Commissioner' },
+          status: r.status || 'Forwarded To Commissioner',
+          supplier_company_name: r.distributor_permit_detail?.supplier_company_name || r.supplier_company_name || 'N/A',
+          applicant_name: r.applicant_name || r.applicantName || 'N/A'
+        }));
+
+        const mappedCancellations = (cancellations || []).map((c: any) => ({
+          ...c,
+          id: c.reference_no || c.id,
+          referenceNo: c.reference_no || c.referenceNo,
+          submitted_at: c.submitted_at || c.created_at,
+          current_stage: c.current_stage || { name: c.status || 'Forwarded To Commissioner' },
+          status: c.status || 'Forwarded To Commissioner',
+          supplier_company_name: c.distributor_permit_detail?.supplier_company_name || c.supplier_company_name || 'N/A',
+          applicant_name: c.applicant_name || c.applicantName || 'N/A'
+        }));
+
+        this.applications = [
+          ...(requisitions || []),
+          ...mappedRevalidations,
+          ...mappedCancellations
+        ];
         this.applyFilters();
         const refParam = this.route.snapshot.queryParams['ref'] || this.route.snapshot.queryParams['id'];
         if (refParam) {

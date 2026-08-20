@@ -1,9 +1,10 @@
 import { Component, Inject, PLATFORM_ID, OnInit, inject } from "@angular/core";
 import { CommonModule, isPlatformBrowser } from "@angular/common";
 import { FormsModule } from "@angular/forms";
-import { Router } from "@angular/router";
+import { ActivatedRoute, Router } from "@angular/router";
 import { SupplyChainService } from "../../services/supplychain.service";
 import { AccountService } from "../../../../../core/services/account.service";
+import { DistributorPermitService } from "../../../../../core/services/distributor-permit.service";
 import { UnifiedActionButtonsComponent } from '../../../../../shared/components/unified-action-buttons/unified-action-buttons.component';
 import { UnifiedActionsService } from '../../../../../shared/services/unified-actions.service';
 import { secureRandomToken } from '../../../../../core/utils/secure-random';
@@ -120,6 +121,14 @@ export class CancellationComponent implements OnInit {
 
   // Services
   private unifiedActionsService = inject(UnifiedActionsService);
+  private distributorPermitService = inject(DistributorPermitService);
+  private route = inject(ActivatedRoute);
+
+  isImflMode(): boolean {
+    const routeUrl = this.router.url.toLowerCase();
+    const section = (this.route?.snapshot?.queryParams?.['section'] || '').toLowerCase();
+    return routeUrl.includes('imfl') || routeUrl.includes('distributor') || section.includes('imfl') || section.includes('distributor');
+  }
 
   constructor(
     private router: Router,
@@ -139,86 +148,54 @@ export class CancellationComponent implements OnInit {
   loadCancellationData() {
     console.log('Loading cancellation data from API...');
 
-    this.supplyChainService.getCancellations().subscribe({
+    const obs = this.isImflMode()
+      ? this.distributorPermitService.getCancellations()
+      : this.supplyChainService.getCancellations();
+
+    obs.subscribe({
       next: (data) => {
         console.log('Raw API response:', data);
-        console.log('Number of items received:', data.length);
 
-        this.cancellationData = data.map((item: any, index: number) => {
+        this.cancellationData = (data || []).map((item: any, index: number) => {
+          const refNo = item.reference_no || item.referenceNo || item.ourRefNo || item.our_ref_no || 'N/A';
+          const dateStr = item.submitted_at || item.submittedAt || item.cancellationDate || item.cancellation_date || item.requisitionDate;
+          const subDate = dateStr ? new Date(dateStr).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
+          const distName = item.distributor_permit_detail?.supplier_company_name || item.supplier_company_name || item.supplierName || item.branchName || item.distilleryName || 'N/A';
+          const estName = item.applicant_name || item.applicantName || item.establishmentName || 'N/A';
+          const permitNo = item.distributor_permit || item.distributor_permit_ref_no || item.cancelledPermitNumber || item.permitNumber || '-';
+
           const mappedItem = {
-            id: item.id || item.pk || `fallback-${index}-${secureRandomToken(8)}`, // Ensure unique ID
-            referenceNo: item.ourRefNo || item.our_ref_no || 'N/A',
-            submissionDate: item.cancellationDate ? new Date(item.cancellationDate).toLocaleDateString('en-GB') :
-              (item.cancellation_date ? new Date(item.cancellation_date).toLocaleDateString('en-GB') :
-                (item.requisitionDate ? new Date(item.requisitionDate).toLocaleDateString('en-GB') :
-                  new Date().toLocaleDateString('en-GB'))),
-            requestDate: item.cancellationDate ? new Date(item.cancellationDate).toLocaleDateString('en-GB') :
-              (item.cancellation_date ? new Date(item.cancellation_date).toLocaleDateString('en-GB') :
-                (item.requisitionDate ? new Date(item.requisitionDate).toLocaleDateString('en-GB') :
-                  new Date().toLocaleDateString('en-GB'))),
-            distilleryName: item.branchName || item.branch_name || item.distilleryName || item.distillery_name || 'N/A',
-            establishmentName:
-              item.establishmentName ||
-              item.establishment_name ||
-              item.manufacturingUnitName ||
-              item.manufacturing_unit_name ||
-              item.licenseeName ||
-              item.licensee_name ||
-              'N/A',
-            status: item.status || 'CancellationPending',
-            amount: (item.totalCancellationAmount || item.total_cancellation_amount || item.cancellationBrAmount || item.cancellation_br_amount || '0.00').toString(),
-            workflowId: item.workflow || item.workflow_id || item.workflowId,
-            currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,
-            permitNumber: (
-              item.cancelledPermitNumbers ||
-              item.cancelledPermitNumber ||
-              item.cancelled_permit_numbers ||
-              item.cancelled_permit_number ||
-              item.permitNumber ||
-              item.permit_no ||
-              item.permitNo ||
-              item.originalPermitNumbers ||
-              item.original_permit_no ||
-              item.originalPermitNo ||
-              '-'
-            ).toString(),
-            cancellationReason: item.reasonForCancellation || item.reason_for_cancellation || 'Cancellation Request',
-            licenseType: item.licenseType || item.license_type || 'Import Permit',
-            allowedActions: item.allowedActions || item.allowed_actions || this.getDefaultActions(item.status),
+            id: item.reference_no || item.id || item.pk || `fallback-${index}-${secureRandomToken(8)}`,
+            referenceNo: refNo,
+            submissionDate: subDate,
+            requestDate: subDate,
+            distilleryName: distName,
+            establishmentName: estName,
+            status: item.status || 'Forwarded To Commissioner',
+            amount: (item.distributor_permit_detail?.total_import_value || item.totalCancellationAmount || item.cancellationBrAmount || '0.00').toString(),
+            workflowId: item.workflow || item.workflow_id || 17,
+            currentStage: item.current_stage || item.currentStage || 162,
+            permitNumber: permitNo,
+            cancellationReason: item.cancellation_reason || item.cancellationReason || 'Cancellation Request',
+            licenseType: 'Import Permit Cancellation',
+            allowedActions: item.allowed_actions || item.allowedActions || this.getDefaultActions(item.status),
             allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || []
           };
 
           // Check if this cancellation was approved locally and override status
           const storedStatus = mappedItem.id ? this.getStoredStatus(mappedItem.id) : null;
           if (storedStatus) {
-            console.log(`Applying stored status for ${mappedItem.id}: ${storedStatus}`);
             mappedItem.status = storedStatus;
-            mappedItem.allowedActions = []; // Clear actions for approved items
+            mappedItem.allowedActions = [];
           }
 
-          console.log(`Mapped item ${index}:`, mappedItem);
           return mappedItem;
         });
-
-        console.log('Final mapped cancellation data:', this.cancellationData);
-
-        // Check for duplicate IDs
-        const ids = this.cancellationData.map(item => item.id);
-        const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
-        if (duplicateIds.length > 0) {
-          console.warn('Duplicate IDs found:', duplicateIds);
-        }
 
         this.applyCancellationFilters();
         this.maybeAutoSelectPendingSummary();
       },
-      error: (err) => {
-        console.error('Error fetching cancellations', err);
-
-        // Fallback to sample data for development
-        console.log('Using fallback sample data');
-        this.loadSampleCancellationData();
-      }
+      error: (err) => console.error('Error loading cancellation data:', err)
     });
   }
 

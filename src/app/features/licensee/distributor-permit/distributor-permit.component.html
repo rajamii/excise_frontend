@@ -18,9 +18,8 @@
 
   <ng-container *ngIf="!isLoading">
 
-    <!-- Active Tab 1: IMFL Requisition -->
-    <ng-container *ngIf="activeTab === 'requisition'">
-      <section class="registration-management-container" *ngIf="!isFormView">
+    <!-- Shared Summary Stats Row & Filters (Visible for All Tabs) -->
+    <section class="registration-management-container" *ngIf="!isFormView">
       <div class="new-license-register-header">
         <div class="row g-3 mb-4 stats-row">
           <div class="col-xl col-lg-6 col-md-6">
@@ -167,7 +166,8 @@
         </div>
       </div>
 
-      <div class="register-table">
+      <!-- Tab 1: IMFL Requisition Table -->
+      <div class="register-table" *ngIf="activeTab === 'requisition'">
         <div class="register-container">
           <div class="register-header-bar" style="background:#0f172a; border-radius:8px 8px 0 0; padding: 12px 18px;">
             <h5 class="register-table-title" style="color:#f1f5f9; margin:0;">
@@ -237,708 +237,280 @@
                         <i class="bi bi-file-earmark-pdf-fill me-1"></i>
                         <span>Authority Letter</span>
                       </button>
+                      <button
+                        class="btn btn-sm btn-outline-danger fw-semibold"
+                        type="button"
+                        title="Request Cancellation"
+                        *ngIf="isApproved(row) && isDistributorUser"
+                        (click)="onCancelPermit(row, $event)"
+                        (mousedown)="$event.stopPropagation()"
+                      >
+                        <i class="bi bi-x-circle me-1"></i>
+                        <span>Cancel Permit</span>
+                      </button>
                     </div>
                   </td>
                 </tr>
               </tbody>
             </table>
-
-            <div class="dp-inline-details" *ngIf="selectedApplication && useInlineDetails">
-              <div class="dp-inline-details__header">
-                <div>
-                  <div class="dp-inline-details__eyebrow">Selected Application</div>
-                  <div class="dp-inline-details__title">
-                    {{ selectedApplication.referenceNo }}
-                    <span class="status-badge status-badge--{{ getStatusGroup(selectedApplication.status) }} ms-2">
-                      {{ getCurrentStage(selectedApplication.status) }}
-                    </span>
-                  </div>
-                </div>
-                <button type="button" class="btn btn-outline-secondary btn-sm" (click)="clearSelectedApplication()">
-                  Close Details
-                </button>
-              </div>
-
-              <div class="dp-inline-details__grid">
-                <div class="detail-card">
-                  <div class="detail-label">Applicant Company</div>
-                  <div class="detail-value fw-bold">{{ selectedApplication.applicantName || 'N/A' }}</div>
-                </div>
-                <div class="detail-card">
-                  <div class="detail-label">Supplier / Establishment</div>
-                  <div class="detail-value fw-bold">{{ selectedApplication.supplierCompanyName || 'N/A' }}</div>
-                </div>
-                <div class="detail-card">
-                  <div class="detail-label">Source Address</div>
-                  <div class="detail-value">{{ selectedApplication.sourceAddress || 'N/A' }}</div>
-                </div>
-                <div class="detail-card">
-                  <div class="detail-label">Origin</div>
-                  <div class="detail-value">{{ selectedApplication.origin || 'N/A' }}</div>
-                </div>
-                <div class="detail-card">
-                  <div class="detail-label">Destination Premises</div>
-                  <div class="detail-value">{{ selectedApplication.destination || 'N/A' }}</div>
-                </div>
-                <div class="detail-card">
-                  <div class="detail-label">Submission Date</div>
-                  <div class="detail-value">{{ (selectedApplication.submittedAt || selectedApplication.createdAt) | date:'dd-MMM-yyyy' }}</div>
-                </div>
-              </div>
-
-              <div class="dp-inline-details__table table-responsive border rounded-3">
-                <table class="table table-striped table-hover align-middle mb-0">
-                  <thead class="table-dark">
-                    <tr>
-                      <th>#</th>
-                      <th>Brand Name</th>
-                      <th>Size (ml)</th>
-                      <th>Cases</th>
-                      <th>EDP / Case</th>
-                      <th>Import Fee / Case</th>
-                      <th>Total Import</th>
-                      <th>Bulk Litres</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr *ngFor="let item of selectedApplication.lineItems; let idx = index">
-                      <td>{{ idx + 1 }}</td>
-                      <td class="fw-semibold">{{ item.brandName || '-' }}</td>
-                      <td>{{ item.sizeMl || 0 }} ml</td>
-                      <td>{{ item.cases }}</td>
-                      <td>{{ (item.edpPerCase || 0) | currency:'INR':'symbol':'1.2-2' }}</td>
-                      <td>{{ (item.importPassFeePerCase || 0) | currency:'INR':'symbol':'1.2-2' }}</td>
-                      <td class="fw-bold text-success">{{ (item.totalImport || 0) | currency:'INR':'symbol':'1.2-2' }}</td>
-                      <td>{{ (item.bulkLitres || 0) | number:'1.3-3' }}</td>
-                    </tr>
-                    <tr *ngIf="!selectedApplication.lineItems?.length">
-                      <td colspan="8" class="text-center text-muted py-4">No line items available.</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <div class="detail-actions p-3 mt-3 bg-light rounded-3 border" *ngIf="selectedActionItem">
-                <div class="fw-bold mb-2">
-                  {{ isOfficerUser ? 'Officer Action Controls' : 'Available Actions' }}
-                </div>
-                <app-unified-action-buttons
-                  [item]="selectedActionItem"
-                  [itemType]="'requisition'"
-                  [context]="detailActionContext"
-                  [displayMode]="'detailed'"
-                  [includeActions]="detailActionIncludeActions"
-                  (actionClicked)="onModalActionClicked($event)">
-                </app-unified-action-buttons>
-              </div>
-            </div>
-
-            <div class="pagination-bar" *ngIf="filteredRows.length > 0">
-              <div class="page-summary">
-                Showing {{ pageStart }}-{{ pageEnd }} of {{ filteredRows.length }}
-              </div>
-
-              <div class="page-controls">
-                <div class="page-size">
-                  <span class="page-size-label">Page size</span>
-                  <select
-                    class="form-select form-select-sm page-size-select"
-                    [(ngModel)]="pageSize"
-                    (ngModelChange)="onPageSizeChange()"
-                    title="Page size"
-                    aria-label="Page size"
-                  >
-                    <option *ngFor="let size of pageSizeOptions" [ngValue]="size">{{ size }}</option>
-                  </select>
-                </div>
-
-                <button class="btn btn-outline-secondary btn-sm" type="button" (click)="prevPage()" [disabled]="pageIndex === 0">
-                  Prev
-                </button>
-                <span class="page-indicator" *ngIf="totalPages > 0">
-                  Page {{ pageIndex + 1 }} / {{ totalPages }}
-                </span>
-                <button
-                  class="btn btn-outline-secondary btn-sm"
-                  type="button"
-                  (click)="nextPage()"
-                  [disabled]="totalPages === 0 || pageIndex >= totalPages - 1"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
           </div>
-
-          <div class="error-state" *ngIf="error">{{ error }}</div>
-          <div class="empty-state" *ngIf="!error && filteredRows.length === 0">
-            <i class="bi bi-inbox"></i>
-            <div>No Applications</div>
-            <small>No entries found.</small>
+          <div class="dp-empty-state text-center p-4 text-muted" *ngIf="!error && filteredRows.length === 0">
+            <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+            <p class="m-0">No requisition applications found.</p>
           </div>
         </div>
       </div>
-    </section>
 
-    <section class="dp-form-view" *ngIf="isFormView">
-      <mat-horizontal-stepper class="dp-stepper" #stepper>
-        <mat-step>
-          <ng-template matStepLabel>Applicant Details</ng-template>
-          <form [formGroup]="applicantForm" class="dp-form-grid dp-form-grid--card">
-            <mat-form-field appearance="outline">
-              <mat-label>Applicant Company Name</mat-label>
-              <input matInput formControlName="applicantCompanyName" aria-label="Applicant Company Name" title="Applicant Company Name">
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>Authorized Signatory</mat-label>
-              <input matInput formControlName="authorizedSignatory" aria-label="Authorized Signatory" title="Authorized Signatory">
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>Application Date</mat-label>
-              <input matInput type="date" formControlName="applicationDate" aria-label="Application Date" title="Application Date">
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>Addressed To</mat-label>
-              <input matInput formControlName="addressedTo" aria-label="Addressed To" title="Addressed To">
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" class="dp-col-span">
-              <mat-label>Applicant Address</mat-label>
-              <textarea matInput rows="3" formControlName="applicantAddress" aria-label="Applicant Address" title="Applicant Address"></textarea>
-            </mat-form-field>
-          </form>
-
-          <div class="dp-form-actions">
-            <button mat-stroked-button matStepperNext type="button">Continue</button>
-          </div>
-        </mat-step>
-
-        <mat-step>
-          <ng-template matStepLabel>Source / Supplier Details</ng-template>
-          <form [formGroup]="supplierForm" class="dp-form-grid dp-form-grid--card">
-            <mat-form-field appearance="outline" class="dp-col-span">
-              <mat-label>Supplier Master</mat-label>
-              <mat-select formControlName="selectedSupplierId" panelClass="dp-select-panel">
-                <mat-option value="">Select supplier</mat-option>
-                <mat-option *ngFor="let supplier of suppliers" [value]="supplier.id">
-                  {{ getSupplierLabel(supplier) }}
-                </mat-option>
-              </mat-select>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>Supplier Company Name</mat-label>
-              <input matInput formControlName="supplierCompanyName" aria-label="Supplier Company Name" title="Supplier Company Name">
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>C/O Logistics Partner</mat-label>
-              <input matInput formControlName="logisticsPartner" aria-label="C/O Logistics Partner" title="C/O Logistics Partner">
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" class="dp-col-span">
-              <mat-label>Full Source Address</mat-label>
-              <textarea matInput rows="3" formControlName="sourceAddress" aria-label="Full Source Address" title="Full Source Address"></textarea>
-            </mat-form-field>
-          </form>
-
-          <div class="dp-form-actions">
-            <button mat-stroked-button matStepperPrevious type="button">Back</button>
-            <button mat-raised-button color="primary" matStepperNext type="button">Continue</button>
-          </div>
-        </mat-step>
-
-        <mat-step>
-          <ng-template matStepLabel>Brand Details</ng-template>
-
-          <div class="dp-section-note">
-            Select a brand and size for each row. Rates and duty columns are read-only and pulled from the master tables.
+      <!-- Tab 2: IMFL Revalidation Table -->
+      <div class="register-table" *ngIf="activeTab === 'revalidation'">
+        <div class="register-container">
+          <div class="register-header-bar" style="background:#0f172a; border-radius:8px 8px 0 0; padding: 12px 18px;">
+            <h5 class="register-table-title" style="color:#f1f5f9; margin:0;">
+              <i class="bi bi-arrow-repeat me-2"></i>
+              IMFL Revalidation Applications
+            </h5>
+            <div class="register-info">
+              <span class="entries-count" style="background:rgba(255,255,255,0.12); color:#e2e8f0; border:1px solid rgba(255,255,255,0.2);">{{ filteredRows.length }} Entries</span>
+            </div>
           </div>
 
-          <div class="dp-table-wrap">
-            <table class="dp-table dp-table--brands">
+          <div class="table-wrapper" *ngIf="!error && filteredRows.length > 0">
+            <table class="table align-middle dp-entries-table">
               <thead>
                 <tr>
-                  <th>Brand Name</th>
-                  <th>Size / Package</th>
-                  <th>Cases</th>
-                  <th>EDP</th>
-                  <th>Import Pass Fee</th>
-                  <th>Total Import</th>
-                  <th>Edu Cess</th>
-                  <th>MRP</th>
-                  <th>BL</th>
-                  <th>Add. ED / Case</th>
-                  <th>Total Add. ED</th>
-                  <th></th>
+                  <th>Sl. No.</th>
+                  <th>Reference No.</th>
+                  <th>Submitted On</th>
+                  <th>Permit (Ref.)</th>
+                  <th>Applicant</th>
+                  <th>Current Stage</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let row of lineItemControls.controls; let i = index; trackBy: trackByIndex" [formGroup]="$any(row)">
+                <tr
+                  *ngFor="let row of pagedRows; let i = index"
+                  class="dp-table-row"
+                  [class.dp-table-row--active]="selectedApplication?.referenceNo === row.applicationId"
+                >
+                  <td>{{ (pageIndex * pageSize) + i + 1 }}</td>
+                  <td class="fw-semibold">{{ row.applicationId }}</td>
+                  <td>{{ row.submittedOn }}</td>
+                  <td>{{ row.supplierName }}</td>
+                  <td>{{ row.applicantName }}</td>
                   <td>
-                    <mat-form-field appearance="outline" class="dp-brand-name-field">
-                      <mat-label>Select Brand</mat-label>
-                      <mat-select formControlName="selectedBrandName" (selectionChange)="onBrandNameChange(i)">
-                        <mat-option value="">Select Brand</mat-option>
-                        <mat-option *ngFor="let brandName of getUniqueBrandNames()" [value]="brandName">
-                          {{ brandName }}
-                        </mat-option>
-                      </mat-select>
-                    </mat-form-field>
+                    <span class="status-badge status-badge--{{ row.statusGroup }}">
+                      {{ row.currentStage }}
+                    </span>
                   </td>
-                  <td>
-                    <mat-form-field appearance="outline" class="dp-size-field">
-                      <mat-label>Select Size</mat-label>
-                      <mat-select formControlName="brandKey" (selectionChange)="onSizeChange(i)">
-                        <mat-option value="">Select Size</mat-option>
-                        <mat-option *ngFor="let sizeOpt of getAvailableSizesForBrand(row.value.selectedBrandName)" [value]="getBrandKey(sizeOpt)">
-                          {{ getSizeLabel(sizeOpt) }}
-                        </mat-option>
-                      </mat-select>
-                    </mat-form-field>
-                  </td>
-                  <td>
-                    <mat-form-field appearance="outline" class="dp-cases-field">
-                      <mat-label>Cases</mat-label>
-                      <input matInput type="number" min="1" formControlName="cases" aria-label="Cases" title="Cases">
-                    </mat-form-field>
-                  </td>
-                  <td>{{ getLineEdp(i) | currency:'INR':'symbol':'1.2-2' }}</td>
-                  <td>{{ getLineImportFee(i) | currency:'INR':'symbol':'1.2-2' }}</td>
-                  <td>{{ getLineImport(i) | currency:'INR':'symbol':'1.2-2' }}</td>
-                  <td>{{ getLineCessPerCase(i) | currency:'INR':'symbol':'1.2-2' }}</td>
-                  <td>{{ getLineMrp(i) | currency:'INR':'symbol':'1.2-2' }}</td>
-                  <td>{{ getLineBulkLitres(i) | number:'1.3-3' }}</td>
-                  <td>{{ getLineAdditionalEdPerCase(i) | currency:'INR':'symbol':'1.2-2' }}</td>
-                  <td>{{ getLineTotalAddEd(i) | currency:'INR':'symbol':'1.2-2' }}</td>
-                  <td>
-                    <button mat-icon-button type="button" (click)="removeLineItem(i)" [disabled]="lineItems.length === 1" title="Remove row">
-                      <mat-icon>delete</mat-icon>
-                    </button>
+                  <td class="dp-action-cell" (click)="$event.stopPropagation()">
+                    <div class="dp-action-buttons">
+                      <button
+                        class="btn dp-action-button"
+                        type="button"
+                        title="View Details"
+                        (click)="onViewDetails(row)"
+                      >
+                        <i class="bi bi-eye-fill"></i>
+                        <span>View Details</span>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
+          <div class="dp-empty-state text-center p-4 text-muted" *ngIf="!error && filteredRows.length === 0">
+            <i class="bi bi-arrow-repeat fs-2 d-block mb-2"></i>
+            <p class="m-0">No revalidation applications found.</p>
+          </div>
+        </div>
+      </div>
 
-          <div class="dp-row-actions">
-            <button mat-stroked-button type="button" (click)="addLineItem()">
-              <mat-icon>add</mat-icon>
-              Add Brand
-            </button>
+      <!-- Tab 3: IMFL Cancellation Table -->
+      <div class="register-table" *ngIf="activeTab === 'cancellation'">
+        <div class="register-container">
+          <div class="register-header-bar" style="background:#0f172a; border-radius:8px 8px 0 0; padding: 12px 18px;">
+            <h5 class="register-table-title" style="color:#f1f5f9; margin:0;">
+              <i class="bi bi-x-circle me-2"></i>
+              IMFL Cancellation Applications
+            </h5>
+            <div class="register-info">
+              <span class="entries-count" style="background:rgba(255,255,255,0.12); color:#e2e8f0; border:1px solid rgba(255,255,255,0.2);">{{ filteredRows.length }} Entries</span>
+            </div>
           </div>
 
-          <div class="dp-summary">
-            <span>Total Cases <strong>{{ totalCases }}</strong></span>
-            <span>Total Import <strong>{{ totalImport | currency:'INR':'symbol':'1.2-2' }}</strong></span>
-            <span>Total Edu Cess <strong>{{ totalCess | currency:'INR':'symbol':'1.2-2' }}</strong></span>
-            <span>Total Add. ED <strong>{{ totalAdditionalEd | currency:'INR':'symbol':'1.2-2' }}</strong></span>
+          <div class="table-wrapper" *ngIf="!error && filteredRows.length > 0">
+            <table class="table align-middle dp-entries-table">
+              <thead>
+                <tr>
+                  <th>Sl. No.</th>
+                  <th>Reference No.</th>
+                  <th>Submitted On</th>
+                  <th>Permit (Ref.)</th>
+                  <th>Applicant</th>
+                  <th>Status / Current Stage</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  *ngFor="let row of pagedRows; let i = index"
+                  class="dp-table-row"
+                  [class.dp-table-row--active]="selectedApplication?.referenceNo === row.applicationId"
+                >
+                  <td>{{ (pageIndex * pageSize) + i + 1 }}</td>
+                  <td class="fw-semibold">{{ row.applicationId }}</td>
+                  <td>{{ row.submittedOn }}</td>
+                  <td>{{ row.supplierName }}</td>
+                  <td>{{ row.applicantName }}</td>
+                  <td>
+                    <span class="status-badge status-badge--{{ row.statusGroup }}">
+                      {{ row.currentStage }}
+                    </span>
+                  </td>
+                  <td class="dp-action-cell" (click)="$event.stopPropagation()">
+                    <div class="dp-action-buttons">
+                      <button
+                        class="btn dp-action-button"
+                        type="button"
+                        title="View Details"
+                        (click)="onViewDetails(row)"
+                      >
+                        <i class="bi bi-eye-fill"></i>
+                        <span>View Details</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-
-          <div class="dp-form-actions">
-            <button mat-stroked-button matStepperPrevious type="button">Back</button>
-            <button mat-raised-button color="primary" matStepperNext type="button">Continue</button>
+          <div class="dp-empty-state text-center p-4 text-muted" *ngIf="!error && filteredRows.length === 0">
+            <i class="bi bi-x-circle fs-2 d-block mb-2"></i>
+            <p class="m-0">No cancellation applications found.</p>
           </div>
-        </mat-step>
+        </div>
+      </div>
 
-        <mat-step>
-          <ng-template matStepLabel>Route & Logistics</ng-template>
-          <form [formGroup]="routeForm" class="dp-form-grid dp-form-grid--card">
-            <mat-form-field appearance="outline">
-              <mat-label>Origin</mat-label>
-              <textarea matInput rows="3" formControlName="origin" aria-label="Origin" title="Origin"></textarea>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>Destination</mat-label>
-              <textarea matInput rows="3" formControlName="destination" aria-label="Destination" title="Destination"></textarea>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>Mode of Transport</mat-label>
-              <mat-select formControlName="transportMode">
-                <mat-option value="Road">Road</mat-option>
-                <mat-option value="Rail">Rail</mat-option>
-                <mat-option value="Air">Air</mat-option>
-                <mat-option value="Sea">Sea</mat-option>
-                <mat-option value="Other">Other</mat-option>
-              </mat-select>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>Vehicle / Container Number</mat-label>
-              <input matInput formControlName="vehicleNumber" aria-label="Vehicle / Container Number" title="Vehicle / Container Number">
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" class="dp-col-span">
-              <mat-label>Route of Import</mat-label>
-              <textarea matInput rows="3" formControlName="routeDetails" aria-label="Route of Import" title="Route of Import"></textarea>
-            </mat-form-field>
-          </form>
-
-          <div class="dp-form-actions">
-            <button mat-stroked-button matStepperPrevious type="button">Back</button>
-            <button mat-raised-button color="primary" matStepperNext type="button">Review</button>
-          </div>
-        </mat-step>
-
-        <mat-step>
-          <ng-template matStepLabel>Review & Submit</ng-template>
-
-          <div class="dp-review">
-            <section class="dp-review-panel">
-              <h3>Applicant</h3>
-              <div class="dp-review-grid">
-                <div *ngFor="let row of applicantSummaryRows">
-                  <span>{{ row.label }}</span>
-                  <strong>{{ row.value }}</strong>
-                </div>
-              </div>
-            </section>
-
-            <section class="dp-review-panel">
-              <h3>Supplier</h3>
-              <div class="dp-review-grid">
-                <div *ngFor="let row of supplierSummaryRows">
-                  <span>{{ row.label }}</span>
-                  <strong>{{ row.value }}</strong>
-                </div>
-              </div>
-            </section>
-
-            <section class="dp-review-panel dp-review-panel--wide">
-              <h3>Route</h3>
-              <div class="dp-review-grid dp-review-grid--route">
-                <div *ngFor="let row of routeSummaryRows">
-                  <span>{{ row.label }}</span>
-                  <strong>{{ row.value }}</strong>
-                </div>
-              </div>
-            </section>
-
-            <section class="dp-review-panel dp-review-panel--wide">
-              <h3>Brand Summary</h3>
-              <div class="dp-table-wrap">
-                <table class="dp-table dp-table--review">
-                  <thead>
-                    <tr>
-                      <th>Brand</th>
-                      <th>Size</th>
-                      <th>Cases</th>
-                      <th>EDP</th>
-                      <th>Import Fee</th>
-                      <th>Total Import</th>
-                      <th>Edu Cess</th>
-                      <th>MRP</th>
-                      <th>BL</th>
-                      <th>Add. ED / Case</th>
-                      <th>Total Add. ED</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr *ngFor="let item of getBrandReviewRows()">
-                      <td>{{ item.brand }}</td>
-                      <td>{{ item.size }}</td>
-                      <td>{{ item.cases }}</td>
-                      <td>{{ item.edp | currency:'INR':'symbol':'1.2-2' }}</td>
-                      <td>{{ item.importFee | currency:'INR':'symbol':'1.2-2' }}</td>
-                      <td>{{ item.totalImport | currency:'INR':'symbol':'1.2-2' }}</td>
-                      <td>{{ item.cess | currency:'INR':'symbol':'1.2-2' }}</td>
-                      <td>{{ item.mrp | currency:'INR':'symbol':'1.2-2' }}</td>
-                      <td>{{ item.bl | number:'1.3-3' }}</td>
-                      <td>{{ item.addEdPerCase | currency:'INR':'symbol':'1.2-2' }}</td>
-                      <td>{{ item.totalAddEd | currency:'INR':'symbol':'1.2-2' }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          </div>
-
-          <form [formGroup]="reviewForm" class="dp-declaration">
-            <mat-checkbox formControlName="declarationAccepted">
-              I declare that the details furnished in this application are true and complete.
-            </mat-checkbox>
-          </form>
-
-          <div class="dp-summary dp-summary--review">
-            <span>Total Cases <strong>{{ totalCases }}</strong></span>
-            <span>Total Import <strong>{{ totalImport | currency:'INR':'symbol':'1.2-2' }}</strong></span>
-            <span>Total Edu Cess <strong>{{ totalCess | currency:'INR':'symbol':'1.2-2' }}</strong></span>
-            <span>Total Add. ED <strong>{{ totalAdditionalEd | currency:'INR':'symbol':'1.2-2' }}</strong></span>
-          </div>
-
-          <div class="dp-form-actions">
-            <button mat-stroked-button matStepperPrevious type="button">Back</button>
-            <button mat-raised-button color="primary" type="button" (click)="submit()" [disabled]="isSubmitting">
-              <mat-icon>send</mat-icon>
-              Submit Application
-            </button>
-          </div>
-        </mat-step>
-      </mat-horizontal-stepper>
     </section>
-    </ng-container>
 
-    <!-- Active Tab 2: IMFL Revalidation -->
-    <app-imfl-revalidation
-      *ngIf="activeTab === 'revalidation'"
-      [applications]="rows"
-    ></app-imfl-revalidation>
-
-    <!-- Active Tab 3: IMFL Cancellation -->
-    <app-imfl-cancellation
-      *ngIf="activeTab === 'cancellation'"
-      [applications]="rows"
-    ></app-imfl-cancellation>
   </ng-container>
-
-  <!-- Modal Overlay Backdrop for Selected Application Details -->
-  <div class="dp-modal-overlay" *ngIf="selectedApplication && !useInlineDetails" (click)="clearSelectedApplication()">
-    <div class="dp-modal-dialog" (click)="$event.stopPropagation()">
-      <div class="dp-modal-header">
-        <div class="dp-modal-title">
-          <i class="bi bi-file-earmark-text-fill me-2 text-primary"></i>
-          <span>IMFL Permit Application Details</span>
-          <span class="badge bg-primary ms-2">{{ selectedApplication.referenceNo }}</span>
-          <span class="status-badge status-badge--pending ms-2">{{ selectedApplication.status }}</span>
-        </div>
-        <button type="button" class="btn-close" (click)="clearSelectedApplication()" aria-label="Close"></button>
-      </div>
-
-      <div class="dp-modal-body">
-        <div class="row g-3 mb-3">
-          <div class="col-md-4">
-            <div class="detail-card">
-              <div class="detail-label">Applicant Company</div>
-              <div class="detail-value fw-bold">{{ selectedApplication.applicantName || 'N/A' }}</div>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <div class="detail-card">
-              <div class="detail-label">Supplier / Establishment</div>
-              <div class="detail-value fw-bold">{{ selectedApplication.supplierCompanyName || 'N/A' }}</div>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <div class="detail-card">
-              <div class="detail-label">Source Address</div>
-              <div class="detail-value">{{ selectedApplication.sourceAddress || 'N/A' }}</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="row g-3 mb-3">
-          <div class="col-md-4">
-            <div class="detail-card">
-              <div class="detail-label">Origin</div>
-              <div class="detail-value">{{ selectedApplication.origin || 'N/A' }}</div>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <div class="detail-card">
-              <div class="detail-label">Destination Premises</div>
-              <div class="detail-value">{{ selectedApplication.destination || 'N/A' }}</div>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <div class="detail-card">
-              <div class="detail-label">Submission Date</div>
-              <div class="detail-value">{{ (selectedApplication.submittedAt || selectedApplication.createdAt) | date:'dd-MMM-yyyy' }}</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="table-responsive border rounded-3 mb-3">
-          <table class="table table-striped table-hover align-middle mb-0">
-            <thead class="table-dark">
-              <tr>
-                <th>#</th>
-                <th>Brand Name</th>
-                <th>Size (ml)</th>
-                <th>Cases</th>
-                <th>EDP / Case</th>
-                <th>Import Fee / Case</th>
-                <th>Total Import (₹)</th>
-                <th>Bulk Litres (BL)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let item of selectedApplication.lineItems; let idx = index">
-                <td>{{ idx + 1 }}</td>
-                <td class="fw-semibold">{{ item.brandName || '-' }}</td>
-                <td>{{ item.sizeMl || 0 }} ml</td>
-                <td>{{ item.cases }}</td>
-                <td>{{ (item.edpPerCase || 0) | currency:'INR':'symbol':'1.2-2' }}</td>
-                <td>{{ (item.importPassFeePerCase || 0) | currency:'INR':'symbol':'1.2-2' }}</td>
-                <td class="fw-bold text-success">{{ (item.totalImport || 0) | currency:'INR':'symbol':'1.2-2' }}</td>
-                <td>{{ (item.bulkLitres || 0) | number:'1.3-3' }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="detail-actions p-3 bg-light rounded-3 border" *ngIf="selectedActionItem">
-          <div class="fw-bold mb-2">
-            {{ isOfficerUser ? 'Officer Action Controls' : 'Available Actions' }}
-          </div>
-          <app-unified-action-buttons
-            [item]="selectedActionItem"
-            [itemType]="'requisition'"
-            [context]="detailActionContext"
-            [displayMode]="'detailed'"
-            [includeActions]="detailActionIncludeActions"
-            (actionClicked)="onModalActionClicked($event)">
-          </app-unified-action-buttons>
-        </div>
-      </div>
-
-      <div class="dp-modal-footer">
-        <button type="button" class="btn btn-secondary btn-sm" (click)="clearSelectedApplication()">Close</button>
-      </div>
-    </div>
-  </div>
 </div>
 
-<!-- IMFL IMPORT PERMIT AUTHORITY LETTER MODAL -->
-<div class="modal-backdrop fade show" *ngIf="authorityLetterModalOpen" style="z-index: 1060;"></div>
-<div class="modal fade show d-block" tabindex="-1" *ngIf="authorityLetterModalOpen" style="z-index: 1065;" (click)="closeAuthorityLetterModal()">
-  <div class="modal-dialog modal-lg modal-dialog-centered" style="max-width: 850px;" (click)="$event.stopPropagation()">
-    <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
-      
-      <!-- Modal Header (Controls) -->
-      <div class="modal-header bg-dark text-white px-4 py-3 no-print d-flex justify-content-between align-items-center">
-        <h5 class="modal-title fs-5 fw-bold mb-0">
-          <i class="bi bi-file-earmark-pdf-fill text-warning me-2"></i>
-          Import Permit Authority Letter
+<!-- Cancellation Modal Popup Overlay -->
+<div
+  class="modal fade show"
+  tabindex="-1"
+  *ngIf="showCancellationModal"
+  style="display: block; background: rgba(0, 0, 0, 0.5); z-index: 1055;"
+>
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content shadow-lg border-0">
+      <div class="modal-header bg-danger text-white py-3">
+        <h5 class="modal-title fw-bold">
+          <i class="bi bi-x-circle-fill me-2"></i>Request Import Permit Cancellation
         </h5>
-        <div class="d-flex gap-2">
-          <button type="button" class="btn btn-warning btn-sm fw-bold px-3" (click)="printAuthorityLetter()">
-            <i class="bi bi-printer-fill me-1"></i> Print / Download PDF
-          </button>
-          <button type="button" class="btn-close btn-close-white" (click)="closeAuthorityLetterModal()"></button>
-        </div>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          (click)="closeCancellationModal()"
+        ></button>
       </div>
 
-      <!-- Modal Body (Printable Pass Document) -->
-      <div class="modal-body p-4 bg-light" style="max-height: 85vh; overflow-y: auto;">
-        <div id="imflAuthorityLetterPrintArea" class="imfl-pass-document p-5 bg-white shadow-sm border mx-auto" style="width: 100%; max-width: 750px; font-family: 'Times New Roman', Times, serif; color: #1a1a1a; line-height: 1.5; position: relative;">
-          
-          <!-- Top Copy Type -->
-          <div class="text-end fw-bold text-uppercase mb-2" style="font-size: 11px; letter-spacing: 1px; color: #444;">
-            QUADRUPLICATE
+      <div class="modal-body p-4" *ngIf="cancellationTargetRow">
+        <div class="alert alert-warning border-warning d-flex align-items-center mb-4">
+          <i class="bi bi-exclamation-triangle-fill text-warning fs-4 me-3"></i>
+          <div>
+            <strong>Surrender Import Permit</strong><br />
+            You are initiating a cancellation request for Permit Application <strong>{{ cancellationTargetRow.applicationId }}</strong>.
           </div>
+        </div>
 
-          <!-- Header Logo & State Title -->
-          <div class="text-center mb-3">
-            <div style="font-size: 22px; font-weight: bold; letter-spacing: 1.5px; color: #1e3a8a; text-transform: uppercase;">
-              EXCISE DEPARTMENT
-            </div>
-            <div style="font-size: 14px; font-weight: bold; color: #334155;">
-              Government of Sikkim
-            </div>
-          </div>
-
-          <!-- Pass Title -->
-          <div class="text-center my-3 border-top border-bottom py-2" style="border-color: #1e3a8a !important;">
-            <div style="font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; color: #1e3a8a;">
-              PASS FOR THE IMPORT OF DUTY-PAID IMPORTED FOREIGN LIQUOR
-            </div>
-          </div>
-
-          <!-- Permit Info Row -->
-          <div class="d-flex justify-content-between align-items-center mb-3 fw-bold" style="font-size: 13px;">
-            <div>Permit Number: <span style="text-decoration: underline;">{{ authorityLetterData?.referenceNo || authorityLetterData?.reference_no || 'CIV/839' }}</span></div>
-            <div>Date: <span>{{ (authorityLetterData?.submitted_at || authorityLetterData?.created_at || '2026-08-20') | date:'dd/MM/yyyy' }}</span></div>
-          </div>
-
-          <!-- Authorization Text -->
-          <div class="mb-4 text-justify" style="font-size: 13px; line-height: 1.6;">
-            <strong>M/s {{ authorityLetterData?.applicant_name || authorityLetterData?.applicantName || authorityLetterData?.supplier_company_name || 'Licensee' }}</strong> of 
-            <span>{{ authorityLetterData?.source_address || authorityLetterData?.applicantAddress || 'Gangtok, Sikkim' }}</span> is hereby authorized to import the under-mentioned description and quantity of duty-paid imported foreign liquor from 
-            <strong>{{ authorityLetterData?.supplier_company_name || authorityLetterData?.supplierName || 'Distributor/Supplier' }}</strong>, in the state of 
-            <span>{{ authorityLetterData?.origin || 'Uttarakhand' }}</span>, to their premises at 
-            <span>{{ authorityLetterData?.destination || 'Gangtok' }}</span>, in the district of 
-            <span>Gangtok</span>, in the state of Sikkim, for the purpose of wholesale.
-          </div>
-
-          <!-- Kind and Quantity Heading -->
-          <div class="text-center fw-bold mb-2" style="font-size: 13px; text-decoration: underline;">
-            Kind and quantity of imported foreign liquor
-          </div>
-
-          <!-- Brand Items Table -->
-          <table class="table table-bordered align-middle mb-4" style="font-size: 12px; border-color: #333;">
-            <thead class="text-center bg-light">
-              <tr>
-                <th style="width: 8%;">Sl. No.</th>
-                <th>Brand</th>
-                <th style="width: 15%;">Size</th>
-                <th style="width: 15%;">Cases</th>
-                <th style="width: 18%;">Bulk Litres</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let item of getAuthorityLetterItems(); let idx = index">
-                <td class="text-center">{{ idx + 1 }}</td>
-                <td>{{ item.brand_name || item.brandName || item.brand }}</td>
-                <td class="text-center">{{ item.size_ml || item.sizeMl || item.size || 750 }} ml</td>
-                <td class="text-center">{{ item.cases }}</td>
-                <td class="text-end pe-3">{{ item.bulk_litres || item.bulkLitres || (item.cases * 9) }}</td>
-              </tr>
-            </tbody>
-            <tfoot>
-              <tr class="fw-bold bg-light">
-                <td colspan="3" class="text-end pe-3">Total</td>
-                <td class="text-center">{{ getAuthorityLetterTotalCases() }}</td>
-                <td class="text-end pe-3">{{ getAuthorityLetterTotalBulkLitres() }}</td>
-              </tr>
-            </tfoot>
-          </table>
-
-          <!-- Stamp & Signature Block -->
-          <div class="d-flex justify-content-between align-items-end my-5 pt-3">
-            <!-- Round Seal -->
-            <div class="text-center" style="opacity: 0.85;">
-              <div style="width: 95px; height: 95px; border: 2px dashed #1e3a8a; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #1e3a8a; font-size: 10px; font-weight: bold; text-transform: uppercase; transform: rotate(-8deg); margin: 0 auto;">
-                Excise Dept<br>★ Govt of Sikkim ★
+        <div class="card mb-4 bg-light border-0">
+          <div class="card-body">
+            <h6 class="fw-bold mb-3 text-secondary border-bottom pb-2">Application & Supplier Summary</h6>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <small class="text-muted d-block">Application Ref. No.</small>
+                <strong class="text-dark">{{ cancellationTargetRow.applicationId }}</strong>
+              </div>
+              <div class="col-md-6">
+                <small class="text-muted d-block">Submitted Date</small>
+                <strong class="text-dark">{{ cancellationTargetRow.submittedOn }}</strong>
+              </div>
+              <div class="col-md-6">
+                <small class="text-muted d-block">Applicant Name</small>
+                <strong class="text-dark">{{ cancellationTargetRow.applicantName }}</strong>
+              </div>
+              <div class="col-md-6">
+                <small class="text-muted d-block">Supplier / Establishment</small>
+                <strong class="text-dark">{{ cancellationTargetRow.supplierName }}</strong>
               </div>
             </div>
-            <!-- Signature -->
-            <div class="text-center" style="line-height: 1.2;">
-              <div style="font-family: 'Brush Script MT', cursive; font-size: 24px; color: #1e3a8a; margin-bottom: 4px;">Excise Officer</div>
-              <div class="fw-bold" style="font-size: 13px;">Excise Officer</div>
-              <div class="fw-bold" style="font-size: 12px; color: #444;">Commissioner</div>
-              <div style="font-size: 11px; color: #555;">Excise Department</div>
-              <div style="font-size: 11px; color: #555;">Government of Sikkim</div>
-            </div>
           </div>
+        </div>
 
-          <!-- Hash token -->
-          <div class="mb-3" style="font-size: 9px; font-family: monospace; color: #888;">
-            Hash: {{ getAuthorityLetterHash() }}
-          </div>
+        <div class="mb-3">
+          <label class="form-label fw-bold">Select Cancellation Reason <span class="text-danger">*</span></label>
+          <select
+            class="form-select"
+            [(ngModel)]="cancellationReasonType"
+          >
+            <option value="Non-availability of tankers / Transport issues">Non-availability of tankers / Transport issues</option>
+            <option value="Export permission not granted">Export permission not granted</option>
+            <option value="Business Closure / Order Cancelled">Business Closure / Order Cancelled</option>
+            <option value="Voluntary Surrender">Voluntary Surrender</option>
+            <option value="Other Reason">Other Reason</option>
+          </select>
+        </div>
 
-          <!-- Conditions -->
-          <div class="border-top pt-3" style="font-size: 11px;">
-            <div class="fw-bold text-uppercase mb-1" style="text-decoration: underline;">CONDITIONS</div>
-            <ol class="ps-3 mb-2" style="line-height: 1.4;">
-              <li>The above said consignment of Indian Made Foreign Liquor shall be conveyed by rail or road to its destination via <strong>{{ authorityLetterData?.route_details || authorityLetterData?.routeDetails || 'Siliguri - NH10A - Gangtok - Sikkim' }}</strong>.</li>
-              <li>The consignment shall not be broken in transit.</li>
-              <li>It shall on arrival be examined at <strong>{{ authorityLetterData?.destination || 'Gangtok' }}</strong>, by Excise Authority.</li>
-              <li>This pass shall remain in force till <strong>{{ getAuthorityLetterValidityDate() }}</strong>.</li>
-            </ol>
-            <div class="fst-italic text-muted mt-2" style="font-size: 10px;">
-              This pass is granted under and subject to the provisions of the Sikkim Excise Act, 1992, the rules, regulation and orders made there under and the conditions specified above.
-            </div>
-          </div>
+        <div class="mb-3">
+          <label class="form-label fw-bold">Detailed Remarks / Explanation <span class="text-danger">*</span></label>
+          <textarea
+            class="form-control"
+            rows="3"
+            placeholder="Please specify detailed reason for permit cancellation..."
+            [(ngModel)]="cancellationReasonDetails"
+          ></textarea>
+        </div>
 
+        <div class="form-check p-3 bg-light rounded border">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            id="cancellationDeclaration"
+            [(ngModel)]="cancellationDeclarationAccepted"
+          />
+          <label class="form-check-label small fw-semibold ms-2" for="cancellationDeclaration">
+            I hereby declare and confirm that I wish to surrender the specified Import Permit for cancellation. I acknowledge that this action cannot be undone once processed by the Excise Commissioner.
+          </label>
         </div>
       </div>
-      
+
+      <div class="modal-footer bg-light py-3">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          (click)="closeCancellationModal()"
+          [disabled]="isSubmittingCancellation"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-danger px-4"
+          [disabled]="!cancellationDeclarationAccepted || !cancellationReasonDetails.trim() || isSubmittingCancellation"
+          (click)="confirmCancellationSubmit()"
+        >
+          <span
+            *ngIf="isSubmittingCancellation"
+            class="spinner-border spinner-border-sm me-2"
+            role="status"
+          ></span>
+          {{ isSubmittingCancellation ? 'Submitting...' : 'Submit Cancellation Request' }}
+        </button>
+      </div>
     </div>
   </div>
 </div>

@@ -3629,6 +3629,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     return normalized === 'distributor' || normalized.includes('distributor');
   }
 
+  isDistributorPermitSection(): boolean {
+    const s = String(this.selectedSupplyChainSection || '').toLowerCase();
+    return s.includes('distributor-permit') || s.includes('imfl-requisition') || s.includes('imfl-revalidation') || s.includes('imfl-cancellation');
+  }
+
   isCommissionerUser(): boolean {
     const roleId = this.getCurrentRoleId();
     if (roleId === 10) return true;

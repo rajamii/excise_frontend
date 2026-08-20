@@ -50,4 +50,24 @@ export class DistributorPermitService {
   getPremises(): Observable<{ destination: string }> {
     return this.http.get<{ destination: string }>(`${this.baseUrl}/premises/`);
   }
+
+  getRevalidations(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/revalidation/`);
+  }
+
+  createRevalidation(payload: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/revalidation/`, payload);
+  }
+
+  getCancellations(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/cancellation/`);
+  }
+
+  createCancellation(payload: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/cancellation/`, payload);
+  }
+
+  getRevalidationSchedules(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/revalidation-schedules/`);
+  }
 }
