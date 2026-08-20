@@ -227,15 +227,27 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       return;
     }
 
+    // Step 0: Check allowedActions or allowed_actions on item
+    const itemAllowedActions = Array.isArray(this.item?.allowedActions) && this.item.allowedActions.length > 0
+      ? this.item.allowedActions
+      : (Array.isArray(this.item?.['allowed_actions']) && (this.item['allowed_actions'] as any[]).length > 0 ? (this.item['allowed_actions'] as any[]) : []);
+
+    if (itemAllowedActions.length > 0) {
+      this.availableActionConfigs = this.normalizeActionConfigs(itemAllowedActions.map((act: string) => ({ action: act })));
+      this.isLoading = false;
+      console.log('UNIFIED BUTTONS: Using item.allowedActions:', this.availableActionConfigs);
+      return;
+    }
+
     // Step 1: If item already has configs from parent, use them
     if (this.item.allowedActionConfigs && this.item.allowedActionConfigs.length > 0) {
       this.availableActionConfigs = this.normalizeActionConfigs(this.item.allowedActionConfigs);
       this.isLoading = false;
-      console.log('?? UNIFIED BUTTONS: Using pre-loaded configs from parent:', this.availableActionConfigs);
+      console.log('UNIFIED BUTTONS: Using pre-loaded configs from parent:', this.availableActionConfigs);
       return;
     }
 
-    // Step 2: Fetch from backend (no frontend hardcoding)
+    // Step 2: Fetch from backend or generate fallback
     this.loadActionsFromBackend();
   }
 
@@ -252,16 +264,62 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
 
     this.workflowActionService.getAvailableActions(requestData).subscribe({
       next: (configs) => {
-        this.availableActionConfigs = this.normalizeActionConfigs(configs || []);
+        let normalized = this.normalizeActionConfigs(configs || []);
+        const itemTypeStr = String(this.itemType || '');
+        if (normalized.length === 0 && (itemTypeStr === 'requisition' || itemTypeStr === 'imfl-requisition')) {
+          normalized = this.getRequisitionFallbackActionConfigs();
+        }
+        this.availableActionConfigs = normalized;
         this.isLoading = false;
-        console.log('?? UNIFIED BUTTONS: Loaded backend configs:', this.availableActionConfigs);
+        console.log('UNIFIED BUTTONS: Loaded backend configs:', this.availableActionConfigs);
       },
       error: (error) => {
-        console.error('?? UNIFIED BUTTONS: Error loading backend configs:', error);
-        this.availableActionConfigs = [];
+        console.error('UNIFIED BUTTONS: Error loading backend configs:', error);
+        const itemTypeStr = String(this.itemType || '');
+        this.availableActionConfigs = (itemTypeStr === 'requisition' || itemTypeStr === 'imfl-requisition')
+          ? this.getRequisitionFallbackActionConfigs()
+          : [];
         this.isLoading = false;
       }
     });
+  }
+
+  private getRequisitionFallbackActionConfigs(): ActionButtonConfig[] {
+    const status = String(this.item?.status || '').toUpperCase();
+    if (this.context === 'commissioner') {
+      if (status.includes('PAYSLIP') || status.includes('VERIF') || status.includes('FINAL')) {
+        return [
+          { action: 'APPROVE', label: 'Approve & Issue Permit', icon: 'verified_user', color: 'success', tooltip: 'Approve & Issue Permit' },
+          { action: 'REJECT', label: 'Reject Application', icon: 'cancel', color: 'warn', tooltip: 'Reject Application' }
+        ];
+      }
+      return [
+        { action: 'APPROVE', label: 'Approve Payment Stage', icon: 'check_circle', color: 'success', tooltip: 'Approve Payment Stage' },
+        { action: 'FORWARD', label: 'Forward Application', icon: 'send', color: 'primary', tooltip: 'Forward Application' },
+        { action: 'REJECT', label: 'Reject', icon: 'cancel', color: 'warn', tooltip: 'Reject Application' },
+        { action: 'RAISE_OBJECTION', label: 'Raise Objection', icon: 'warning', color: 'warn', tooltip: 'Raise Objection' }
+      ];
+    } else if (this.context === 'permit-section') {
+      if (status.includes('PAYSLIP') || status.includes('PAYMENT')) {
+        return [
+          { action: 'VERIFY', label: 'Verify Payslip', icon: 'verified', color: 'success', tooltip: 'Verify Payslip & Forward' },
+          { action: 'FORWARD', label: 'Forward to Commissioner', icon: 'send', color: 'primary', tooltip: 'Forward to Commissioner' },
+          { action: 'REJECT', label: 'Reject', icon: 'cancel', color: 'warn', tooltip: 'Reject Application' }
+        ];
+      }
+      return [
+        { action: 'FORWARD', label: 'Forward to Commissioner', icon: 'send', color: 'primary', tooltip: 'Forward to Commissioner' },
+        { action: 'REJECT', label: 'Reject', icon: 'cancel', color: 'warn', tooltip: 'Reject Application' },
+        { action: 'RAISE_OBJECTION', label: 'Raise Objection', icon: 'warning', color: 'warn', tooltip: 'Raise Objection' }
+      ];
+    } else if (this.context === 'licensee') {
+      if (status.includes('PAYMENT') || status.includes('AWAITING_PAYMENT')) {
+        return [
+          { action: 'PAY', label: 'Make Payment / Upload Payslip', icon: 'payment', color: 'primary', tooltip: 'Make Payment' }
+        ];
+      }
+    }
+    return [];
   }
 
   getAvailableButtons(): ActionButtonConfig[] {

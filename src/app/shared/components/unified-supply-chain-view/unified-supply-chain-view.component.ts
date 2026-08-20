@@ -1790,6 +1790,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             'commissioner-dashboard': USER_CONTEXTS.COMMISSIONER,
             'commissioner': USER_CONTEXTS.COMMISSIONER,
             'permit-section': USER_CONTEXTS.PERMIT_SECTION,
+            'distributor-permit': USER_CONTEXTS.PERMIT_SECTION,
+            'imfl-requisition': USER_CONTEXTS.PERMIT_SECTION,
             'officer-in-charge': USER_CONTEXTS.OFFICER_IN_CHARGE,
             'itcell': USER_CONTEXTS.IT_CELL,
             'it-cell': USER_CONTEXTS.IT_CELL,
@@ -1797,17 +1799,23 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             'licensee': USER_CONTEXTS.LICENSEE
         };
 
+        if (this.roleService.hasRole(10) || this.roleService.hasRole(12)) {
+            return USER_CONTEXTS.COMMISSIONER;
+        }
+        if (this.roleService.hasRole(5)) {
+            return USER_CONTEXTS.PERMIT_SECTION;
+        }
+
         if (source && contextMap[source]) {
             return contextMap[source];
         }
 
-        // Fallback: determine from current URL path
         const currentUrl = this.router.url;
         if (currentUrl.includes('commissioner')) return USER_CONTEXTS.COMMISSIONER;
         if (currentUrl.includes('permit-section')) return USER_CONTEXTS.PERMIT_SECTION;
         if (currentUrl.includes('dashboard') && currentUrl.includes('section=')) return USER_CONTEXTS.LICENSEE;
 
-        return USER_CONTEXTS.LICENSEE; // Default context
+        return USER_CONTEXTS.LICENSEE;
     }
 
     isLicenseeContext(): boolean {
@@ -3207,9 +3215,33 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             return null;
         }
 
-        const actions = Array.isArray(this.applicationData.allowedActions)
+        let actions = Array.isArray(this.applicationData.allowedActions) && this.applicationData.allowedActions.length > 0
             ? this.applicationData.allowedActions
-            : [];
+            : (Array.isArray(this.applicationData['allowed_actions']) && (this.applicationData['allowed_actions'] as any[]).length > 0
+                ? (this.applicationData['allowed_actions'] as any[])
+                : []);
+
+        if (actions.length === 0 && (this.applicationType === 'requisition' || this.isImflDistributorPermitSource())) {
+            const context = this.getUserContext();
+            const status = String(this.applicationData.status || '').toUpperCase();
+            if (context === USER_CONTEXTS.COMMISSIONER) {
+                if (status.includes('PAYSLIP') || status.includes('VERIF') || status.includes('FINAL')) {
+                    actions = ['APPROVE', 'REJECT'];
+                } else {
+                    actions = ['APPROVE', 'FORWARD', 'REJECT', 'RAISE_OBJECTION'];
+                }
+            } else if (context === USER_CONTEXTS.PERMIT_SECTION) {
+                if (status.includes('PAYSLIP') || status.includes('PAYMENT')) {
+                    actions = ['VERIFY', 'FORWARD', 'REJECT'];
+                } else {
+                    actions = ['FORWARD', 'REJECT', 'RAISE_OBJECTION'];
+                }
+            } else if (context === USER_CONTEXTS.LICENSEE) {
+                if (status.includes('PAYMENT') || status.includes('AWAITING_PAYMENT')) {
+                    actions = ['PAY'];
+                }
+            }
+        }
 
         const normalizedActions = actions
             .map(action => String(action || '').toUpperCase().trim())
