@@ -10,6 +10,7 @@ import { DashboardStatisticsComponent } from '../../../shared/components/dashboa
 import { UnifiedActionButtonsComponent } from '../../../shared/components/unified-action-buttons/unified-action-buttons.component';
 import { UnifiedActionsService } from '../../../shared/services/unified-actions.service';
 import { UnifiedDashboardService } from '../../../core/services/unified-dashboard.service';
+import { DistributorPermitService } from '../../../core/services/distributor-permit.service';
 
 interface CommissionerData {
   id?: number;
@@ -881,6 +882,7 @@ export class CommissionerDashboardComponent implements OnInit {
   private hologramDataService = inject(HologramDataService);
   private unifiedActionsService = inject(UnifiedActionsService);
   private unifiedDashboardService = inject(UnifiedDashboardService);
+  private distributorPermitService = inject(DistributorPermitService);
 
   // Data properties
   allApplications: CommissionerData[] = [];
@@ -960,6 +962,46 @@ export class CommissionerDashboardComponent implements OnInit {
     this.loadTransitPermits();
     this.loadHolograms();
     this.loadCancellations();
+    this.loadDistributorPermits();
+  }
+
+  private loadDistributorPermits(): void {
+    this.distributorPermitService.listApplications().subscribe({
+      next: (apps: any[]) => {
+        const list = Array.isArray(apps) ? apps : [];
+        const reqs: CommissionerData[] = [];
+        const revals: CommissionerData[] = [];
+        const cancs: CommissionerData[] = [];
+
+        list.forEach((item: any) => {
+          const ref = String(item.reference_no || item.referenceNo || '').toUpperCase();
+          const mapped: CommissionerData = {
+            id: item.id || item.reference_no || item.referenceNo,
+            referenceNo: item.reference_no || item.referenceNo,
+            submissionDate: this.formatDate(item.submitted_at || item.submittedAt || item.created_at || item.createdAt),
+            distilleryName: item.supplier_company_name || item.supplierCompanyName || item.applicant_name || item.applicantName || 'N/A',
+            status: item.status || 'PENDING',
+            amount: String(item.total_import_value || item.totalImportValue || '0.00'),
+            type: ref.startsWith('IMFLREV') ? 'revalidation' : (ref.startsWith('IMFLCAN') ? 'cancellation' : 'requisition'),
+            allowedActions: ['VIEW', 'FORWARD', 'APPROVE', 'REJECT', 'RAISE_OBJECTION'],
+            allowedActionConfigs: []
+          };
+
+          if (ref.startsWith('IMFLREV')) {
+            revals.push(mapped);
+          } else if (ref.startsWith('IMFLCAN')) {
+            cancs.push(mapped);
+          } else {
+            reqs.push(mapped);
+          }
+        });
+
+        if (reqs.length > 0) this.updateApplications('requisition', reqs);
+        if (revals.length > 0) this.updateApplications('revalidation', revals);
+        if (cancs.length > 0) this.updateApplications('cancellation', cancs);
+      },
+      error: (err) => console.error('Error loading distributor permits for commissioner:', err)
+    });
   }
 
   loadUnifiedDashboardCounts(): void {
@@ -1303,11 +1345,14 @@ export class CommissionerDashboardComponent implements OnInit {
   getFilterOptions() {
     return [
       { value: 'all', label: 'All Applications' },
-      { value: 'requisition', label: 'Requisitions' },
-      { value: 'revalidation', label: 'Revalidations' },
+      { value: 'imfl-requisition', label: 'IMFL Requisitions' },
+      { value: 'imfl-revalidation', label: 'IMFL Revalidations' },
+      { value: 'imfl-cancellation', label: 'IMFL Cancellations' },
+      { value: 'requisition', label: 'ENA Requisitions' },
+      { value: 'revalidation', label: 'ENA Revalidations' },
       { value: 'transit', label: 'Transit Permits' },
       { value: 'hologram', label: 'Holograms' },
-      { value: 'cancellation', label: 'Cancellations' }
+      { value: 'cancellation', label: 'ENA Cancellations' }
     ];
   }
 

@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnChanges, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MaterialModule } from '../../../../../shared/material.module';
@@ -15,28 +15,49 @@ export class ImflRevalidationComponent implements OnInit {
   @Input() applications: any[] = [];
   filteredRows: any[] = [];
   selectedApp: any = null;
+  searchQuery = '';
 
   // Stats counts
   get totalCount(): number {
-    return this.applications.length;
+    return this.filteredRows.length;
   }
 
   get pendingCount(): number {
-    return this.applications.filter(app => 
+    return this.filteredRows.filter(app => 
       (app.status || '').toLowerCase().includes('pending') || 
       (app.currentStage || '').toLowerCase().includes('pending')
     ).length;
   }
 
   get approvedCount(): number {
-    return this.applications.filter(app => 
+    return this.filteredRows.filter(app => 
       (app.status || '').toLowerCase() === 'approved' || 
       (app.currentStage || '').toLowerCase() === 'approved'
     ).length;
   }
 
   ngOnInit(): void {
-    this.filteredRows = [...this.applications];
+    this.applyFilter();
+  }
+
+  ngOnChanges(): void {
+    this.applyFilter();
+  }
+
+  applyFilter(): void {
+    const q = (this.searchQuery || '').trim().toLowerCase();
+    this.filteredRows = (this.applications || []).filter((row) => {
+      const ref = String(row.referenceNo || row.applicationId || '').toUpperCase();
+      const status = String(row.status || row.currentStage || '').toLowerCase();
+      const isEligible = ref.startsWith('IMFLREV') || status.includes('approved');
+      if (!isEligible) return false;
+
+      if (!q) return true;
+      return (
+        ref.toLowerCase().includes(q) ||
+        String(row.supplierCompanyName || row.supplierName || '').toLowerCase().includes(q)
+      );
+    });
   }
 
   openRevalidationModal(app: any): void {

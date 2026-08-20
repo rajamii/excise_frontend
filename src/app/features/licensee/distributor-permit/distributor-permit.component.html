@@ -270,41 +270,109 @@
         </div>
       </div>
 
-      <section class="dp-detail" *ngIf="selectedApplication">
-        <div class="dp-detail__header">
-          <div>
-            <div class="dp-section-title">{{ selectedApplication.referenceNo }}</div>
-            <div class="dp-muted">{{ selectedApplication.status }}</div>
+    <!-- Modal Overlay Backdrop for Selected Application Details -->
+    <div class="dp-modal-overlay" *ngIf="selectedApplication" (click)="clearSelectedApplication()">
+      <div class="dp-modal-dialog" (click)="$event.stopPropagation()">
+        <div class="dp-modal-header">
+          <div class="dp-modal-title">
+            <i class="bi bi-file-earmark-text-fill me-2 text-primary"></i>
+            <span>IMFL Permit Application Details</span>
+            <span class="badge bg-primary ms-2">{{ selectedApplication.referenceNo }}</span>
+            <span class="status-badge status-badge--pending ms-2">{{ selectedApplication.status }}</span>
           </div>
-          <button mat-icon-button type="button" (click)="clearSelectedApplication()">
-            <mat-icon>close</mat-icon>
-          </button>
+          <button type="button" class="btn-close" (click)="clearSelectedApplication()" aria-label="Close"></button>
         </div>
-        <p>{{ selectedApplication.officerRemarks || 'No officer remarks recorded.' }}</p>
-        <div class="dp-table-wrap">
-          <table class="dp-table dp-table--compact">
-            <thead>
-              <tr>
-                <th>Brand</th>
-                <th>Size</th>
-                <th>Cases</th>
-                <th>Total Import</th>
-                <th>BL</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let item of selectedApplication.lineItems">
-                <td>{{ item.brandName || item.brand_name || '-' }}</td>
-                <td>{{ (item.sizeMl || item.size_ml || 0) }} ml</td>
-                <td>{{ item.cases }}</td>
-                <td>{{ (item.totalImport || item.total_import || 0) | currency:'INR':'symbol':'1.2-2' }}</td>
-                <td>{{ (item.bulkLitres || item.bulk_litres || 0) | number:'1.3-3' }}</td>
-              </tr>
-            </tbody>
-          </table>
+
+        <div class="dp-modal-body">
+          <div class="row g-3 mb-3">
+            <div class="col-md-4">
+              <div class="detail-card">
+                <div class="detail-label">Applicant Company</div>
+                <div class="detail-value fw-bold">{{ selectedApplication.applicantName || 'N/A' }}</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="detail-card">
+                <div class="detail-label">Supplier / Establishment</div>
+                <div class="detail-value fw-bold">{{ selectedApplication.supplierCompanyName || 'N/A' }}</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="detail-card">
+                <div class="detail-label">Source Address</div>
+                <div class="detail-value">{{ selectedApplication.sourceAddress || 'N/A' }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-4">
+              <div class="detail-card">
+                <div class="detail-label">Origin</div>
+                <div class="detail-value">{{ selectedApplication.origin || 'N/A' }}</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="detail-card">
+                <div class="detail-label">Destination Premises</div>
+                <div class="detail-value">{{ selectedApplication.destination || 'N/A' }}</div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="detail-card">
+                <div class="detail-label">Submission Date</div>
+                <div class="detail-value">{{ (selectedApplication.submittedAt || selectedApplication.createdAt) | date:'dd-MMM-yyyy' }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-responsive border rounded-3 mb-3">
+            <table class="table table-striped table-hover align-middle mb-0">
+              <thead class="table-dark">
+                <tr>
+                  <th>#</th>
+                  <th>Brand Name</th>
+                  <th>Size (ml)</th>
+                  <th>Cases</th>
+                  <th>EDP / Case</th>
+                  <th>Import Fee / Case</th>
+                  <th>Total Import (₹)</th>
+                  <th>Bulk Litres (BL)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of selectedApplication.lineItems; let idx = index">
+                  <td>{{ idx + 1 }}</td>
+                  <td class="fw-semibold">{{ item.brandName || '-' }}</td>
+                  <td>{{ item.sizeMl || 0 }} ml</td>
+                  <td>{{ item.cases }}</td>
+                  <td>{{ (item.edpPerCase || 0) | currency:'INR':'symbol':'1.2-2' }}</td>
+                  <td>{{ (item.importPassFeePerCase || 0) | currency:'INR':'symbol':'1.2-2' }}</td>
+                  <td class="fw-bold text-success">{{ (item.totalImport || 0) | currency:'INR':'symbol':'1.2-2' }}</td>
+                  <td>{{ (item.bulkLitres || 0) | number:'1.3-3' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Workflow action buttons for Officers / Permit Section -->
+          <div class="detail-actions p-3 bg-light rounded-3 border" *ngIf="isOfficerUser">
+            <div class="fw-bold mb-2">Officer Action Controls</div>
+            <app-unified-action-buttons
+              [item]="selectedActionItem"
+              [itemType]="'requisition'"
+              [context]="'permit-section'"
+              [displayMode]="'detailed'">
+            </app-unified-action-buttons>
+          </div>
         </div>
-      </section>
-    </section>
+
+        <div class="dp-modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" (click)="clearSelectedApplication()">Close</button>
+        </div>
+      </div>
+    </div>
+  </section>
 
     <section class="dp-form-view" *ngIf="isFormView">
       <mat-horizontal-stepper class="dp-stepper" #stepper>

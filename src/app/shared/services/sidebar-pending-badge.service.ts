@@ -6,6 +6,7 @@ import { catchError, map, tap, shareReplay } from 'rxjs/operators';
 import { EnaRequisitionService } from '../../core/services/ena-requisition.service';
 import { SupplyChainService } from '../../features/licensee/supplyChain/services/supplychain.service';
 import { HologramDataService } from '../../features/licensee/supplyChain/services/hologram-data.service';
+import { DistributorPermitService } from '../../core/services/distributor-permit.service';
 import { environment } from '../../../environments/environment';
 
 type PendingCountsBySection = Record<string, number>;
@@ -31,7 +32,8 @@ export class SidebarPendingBadgeService {
     private http: HttpClient,
     private enaRequisitionService: EnaRequisitionService,
     private supplyChainService: SupplyChainService,
-    private hologramService: HologramDataService
+    private hologramService: HologramDataService,
+    private distributorPermitService: DistributorPermitService
   ) {
     this.hologramService.requestUpdate$.subscribe(() => {
       console.log('🔄 BADGE SERVICE: Received hologram request update notification, triggering sidebar refresh');
@@ -195,6 +197,56 @@ export class SidebarPendingBadgeService {
 
       case 'special-permit':
         return this.fetchDashboardCount(`${this.apiBase}/special-permit/dashboard-counts/`, audience);
+
+      case 'distributor-permit':
+      case 'imfl-permit':
+      case 'distributor-permit-requisition':
+      case 'imfl-requisition':
+        if (mode === 'light') return of(0);
+        return this.distributorPermitService.listApplications().pipe(
+          map((items) => this.toArray(items)),
+          map((items) => {
+            return items.filter(x => {
+              const ref = String(x?.reference_no || x?.referenceNo || '').toUpperCase();
+              const st = String(x?.status || '').toLowerCase();
+              if (ref.startsWith('IMFLREV') || ref.startsWith('IMFLCAN')) return false;
+              return st.includes('pending') || st.includes('submitted') || st.includes('forward');
+            }).length;
+          }),
+          catchError(() => of(0))
+        );
+
+      case 'distributor-permit-revalidation':
+      case 'imfl-revalidation':
+        if (mode === 'light') return of(0);
+        return this.distributorPermitService.listApplications().pipe(
+          map((items) => this.toArray(items)),
+          map((items) => {
+            return items.filter(x => {
+              const ref = String(x?.reference_no || x?.referenceNo || '').toUpperCase();
+              const st = String(x?.status || '').toLowerCase();
+              if (!ref.startsWith('IMFLREV')) return false;
+              return st.includes('pending') || st.includes('submitted') || st.includes('forward');
+            }).length;
+          }),
+          catchError(() => of(0))
+        );
+
+      case 'distributor-permit-cancellation':
+      case 'imfl-cancellation':
+        if (mode === 'light') return of(0);
+        return this.distributorPermitService.listApplications().pipe(
+          map((items) => this.toArray(items)),
+          map((items) => {
+            return items.filter(x => {
+              const ref = String(x?.reference_no || x?.referenceNo || '').toUpperCase();
+              const st = String(x?.status || '').toLowerCase();
+              if (!ref.startsWith('IMFLCAN')) return false;
+              return st.includes('pending') || st.includes('submitted') || st.includes('forward');
+            }).length;
+          }),
+          catchError(() => of(0))
+        );
 
       case 'requisition':
         if (mode === 'light') return of(0);

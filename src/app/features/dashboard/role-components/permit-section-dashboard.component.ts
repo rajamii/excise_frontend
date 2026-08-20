@@ -10,6 +10,7 @@ import { CompanyCollaborationService } from '../../../core/services/company-coll
 import { DashboardStatisticsComponent } from '../../../shared/components/dashboard-statistics/dashboard-statistics.component';
 import { UnifiedActionButtonsComponent } from '../../../shared/components/unified-action-buttons/unified-action-buttons.component';
 import { UnifiedActionsService } from '../../../shared/services/unified-actions.service';
+import { DistributorPermitService } from '../../../core/services/distributor-permit.service';
 
 interface PermitData {
   id?: number;
@@ -18,7 +19,7 @@ interface PermitData {
   distilleryName: string;
   status: string;
   amount: string;
-  type: 'requisition' | 'revalidation' | 'transit' | 'hologram' | 'cancellation' | 'company';
+  type: 'requisition' | 'revalidation' | 'transit' | 'hologram' | 'cancellation' | 'company' | 'company-collaboration' | 'imfl-requisition' | 'imfl-revalidation' | 'imfl-cancellation';
   allowedActions?: string[];
   allowedActionConfigs?: any[];
   workflowId?: number;
@@ -177,6 +178,7 @@ export class PermitSectionDashboardComponent implements OnInit {
   private companyRegistrationService = inject(CompanyRegistrationService);
   private companyCollaborationService = inject(CompanyCollaborationService);
   private unifiedActionsService = inject(UnifiedActionsService);
+  private distributorPermitService = inject(DistributorPermitService);
 
   // Data properties
   allPermits: PermitData[] = [];
@@ -208,6 +210,46 @@ export class PermitSectionDashboardComponent implements OnInit {
     this.loadRequisitions();
     this.loadCompanyRegistrations();
     this.loadCompanyCollaborations();
+    this.loadDistributorPermits();
+  }
+
+  private loadDistributorPermits(): void {
+    this.distributorPermitService.listApplications().subscribe({
+      next: (apps: any[]) => {
+        const list = Array.isArray(apps) ? apps : [];
+        const reqs: PermitData[] = [];
+        const revals: PermitData[] = [];
+        const cancs: PermitData[] = [];
+
+        list.forEach((item: any) => {
+          const ref = String(item.reference_no || item.referenceNo || '').toUpperCase();
+          const mapped: PermitData = {
+            id: item.id || item.reference_no || item.referenceNo,
+            referenceNo: item.reference_no || item.referenceNo,
+            submissionDate: this.formatDate(item.submitted_at || item.submittedAt || item.created_at || item.createdAt),
+            distilleryName: item.supplier_company_name || item.supplierCompanyName || item.applicant_name || item.applicantName || 'N/A',
+            status: item.status || 'PENDING',
+            amount: String(item.total_import_value || item.totalImportValue || '0.00'),
+            type: ref.startsWith('IMFLREV') ? 'imfl-revalidation' : (ref.startsWith('IMFLCAN') ? 'imfl-cancellation' : 'imfl-requisition'),
+            allowedActions: ['VIEW', 'FORWARD', 'APPROVE', 'REJECT', 'RAISE_OBJECTION'],
+            allowedActionConfigs: []
+          };
+
+          if (ref.startsWith('IMFLREV')) {
+            revals.push(mapped);
+          } else if (ref.startsWith('IMFLCAN')) {
+            cancs.push(mapped);
+          } else {
+            reqs.push(mapped);
+          }
+        });
+
+        if (reqs.length > 0) this.updatePermits('imfl-requisition', reqs);
+        if (revals.length > 0) this.updatePermits('imfl-revalidation', revals);
+        if (cancs.length > 0) this.updatePermits('imfl-cancellation', cancs);
+      },
+      error: (err) => console.error('Error loading distributor permits:', err)
+    });
   }
 
   loadRequisitions(): void {
@@ -531,12 +573,10 @@ export class PermitSectionDashboardComponent implements OnInit {
 
   // Dashboard statistics methods
   getDashboardStatistics() {
-    // When a specific module is selected, use its counts from moduleCounts
     if (this.selectedModule && this.selectedModule !== 'all') {
       const mc = this.moduleCounts[this.selectedModule];
       if (mc) {
-        const total = (mc.applied || 0) || (mc.pending || 0) + (mc.approved || 0) +
-                      (mc.objection || 0) + (mc.rejected || 0);
+        const total = (mc.applied || 0) || ((mc.pending || 0) + (mc.approved || 0) + (mc.objection || 0) + (mc.rejected || 0));
         return {
           applied: total,
           pending: mc.pending || 0,
@@ -546,30 +586,54 @@ export class PermitSectionDashboardComponent implements OnInit {
       }
     }
 
-    // All Modules: use allPermits totals
-    const actionablePending = this.getActionablePendingCount();
+    const modules = ['requisition', 'distributor-permit-requisition', 'company', 'company-collaboration'];
+    let applied = 0;
+    let pending = 0;
+    let approved = 0;
+    let rejected = 0;
+    let hasCounts = false;
 
-    const rejected = this.allPermits.filter(p => {
-      const s = String(p.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    modules.forEach(m => {
+      const mc = this.moduleCounts?.[m];
+      if (mc) {
+        hasCounts = true;
+        applied += Number(mc.applied || 0);
+        pending += Number(mc.pending || 0);
+        approved += Number(mc.approved || 0);
+        rejected += Number(mc.rejected || 0);
+      }
+    });
+
+    if (hasCounts && applied > 0) {
+      return { applied, pending, approved, rejected };
+    }
+
+    const appCount = this.allPermits.filter(p => {
+      const s = String(p.status || '').toLowerCase();
+      return s.includes('approve') || s.includes('permit_issued') || s.includes('pass_issued') || s.includes('completed') || s.includes('issued');
+    }).length;
+
+    const rejCount = this.allPermits.filter(p => {
+      const s = String(p.status || '').toLowerCase();
       return s.includes('reject') || s.includes('cancel');
     }).length;
 
-    // "Approved" from the Permit Section perspective means any application that has
-    // moved PAST the Permit Section stage — including Commissioner, Awaiting Payment,
-    // and truly Approved. We compute this as all remaining items (not pending, not rejected).
-    const approved = this.allPermits.length - actionablePending - rejected;
+    const pendCount = this.allPermits.length - appCount - rejCount;
 
-    return { applied: this.allPermits.length, pending: actionablePending, approved, rejected };
+    return { applied: this.allPermits.length, pending: pendCount, approved: appCount, rejected: rejCount };
   }
 
   getFilterOptions() {
     const options = [
       { value: 'all', label: 'All Applications' },
-      { value: 'requisition', label: 'Requisitions' },
-      { value: 'revalidation', label: 'Revalidations' },
+      { value: 'imfl-requisition', label: 'IMFL Requisitions' },
+      { value: 'imfl-revalidation', label: 'IMFL Revalidations' },
+      { value: 'imfl-cancellation', label: 'IMFL Cancellations' },
+      { value: 'requisition', label: 'ENA Requisitions' },
+      { value: 'revalidation', label: 'ENA Revalidations' },
       { value: 'transit', label: 'Transit Permits' },
       { value: 'hologram', label: 'Holograms' },
-      { value: 'cancellation', label: 'Cancellations' }
+      { value: 'cancellation', label: 'ENA Cancellations' }
     ];
 
     return this.isPermitSectionUser()

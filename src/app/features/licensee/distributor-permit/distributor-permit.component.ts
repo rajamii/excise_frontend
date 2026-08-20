@@ -18,6 +18,8 @@ import { ImflHeaderComponent, ImflTabType } from './components/imfl-header/imfl-
 import { ImflRevalidationComponent } from './components/imfl-revalidation/imfl-revalidation.component';
 import { ImflCancellationComponent } from './components/imfl-cancellation/imfl-cancellation.component';
 
+import { UnifiedActionButtonsComponent } from '../../../shared/components/unified-action-buttons/unified-action-buttons.component';
+
 type DistributorPermitStatusFilter = 'all' | 'approved' | 'pending' | 'objection' | 'rejected';
 type DistributorPermitStatusGroup = Exclude<DistributorPermitStatusFilter, 'all'>;
 
@@ -43,7 +45,8 @@ interface DistributorPermitRow {
     MaterialModule,
     ImflHeaderComponent,
     ImflRevalidationComponent,
-    ImflCancellationComponent
+    ImflCancellationComponent,
+    UnifiedActionButtonsComponent
   ],
   templateUrl: './distributor-permit.component.html',
   styleUrl: './distributor-permit.component.scss'
@@ -189,6 +192,16 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const toDate = this.dateToFilter ? new Date(this.dateToFilter) : null;
 
     return this.rows.filter((row) => {
+      const ref = String(row.applicationId || '').toUpperCase();
+
+      if (this.activeTab === 'requisition') {
+        if (ref.startsWith('IMFLREV') || ref.startsWith('IMFLCAN')) return false;
+      } else if (this.activeTab === 'revalidation') {
+        if (!ref.startsWith('IMFLREV')) return false;
+      } else if (this.activeTab === 'cancellation') {
+        if (!ref.startsWith('IMFLCAN')) return false;
+      }
+
       const matchesStatus = this.activeCardFilter === 'all' || row.statusGroup === this.activeCardFilter;
       const matchesSearch = !q ||
         row.applicationId.toLowerCase().includes(q) ||
@@ -424,12 +437,32 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       });
   }
 
+  get isOfficerUser(): boolean {
+    const roleId = Number(this.accountService.getCurrentUser()?.role?.id || 0);
+    return roleId === 5 || roleId === 10 || roleId === 12;
+  }
+
   selectApplication(row: DistributorPermitApplication): void {
     this.selectedApplication = row;
   }
 
+  get selectedActionItem(): any {
+    if (!this.selectedApplication) return null;
+    return {
+      id: this.selectedApplication['id'] || this.selectedApplication.referenceNo || '',
+      referenceNo: this.selectedApplication.referenceNo || '',
+      status: this.selectedApplication.status || 'PENDING',
+      ...this.selectedApplication
+    };
+  }
+
   clearSelectedApplication(): void {
     this.selectedApplication = null;
+  }
+
+  onOfficerActionCompleted(): void {
+    this.clearSelectedApplication();
+    this.loadInitialData();
   }
 
   getStatusGroup(status: string | undefined): DistributorPermitStatusGroup {

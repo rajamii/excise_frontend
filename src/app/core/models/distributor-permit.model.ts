@@ -31,25 +31,37 @@ export interface DistributorPermitLineItem {
 
 export interface DistributorPermitApplication {
   referenceNo?: string;
+  reference_no?: string;
   applicantName?: string;
+  applicant_name?: string;
   supplierCompanyName: string;
+  supplier_company_name?: string;
   logisticsPartner?: string;
+  logistics_partner?: string;
   sourceAddress: string;
+  source_address?: string;
   origin?: string;
   destination?: string;
   routeDetails?: string;
+  route_details?: string;
   declarationAccepted: boolean;
+  declaration_accepted?: boolean;
   status?: string;
   officerRemarks?: string;
+  officer_remarks?: string;
   submittedAt?: string;
+  submitted_at?: string;
   createdAt?: string;
+  created_at?: string;
   lineItems: DistributorPermitLineItem[];
+  line_items?: DistributorPermitLineItem[];
   brandCount?: number;
   totalCases?: number;
   totalImportValue?: number;
   totalEducationCess?: number;
   totalAdditionalEd?: number;
   totalBulkLitres?: number;
+  [key: string]: any;
 }
 
 export interface DistributorSupplier {

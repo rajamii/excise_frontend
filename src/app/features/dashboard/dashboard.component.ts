@@ -477,7 +477,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     // the API returns applied=0 (admin/officer roles) by summing all statuses.
     // For supply chain modules, always use the stored count (0 if not yet loaded).
     const appliedValue = isAllModules
-      ? this.getModuleTotal('all') + this.getSupplyChainAppliedTotal()
+      ? (isPermitSection ? this.getSupplyChainAppliedTotal() : (this.getModuleTotal('all') + this.getSupplyChainAppliedTotal()))
       : this.getModuleTotal(effectiveModule);
 
     this.singleWindowChartData = {
@@ -488,16 +488,16 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           data: [
             appliedValue,
             isAllModules
-              ? (this.dashboardCounts.pending || 0) + this.getSupplyChainPendingTotal()
+              ? (isPermitSection ? this.getSupplyChainPendingTotal() : ((this.dashboardCounts.pending || 0) + this.getSupplyChainPendingTotal()))
               : (sourceCounts.pending || 0),
             isAllModules
-              ? (this.dashboardCounts.approved || 0) + this.getSupplyChainApprovedTotal()
+              ? (isPermitSection ? this.getSupplyChainApprovedTotal() : ((this.dashboardCounts.approved || 0) + this.getSupplyChainApprovedTotal()))
               : (sourceCounts.approved || 0),
             isAllModules
-              ? (this.dashboardCounts.objection || 0) + this.getSupplyChainObjectionTotal()
+              ? (isPermitSection ? this.getSupplyChainObjectionTotal() : ((this.dashboardCounts.objection || 0) + this.getSupplyChainObjectionTotal()))
               : (sourceCounts.objection || 0),
             isAllModules
-              ? (this.dashboardCounts.rejected || 0) + this.getSupplyChainRejectedTotal()
+              ? (isPermitSection ? this.getSupplyChainRejectedTotal() : ((this.dashboardCounts.rejected || 0) + this.getSupplyChainRejectedTotal()))
               : (sourceCounts.rejected || 0)
           ]
         }
@@ -563,7 +563,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (isPermitSection) {
       this.availableChartModules = [
         { value: 'all', label: 'All Modules' },
-        { value: 'requisition', label: 'Requisitions' },
+        { value: 'distributor-permit-requisition', label: 'IMFL Requisition' },
+        { value: 'requisition', label: 'ENA Requisitions' },
         { value: 'company', label: 'Company Reg.' },
         { value: 'company-collaboration', label: 'Company Collab.' }
       ];
@@ -2712,6 +2713,15 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   getSupplyChainPendingTotal(): number {
     const roleId = this.getCurrentRoleId();
     if (roleId === 4 || roleId === 8 || roleId === 9) return 0;
+    if (this.isDistributorUser()) {
+      return this.getSupplyChainPendingCount('distributor-permit-requisition') +
+             this.getSupplyChainPendingCount('distributor-permit-revalidation') +
+             this.getSupplyChainPendingCount('distributor-permit-cancellation');
+    }
+    if (roleId === 5) {
+      const modules = ['requisition', 'distributor-permit-requisition', 'company', 'company-collaboration'];
+      return modules.reduce((sum, m) => sum + this.getSupplyChainPendingCount(m), 0);
+    }
     const isCommissioner = this.isCommissionerUser();
     return this.getSupplyChainPendingCount('requisition') +
            this.getSupplyChainPendingCount('revalidation') +
@@ -2737,6 +2747,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
              (this.supplyChainModuleCounts['distributor-permit-revalidation']?.applied || 0) +
              (this.supplyChainModuleCounts['distributor-permit-cancellation']?.applied || 0);
     }
+    if (roleId === 5) {
+      const modules = ['requisition', 'distributor-permit-requisition', 'company', 'company-collaboration'];
+      return modules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.applied || 0), 0);
+    }
     const isCommissioner = this.isCommissionerUser();
     const modules = ['requisition', 'revalidation', 'cancellation', 'hologram'];
     if (!isCommissioner) {
@@ -2752,6 +2766,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return (this.supplyChainModuleCounts['distributor-permit-requisition']?.approved || 0) +
              (this.supplyChainModuleCounts['distributor-permit-revalidation']?.approved || 0) +
              (this.supplyChainModuleCounts['distributor-permit-cancellation']?.approved || 0);
+    }
+    if (roleId === 5) {
+      const modules = ['requisition', 'distributor-permit-requisition', 'company', 'company-collaboration'];
+      return modules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.approved || 0), 0);
     }
     const isCommissioner = this.isCommissionerUser();
     const modules = ['requisition', 'revalidation', 'cancellation', 'hologram'];
@@ -2769,6 +2787,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
              (this.supplyChainModuleCounts['distributor-permit-revalidation']?.rejected || 0) +
              (this.supplyChainModuleCounts['distributor-permit-cancellation']?.rejected || 0);
     }
+    if (roleId === 5) {
+      const modules = ['requisition', 'distributor-permit-requisition', 'company', 'company-collaboration'];
+      return modules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.rejected || 0), 0);
+    }
     const isCommissioner = this.isCommissionerUser();
     const modules = ['requisition', 'revalidation', 'cancellation', 'hologram'];
     if (!isCommissioner) {
@@ -2784,6 +2806,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return (this.supplyChainModuleCounts['distributor-permit-requisition']?.objection || 0) +
              (this.supplyChainModuleCounts['distributor-permit-revalidation']?.objection || 0) +
              (this.supplyChainModuleCounts['distributor-permit-cancellation']?.objection || 0);
+    }
+    if (roleId === 5) {
+      const modules = ['requisition', 'distributor-permit-requisition', 'company', 'company-collaboration'];
+      return modules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.objection || 0), 0);
     }
     const isCommissioner = this.isCommissionerUser();
     const modules = ['requisition', 'revalidation', 'cancellation', 'hologram'];
