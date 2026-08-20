@@ -623,12 +623,29 @@ export class UnifiedActionsService {
       });
     }
 
+    // IMFL Distributor Permit payment — directly call backend perform-action (PAY)
+    if (
+      itemType === 'distributor-permit' ||
+      itemType === 'distributor-permit-requisition' ||
+      String(itemType || '').startsWith('imfl-')
+    ) {
+      return this.toActionResult(
+        this.http.post<any>(
+          `${environment.apiBaseUrl}/transactional/distributor-permit/${item.id}/perform-action/`,
+          { action: 'PAY' }
+        ),
+        'Payment completed successfully. Application forwarded to Permit Section.',
+        'Failed to complete payment for IMFL Requisition'
+      );
+    }
+
     switch (itemType) {
       case 'new-license': {
         const applicationId = this.getWorkflowApplicationId(item);
         if (!applicationId) {
           return of({ success: false, message: 'Application ID is required for payment' });
         }
+
         const licenseFee = Number(item?.license_fee_amount ?? item?.licenseFeeAmount ?? item?.yearly_license_fee ?? item?.yearlyLicenseFee ?? 0);
         const securityFee = Number(item?.security_fee_amount ?? item?.securityFeeAmount ?? 0);
         this.router.navigate(['/dashboard'], {
