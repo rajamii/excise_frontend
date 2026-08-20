@@ -1072,10 +1072,13 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           let reqApproved = 0;
           let reqObjection = 0;
           let reqRejected = 0;
+          let reqAwaitingPayment = 0;
 
           distApps.forEach((app: any) => {
             const st = String(app.status || app.current_stage || '').toLowerCase();
-            if (st.includes('approved')) {
+            if (st.includes('awaiting payment') || st.includes('awaiting_payment') || st.includes('payment')) {
+              reqAwaitingPayment++;
+            } else if (st.includes('approved')) {
               reqApproved++;
             } else if (st.includes('reject')) {
               reqRejected++;
@@ -1091,7 +1094,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             pending: reqPending,
             approved: reqApproved,
             objection: reqObjection,
-            rejected: reqRejected
+            rejected: reqRejected,
+            awaitingPayment: reqAwaitingPayment
           };
 
           this.supplyChainModuleCounts['distributor-permit'] = reqStats;
@@ -1101,14 +1105,16 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             pending: 0,
             approved: 0,
             objection: 0,
-            rejected: 0
+            rejected: 0,
+            awaitingPayment: 0
           };
           this.supplyChainModuleCounts['distributor-permit-cancellation'] = {
             applied: 0,
             pending: 0,
             approved: 0,
             objection: 0,
-            rejected: 0
+            rejected: 0,
+            awaitingPayment: 0
           };
 
           // Set sidebar badge count for 'distributor-permit' (IMFL Permit)
@@ -2743,7 +2749,15 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (roleId === 4 || roleId === 8 || roleId === 9) return 0;
     const isCommissioner = this.isCommissionerUser();
     if (isCommissioner) return 0;
+    if (this.isDistributorUser()) {
+      return (this.supplyChainModuleCounts['distributor-permit-requisition']?.awaitingPayment || 0) +
+             (this.supplyChainModuleCounts['distributor-permit-revalidation']?.awaitingPayment || 0) +
+             (this.supplyChainModuleCounts['distributor-permit-cancellation']?.awaitingPayment || 0);
+    }
     return (this.supplyChainModuleCounts['requisition']?.awaitingPayment || 0) +
+           (this.supplyChainModuleCounts['distributor-permit-requisition']?.awaitingPayment || 0) +
+           (this.supplyChainModuleCounts['distributor-permit-revalidation']?.awaitingPayment || 0) +
+           (this.supplyChainModuleCounts['distributor-permit-cancellation']?.awaitingPayment || 0) +
            (this.supplyChainModuleCounts['hologram']?.awaitingPayment || 0);
   }
 
@@ -4686,6 +4700,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.selectedChartModule === 'all') {
       if ((this.supplyChainModuleCounts['requisition']?.awaitingPayment || 0) > 0) {
         parts.push('Requisition');
+      }
+      if ((this.supplyChainModuleCounts['distributor-permit-requisition']?.awaitingPayment || 0) > 0) {
+        parts.push('IMFL Requisition');
       }
       if ((this.supplyChainModuleCounts['hologram']?.awaitingPayment || 0) > 0) {
         parts.push('Hologram');

@@ -834,6 +834,8 @@ export class UnifiedActionsService {
       item?.br_amount,
       item?.totalAmount,
       item?.total_amount,
+      item?.total_import_value,
+      item?.totalImportValue,
       item?.totalCancellationAmount,
       item?.total_cancellation_amount,
       item?.license_fee_amount,

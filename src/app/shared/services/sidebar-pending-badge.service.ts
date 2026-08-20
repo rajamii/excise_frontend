@@ -99,7 +99,35 @@ export class SidebarPendingBadgeService {
         // For requisition and hologram we need both a pending count and a payment count.
         // Share a single HTTP fetch via shareReplay(1) so the two derived tasks don't
         // each fire their own request.
-        if (audience === 'licensee' && section === 'requisition') {
+        if (audience === 'licensee' && (section === 'distributor-permit' || section === 'distributor-permit-requisition')) {
+          const dist$ = this.distributorPermitService.listApplications().pipe(
+            map((items) => this.toArray(items)),
+            shareReplay(1),
+            catchError(() => of([] as any[]))
+          );
+          tasks[section] = dist$.pipe(
+            map((items) => {
+              return items.filter(x => {
+                const ref = String(x?.reference_no || x?.referenceNo || '').toUpperCase();
+                const st = String(x?.status || x?.current_stage_name || '').toLowerCase();
+                if (ref.startsWith('IMFLREV') || ref.startsWith('IMFLCAN')) return false;
+                return st.includes('pending') || st.includes('submitted') || st.includes('forward') || st.includes('awaiting payment') || st.includes('payment');
+              }).length;
+            }),
+            catchError(() => of(0))
+          );
+          tasks[`${section}:payment`] = dist$.pipe(
+            map((items) => {
+              return items.filter(x => {
+                const ref = String(x?.reference_no || x?.referenceNo || '').toUpperCase();
+                const st = String(x?.status || x?.current_stage_name || '').toLowerCase();
+                if (ref.startsWith('IMFLREV') || ref.startsWith('IMFLCAN')) return false;
+                return st.includes('awaiting payment') || st.includes('awaiting_payment') || st.includes('payment');
+              }).length;
+            }),
+            catchError(() => of(0))
+          );
+        } else if (audience === 'licensee' && section === 'requisition') {
           const reqs$ = this.enaRequisitionService.getRequisitions().pipe(
             map((response) => this.toArray(response)),
             shareReplay(1),

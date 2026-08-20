@@ -186,7 +186,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return this.rows.reduce(
       (acc, row) => {
         acc.total += 1;
-        acc[row.statusGroup] += 1;
+        if (acc[row.statusGroup] !== undefined) {
+          acc[row.statusGroup] += 1;
+        }
         return acc;
       },
       { total: 0, approved: 0, pending: 0, objection: 0, rejected: 0 }

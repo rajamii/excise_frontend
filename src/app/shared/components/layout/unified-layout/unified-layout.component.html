@@ -72,6 +72,7 @@
                 <mat-icon class="nav-icon">local_shipping</mat-icon>
                 <span class="nav-text">IMFL Permit</span>
                 <span class="nav-badge nav-badge--group" *ngIf="!imflPermitExpanded && getPendingCount('distributor-permit') > 0">{{ getPendingCount('distributor-permit') }}</span>
+                <span class="nav-badge nav-badge--payment" *ngIf="!imflPermitExpanded && getPendingCount('distributor-permit:payment') as payCount" title="Awaiting Payment"><mat-icon>payment</mat-icon></span>
                 <mat-icon class="nav-chevron">{{ imflPermitExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
               </button>
 
@@ -80,6 +81,7 @@
                   <mat-icon class="nav-icon">description</mat-icon>
                   <span class="nav-text">IMFL Requisition</span>
                   <span class="nav-badge" *ngIf="getPendingCount('distributor-permit') as pending">{{ pending }}</span>
+                  <span class="nav-badge nav-badge--payment" *ngIf="getPendingCount('distributor-permit:payment') as payCount" title="Awaiting Payment"><mat-icon>payment</mat-icon></span>
                 </button>
 
                 <button *ngIf="!isPermitSectionUser()" class="nav-item nav-item--sub imfl-permit-sub-item" (click)="navigateToImflPermitTab('revalidation')" [class.active]="isDashboardSectionActive('distributor-permit') && isImflTabActive('revalidation')">
@@ -281,6 +283,7 @@
                   <mat-icon class="nav-icon">local_shipping</mat-icon>
                   <span class="nav-text">IMFL Permit</span>
                   <span class="nav-badge nav-badge--group" *ngIf="!imflPermitExpanded && getPendingCount('distributor-permit') > 0">{{ getPendingCount('distributor-permit') }}</span>
+                  <span class="nav-badge nav-badge--payment" *ngIf="!imflPermitExpanded && getPendingCount('distributor-permit:payment') as payCount" title="Awaiting Payment"><mat-icon>payment</mat-icon></span>
                   <mat-icon class="nav-chevron">{{ imflPermitExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
                 </button>
 
@@ -289,6 +292,7 @@
                     <mat-icon class="nav-icon">description</mat-icon>
                     <span class="nav-text">IMFL Requisition</span>
                     <span class="nav-badge" *ngIf="getPendingCount('distributor-permit') as pending">{{ pending }}</span>
+                    <span class="nav-badge nav-badge--payment" *ngIf="getPendingCount('distributor-permit:payment') as payCount" title="Awaiting Payment"><mat-icon>payment</mat-icon></span>
                   </button>
 
                   <button *ngIf="!isPermitSectionUser()" class="nav-item nav-item--sub imfl-permit-sub-item" (click)="navigateToImflPermitTab('revalidation')" [class.active]="isDashboardSectionActive('distributor-permit') && isImflTabActive('revalidation')">

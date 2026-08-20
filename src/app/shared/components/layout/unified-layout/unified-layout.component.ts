@@ -459,7 +459,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         return false;
       };
 
-      const licenseeSections: string[] = ['new-license', 'license-renewal', 'salesman-barman-registration', 'company-registration', 'company-collaboration', 'special-permit'];
+      const licenseeSections: string[] = ['new-license', 'license-renewal', 'salesman-barman-registration', 'company-registration', 'company-collaboration', 'special-permit', 'distributor-permit'];
       // Distillery licensees always see Bulk Spirit menus even when DB navigation routes are incomplete.
       // Ensure Requisition payment-pending badge still loads in that case.
       if (this.showDistilleryMenus || hasDbRoute(/requisition|ena|bulk[_-]?spirit/)) {
