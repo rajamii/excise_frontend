@@ -218,19 +218,21 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   get filteredRows(): DistributorPermitRow[] {
     const q = this.searchFilter.trim().toLowerCase();
-    const fromDate = this.dateFromFilter ? new Date(this.dateFromFilter) : null;
-    const toDate = this.dateToFilter ? new Date(this.dateToFilter) : null;
+    const parsedFrom = this.dateFromFilter ? this.parseDate(this.dateFromFilter) : null;
+    const parsedTo = this.dateToFilter ? this.parseDate(this.dateToFilter) : null;
+    const validFrom = parsedFrom && !Number.isNaN(parsedFrom.getTime()) ? parsedFrom : null;
+    const validTo = parsedTo && !Number.isNaN(parsedTo.getTime()) ? parsedTo : null;
 
     return this.activeTabRows.filter((row) => {
       const matchesStatus = this.activeCardFilter === 'all' || row.statusGroup === this.activeCardFilter;
       const matchesSearch = !q ||
-        row.applicationId.toLowerCase().includes(q) ||
-        row.applicantName.toLowerCase().includes(q) ||
-        row.supplierName.toLowerCase().includes(q) ||
-        row.currentStage.toLowerCase().includes(q);
+        (row.applicationId || '').toLowerCase().includes(q) ||
+        (row.applicantName || '').toLowerCase().includes(q) ||
+        (row.supplierName || '').toLowerCase().includes(q) ||
+        (row.currentStage || '').toLowerCase().includes(q);
 
-      const matchesFrom = !fromDate || (row.submittedDate !== null && row.submittedDate >= this.startOfDay(fromDate));
-      const matchesTo = !toDate || (row.submittedDate !== null && row.submittedDate <= this.endOfDay(toDate));
+      const matchesFrom = !validFrom || (row.submittedDate !== null && row.submittedDate >= this.startOfDay(validFrom));
+      const matchesTo = !validTo || (row.submittedDate !== null && row.submittedDate <= this.endOfDay(validTo));
 
       return matchesStatus && matchesSearch && matchesFrom && matchesTo;
     });
