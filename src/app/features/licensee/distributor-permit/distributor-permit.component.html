@@ -1,4 +1,11 @@
 <div class="dp-shell">
+  <app-imfl-header
+    [activeTab]="activeTab"
+    [isFormView]="isFormView"
+    (tabChange)="onTabChange($event)"
+    (applyNew)="openApplyForm()">
+  </app-imfl-header>
+
   <div class="dp-alert dp-alert--error" *ngIf="loadError">
     <mat-icon>warning</mat-icon>
     <span>{{ loadError }}</span>

@@ -361,15 +361,26 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
     const supplier = this.supplierForm.getRawValue();
     const route = this.routeForm.getRawValue();
+    const supplierName = supplier.supplierCompanyName || '';
+    const srcAddress = supplier.sourceAddress || '';
+    const logistics = supplier.logisticsPartner || '';
+    const routeText = this.buildRouteDetails(route);
+
     const payload: any = {
-      supplierCompanyName: supplier.supplierCompanyName || '',
-      logisticsPartner: supplier.logisticsPartner || '',
-      sourceAddress: supplier.sourceAddress || '',
-      origin: route.origin || supplier.sourceAddress || '',
+      supplier_company_name: supplierName,
+      supplierCompanyName: supplierName,
+      logistics_partner: logistics,
+      logisticsPartner: logistics,
+      source_address: srcAddress,
+      sourceAddress: srcAddress,
+      origin: route.origin || srcAddress || '',
       destination: route.destination || '',
-      routeDetails: this.buildRouteDetails(route),
+      route_details: routeText,
+      routeDetails: routeText,
+      declaration_accepted: this.reviewForm.value.declarationAccepted === true,
       declarationAccepted: this.reviewForm.value.declarationAccepted === true,
-      lineItems
+      line_items: lineItems,
+      lineItems: lineItems
     };
 
     this.isSubmitting = true;
@@ -391,7 +402,24 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.isSubmitting = false;
-          void Swal.fire('Error', error?.error?.detail || 'Unable to submit application.', 'error');
+          let message = 'Unable to submit application.';
+          if (error?.error) {
+            if (typeof error.error === 'string') {
+              message = error.error;
+            } else if (error.error.detail) {
+              message = error.error.detail;
+            } else {
+              const errs = Object.entries(error.error)
+                .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+                .join('<br>');
+              if (errs) message = errs;
+            }
+          }
+          void Swal.fire({
+            title: 'Error',
+            html: message,
+            icon: 'error'
+          });
         }
       });
   }
