@@ -391,6 +391,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       'UPDATE_ARRIVAL',
       'REQUEST_REVALIDATION',
       'PAY',
+      'FORCE_PAY',
       'SUBMIT',
       'REVERT'
     ];
@@ -883,7 +884,20 @@ private getTransitRejectSummary(): {
         break;
 
       case 'PAY':
-        this.handlePaymentAction();
+        const currentItemType = String(this.itemType || '').toLowerCase();
+        if (
+          currentItemType.includes('distributor-permit') ||
+          currentItemType === 'requisition' ||
+          currentItemType.startsWith('imfl-')
+        ) {
+          this.handleGenericAction(button);
+        } else {
+          this.handlePaymentAction();
+        }
+        break;
+
+      case 'FORCE_PAY':
+        this.handleGenericAction(button);
         break;
 
       case 'REQUEST_CANCELLATION':
@@ -2054,6 +2068,20 @@ private getTransitRejectSummary(): {
       label = 'Revert';
       icon = 'undo';
       color = 'warn';
+    }
+
+    if (action === 'FORCE_PAY') {
+      label = 'Force Pay';
+      icon = 'bolt';
+      color = 'success';
+      tooltip = 'Force Excise Duty Payment & Move to Next Stage';
+    }
+
+    if (action === 'PAY') {
+      label = 'Pay';
+      icon = 'payment';
+      color = 'primary';
+      tooltip = 'Pay Excise Duty';
     }
 
     return {

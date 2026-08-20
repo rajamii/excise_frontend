@@ -3264,9 +3264,15 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             .map(action => String(action || '').toUpperCase().trim())
             .filter(action => !!action && action !== 'VIEW');
 
-        // For IMFL distributor permit: return [] (empty array, not null) when there are no actions.
-        // null means "no filter — show all", but [] means "filter to nothing — show none".
+        // For IMFL distributor permit: include FORCE_PAY and PAY only if NOT paid and at Awaiting Payment stage (stage 154)
         if (this.isImflDistributorPermitSource()) {
+            const stageId = this.applicationData?.['current_stage_id'] || this.applicationData?.['currentStageId'];
+            const statusStr = String(this.applicationData?.['status'] || '').toUpperCase();
+            const isPaid = Boolean(this.applicationData?.['is_excise_duty_fee_paid'] || this.applicationData?.['isExciseDutyFeePaid']);
+            if (!isPaid && (stageId === 154 || statusStr === 'AWAITING PAYMENT' || statusStr === 'AWAITING_PAYMENT')) {
+                if (!normalizedActions.includes('FORCE_PAY')) normalizedActions.push('FORCE_PAY');
+                if (!normalizedActions.includes('PAY')) normalizedActions.push('PAY');
+            }
             return Array.from(new Set(normalizedActions));
         }
 

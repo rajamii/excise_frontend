@@ -101,6 +101,9 @@ export class UnifiedActionsService {
       case 'PAY':
         return this.handlePayAction(item, itemType);
 
+      case 'FORCE_PAY':
+        return this.handleForcePayAction(item, itemType);
+
       case 'REQUEST_REVALIDATION':
         return this.handleRequestRevalidationAction(item, itemType, context);
 
@@ -787,6 +790,25 @@ export class UnifiedActionsService {
           message: `Redirected to wallet (${walletTab}) for payment`
         });
     }
+  }
+
+  private handleForcePayAction(item: any, itemType: string): Observable<ActionResult> {
+    const id = item?.id || item?.referenceNo || item?.reference_no || item?.refNo;
+    if (!id) {
+      return of({
+        success: false,
+        message: 'Item ID is required for force payment'
+      });
+    }
+
+    return this.toActionResult(
+      this.http.post<any>(
+        `${environment.apiBaseUrl}/transactional/distributor-permit/${id}/perform-action/`,
+        { action: 'FORCE_PAY' }
+      ),
+      'Force payment completed successfully. Application forwarded to Permit Section.',
+      'Failed to force payment for IMFL Requisition'
+    );
   }
 
   private mapWalletTabForItemType(itemType: string): 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram' {
