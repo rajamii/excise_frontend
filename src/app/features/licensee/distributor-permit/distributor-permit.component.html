@@ -198,8 +198,6 @@
                   *ngFor="let row of pagedRows; let i = index"
                   class="dp-table-row"
                   [class.dp-table-row--active]="selectedApplication?.referenceNo === row.applicationId"
-                  (click)="onViewDetails(row)"
-                  (mousedown)="onViewDetails(row)"
                 >
                   <td>{{ (pageIndex * pageSize) + i + 1 }}</td>
                   <td class="fw-semibold">{{ row.applicationId }}</td>
