@@ -50,7 +50,22 @@ export class ListComponent implements OnInit {
     this.timerService.getTimers().subscribe({
       next: (data) => {
         this.isLoading = false;
-        this.timers = data || [];
+        this.timers = (data || []).map((t: any) => {
+          const val = t.delay_value ?? t.delayValue ?? t.delay_time ?? t.value ?? 0;
+          const unit = t.delay_unit ?? t.delayUnit ?? t.unit ?? 'minute';
+          const active = t.is_active ?? t.isActive ?? t.active ?? true;
+          const validity = t.validity_period_days ?? t.validityPeriodDays ?? null;
+          return {
+            ...t,
+            delay_value: Number(val),
+            delayValue: Number(val),
+            delay_unit: String(unit),
+            delayUnit: String(unit),
+            is_active: Boolean(active),
+            isActive: Boolean(active),
+            validity_period_days: validity
+          };
+        });
       },
       error: (err) => {
         this.isLoading = false;
@@ -61,13 +76,40 @@ export class ListComponent implements OnInit {
   }
 
   get filteredTimers(): TimerConfig[] {
+    const hiddenCodes = ['LICENSE_RENEWAL_TIMER', 'LICENSE_RENEWAL_REMINDER_TIMER'];
+    let list = this.timers.filter(t => !hiddenCodes.includes((t.code || '').toUpperCase()));
     const q = this.searchQuery.trim().toLowerCase();
-    if (!q) return this.timers;
-    return this.timers.filter(t =>
+    if (!q) return list;
+    return list.filter(t =>
       (t.code || '').toLowerCase().includes(q) ||
       (t.description || '').toLowerCase().includes(q) ||
-      (t.delay_unit || '').toLowerCase().includes(q)
+      (t.delay_unit || '').toLowerCase().includes(q) ||
+      this.formatDelayTime(t).toLowerCase().includes(q)
     );
+  }
+
+  getTimerIsActive(timer: any): boolean {
+    if (!timer) return false;
+    if (timer.is_active !== undefined) return Boolean(timer.is_active);
+    if (timer.isActive !== undefined) return Boolean(timer.isActive);
+    if (timer.active !== undefined) return Boolean(timer.active);
+    return true;
+  }
+
+  formatDelayTime(timer: any): string {
+    if (!timer) return '-';
+    const val = timer.delay_value ?? timer.delayValue ?? timer.delay_time ?? timer.value;
+    const unitRaw = timer.delay_unit ?? timer.delayUnit ?? timer.unit ?? 'minute';
+    if (val === undefined || val === null || val === '') {
+      return '-';
+    }
+    const unit = String(unitRaw).toLowerCase();
+    const unitFormatted = Number(val) === 1 ? unit : (unit.endsWith('s') ? unit : unit + 's');
+    let extra = '';
+    if (String(timer.code || '').toUpperCase().includes('HOLOGRAM') && Number(val) === 1020) {
+      extra = ' (5:00 PM)';
+    }
+    return `${val} ${unitFormatted}${extra}`;
   }
 
   openCreateModal(): void {
@@ -82,15 +124,15 @@ export class ListComponent implements OnInit {
     this.showModal = true;
   }
 
-  openEditModal(timer: TimerConfig): void {
+  openEditModal(timer: any): void {
     this.isEditMode = true;
     this.editingId = timer.id || null;
-    this.formCode = timer.code;
+    this.formCode = timer.code || '';
     this.formDescription = timer.description || '';
-    this.formDelayValue = timer.delay_value;
-    this.formDelayUnit = timer.delay_unit || 'minute';
-    this.formValidityDays = timer.validity_period_days ?? null;
-    this.formIsActive = timer.is_active;
+    this.formDelayValue = timer.delay_value ?? timer.delayValue ?? 10;
+    this.formDelayUnit = timer.delay_unit ?? timer.delayUnit ?? 'minute';
+    this.formValidityDays = timer.validity_period_days ?? timer.validityPeriodDays ?? null;
+    this.formIsActive = this.getTimerIsActive(timer);
     this.showModal = true;
   }
 

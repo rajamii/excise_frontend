@@ -53,10 +53,10 @@
             <th style="width: 60px;">Sl.</th>
             <th>Timer Code</th>
             <th>Description</th>
-            <th>Delay Value & Unit</th>
+            <th>Configured Time (Value & Unit)</th>
             <th>Validity Days</th>
             <th>Active Status</th>
-            <th style="width: 130px;" class="text-end">Actions</th>
+            <th style="width: 90px;" class="text-end">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -71,8 +71,10 @@
               <span class="text-dark fw-normal">{{ timer.description || '-' }}</span>
             </td>
             <td>
-              <span class="fw-bold text-dark me-1">{{ timer.delay_value }}</span>
-              <span class="badge bg-secondary-subtle text-secondary border text-uppercase">{{ timer.delay_unit }}</span>
+              <span class="badge bg-primary text-white fs-6 px-3 py-2 shadow-sm font-monospace">
+                <i class="bi bi-clock me-1"></i>
+                {{ formatDelayTime(timer) }}
+              </span>
             </td>
             <td>
               <span *ngIf="timer.validity_period_days !== null && timer.validity_period_days !== undefined" class="badge bg-info-subtle text-info border font-monospace">
@@ -86,31 +88,23 @@
                   class="form-check-input"
                   type="checkbox"
                   role="switch"
-                  [checked]="timer.is_active"
+                  [checked]="getTimerIsActive(timer)"
                   (change)="toggleActive(timer)"
                   title="Toggle active status"
                 />
-                <span class="badge" [ngClass]="timer.is_active ? 'bg-success' : 'bg-danger'">
-                  {{ timer.is_active ? 'Active' : 'Inactive' }}
+                <span class="badge" [ngClass]="getTimerIsActive(timer) ? 'bg-success' : 'bg-danger'">
+                  {{ getTimerIsActive(timer) ? 'Active' : 'Inactive' }}
                 </span>
               </div>
             </td>
             <td class="text-end">
               <button
-                class="btn btn-sm btn-outline-primary me-1"
+                class="btn btn-sm btn-outline-primary"
                 type="button"
                 title="Edit Timer"
                 (click)="openEditModal(timer)"
               >
-                <i class="bi bi-pencil-fill"></i>
-              </button>
-              <button
-                class="btn btn-sm btn-outline-danger"
-                type="button"
-                title="Delete Timer"
-                (click)="deleteTimer(timer)"
-              >
-                <i class="bi bi-trash-fill"></i>
+                <i class="bi bi-pencil-fill me-1"></i> Edit
               </button>
             </td>
           </tr>
