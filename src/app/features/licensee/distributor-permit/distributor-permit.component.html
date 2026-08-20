@@ -241,9 +241,9 @@
                         class="btn btn-sm btn-outline-danger fw-semibold"
                         type="button"
                         title="Request Cancellation"
-                        *ngIf="isApproved(row) && isDistributorUser"
+                        *ngIf="canRequestCancellation(row)"
                         (click)="onCancelPermit(row, $event)"
-                        (mousedown)="$event.stopPropagation()"
+                        (mousedown)="onCancelPermit(row, $event)"
                       >
                         <i class="bi bi-x-circle me-1"></i>
                         <span>Cancel Permit</span>

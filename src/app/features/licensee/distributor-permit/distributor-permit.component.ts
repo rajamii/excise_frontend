@@ -44,10 +44,7 @@ interface DistributorPermitRow {
     CommonModule,
     FormsModule,
     MaterialModule,
-    ImflHeaderComponent,
-    ImflRevalidationComponent,
-    ImflCancellationComponent,
-    UnifiedActionButtonsComponent
+    ImflHeaderComponent
   ],
   templateUrl: './distributor-permit.component.html',
   styleUrl: './distributor-permit.component.scss'
@@ -291,7 +288,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   get isDistributorUser(): boolean {
     const user = this.accountService.getCurrentUser() as any;
-    let roleId = Number(user?.role?.id || user?.roleId || 0);
+    let roleId = Number(user?.role?.id || user?.roleId || user?.role_id || 0);
     if (!roleId) {
       try {
         const cached = localStorage.getItem('currentUser') || localStorage.getItem('user');
@@ -301,11 +298,16 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         }
       } catch {}
     }
+    const roleName = String(user?.role?.name || user?.role || '').toLowerCase();
     const officerRoles = [1, 3, 5, 6, 7, 8, 9, 10];
-    if (officerRoles.includes(roleId)) {
+    if (officerRoles.includes(roleId) && !roleName.includes('distributor')) {
       return false;
     }
     return true;
+  }
+
+  canRequestCancellation(row: DistributorPermitRow | any): boolean {
+    return this.isApproved(row) && this.isDistributorUser;
   }
 
   showCancellationModal = false;
@@ -317,9 +319,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   onCancelPermit(row: DistributorPermitRow | any, event?: Event): void {
     if (event) {
-      event.preventDefault();
-      event.stopPropagation();
+      try { event.preventDefault(); } catch {}
+      try { event.stopPropagation(); } catch {}
     }
+    console.log('Cancel Permit clicked for row:', row);
     this.cancellationTargetRow = row;
     this.cancellationReasonType = 'Non-availability of tankers / Transport issues';
     this.cancellationReasonDetails = '';
