@@ -13,7 +13,6 @@ import Swal from 'sweetalert2';
 })
 export class ImflCancellationComponent implements OnInit {
   @Input() applications: any[] = [];
-  searchQuery = '';
   filteredRows: any[] = [];
   selectedApp: any = null;
 
@@ -37,19 +36,7 @@ export class ImflCancellationComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.applyFilter();
-  }
-
-  applyFilter(): void {
-    if (!this.searchQuery.trim()) {
-      this.filteredRows = [...this.applications];
-    } else {
-      const q = this.searchQuery.toLowerCase();
-      this.filteredRows = this.applications.filter(app =>
-        String(app.referenceNo || app.applicationId || '').toLowerCase().includes(q) ||
-        String(app.supplierCompanyName || app.supplierName || '').toLowerCase().includes(q)
-      );
-    }
+    this.filteredRows = [...this.applications];
   }
 
   openCancellationModal(app: any): void {
