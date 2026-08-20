@@ -3233,24 +3233,29 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 ? (this.applicationData['allowed_actions'] as any[])
                 : []);
 
-        if (actions.length === 0 && (this.applicationType === 'requisition' || this.isImflDistributorPermitSource())) {
-            const context = this.getUserContext();
-            const status = String(this.applicationData.status || '').toUpperCase();
-            if (context === USER_CONTEXTS.COMMISSIONER) {
-                if (status.includes('PAYSLIP') || status.includes('VERIF') || status.includes('FINAL')) {
-                    actions = ['APPROVE', 'REJECT'];
-                } else {
-                    actions = ['APPROVE', 'FORWARD', 'REJECT', 'RAISE_OBJECTION'];
-                }
-            } else if (context === USER_CONTEXTS.PERMIT_SECTION) {
-                if (status.includes('PAYSLIP') || status.includes('PAYMENT')) {
-                    actions = ['VERIFY', 'FORWARD', 'REJECT'];
-                } else {
-                    actions = ['FORWARD', 'REJECT', 'RAISE_OBJECTION'];
-                }
-            } else if (context === USER_CONTEXTS.LICENSEE) {
-                if (status.includes('PAYMENT') || status.includes('AWAITING_PAYMENT')) {
-                    actions = ['PAY'];
+        // For IMFL distributor permit, the backend returns accurate allowedActions from
+        // workflow transitions (DB-driven). An empty list means no actions for this user
+        // at the current stage — do NOT apply a status-text fallback.
+        if (!this.isImflDistributorPermitSource()) {
+            if (actions.length === 0 && (this.applicationType === 'requisition' || this.isImflDistributorPermitSource())) {
+                const context = this.getUserContext();
+                const status = String(this.applicationData.status || '').toUpperCase();
+                if (context === USER_CONTEXTS.COMMISSIONER) {
+                    if (status.includes('PAYSLIP') || status.includes('VERIF') || status.includes('FINAL')) {
+                        actions = ['APPROVE', 'REJECT'];
+                    } else {
+                        actions = ['APPROVE', 'FORWARD', 'REJECT', 'RAISE_OBJECTION'];
+                    }
+                } else if (context === USER_CONTEXTS.PERMIT_SECTION) {
+                    if (status.includes('PAYSLIP') || status.includes('PAYMENT')) {
+                        actions = ['VERIFY', 'FORWARD', 'REJECT'];
+                    } else {
+                        actions = ['FORWARD', 'REJECT', 'RAISE_OBJECTION'];
+                    }
+                } else if (context === USER_CONTEXTS.LICENSEE) {
+                    if (status.includes('PAYMENT') || status.includes('AWAITING_PAYMENT')) {
+                        actions = ['PAY'];
+                    }
                 }
             }
         }
@@ -3258,6 +3263,12 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         const normalizedActions = actions
             .map(action => String(action || '').toUpperCase().trim())
             .filter(action => !!action && action !== 'VIEW');
+
+        // For IMFL distributor permit: return [] (empty array, not null) when there are no actions.
+        // null means "no filter — show all", but [] means "filter to nothing — show none".
+        if (this.isImflDistributorPermitSource()) {
+            return Array.from(new Set(normalizedActions));
+        }
 
         return normalizedActions.length ? Array.from(new Set(normalizedActions)) : null;
     }

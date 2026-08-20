@@ -293,14 +293,22 @@ export class UnifiedActionsService {
         message: 'Item ID is required for approval'
       });
     }
-
     switch (itemType) {
-      case 'requisition':
+      case 'requisition': {
+        const isImfl = String(item.id || '').toUpperCase().startsWith('IMFL') || String(item.referenceNo || '').toUpperCase().startsWith('IMFL');
+        if (isImfl) {
+          return this.toActionResult(
+            this.http.post<any>(`${environment.apiBaseUrl}/transactional/distributor-permit/${item.id}/perform-action/`, { action: 'APPROVE' }),
+            'Distributor permit requisition approved successfully',
+            'Failed to approve distributor permit requisition'
+          );
+        }
         return this.toActionResult(
           this.enaRequisitionService.performAction(item.id, 'APPROVE'),
           'Requisition approved successfully',
           'Failed to approve requisition'
         );
+      }
 
       case 'revalidation':
         return this.toActionResult(
@@ -377,12 +385,21 @@ export class UnifiedActionsService {
     }
 
     switch (itemType) {
-      case 'requisition':
+      case 'requisition': {
+        const isImfl = String(item.id || '').toUpperCase().startsWith('IMFL') || String(item.referenceNo || '').toUpperCase().startsWith('IMFL');
+        if (isImfl) {
+          return this.toActionResult(
+            this.http.post<any>(`${environment.apiBaseUrl}/transactional/distributor-permit/${item.id}/perform-action/`, { action: 'REJECT', remarks: reason }),
+            'Distributor permit requisition rejected successfully',
+            'Failed to reject distributor permit requisition'
+          );
+        }
         return this.toActionResult(
           this.enaRequisitionService.performAction(item.id, 'REJECT'),
           'Requisition rejected successfully',
           'Failed to reject requisition'
         );
+      }
 
       case 'revalidation':
         return this.toActionResult(
@@ -484,6 +501,17 @@ export class UnifiedActionsService {
   private handleForwardAction(item: any, itemType: string, options?: ActionExecutionOptions): Observable<ActionResult> {
     if (!item.id) {
       return of({ success: false, message: 'Item ID is required for forward' });
+    }
+
+    if (itemType === 'requisition') {
+      const isImfl = String(item.id || '').toUpperCase().startsWith('IMFL') || String(item.referenceNo || '').toUpperCase().startsWith('IMFL');
+      if (isImfl) {
+        return this.toActionResult(
+          this.http.post<any>(`${environment.apiBaseUrl}/transactional/distributor-permit/${item.id}/perform-action/`, { action: 'FORWARD' }),
+          'Distributor permit requisition forwarded successfully',
+          'Failed to forward distributor permit requisition'
+        );
+      }
     }
 
     if (itemType === 'hologram') {
@@ -1186,6 +1214,21 @@ export class UnifiedActionsService {
   }
 
   private handleRaiseObjectionAction(item: any, itemType: string): Observable<ActionResult> {
+    if (itemType === 'requisition') {
+      const isImfl = String(item.id || '').toUpperCase().startsWith('IMFL') || String(item.referenceNo || '').toUpperCase().startsWith('IMFL');
+      if (isImfl) {
+        const remarks = String(prompt('Enter objection remarks (required):') || '').trim();
+        if (!remarks) {
+          return of({ success: false, message: 'Objection remarks required.' });
+        }
+        return this.toActionResult(
+          this.http.post<any>(`${environment.apiBaseUrl}/transactional/distributor-permit/${item.id}/perform-action/`, { action: 'RAISE_OBJECTION', remarks }),
+          'Objection raised successfully',
+          'Failed to raise objection'
+        );
+      }
+    }
+
     if (!['new-license', 'company-registration', 'company-collaboration', 'label-registration', 'salesman-barman-registration'].includes(itemType)) {
       return of({ success: false, message: `Raise objection not implemented for ${itemType}` });
     }

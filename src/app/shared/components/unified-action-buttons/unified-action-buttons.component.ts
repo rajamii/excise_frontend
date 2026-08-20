@@ -1776,7 +1776,11 @@ private getTransitRejectSummary(): {
       });
     }
 
-    if (include.length) {
+    // includeActions=null means "no filter" (show all buttons).
+    // includeActions=[] means "explicitly restricted to nothing" — show no buttons.
+    if (this.includeActions !== null && this.includeActions !== undefined) {
+      result = result.filter(config => include.includes(config.action));
+    } else if (include.length) {
       result = result.filter(config => include.includes(config.action));
     }
 
