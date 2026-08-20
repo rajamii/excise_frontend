@@ -20,6 +20,7 @@ import { SalesmanBarmanRegistrationService } from '../../../core/services/salesm
 import { LicenseApplicationService } from '../../../core/services/license-application.service';
 import { MasterService } from '../../../core/services/master.service';
 import { SpecialPermitService } from '../../../core/services/special-permit.service';
+import { DistributorPermitService } from '../../../core/services/distributor-permit.service';
 import { ActionButtonConfig } from '../../../core/services/action-config.service';
 import { LicenseCategory } from '../../../core/models/license-category.model';
 import { LicenseFee } from '../../../core/models/license-fee.model';
@@ -106,6 +107,12 @@ export interface UnifiedApplicationData {
     paymentAmount?: string | number;
     hologramType?: string;
     permitType?: string;
+    supplierCompanyName?: string;
+    sourceAddress?: string;
+    origin?: string;
+    destination?: string;
+    logisticsPartner?: string;
+    lineItems?: any[];
 
     // New license specific fields (explicitly declared for strict template type-checking)
     applicant_name?: string;
@@ -465,6 +472,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         private licenseApplicationService: LicenseApplicationService,
         private masterService: MasterService,
         private specialPermitService: SpecialPermitService,
+        private distributorPermitService: DistributorPermitService,
         private roleService: RoleService,
         private unifiedActionsService: UnifiedActionsService,
         private unifiedDashboardService: UnifiedDashboardService,
@@ -499,30 +507,51 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
     // Dynamic service configuration
     private get serviceConfigs(): { [key in ApplicationType]: ServiceConfig } {
+        const isImflRequisition = this.isImflDistributorPermitSource() && this.applicationType === 'requisition';
         return {
             requisition: {
-                service: this.enaRequisitionService,
-                listMethod: 'getRequisitions',
-                detailMethod: 'getRequisitionById',
+                service: isImflRequisition ? this.distributorPermitService : this.enaRequisitionService,
+                listMethod: isImflRequisition ? 'listApplications' : 'getRequisitions',
+                detailMethod: isImflRequisition ? 'getApplication' : 'getRequisitionById',
                 workflowId: WORKFLOW_IDS[APPLICATION_TYPES.REQUISITION],
                 fieldMappings: {
-                    id: ['id'],
+                    id: isImflRequisition ? ['referenceNo', 'reference_no', 'id'] : ['id'],
                     referenceNo: ['ourRefNo', 'our_ref_no', 'referenceNo', 'reference_no'],
-                    submissionDate: ['requisitionDate', 'requisition_date', 'createdAt', 'created_at', 'submission_date'],
+                    submissionDate: isImflRequisition
+                        ? ['submittedAt', 'submitted_at', 'createdAt', 'created_at', 'submission_date']
+                        : ['requisitionDate', 'requisition_date', 'createdAt', 'created_at', 'submission_date'],
                     status: ['status', 'currentStageName'],
                     currentStage: ['currentStage', 'current_stage'],
                     currentStageName: ['currentStageName', 'current_stage_name'],
                     workflowId: ['workflow', 'workflow_id', 'workflowId'],
-                    distilleryName: ['liftedFromDistilleryName', 'lifted_from_distillery_name', 'distillery_name', 'distilleryName'],
-                    brAmount: ['paymentAmount', 'payment_amount', 'br_amount', 'brAmount', 'totalbl', 'total_bl', 'grainEnaNumber', 'grain_ena_number'],
-                    quantity: ['totalbl', 'total_bl', 'grainEnaNumber', 'grain_ena_number', 'quantity'],
-                    numberOfPermits: ['requisitonNumberOfPermits', 'requisition_number_of_permits', 'number_of_permits', 'numberOfPermits'],
-                    purpose: ['purposeName', 'purpose_name', 'branchPurpose', 'branch_purpose', 'purpose'],
-                    bulkSpiritType: ['bulkSpiritType', 'bulk_spirit_type', 'spirit_type', 'spiritType'],
+                    distilleryName: isImflRequisition
+                        ? ['supplierCompanyName', 'supplier_company_name', 'distillery_name', 'distilleryName']
+                        : ['liftedFromDistilleryName', 'lifted_from_distillery_name', 'distillery_name', 'distilleryName'],
+                    brAmount: isImflRequisition
+                        ? ['totalImportValue', 'total_import_value', 'paymentAmount', 'payment_amount']
+                        : ['paymentAmount', 'payment_amount', 'br_amount', 'brAmount', 'totalbl', 'total_bl', 'grainEnaNumber', 'grain_ena_number'],
+                    quantity: isImflRequisition
+                        ? ['totalBulkLitres', 'total_bulk_litres', 'quantity']
+                        : ['totalbl', 'total_bl', 'grainEnaNumber', 'grain_ena_number', 'quantity'],
+                    numberOfPermits: isImflRequisition
+                        ? ['brandCount', 'brand_count', 'number_of_permits', 'numberOfPermits']
+                        : ['requisitonNumberOfPermits', 'requisition_number_of_permits', 'number_of_permits', 'numberOfPermits'],
+                    purpose: isImflRequisition
+                        ? ['logisticsPartner', 'logistics_partner', 'purpose']
+                        : ['purposeName', 'purpose_name', 'branchPurpose', 'branch_purpose', 'purpose'],
+                    bulkSpiritType: isImflRequisition
+                        ? ['permitType', 'permit_type', 'bulkSpiritType']
+                        : ['bulkSpiritType', 'bulk_spirit_type', 'spirit_type', 'spiritType'],
                     strengthTo: ['strength', 'strength_to', 'strengthTo', 'alcohol_strength', 'alcoholStrength'],
-                    liftedFrom: ['liftedFrom', 'lifted_from', 'liftedFromDistilleryName', 'lifted_from_distillery_name'],
-                    viaRoute: ['viaRoute', 'via_route', 'route', 'transport_route', 'transportRoute'],
-                    checkpostEntry: ['checkPostName', 'checkpost_name', 'checkpost_entry', 'checkpostEntry']
+                    liftedFrom: isImflRequisition
+                        ? ['sourceAddress', 'source_address', 'origin', 'liftedFrom']
+                        : ['liftedFrom', 'lifted_from', 'liftedFromDistilleryName', 'lifted_from_distillery_name'],
+                    viaRoute: isImflRequisition
+                        ? ['routeDetails', 'route_details', 'viaRoute']
+                        : ['viaRoute', 'via_route', 'route', 'transport_route', 'transportRoute'],
+                    checkpostEntry: isImflRequisition
+                        ? ['destination', 'checkpostEntry', 'checkpost_entry']
+                        : ['checkPostName', 'checkpost_name', 'checkpost_entry', 'checkpostEntry']
                 }
             },
             revalidation: {
@@ -1172,6 +1201,34 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     private addTypeSpecificFields(mappedData: UnifiedApplicationData, apiData: any, config: ServiceConfig): void {
         switch (this.applicationType) {
             case 'requisition':
+                if (this.isImflDistributorPermitSource()) {
+                    const lineItems = apiData?.lineItems || apiData?.line_items || [];
+                    mappedData['permitType'] = 'IMFL Import Permit';
+                    mappedData['bulkSpiritType'] = mappedData.bulkSpiritType || 'IMFL';
+                    mappedData['applicantName'] = this.extractFieldValue(apiData, ['applicantName', 'applicant_name']) || '';
+                    mappedData['supplierCompanyName'] = this.extractFieldValue(apiData, ['supplierCompanyName', 'supplier_company_name']) || '';
+                    mappedData['sourceAddress'] = this.extractFieldValue(apiData, ['sourceAddress', 'source_address']) || '';
+                    mappedData['origin'] = this.extractFieldValue(apiData, ['origin']) || '';
+                    mappedData['destination'] = this.extractFieldValue(apiData, ['destination']) || '';
+                    mappedData['routeDetails'] = this.extractFieldValue(apiData, ['routeDetails', 'route_details']) || '';
+                    mappedData['logisticsPartner'] = this.extractFieldValue(apiData, ['logisticsPartner', 'logistics_partner']) || '';
+                    mappedData['declarationAccepted'] = Boolean(
+                        this.extractFieldValue(apiData, ['declarationAccepted', 'declaration_accepted'])
+                    );
+                    mappedData['lineItems'] = Array.isArray(lineItems) ? lineItems : [];
+                    mappedData['numberOfPermits'] = this.parseNumericValue(
+                        this.extractFieldValue(apiData, ['brandCount', 'brand_count']),
+                        Array.isArray(lineItems) ? lineItems.length : 0
+                    );
+                    mappedData['quantity'] = this.parseNumericValue(
+                        this.extractFieldValue(apiData, ['totalBulkLitres', 'total_bulk_litres']),
+                        this.sumImflBulkLitres(lineItems)
+                    );
+                    mappedData['brAmount'] = this.parseNumericValue(
+                        this.extractFieldValue(apiData, ['totalImportValue', 'total_import_value']),
+                        this.sumImflImportValue(lineItems)
+                    );
+                }
                 mappedData['rejectedByDisplay'] = this.resolveRejectedByDisplay(apiData, mappedData);
                 mappedData['cancellationReasonDisplay'] = this.extractFieldValue(apiData, [
                     'cancellationReasonDisplay',
@@ -1521,6 +1578,26 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 mappedData['numberOfPermits'] = permitsList.length;
             }
         }
+    }
+
+    private isImflDistributorPermitSource(): boolean {
+        const source = String(this.route.snapshot.queryParamMap.get('source') || '').trim().toLowerCase();
+        const ref = String(this.route.snapshot.queryParamMap.get('ref') || '').trim().toUpperCase();
+        return source === 'distributor-permit' || source === 'imfl-requisition' || ref.startsWith('IMFL') || ref.startsWith('IMP/') || ref.startsWith('DP/');
+    }
+
+    isImflRequisition(): boolean {
+        return this.applicationType === 'requisition' && this.isImflDistributorPermitSource();
+    }
+
+    private sumImflBulkLitres(lineItems: any[]): number {
+        if (!Array.isArray(lineItems)) return 0;
+        return lineItems.reduce((sum, item) => sum + this.parseNumericValue(item?.bulkLitres ?? item?.bulk_litres), 0);
+    }
+
+    private sumImflImportValue(lineItems: any[]): number {
+        if (!Array.isArray(lineItems)) return 0;
+        return lineItems.reduce((sum, item) => sum + this.parseNumericValue(item?.totalImport ?? item?.total_import), 0);
     }
 
     private findItemByReference(items: any[], refNo: string, referenceFields: string[]): any {
@@ -3485,11 +3562,19 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     }
 
     getPageTitle(): string {
+        if (this.applicationType === 'requisition' && this.isImflDistributorPermitSource()) {
+            return 'IMFL Requisition Details';
+        }
         return PAGE_TITLES[this.applicationType] || 'Application Details';
     }
 
     goBack(): void {
         const source = this.route.snapshot.queryParamMap.get('source');
+
+        if (source === 'distributor-permit' || source === 'imfl-requisition') {
+            this.router.navigate(['/dashboard'], { queryParams: { section: 'distributor-permit', tab: 'requisition' } });
+            return;
+        }
 
         // IT Cell hologram flows should return to the IT Cell dashboard section, not the licensee hologram section.
         if (source === 'itcell' || source === 'it-cell') {

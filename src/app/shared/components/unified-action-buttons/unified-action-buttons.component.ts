@@ -1851,9 +1851,6 @@ private getTransitRejectSummary(): {
   private applyContextActionRestrictions(configs: ActionButtonConfig[]): ActionButtonConfig[] {
     return configs.filter(config => {
       const action = this.normalizeActionName(config?.action);
-      if (action === 'REQUEST_CANCELLATION' && this.itemType === 'requisition') {
-        return false;
-      }
       if (action === 'REQUEST_CANCELLATION' && this.context !== 'licensee') {
         return false;
       }

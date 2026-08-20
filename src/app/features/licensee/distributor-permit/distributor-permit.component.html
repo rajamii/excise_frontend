@@ -194,7 +194,13 @@
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let row of pagedRows; let i = index">
+                <tr
+                  *ngFor="let row of pagedRows; let i = index"
+                  class="dp-table-row"
+                  [class.dp-table-row--active]="selectedApplication?.referenceNo === row.applicationId"
+                  (click)="onViewDetails(row)"
+                  (mousedown)="onViewDetails(row)"
+                >
                   <td>{{ (pageIndex * pageSize) + i + 1 }}</td>
                   <td class="fw-semibold">{{ row.applicationId }}</td>
                   <td>{{ row.submittedOn }}</td>
@@ -210,19 +216,111 @@
                       {{ row.currentStage }}
                     </span>
                   </td>
-                  <td>
+                  <td class="dp-action-cell" (click)="$event.stopPropagation()">
                     <button
-                      class="btn btn-link p-0 action-eye"
+                      class="btn dp-action-button"
                       type="button"
                       title="View Details"
-                      (click)="selectApplication(row.application)"
+                      (click)="onViewDetails(row)"
+                      (mousedown)="onViewDetails(row)"
                     >
                       <i class="bi bi-eye-fill"></i>
+                      <span>View Details</span>
                     </button>
                   </td>
                 </tr>
               </tbody>
             </table>
+
+            <div class="dp-inline-details" *ngIf="selectedApplication && useInlineDetails">
+              <div class="dp-inline-details__header">
+                <div>
+                  <div class="dp-inline-details__eyebrow">Selected Application</div>
+                  <div class="dp-inline-details__title">
+                    {{ selectedApplication.referenceNo }}
+                    <span class="status-badge status-badge--{{ getStatusGroup(selectedApplication.status) }} ms-2">
+                      {{ getCurrentStage(selectedApplication.status) }}
+                    </span>
+                  </div>
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm" (click)="clearSelectedApplication()">
+                  Close Details
+                </button>
+              </div>
+
+              <div class="dp-inline-details__grid">
+                <div class="detail-card">
+                  <div class="detail-label">Applicant Company</div>
+                  <div class="detail-value fw-bold">{{ selectedApplication.applicantName || 'N/A' }}</div>
+                </div>
+                <div class="detail-card">
+                  <div class="detail-label">Supplier / Establishment</div>
+                  <div class="detail-value fw-bold">{{ selectedApplication.supplierCompanyName || 'N/A' }}</div>
+                </div>
+                <div class="detail-card">
+                  <div class="detail-label">Source Address</div>
+                  <div class="detail-value">{{ selectedApplication.sourceAddress || 'N/A' }}</div>
+                </div>
+                <div class="detail-card">
+                  <div class="detail-label">Origin</div>
+                  <div class="detail-value">{{ selectedApplication.origin || 'N/A' }}</div>
+                </div>
+                <div class="detail-card">
+                  <div class="detail-label">Destination Premises</div>
+                  <div class="detail-value">{{ selectedApplication.destination || 'N/A' }}</div>
+                </div>
+                <div class="detail-card">
+                  <div class="detail-label">Submission Date</div>
+                  <div class="detail-value">{{ (selectedApplication.submittedAt || selectedApplication.createdAt) | date:'dd-MMM-yyyy' }}</div>
+                </div>
+              </div>
+
+              <div class="dp-inline-details__table table-responsive border rounded-3">
+                <table class="table table-striped table-hover align-middle mb-0">
+                  <thead class="table-dark">
+                    <tr>
+                      <th>#</th>
+                      <th>Brand Name</th>
+                      <th>Size (ml)</th>
+                      <th>Cases</th>
+                      <th>EDP / Case</th>
+                      <th>Import Fee / Case</th>
+                      <th>Total Import</th>
+                      <th>Bulk Litres</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let item of selectedApplication.lineItems; let idx = index">
+                      <td>{{ idx + 1 }}</td>
+                      <td class="fw-semibold">{{ item.brandName || '-' }}</td>
+                      <td>{{ item.sizeMl || 0 }} ml</td>
+                      <td>{{ item.cases }}</td>
+                      <td>{{ (item.edpPerCase || 0) | currency:'INR':'symbol':'1.2-2' }}</td>
+                      <td>{{ (item.importPassFeePerCase || 0) | currency:'INR':'symbol':'1.2-2' }}</td>
+                      <td class="fw-bold text-success">{{ (item.totalImport || 0) | currency:'INR':'symbol':'1.2-2' }}</td>
+                      <td>{{ (item.bulkLitres || 0) | number:'1.3-3' }}</td>
+                    </tr>
+                    <tr *ngIf="!selectedApplication.lineItems?.length">
+                      <td colspan="8" class="text-center text-muted py-4">No line items available.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="detail-actions p-3 mt-3 bg-light rounded-3 border" *ngIf="selectedActionItem">
+                <div class="fw-bold mb-2">
+                  {{ isOfficerUser ? 'Officer Action Controls' : 'Available Actions' }}
+                </div>
+                <app-unified-action-buttons
+                  [item]="selectedActionItem"
+                  [itemType]="'requisition'"
+                  [context]="detailActionContext"
+                  [displayMode]="'detailed'"
+                  [includeActions]="detailActionIncludeActions"
+                  (actionClicked)="onModalActionClicked($event)">
+                </app-unified-action-buttons>
+              </div>
+            </div>
 
             <div class="pagination-bar" *ngIf="filteredRows.length > 0">
               <div class="page-summary">
@@ -269,110 +367,7 @@
           </div>
         </div>
       </div>
-
-    <!-- Modal Overlay Backdrop for Selected Application Details -->
-    <div class="dp-modal-overlay" *ngIf="selectedApplication" (click)="clearSelectedApplication()">
-      <div class="dp-modal-dialog" (click)="$event.stopPropagation()">
-        <div class="dp-modal-header">
-          <div class="dp-modal-title">
-            <i class="bi bi-file-earmark-text-fill me-2 text-primary"></i>
-            <span>IMFL Permit Application Details</span>
-            <span class="badge bg-primary ms-2">{{ selectedApplication.referenceNo }}</span>
-            <span class="status-badge status-badge--pending ms-2">{{ selectedApplication.status }}</span>
-          </div>
-          <button type="button" class="btn-close" (click)="clearSelectedApplication()" aria-label="Close"></button>
-        </div>
-
-        <div class="dp-modal-body">
-          <div class="row g-3 mb-3">
-            <div class="col-md-4">
-              <div class="detail-card">
-                <div class="detail-label">Applicant Company</div>
-                <div class="detail-value fw-bold">{{ selectedApplication.applicantName || 'N/A' }}</div>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <div class="detail-card">
-                <div class="detail-label">Supplier / Establishment</div>
-                <div class="detail-value fw-bold">{{ selectedApplication.supplierCompanyName || 'N/A' }}</div>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <div class="detail-card">
-                <div class="detail-label">Source Address</div>
-                <div class="detail-value">{{ selectedApplication.sourceAddress || 'N/A' }}</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="row g-3 mb-3">
-            <div class="col-md-4">
-              <div class="detail-card">
-                <div class="detail-label">Origin</div>
-                <div class="detail-value">{{ selectedApplication.origin || 'N/A' }}</div>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <div class="detail-card">
-                <div class="detail-label">Destination Premises</div>
-                <div class="detail-value">{{ selectedApplication.destination || 'N/A' }}</div>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <div class="detail-card">
-                <div class="detail-label">Submission Date</div>
-                <div class="detail-value">{{ (selectedApplication.submittedAt || selectedApplication.createdAt) | date:'dd-MMM-yyyy' }}</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="table-responsive border rounded-3 mb-3">
-            <table class="table table-striped table-hover align-middle mb-0">
-              <thead class="table-dark">
-                <tr>
-                  <th>#</th>
-                  <th>Brand Name</th>
-                  <th>Size (ml)</th>
-                  <th>Cases</th>
-                  <th>EDP / Case</th>
-                  <th>Import Fee / Case</th>
-                  <th>Total Import (₹)</th>
-                  <th>Bulk Litres (BL)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let item of selectedApplication.lineItems; let idx = index">
-                  <td>{{ idx + 1 }}</td>
-                  <td class="fw-semibold">{{ item.brandName || '-' }}</td>
-                  <td>{{ item.sizeMl || 0 }} ml</td>
-                  <td>{{ item.cases }}</td>
-                  <td>{{ (item.edpPerCase || 0) | currency:'INR':'symbol':'1.2-2' }}</td>
-                  <td>{{ (item.importPassFeePerCase || 0) | currency:'INR':'symbol':'1.2-2' }}</td>
-                  <td class="fw-bold text-success">{{ (item.totalImport || 0) | currency:'INR':'symbol':'1.2-2' }}</td>
-                  <td>{{ (item.bulkLitres || 0) | number:'1.3-3' }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Workflow action buttons for Officers / Permit Section -->
-          <div class="detail-actions p-3 bg-light rounded-3 border" *ngIf="isOfficerUser">
-            <div class="fw-bold mb-2">Officer Action Controls</div>
-            <app-unified-action-buttons
-              [item]="selectedActionItem"
-              [itemType]="'requisition'"
-              [context]="'permit-section'"
-              [displayMode]="'detailed'">
-            </app-unified-action-buttons>
-          </div>
-        </div>
-
-        <div class="dp-modal-footer">
-          <button type="button" class="btn btn-secondary btn-sm" (click)="clearSelectedApplication()">Close</button>
-        </div>
-      </div>
-    </div>
-  </section>
+    </section>
 
     <section class="dp-form-view" *ngIf="isFormView">
       <mat-horizontal-stepper class="dp-stepper" #stepper>
@@ -689,4 +684,110 @@
       [applications]="rows"
     ></app-imfl-cancellation>
   </ng-container>
+
+  <!-- Modal Overlay Backdrop for Selected Application Details -->
+  <div class="dp-modal-overlay" *ngIf="selectedApplication && !useInlineDetails" (click)="clearSelectedApplication()">
+    <div class="dp-modal-dialog" (click)="$event.stopPropagation()">
+      <div class="dp-modal-header">
+        <div class="dp-modal-title">
+          <i class="bi bi-file-earmark-text-fill me-2 text-primary"></i>
+          <span>IMFL Permit Application Details</span>
+          <span class="badge bg-primary ms-2">{{ selectedApplication.referenceNo }}</span>
+          <span class="status-badge status-badge--pending ms-2">{{ selectedApplication.status }}</span>
+        </div>
+        <button type="button" class="btn-close" (click)="clearSelectedApplication()" aria-label="Close"></button>
+      </div>
+
+      <div class="dp-modal-body">
+        <div class="row g-3 mb-3">
+          <div class="col-md-4">
+            <div class="detail-card">
+              <div class="detail-label">Applicant Company</div>
+              <div class="detail-value fw-bold">{{ selectedApplication.applicantName || 'N/A' }}</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="detail-card">
+              <div class="detail-label">Supplier / Establishment</div>
+              <div class="detail-value fw-bold">{{ selectedApplication.supplierCompanyName || 'N/A' }}</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="detail-card">
+              <div class="detail-label">Source Address</div>
+              <div class="detail-value">{{ selectedApplication.sourceAddress || 'N/A' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-4">
+            <div class="detail-card">
+              <div class="detail-label">Origin</div>
+              <div class="detail-value">{{ selectedApplication.origin || 'N/A' }}</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="detail-card">
+              <div class="detail-label">Destination Premises</div>
+              <div class="detail-value">{{ selectedApplication.destination || 'N/A' }}</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="detail-card">
+              <div class="detail-label">Submission Date</div>
+              <div class="detail-value">{{ (selectedApplication.submittedAt || selectedApplication.createdAt) | date:'dd-MMM-yyyy' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-responsive border rounded-3 mb-3">
+          <table class="table table-striped table-hover align-middle mb-0">
+            <thead class="table-dark">
+              <tr>
+                <th>#</th>
+                <th>Brand Name</th>
+                <th>Size (ml)</th>
+                <th>Cases</th>
+                <th>EDP / Case</th>
+                <th>Import Fee / Case</th>
+                <th>Total Import (₹)</th>
+                <th>Bulk Litres (BL)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of selectedApplication.lineItems; let idx = index">
+                <td>{{ idx + 1 }}</td>
+                <td class="fw-semibold">{{ item.brandName || '-' }}</td>
+                <td>{{ item.sizeMl || 0 }} ml</td>
+                <td>{{ item.cases }}</td>
+                <td>{{ (item.edpPerCase || 0) | currency:'INR':'symbol':'1.2-2' }}</td>
+                <td>{{ (item.importPassFeePerCase || 0) | currency:'INR':'symbol':'1.2-2' }}</td>
+                <td class="fw-bold text-success">{{ (item.totalImport || 0) | currency:'INR':'symbol':'1.2-2' }}</td>
+                <td>{{ (item.bulkLitres || 0) | number:'1.3-3' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="detail-actions p-3 bg-light rounded-3 border" *ngIf="selectedActionItem">
+          <div class="fw-bold mb-2">
+            {{ isOfficerUser ? 'Officer Action Controls' : 'Available Actions' }}
+          </div>
+          <app-unified-action-buttons
+            [item]="selectedActionItem"
+            [itemType]="'requisition'"
+            [context]="detailActionContext"
+            [displayMode]="'detailed'"
+            [includeActions]="detailActionIncludeActions"
+            (actionClicked)="onModalActionClicked($event)">
+          </app-unified-action-buttons>
+        </div>
+      </div>
+
+      <div class="dp-modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" (click)="clearSelectedApplication()">Close</button>
+      </div>
+    </div>
+  </div>
 </div>

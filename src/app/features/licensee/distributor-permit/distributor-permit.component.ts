@@ -18,7 +18,8 @@ import { ImflHeaderComponent, ImflTabType } from './components/imfl-header/imfl-
 import { ImflRevalidationComponent } from './components/imfl-revalidation/imfl-revalidation.component';
 import { ImflCancellationComponent } from './components/imfl-cancellation/imfl-cancellation.component';
 
-import { UnifiedActionButtonsComponent } from '../../../shared/components/unified-action-buttons/unified-action-buttons.component';
+import { ActionItem, UnifiedActionButtonsComponent } from '../../../shared/components/unified-action-buttons/unified-action-buttons.component';
+import { UnifiedActionsService } from '../../../shared/services/unified-actions.service';
 
 type DistributorPermitStatusFilter = 'all' | 'approved' | 'pending' | 'objection' | 'rejected';
 type DistributorPermitStatusGroup = Exclude<DistributorPermitStatusFilter, 'all'>;
@@ -58,6 +59,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly accountService = inject(AccountService);
   private readonly profileService = inject(SupplyChainProfileService);
+  private readonly unifiedActionsService = inject(UnifiedActionsService);
   private readonly destroy$ = new Subject<void>();
 
   readonly applicantForm = this.fb.group({
@@ -101,6 +103,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   loadError = '';
   error: string | null = null;
   isFormView = false;
+  readonly useInlineDetails = true;
 
   activeTab: ImflTabType = 'requisition';
 
@@ -126,6 +129,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         const tabParam = String(params?.['tab'] || '').toLowerCase() as ImflTabType;
         if (['requisition', 'revalidation', 'cancellation'].includes(tabParam)) {
           this.activeTab = tabParam;
+        }
+        const refParam = params?.['ref'] || params?.['id'];
+        if (refParam) {
+          this.openRefWhenApplicationsLoaded(String(refParam));
         }
       });
 
@@ -442,8 +449,79 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return roleId === 5 || roleId === 10 || roleId === 12;
   }
 
-  selectApplication(row: DistributorPermitApplication): void {
-    this.selectedApplication = row;
+  selectApplication(rawApp: any): void {
+    console.log('selectApplication called with:', rawApp);
+    if (!rawApp) {
+      console.log('rawApp is null or undefined');
+      return;
+    }
+    const app = rawApp.application || rawApp;
+    console.log('Processed app:', app);
+    const ref = app.referenceNo || app.reference_no || app.id || rawApp.applicationId || rawApp.id;
+    console.log('Reference:', ref);
+
+    const normalized: DistributorPermitApplication = {
+      ...app,
+      id: app.id || ref,
+      referenceNo: ref || 'N/A',
+      applicantName: app.applicantName || app.applicant_name || rawApp.applicantName || this.applicantDisplayName || 'N/A',
+      supplierCompanyName: app.supplierCompanyName || app.supplier_company_name || rawApp.supplierName || 'N/A',
+      sourceAddress: app.sourceAddress || app.source_address || 'N/A',
+      origin: app.origin || 'N/A',
+      destination: app.destination || 'N/A',
+      status: app.status || app.current_stage_name || rawApp.currentStage || 'PENDING',
+      submittedAt: app.submittedAt || app.submitted_at || app.createdAt || app.created_at || rawApp.submittedOn,
+      lineItems: app.lineItems || app.line_items || []
+    };
+
+    this.selectedApplication = normalized;
+    console.log('selectedApplication set to:', this.selectedApplication);
+
+    if (ref) {
+      this.permitService.getApplication(String(ref)).subscribe({
+        next: (res: any) => {
+          console.log('API response:', res);
+          if (res) {
+            const lines = res.lineItems || res.line_items || normalized.lineItems || [];
+            this.selectedApplication = {
+              ...normalized,
+              ...res,
+              referenceNo: res.referenceNo || res.reference_no || normalized.referenceNo,
+              applicantName: res.applicantName || res.applicant_name || normalized.applicantName,
+              supplierCompanyName: res.supplierCompanyName || res.supplier_company_name || normalized.supplierCompanyName,
+              sourceAddress: res.sourceAddress || res.source_address || normalized.sourceAddress,
+              origin: res.origin || normalized.origin,
+              destination: res.destination || normalized.destination,
+              status: res.status || normalized.status,
+              lineItems: lines.map((li: any) => ({
+                ...li,
+                brandName: li.brandName || li.brand_name || li.brand?.name || 'N/A',
+                sizeMl: li.sizeMl || li.size_ml || li.size || 0,
+                cases: li.cases || 0,
+                edpPerCase: li.edpPerCase || li.edp_per_case || 0,
+                importPassFeePerCase: li.importPassFeePerCase || li.import_pass_fee_per_case || 0,
+                totalImport: li.totalImport || li.total_import_fee || li.total_import || 0,
+                bulkLitres: li.bulkLitres || li.bulk_litres || 0
+              }))
+            };
+            console.log('Updated selectedApplication:', this.selectedApplication);
+          }
+        },
+        error: (err) => console.error('Error fetching full permit application details:', err)
+      });
+    }
+  }
+
+  onViewDetails(row: DistributorPermitRow): void {
+    const referenceNo = row.applicationId || row.application?.referenceNo || row.application?.reference_no || row.id;
+    this.router.navigate(['/supply-chain-view'], {
+      queryParams: {
+        type: 'requisition',
+        id: referenceNo,
+        ref: referenceNo,
+        source: 'distributor-permit'
+      }
+    });
   }
 
   get selectedActionItem(): any {
@@ -456,8 +534,56 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     };
   }
 
+  get detailActionContext(): 'licensee' | 'permit-section' {
+    return this.isOfficerUser ? 'permit-section' : 'licensee';
+  }
+
+  get detailActionIncludeActions(): string[] | null {
+    if (this.isOfficerUser) {
+      return null;
+    }
+    return ['REQUEST_REVALIDATION', 'REQUEST_CANCELLATION'];
+  }
+
   clearSelectedApplication(): void {
     this.selectedApplication = null;
+  }
+
+  onModalActionClicked(event: { action: string; item: ActionItem }): void {
+    if (!event?.action || !event?.item) {
+      return;
+    }
+
+    this.unifiedActionsService.executeAction(
+      event.action,
+      event.item,
+      'requisition',
+      this.detailActionContext
+    )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (result) => {
+          if (result?.success === false) {
+            void Swal.fire({
+              title: 'Action Failed',
+              text: result.message || 'Unable to complete the selected action.',
+              icon: 'error'
+            });
+            return;
+          }
+
+          if (event.action === 'REQUEST_REVALIDATION' || event.action === 'REQUEST_CANCELLATION') {
+            this.clearSelectedApplication();
+          }
+        },
+        error: (error) => {
+          void Swal.fire({
+            title: 'Action Failed',
+            text: error?.error?.detail || error?.error?.message || error?.message || 'Unable to complete the selected action.',
+            icon: 'error'
+          });
+        }
+      });
   }
 
   onOfficerActionCompleted(): void {
@@ -694,7 +820,24 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       .subscribe((rows) => {
         this.applications = rows || [];
         this.applyFilters();
+        const refParam = this.route.snapshot.queryParams['ref'] || this.route.snapshot.queryParams['id'];
+        if (refParam) {
+          this.openRefWhenApplicationsLoaded(String(refParam));
+        }
       });
+  }
+
+  private openRefWhenApplicationsLoaded(ref: string): void {
+    if (!ref) return;
+    const match = (this.applications || []).find((app: any) => {
+      const r = app.referenceNo || app.reference_no || app.id;
+      return String(r || '').toLowerCase() === String(ref || '').toLowerCase();
+    });
+    if (match) {
+      this.selectApplication(match);
+    } else {
+      this.selectApplication({ referenceNo: ref, reference_no: ref, id: ref } as any);
+    }
   }
 
   private loadApplicantDefaults(): void {

@@ -233,6 +233,22 @@ export class UnifiedActionsService {
       }
     }
 
+    if (String(itemType || '').startsWith('imfl-') || itemType === 'distributor-permit') {
+      const tab = itemType === 'imfl-revalidation' ? 'revalidation' : (itemType === 'imfl-cancellation' ? 'cancellation' : 'requisition');
+      this.router.navigate(['/dashboard'], {
+        queryParams: {
+          section: 'distributor-permit',
+          tab,
+          ref: ref || id,
+          view: 'details'
+        }
+      });
+      return of({
+        success: true,
+        message: `Navigated to ${itemType} details`
+      });
+    }
+
     const queryParams: any = {
       id: id || undefined,
       ref: ref || undefined,

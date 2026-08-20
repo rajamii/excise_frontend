@@ -1,8 +1,9 @@
-import { Component, Input, OnChanges, OnInit } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MaterialModule } from '../../../../../shared/material.module';
 import Swal from 'sweetalert2';
+import { UnifiedActionsService } from '../../../../../shared/services/unified-actions.service';
 
 @Component({
   selector: 'app-imfl-revalidation',
@@ -12,6 +13,8 @@ import Swal from 'sweetalert2';
   styleUrl: './imfl-revalidation.component.scss'
 })
 export class ImflRevalidationComponent implements OnInit {
+  private readonly unifiedActionsService = inject(UnifiedActionsService);
+
   @Input() applications: any[] = [];
   filteredRows: any[] = [];
   selectedApp: any = null;
@@ -62,7 +65,6 @@ export class ImflRevalidationComponent implements OnInit {
 
   openRevalidationModal(app: any): void {
     this.selectedApp = app;
-
     Swal.fire({
       title: 'Apply IMFL Permit Revalidation',
       html: `
@@ -96,8 +98,32 @@ export class ImflRevalidationComponent implements OnInit {
       }
     }).then((result) => {
       if (result.isConfirmed && result.value) {
-        Swal.fire('Submitted!', `Revalidation request for ${app.referenceNo || app.applicationId} submitted successfully.`, 'success');
+        this.unifiedActionsService.executeAction('REQUEST_REVALIDATION', this.toActionItem(app), 'requisition', 'licensee').subscribe({
+          next: (response) => {
+            if (response?.success === false) {
+              void Swal.fire('Unable to Proceed', response.message || 'Revalidation request could not be opened.', 'error');
+              return;
+            }
+          },
+          error: (error) => {
+            void Swal.fire(
+              'Unable to Proceed',
+              error?.error?.detail || error?.error?.message || error?.message || 'Revalidation request could not be opened.',
+              'error'
+            );
+          }
+        });
       }
     });
+  }
+
+  private toActionItem(app: any): any {
+    return {
+      id: app?.id || app?.application?.id || app?.referenceNo || app?.applicationId,
+      referenceNo: app?.referenceNo || app?.application?.referenceNo || app?.applicationId || '',
+      status: app?.status || app?.currentStage || 'APPROVED',
+      ...app,
+      ...(app?.application || {})
+    };
   }
 }

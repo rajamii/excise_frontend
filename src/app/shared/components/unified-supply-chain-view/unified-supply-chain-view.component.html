@@ -107,6 +107,78 @@
                 </div>
                 <!-- ========== REQUISITION DETAILS SECTION ========== -->
                 @if (isRequisition()) {
+                @if (isImflRequisition()) {
+                <div class="section-card mb-4">
+                    <h5 class="section-title">IMFL Applicant & Supplier Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light detail-label-cell">Applicant</td>
+                                    <td>{{ applicationData.applicantName || 'Not specified' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Supplier / Establishment</td>
+                                    <td>{{ applicationData.supplierCompanyName || 'Not specified' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Source Address</td>
+                                    <td>{{ applicationData.sourceAddress || 'Not specified' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Origin</td>
+                                    <td>{{ applicationData.origin || 'Not specified' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Destination Premises</td>
+                                    <td>{{ applicationData.destination || 'Not specified' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Logistics Partner</td>
+                                    <td>{{ applicationData.logisticsPartner || 'Not specified' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Route Details</td>
+                                    <td>{{ applicationData.routeDetails || 'Not specified' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="section-card mb-4" *ngIf="applicationData.lineItems?.length">
+                    <h5 class="section-title">Brand / Line Item Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Brand</th>
+                                    <th>Size</th>
+                                    <th>Cases</th>
+                                    <th>EDP / Case</th>
+                                    <th>Import Fee / Case</th>
+                                    <th>Total Import</th>
+                                    <th>Bulk Litres</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let item of applicationData.lineItems; let idx = index">
+                                    <td>{{ idx + 1 }}</td>
+                                    <td>{{ item.brandName || item.brand_name || 'Not specified' }}</td>
+                                    <td>{{ item.sizeMl || item.size_ml || 0 }} ml</td>
+                                    <td>{{ item.cases || 0 }}</td>
+                                    <td>₹{{ item.edpPerCase || item.edp_per_case || 0 }}</td>
+                                    <td>₹{{ item.importPassFeePerCase || item.import_pass_fee_per_case || 0 }}</td>
+                                    <td class="fw-bold text-success">₹{{ item.totalImport || item.total_import || 0 }}</td>
+                                    <td>{{ item.bulkLitres || item.bulk_litres || 0 }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                }
+
                 <div class="section-card mb-4">
                     <h5 class="section-title">Import Permit Specifications</h5>
                     <div class="table-responsive">
