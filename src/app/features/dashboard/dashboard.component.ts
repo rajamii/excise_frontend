@@ -4243,7 +4243,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     if (section === 'distributor-permit') {
-      return this.isDistributorUser();
+      // Only show button for requisition tab
+      const tab = this.route.snapshot.queryParamMap.get('tab') || 'requisition';
+      return this.isDistributorUser() && tab === 'requisition';
     }
 
     // Licensee or Distributor: show Create actions only
