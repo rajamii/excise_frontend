@@ -340,7 +340,7 @@
 
               <!-- Master Data group -->
               <button class="nav-item bulk-spirit-nav-item" (click)="adminMasterDataExpanded = !adminMasterDataExpanded"
-                [class.active]="adminMasterDataExpanded || isAdminRouteActive('/dashboard/admin/districts') || isAdminRouteActive('/dashboard/admin/subdivisions') || isAdminRouteActive('/dashboard/admin/roads') || isAdminRouteActive('/dashboard/admin/police-stations') || isAdminRouteActive('/dashboard/admin/locations') || isAdminRouteActive('/dashboard/admin/blocks-wards')"
+                [class.active]="adminMasterDataExpanded || isAdminRouteActive('/dashboard/admin/districts') || isAdminRouteActive('/dashboard/admin/subdivisions') || isAdminRouteActive('/dashboard/admin/roads') || isAdminRouteActive('/dashboard/admin/police-stations') || isAdminRouteActive('/dashboard/admin/locations') || isAdminRouteActive('/dashboard/admin/blocks-wards') || isAdminRouteActive('/dashboard/admin/timer') || isAdminRouteActive('/dashboard/admin/master/timer')"
                 [class.group-expanded]="adminMasterDataExpanded">
                 <mat-icon class="nav-icon">dns</mat-icon>
                 <span class="nav-text">Master Data</span>
@@ -370,6 +370,10 @@
                 <a routerLink="/dashboard/admin/blocks-wards" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
                   <mat-icon class="nav-icon">view_module</mat-icon>
                   <span class="nav-text">Block &amp; Wards</span>
+                </a>
+                <a routerLink="/dashboard/admin/timer" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">schedule</mat-icon>
+                  <span class="nav-text">Timer</span>
                 </a>
               </ng-container>
 

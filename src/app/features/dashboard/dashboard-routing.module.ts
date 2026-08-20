@@ -63,6 +63,13 @@ const routes: Routes = [
         canActivate: [UserRouteAccessService],
         data: { requiredPermission: 'master.roles.view' }
       },
+      {
+        path: 'admin/timer',
+        loadComponent: () =>
+          import('../admin/master/timer/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
       // ✅ COMMENTED OUT: District route causing compilation errors
       // Uncomment this once the district list component export issue is fixed
       {

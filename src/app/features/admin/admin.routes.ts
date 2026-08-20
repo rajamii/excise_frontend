@@ -455,6 +455,17 @@ const routes: Routes = [
               authorities: ['site_admin'],
             },
           },
+          {
+            path: 'timer',
+            loadComponent: () =>
+              import('./master/timer/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: ['site_admin'],
+            },
+          },
         ]
       },
     ],
