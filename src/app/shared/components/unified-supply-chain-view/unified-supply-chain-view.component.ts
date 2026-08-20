@@ -1580,7 +1580,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         }
     }
 
-    private isImflDistributorPermitSource(): boolean {
+    isImflDistributorPermitSource(): boolean {
         const source = String(this.route.snapshot.queryParamMap.get('source') || '').trim().toLowerCase();
         const ref = String(this.route.snapshot.queryParamMap.get('ref') || '').trim().toUpperCase();
         return source === 'distributor-permit' || source === 'imfl-requisition' || ref.startsWith('IMFL') || ref.startsWith('IMP/') || ref.startsWith('DP/');
@@ -3333,6 +3333,79 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 }
             });
         });
+    }
+
+    authorityLetterModalOpen = false;
+
+    isApprovedApplication(): boolean {
+        const stage = String(this.applicationData?.['status'] || '').toLowerCase();
+        const stageId = this.applicationData?.['current_stage_id'] || this.applicationData?.['currentStageId'];
+        const isFinal = Boolean(this.applicationData?.['current_stage_is_final'] || this.applicationData?.['currentStageIsFinal']);
+        return stageId === 151 || isFinal || stage.includes('approved');
+    }
+
+    openAuthorityLetterModal(): void {
+        this.authorityLetterModalOpen = true;
+        this.cdr.detectChanges();
+    }
+
+    closeAuthorityLetterModal(): void {
+        this.authorityLetterModalOpen = false;
+        this.cdr.detectChanges();
+    }
+
+    getAuthorityLetterItems(): any[] {
+        const app = this.applicationData;
+        if (!app) return [];
+        if (Array.isArray(app['line_items']) && app['line_items'].length > 0) return app['line_items'];
+        if (Array.isArray(app['lineItems']) && app['lineItems'].length > 0) return app['lineItems'];
+        return [];
+    }
+
+    getAuthorityLetterTotalCases(): number {
+        return this.getAuthorityLetterItems().reduce((sum, item) => sum + Number(item.cases || 0), 0);
+    }
+
+    getAuthorityLetterTotalBulkLitres(): number {
+        return this.getAuthorityLetterItems().reduce((sum, item) => sum + Number(item.bulk_litres || item.bulkLitres || (item.cases * 9) || 0), 0);
+    }
+
+    getAuthorityLetterValidityDate(): string {
+        const dateStr = this.applicationData?.['submitted_at'] || this.applicationData?.['created_at'];
+        const base = dateStr ? new Date(dateStr) : new Date();
+        base.setDate(base.getDate() + 60);
+        return base.toLocaleDateString('en-GB');
+    }
+
+    getAuthorityLetterHash(): string {
+        const ref = String(this.applicationData?.['referenceNo'] || this.applicationData?.['reference_no'] || 'IMFLREQ');
+        return (ref + '33ecfbeb91bd24d127a40ee77dcboe5320df025fe109d63deb1c027d08abd4a6').slice(0, 48);
+    }
+
+    printAuthorityLetter(): void {
+        const printContents = document.getElementById('imflAuthorityLetterPrintArea')?.innerHTML;
+        if (!printContents) return;
+        const win = window.open('', '_blank', 'width=900,height=1000');
+        if (!win) return;
+        win.document.write(`
+          <html>
+            <head>
+              <title>IMFL Import Permit Pass - ${this.applicationData?.['referenceNo'] || ''}</title>
+              <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+              <style>
+                body { font-family: 'Times New Roman', Times, serif; padding: 30px; background: white; color: #111; }
+                .imfl-pass-document { border: none !important; box-shadow: none !important; padding: 0 !important; }
+              </style>
+            </head>
+            <body>
+              <div class="imfl-pass-document">${printContents}</div>
+              <script>
+                setTimeout(() => { window.print(); window.close(); }, 500);
+              </script>
+            </body>
+          </html>
+        `);
+        win.document.close();
     }
 
     openSiteEnquiryReportModal(): void {

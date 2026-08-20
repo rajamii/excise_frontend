@@ -2021,6 +2021,10 @@
                         <button class="btn btn-primary btn-lg application-footer-actions__print" type="button" (click)="printApplication()">
                             <i class="bi bi-printer me-2"></i>Print Application
                         </button>
+
+                        <button class="btn btn-success btn-lg application-footer-actions__print" type="button" *ngIf="isImflDistributorPermitSource() && isApprovedApplication()" (click)="openAuthorityLetterModal()">
+                            <i class="bi bi-file-earmark-pdf-fill me-2"></i>Authority Letter (Import Pass)
+                        </button>
                     </div>
                 </div>
         <app-unified-action-buttons *ngIf="!isHologram()"
@@ -2357,4 +2361,144 @@
         </div>
     </div>
 </ng-container>
+
+<!-- IMFL IMPORT PERMIT AUTHORITY LETTER MODAL -->
+<div class="modal-backdrop fade show" *ngIf="authorityLetterModalOpen" style="z-index: 1060;"></div>
+<div class="modal fade show d-block" tabindex="-1" *ngIf="authorityLetterModalOpen" style="z-index: 1065;" (click)="closeAuthorityLetterModal()">
+  <div class="modal-dialog modal-lg modal-dialog-centered" style="max-width: 850px;" (click)="$event.stopPropagation()">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+      
+      <!-- Modal Header (Controls) -->
+      <div class="modal-header bg-dark text-white px-4 py-3 no-print d-flex justify-content-between align-items-center">
+        <h5 class="modal-title fs-5 fw-bold mb-0">
+          <i class="bi bi-file-earmark-pdf-fill text-warning me-2"></i>
+          Import Permit Authority Letter
+        </h5>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-warning btn-sm fw-bold px-3" (click)="printAuthorityLetter()">
+            <i class="bi bi-printer-fill me-1"></i> Print / Download PDF
+          </button>
+          <button type="button" class="btn-close btn-close-white" (click)="closeAuthorityLetterModal()"></button>
+        </div>
+      </div>
+
+      <!-- Modal Body (Printable Pass Document) -->
+      <div class="modal-body p-4 bg-light" style="max-height: 85vh; overflow-y: auto;">
+        <div id="imflAuthorityLetterPrintArea" class="imfl-pass-document p-5 bg-white shadow-sm border mx-auto" style="width: 100%; max-width: 750px; font-family: 'Times New Roman', Times, serif; color: #1a1a1a; line-height: 1.5; position: relative;">
+          
+          <!-- Top Copy Type -->
+          <div class="text-end fw-bold text-uppercase mb-2" style="font-size: 11px; letter-spacing: 1px; color: #444;">
+            QUADRUPLICATE
+          </div>
+
+          <!-- Header Logo & State Title -->
+          <div class="text-center mb-3">
+            <div style="font-size: 22px; font-weight: bold; letter-spacing: 1.5px; color: #1e3a8a; text-transform: uppercase;">
+              EXCISE DEPARTMENT
+            </div>
+            <div style="font-size: 14px; font-weight: bold; color: #334155;">
+              Government of Sikkim
+            </div>
+          </div>
+
+          <!-- Pass Title -->
+          <div class="text-center my-3 border-top border-bottom py-2" style="border-color: #1e3a8a !important;">
+            <div style="font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; color: #1e3a8a;">
+              PASS FOR THE IMPORT OF DUTY-PAID IMPORTED FOREIGN LIQUOR
+            </div>
+          </div>
+
+          <!-- Permit Info Row -->
+          <div class="d-flex justify-content-between align-items-center mb-3 fw-bold" style="font-size: 13px;">
+            <div>Permit Number: <span style="text-decoration: underline;">{{ applicationData?.['referenceNo'] || applicationData?.['reference_no'] || 'CIV/839' }}</span></div>
+            <div>Date: <span>{{ (applicationData?.['submitted_at'] || applicationData?.['created_at'] || '2026-08-20') | date:'dd/MM/yyyy' }}</span></div>
+          </div>
+
+          <!-- Authorization Text -->
+          <div class="mb-4 text-justify" style="font-size: 13px; line-height: 1.6;">
+            <strong>M/s {{ applicationData?.['applicant_name'] || applicationData?.['applicantName'] || applicationData?.['supplier_company_name'] || 'Licensee' }}</strong> of 
+            <span>{{ applicationData?.['source_address'] || applicationData?.['applicantAddress'] || 'Gangtok, Sikkim' }}</span> is hereby authorized to import the under-mentioned description and quantity of duty-paid imported foreign liquor from 
+            <strong>{{ applicationData?.['supplier_company_name'] || applicationData?.['supplierName'] || 'Distributor/Supplier' }}</strong>, in the state of 
+            <span>{{ applicationData?.['origin'] || 'Uttarakhand' }}</span>, to their premises at 
+            <span>{{ applicationData?.['destination'] || 'Gangtok' }}</span>, in the district of 
+            <span>Gangtok</span>, in the state of Sikkim, for the purpose of wholesale.
+          </div>
+
+          <!-- Kind and Quantity Heading -->
+          <div class="text-center fw-bold mb-2" style="font-size: 13px; text-decoration: underline;">
+            Kind and quantity of imported foreign liquor
+          </div>
+
+          <!-- Brand Items Table -->
+          <table class="table table-bordered align-middle mb-4" style="font-size: 12px; border-color: #333;">
+            <thead class="text-center bg-light">
+              <tr>
+                <th style="width: 8%;">Sl. No.</th>
+                <th>Brand</th>
+                <th style="width: 15%;">Size</th>
+                <th style="width: 15%;">Cases</th>
+                <th style="width: 18%;">Bulk Litres</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of getAuthorityLetterItems(); let idx = index">
+                <td class="text-center">{{ idx + 1 }}</td>
+                <td>{{ item.brand_name || item.brandName || item.brand }}</td>
+                <td class="text-center">{{ item.size_ml || item.sizeMl || item.size || 750 }} ml</td>
+                <td class="text-center">{{ item.cases }}</td>
+                <td class="text-end pe-3">{{ item.bulk_litres || item.bulkLitres || (item.cases * 9) }}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="fw-bold bg-light">
+                <td colspan="3" class="text-end pe-3">Total</td>
+                <td class="text-center">{{ getAuthorityLetterTotalCases() }}</td>
+                <td class="text-end pe-3">{{ getAuthorityLetterTotalBulkLitres() }}</td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <!-- Stamp & Signature Block -->
+          <div class="d-flex justify-content-between align-items-end my-5 pt-3">
+            <!-- Round Seal -->
+            <div class="text-center" style="opacity: 0.85;">
+              <div style="width: 95px; height: 95px; border: 2px dashed #1e3a8a; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #1e3a8a; font-size: 10px; font-weight: bold; text-transform: uppercase; transform: rotate(-8deg); margin: 0 auto;">
+                Excise Dept<br>★ Govt of Sikkim ★
+              </div>
+            </div>
+            <!-- Signature -->
+            <div class="text-center" style="line-height: 1.2;">
+              <div style="font-family: 'Brush Script MT', cursive; font-size: 24px; color: #1e3a8a; margin-bottom: 4px;">Excise Officer</div>
+              <div class="fw-bold" style="font-size: 13px;">Excise Officer</div>
+              <div class="fw-bold" style="font-size: 12px; color: #444;">Commissioner</div>
+              <div style="font-size: 11px; color: #555;">Excise Department</div>
+              <div style="font-size: 11px; color: #555;">Government of Sikkim</div>
+            </div>
+          </div>
+
+          <!-- Hash token -->
+          <div class="mb-3" style="font-size: 9px; font-family: monospace; color: #888;">
+            Hash: {{ getAuthorityLetterHash() }}
+          </div>
+
+          <!-- Conditions -->
+          <div class="border-top pt-3" style="font-size: 11px;">
+            <div class="fw-bold text-uppercase mb-1" style="text-decoration: underline;">CONDITIONS</div>
+            <ol class="ps-3 mb-2" style="line-height: 1.4;">
+              <li>The above said consignment of Indian Made Foreign Liquor shall be conveyed by rail or road to its destination via <strong>{{ applicationData?.['route_details'] || applicationData?.['routeDetails'] || 'Siliguri - NH10A - Gangtok - Sikkim' }}</strong>.</li>
+              <li>The consignment shall not be broken in transit.</li>
+              <li>It shall on arrival be examined at <strong>{{ applicationData?.['destination'] || 'Gangtok' }}</strong>, by Excise Authority.</li>
+              <li>This pass shall remain in force till <strong>{{ getAuthorityLetterValidityDate() }}</strong>.</li>
+            </ol>
+            <div class="fst-italic text-muted mt-2" style="font-size: 10px;">
+              This pass is granted under and subject to the provisions of the Sikkim Excise Act, 1992, the rules, regulation and orders made there under and the conditions specified above.
+            </div>
+          </div>
+
+        </div>
+      </div>
+      
+    </div>
+  </div>
+</div>
 

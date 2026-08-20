@@ -249,6 +249,83 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return this.lineItems.controls.reduce((sum, _, index) => sum + this.getLineCases(index), 0);
   }
 
+  authorityLetterModalOpen = false;
+  authorityLetterData: any = null;
+
+  isApproved(row: DistributorPermitRow | any): boolean {
+    const stage = String(row?.currentStage || row?.status || row?.application?.status || '').toLowerCase();
+    const stageId = row?.application?.current_stage_id || row?.application?.currentStageId || row?.current_stage_id;
+    const isFinal = Boolean(row?.application?.current_stage_is_final || row?.application?.currentStageIsFinal);
+    return stageId === 151 || isFinal || stage.includes('approved');
+  }
+
+  openAuthorityLetter(row: DistributorPermitRow | any): void {
+    this.authorityLetterData = row.application || row;
+    this.authorityLetterModalOpen = true;
+  }
+
+  closeAuthorityLetterModal(): void {
+    this.authorityLetterModalOpen = false;
+    this.authorityLetterData = null;
+  }
+
+  getAuthorityLetterItems(): any[] {
+    const app = this.authorityLetterData;
+    if (!app) return [];
+    if (Array.isArray(app.line_items) && app.line_items.length > 0) return app.line_items;
+    if (Array.isArray(app.lineItems) && app.lineItems.length > 0) return app.lineItems;
+    return [];
+  }
+
+  getAuthorityLetterTotalCases(): number {
+    return this.getAuthorityLetterItems().reduce((sum, item) => sum + Number(item.cases || 0), 0);
+  }
+
+  getAuthorityLetterTotalBulkLitres(): number {
+    return this.getAuthorityLetterItems().reduce((sum, item) => sum + Number(item.bulk_litres || item.bulkLitres || (item.cases * 9) || 0), 0);
+  }
+
+  getAuthorityLetterValidityDate(): string {
+    const dateStr = this.authorityLetterData?.submitted_at || this.authorityLetterData?.created_at;
+    const base = dateStr ? new Date(dateStr) : new Date();
+    base.setDate(base.getDate() + 60);
+    return base.toLocaleDateString('en-GB');
+  }
+
+  getAuthorityLetterHash(): string {
+    const ref = String(this.authorityLetterData?.referenceNo || this.authorityLetterData?.reference_no || 'IMFLREQ');
+    return (ref + '33ecfbeb91bd24d127a40ee77dcboe5320df025fe109d63deb1c027d08abd4a6').slice(0, 48);
+  }
+
+  printAuthorityLetter(): void {
+    const printContents = document.getElementById('imflAuthorityLetterPrintArea')?.innerHTML;
+    if (!printContents) return;
+    const win = window.open('', '_blank', 'width=900,height=1000');
+    if (!win) return;
+    win.document.write(`
+      <html>
+        <head>
+          <title>IMFL Import Permit Pass - ${this.authorityLetterData?.referenceNo || ''}</title>
+          <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+          <style>
+            body { font-family: 'Times New Roman', Times, serif; padding: 30px; background: white; color: #111; }
+            .imfl-pass-document { border: none !important; box-shadow: none !important; padding: 0 !important; }
+            @media print {
+              .no-print { display: none !important; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="imfl-pass-document">${printContents}</div>
+          <script>
+            setTimeout(() => { window.print(); window.close(); }, 500);
+          </script>
+        </body>
+      </html>
+    `);
+    win.document.close();
+  }
+
   get totalImport(): number {
     return this.lineItems.controls.reduce((sum, _, index) => sum + this.getLineImport(index), 0);
   }
