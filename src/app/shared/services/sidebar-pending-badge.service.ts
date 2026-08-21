@@ -68,6 +68,7 @@ export class SidebarPendingBadgeService {
 
     const tasks: Record<string, Observable<number>> = {};
     for (const section of normalized) {
+      const imflTab = this.mapDistributorPermitBadgeTab(section);
       const isDashboardSection =
         audience === 'licensee' &&
         (section === 'new-license' ||
@@ -79,7 +80,11 @@ export class SidebarPendingBadgeService {
          section === 'company-collaboration' ||
          section === 'special-permit');
 
-      if (isDashboardSection) {
+      if (imflTab) {
+        const detail$ = this.fetchDistributorPermitDashboardCounts(imflTab, audience).pipe(shareReplay(1));
+        tasks[section] = detail$.pipe(map(d => d.total));
+        tasks[`${section}:payment`] = detail$.pipe(map(d => d.payment));
+      } else if (isDashboardSection) {
         const urlMap: Record<string, string> = {
           'new-license': `${this.apiBase}/new_license_application/dashboard-counts/`,
           'license-renewal': `${this.apiBase}/license_renewal_application/dashboard-counts/`,
@@ -99,35 +104,7 @@ export class SidebarPendingBadgeService {
         // For requisition and hologram we need both a pending count and a payment count.
         // Share a single HTTP fetch via shareReplay(1) so the two derived tasks don't
         // each fire their own request.
-        if (audience === 'licensee' && (section === 'distributor-permit' || section === 'distributor-permit-requisition')) {
-          const dist$ = this.distributorPermitService.listApplications().pipe(
-            map((items) => this.toArray(items)),
-            shareReplay(1),
-            catchError(() => of([] as any[]))
-          );
-          tasks[section] = dist$.pipe(
-            map((items) => {
-              return items.filter(x => {
-                const ref = String(x?.reference_no || x?.referenceNo || '').toUpperCase();
-                const st = String(x?.status || x?.current_stage_name || '').toLowerCase();
-                if (ref.startsWith('IMFLREV') || ref.startsWith('IMFLCAN')) return false;
-                return st.includes('pending') || st.includes('submitted') || st.includes('forward') || st.includes('awaiting payment') || st.includes('payment');
-              }).length;
-            }),
-            catchError(() => of(0))
-          );
-          tasks[`${section}:payment`] = dist$.pipe(
-            map((items) => {
-              return items.filter(x => {
-                const ref = String(x?.reference_no || x?.referenceNo || '').toUpperCase();
-                const st = String(x?.status || x?.current_stage_name || '').toLowerCase();
-                if (ref.startsWith('IMFLREV') || ref.startsWith('IMFLCAN')) return false;
-                return st.includes('awaiting payment') || st.includes('awaiting_payment') || st.includes('payment');
-              }).length;
-            }),
-            catchError(() => of(0))
-          );
-        } else if (audience === 'licensee' && section === 'requisition') {
+        if (audience === 'licensee' && section === 'requisition') {
           const reqs$ = this.enaRequisitionService.getRequisitions().pipe(
             map((response) => this.toArray(response)),
             shareReplay(1),
@@ -195,6 +172,41 @@ export class SidebarPendingBadgeService {
     );
   }
 
+  private fetchDistributorPermitDashboardCounts(
+    tab: 'requisition' | 'revalidation' | 'cancellation',
+    audience: BadgeAudience
+  ): Observable<{ total: number; payment: number }> {
+    return this.distributorPermitService.getDashboardCounts(tab).pipe(
+      map((counts) => {
+        const pending = Number(counts?.pending || 0);
+        if (audience !== 'licensee') return { total: pending, payment: 0 };
+
+        const objection = Number(counts?.objection || 0);
+        const awaitingPayment = Number(counts?.awaitingPayment ?? counts?.awaiting_payment ?? 0);
+        return { total: awaitingPayment + objection, payment: awaitingPayment };
+      }),
+      catchError(() => of({ total: 0, payment: 0 }))
+    );
+  }
+
+  private mapDistributorPermitBadgeTab(section: string): 'requisition' | 'revalidation' | 'cancellation' | null {
+    switch (section) {
+      case 'distributor-permit':
+      case 'imfl-permit':
+      case 'distributor-permit-requisition':
+      case 'imfl-requisition':
+        return 'requisition';
+      case 'distributor-permit-revalidation':
+      case 'imfl-revalidation':
+        return 'revalidation';
+      case 'distributor-permit-cancellation':
+      case 'imfl-cancellation':
+        return 'cancellation';
+      default:
+        return null;
+    }
+  }
+
   private normalizeSections(sections: string[]): string[] {
     const unique = new Set<string>();
     for (const raw of sections || []) {
@@ -231,50 +243,17 @@ export class SidebarPendingBadgeService {
       case 'distributor-permit-requisition':
       case 'imfl-requisition':
         if (mode === 'light') return of(0);
-        return this.distributorPermitService.listApplications().pipe(
-          map((items) => this.toArray(items)),
-          map((items) => {
-            return items.filter(x => {
-              const ref = String(x?.reference_no || x?.referenceNo || '').toUpperCase();
-              const st = String(x?.status || '').toLowerCase();
-              if (ref.startsWith('IMFLREV') || ref.startsWith('IMFLCAN')) return false;
-              return st.includes('pending') || st.includes('submitted') || st.includes('forward');
-            }).length;
-          }),
-          catchError(() => of(0))
-        );
+        return this.fetchDistributorPermitDashboardCounts('requisition', audience).pipe(map(d => d.total));
 
       case 'distributor-permit-revalidation':
       case 'imfl-revalidation':
         if (mode === 'light') return of(0);
-        return this.distributorPermitService.listApplications().pipe(
-          map((items) => this.toArray(items)),
-          map((items) => {
-            return items.filter(x => {
-              const ref = String(x?.reference_no || x?.referenceNo || '').toUpperCase();
-              const st = String(x?.status || '').toLowerCase();
-              if (!ref.startsWith('IMFLREV')) return false;
-              return st.includes('pending') || st.includes('submitted') || st.includes('forward');
-            }).length;
-          }),
-          catchError(() => of(0))
-        );
+        return this.fetchDistributorPermitDashboardCounts('revalidation', audience).pipe(map(d => d.total));
 
       case 'distributor-permit-cancellation':
       case 'imfl-cancellation':
         if (mode === 'light') return of(0);
-        return this.distributorPermitService.listApplications().pipe(
-          map((items) => this.toArray(items)),
-          map((items) => {
-            return items.filter(x => {
-              const ref = String(x?.reference_no || x?.referenceNo || '').toUpperCase();
-              const st = String(x?.status || '').toLowerCase();
-              if (!ref.startsWith('IMFLCAN')) return false;
-              return st.includes('pending') || st.includes('submitted') || st.includes('forward');
-            }).length;
-          }),
-          catchError(() => of(0))
-        );
+        return this.fetchDistributorPermitDashboardCounts('cancellation', audience).pipe(map(d => d.total));
 
       case 'requisition':
         if (mode === 'light') return of(0);

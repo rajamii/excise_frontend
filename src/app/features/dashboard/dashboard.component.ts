@@ -794,16 +794,23 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       ? this.hologramService.getRequests().pipe(catchError(() => of([])))
       : of([] as any[]);
 
-    const dist$ = (this.isDistributorUser() || isAdminOrOfficer)
-      ? this.distributorPermitService.listApplications().pipe(catchError(() => of([] as any[])))
-      : of([] as any[]);
+    const shouldLoadDistributorPermitCounts = this.isDistributorUser() || isAdminOrOfficer;
+    const distReq$ = shouldLoadDistributorPermitCounts
+      ? this.distributorPermitService.getDashboardCounts('requisition').pipe(catchError(() => of(null)))
+      : of(null as any);
+    const distRev$ = shouldLoadDistributorPermitCounts
+      ? this.distributorPermitService.getDashboardCounts('revalidation').pipe(catchError(() => of(null)))
+      : of(null as any);
+    const distCan$ = shouldLoadDistributorPermitCounts
+      ? this.distributorPermitService.getDashboardCounts('cancellation').pipe(catchError(() => of(null)))
+      : of(null as any);
 
-    forkJoin({ req: req$, rev: rev$, can: can$, tra: tra$, hol: hol$, comp: comp$, collab: collab$, bld: bld$, holReq: holReq$, dist: dist$ })
+    forkJoin({ req: req$, rev: rev$, can: can$, tra: tra$, hol: hol$, comp: comp$, collab: collab$, bld: bld$, holReq: holReq$, distReq: distReq$, distRev: distRev$, distCan: distCan$ })
       .pipe(
         takeUntil(this.destroy$),
         finalize(() => onComplete?.())
       )
-      .subscribe(({ req, rev, can, tra, hol, comp, collab, bld, holReq, dist }) => {
+      .subscribe(({ req, rev, can, tra, hol, comp, collab, bld, holReq, distReq, distRev, distCan }) => {
 
         // ── REQUISITIONS ──────────────────────────────────────────────────────
         {
@@ -1066,64 +1073,35 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
         // ── DISTRIBUTOR PERMIT ────────────────────────────────────────────────
         {
-          const distApps: any[] = Array.isArray(dist) ? dist : [];
-          let reqApplied = distApps.length;
-          let reqPending = 0;
-          let reqApproved = 0;
-          let reqObjection = 0;
-          let reqRejected = 0;
-          let reqAwaitingPayment = 0;
-
-          distApps.forEach((app: any) => {
-            const st = String(app.status || app.current_stage || '').toLowerCase();
-            if (st.includes('awaiting payment') || st.includes('awaiting_payment') || st.includes('payment')) {
-              reqAwaitingPayment++;
-            } else if (st.includes('approved')) {
-              reqApproved++;
-            } else if (st.includes('reject')) {
-              reqRejected++;
-            } else if (st.includes('object')) {
-              reqObjection++;
-            } else {
-              reqPending++;
-            }
+          const toDashboardCount = (counts: any): DashboardCount & { objection: number; awaitingPayment: number } => ({
+            applied: Number(counts?.applied ?? counts?.total ?? 0),
+            pending: Number(counts?.pending ?? 0),
+            approved: Number(counts?.approved ?? 0),
+            objection: Number(counts?.objection ?? 0),
+            rejected: Number(counts?.rejected ?? 0),
+            awaitingPayment: Number(counts?.awaitingPayment ?? counts?.awaiting_payment ?? 0)
           });
 
-          const reqStats = {
-            applied: reqApplied,
-            pending: reqPending,
-            approved: reqApproved,
-            objection: reqObjection,
-            rejected: reqRejected,
-            awaitingPayment: reqAwaitingPayment
-          };
+          const reqStats = toDashboardCount(distReq);
+          const revStats = toDashboardCount(distRev);
+          const canStats = toDashboardCount(distCan);
 
           this.supplyChainModuleCounts['distributor-permit'] = reqStats;
           this.supplyChainModuleCounts['distributor-permit-requisition'] = reqStats;
-          this.supplyChainModuleCounts['distributor-permit-revalidation'] = {
-            applied: 0,
-            pending: 0,
-            approved: 0,
-            objection: 0,
-            rejected: 0,
-            awaitingPayment: 0
-          };
-          this.supplyChainModuleCounts['distributor-permit-cancellation'] = {
-            applied: 0,
-            pending: 0,
-            approved: 0,
-            objection: 0,
-            rejected: 0,
-            awaitingPayment: 0
-          };
+          this.supplyChainModuleCounts['distributor-permit-revalidation'] = revStats;
+          this.supplyChainModuleCounts['distributor-permit-cancellation'] = canStats;
 
-          // Set sidebar badge count for 'distributor-permit' (IMFL Permit)
-          // for distributors (own apps), and officer roles (pending = apps awaiting their action)
+          // Set sidebar badge count for IMFL permit modules from cached dashboard counts.
           if (this.isDistributorUser()) {
-            this.supplyChainPendingCounts['distributor-permit'] = reqPending;
+            this.supplyChainPendingCounts['distributor-permit'] = reqStats.pending;
+            this.supplyChainPendingCounts['distributor-permit-requisition'] = reqStats.pending;
+            this.supplyChainPendingCounts['distributor-permit-revalidation'] = revStats.pending;
+            this.supplyChainPendingCounts['distributor-permit-cancellation'] = canStats.pending;
           } else {
-            // For Commissioner / Permit Section: pending = total pending + objection apps visible to them
-            this.supplyChainPendingCounts['distributor-permit'] = reqPending + reqObjection;
+            this.supplyChainPendingCounts['distributor-permit'] = reqStats.pending + (reqStats.objection ?? 0);
+            this.supplyChainPendingCounts['distributor-permit-requisition'] = reqStats.pending + (reqStats.objection ?? 0);
+            this.supplyChainPendingCounts['distributor-permit-revalidation'] = revStats.pending + (revStats.objection ?? 0);
+            this.supplyChainPendingCounts['distributor-permit-cancellation'] = canStats.pending + (canStats.objection ?? 0);
           }
         }
 
@@ -3121,7 +3099,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.isChartLoading = true;
 
     this.unifiedDashboardService
-      .getDetailedUnifiedDashboardCounts(this.dashboardConfig, forceRefresh || this.isDistributorUser())
+      .getDetailedUnifiedDashboardCounts(this.dashboardConfig, forceRefresh)
       .pipe(finalize(() => { this.isLoading = false; }))
       .subscribe({
         next: (res) => {

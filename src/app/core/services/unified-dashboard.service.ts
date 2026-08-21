@@ -152,7 +152,7 @@ export class UnifiedDashboardService {
 
     const empty: DashboardCount = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 } as DashboardCount;
 
-    const getUrl = (url: string) => forceRefresh ? `${url}?cb=${Date.now()}` : url;
+    const getUrl = (url: string) => url;
 
     if (enabledTypes.includes('license-renewal')) {
       tasks.push(
@@ -289,7 +289,6 @@ export class UnifiedDashboardService {
 
     const buildUrl = (base: string): string => {
       const params = new URLSearchParams();
-      if (forceRefresh) params.set('cb', Date.now().toString());
       if (month != null) params.set('month', String(month));
       if (year != null) params.set('year', String(year));
       const qs = params.toString();

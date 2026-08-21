@@ -16,6 +16,11 @@ export class DistributorPermitService {
 
   constructor(private http: HttpClient) {}
 
+  getDashboardCounts(tab: 'requisition' | 'revalidation' | 'cancellation' = 'requisition'): Observable<any> {
+    const params = new HttpParams().set('tab', tab);
+    return this.http.get<any>(`${this.baseUrl}/dashboard-counts/`, { params });
+  }
+
   listApplications(status?: string): Observable<DistributorPermitApplication[]> {
     let params = new HttpParams();
     if (status) {
