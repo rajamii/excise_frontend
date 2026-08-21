@@ -282,7 +282,7 @@
                   [class.group-expanded]="imflPermitExpanded">
                   <mat-icon class="nav-icon">local_shipping</mat-icon>
                   <span class="nav-text">IMFL Permit</span>
-                  <span class="nav-badge nav-badge--group" *ngIf="!imflPermitExpanded && getPendingCount('distributor-permit') > 0">{{ getPendingCount('distributor-permit') }}</span>
+                  <span class="nav-badge nav-badge--group" *ngIf="!imflPermitExpanded && getImflPermitTotalPendingCount() > 0">{{ getImflPermitTotalPendingCount() }}</span>
                   <span class="nav-badge nav-badge--payment" *ngIf="!imflPermitExpanded && getPendingCount('distributor-permit:payment') as payCount" title="Awaiting Payment"><mat-icon>payment</mat-icon></span>
                   <mat-icon class="nav-chevron">{{ imflPermitExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
                 </button>
@@ -298,11 +298,13 @@
                   <button *ngIf="!isPermitSectionUser()" class="nav-item nav-item--sub imfl-permit-sub-item" (click)="navigateToImflPermitTab('revalidation')" [class.active]="isDashboardSectionActive('distributor-permit') && isImflTabActive('revalidation')">
                     <mat-icon class="nav-icon">refresh</mat-icon>
                     <span class="nav-text">IMFL Revalidation</span>
+                    <span class="nav-badge" *ngIf="getPendingCount('distributor-permit-revalidation') || getPendingCount('imfl-revalidation') as pending">{{ pending }}</span>
                   </button>
 
                   <button *ngIf="!isPermitSectionUser()" class="nav-item nav-item--sub imfl-permit-sub-item" (click)="navigateToImflPermitTab('cancellation')" [class.active]="isDashboardSectionActive('cancellation') || (isDashboardSectionActive('distributor-permit') && isImflTabActive('cancellation'))">
                     <mat-icon class="nav-icon">cancel</mat-icon>
                     <span class="nav-text">IMFL Cancellation</span>
+                    <span class="nav-badge" *ngIf="getPendingCount('distributor-permit-cancellation') || getPendingCount('imfl-cancellation') || getPendingCount('cancellation') as pending">{{ pending }}</span>
                   </button>
                 </ng-container>
               </ng-container>

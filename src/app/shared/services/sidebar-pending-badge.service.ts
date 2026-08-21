@@ -201,6 +201,7 @@ export class SidebarPendingBadgeService {
         return 'revalidation';
       case 'distributor-permit-cancellation':
       case 'imfl-cancellation':
+      case 'cancellation':
         return 'cancellation';
       default:
         return null;
