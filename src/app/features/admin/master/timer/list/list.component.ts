@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
@@ -14,6 +14,7 @@ import { TimerConfig, TimerService } from '../../../../../core/services/timer.se
 })
 export class ListComponent implements OnInit {
   private timerService = inject(TimerService);
+  private cdr = inject(ChangeDetectorRef);
 
   timers: TimerConfig[] = [];
   isLoading = false;
@@ -185,12 +186,47 @@ export class ListComponent implements OnInit {
 
   toggleActive(timer: TimerConfig): void {
     if (!timer.id) return;
+    
+    // Store original state
+    const originalIsActive = timer.is_active;
+    const originalIsActiveCamel = (timer as any).isActive;
+    
+    // Optimistically update UI
+    timer.is_active = !originalIsActive;
+    (timer as any).isActive = !originalIsActive;
+    
+    // Force change detection
+    this.cdr.detectChanges();
+    
     this.timerService.toggleActive(timer.id).subscribe({
       next: (updated) => {
+        console.log('Toggle success response:', updated);
+        // Confirm the update from backend
         timer.is_active = updated.is_active;
+        (timer as any).isActive = updated.is_active;
+        
+        // Force change detection again
+        this.cdr.detectChanges();
+        
+        // Show success message
+        const newStatus = updated.is_active ? 'Active' : 'Inactive';
+        Swal.fire({
+          icon: 'success',
+          title: 'Status Updated',
+          text: `Timer is now ${newStatus}`,
+          timer: 1500,
+          showConfirmButton: false
+        });
       },
       error: (err) => {
-        console.error('Error toggling active state:', err);
+        console.error('Toggle error:', err);
+        // Revert on error
+        timer.is_active = originalIsActive;
+        (timer as any).isActive = originalIsActiveCamel;
+        
+        // Force change detection
+        this.cdr.detectChanges();
+        
         Swal.fire('Error', 'Failed to update timer active state.', 'error');
       }
     });

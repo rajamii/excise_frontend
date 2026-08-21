@@ -79,22 +79,9 @@
               </span>
             </td>
             <td>
-              <div class="status-toggle-wrapper">
-                <input
-                  class="status-toggle-input"
-                  type="checkbox"
-                  role="switch"
-                  [id]="'switch-' + timer.id"
-                  [checked]="getTimerIsActive(timer)"
-                  (change)="toggleActive(timer)"
-                  title="Toggle active status"
-                />
-                <label [for]="'switch-' + timer.id" class="status-toggle-label">
-                  <span class="status-badge" [ngClass]="getTimerIsActive(timer) ? 'status-active' : 'status-inactive'">
-                    {{ getTimerIsActive(timer) ? 'Active' : 'Inactive' }}
-                  </span>
-                </label>
-              </div>
+              <span class="status-badge" [ngClass]="getTimerIsActive(timer) ? 'status-active' : 'status-inactive'">
+                {{ getTimerIsActive(timer) ? 'Active' : 'Inactive' }}
+              </span>
             </td>
             <td class="text-end">
               <button
@@ -103,7 +90,7 @@
                 title="Edit Timer"
                 (click)="openEditModal(timer)"
               >
-                <i class="bi bi-pencil-fill me-1"></i> Edit
+                <i class="bi bi-pencil-fill"></i>
               </button>
             </td>
           </tr>

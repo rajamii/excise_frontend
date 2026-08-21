@@ -274,65 +274,14 @@
 }
 
 // ───────────────────────────────────────────────────────────────
-// Status Toggle
+// Status Badge (No Toggle - Display Only)
 // ───────────────────────────────────────────────────────────────
-
-.status-toggle-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.status-toggle-input {
-  width: 2.75rem;
-  height: 1.4rem;
-  cursor: pointer;
-  appearance: none;
-  background: #ef4444;
-  border-radius: 999px;
-  position: relative;
-  transition: background-color 0.3s ease;
-  border: 2px solid transparent;
-
-  &::before {
-    content: '';
-    position: absolute;
-    width: 1.1rem;
-    height: 1.1rem;
-    border-radius: 50%;
-    background: #ffffff;
-    top: 50%;
-    left: 0.12rem;
-    transform: translateY(-50%);
-    transition: left 0.3s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  }
-
-  &:checked {
-    background: #10b981;
-    border-color: #059669;
-
-    &::before {
-      left: calc(100% - 1.23rem);
-    }
-  }
-
-  &:focus {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
-  }
-}
-
-.status-toggle-label {
-  cursor: pointer;
-  margin: 0;
-}
 
 .status-badge {
   display: inline-block;
-  padding: 0.3rem 0.65rem;
-  border-radius: 5px;
-  font-size: 0.7rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -465,16 +414,19 @@
 }
 
 // ───────────────────────────────────────────────────────────────
-// Action Button
+// Action Button (Icon Only)
 // ───────────────────────────────────────────────────────────────
 
 .action-btn {
-  padding: 0.4rem 0.8rem;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
   border: 1.5px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 600;
+  border-radius: 8px;
   color: #374151;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -482,18 +434,19 @@
 
   i {
     color: #6b7280;
-    font-size: 0.75rem;
+    font-size: 0.9rem;
+    margin: 0;
   }
 
   &:hover {
-    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-    border-color: #9ca3af;
-    color: #1f2937;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border-color: #2563eb;
+    color: #ffffff;
     transform: translateY(-1px);
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 3px 8px rgba(37, 99, 235, 0.3);
 
     i {
-      color: #374151;
+      color: #ffffff;
     }
   }
 
