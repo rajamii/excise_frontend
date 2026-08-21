@@ -201,7 +201,6 @@ export class SidebarPendingBadgeService {
         return 'revalidation';
       case 'distributor-permit-cancellation':
       case 'imfl-cancellation':
-      case 'cancellation':
         return 'cancellation';
       default:
         return null;
@@ -257,26 +256,18 @@ export class SidebarPendingBadgeService {
         return this.fetchDistributorPermitDashboardCounts('cancellation', audience).pipe(map(d => d.total));
 
       case 'requisition':
-        if (mode === 'light') return of(0);
         if (audience === 'licensee') {
           return this.enaRequisitionService.getRequisitions().pipe(
             map((response) => this.toArray(response)),
             map((items) => this.countRequisitionPendingReview(items))
           );
         }
-        // For officer roles (Permit Section / Commissioner): count items that are actionable
-        // via allowedActions PLUS items where the backend didn't populate allowedActions but
-        // the status clearly routes the item to this officer's stage:
-        //  • plain "PENDING" (just submitted)
-        //  • "FORWARDED PAYSLIP PERMIT SECTION" (back at PS after payment)
-        //  • "FORWARDED COMMISSIONER" (at commissioner stage)
         return this.enaRequisitionService.getRequisitions().pipe(
           map((response) => this.toArray(response)),
           map((items) => this.countActionableWithStatusFallback(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY']))
         );
 
       case 'revalidation':
-        if (mode === 'light') return of(0);
         if (audience === 'licensee') {
           return this.supplyChainService.getRevalidationData().pipe(
             map((items) => this.toArray(items)),
@@ -289,7 +280,6 @@ export class SidebarPendingBadgeService {
         );
 
       case 'cancellation':
-        if (mode === 'light') return of(0);
         if (audience === 'licensee') {
           return this.supplyChainService.getCancellationData().pipe(
             map((items) => this.toArray(items)),

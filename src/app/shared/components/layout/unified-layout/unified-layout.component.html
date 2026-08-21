@@ -304,7 +304,7 @@
                   <button *ngIf="!isPermitSectionUser()" class="nav-item nav-item--sub imfl-permit-sub-item" (click)="navigateToImflPermitTab('cancellation')" [class.active]="isDashboardSectionActive('cancellation') || (isDashboardSectionActive('distributor-permit') && isImflTabActive('cancellation'))">
                     <mat-icon class="nav-icon">cancel</mat-icon>
                     <span class="nav-text">IMFL Cancellation</span>
-                    <span class="nav-badge" *ngIf="getPendingCount('distributor-permit-cancellation') || getPendingCount('imfl-cancellation') || getPendingCount('cancellation') as pending">{{ pending }}</span>
+                    <span class="nav-badge" *ngIf="getPendingCount('distributor-permit-cancellation') || getPendingCount('imfl-cancellation') as pending">{{ pending }}</span>
                   </button>
                 </ng-container>
               </ng-container>

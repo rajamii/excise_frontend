@@ -524,7 +524,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   getImflPermitTotalPendingCount(): number {
     const req = this.getPendingCount('distributor-permit');
     const rev = this.getPendingCount('distributor-permit-revalidation') || this.getPendingCount('imfl-revalidation');
-    const can = this.getPendingCount('distributor-permit-cancellation') || this.getPendingCount('imfl-cancellation') || this.getPendingCount('cancellation');
+    const can = this.getPendingCount('distributor-permit-cancellation') || this.getPendingCount('imfl-cancellation');
     return req + rev + can;
   }
 
