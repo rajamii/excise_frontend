@@ -27,6 +27,8 @@ export interface DistributorPermitLineItem {
   total_additional_ed?: number;
   bulkLitres?: number;
   bulk_litres?: number;
+  permitNumber?: string;
+  permit_number?: string;
 }
 
 export interface DistributorPermitApplication {
@@ -55,6 +57,8 @@ export interface DistributorPermitApplication {
   created_at?: string;
   lineItems: DistributorPermitLineItem[];
   line_items?: DistributorPermitLineItem[];
+  permitWiseDetails?: any[];
+  permit_wise_details?: any[];
   brandCount?: number;
   totalCases?: number;
   totalImportValue?: number;

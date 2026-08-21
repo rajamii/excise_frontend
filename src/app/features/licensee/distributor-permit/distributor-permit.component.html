@@ -554,6 +554,28 @@
             <span>Total Add. ED <strong>{{ totalAdditionalEd | currency:'INR':'symbol':'1.2-2' }}</strong></span>
           </div>
 
+          <!-- Permit Allocation Summary (Max 600 Cases per Permit) -->
+          <div class="dp-permit-breakdown-card my-3 p-3 border rounded bg-light" *ngIf="getPermitBreakdown().length > 0">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <span class="fw-bold text-primary"><mat-icon class="align-middle me-1">layers</mat-icon> Permit Allocation Summary (Max 600 Cases / Permit)</span>
+              <span class="badge bg-primary fs-7">{{ getPermitBreakdown().length }} Permit(s) Required</span>
+            </div>
+            <div class="row g-2">
+              <div class="col-md-6" *ngFor="let permit of getPermitBreakdown()">
+                <div class="card card-body p-2 border-primary border-opacity-25 bg-white shadow-sm">
+                  <div class="d-flex justify-content-between align-items-center fw-bold text-dark fs-7 mb-1">
+                    <span>{{ permit.permitName }}</span>
+                    <span class="badge bg-secondary">{{ permit.totalCases }} Cases</span>
+                  </div>
+                  <div class="text-muted fs-8">
+                    <div>Import Fee: <strong>{{ permit.totalImport | currency:'INR':'symbol':'1.2-2' }}</strong> | Add. ED: <strong>{{ permit.totalAddEd | currency:'INR':'symbol':'1.2-2' }}</strong></div>
+                    <div>Bulk Litres: <strong>{{ permit.totalBulkLitres | number:'1.2-2' }} BL</strong></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="dp-form-actions">
             <button mat-stroked-button matStepperPrevious type="button">Back</button>
             <button mat-raised-button color="primary" matStepperNext type="button">Continue</button>

@@ -1216,6 +1216,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                         this.extractFieldValue(apiData, ['declarationAccepted', 'declaration_accepted'])
                     );
                     mappedData['lineItems'] = Array.isArray(lineItems) ? lineItems : [];
+                    const permitWiseDetails = apiData?.permitWiseDetails || apiData?.permit_wise_details || [];
+                    mappedData['permitWiseDetails'] = Array.isArray(permitWiseDetails) ? permitWiseDetails : [];
                     mappedData['numberOfPermits'] = this.parseNumericValue(
                         this.extractFieldValue(apiData, ['brandCount', 'brand_count']),
                         Array.isArray(lineItems) ? lineItems.length : 0

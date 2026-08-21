@@ -177,6 +177,63 @@
                         </table>
                     </div>
                 </div>
+
+                <!-- Permit Allocation Breakdown Section (Max 600 Cases per Permit) -->
+                <div class="section-card mb-4" *ngIf="applicationData['permitWiseDetails'] && applicationData['permitWiseDetails'].length > 0">
+                    <h5 class="section-title text-primary d-flex align-items-center justify-content-between">
+                        <span><i class="bi bi-layers-half me-2"></i>Permit Allocation Breakdown (Max 600 Cases / Permit)</span>
+                        <span class="badge bg-primary fs-6">{{ applicationData['permitWiseDetails'].length }} Permit(s)</span>
+                    </h5>
+                    <div class="accordion" id="permitBreakdownAccordion">
+                        <div class="accordion-item mb-3 border shadow-sm rounded" *ngFor="let pDetail of applicationData['permitWiseDetails']; let pIdx = index">
+                            <h2 class="accordion-header" [id]="'permitHeading' + pIdx">
+                                <button class="accordion-button bg-light fw-bold text-dark d-flex justify-content-between pe-4" type="button" data-bs-toggle="collapse" [attr.data-bs-target]="'#permitCollapse' + pIdx" aria-expanded="true">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="badge bg-secondary">Permit {{ pIdx + 1 }}</span>
+                                        <span class="text-primary fw-bold">{{ pDetail.permit_number || pDetail.permitNumber }}</span>
+                                    </div>
+                                    <div class="d-flex gap-3 text-muted fs-7 me-3">
+                                        <span>Cases: <strong>{{ pDetail.total_cases || pDetail.totalCases }}</strong></span>
+                                        <span>Import Fee: <strong>₹{{ pDetail.total_import_fee || pDetail.totalImportFee | number:'1.2-2' }}</strong></span>
+                                        <span>Bulk Litres: <strong>{{ pDetail.total_bulk_litres || pDetail.totalBulkLitres | number:'1.2-2' }} BL</strong></span>
+                                    </div>
+                                </button>
+                            </h2>
+                            <div [id]="'permitCollapse' + pIdx" class="accordion-collapse collapse show" [attr.aria-labelledby]="'permitHeading' + pIdx">
+                                <div class="accordion-body p-3">
+                                    <table class="table table-bordered align-middle mb-0" style="font-size: 13px;">
+                                        <thead class="bg-light">
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Brand</th>
+                                                <th>Size</th>
+                                                <th>Cases</th>
+                                                <th>Import Fee / Case</th>
+                                                <th>Total Import Fee</th>
+                                                <th>Add. ED / Case</th>
+                                                <th>Total Add. ED</th>
+                                                <th>Bulk Litres</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr *ngFor="let item of pDetail.line_items || pDetail.lineItems; let idx = index">
+                                                <td>{{ idx + 1 }}</td>
+                                                <td>{{ item.brand_name || item.brandName }}</td>
+                                                <td>{{ item.size_ml || item.sizeMl }} ml</td>
+                                                <td class="fw-bold">{{ item.cases }}</td>
+                                                <td>₹{{ item.import_pass_fee_per_case || item.importPassFeePerCase }}</td>
+                                                <td class="fw-bold text-success">₹{{ item.total_import || item.totalImport | number:'1.2-2' }}</td>
+                                                <td>₹{{ item.additional_ed_per_case || item.additionalEdPerCase }}</td>
+                                                <td>₹{{ item.total_additional_ed || item.totalAdditionalEd | number:'1.2-2' }}</td>
+                                                <td>{{ item.bulk_litres || item.bulkLitres | number:'1.2-2' }} BL</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 }
 
                 <div class="section-card mb-4">

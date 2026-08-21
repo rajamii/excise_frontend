@@ -1005,6 +1005,94 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }>;
   }
 
+  getPermitBreakdown(): Array<{
+    permitIndex: number;
+    permitName: string;
+    totalCases: number;
+    totalImport: number;
+    totalAddEd: number;
+    totalCess: number;
+    totalBulkLitres: number;
+    items: Array<{
+      brand: string;
+      size: string;
+      cases: number;
+      importFee: number;
+      totalImport: number;
+      addEdPerCase: number;
+      totalAddEd: number;
+      bl: number;
+    }>;
+  }> {
+    const rawRows = this.getBrandReviewRows();
+    if (!rawRows || rawRows.length === 0) return [];
+
+    const permits: Array<{
+      permitIndex: number;
+      permitName: string;
+      totalCases: number;
+      totalImport: number;
+      totalAddEd: number;
+      totalCess: number;
+      totalBulkLitres: number;
+      items: any[];
+    }> = [];
+
+    let currentPermitIndex = 1;
+    let currentCases = 0;
+    let currentItems: any[] = [];
+
+    for (const row of rawRows) {
+      let remCases = row.cases;
+      while (remCases > 0) {
+        const available = 600 - currentCases;
+        if (available <= 0) {
+          permits.push(this.buildPermitSummaryObject(currentPermitIndex, currentItems));
+          currentPermitIndex++;
+          currentCases = 0;
+          currentItems = [];
+        }
+
+        const allocated = Math.min(remCases, 600 - currentCases);
+        currentItems.push({
+          ...row,
+          cases: allocated,
+          totalImport: row.importFee * allocated,
+          totalAddEd: row.addEdPerCase * allocated,
+          cess: row.cess ? (row.cess / row.cases) * allocated : 0,
+          bl: row.bl ? (row.bl / row.cases) * allocated : 0
+        });
+
+        currentCases += allocated;
+        remCases -= allocated;
+      }
+    }
+
+    if (currentItems.length > 0) {
+      permits.push(this.buildPermitSummaryObject(currentPermitIndex, currentItems));
+    }
+
+    return permits;
+  }
+
+  private buildPermitSummaryObject(permitIndex: number, items: any[]) {
+    const totalCases = items.reduce((sum, item) => sum + item.cases, 0);
+    const totalImport = items.reduce((sum, item) => sum + item.totalImport, 0);
+    const totalAddEd = items.reduce((sum, item) => sum + item.totalAddEd, 0);
+    const totalCess = items.reduce((sum, item) => sum + item.cess, 0);
+    const totalBulkLitres = items.reduce((sum, item) => sum + item.bl, 0);
+    return {
+      permitIndex,
+      permitName: `Permit #${permitIndex} (Max 600 Cases)`,
+      totalCases,
+      totalImport,
+      totalAddEd,
+      totalCess,
+      totalBulkLitres,
+      items
+    };
+  }
+
   get applicantSummaryRows(): Array<{ label: string; value: string }> {
     return [
       { label: 'Applicant Company', value: String(this.applicantForm.value.applicantCompanyName || '-') },
