@@ -8,6 +8,7 @@ import { AccountService } from './account.service';
 @Injectable({ providedIn: 'root' })
 export class LicenseMeService {
   private readonly apiUrl = `${environment.apiBaseUrl}/masters/license/me/`;
+  private readonly cacheTtlMs = 5 * 60_000;
   private cache$?: Observable<any[]>;
   private cacheUserKey: string | null = null;
   private lastFetchMs = 0;
@@ -25,7 +26,7 @@ export class LicenseMeService {
 
   getMyLicenses(forceRefresh = false): Observable<any[]> {
     const now = Date.now();
-    if (!forceRefresh && this.cache$ && now - this.lastFetchMs < 15_000) {
+    if (!forceRefresh && this.cache$ && now - this.lastFetchMs < this.cacheTtlMs) {
       return this.cache$;
     }
 

@@ -9,7 +9,7 @@ import { BulkSpiritType, Checkpost, Distillery, DistRow, LiquorRates, Purpose } 
   providedIn: 'root',
 })
 export class SupplyChainService {
-  private readonly cacheTtlMs = 60_000;
+  private readonly cacheTtlMs = 5 * 60_000;
   private readonly responseCache = new Map<string, { value: unknown; fetchedAt: number }>();
   private readonly inflightRequests = new Map<string, Observable<unknown>>();
 

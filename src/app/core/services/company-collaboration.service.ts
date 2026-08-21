@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
+import { map, catchError, finalize, shareReplay, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import {
   CompanyCollaborationBrand,
@@ -93,11 +93,43 @@ function normalizeBrand(raw: any): CompanyCollaborationBrand {
 export class CompanyCollaborationService {
   private baseUrl     = `${environment.apiBaseUrl}/transactional/company-collaboration`;
   private mastersUrl  = `${environment.apiBaseUrl}/masters/company-collaboration`;
+  private readonly cacheTtlMs = 5 * 60_000;
+  private responseCache = new Map<string, { value: unknown; fetchedAt: number }>();
+  private inflightRequests = new Map<string, Observable<unknown>>();
 
   private selectedBrands: CompanyCollaborationBrand[] = [];
   private collabDocs: Partial<Record<string, File>> = {};
 
   constructor(private http: HttpClient) {}
+
+  private getCachedOrFetch<T>(key: string, requestFactory: () => Observable<T>): Observable<T> {
+    const cachedEntry = this.responseCache.get(key);
+    const now = Date.now();
+    if (cachedEntry && now - cachedEntry.fetchedAt < this.cacheTtlMs) {
+      return new Observable<T>((subscriber) => {
+        subscriber.next(cachedEntry.value as T);
+        subscriber.complete();
+      });
+    }
+
+    const inflightRequest = this.inflightRequests.get(key);
+    if (inflightRequest) return inflightRequest as Observable<T>;
+
+    const request$ = requestFactory().pipe(
+      tap((value) => this.responseCache.set(key, { value, fetchedAt: Date.now() })),
+      finalize(() => this.inflightRequests.delete(key)),
+      shareReplay({ bufferSize: 1, refCount: false })
+    );
+    this.inflightRequests.set(key, request$ as Observable<unknown>);
+    return request$;
+  }
+
+  private invalidateCache(...keys: string[]): void {
+    for (const key of keys) {
+      this.responseCache.delete(key);
+      this.inflightRequests.delete(key);
+    }
+  }
 
   setCollabDocuments(docs: Partial<Record<string, File>>): void {
     this.collabDocs = { ...this.collabDocs, ...docs };
@@ -114,11 +146,13 @@ export class CompanyCollaborationService {
   // ── Application lifecycle ──────────────────────────────────────────────────
 
   applyCompanyCollaboration(data: FormData): Observable<any> {
-    return this.http.post(`${this.baseUrl}/apply/`, data);
+    return this.http.post(`${this.baseUrl}/apply/`, data).pipe(
+      tap(() => this.invalidateCache('collab:list', 'collab:dashboard-counts', 'collab:list-by-status'))
+    );
   }
 
   listCompanyCollaborations(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/list/`);
+    return this.getCachedOrFetch('collab:list', () => this.http.get(`${this.baseUrl}/list/`));
   }
 
   getCompanyCollaborationDetail(applicationId: string): Observable<any> {
@@ -126,11 +160,11 @@ export class CompanyCollaborationService {
   }
 
   getDashboardCounts(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/dashboard-counts/`);
+    return this.getCachedOrFetch('collab:dashboard-counts', () => this.http.get(`${this.baseUrl}/dashboard-counts/`));
   }
 
   getApplicationsByStatus(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/list-by-status/`);
+    return this.getCachedOrFetch('collab:list-by-status', () => this.http.get(`${this.baseUrl}/list-by-status/`));
   }
 
   // ── Master data ────────────────────────────────────────────────────────────

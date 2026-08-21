@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
+import { finalize, shareReplay, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import {
   BilldeskWalletRechargeInitiatePayload,
@@ -36,6 +37,9 @@ declare global {
 export class PaymentIntegrationService {
   private readonly baseUrl = `${environment.apiBaseUrl}/transactional/payment`;
   private readonly gatewayUrl = `${environment.apiBaseUrl}/transactional/payment-gateway`;
+  private readonly cacheTtlMs = 5 * 60_000;
+  private responseCache = new Map<string, { value: unknown; fetchedAt: number }>();
+  private inflightRequests = new Map<string, Observable<unknown>>();
 
   // Use a Subject to tell components when a payment is finished
   private paymentStatusSource = new Subject<{ status: string, applicationId: string }>();
@@ -45,6 +49,44 @@ export class PaymentIntegrationService {
   private readonly billdeskCooldownSeconds = 15 * 60;
 
   constructor(private http: HttpClient) { }
+
+  private getCachedOrFetch<T>(key: string, requestFactory: () => Observable<T>): Observable<T> {
+    const cachedEntry = this.responseCache.get(key);
+    const now = Date.now();
+    if (cachedEntry && now - cachedEntry.fetchedAt < this.cacheTtlMs) {
+      return new Observable<T>((subscriber) => {
+        subscriber.next(cachedEntry.value as T);
+        subscriber.complete();
+      });
+    }
+
+    const inflightRequest = this.inflightRequests.get(key);
+    if (inflightRequest) {
+      return inflightRequest as Observable<T>;
+    }
+
+    const request$ = requestFactory().pipe(
+      tap((value) => {
+        this.responseCache.set(key, { value, fetchedAt: Date.now() });
+      }),
+      finalize(() => {
+        this.inflightRequests.delete(key);
+      }),
+      shareReplay({ bufferSize: 1, refCount: false })
+    );
+    this.inflightRequests.set(key, request$ as Observable<unknown>);
+    return request$;
+  }
+
+  clearWalletCache(licenseeId?: string): void {
+    const prefix = licenseeId ? `wallet:${licenseeId}:` : 'wallet:';
+    for (const key of Array.from(this.responseCache.keys())) {
+      if (key.startsWith(prefix)) this.responseCache.delete(key);
+    }
+    for (const key of Array.from(this.inflightRequests.keys())) {
+      if (key.startsWith(prefix)) this.inflightRequests.delete(key);
+    }
+  }
 
   getMasterData(moduleCode?: string): Observable<PaymentMasterDataResponse> {
     let params = new HttpParams();
@@ -59,7 +101,9 @@ export class PaymentIntegrationService {
   }
 
   getWalletBalance(licenseeId: string): Observable<WalletBalanceResponse> {
-    return this.http.get<WalletBalanceResponse>(`${this.baseUrl}/wallet/${licenseeId}/`);
+    return this.getCachedOrFetch(`wallet:${licenseeId}:balance`, () =>
+      this.http.get<WalletBalanceResponse>(`${this.baseUrl}/wallet/${licenseeId}/`)
+    );
   }
 
   getWalletSummary(licenseeId: string, moduleType?: string): Observable<WalletSummaryResponse> {
@@ -67,12 +111,17 @@ export class PaymentIntegrationService {
     if (moduleType) {
       params = params.set('module_type', moduleType);
     }
-    return this.http.get<WalletSummaryResponse>(`${this.baseUrl}/wallet/${licenseeId}/summary/`, { params });
+    const key = `wallet:${licenseeId}:summary:${moduleType || 'all'}`;
+    return this.getCachedOrFetch(key, () =>
+      this.http.get<WalletSummaryResponse>(`${this.baseUrl}/wallet/${licenseeId}/summary/`, { params })
+    );
   }
 
   getWalletRecharge(licenseeId: string, limit = 200): Observable<WalletTransactionResponse> {
     const params = new HttpParams().set('limit', String(limit));
-    return this.http.get<WalletTransactionResponse>(`${this.baseUrl}/wallet/${licenseeId}/recharge/`, { params });
+    return this.getCachedOrFetch(`wallet:${licenseeId}:recharge:${limit}`, () =>
+      this.http.get<WalletTransactionResponse>(`${this.baseUrl}/wallet/${licenseeId}/recharge/`, { params })
+    );
   }
 
   creditWalletRecharge(
@@ -85,16 +134,22 @@ export class PaymentIntegrationService {
       remarks?: string;
     }
   ): Observable<any> {
-    return this.http.post<any>(`${this.baseUrl}/wallet/${licenseeId}/recharge/credit/`, payload);
+    return this.http.post<any>(`${this.baseUrl}/wallet/${licenseeId}/recharge/credit/`, payload).pipe(
+      tap(() => this.clearWalletCache(licenseeId))
+    );
   }
 
   getWalletHistory(licenseeId: string, limit = 500): Observable<WalletTransactionResponse> {
     const params = new HttpParams().set('limit', String(limit));
-    return this.http.get<WalletTransactionResponse>(`${this.baseUrl}/wallet/${licenseeId}/history/`, { params });
+    return this.getCachedOrFetch(`wallet:${licenseeId}:history:${limit}`, () =>
+      this.http.get<WalletTransactionResponse>(`${this.baseUrl}/wallet/${licenseeId}/history/`, { params })
+    );
   }
 
   initiatePayment(payload: PaymentInitiatePayload): Observable<PaymentInitiateResponse> {
-    return this.http.post<PaymentInitiateResponse>(`${this.baseUrl}/transactions/initiate/`, payload);
+    return this.http.post<PaymentInitiateResponse>(`${this.baseUrl}/transactions/initiate/`, payload).pipe(
+      tap(() => this.clearWalletCache())
+    );
   }
 
   initiateBilldeskWalletRecharge(
@@ -175,18 +230,33 @@ export class PaymentIntegrationService {
     if (typeof filters?.limit === 'number') {
       params = params.set('limit', String(filters.limit));
     }
-    return this.http.get<PaymentTransactionListResponse>(`${this.baseUrl}/transactions/`, { params });
+    const key = `transactions:list:${JSON.stringify(filters || {})}`;
+    return this.getCachedOrFetch(key, () =>
+      this.http.get<PaymentTransactionListResponse>(`${this.baseUrl}/transactions/`, { params })
+    );
   }
 
   getTransaction(utr: string): Observable<PaymentTransaction> {
-    return this.http.get<PaymentTransaction>(`${this.baseUrl}/transactions/${utr}/`);
+    return this.getCachedOrFetch(`transactions:detail:${utr}`, () =>
+      this.http.get<PaymentTransaction>(`${this.baseUrl}/transactions/${utr}/`)
+    );
   }
 
   updateTransactionStatus(
     utr: string,
     payload: PaymentStatusUpdatePayload
   ): Observable<PaymentTransaction> {
-    return this.http.patch<PaymentTransaction>(`${this.baseUrl}/transactions/${utr}/status/`, payload);
+    return this.http.patch<PaymentTransaction>(`${this.baseUrl}/transactions/${utr}/status/`, payload).pipe(
+      tap(() => {
+        this.clearWalletCache();
+        for (const key of Array.from(this.responseCache.keys())) {
+          if (key.startsWith('transactions:')) this.responseCache.delete(key);
+        }
+        for (const key of Array.from(this.inflightRequests.keys())) {
+          if (key.startsWith('transactions:')) this.inflightRequests.delete(key);
+        }
+      })
+    );
   }
 
   launchBillDeskSDK(apiData: any, callback: (txn: any) => void): void {

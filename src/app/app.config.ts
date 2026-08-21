@@ -12,6 +12,7 @@ import { provideToastr } from 'ngx-toastr';
 import { MarkdownModule } from 'ngx-markdown';
 import { HTTP_INTERCEPTORS } from '@angular/common/http';
 import { JwtRefreshInterceptor } from './core/interceptors/jwt-refresh.interceptor';
+import { ReadApiCacheInterceptor } from './core/interceptors/read-api-cache.interceptor';
 import { routes } from './app.routes';
 import { AuthInterceptor } from './core/interceptors/auth.interceptor';
 import { uiLoadingInterceptorFn } from './core/interceptors/ui-loading.interceptor-fn';
@@ -33,6 +34,7 @@ export const appConfig: ApplicationConfig = {
     { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
     { provide: HTTP_INTERCEPTORS, useClass: JwtRefreshInterceptor, multi: true },
     { provide: HTTP_INTERCEPTORS, useClass: CsrfInterceptor, multi: true },
+    { provide: HTTP_INTERCEPTORS, useClass: ReadApiCacheInterceptor, multi: true },
     
     // ✅ Chart.js configuration (registered once)
     provideCharts(withDefaultRegisterables()),

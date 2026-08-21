@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { finalize, shareReplay, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import {
   DistributorBrandMaster,
@@ -13,12 +14,53 @@ import {
 })
 export class DistributorPermitService {
   private readonly baseUrl = `${environment.apiBaseUrl}/transactional/distributor-permit`;
+  private readonly cacheTtlMs = 5 * 60_000;
+  private responseCache = new Map<string, { value: unknown; fetchedAt: number }>();
+  private inflightRequests = new Map<string, Observable<unknown>>();
 
   constructor(private http: HttpClient) {}
 
+  private getCachedOrFetch<T>(key: string, requestFactory: () => Observable<T>): Observable<T> {
+    const cachedEntry = this.responseCache.get(key);
+    const now = Date.now();
+    if (cachedEntry && now - cachedEntry.fetchedAt < this.cacheTtlMs) {
+      return new Observable<T>((subscriber) => {
+        subscriber.next(cachedEntry.value as T);
+        subscriber.complete();
+      });
+    }
+
+    const inflightRequest = this.inflightRequests.get(key);
+    if (inflightRequest) return inflightRequest as Observable<T>;
+
+    const request$ = requestFactory().pipe(
+      tap((value) => this.responseCache.set(key, { value, fetchedAt: Date.now() })),
+      finalize(() => this.inflightRequests.delete(key)),
+      shareReplay({ bufferSize: 1, refCount: false })
+    );
+    this.inflightRequests.set(key, request$ as Observable<unknown>);
+    return request$;
+  }
+
+  private invalidateCacheByPrefix(prefix: string): void {
+    for (const key of Array.from(this.responseCache.keys())) {
+      if (key.startsWith(prefix)) this.responseCache.delete(key);
+    }
+    for (const key of Array.from(this.inflightRequests.keys())) {
+      if (key.startsWith(prefix)) this.inflightRequests.delete(key);
+    }
+  }
+
+  clearCache(): void {
+    this.responseCache.clear();
+    this.inflightRequests.clear();
+  }
+
   getDashboardCounts(tab: 'requisition' | 'revalidation' | 'cancellation' = 'requisition'): Observable<any> {
     const params = new HttpParams().set('tab', tab);
-    return this.http.get<any>(`${this.baseUrl}/dashboard-counts/`, { params });
+    return this.getCachedOrFetch(`dashboard-counts:${tab}`, () =>
+      this.http.get<any>(`${this.baseUrl}/dashboard-counts/`, { params })
+    );
   }
 
   listApplications(status?: string): Observable<DistributorPermitApplication[]> {
@@ -26,7 +68,9 @@ export class DistributorPermitService {
     if (status) {
       params = params.set('status', status);
     }
-    return this.http.get<DistributorPermitApplication[]>(`${this.baseUrl}/`, { params });
+    return this.getCachedOrFetch(`applications:${status || 'all'}`, () =>
+      this.http.get<DistributorPermitApplication[]>(`${this.baseUrl}/`, { params })
+    );
   }
 
   getApplication(referenceNo: string): Observable<DistributorPermitApplication> {
@@ -34,11 +78,15 @@ export class DistributorPermitService {
   }
 
   createApplication(payload: DistributorPermitApplication): Observable<DistributorPermitApplication> {
-    return this.http.post<DistributorPermitApplication>(`${this.baseUrl}/`, payload);
+    return this.http.post<DistributorPermitApplication>(`${this.baseUrl}/`, payload).pipe(
+      tap(() => this.clearCache())
+    );
   }
 
   getSuppliers(): Observable<DistributorSupplier[]> {
-    return this.http.get<DistributorSupplier[]>(`${this.baseUrl}/suppliers/?active_only=1`);
+    return this.getCachedOrFetch('suppliers:active', () =>
+      this.http.get<DistributorSupplier[]>(`${this.baseUrl}/suppliers/?active_only=1`)
+    );
   }
 
   getBrandMaster(q = ''): Observable<{ success: boolean; data: DistributorBrandMaster[]; total: number }> {
@@ -46,26 +94,32 @@ export class DistributorPermitService {
     if (q.trim()) {
       params = params.set('q', q.trim());
     }
-    return this.http.get<{ success: boolean; data: DistributorBrandMaster[]; total: number }>(
-      `${this.baseUrl}/brand-master/`,
-      { params }
+    return this.getCachedOrFetch(`brand-master:${q.trim() || 'all'}`, () =>
+      this.http.get<{ success: boolean; data: DistributorBrandMaster[]; total: number }>(
+        `${this.baseUrl}/brand-master/`,
+        { params }
+      )
     );
   }
 
   getPremises(): Observable<{ destination: string }> {
-    return this.http.get<{ destination: string }>(`${this.baseUrl}/premises/`);
+    return this.getCachedOrFetch('premises', () =>
+      this.http.get<{ destination: string }>(`${this.baseUrl}/premises/`)
+    );
   }
 
   getRevalidations(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.baseUrl}/revalidation/`);
+    return this.getCachedOrFetch('revalidation:list', () => this.http.get<any[]>(`${this.baseUrl}/revalidation/`));
   }
 
   createRevalidation(payload: any): Observable<any> {
-    return this.http.post<any>(`${this.baseUrl}/revalidation/`, payload);
+    return this.http.post<any>(`${this.baseUrl}/revalidation/`, payload).pipe(
+      tap(() => this.clearCache())
+    );
   }
 
   getCancellations(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.baseUrl}/cancellation/`);
+    return this.getCachedOrFetch('cancellation:list', () => this.http.get<any[]>(`${this.baseUrl}/cancellation/`));
   }
 
   getCancellation(referenceNo: string): Observable<any> {
@@ -73,10 +127,14 @@ export class DistributorPermitService {
   }
 
   createCancellation(payload: any): Observable<any> {
-    return this.http.post<any>(`${this.baseUrl}/cancellation/`, payload);
+    return this.http.post<any>(`${this.baseUrl}/cancellation/`, payload).pipe(
+      tap(() => this.clearCache())
+    );
   }
 
   getRevalidationSchedules(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.baseUrl}/revalidation-schedules/`);
+    return this.getCachedOrFetch('revalidation-schedules:list', () =>
+      this.http.get<any[]>(`${this.baseUrl}/revalidation-schedules/`)
+    );
   }
 }
