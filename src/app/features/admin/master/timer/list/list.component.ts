@@ -28,7 +28,6 @@ export class ListComponent implements OnInit {
   formDescription = '';
   formDelayValue: number = 10;
   formDelayUnit = 'minute';
-  formValidityDays: number | null = null;
   formIsActive = true;
   isSubmitting = false;
 
@@ -54,7 +53,6 @@ export class ListComponent implements OnInit {
           const val = t.delay_value ?? t.delayValue ?? t.delay_time ?? t.value ?? 0;
           const unit = t.delay_unit ?? t.delayUnit ?? t.unit ?? 'minute';
           const active = t.is_active ?? t.isActive ?? t.active ?? true;
-          const validity = t.validity_period_days ?? t.validityPeriodDays ?? null;
           return {
             ...t,
             delay_value: Number(val),
@@ -62,8 +60,7 @@ export class ListComponent implements OnInit {
             delay_unit: String(unit),
             delayUnit: String(unit),
             is_active: Boolean(active),
-            isActive: Boolean(active),
-            validity_period_days: validity
+            isActive: Boolean(active)
           };
         });
       },
@@ -119,7 +116,6 @@ export class ListComponent implements OnInit {
     this.formDescription = '';
     this.formDelayValue = 10;
     this.formDelayUnit = 'minute';
-    this.formValidityDays = null;
     this.formIsActive = true;
     this.showModal = true;
   }
@@ -131,7 +127,6 @@ export class ListComponent implements OnInit {
     this.formDescription = timer.description || '';
     this.formDelayValue = timer.delay_value ?? timer.delayValue ?? 10;
     this.formDelayUnit = timer.delay_unit ?? timer.delayUnit ?? 'minute';
-    this.formValidityDays = timer.validity_period_days ?? timer.validityPeriodDays ?? null;
     this.formIsActive = this.getTimerIsActive(timer);
     this.showModal = true;
   }
@@ -152,7 +147,6 @@ export class ListComponent implements OnInit {
       description: this.formDescription.trim(),
       delay_value: Number(this.formDelayValue) || 0,
       delay_unit: this.formDelayUnit,
-      validity_period_days: this.formValidityDays !== null && this.formValidityDays !== undefined ? Number(this.formValidityDays) : null,
       is_active: this.formIsActive
     };
 
