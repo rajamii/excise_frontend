@@ -3222,9 +3222,40 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         return fallback;
     }
 
+    isFinalOrCompletedStatus(): boolean {
+        if (!this.applicationData) return false;
+        const status = String(this.applicationData.status || '').toUpperCase().trim();
+        const stageId = Number((this.applicationData as any)?.current_stage?.id || (this.applicationData as any)?.current_stage_id || 0);
+        const stageName = String((this.applicationData as any)?.current_stage?.name || (this.applicationData as any)?.current_stage_name || '').toUpperCase().trim();
+        const isFinalStage = Boolean(
+            (this.applicationData as any)?.current_stage?.is_final ??
+            (this.applicationData as any)?.current_stage?.isFinal ??
+            false
+        );
+
+        if (isFinalStage) return true;
+        if ([151, 152, 150, 165, 158, 159, 130, 131, 136, 137, 145, 146].includes(stageId)) return true;
+        if (
+            status === 'APPROVED' ||
+            status === 'REJECTED' ||
+            stageName === 'APPROVED' ||
+            stageName === 'REJECTED' ||
+            status === 'APPROVED BY COMMISSIONER' ||
+            status === 'REJECTED BY COMMISSIONER'
+        ) {
+            return true;
+        }
+
+        return false;
+    }
+
     getIncludeActionsForDetailView(): string[] | null {
         if (!this.applicationData) {
             return null;
+        }
+
+        if (this.isFinalOrCompletedStatus()) {
+            return [];
         }
 
         let actions = Array.isArray(this.applicationData.allowedActions) && this.applicationData.allowedActions.length > 0
@@ -3233,29 +3264,32 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 ? (this.applicationData['allowed_actions'] as any[])
                 : []);
 
-        // For IMFL distributor permit, the backend returns accurate allowedActions from
-        // workflow transitions (DB-driven). An empty list means no actions for this user
-        // at the current stage — do NOT apply a status-text fallback.
-        if (!this.isImflDistributorPermitSource()) {
-            if (actions.length === 0 && (this.applicationType === 'requisition' || this.isImflDistributorPermitSource())) {
-                const context = this.getUserContext();
-                const status = String(this.applicationData.status || '').toUpperCase();
-                if (context === USER_CONTEXTS.COMMISSIONER) {
-                    if (status.includes('PAYSLIP') || status.includes('VERIF') || status.includes('FINAL')) {
-                        actions = ['APPROVE', 'REJECT'];
-                    } else {
-                        actions = ['APPROVE', 'FORWARD', 'REJECT', 'RAISE_OBJECTION'];
-                    }
-                } else if (context === USER_CONTEXTS.PERMIT_SECTION) {
-                    if (status.includes('PAYSLIP') || status.includes('PAYMENT')) {
-                        actions = ['VERIFY', 'FORWARD', 'REJECT'];
-                    } else {
-                        actions = ['FORWARD', 'REJECT', 'RAISE_OBJECTION'];
-                    }
-                } else if (context === USER_CONTEXTS.LICENSEE) {
-                    if (status.includes('PAYMENT') || status.includes('AWAITING_PAYMENT')) {
-                        actions = ['PAY'];
-                    }
+        if (actions.length === 0) {
+            const context = this.getUserContext();
+            const status = String(this.applicationData.status || '').toUpperCase();
+            const stageId = Number((this.applicationData as any)?.current_stage?.id || (this.applicationData as any)?.current_stage_id || 0);
+
+            if (context === USER_CONTEXTS.COMMISSIONER) {
+                if (this.applicationType === 'cancellation' || stageId === 162 || status.includes('COMMISSIONER')) {
+                    actions = ['APPROVE', 'REJECT'];
+                } else if (this.applicationType === 'revalidation' || stageId === 160) {
+                    actions = ['APPROVE', 'REJECT'];
+                } else if (status.includes('PAYSLIP') || status.includes('VERIF') || status.includes('FINAL')) {
+                    actions = ['APPROVE', 'REJECT'];
+                } else {
+                    actions = ['APPROVE', 'FORWARD', 'REJECT', 'RAISE_OBJECTION'];
+                }
+            } else if (context === USER_CONTEXTS.PERMIT_SECTION) {
+                if (this.applicationType === 'cancellation' || this.applicationType === 'revalidation') {
+                    actions = ['FORWARD', 'REJECT'];
+                } else if (status.includes('PAYSLIP') || status.includes('PAYMENT')) {
+                    actions = ['VERIFY', 'FORWARD', 'REJECT'];
+                } else {
+                    actions = ['FORWARD', 'REJECT', 'RAISE_OBJECTION'];
+                }
+            } else if (context === USER_CONTEXTS.LICENSEE) {
+                if (status.includes('PAYMENT') || status.includes('AWAITING_PAYMENT')) {
+                    actions = ['PAY'];
                 }
             }
         }
@@ -3264,7 +3298,6 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             .map(action => String(action || '').toUpperCase().trim())
             .filter(action => !!action && action !== 'VIEW');
 
-        // For IMFL distributor permit: include FORCE_PAY and PAY only if NOT paid and at Awaiting Payment stage (stage 154)
         if (this.isImflDistributorPermitSource()) {
             const stageId = this.applicationData?.['current_stage_id'] || this.applicationData?.['currentStageId'];
             const statusStr = String(this.applicationData?.['status'] || '').toUpperCase();
