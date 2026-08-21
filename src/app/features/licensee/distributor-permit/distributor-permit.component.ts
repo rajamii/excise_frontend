@@ -137,6 +137,13 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
             this.activeTab = 'requisition';
           }
         }
+        const statusParam = String(params?.['status'] || '').toLowerCase() as DistributorPermitStatusFilter;
+        if (['all', 'approved', 'pending', 'objection', 'rejected'].includes(statusParam)) {
+          this.activeCardFilter = statusParam;
+        } else {
+          this.autoSelectDefaultStatusFilter();
+        }
+
         const refParam = params?.['ref'] || params?.['id'];
         if (refParam) {
           this.openRefWhenApplicationsLoaded(String(refParam));
@@ -160,11 +167,26 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   onTabChange(tab: ImflTabType): void {
     this.activeTab = tab;
+    this.pageIndex = 0;
+    this.autoSelectDefaultStatusFilter();
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { tab },
       queryParamsHandling: 'merge'
     });
+  }
+
+  autoSelectDefaultStatusFilter(): void {
+    const statusParam = String(this.route.snapshot.queryParams['status'] || '').toLowerCase();
+    if (['all', 'approved', 'pending', 'objection', 'rejected'].includes(statusParam)) {
+      this.activeCardFilter = statusParam as DistributorPermitStatusFilter;
+      return;
+    }
+    if (this.counts.pending > 0) {
+      this.activeCardFilter = 'pending';
+    } else {
+      this.activeCardFilter = 'all';
+    }
   }
 
   openApplyForm(): void {
@@ -1129,6 +1151,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       ...mappedRevalidations,
       ...mappedCancellations
     ];
+    this.autoSelectDefaultStatusFilter();
     this.applyFilters();
     const refParam = this.route.snapshot.queryParams['ref'] || this.route.snapshot.queryParams['id'];
     if (refParam) {
