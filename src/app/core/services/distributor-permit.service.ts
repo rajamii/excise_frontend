@@ -63,6 +63,10 @@ export class DistributorPermitService {
     return this.http.get<any[]>(`${this.baseUrl}/cancellation/`);
   }
 
+  getCancellation(referenceNo: string): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/cancellation/${encodeURIComponent(referenceNo)}/`);
+  }
+
   createCancellation(payload: any): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/cancellation/`, payload);
   }

@@ -590,7 +590,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             cancellation: {
                 service: this.isImflDistributorPermitSource() ? this.distributorPermitService : this.supplyChainService,
                 listMethod: this.isImflDistributorPermitSource() ? 'getCancellations' : 'getCancellationData',
-                detailMethod: this.isImflDistributorPermitSource() ? 'getApplication' : 'getCancellationDetail',
+                detailMethod: this.isImflDistributorPermitSource() ? 'getCancellation' : 'getCancellationDetail',
                 workflowId: WORKFLOW_IDS[APPLICATION_TYPES.CANCELLATION],
                 fieldMappings: {
                     id: this.isImflDistributorPermitSource() ? ['referenceNo', 'reference_no', 'id'] : ['id'],
@@ -3745,7 +3745,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         const source = this.route.snapshot.queryParamMap.get('source');
 
         if (source === 'distributor-permit' || source === 'imfl-requisition') {
-            this.router.navigate(['/dashboard'], { queryParams: { section: 'distributor-permit', tab: 'requisition' } });
+            const tabParam = this.applicationType === 'cancellation' ? 'cancellation' : (this.applicationType === 'revalidation' ? 'revalidation' : 'requisition');
+            this.router.navigate(['/dashboard'], { queryParams: { section: 'distributor-permit', tab: tabParam } });
             return;
         }
 

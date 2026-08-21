@@ -734,9 +734,17 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   onViewDetails(row: DistributorPermitRow): void {
     const referenceNo = row.applicationId || row.application?.referenceNo || row.application?.reference_no || row.id;
+    const refUpper = String(referenceNo || '').toUpperCase();
+    let type: 'requisition' | 'revalidation' | 'cancellation' = 'requisition';
+    if (this.activeTab === 'cancellation' || refUpper.startsWith('IMFLCAN')) {
+      type = 'cancellation';
+    } else if (this.activeTab === 'revalidation' || refUpper.startsWith('IMFLREV')) {
+      type = 'revalidation';
+    }
+
     this.router.navigate(['/supply-chain-view'], {
       queryParams: {
-        type: 'requisition',
+        type,
         id: referenceNo,
         ref: referenceNo,
         source: 'distributor-permit'
