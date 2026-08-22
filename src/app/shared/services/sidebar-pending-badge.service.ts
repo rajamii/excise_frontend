@@ -245,6 +245,15 @@ export class SidebarPendingBadgeService {
       case 'imfl-requisition':
         return this.fetchDistributorPermitDashboardCounts('requisition', audience).pipe(map(d => d.total));
 
+      case 'imfl-requisition-cases':
+        return this.distributorPermitService.getCasesProcessed().pipe(
+          map((items: any) => {
+            const list = Array.isArray(items) ? items : (items?.results || []);
+            return list.filter((c: any) => String(c.status).toLowerCase() === 'under_review').length;
+          }),
+          catchError(() => of(0))
+        );
+
       case 'distributor-permit-revalidation':
       case 'imfl-revalidation':
         return this.fetchDistributorPermitDashboardCounts('revalidation', audience).pipe(map(d => d.total));

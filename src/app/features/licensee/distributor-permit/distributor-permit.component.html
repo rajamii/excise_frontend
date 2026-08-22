@@ -1782,68 +1782,195 @@
   </div>
 </div>
 
-<!-- Officer Stock Arrival Approval Modal -->
+<!-- Officer Stock Arrival Approval Modal (Permit-by-Permit Review) -->
 <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0, 0, 0, 0.6); z-index: 1065;" *ngIf="showArrivalReviewModal">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content border-0 shadow-lg">
       <div class="modal-header bg-warning bg-gradient text-dark py-3 px-4">
         <h5 class="modal-title fw-bold">
           <i class="bi bi-check-square-fill me-2"></i>
-          Review Physical Stock Arrival - {{ selectedArrivalReviewItem?.permit_number }}
+          Review Physical Stock Arrival - {{ selectedArrivalReviewRow?.applicationId || selectedArrivalReviewRow?.referenceNo }}
         </h5>
         <button type="button" class="btn-close" (click)="closeArrivalReviewModal()"></button>
       </div>
-      <div class="modal-body p-4">
-        <div class="alert alert-warning border border-warning d-flex align-items-center mb-3">
-          <i class="bi bi-exclamation-triangle-fill fs-4 me-3 text-warning"></i>
-          <div>
-            <strong>Physical Stock Arrival Submitted for OIC Approval</strong><br />
-            <small>Review the details entered by the distributor below before taking approval action.</small>
+      <div class="modal-body p-4" style="max-height: 78vh; overflow-y: auto;">
+
+        <!-- Submitted Permits Review Progress Bar -->
+        <div class="permit-review-progress p-3 bg-light rounded border mb-3" *ngIf="availableReviewPermits.length > 0">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="m-0 fw-bold text-dark fs-6"><i class="bi bi-list-check me-1 text-primary"></i> Submitted Permits Review Status:</h6>
+            <span class="badge" [ngClass]="allSubmittedPermitsReviewed ? 'bg-success fs-7' : 'bg-warning text-dark fs-7'">
+              {{ reviewedPermitsCount }} / {{ availableReviewPermits.length }} Permits Reviewed
+            </span>
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            <button
+              type="button"
+              *ngFor="let p of availableReviewPermits"
+              class="btn btn-sm text-start shadow-none d-flex align-items-center gap-2"
+              [ngClass]="{
+                'btn-primary text-white': selectedReviewPermitNumber === p.permitNumber,
+                'btn-outline-secondary': selectedReviewPermitNumber !== p.permitNumber
+              }"
+              (click)="selectedReviewPermitNumber = p.permitNumber; onReviewPermitChange()"
+            >
+              <span class="fw-bold">{{ p.permitNumber }}</span>
+              <span class="badge py-1 px-2" [ngClass]="getReviewPermitStatusBadgeClass(p)">
+                {{ p.status === 'under_review' ? 'Action Needed' : (p.status === 'approved' ? 'Approved' : 'Rejected') }}
+              </span>
+            </button>
           </div>
         </div>
 
-        <div class="card border mb-3 shadow-sm">
-          <div class="card-header bg-light fw-bold py-2">
-            <i class="bi bi-truck me-2"></i> Stock Arrival Entry Details
+        <!-- Permit Selector Dropdown -->
+        <div class="mb-3 p-3 bg-light rounded border" *ngIf="availableReviewPermits.length > 0">
+          <label class="form-label fw-bold text-dark mb-1">
+            <i class="bi bi-card-heading me-1 text-primary"></i> Select Submitted Permit Number for Review &amp; Action:
+          </label>
+          <select
+            class="form-select form-select-lg fw-bold"
+            [(ngModel)]="selectedReviewPermitNumber"
+            (change)="onReviewPermitChange()"
+          >
+            <option *ngFor="let opt of availableReviewPermits" [value]="opt.permitNumber">
+              {{ opt.permitNumber }} - {{ opt.totalCases }} Cases ({{ getReviewPermitStatusLabel(opt) }})
+            </option>
+          </select>
+        </div>
+
+        <!-- Permit Arrival Status Banner -->
+        <div
+          class="alert d-flex align-items-center mb-3"
+          [ngClass]="{
+            'alert-warning border-warning': selectedReviewPermitItem?.status === 'under_review',
+            'alert-success border-success': selectedReviewPermitItem?.status === 'approved',
+            'alert-danger border-danger': selectedReviewPermitItem?.status === 'rejected',
+            'alert-secondary border-secondary': selectedReviewPermitItem?.status === 'pending'
+          }"
+          *ngIf="selectedReviewPermitItem"
+        >
+          <i
+            class="fs-4 me-3 bi"
+            [ngClass]="{
+              'bi-clock-history text-warning': selectedReviewPermitItem?.status === 'under_review',
+              'bi-check-circle-fill text-success': selectedReviewPermitItem?.status === 'approved',
+              'bi-x-circle-fill text-danger': selectedReviewPermitItem?.status === 'rejected',
+              'bi-info-circle-fill text-secondary': selectedReviewPermitItem?.status === 'pending'
+            }"
+          ></i>
+          <div>
+            <strong class="d-block" *ngIf="selectedReviewPermitItem?.status === 'under_review'">
+              Stock Arrival Submitted by Distributor - Action Needed (Approve / Reject)
+            </strong>
+            <strong class="d-block" *ngIf="selectedReviewPermitItem?.status === 'approved'">
+              Stock Arrival Approved for Permit {{ selectedReviewPermitItem?.permitNumber }}
+            </strong>
+            <strong class="d-block" *ngIf="selectedReviewPermitItem?.status === 'rejected'">
+              Stock Arrival Rejected for Permit {{ selectedReviewPermitItem?.permitNumber }} (Distributor Action Re-opened)
+            </strong>
+            <strong class="d-block" *ngIf="selectedReviewPermitItem?.status === 'pending'">
+              No Physical Stock Arrival Details Submitted for this Permit Yet
+            </strong>
+            <small class="text-muted" *ngIf="selectedReviewPermitItem?.status === 'under_review'">
+              Review vehicle registration and arrived cases below before taking approval or rejection action on this permit.
+            </small>
+          </div>
+        </div>
+
+        <!-- Permit Stock Details Card -->
+        <div class="card border mb-3 shadow-sm" *ngIf="selectedReviewPermitItem">
+          <div class="card-header bg-light d-flex justify-content-between align-items-center py-2 px-3">
+            <span class="fw-bold text-primary">
+              <i class="bi bi-box-seam me-1"></i> Permit: {{ selectedReviewPermitItem.permitNumber }}
+            </span>
+            <span class="badge" [ngClass]="getReviewPermitStatusBadgeClass(selectedReviewPermitItem)">
+              {{ getReviewPermitStatusLabel(selectedReviewPermitItem) }}
+            </span>
           </div>
           <div class="card-body p-3">
             <div class="row g-3">
               <div class="col-md-6">
-                <p class="mb-2"><strong>Permit Number:</strong> <span class="badge bg-primary fs-7">{{ selectedArrivalReviewItem?.permit_number }}</span></p>
-                <p class="mb-2"><strong>Car / Vehicle Registration No:</strong> <span class="fw-bold text-dark fs-6 d-block">{{ selectedArrivalReviewItem?.vehicle_number || selectedArrivalReviewItem?.vehicleNumber || 'N/A' }}</span></p>
-                <p class="mb-2"><strong>Brand Name:</strong> <span class="fw-semibold text-primary d-block">{{ selectedArrivalReviewItem?.brand_name || 'N/A' }}</span></p>
-                <p class="mb-0"><strong>Size (ml):</strong> {{ selectedArrivalReviewItem?.size_ml || 750 }} ml</p>
+                <p class="mb-2">
+                  <strong>Car / Vehicle Registration No:</strong>
+                  <span class="fw-bold text-dark fs-6 d-block" *ngIf="selectedReviewPermitItem.vehicleNumber">
+                    <i class="bi bi-truck me-1"></i>{{ selectedReviewPermitItem.vehicleNumber }}
+                  </span>
+                  <span class="text-muted d-block" *ngIf="!selectedReviewPermitItem.vehicleNumber">N/A (Not Submitted)</span>
+                </p>
+                <p class="mb-2">
+                  <strong>Brand Name:</strong>
+                  <span class="fw-semibold text-primary d-block">{{ selectedReviewPermitItem.brandName || 'N/A' }}</span>
+                </p>
+                <p class="mb-0"><strong>Size (ml):</strong> {{ selectedReviewPermitItem.sizeMl }} ml</p>
               </div>
+
               <div class="col-md-6">
-                <p class="mb-2"><strong>Arrived Cases:</strong> <span class="fw-bold text-success fs-6">{{ selectedArrivalReviewItem?.arrived_cases }} Cases</span> / {{ selectedArrivalReviewItem?.expected_cases || selectedArrivalReviewItem?.arrived_cases }} Expected</p>
-                <p class="mb-2" *ngIf="selectedArrivalReviewItem?.submitted_at"><strong>Submitted Date:</strong> {{ selectedArrivalReviewItem?.submitted_at | date:'dd-MMM-yyyy HH:mm' }}</p>
-                <p class="mb-2" *ngIf="selectedArrivalReviewItem?.submitted_by_name"><strong>Submitted By:</strong> {{ selectedArrivalReviewItem?.submitted_by_name }}</p>
-                <p class="mb-0 text-muted fst-italic" *ngIf="selectedArrivalReviewItem?.remarks"><strong>Distributor Notes:</strong> "{{ selectedArrivalReviewItem?.remarks }}"</p>
+                <p class="mb-2">
+                  <strong>Arrived Cases:</strong>
+                  <span
+                    class="fw-bold fs-6"
+                    [ngClass]="selectedReviewPermitItem.status === 'approved' ? 'text-success' : 'text-warning text-darken-3'"
+                    *ngIf="selectedReviewPermitItem.arrivedCases !== null"
+                  >
+                    {{ selectedReviewPermitItem.arrivedCases }} Cases
+                  </span>
+                  <span class="text-muted" *ngIf="selectedReviewPermitItem.arrivedCases === null">N/A</span>
+                  / {{ selectedReviewPermitItem.expectedCases }} Total Expected
+                </p>
+                <p class="mb-2" *ngIf="selectedReviewPermitItem.submittedAt">
+                  <strong>Submitted Date:</strong> {{ selectedReviewPermitItem.submittedAt | date:'dd-MMM-yyyy HH:mm' }}
+                </p>
+                <p class="mb-0 text-muted fst-italic" *ngIf="selectedReviewPermitItem.notes">
+                  <strong>Distributor Notes:</strong> "{{ selectedReviewPermitItem.notes }}"
+                </p>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="mb-3">
+        <!-- Officer Remarks Field -->
+        <div class="mb-3" *ngIf="selectedReviewPermitItem?.status === 'under_review'">
           <label class="form-label fw-semibold">Officer Remarks / Comments (Optional):</label>
           <textarea
             class="form-control"
             rows="3"
             [(ngModel)]="officerActionRemarks"
-            placeholder="Enter officer review remarks, verification note, or rejection reason..."
+            placeholder="Enter officer review remarks, verification note, or rejection reason for this permit..."
           ></textarea>
         </div>
+
       </div>
-      <div class="modal-footer bg-light py-3 px-4 d-flex justify-content-between">
+      <div class="modal-footer bg-light py-3 px-4 d-flex justify-content-between align-items-center">
         <button type="button" class="btn btn-secondary px-4" (click)="closeArrivalReviewModal()" [disabled]="isProcessingAction">
           Close
         </button>
-        <div class="d-flex gap-2">
-          <button type="button" class="btn btn-danger px-4 fw-bold" (click)="confirmRejectArrival()" [disabled]="isProcessingAction">
-            <i class="bi bi-x-circle-fill me-1"></i> Reject Arrival
+        <div class="d-flex gap-2 align-items-center">
+          <button
+            type="button"
+            class="btn btn-danger px-3 fw-bold shadow-sm"
+            *ngIf="selectedReviewPermitItem?.status === 'under_review'"
+            (click)="confirmRejectSelectedPermit()"
+            [disabled]="isProcessingAction"
+          >
+            <i class="bi bi-x-circle-fill me-1"></i> Reject Permit Arrival
           </button>
-          <button type="button" class="btn btn-success px-4 fw-bold" (click)="confirmApproveArrival()" [disabled]="isProcessingAction">
-            <i class="bi bi-check-circle-fill me-1"></i> Approve Arrival
+          <button
+            type="button"
+            class="btn btn-success px-3 fw-bold shadow-sm"
+            *ngIf="selectedReviewPermitItem?.status === 'under_review'"
+            (click)="confirmApproveSelectedPermit()"
+            [disabled]="isProcessingAction"
+          >
+            <i class="bi bi-check-circle-fill me-1"></i> Approve Permit Arrival
+          </button>
+
+          <button
+            type="button"
+            class="btn btn-primary px-4 fw-bold shadow-sm ms-2"
+            (click)="finalizeApplicationReview()"
+            [disabled]="isProcessingAction"
+          >
+            <i class="bi bi-check-all me-1"></i> Finalize Application Review
           </button>
         </div>
       </div>

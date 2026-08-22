@@ -242,15 +242,24 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     });
   }
 
+  getOfficerStatusGroup(row: DistributorPermitRow | any): DistributorPermitStatusGroup {
+    const arrivalStatus = this.getArrivalStatusForRow(row);
+    if (arrivalStatus === 'under_review') return 'pending';
+    if (arrivalStatus === 'approved') return 'approved';
+    if (arrivalStatus === 'rejected') return 'rejected';
+    return row.statusGroup || 'pending';
+  }
+
   get counts(): { total: number; approved: number; pending: number; underProcess: number; objection: number; rejected: number } {
     return this.activeTabRows.reduce(
       (acc, row) => {
         acc.total += 1;
-        if (row.statusGroup === 'approved') acc.approved += 1;
-        else if (row.statusGroup === 'pending') acc.pending += 1;
-        else if (row.statusGroup === 'under_process') acc.underProcess += 1;
-        else if (row.statusGroup === 'objection') acc.objection += 1;
-        else if (row.statusGroup === 'rejected') acc.rejected += 1;
+        const stGroup = this.isOfficerUser ? this.getOfficerStatusGroup(row) : row.statusGroup;
+        if (stGroup === 'approved') acc.approved += 1;
+        else if (stGroup === 'pending') acc.pending += 1;
+        else if (stGroup === 'under_process') acc.underProcess += 1;
+        else if (stGroup === 'objection') acc.objection += 1;
+        else if (stGroup === 'rejected') acc.rejected += 1;
         return acc;
       },
       { total: 0, approved: 0, pending: 0, underProcess: 0, objection: 0, rejected: 0 }
@@ -265,7 +274,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const validTo = parsedTo && !Number.isNaN(parsedTo.getTime()) ? parsedTo : null;
 
     return this.activeTabRows.filter((row) => {
-      const matchesStatus = this.activeCardFilter === 'all' || row.statusGroup === this.activeCardFilter;
+      const stGroup = this.isOfficerUser ? this.getOfficerStatusGroup(row) : row.statusGroup;
+      const matchesStatus = this.activeCardFilter === 'all' || stGroup === this.activeCardFilter;
       const matchesSearch = !q ||
         (row.applicationId || '').toLowerCase().includes(q) ||
         (row.applicantName || '').toLowerCase().includes(q) ||
@@ -1059,7 +1069,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     });
   }
 
-  selectedArrivalReviewItem: any = null;
+  selectedArrivalReviewRow: any = null;
+  availableReviewPermits: any[] = [];
+  selectedReviewPermitNumber = '';
+  selectedReviewPermitItem: any = null;
   showArrivalReviewModal = false;
   officerActionRemarks = '';
   pendingArrivalReviews: any[] = [];
@@ -1076,14 +1089,36 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       return pNo === appIdLower || pAppRef === appIdLower || pNo.startsWith(appIdLower);
     });
     caseProcList.sort((a: any, b: any) => (b.id || 0) - (a.id || 0));
-    if (caseProcList.length > 0) return caseProcList[0];
 
-    const arrRec = (this.allArrivalsList || []).find((a: any) => {
+    const arrRecList = (this.allArrivalsList || []).filter((a: any) => {
       const pNo = String(a.permit_number || a.permitNumber || '').toLowerCase().trim();
       const pAppRef = String(a.distributor_permit?.reference_no || a.distributor_permit || '').toLowerCase().trim();
       return pNo === appIdLower || pAppRef === appIdLower || pNo.startsWith(appIdLower);
     });
-    return arrRec || null;
+
+    if (caseProcList.length === 0 && arrRecList.length === 0) {
+      return null;
+    }
+
+    const vehicleNumbers = Array.from(new Set([
+      ...caseProcList.map(c => c.vehicle_number || c.vehicleNumber).filter(Boolean),
+      ...arrRecList.map(a => a.vehicle_number || a.vehicleNumber).filter(Boolean)
+    ]));
+
+    const totalArrived = caseProcList.reduce((sum, c) => sum + Number(c.arrived_cases ?? c.arrivedCases ?? 0), 0)
+      || arrRecList.reduce((sum, a) => sum + Number(a.arrived_cases ?? a.arrivedCases ?? 0), 0);
+
+    const latest = caseProcList[0] || arrRecList[0];
+
+    return {
+      ...latest,
+      vehicle_number: vehicleNumbers.join(', '),
+      arrived_cases: totalArrived,
+      expected_cases: row?.cases || latest.expected_cases || latest.expectedCases || 0,
+      brand_name: row?.brandName || latest.brand_name || 'N/A',
+      size_ml: row?.sizeMl || latest.size_ml || 750,
+      status: caseProcList.some(c => String(c.status).toLowerCase() === 'under_review') ? 'under_review' : (latest.status || 'approved')
+    };
   }
 
   getArrivalStatusForRow(row: any): string {
@@ -1110,76 +1145,286 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       try { event.stopPropagation(); } catch {}
     }
     this.officerActionRemarks = '';
-    if (item) {
-      this.selectedArrivalReviewItem = item;
+
+    let targetRow = row;
+    if (!targetRow && item) {
+      const pRef = String(item.application_ref || item.distributor_permit || '').toLowerCase();
+      targetRow = (this.applications || []).find((a: any) => {
+        const ref = String(a.referenceNo || a.reference_no || a.id || '').toLowerCase();
+        return ref === pRef;
+      }) || (this.filteredRows || []).find(r => String(r.applicationId).toLowerCase() === pRef);
+    }
+    if (!targetRow && this.filteredRows.length > 0) {
+      targetRow = this.filteredRows[0];
+    }
+    this.selectedArrivalReviewRow = targetRow;
+
+    if (!this.allCasesProcessedList || this.allCasesProcessedList.length === 0) {
+      this.permitService.getCasesProcessed().subscribe({
+        next: (res: any) => {
+          this.allCasesProcessedList = Array.isArray(res) ? res : res?.results || [];
+          this.buildAvailableReviewPermits(item);
+          this.showArrivalReviewModal = true;
+        },
+        error: () => {
+          this.buildAvailableReviewPermits(item);
+          this.showArrivalReviewModal = true;
+        }
+      });
+    } else {
+      this.buildAvailableReviewPermits(item);
       this.showArrivalReviewModal = true;
-    } else if (row) {
-      const pendingItem = this.getPendingArrivalForItem(row);
-      if (pendingItem) {
-        this.selectedArrivalReviewItem = pendingItem;
-        this.showArrivalReviewModal = true;
-      } else {
-        this.openPermitDetailsModal(row, event);
+    }
+  }
+
+  private buildAvailableReviewPermits(initialItem?: any): void {
+    const row = this.selectedArrivalReviewRow;
+    const appId = row?.applicationId || row?.referenceNo || row?.reference_no || initialItem?.application_ref || '';
+    const rawApp = row?.application || row || {};
+    const appIdLower = String(appId).toLowerCase().trim();
+
+    let pDetails = rawApp?.permit_wise_details || rawApp?.permitWiseDetails || [];
+    if (!Array.isArray(pDetails) || pDetails.length === 0) {
+      const matching = (this.applications || []).find((a: any) => {
+        const ref = String(a.referenceNo || a.reference_no || a.id || '').toLowerCase().trim();
+        return ref === appIdLower;
+      });
+      if (matching) {
+        pDetails = matching.permit_wise_details || matching.permitWiseDetails || matching['application']?.permit_wise_details || [];
       }
     }
+
+    const itemsToMap = (Array.isArray(pDetails) && pDetails.length > 0) ? pDetails : [{
+      permit_number: appId,
+      total_cases: Number(row?.cases || rawApp?.cases || rawApp?.total_cases || initialItem?.expected_cases || initialItem?.arrived_cases || 0),
+      line_items: rawApp?.line_items || rawApp?.lineItems || []
+    }];
+
+    let defaultBrand = row?.brandName || rawApp?.brand_name || rawApp?.brandName || '';
+    if (!defaultBrand || defaultBrand === 'N/A') {
+      const lines = rawApp?.line_items || rawApp?.lineItems || [];
+      if (lines[0]) {
+        defaultBrand = lines[0].brand_name || lines[0].brandName || lines[0].selectedBrandName || lines[0].brand_details?.brand_name || 'N/A';
+      }
+    }
+
+    const isSinglePermit = itemsToMap.length === 1;
+
+    const mapped = itemsToMap.map((p: any) => {
+      const pNum = String(p.permit_number || p.permitNumber || appId);
+      const pNumLower = pNum.toLowerCase().trim();
+
+      let bName = p.brand_name || p.brandName;
+      if (!bName || bName === 'N/A') {
+        const lines = p.line_items || p.lineItems || [];
+        if (lines[0]) {
+          bName = lines[0].brand_name || lines[0].brandName || lines[0].selectedBrandName || lines[0].brand_details?.brand_name;
+        }
+      }
+      if (!bName || bName === 'N/A') {
+        bName = defaultBrand || 'N/A';
+      }
+
+      // Exact permit number matching for cases processed
+      const caseProcList = (this.allCasesProcessedList || []).filter((c: any) => {
+        const cPNo = String(c.permit_number || c.permitNumber || '').toLowerCase().trim();
+        const cAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase().trim();
+        if (cPNo) {
+          return cPNo === pNumLower;
+        }
+        return isSinglePermit && cAppRef === appIdLower;
+      });
+      caseProcList.sort((a: any, b: any) => (b.id || 0) - (a.id || 0));
+      const caseProc = caseProcList[0] || null;
+
+      // Exact permit number matching for arrivals
+      const arrRec = (this.allArrivalsList || []).find((a: any) => {
+        const aPNo = String(a.permit_number || a.permitNumber || '').toLowerCase().trim();
+        const aAppRef = String(a.distributor_permit?.reference_no || a.distributor_permit || '').toLowerCase().trim();
+        if (aPNo) {
+          return aPNo === pNumLower;
+        }
+        return isSinglePermit && aAppRef === appIdLower;
+      });
+
+      let pStatus = caseProc ? String(caseProc.status).toLowerCase().trim() : (arrRec ? 'approved' : 'pending');
+
+      const vehicleNo = caseProc?.vehicle_number || caseProc?.vehicleNumber || arrRec?.vehicle_number || arrRec?.vehicleNumber || '';
+      const arrivedCases = caseProc?.arrived_cases ?? (caseProc as any)?.arrivedCases ?? arrRec?.arrived_cases ?? (arrRec as any)?.arrivedCases ?? null;
+      const expectedCases = caseProc?.expected_cases || arrRec?.expected_cases || Number(p.total_cases || p.totalCases || 0);
+      const notes = caseProc?.remarks || arrRec?.remarks || '';
+      const submittedAt = caseProc?.submitted_at || arrRec?.arrived_at || null;
+      const officerNotes = caseProc?.officer_remarks || '';
+
+      return {
+        permitNumber: pNum,
+        brandName: bName,
+        sizeMl: Number(p.size_ml || p.sizeMl || (p.line_items?.[0]?.size_ml) || rawApp?.size_ml || 750),
+        totalCases: Number(p.total_cases || p.totalCases || expectedCases || 0),
+        expectedCases,
+        arrivedCases,
+        vehicleNumber: vehicleNo,
+        status: pStatus,
+        notes,
+        submittedAt,
+        officerNotes,
+        caseProcessedId: caseProc?.id || null,
+        rawCaseProc: caseProc,
+        rawArrival: arrRec
+      };
+    });
+
+    // Show ONLY permits that have been submitted by distributor for arrival review (status !== 'pending')
+    const submittedOnly = mapped.filter(p => p.status !== 'pending' && (p.caseProcessedId || p.rawArrival || p.status === 'under_review' || p.status === 'approved' || p.status === 'rejected'));
+    this.availableReviewPermits = submittedOnly;
+
+    if (initialItem && initialItem.permit_number) {
+      const match = this.availableReviewPermits.find(p => p.permitNumber.toLowerCase() === String(initialItem.permit_number).toLowerCase());
+      if (match) {
+        this.selectedReviewPermitNumber = match.permitNumber;
+        this.selectedReviewPermitItem = match;
+        return;
+      }
+    }
+
+    const firstUnderReview = this.availableReviewPermits.find(p => p.status === 'under_review');
+    const chosen = firstUnderReview || this.availableReviewPermits[0] || null;
+    this.selectedReviewPermitItem = chosen;
+    this.selectedReviewPermitNumber = chosen?.permitNumber || '';
+  }
+
+  onReviewPermitChange(): void {
+    this.selectedReviewPermitItem = this.availableReviewPermits.find(p => p.permitNumber === this.selectedReviewPermitNumber) || null;
+    this.officerActionRemarks = this.selectedReviewPermitItem?.officerNotes || '';
+  }
+
+  get reviewedPermitsCount(): number {
+    return (this.availableReviewPermits || []).filter(p => p.status === 'approved' || p.status === 'rejected').length;
+  }
+
+  get allSubmittedPermitsReviewed(): boolean {
+    if (!this.availableReviewPermits || this.availableReviewPermits.length === 0) return false;
+    return this.availableReviewPermits.every(p => p.status === 'approved' || p.status === 'rejected');
+  }
+
+  getReviewPermitStatusBadgeClass(item: any): string {
+    if (!item) return 'bg-secondary';
+    if (item.status === 'under_review') return 'bg-warning text-dark';
+    if (item.status === 'approved') return 'bg-success text-white';
+    if (item.status === 'rejected') return 'bg-danger text-white';
+    return 'bg-secondary text-white';
+  }
+
+  getReviewPermitStatusLabel(item: any): string {
+    if (!item) return 'Pending';
+    if (item.status === 'under_review') return 'Awaiting Approval (Under Review)';
+    if (item.status === 'approved') return 'Stock Arrival Approved';
+    if (item.status === 'rejected') return 'Stock Arrival Rejected';
+    return 'Pending Stock Arrival';
+  }
+
+  finalizeApplicationReview(): void {
+    if (!this.allSubmittedPermitsReviewed) {
+      const unreviewed = (this.availableReviewPermits || []).filter(p => p.status === 'under_review');
+      const pList = unreviewed.map(p => p.permitNumber).join(', ');
+      if (typeof Swal !== 'undefined') {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Pending Permit Action Required',
+          text: `Action required on remaining permits! Please approve or reject each submitted permit before finalizing. Remaining permits awaiting action: ${pList}`
+        });
+      } else {
+        alert(`Action required on remaining permits! Please approve or reject each submitted permit before finalizing. Remaining: ${pList}`);
+      }
+      return;
+    }
+
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        icon: 'success',
+        title: 'Review Finalized!',
+        text: 'All submitted permits have been reviewed and acted upon successfully.'
+      });
+    } else {
+      alert('All submitted permits have been reviewed and acted upon successfully.');
+    }
+    this.closeArrivalReviewModal();
+    this.loadPendingArrivalReviews();
+    this.loadApplications();
   }
 
   closeArrivalReviewModal(): void {
     this.showArrivalReviewModal = false;
-    this.selectedArrivalReviewItem = null;
+    this.selectedArrivalReviewRow = null;
+    this.selectedReviewPermitItem = null;
+    this.availableReviewPermits = [];
     this.officerActionRemarks = '';
   }
 
-  confirmApproveArrival(): void {
-    if (!this.selectedArrivalReviewItem) return;
+  confirmApproveSelectedPermit(): void {
+    if (!this.selectedReviewPermitItem || !this.selectedReviewPermitItem.caseProcessedId) {
+      alert('No active stock arrival submission found to approve for this permit.');
+      return;
+    }
     this.isProcessingAction = true;
-    this.permitService.performCasesProcessedAction(this.selectedArrivalReviewItem.id, 'approve', this.officerActionRemarks).subscribe({
+    this.permitService.performCasesProcessedAction(this.selectedReviewPermitItem.caseProcessedId, 'approve', this.officerActionRemarks).subscribe({
       next: () => {
         this.isProcessingAction = false;
-        this.closeArrivalReviewModal();
         if (typeof Swal !== 'undefined') {
-          Swal.fire('Approved!', 'Stock arrival approved successfully and stored in IMFL cases register.', 'success');
+          Swal.fire('Approved!', `Stock arrival for Permit ${this.selectedReviewPermitItem.permitNumber} approved successfully!`, 'success');
         } else {
-          alert('Stock arrival approved successfully!');
+          alert(`Stock arrival for Permit ${this.selectedReviewPermitItem.permitNumber} approved!`);
         }
+        this.selectedReviewPermitItem.status = 'approved';
         this.loadPendingArrivalReviews();
         this.loadApplications();
       },
       error: (err: any) => {
         this.isProcessingAction = false;
         if (typeof Swal !== 'undefined') {
-          Swal.fire('Error', 'Failed to approve stock arrival: ' + (err?.error?.message || err?.message || 'Server error'), 'error');
+          Swal.fire('Error', 'Failed to approve: ' + (err?.error?.message || err?.message || 'Server error'), 'error');
         } else {
-          alert('Failed to approve stock arrival: ' + (err?.error?.message || err?.message || 'Server error'));
+          alert('Failed to approve: ' + (err?.error?.message || err?.message || 'Server error'));
         }
       }
     });
   }
 
-  confirmRejectArrival(): void {
-    if (!this.selectedArrivalReviewItem) return;
+  confirmRejectSelectedPermit(): void {
+    if (!this.selectedReviewPermitItem || !this.selectedReviewPermitItem.caseProcessedId) {
+      alert('No active stock arrival submission found to reject for this permit.');
+      return;
+    }
     this.isProcessingAction = true;
-    this.permitService.performCasesProcessedAction(this.selectedArrivalReviewItem.id, 'reject', this.officerActionRemarks).subscribe({
+    this.permitService.performCasesProcessedAction(this.selectedReviewPermitItem.caseProcessedId, 'reject', this.officerActionRemarks).subscribe({
       next: () => {
         this.isProcessingAction = false;
-        this.closeArrivalReviewModal();
         if (typeof Swal !== 'undefined') {
-          Swal.fire('Rejected!', 'Stock arrival rejected. Action re-opened for permit.', 'info');
+          Swal.fire('Rejected', `Stock arrival for Permit ${this.selectedReviewPermitItem.permitNumber} rejected.`, 'info');
         } else {
-          alert('Stock arrival rejected.');
+          alert(`Stock arrival for Permit ${this.selectedReviewPermitItem.permitNumber} rejected.`);
         }
+        this.selectedReviewPermitItem.status = 'rejected';
         this.loadPendingArrivalReviews();
         this.loadApplications();
       },
       error: (err: any) => {
         this.isProcessingAction = false;
         if (typeof Swal !== 'undefined') {
-          Swal.fire('Error', 'Failed to reject stock arrival: ' + (err?.error?.message || err?.message || 'Server error'), 'error');
+          Swal.fire('Error', 'Failed to reject: ' + (err?.error?.message || err?.message || 'Server error'), 'error');
         } else {
-          alert('Failed to reject stock arrival: ' + (err?.error?.message || err?.message || 'Server error'));
+          alert('Failed to reject: ' + (err?.error?.message || err?.message || 'Server error'));
         }
       }
     });
+  }
+
+  confirmApproveArrival(): void {
+    this.confirmApproveSelectedPermit();
+  }
+
+  confirmRejectArrival(): void {
+    this.confirmRejectSelectedPermit();
   }
 
   loadPendingArrivalReviews(): void {
@@ -2291,7 +2536,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       premises: this.permitService.getPremises().pipe(catchError(() => of({ destination: '' } as any))),
       requisitions: this.permitService.listApplications().pipe(catchError(() => of([] as any[]))),
       revalidations: this.permitService.getRevalidations().pipe(catchError(() => of([] as any[]))),
-      cancellations: this.permitService.getCancellations().pipe(catchError(() => of([] as any[])))
+      cancellations: this.permitService.getCancellations().pipe(catchError(() => of([] as any[]))),
+      casesProcessed: this.permitService.getCasesProcessed().pipe(catchError(() => of([] as any[]))),
+      arrivals: this.permitService.getArrivals().pipe(catchError(() => of([] as any[])))
     })
       .pipe(
         takeUntil(this.destroy$),
@@ -2300,12 +2547,16 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         })
       )
       .subscribe({
-        next: ({ suppliers, brands, premises, requisitions, revalidations, cancellations }) => {
+        next: ({ suppliers, brands, premises, requisitions, revalidations, cancellations, casesProcessed, arrivals }) => {
           try {
             this.suppliers = Array.isArray(suppliers) ? suppliers : [];
             this.brandMaster = Array.isArray(brands?.data) ? brands.data : (Array.isArray(brands) ? brands : []);
             this.routeForm.controls.destination.setValue(premises?.destination || '', { emitEvent: false });
             this.populateDefaultBrandRows();
+
+            this.allCasesProcessedList = Array.isArray(casesProcessed) ? casesProcessed : (casesProcessed as any)?.results || [];
+            this.allArrivalsList = Array.isArray(arrivals) ? arrivals : (arrivals as any)?.results || [];
+            this.pendingArrivalReviews = this.allCasesProcessedList.filter((c: any) => String(c.status).toLowerCase() === 'under_review');
 
             this.processLoadedApplications(requisitions, revalidations, cancellations);
           } catch (err) {
@@ -2320,14 +2571,18 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   private loadApplications(): void {
-    this.loadPendingArrivalReviews();
     forkJoin({
       requisitions: this.permitService.listApplications().pipe(catchError(() => of([]))),
       revalidations: this.permitService.getRevalidations().pipe(catchError(() => of([]))),
-      cancellations: this.permitService.getCancellations().pipe(catchError(() => of([])))
+      cancellations: this.permitService.getCancellations().pipe(catchError(() => of([]))),
+      casesProcessed: this.permitService.getCasesProcessed().pipe(catchError(() => of([]))),
+      arrivals: this.permitService.getArrivals().pipe(catchError(() => of([])))
     })
       .pipe(takeUntil(this.destroy$))
-      .subscribe(({ requisitions, revalidations, cancellations }) => {
+      .subscribe(({ requisitions, revalidations, cancellations, casesProcessed, arrivals }) => {
+        this.allCasesProcessedList = Array.isArray(casesProcessed) ? casesProcessed : (casesProcessed as any)?.results || [];
+        this.allArrivalsList = Array.isArray(arrivals) ? arrivals : (arrivals as any)?.results || [];
+        this.pendingArrivalReviews = this.allCasesProcessedList.filter((c: any) => String(c.status).toLowerCase() === 'under_review');
         this.processLoadedApplications(requisitions, revalidations, cancellations);
       });
   }

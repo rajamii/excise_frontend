@@ -12,6 +12,7 @@ import { UnifiedActionButtonsComponent } from '../../../shared/components/unifie
 import { UnifiedActionsService } from '../../../shared/services/unified-actions.service';
 import { HologramDataService } from '../../licensee/supplyChain/services/hologram-data.service';
 import { SidebarPendingBadgeService } from '../../../shared/services/sidebar-pending-badge.service';
+import { DistributorPermitService } from '../../../core/services/distributor-permit.service';
 
 type HologramRequestCategory = 'PENDING' | 'UNDER_PROCESS' | 'APPROVED' | 'REJECTED';
 
@@ -262,6 +263,7 @@ export class OfficerInChargeDashboardComponent implements OnInit {
   private hologramService = inject(HologramDataService);
   private enaRequisitionService = inject(EnaRequisitionService);
   private sidebarPendingBadgeService = inject(SidebarPendingBadgeService);
+  private distributorPermitService = inject(DistributorPermitService);
 
   // Data properties
   allApplications: OfficerData[] = [];
@@ -277,6 +279,7 @@ export class OfficerInChargeDashboardComponent implements OnInit {
   public hologramProcurementPendingCount = 0;
   public blDetailsPendingCount = 0;
   public dailyEntryPendingCount = 0;
+  public imflCasesPendingCount = 0;
 
   // Pagination
   currentPage: number = 1;
@@ -310,7 +313,20 @@ export class OfficerInChargeDashboardComponent implements OnInit {
       this.loadHologramProcurementPendingCount();
       this.loadBlDetailsPendingCount();
       this.loadDailyEntryPendingCount();
+      this.loadImflCasesPendingCount();
     }, 0);
+  }
+
+  private loadImflCasesPendingCount(): void {
+    this.distributorPermitService.getCasesProcessed().subscribe({
+      next: (res: any) => {
+        const list = Array.isArray(res) ? res : (res?.results || []);
+        this.imflCasesPendingCount = list.filter((c: any) => String(c.status).toLowerCase() === 'under_review').length;
+      },
+      error: () => {
+        this.imflCasesPendingCount = 0;
+      }
+    });
   }
 
   private loadDailyEntryPendingCount(): void {
@@ -422,8 +438,8 @@ export class OfficerInChargeDashboardComponent implements OnInit {
     const holProcPending = this.hologramProcurementPendingCount || 0;
 
     return {
-      applied: transitApplied + hologramReqApplied + bldApplied,
-      pending: transitPending + hologramReqPending + holProcPending + bldPending,
+      applied: transitApplied + hologramReqApplied + bldApplied + this.imflCasesPendingCount,
+      pending: transitPending + hologramReqPending + holProcPending + bldPending + this.imflCasesPendingCount,
       approved: transitApproved + hologramReqApproved + bldApproved,
       rejected: transitRejected + hologramReqRejected + bldRejected,
       dailyEntry: this.dailyEntryPendingCount
