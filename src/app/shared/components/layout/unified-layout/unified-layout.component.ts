@@ -513,7 +513,17 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   private getVisibleOfficerSections(): string[] {
     if (this.isLicenseeUser()) return [];
 
-    const sections: string[] = ['distributor-permit', 'distributor-permit-revalidation', 'distributor-permit-cancellation', 'imfl-revalidation', 'imfl-cancellation', 'cancellation'];
+    const sections: string[] = [
+      'distributor-permit',
+      'imfl-permit',
+      'distributor-permit-requisition',
+      'imfl-requisition',
+      'distributor-permit-revalidation',
+      'imfl-revalidation',
+      'distributor-permit-cancellation',
+      'imfl-cancellation',
+      'cancellation'
+    ];
     for (const item of this.officerSectionItems) {
       if (!this.shouldShowOfficerSectionItem(item)) continue;
       sections.push(item.section);
@@ -522,7 +532,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   getImflPermitTotalPendingCount(): number {
-    const req = this.getPendingCount('distributor-permit');
+    const req = this.getPendingCount('distributor-permit') || this.getPendingCount('distributor-permit-requisition') || this.getPendingCount('imfl-requisition');
     const rev = this.getPendingCount('distributor-permit-revalidation') || this.getPendingCount('imfl-revalidation');
     const can = this.getPendingCount('distributor-permit-cancellation') || this.getPendingCount('imfl-cancellation');
     return req + rev + can;

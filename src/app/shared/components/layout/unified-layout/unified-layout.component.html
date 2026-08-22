@@ -291,7 +291,7 @@
                   <button class="nav-item nav-item--sub imfl-permit-sub-item" (click)="navigateToImflPermitTab('requisition')" [class.active]="isDashboardSectionActive('distributor-permit') && isImflTabActive('requisition')">
                     <mat-icon class="nav-icon">description</mat-icon>
                     <span class="nav-text">IMFL Requisition</span>
-                    <span class="nav-badge" *ngIf="getPendingCount('distributor-permit') as pending">{{ pending }}</span>
+                    <span class="nav-badge" *ngIf="(getPendingCount('distributor-permit') || getPendingCount('distributor-permit-requisition') || getPendingCount('imfl-requisition')) as pending">{{ pending }}</span>
                     <span class="nav-badge nav-badge--payment" *ngIf="getPendingCount('distributor-permit:payment') as payCount" title="Awaiting Payment"><mat-icon>payment</mat-icon></span>
                   </button>
 
