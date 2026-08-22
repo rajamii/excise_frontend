@@ -729,6 +729,61 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     });
   }
 
+  showArrivalsRegisterModal = false;
+  arrivalRecords: any[] = [];
+  isLoadingArrivalRecords = false;
+  arrivalSearchTerm = '';
+  arrivalMonthFilter = '';
+
+  openArrivalsRegisterModal(): void {
+    this.isLoadingArrivalRecords = true;
+    this.showArrivalsRegisterModal = true;
+    this.arrivalSearchTerm = '';
+    this.arrivalMonthFilter = '';
+
+    this.permitService.getArrivals().subscribe({
+      next: (res: any[]) => {
+        this.arrivalRecords = Array.isArray(res) ? res : [];
+        this.isLoadingArrivalRecords = false;
+      },
+      error: (err: any) => {
+        console.error('Error fetching stock arrivals register:', err);
+        this.arrivalRecords = [];
+        this.isLoadingArrivalRecords = false;
+      }
+    });
+  }
+
+  closeArrivalsRegisterModal(): void {
+    this.showArrivalsRegisterModal = false;
+  }
+
+  get filteredArrivalRecords(): any[] {
+    const q = (this.arrivalSearchTerm || '').trim().toLowerCase();
+    const month = (this.arrivalMonthFilter || '').trim();
+
+    return (this.arrivalRecords || []).filter(item => {
+      const dpRef = String(item.distributor_permit || item.distributorPermit || '').toLowerCase();
+      const pNum = String(item.permit_number || item.permitNumber || '').toLowerCase();
+      const vNum = String(item.vehicle_number || item.vehicleNumber || '').toLowerCase();
+      const bName = String(item.brand_name || item.brandName || '').toLowerCase();
+
+      const matchesSearch = !q || dpRef.includes(q) || pNum.includes(q) || vNum.includes(q) || bName.includes(q);
+
+      let matchesMonth = true;
+      if (month && item.arrived_at) {
+        const itemMonth = String(item.arrived_at).substring(0, 7); // YYYY-MM
+        matchesMonth = itemMonth === month;
+      }
+
+      return matchesSearch && matchesMonth;
+    });
+  }
+
+  get totalArrivedCasesSum(): number {
+    return this.filteredArrivalRecords.reduce((sum, item) => sum + Number(item.arrived_cases || item.arrivedCases || 0), 0);
+  }
+
   canRequestRevalidation(row: DistributorPermitRow | any): boolean {
     if (!this.isDistributorUser) return false;
     const raw = row?.application || row;

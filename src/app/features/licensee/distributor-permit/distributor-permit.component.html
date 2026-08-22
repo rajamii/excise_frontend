@@ -3,7 +3,8 @@
     [activeTab]="activeTab"
     [isFormView]="isFormView"
     (tabChange)="onTabChange($event)"
-    (applyNew)="openApplyForm()">
+    (applyNew)="openApplyForm()"
+    (viewArrivals)="openArrivalsRegisterModal()">
   </app-imfl-header>
 
   <div class="dp-alert dp-alert--error" *ngIf="loadError">
@@ -1366,6 +1367,124 @@
           <span *ngIf="isSubmittingArrival" class="spinner-border spinner-border-sm me-2"></span>
           <i *ngIf="!isSubmittingArrival" class="bi bi-check-circle-fill me-2"></i>
           {{ isSubmittingArrival ? 'Submitting...' : 'Submit Stock Arrival' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW CASES ARRIVAL REGISTER MODAL -->
+<div
+  class="modal fade show d-block"
+  tabindex="-1"
+  *ngIf="showArrivalsRegisterModal"
+  style="background-color: rgba(0,0,0,0.5); z-index: 1070;"
+>
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content shadow-lg border-0 rounded-3">
+      <div class="modal-header bg-info bg-gradient text-white py-3">
+        <h5 class="modal-title fw-bold">
+          <i class="bi bi-journal-text me-2"></i>
+          IMFL Monthly Cases Arrival Register
+        </h5>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          (click)="closeArrivalsRegisterModal()"
+        ></button>
+      </div>
+
+      <div class="modal-body p-4" style="max-height: 80vh; overflow-y: auto;">
+        <!-- Filters Header Bar -->
+        <div class="row g-3 mb-3 align-items-center">
+          <div class="col-md-6">
+            <div class="input-group">
+              <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Search by Permit No, Vehicle No, Application ID, or Brand..."
+                [(ngModel)]="arrivalSearchTerm"
+              />
+            </div>
+          </div>
+          <div class="col-md-4">
+            <input
+              type="month"
+              class="form-control"
+              [(ngModel)]="arrivalMonthFilter"
+              title="Filter by arrival month"
+            />
+          </div>
+          <div class="col-md-2 text-end">
+            <span class="badge bg-dark fs-6 px-3 py-2">
+              Total: {{ filteredArrivalRecords.length }} Records
+            </span>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div class="text-center py-5" *ngIf="isLoadingArrivalRecords">
+          <div class="spinner-border text-info mb-2" role="status"></div>
+          <p class="text-muted m-0">Loading cases arrival records...</p>
+        </div>
+
+        <!-- Empty State -->
+        <div class="text-center py-5 text-muted" *ngIf="!isLoadingArrivalRecords && filteredArrivalRecords.length === 0">
+          <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+          <p class="fs-6 m-0">No stock arrival records found.</p>
+        </div>
+
+        <!-- Table View -->
+        <div class="table-responsive" *ngIf="!isLoadingArrivalRecords && filteredArrivalRecords.length > 0">
+          <table class="table table-hover align-middle border">
+            <thead class="table-light fw-bold text-secondary">
+              <tr>
+                <th>#</th>
+                <th>Requisition App Ref.</th>
+                <th>Permit Number</th>
+                <th>Car / Vehicle No.</th>
+                <th>Brand Name</th>
+                <th>Size (ml)</th>
+                <th>Expected Cases</th>
+                <th>Arrived Cases</th>
+                <th>Arrived On</th>
+                <th>Status</th>
+                <th>Remarks</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of filteredArrivalRecords; let i = index">
+                <td>{{ i + 1 }}</td>
+                <td class="fw-semibold text-primary">{{ item.distributor_permit }}</td>
+                <td><span class="badge bg-secondary">{{ item.permit_number }}</span></td>
+                <td class="fw-bold text-dark">{{ item.vehicle_number }}</td>
+                <td class="text-truncate" style="max-width: 200px;" [title]="item.brand_name">{{ item.brand_name }}</td>
+                <td>{{ item.size_ml }} ml</td>
+                <td><span class="badge bg-light text-dark border">{{ item.expected_cases }} Cases</span></td>
+                <td><span class="badge bg-success fs-6">{{ item.arrived_cases }} Cases</span></td>
+                <td class="small">{{ item.arrived_at | date:'dd-MMM-yyyy HH:mm' }}</td>
+                <td>
+                  <span class="badge bg-info text-white">{{ item.status || 'Submitted' }}</span>
+                </td>
+                <td class="small text-muted text-truncate" style="max-width: 150px;" [title]="item.remarks">{{ item.remarks || '-' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="modal-footer bg-light py-3 d-flex justify-content-between">
+        <div>
+          <span class="fw-bold text-dark me-3">Total Arrived Cases:</span>
+          <span class="badge bg-success fs-6">{{ totalArrivedCasesSum }} Cases</span>
+        </div>
+        <button
+          type="button"
+          class="btn btn-secondary px-4"
+          (click)="closeArrivalsRegisterModal()"
+        >
+          Close
         </button>
       </div>
     </div>

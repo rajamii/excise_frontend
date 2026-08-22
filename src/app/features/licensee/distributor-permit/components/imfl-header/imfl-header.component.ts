@@ -17,6 +17,7 @@ export class ImflHeaderComponent {
   @Input() isFormView = false;
   @Output() tabChange = new EventEmitter<ImflTabType>();
   @Output() applyNew = new EventEmitter<void>();
+  @Output() viewArrivals = new EventEmitter<void>();
 
   selectTab(tab: ImflTabType): void {
     if (this.activeTab !== tab) {
@@ -27,5 +28,9 @@ export class ImflHeaderComponent {
 
   onApplyNewClick(): void {
     this.applyNew.emit();
+  }
+
+  onViewArrivalsClick(): void {
+    this.viewArrivals.emit();
   }
 }

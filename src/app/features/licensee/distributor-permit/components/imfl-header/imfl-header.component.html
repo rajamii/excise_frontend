@@ -1,1 +1,32 @@
-<!-- IMFL Header removed as requested -->
+<div class="imfl-header-bar d-flex justify-content-between align-items-center mb-3 p-3 bg-white rounded-3 shadow-sm" *ngIf="!isFormView">
+  <div class="d-flex align-items-center gap-2">
+    <button type="button" class="btn btn-light btn-sm rounded-circle p-2 shadow-sm border" title="Go Back">
+      <i class="bi bi-arrow-left"></i>
+    </button>
+    <h4 class="m-0 fw-bold text-dark me-3">
+      IMFL / <span class="text-capitalize">{{ activeTab }}</span>
+    </h4>
+  </div>
+
+  <div class="d-flex align-items-center gap-2">
+    <button
+      type="button"
+      class="btn btn-outline-info btn-sm fw-bold px-3 py-2 rounded-pill shadow-sm"
+      (click)="onViewArrivalsClick()"
+      title="View Monthly Cases Arrival Register"
+    >
+      <i class="bi bi-clipboard-data-fill me-1"></i>
+      View Cases Arrival
+    </button>
+
+    <button
+      type="button"
+      class="btn btn-danger btn-sm fw-bold px-3 py-2 text-white bg-gradient border-0 rounded-pill shadow-sm"
+      (click)="onApplyNewClick()"
+      style="background: linear-gradient(135deg, #ff416c, #ff4b2b);"
+    >
+      <i class="bi bi-plus-circle-fill me-1"></i>
+      Apply for Import Permit
+    </button>
+  </div>
+</div>
