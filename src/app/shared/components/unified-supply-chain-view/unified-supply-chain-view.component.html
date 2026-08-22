@@ -386,6 +386,67 @@
 
                 <!-- ========== CANCELLATION DETAILS SECTION ========== -->
                 @if (isCancellation()) {
+                <!-- Cancelled Permit Allocation Breakdown Card -->
+                <div class="section-card mb-4" *ngIf="applicationData['permitWiseDetails'] && applicationData['permitWiseDetails'].length > 0">
+                    <h5 class="section-title text-danger d-flex align-items-center justify-content-between">
+                        <span><i class="bi bi-x-circle-fill me-2 text-danger"></i>Cancelled Permit Details ({{ applicationData.cancelledPermitNumber || applicationData.originalPermitNo }})</span>
+                        <span class="badge bg-danger fs-6">{{ applicationData['permitWiseDetails'].length }} Permit(s)</span>
+                    </h5>
+                    <div class="accordion" id="cancellationPermitBreakdownAccordion">
+                        <div class="accordion-item mb-3 border border-danger border-opacity-25 shadow-sm rounded" *ngFor="let pDetail of applicationData['permitWiseDetails']; let pIdx = index">
+                            <h2 class="accordion-header" [id]="'canPermitHeading' + pIdx">
+                                <button class="accordion-button bg-danger bg-opacity-10 fw-bold text-danger d-flex justify-content-between pe-4" type="button" data-bs-toggle="collapse" [attr.data-bs-target]="'#canPermitCollapse' + pIdx" aria-expanded="true">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="badge bg-danger">Cancelled Permit</span>
+                                        <span class="text-danger fw-bold fs-6">{{ pDetail.permit_number || pDetail.permitNumber }}</span>
+                                    </div>
+                                    <div class="d-flex gap-3 text-dark fs-7 me-3">
+                                        <span>Cases: <strong>{{ pDetail.total_cases || pDetail.totalCases }}</strong></span>
+                                        <span>Import Fee: <strong>₹{{ (pDetail.total_import_fee || pDetail.totalImportFee) | number:'1.2-2' }}</strong></span>
+                                        <span>Bulk Litres: <strong>{{ (pDetail.total_bulk_litres || pDetail.totalBulkLitres) | number:'1.2-2' }} BL</strong></span>
+                                    </div>
+                                </button>
+                            </h2>
+                            <div [id]="'canPermitCollapse' + pIdx" class="accordion-collapse collapse show" [attr.aria-labelledby]="'canPermitHeading' + pIdx">
+                                <div class="accordion-body p-3">
+                                    <div class="table-responsive mb-3">
+                                        <table class="table table-bordered align-middle mb-0" style="font-size: 13px;">
+                                            <thead class="table-light text-secondary">
+                                                <tr>
+                                                    <th>#</th>
+                                                    <th>Brand Name</th>
+                                                    <th>Size</th>
+                                                    <th class="text-center">Cases</th>
+                                                    <th class="text-end">Import Fee</th>
+                                                    <th class="text-end">Add. ED</th>
+                                                    <th class="text-end">BL</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr *ngFor="let item of pDetail.line_items || pDetail.lineItems; let itemIdx = index">
+                                                    <td>{{ itemIdx + 1 }}</td>
+                                                    <td class="fw-medium">{{ item.brand_name || item.brandName }}</td>
+                                                    <td>{{ item.size_ml || item.sizeMl }} ml</td>
+                                                    <td class="text-center fw-bold">{{ item.cases }}</td>
+                                                    <td class="text-end text-success fw-semibold">₹{{ (item.total_import || item.totalImport || 0) | number:'1.2-2' }}</td>
+                                                    <td class="text-end">₹{{ (item.total_additional_ed || item.totalAddEd || 0) | number:'1.2-2' }}</td>
+                                                    <td class="text-end fw-medium">{{ (item.bulk_litres || item.bl || 0) | number:'1.3-3' }} BL</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="p-2 bg-light rounded border d-flex flex-wrap gap-3 justify-content-around text-center small">
+                                        <div><span class="text-muted d-block">Cases</span><strong>{{ pDetail.total_cases || pDetail.totalCases }}</strong></div>
+                                        <div><span class="text-muted d-block">Total Import Fee</span><strong class="text-success">₹{{ (pDetail.total_import_fee || pDetail.totalImportFee) | number:'1.2-2' }}</strong></div>
+                                        <div><span class="text-muted d-block">Total Add. ED</span><strong>₹{{ (pDetail.total_additional_ed || pDetail.totalAdditionalEd) | number:'1.2-2' }}</strong></div>
+                                        <div><span class="text-muted d-block">Total Bulk Litres</span><strong>{{ (pDetail.total_bulk_litres || pDetail.totalBulkLitres) | number:'1.3-3' }} BL</strong></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="section-card mb-4">
                     <h5 class="section-title">Original Permit Information</h5>
                     <div class="table-responsive">

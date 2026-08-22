@@ -341,27 +341,126 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   cancellationDeclarationAccepted = false;
   isSubmittingCancellation = false;
 
+  selectedPermitNumberForCancellation = '';
+  availablePermitOptionsForCancellation: Array<{
+    permitNumber: string;
+    totalCases: number;
+    label: string;
+    isUnderProcess: boolean;
+    isCancelled: boolean;
+    detail: any;
+  }> = [];
+  selectedPermitDetail: any = null;
+
   onCancelPermit(row: DistributorPermitRow | any, event?: Event): void {
     if (event) {
       try { event.preventDefault(); } catch {}
       try { event.stopPropagation(); } catch {}
     }
-    console.log('Cancel Permit clicked for row:', row);
     this.cancellationTargetRow = row;
     this.cancellationReasonType = 'Non-availability of tankers / Transport issues';
     this.cancellationReasonDetails = '';
     this.cancellationDeclarationAccepted = false;
+
+    const appId = row.applicationId || row.referenceNo || row.reference_no || '';
+    const rawApp = row.application || row;
+    const pDetails = rawApp?.permit_wise_details || rawApp?.permitWiseDetails || [];
+
+    const appIdLower = String(appId).toLowerCase();
+    const existingCancellations = (this.applications || []).filter((a: any) => {
+      const isCan = String(a.referenceNo || a.reference_no || '').startsWith('IMFLCAN') || a.applicationType === 'cancellation';
+      const refTarget = String(a.application?.distributor_permit || a.application?.distributorPermit || a.distributor_permit || '').toLowerCase();
+      const targetNo = String(a.application?.distributor_permit_ref_no || a.distributor_permit_ref_no || '').toLowerCase();
+      return isCan && (refTarget === appIdLower || targetNo === appIdLower || String(a.referenceNo).toLowerCase().includes(appIdLower));
+    });
+
+    this.availablePermitOptionsForCancellation = [];
+
+    if (Array.isArray(pDetails) && pDetails.length > 0) {
+      pDetails.forEach((p: any) => {
+        const pNum = String(p.permit_number || p.permitNumber || appId);
+        const cases = Number(p.total_cases || p.totalCases || 0);
+
+        const existingForPermit = existingCancellations.find((canApp: any) => {
+          const cancelledNo = String(canApp.cancelledPermitNumber || canApp.cancelled_permit_number || canApp.application?.cancelled_permit_number || '').toLowerCase();
+          const reasonText = String(canApp.cancellationReason || canApp.cancellation_reason || '').toLowerCase();
+          return (cancelledNo && cancelledNo === pNum.toLowerCase()) || reasonText.includes(pNum.toLowerCase());
+        });
+
+        let isCancelled = false;
+        let isUnderProcess = false;
+
+        if (existingForPermit) {
+          const st = String(existingForPermit['status'] || existingForPermit['currentStage'] || '').toUpperCase();
+          if (st.includes('APPROVED') || st.includes('COMPLETED')) {
+            isCancelled = true;
+          } else if (!st.includes('REJECTED')) {
+            isUnderProcess = true;
+          }
+        }
+
+        let label = `${pNum} (${cases} Cases)`;
+        if (isCancelled) {
+          label += ' - (Cancelled)';
+        } else if (isUnderProcess) {
+          label += ' - (Cancellation Under Process)';
+        } else {
+          label += ' - (Available)';
+        }
+
+        this.availablePermitOptionsForCancellation.push({
+          permitNumber: pNum,
+          totalCases: cases,
+          label,
+          isUnderProcess,
+          isCancelled,
+          detail: p
+        });
+      });
+    } else {
+      this.availablePermitOptionsForCancellation.push({
+        permitNumber: appId,
+        totalCases: Number(row.cases || 0),
+        label: `${appId} - Single Permit`,
+        isUnderProcess: false,
+        isCancelled: false,
+        detail: null
+      });
+    }
+
+    const firstAvailable = this.availablePermitOptionsForCancellation.find(opt => !opt.isCancelled && !opt.isUnderProcess);
+    this.selectedPermitNumberForCancellation = firstAvailable ? firstAvailable.permitNumber : (this.availablePermitOptionsForCancellation[0]?.permitNumber || appId);
+    this.onPermitSelectionChangeForCancellation();
+
     this.showCancellationModal = true;
+  }
+
+  onPermitSelectionChangeForCancellation(): void {
+    const opt = this.availablePermitOptionsForCancellation.find(o => o.permitNumber === this.selectedPermitNumberForCancellation);
+    this.selectedPermitDetail = opt ? opt.detail : null;
   }
 
   closeCancellationModal(): void {
     if (this.isSubmittingCancellation) return;
     this.showCancellationModal = false;
     this.cancellationTargetRow = null;
+    this.selectedPermitDetail = null;
+    this.selectedPermitNumberForCancellation = '';
+    this.availablePermitOptionsForCancellation = [];
   }
 
   confirmCancellationSubmit(): void {
     if (!this.cancellationTargetRow) return;
+    if (!this.selectedPermitNumberForCancellation) {
+      alert('Please select a permit to cancel.');
+      return;
+    }
+    const selectedOpt = this.availablePermitOptionsForCancellation.find(o => o.permitNumber === this.selectedPermitNumberForCancellation);
+    if (selectedOpt && (selectedOpt.isCancelled || selectedOpt.isUnderProcess)) {
+      alert(`Permit ${this.selectedPermitNumberForCancellation} is already ${selectedOpt.isCancelled ? 'cancelled' : 'under process for cancellation'}.`);
+      return;
+    }
+
     if (!this.cancellationDeclarationAccepted) {
       alert('Please accept the declaration to proceed.');
       return;
@@ -372,17 +471,19 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }
 
     const appId = this.cancellationTargetRow.applicationId;
-    const fullReason = `${this.cancellationReasonType}: ${this.cancellationReasonDetails.trim()}`;
+    const fullReason = `[Permit: ${this.selectedPermitNumberForCancellation}] ${this.cancellationReasonType}: ${this.cancellationReasonDetails.trim()}`;
 
     this.isSubmittingCancellation = true;
     this.permitService.createCancellation({
       distributor_permit: appId,
+      cancelled_permit_number: this.selectedPermitNumberForCancellation,
+      permit_wise_details: this.selectedPermitDetail ? [this.selectedPermitDetail] : [],
       cancellation_reason: fullReason
     }).subscribe({
       next: (res: any) => {
         this.isSubmittingCancellation = false;
         this.closeCancellationModal();
-        alert(`Permit cancellation request submitted successfully. Reference No: ${res.reference_no || res.id}`);
+        alert(`Permit cancellation request submitted successfully for Permit ${this.selectedPermitNumberForCancellation}. Reference No: ${res.reference_no || res.id}`);
         this.loadApplications();
       },
       error: (err: any) => {
@@ -1227,10 +1328,20 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       const refNo = c?.reference_no || c?.referenceNo || '';
       const dateVal = c?.submitted_at || c?.submittedAt || c?.created_at || '';
       const stageName = c?.current_stage?.name || c?.current_stage_name || c?.status || 'Pending';
+      const cancelledNo = c?.cancelled_permit_number || c?.cancelledPermitNumber || '';
+      const permitWiseDetails = c?.permit_wise_details || c?.permitWiseDetails || [];
+      const distPermitRef = c?.distributor_permit_detail?.reference_no || c?.distributor_permit_detail?.id || c?.distributor_permit || c?.distributorPermit || '';
       return {
         ...c,
+        applicationType: 'cancellation',
         referenceNo: refNo,
         reference_no: refNo,
+        cancelledPermitNumber: cancelledNo,
+        cancelled_permit_number: cancelledNo,
+        distributorPermit: distPermitRef,
+        distributor_permit: distPermitRef,
+        permitWiseDetails,
+        permit_wise_details: permitWiseDetails,
         submittedAt: dateVal,
         submitted_at: dateVal,
         createdAt: dateVal,

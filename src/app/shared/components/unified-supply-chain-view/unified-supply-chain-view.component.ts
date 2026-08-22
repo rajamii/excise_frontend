@@ -1292,33 +1292,69 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     mappedData['originalPermitNo'] = mappedData.referenceNo;
                 }
 
-                const cancellationEachPermitDate = this.extractFieldValue(apiData, ['cancellationEachPermitDate', 'cancellation_each_permit_date']);
-                if (cancellationEachPermitDate) {
-                    mappedData['originalPermitDate'] = this.parseDate(cancellationEachPermitDate);
-                } else {
-                    mappedData['originalPermitDate'] = mappedData.submissionDate;
+                const distDetail = apiData?.distributor_permit_detail || {};
+                if (!mappedData['applicantName']) {
+                    mappedData['applicantName'] = this.extractFieldValue(apiData, ['applicantName', 'applicant_name']) || this.extractFieldValue(distDetail, ['applicantName', 'applicant_name']) || '';
+                }
+                if (!mappedData['supplierCompanyName']) {
+                    mappedData['supplierCompanyName'] = this.extractFieldValue(apiData, ['supplierCompanyName', 'supplier_company_name']) || this.extractFieldValue(distDetail, ['supplierCompanyName', 'supplier_company_name']) || '';
+                }
+                if (!mappedData['sourceAddress']) {
+                    mappedData['sourceAddress'] = this.extractFieldValue(apiData, ['sourceAddress', 'source_address']) || this.extractFieldValue(distDetail, ['sourceAddress', 'source_address']) || '';
+                }
+                if (!mappedData['origin']) {
+                    mappedData['origin'] = this.extractFieldValue(apiData, ['origin']) || this.extractFieldValue(distDetail, ['origin']) || '';
+                }
+                if (!mappedData['destination']) {
+                    mappedData['destination'] = this.extractFieldValue(apiData, ['destination']) || this.extractFieldValue(distDetail, ['destination']) || '';
+                }
+                if (!mappedData['routeDetails']) {
+                    mappedData['routeDetails'] = this.extractFieldValue(apiData, ['routeDetails', 'route_details']) || this.extractFieldValue(distDetail, ['routeDetails', 'route_details']) || '';
                 }
 
-                const cancellationTotalAmount = this.parseNumericValue(
-                    this.extractFieldValue(apiData, ['totalCancellationAmount', 'total_cancellation_amount'])
-                );
-                const cancellationBrAmount = this.parseNumericValue(
-                    this.extractFieldValue(apiData, ['cancellationBrAmount', 'cancellation_br_amount'])
-                );
-                const cancellationTotalBl = this.parseNumericValue(this.extractFieldValue(apiData, ['totalBl', 'total_bl']));
+                let canPermitWise = apiData?.permitWiseDetails || apiData?.permit_wise_details;
+                if (!Array.isArray(canPermitWise) || canPermitWise.length === 0) {
+                    canPermitWise = distDetail?.permit_wise_details || distDetail?.permitWiseDetails || [];
+                    if (cancelledPermitNumber && Array.isArray(canPermitWise)) {
+                        const matched = canPermitWise.filter((p: any) => String(p.permit_number || p.permitNumber || '').toLowerCase() === String(cancelledPermitNumber).toLowerCase());
+                        if (matched.length > 0) {
+                            canPermitWise = matched;
+                        }
+                    }
+                }
+                mappedData['permitWiseDetails'] = Array.isArray(canPermitWise) ? canPermitWise : [];
+                mappedData['lineItems'] = apiData?.lineItems || apiData?.line_items || distDetail?.line_items || [];
 
-                if (cancellationTotalAmount > 0) {
-                    mappedData['cancellationAmount'] = cancellationTotalAmount;
-                    mappedData['refundAmount'] = cancellationTotalAmount;
-                    mappedData['brAmount'] = cancellationTotalAmount;
-                } else if (cancellationBrAmount > 0) {
-                    mappedData['cancellationAmount'] = cancellationBrAmount;
-                    mappedData['refundAmount'] = cancellationBrAmount;
-                    mappedData['brAmount'] = cancellationBrAmount;
-                } else if (cancellationTotalBl > 0) {
-                    mappedData['cancellationAmount'] = cancellationTotalBl;
-                    mappedData['refundAmount'] = cancellationTotalBl;
-                    mappedData['brAmount'] = cancellationTotalBl;
+                if (Array.isArray(canPermitWise) && canPermitWise.length > 0) {
+                    const totalFee = canPermitWise.reduce((sum: number, p: any) => sum + Number(p.total_import_fee || p.totalImportFee || 0), 0);
+                    const totalBl = canPermitWise.reduce((sum: number, p: any) => sum + Number(p.total_bulk_litres || p.totalBulkLitres || 0), 0);
+                    mappedData['brAmount'] = totalFee;
+                    mappedData['cancellationAmount'] = totalFee;
+                    mappedData['refundAmount'] = totalFee;
+                    mappedData['quantity'] = totalBl;
+                    mappedData['numberOfPermits'] = canPermitWise.length;
+                } else {
+                    const cancellationTotalAmount = this.parseNumericValue(
+                        this.extractFieldValue(apiData, ['totalCancellationAmount', 'total_cancellation_amount'])
+                    );
+                    const cancellationBrAmount = this.parseNumericValue(
+                        this.extractFieldValue(apiData, ['cancellationBrAmount', 'cancellation_br_amount'])
+                    );
+                    const cancellationTotalBl = this.parseNumericValue(this.extractFieldValue(apiData, ['totalBl', 'total_bl']));
+
+                    if (cancellationTotalAmount > 0) {
+                        mappedData['cancellationAmount'] = cancellationTotalAmount;
+                        mappedData['refundAmount'] = cancellationTotalAmount;
+                        mappedData['brAmount'] = cancellationTotalAmount;
+                    } else if (cancellationBrAmount > 0) {
+                        mappedData['cancellationAmount'] = cancellationBrAmount;
+                        mappedData['refundAmount'] = cancellationBrAmount;
+                        mappedData['brAmount'] = cancellationBrAmount;
+                    } else if (cancellationTotalBl > 0) {
+                        mappedData['cancellationAmount'] = cancellationTotalBl;
+                        mappedData['refundAmount'] = cancellationTotalBl;
+                        mappedData['brAmount'] = cancellationTotalBl;
+                    }
                 }
 
                 const refundProcessedDate = this.extractFieldValue(apiData, ['refundProcessedDate', 'refund_processed_date']);
