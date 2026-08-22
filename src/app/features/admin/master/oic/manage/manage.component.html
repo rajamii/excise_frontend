@@ -11,7 +11,8 @@
         <span>Loading approved establishments...</span>
       </div>
 
-      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <!-- MANUFACTURING ESTABLISHMENT SELECTOR -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" *ngIf="assignmentType !== 'distributor'">
         <mat-label>Establishment Name</mat-label>
         <mat-select
           name="approvedApplicationId"
@@ -41,6 +42,30 @@
         </mat-hint>
         <mat-error *ngIf="(applicationModel.touched || submitAttempted) && applicationModel.errors?.['required']">
           Establishment is required
+        </mat-error>
+      </mat-form-field>
+
+      <!-- DISTRIBUTOR USER SELECTOR -->
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" *ngIf="assignmentType === 'distributor'">
+        <mat-label>Distributor User / Establishment</mat-label>
+        <mat-select
+          name="selectedDistributorId"
+          required
+          [(ngModel)]="selectedDistributorId"
+          #distributorModel="ngModel"
+          [disabled]="isLoading || isSaving"
+        >
+          <mat-option
+            *ngFor="let item of distributors"
+            [value]="item.id"
+          >
+            <div class="establishment-option">
+              <span class="establishment-option__label">{{ item.establishmentName }} (Username: {{ item.username }})</span>
+            </div>
+          </mat-option>
+        </mat-select>
+        <mat-error *ngIf="(distributorModel.touched || submitAttempted) && distributorModel.errors?.['required']">
+          Distributor selection is required
         </mat-error>
       </mat-form-field>
       <div *ngIf="shouldShowOicDetailsButton()" class="existing-oic-details-wrap">

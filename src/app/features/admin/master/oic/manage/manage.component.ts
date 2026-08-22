@@ -19,7 +19,11 @@ import { MaterialModule } from '../../../../../shared/material.module';
   styleUrl: './manage.component.scss'
 })
 export class ManageComponent implements OnInit {
+  assignmentType: 'manufacturing' | 'distributor' = 'manufacturing';
   establishments: OICApprovedEstablishment[] = [];
+  distributors: any[] = [];
+  selectedDistributorId: string | number = '';
+
   oicCountByApplicationId: Record<string, number> = {};
   oicOfficersByApplicationId: Record<string, OICOfficerRecord[]> = {};
   isLoading = false;
@@ -29,6 +33,8 @@ export class ManageComponent implements OnInit {
 
   form: CreateOICOfficerPayload = {
     approvedApplicationId: '',
+    distributorUserId: '',
+    assignmentType: 'manufacturing',
     name: '',
     email: '',
     phoneNumber: ''
@@ -42,15 +48,47 @@ export class ManageComponent implements OnInit {
 
   ngOnInit(): void {
     this.isEditMode = !!this.data?.id;
+    this.assignmentType = (this.data?.assignmentType || 'manufacturing').toLowerCase() as 'manufacturing' | 'distributor';
+
     if (this.data) {
       this.form = {
         approvedApplicationId: String(this.data.applicationId || ''),
+        distributorUserId: this.data.distributorUserId || '',
+        assignmentType: this.assignmentType,
         name: String(this.data.name || ''),
         email: String(this.data.email || ''),
         phoneNumber: String(this.data.phoneNumber || '')
       };
+      if (this.data.distributorUserId) {
+        this.selectedDistributorId = this.data.distributorUserId;
+      }
     }
-    this.loadEstablishments();
+
+    if (this.assignmentType === 'distributor') {
+      this.loadDistributors();
+    } else {
+      this.loadEstablishments();
+    }
+  }
+
+  loadDistributors(): void {
+    this.isLoading = true;
+    forkJoin({
+      distributors: this.adminService.getOICApprovedDistributors(),
+      officers: this.adminService.getOICOfficers()
+    }).subscribe({
+      next: ({ distributors, officers }) => {
+        this.distributors = Array.isArray(distributors) ? distributors : [];
+        this.oicCountByApplicationId = this.buildOicCountMap(officers);
+        this.oicOfficersByApplicationId = this.buildOicOfficerMap(officers);
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Failed to load approved distributors:', error);
+        this.distributors = [];
+        this.isLoading = false;
+      }
+    });
   }
 
   loadEstablishments(): void {
@@ -218,8 +256,19 @@ export class ManageComponent implements OnInit {
 
   onSave(): void {
     this.submitAttempted = true;
-    if (!this.form.approvedApplicationId || !this.form.name || !this.form.email || !this.form.phoneNumber) {
-      return;
+
+    if (this.assignmentType === 'distributor') {
+      if (!this.selectedDistributorId || !this.form.name || !this.form.email || !this.form.phoneNumber) {
+        return;
+      }
+      this.form.distributorUserId = this.selectedDistributorId;
+      this.form.approvedApplicationId = '';
+      this.form.assignmentType = 'distributor';
+    } else {
+      if (!this.form.approvedApplicationId || !this.form.name || !this.form.email || !this.form.phoneNumber) {
+        return;
+      }
+      this.form.assignmentType = 'manufacturing';
     }
 
     this.isSaving = true;

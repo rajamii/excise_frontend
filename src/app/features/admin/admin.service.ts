@@ -37,6 +37,18 @@ export interface OICApprovedEstablishment {
   licenseeId: string;
   districtCode: string;
   subdivisionCode: string;
+  categoryName?: string;
+}
+
+export interface OICApprovedDistributor {
+  id: number;
+  username: string;
+  fullName: string;
+  establishmentName: string;
+  email: string;
+  phoneNumber: string;
+  districtCode: string;
+  subdivisionCode: string;
 }
 
 export interface OICOfficerRecord {
@@ -51,6 +63,10 @@ export interface OICOfficerRecord {
   licensee_id: string;
   establishment_name: string;
   establishmentName?: string;
+  assignmentType?: 'manufacturing' | 'distributor';
+  distributorUserId?: number;
+  distributorUsername?: string;
+  distributorName?: string;
   created_at: string;
   createdAt?: string;
   officer_created_at?: string;
@@ -59,7 +75,9 @@ export interface OICOfficerRecord {
 }
 
 export interface CreateOICOfficerPayload {
-  approvedApplicationId: string;
+  approvedApplicationId?: string;
+  distributorUserId?: string | number;
+  assignmentType?: 'manufacturing' | 'distributor';
   name: string;
   email: string;
   phoneNumber: string;
@@ -107,6 +125,12 @@ export class AdminService {
   getOICApprovedEstablishments(): Observable<OICApprovedEstablishment[]> {
     return this.http.get<OICApprovedEstablishment[]>(
       `${this.usersUrl}/users/oic/approved-establishments/`
+    );
+  }
+
+  getOICApprovedDistributors(): Observable<OICApprovedDistributor[]> {
+    return this.http.get<OICApprovedDistributor[]>(
+      `${this.usersUrl}/users/oic/approved-distributors/`
     );
   }
 

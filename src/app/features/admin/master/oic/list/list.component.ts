@@ -13,6 +13,8 @@ import Swal from 'sweetalert2';
   styleUrls: ['./list.component.scss']
 })
 export class ListComponent implements OnInit {
+  activeTab: 'manufacturing' | 'distributor' = 'manufacturing';
+
   displayedColumns: string[] = [
     'name',
     'username',
@@ -33,17 +35,31 @@ export class ListComponent implements OnInit {
   pageSizeOptions = [5, 10, 20, 50];
   pageIndex = 0;
 
+  setTab(tab: 'manufacturing' | 'distributor'): void {
+    if (this.activeTab !== tab) {
+      this.activeTab = tab;
+      this.pageIndex = 0;
+    }
+  }
+
+  get filteredOfficers(): OICOfficerRecord[] {
+    return (this.officers || []).filter(o => {
+      const type = (o.assignmentType || 'manufacturing').toLowerCase();
+      return type === this.activeTab;
+    });
+  }
+
   get pagedOfficers(): OICOfficerRecord[] {
     const start = this.pageIndex * this.pageSize;
-    return this.officers.slice(start, start + this.pageSize);
+    return this.filteredOfficers.slice(start, start + this.pageSize);
   }
 
   get totalPages(): number {
-    return Math.max(1, Math.ceil(this.officers.length / this.pageSize));
+    return Math.max(1, Math.ceil(this.filteredOfficers.length / this.pageSize));
   }
 
   pageEnd(): number {
-    return Math.min((this.pageIndex + 1) * this.pageSize, this.officers.length);
+    return Math.min((this.pageIndex + 1) * this.pageSize, this.filteredOfficers.length);
   }
 
   onPageSizeChange(): void {
@@ -80,7 +96,8 @@ export class ListComponent implements OnInit {
       width: '760px',
       maxWidth: '96vw',
       autoFocus: false,
-      panelClass: 'oic-manage-dialog'
+      panelClass: 'oic-manage-dialog',
+      data: { assignmentType: this.activeTab }
     });
 
     dialogRef.afterClosed().subscribe((result) => {
