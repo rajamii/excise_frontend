@@ -3260,28 +3260,59 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             return [];
         }
 
-        let actions = Array.isArray(this.applicationData.allowedActions) && this.applicationData.allowedActions.length > 0
-            ? this.applicationData.allowedActions
-            : (Array.isArray(this.applicationData['allowed_actions']) && (this.applicationData['allowed_actions'] as any[]).length > 0
-                ? (this.applicationData['allowed_actions'] as any[])
-                : []);
+        const rawAllowedActions = this.applicationData.allowedActions ?? this.applicationData['allowed_actions'];
+        if (Array.isArray(rawAllowedActions)) {
+            const actions = (rawAllowedActions as string[])
+                .map(a => String(a || '').toUpperCase().trim())
+                .filter(a => !!a && a !== 'VIEW');
 
-        if (actions.length === 0) {
-            const context = this.getUserContext();
-            const status = String(this.applicationData.status || '').toUpperCase();
-            const stageId = Number((this.applicationData as any)?.current_stage?.id || (this.applicationData as any)?.current_stage_id || 0);
-
-            if (context === USER_CONTEXTS.COMMISSIONER) {
-                if (this.applicationType === 'cancellation' || stageId === 162 || status.includes('COMMISSIONER')) {
-                    actions = ['APPROVE', 'REJECT'];
-                } else if (this.applicationType === 'revalidation' || stageId === 160) {
-                    actions = ['APPROVE', 'REJECT'];
-                } else if (status.includes('PAYSLIP') || status.includes('VERIF') || status.includes('FINAL')) {
-                    actions = ['APPROVE', 'REJECT'];
-                } else {
-                    actions = ['APPROVE', 'FORWARD', 'REJECT', 'RAISE_OBJECTION'];
+            if (this.isImflDistributorPermitSource()) {
+                const stageId = Number(this.applicationData?.['current_stage_id'] || (this.applicationData as any)?.current_stage?.id || 0);
+                const statusStr = String(this.applicationData?.['status'] || '').toUpperCase();
+                const isPaid = Boolean(this.applicationData?.['is_excise_duty_fee_paid'] || this.applicationData?.['isExciseDutyFeePaid']);
+                if (!isPaid && (stageId === 154 || statusStr === 'AWAITING PAYMENT' || statusStr === 'AWAITING_PAYMENT')) {
+                    if (!actions.includes('FORCE_PAY')) actions.push('FORCE_PAY');
+                    if (!actions.includes('PAY')) actions.push('PAY');
                 }
-            } else if (context === USER_CONTEXTS.PERMIT_SECTION) {
+            }
+
+            return Array.from(new Set(actions));
+        }
+
+        const status = String(this.applicationData.status || '').toUpperCase();
+        const stageId = Number((this.applicationData as any)?.current_stage?.id || (this.applicationData as any)?.current_stage_id || 0);
+        const stageName = String((this.applicationData as any)?.current_stage?.name || (this.applicationData as any)?.current_stage_name || '').toUpperCase();
+
+        if (
+            stageId === 153 ||
+            status.includes('FORWARDED TO COMMISSIONER') ||
+            status.includes('APPROVED') ||
+            status.includes('REJECTED') ||
+            stageName.includes('FORWARDED TO COMMISSIONER') ||
+            stageName.includes('APPROVED') ||
+            stageName.includes('REJECTED')
+        ) {
+            const context = this.getUserContext();
+            if (context === USER_CONTEXTS.PERMIT_SECTION) {
+                return [];
+            }
+        }
+
+        let actions: string[] = [];
+        const context = this.getUserContext();
+
+        if (context === USER_CONTEXTS.COMMISSIONER) {
+            if (this.applicationType === 'cancellation' || stageId === 162 || status.includes('COMMISSIONER')) {
+                actions = ['APPROVE', 'REJECT'];
+            } else if (this.applicationType === 'revalidation' || stageId === 160) {
+                actions = ['APPROVE', 'REJECT'];
+            } else if (status.includes('PAYSLIP') || status.includes('VERIF') || status.includes('FINAL')) {
+                actions = ['APPROVE', 'REJECT'];
+            } else {
+                actions = ['APPROVE', 'FORWARD', 'REJECT', 'RAISE_OBJECTION'];
+            }
+        } else if (context === USER_CONTEXTS.PERMIT_SECTION) {
+            if (!status.includes('FORWARD') && !status.includes('APPROVED') && !status.includes('REJECTED') && !stageName.includes('FORWARD') && !stageName.includes('APPROVED')) {
                 if (this.applicationType === 'cancellation' || this.applicationType === 'revalidation') {
                     actions = ['FORWARD', 'REJECT'];
                 } else if (status.includes('PAYSLIP') || status.includes('PAYMENT')) {
@@ -3289,10 +3320,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 } else {
                     actions = ['FORWARD', 'REJECT', 'RAISE_OBJECTION'];
                 }
-            } else if (context === USER_CONTEXTS.LICENSEE) {
-                if (status.includes('PAYMENT') || status.includes('AWAITING_PAYMENT')) {
-                    actions = ['PAY'];
-                }
+            }
+        } else if (context === USER_CONTEXTS.LICENSEE) {
+            if (status.includes('PAYMENT') || status.includes('AWAITING_PAYMENT')) {
+                actions = ['PAY'];
             }
         }
 
@@ -3301,7 +3332,6 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             .filter(action => !!action && action !== 'VIEW');
 
         if (this.isImflDistributorPermitSource()) {
-            const stageId = this.applicationData?.['current_stage_id'] || this.applicationData?.['currentStageId'];
             const statusStr = String(this.applicationData?.['status'] || '').toUpperCase();
             const isPaid = Boolean(this.applicationData?.['is_excise_duty_fee_paid'] || this.applicationData?.['isExciseDutyFeePaid']);
             if (!isPaid && (stageId === 154 || statusStr === 'AWAITING PAYMENT' || statusStr === 'AWAITING_PAYMENT')) {
