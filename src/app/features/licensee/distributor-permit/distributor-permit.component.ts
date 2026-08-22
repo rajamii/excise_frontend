@@ -574,6 +574,161 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     });
   }
 
+  canUpdateArrival(row: DistributorPermitRow | any): boolean {
+    if (!this.isDistributorUser) return false;
+    const appId = String(row?.applicationId || row?.referenceNo || '').toUpperCase();
+    if (!appId.startsWith('IMFLREQ')) return false;
+    return this.isApproved(row);
+  }
+
+  showArrivalModal = false;
+  arrivalTargetRow: DistributorPermitRow | null = null;
+  selectedPermitNumberForArrival = '';
+  availablePermitOptionsForArrival: Array<{
+    permitNumber: string;
+    totalCases: number;
+    label: string;
+    detail: any;
+  }> = [];
+  selectedPermitDetailForArrival: any = null;
+  arrivalVehicleNumber = '';
+  arrivalBrandName = '';
+  arrivalSizeMl = 750;
+  arrivalExpectedCases = 0;
+  arrivalArrivedCases: number | null = null;
+  arrivalRemarks = '';
+  isSubmittingArrival = false;
+
+  openArrivalModal(row: DistributorPermitRow | any, event?: Event): void {
+    if (event) {
+      try { event.preventDefault(); } catch {}
+      try { event.stopPropagation(); } catch {}
+    }
+    this.arrivalTargetRow = row;
+    this.arrivalVehicleNumber = '';
+    this.arrivalRemarks = '';
+    this.arrivalArrivedCases = null;
+
+    const appId = row.applicationId || row.referenceNo || row.reference_no || '';
+    const rawApp = row.application || row;
+    let pDetails = rawApp?.permit_wise_details || rawApp?.permitWiseDetails || [];
+
+    if (!Array.isArray(pDetails) || pDetails.length === 0) {
+      const matching = (this.applications || []).find((a: any) => {
+        const ref = String(a.referenceNo || a.reference_no || a.id || '').toLowerCase();
+        return ref === String(appId).toLowerCase();
+      });
+      if (matching) {
+        pDetails = matching.permit_wise_details || matching.permitWiseDetails || matching['application']?.permit_wise_details || [];
+      }
+    }
+
+    this.availablePermitOptionsForArrival = [];
+
+    if (Array.isArray(pDetails) && pDetails.length > 0) {
+      pDetails.forEach((p: any) => {
+        const pNum = String(p.permit_number || p.permitNumber || appId);
+        const cases = Number(p.total_cases || p.totalCases || 0);
+        this.availablePermitOptionsForArrival.push({
+          permitNumber: pNum,
+          totalCases: cases,
+          label: `${pNum} (${cases} Cases)`,
+          detail: p
+        });
+      });
+    } else {
+      const fallbackDetail = {
+        permit_number: appId,
+        permitNumber: appId,
+        total_cases: Number(row.cases || rawApp?.cases || rawApp?.total_cases || 0),
+        totalCases: Number(row.cases || rawApp?.cases || rawApp?.total_cases || 0),
+        line_items: rawApp?.line_items || rawApp?.lineItems || []
+      };
+      this.availablePermitOptionsForArrival.push({
+        permitNumber: appId,
+        totalCases: Number(fallbackDetail.totalCases || 0),
+        label: `${appId} (${fallbackDetail.totalCases || 0} Cases)`,
+        detail: fallbackDetail
+      });
+    }
+
+    this.selectedPermitNumberForArrival = this.availablePermitOptionsForArrival[0]?.permitNumber || appId;
+    this.onPermitSelectionChangeForArrival();
+    this.showArrivalModal = true;
+  }
+
+  onPermitSelectionChangeForArrival(): void {
+    const opt = this.availablePermitOptionsForArrival.find(o => o.permitNumber === this.selectedPermitNumberForArrival);
+    this.selectedPermitDetailForArrival = opt ? opt.detail : null;
+
+    if (this.selectedPermitDetailForArrival) {
+      const items = this.selectedPermitDetailForArrival.line_items || this.selectedPermitDetailForArrival.lineItems || [];
+      const firstItem = items[0] || {};
+      this.arrivalBrandName = firstItem.brand_name || firstItem.brandName || '';
+      this.arrivalSizeMl = Number(firstItem.size_ml || firstItem.sizeMl || 750);
+      this.arrivalExpectedCases = Number(this.selectedPermitDetailForArrival.total_cases || this.selectedPermitDetailForArrival.totalCases || 0);
+    } else {
+      this.arrivalBrandName = '';
+      this.arrivalSizeMl = 750;
+      this.arrivalExpectedCases = 0;
+    }
+    this.arrivalArrivedCases = this.arrivalExpectedCases || null;
+  }
+
+  closeArrivalModal(): void {
+    if (this.isSubmittingArrival) return;
+    this.showArrivalModal = false;
+    this.arrivalTargetRow = null;
+    this.selectedPermitDetailForArrival = null;
+    this.selectedPermitNumberForArrival = '';
+    this.availablePermitOptionsForArrival = [];
+    this.arrivalVehicleNumber = '';
+    this.arrivalArrivedCases = null;
+    this.arrivalRemarks = '';
+  }
+
+  confirmArrivalSubmit(): void {
+    if (!this.arrivalTargetRow) return;
+    if (!this.selectedPermitNumberForArrival) {
+      alert('Please select a permit number for arrival update.');
+      return;
+    }
+    if (!this.arrivalVehicleNumber.trim()) {
+      alert('Please enter Car / Vehicle Number.');
+      return;
+    }
+    if (this.arrivalArrivedCases === null || this.arrivalArrivedCases === undefined || this.arrivalArrivedCases < 0) {
+      alert('Please enter a valid number of arrived cases.');
+      return;
+    }
+
+    const payload = {
+      distributor_permit: this.arrivalTargetRow.applicationId,
+      permit_number: this.selectedPermitNumberForArrival,
+      vehicle_number: this.arrivalVehicleNumber.trim(),
+      brand_name: this.arrivalBrandName.trim() || 'N/A',
+      size_ml: this.arrivalSizeMl || 750,
+      expected_cases: this.arrivalExpectedCases || 0,
+      arrived_cases: this.arrivalArrivedCases,
+      remarks: this.arrivalRemarks.trim()
+    };
+
+    this.isSubmittingArrival = true;
+    this.permitService.createArrival(payload).subscribe({
+      next: (res: any) => {
+        this.isSubmittingArrival = false;
+        this.closeArrivalModal();
+        alert(`Stock arrival details updated successfully for Permit ${this.selectedPermitNumberForArrival}. Vehicle: ${payload.vehicle_number}, Arrived Cases: ${payload.arrived_cases}.`);
+        this.loadApplications();
+      },
+      error: (err: any) => {
+        this.isSubmittingArrival = false;
+        console.error('Error submitting stock arrival:', err);
+        alert('Failed to update stock arrival: ' + (err?.error?.message || err?.message || 'Server error'));
+      }
+    });
+  }
+
   canRequestRevalidation(row: DistributorPermitRow | any): boolean {
     if (!this.isDistributorUser) return false;
     const raw = row?.application || row;

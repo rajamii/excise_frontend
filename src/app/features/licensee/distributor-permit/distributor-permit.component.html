@@ -246,6 +246,17 @@
                         <span>View Details</span>
                       </button>
                       <button
+                        class="btn btn-sm btn-info fw-semibold text-white me-1"
+                        type="button"
+                        *ngIf="canUpdateArrival(row)"
+                        title="Record physical stock arrival for approved permit"
+                        (click)="openArrivalModal(row, $event)"
+                        (mousedown)="openArrivalModal(row, $event)"
+                      >
+                        <i class="bi bi-truck me-1"></i>
+                        <span>Update Arrival</span>
+                      </button>
+                      <button
                         class="btn btn-sm btn-success fw-semibold"
                         type="button"
                         title="View & Print Authority Letter"
@@ -336,6 +347,19 @@
                         <i class="bi bi-arrow-repeat me-1"></i>
                         <span>Submit Application</span>
                       </button>
+                      <!-- Update Arrival Button for Approved IMFL Requisitions -->
+                      <button
+                        class="btn btn-info btn-sm fw-bold text-white me-1"
+                        type="button"
+                        *ngIf="canUpdateArrival(row)"
+                        title="Record physical stock arrival for approved permit"
+                        (click)="openArrivalModal(row, $event)"
+                        (mousedown)="openArrivalModal(row, $event)"
+                      >
+                        <i class="bi bi-truck me-1"></i>
+                        <span>Update Arrival</span>
+                      </button>
+
                       <!-- Submitted IMFLREV applications: View Details -->
                       <button
                         class="btn dp-action-button"
@@ -1166,6 +1190,182 @@
           <span *ngIf="isSubmittingRevalidation" class="spinner-border spinner-border-sm me-2"></span>
           <i *ngIf="!isSubmittingRevalidation" class="bi bi-send-fill me-2"></i>
           {{ isSubmittingRevalidation ? 'Submitting...' : 'Submit Revalidation Request' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- UPDATE IMFL STOCK ARRIVAL MODAL -->
+<div
+  class="modal fade show d-block"
+  tabindex="-1"
+  *ngIf="showArrivalModal"
+  style="background-color: rgba(0,0,0,0.5); z-index: 1060;"
+>
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content shadow border-0 rounded-3">
+      <div class="modal-header bg-info bg-gradient text-white py-3">
+        <h5 class="modal-title fw-bold">
+          <i class="bi bi-truck me-2"></i>
+          Update IMFL Stock Arrival - {{ arrivalTargetRow?.applicationId }}
+        </h5>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          (click)="closeArrivalModal()"
+          [disabled]="isSubmittingArrival"
+        ></button>
+      </div>
+
+      <div class="modal-body p-4" style="max-height: 80vh; overflow-y: auto;">
+        <!-- Permit Summary Card -->
+        <div class="card bg-light border-0 mb-3 shadow-sm">
+          <div class="card-body py-2 px-3">
+            <div class="row align-items-center">
+              <div class="col-md-6 mb-1 mb-md-0">
+                <span class="text-secondary small d-block">Application Ref. No.</span>
+                <span class="fw-bold text-dark">{{ arrivalTargetRow?.applicationId }}</span>
+              </div>
+              <div class="col-md-6 text-md-end">
+                <span class="text-secondary small d-block">Supplier Company</span>
+                <span class="fw-bold text-primary">{{ arrivalTargetRow?.supplierName || 'N/A' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Permit Allocation Selection Dropdown -->
+        <div class="mb-3">
+          <label class="form-label fw-bold text-secondary">
+            Select Permit Number <span class="text-danger">*</span>
+          </label>
+          <select
+            class="form-select form-select-lg border-primary shadow-sm"
+            [(ngModel)]="selectedPermitNumberForArrival"
+            (change)="onPermitSelectionChangeForArrival()"
+          >
+            <option *ngFor="let opt of availablePermitOptionsForArrival" [value]="opt.permitNumber">
+              {{ opt.label }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Expected Details Breakdown Card -->
+        <div class="card border-info border-opacity-25 bg-info bg-opacity-10 mb-4 shadow-sm" *ngIf="selectedPermitDetailForArrival">
+          <div class="card-header bg-info bg-opacity-10 py-2 border-0">
+            <h6 class="mb-0 fw-bold text-info text-darken-2">
+              <i class="bi bi-clipboard-check me-2"></i>
+              Expected Permit Allocation Details
+            </h6>
+          </div>
+          <div class="card-body py-2 px-3">
+            <div class="row g-2">
+              <div class="col-md-7">
+                <span class="text-secondary small d-block">Brand Name</span>
+                <span class="fw-bold text-dark d-block text-truncate" [title]="arrivalBrandName">{{ arrivalBrandName || 'N/A' }}</span>
+              </div>
+              <div class="col-md-2">
+                <span class="text-secondary small d-block">Size (ml)</span>
+                <span class="fw-bold text-dark">{{ arrivalSizeMl }} ml</span>
+              </div>
+              <div class="col-md-3 text-md-end">
+                <span class="text-secondary small d-block">Expected Cases</span>
+                <span class="badge bg-primary fs-6">{{ arrivalExpectedCases }} Cases</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stock Arrival Input Form -->
+        <div class="card border-1 shadow-sm p-3 mb-2">
+          <h6 class="fw-bold text-dark mb-3">
+            <i class="bi bi-pencil-square me-1"></i> Physical Stock Arrival Entry
+          </h6>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-bold text-secondary small">
+                Car / Vehicle Registration Number <span class="text-danger">*</span>
+              </label>
+              <input
+                type="text"
+                class="form-control"
+                placeholder="e.g. SK-01-AB-1234"
+                [(ngModel)]="arrivalVehicleNumber"
+              />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold text-secondary small">
+                Brand Name
+              </label>
+              <input
+                type="text"
+                class="form-control bg-light"
+                [(ngModel)]="arrivalBrandName"
+                readonly
+              />
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-bold text-secondary small">
+                Expected Cases
+              </label>
+              <input
+                type="number"
+                class="form-control bg-light fw-bold"
+                [value]="arrivalExpectedCases"
+                readonly
+              />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold text-secondary small">
+                Arrived Cases <span class="text-danger">*</span>
+              </label>
+              <input
+                type="number"
+                class="form-control border-success fw-bold text-success fs-5"
+                placeholder="Enter arrived number of cases"
+                [(ngModel)]="arrivalArrivedCases"
+                min="0"
+              />
+            </div>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label fw-bold text-secondary small">
+              Remarks / Arrival Notes (Optional)
+            </label>
+            <textarea
+              class="form-control"
+              rows="2"
+              placeholder="Enter any discrepancy, condition of seal, or transport remarks..."
+              [(ngModel)]="arrivalRemarks"
+            ></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer bg-light py-3">
+        <button
+          type="button"
+          class="btn btn-outline-secondary px-4"
+          (click)="closeArrivalModal()"
+          [disabled]="isSubmittingArrival"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-info px-4 text-white fw-bold"
+          [disabled]="isSubmittingArrival || !arrivalVehicleNumber.trim() || arrivalArrivedCases === null || arrivalArrivedCases < 0"
+          (click)="confirmArrivalSubmit()"
+        >
+          <span *ngIf="isSubmittingArrival" class="spinner-border spinner-border-sm me-2"></span>
+          <i *ngIf="!isSubmittingArrival" class="bi bi-check-circle-fill me-2"></i>
+          {{ isSubmittingArrival ? 'Submitting...' : 'Submit Stock Arrival' }}
         </button>
       </div>
     </div>

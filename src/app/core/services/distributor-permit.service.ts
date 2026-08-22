@@ -135,4 +135,18 @@ export class DistributorPermitService {
   getRevalidationSchedules(): Observable<any[]> {
     return this.http.get<any[]>(`${this.baseUrl}/revalidation-schedules/`);
   }
+
+  getArrivals(permitNo?: string): Observable<any[]> {
+    let params = new HttpParams();
+    if (permitNo) {
+      params = params.set('permit_number', permitNo);
+    }
+    return this.http.get<any[]>(`${this.baseUrl}/arrival/`, { params });
+  }
+
+  createArrival(payload: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/arrival/`, payload).pipe(
+      tap(() => this.clearCache())
+    );
+  }
 }
