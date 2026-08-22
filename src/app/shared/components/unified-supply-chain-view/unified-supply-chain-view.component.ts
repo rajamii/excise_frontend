@@ -29,6 +29,7 @@ import { UnifiedActionsService } from '../../services/unified-actions.service';
 import { SiteEnquiryFormDialogComponent } from '../site-enquiry-form-dialog/site-enquiry-form-dialog.component';
 import { RoleService } from '../../../core/services/role.service';
 import { UnifiedDashboardService } from '../../../core/services/unified-dashboard.service';
+import { SidebarPendingBadgeService } from '../../services/sidebar-pending-badge.service';
 import { Objection } from '../../../core/models/license-application.model';
 
 // Constants
@@ -476,6 +477,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         private roleService: RoleService,
         private unifiedActionsService: UnifiedActionsService,
         private unifiedDashboardService: UnifiedDashboardService,
+        private sidebarPendingBadgeService: SidebarPendingBadgeService,
         private dialog: MatDialog,
         private snackBar: MatSnackBar,
         private sanitizer: DomSanitizer,
@@ -1908,6 +1910,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                         'COMPLETE', 'ASSIGN_CARTONS', 'PAY',
                         'SUBMITPAYSLIP', 'APPROVEPAYSLIP', 'REJECTPAYSLIP', 'REVERT'
                     ].includes(action)) {
+                        this.distributorPermitService.clearCache();
+                        this.sidebarPendingBadgeService.triggerRefresh();
                         const currentId = this.applicationData?.id?.toString() || '';
                         const currentRef = this.applicationData?.referenceNo || '';
                         this.loadApplicationData(currentRef, currentId);
