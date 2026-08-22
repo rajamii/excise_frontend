@@ -3262,11 +3262,11 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
         const rawAllowedActions = this.applicationData.allowedActions ?? this.applicationData['allowed_actions'];
         if (Array.isArray(rawAllowedActions)) {
-            const actions = (rawAllowedActions as string[])
+            let actions = (rawAllowedActions as string[])
                 .map(a => String(a || '').toUpperCase().trim())
                 .filter(a => !!a && a !== 'VIEW');
 
-            if (this.isImflDistributorPermitSource()) {
+            if (this.isImflDistributorPermitSource() && this.isLicenseeContext()) {
                 const stageId = Number(this.applicationData?.['current_stage_id'] || (this.applicationData as any)?.current_stage?.id || 0);
                 const statusStr = String(this.applicationData?.['status'] || '').toUpperCase();
                 const isPaid = Boolean(this.applicationData?.['is_excise_duty_fee_paid'] || this.applicationData?.['isExciseDutyFeePaid']);
@@ -3274,6 +3274,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     if (!actions.includes('FORCE_PAY')) actions.push('FORCE_PAY');
                     if (!actions.includes('PAY')) actions.push('PAY');
                 }
+            }
+
+            if (!this.isLicenseeContext()) {
+                actions = actions.filter(a => a !== 'PAY' && a !== 'FORCE_PAY');
             }
 
             return Array.from(new Set(actions));
@@ -3331,17 +3335,21 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             .map(action => String(action || '').toUpperCase().trim())
             .filter(action => !!action && action !== 'VIEW');
 
-        if (this.isImflDistributorPermitSource()) {
+        if (this.isImflDistributorPermitSource() && this.isLicenseeContext()) {
             const statusStr = String(this.applicationData?.['status'] || '').toUpperCase();
             const isPaid = Boolean(this.applicationData?.['is_excise_duty_fee_paid'] || this.applicationData?.['isExciseDutyFeePaid']);
             if (!isPaid && (stageId === 154 || statusStr === 'AWAITING PAYMENT' || statusStr === 'AWAITING_PAYMENT')) {
                 if (!normalizedActions.includes('FORCE_PAY')) normalizedActions.push('FORCE_PAY');
                 if (!normalizedActions.includes('PAY')) normalizedActions.push('PAY');
             }
-            return Array.from(new Set(normalizedActions));
         }
 
-        return normalizedActions.length ? Array.from(new Set(normalizedActions)) : null;
+        let finalActions = Array.from(new Set(normalizedActions));
+        if (!this.isLicenseeContext()) {
+            finalActions = finalActions.filter(a => a !== 'PAY' && a !== 'FORCE_PAY');
+        }
+
+        return finalActions;
     }
 
     canViewSiteEnquiryReport(): boolean {
