@@ -415,9 +415,21 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           return (revNo && revNo === pNum.toLowerCase()) || reasonText.includes(pNum.toLowerCase()) || !revNo;
         });
 
+        const now = new Date();
+        const validUpToStr = rawApp?.valid_up_to || rawApp?.validUpTo || row?.application?.valid_up_to || '';
+        const validUpToDate = validUpToStr ? new Date(validUpToStr) : null;
+        const isExpired = Boolean(validUpToDate && validUpToDate <= now);
+        const isActivatedSched = Boolean(
+          row?.isActivatedSchedule ||
+          rawApp?.is_activated_schedule ||
+          rawApp?.can_submit_application ||
+          String(row?.currentStage || rawApp?.status || '').toLowerCase().includes('activated') ||
+          String(row?.currentStage || rawApp?.status || '').toLowerCase().includes('ready for revalidation')
+        );
+
         let isCancelled = false;
         let isUnderProcess = false;
-        let isRevalidated = false;
+        let isRevalidatedWaiting = false;
 
         if (existingForPermit) {
           const st = String(existingForPermit['status'] || existingForPermit['currentStage'] || '').toUpperCase();
@@ -428,15 +440,16 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           }
         }
 
-        if (existingForPermitRev || row?.isActivatedSchedule || rawApp?.is_activated_schedule || rawApp?.valid_up_to) {
+        if (!isCancelled && !isUnderProcess) {
           if (existingForPermitRev) {
             const st = String(existingForPermitRev['status'] || existingForPermitRev['currentStage'] || '').toUpperCase();
-            if (!st.includes('REJECTED')) {
-              isRevalidated = true;
+            if (!st.includes('REJECTED') && !st.includes('APPROVED')) {
+              isRevalidatedWaiting = true;
+            } else if (isExpired || isActivatedSched) {
+              isRevalidatedWaiting = true;
             }
-          }
-          if (row?.isActivatedSchedule || rawApp?.is_activated_schedule) {
-            isRevalidated = true;
+          } else if (isExpired || isActivatedSched) {
+            isRevalidatedWaiting = true;
           }
         }
 
@@ -445,8 +458,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           label += ' - (Cancelled)';
         } else if (isUnderProcess) {
           label += ' - (Cancellation Under Process)';
-        } else if (isRevalidated) {
-          label += ' - (Revalidated)';
+        } else if (isRevalidatedWaiting) {
+          label += ' - (Revalidation Waiting)';
         } else {
           label += ' - (Available)';
         }
@@ -457,15 +470,28 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           label,
           isUnderProcess,
           isCancelled,
-          isRevalidated,
+          isRevalidated: isRevalidatedWaiting,
           detail: p
         });
       });
     } else {
-      const isRevalidated = Boolean(row?.isActivatedSchedule || rawApp?.is_activated_schedule || existingRevalidations.length > 0);
+      const now = new Date();
+      const validUpToStr = rawApp?.valid_up_to || rawApp?.validUpTo || row?.application?.valid_up_to || '';
+      const validUpToDate = validUpToStr ? new Date(validUpToStr) : null;
+      const isExpired = Boolean(validUpToDate && validUpToDate <= now);
+      const isActivatedSched = Boolean(
+        row?.isActivatedSchedule ||
+        rawApp?.is_activated_schedule ||
+        rawApp?.can_submit_application ||
+        String(row?.currentStage || rawApp?.status || '').toLowerCase().includes('activated') ||
+        String(row?.currentStage || rawApp?.status || '').toLowerCase().includes('ready for revalidation')
+      );
+      const isRevalidatedWaiting = isExpired || isActivatedSched || existingRevalidations.length > 0;
       let label = `${appId} - Single Permit`;
-      if (isRevalidated) {
-        label += ' - (Revalidated)';
+      if (isRevalidatedWaiting) {
+        label += ' - (Revalidation Waiting)';
+      } else {
+        label += ' - (Available)';
       }
       this.availablePermitOptionsForCancellation.push({
         permitNumber: appId,
@@ -473,7 +499,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         label,
         isUnderProcess: false,
         isCancelled: false,
-        isRevalidated,
+        isRevalidated: isRevalidatedWaiting,
         detail: null
       });
     }
@@ -508,7 +534,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const selectedOpt = this.availablePermitOptionsForCancellation.find(o => o.permitNumber === this.selectedPermitNumberForCancellation);
     if (selectedOpt && (selectedOpt.isCancelled || selectedOpt.isUnderProcess || selectedOpt.isRevalidated)) {
       if (selectedOpt.isRevalidated) {
-        alert(`Permit ${this.selectedPermitNumberForCancellation} has been revalidated / requires revalidation and cannot be cancelled.`);
+        alert(`Permit ${this.selectedPermitNumberForCancellation} validity has expired and is waiting for revalidation. Please submit and complete revalidation before attempting to cancel.`);
       } else {
         alert(`Permit ${this.selectedPermitNumberForCancellation} is already ${selectedOpt.isCancelled ? 'cancelled' : 'under process for cancellation'}.`);
       }
