@@ -36,6 +36,9 @@ interface DistributorPermitRow {
   currentStage: string;
   statusGroup: DistributorPermitStatusGroup;
   isActivatedSchedule: boolean;
+  brandName?: string;
+  sizeMl?: number;
+  cases?: number;
   application: DistributorPermitApplication;
 }
 
@@ -629,11 +632,14 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       }
 
       // 1. Stock Arrival Record
-      const caseProc = (this.allCasesProcessedList || []).find((c: any) => {
+      const caseProcList = (this.allCasesProcessedList || []).filter((c: any) => {
         const pNo = String(c.permit_number || c.permitNumber || '').toLowerCase();
         const pAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase();
         return pNo === pNumLower || pAppRef === appIdLower;
       });
+
+      caseProcList.sort((a: any, b: any) => (b.id || 0) - (a.id || 0));
+      const caseProc = caseProcList[0] || null;
 
       const arrRec = (this.allArrivalsList || []).find((a: any) => {
         const pNo = String(a.permit_number || a.permitNumber || '').toLowerCase();
@@ -642,7 +648,15 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       });
 
       const arrivalObj = caseProc || arrRec || null;
-      let arrivalStatus = caseProc ? caseProc.status : (arrRec ? 'approved' : 'pending');
+      let arrivalStatus = caseProc ? String(caseProc.status).toLowerCase() : (arrRec ? 'approved' : 'pending');
+
+      const vehicleNo = caseProc?.vehicle_number || caseProc?.vehicleNumber || caseProc?.vehicle_no || arrRec?.vehicle_number || arrRec?.vehicleNumber || '';
+      const arrivedCasesVal = (caseProc?.arrived_cases !== undefined && caseProc?.arrived_cases !== null)
+        ? caseProc.arrived_cases
+        : ((caseProc as any)?.arrivedCases !== undefined ? (caseProc as any).arrivedCases : (arrRec?.arrived_cases ?? (arrRec as any)?.arrivedCases ?? ''));
+      const expectedCasesVal = caseProc?.expected_cases || caseProc?.expectedCases || arrRec?.expected_cases || arrRec?.expectedCases || Number(p.total_cases || p.totalCases || row.cases || rawApp?.cases || 0);
+      const arrivalNotesVal = caseProc?.remarks || arrRec?.remarks || '';
+      const submittedDateVal = caseProc?.submitted_at || caseProc?.submittedAt || arrRec?.arrived_at || arrRec?.arrivedAt || '';
 
       // 2. Cancellation Record
       const canRec = existingCancellations.find((canApp: any) => {
@@ -689,6 +703,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         brandName: brandName || 'N/A',
         sizeMl: Number(p.size_ml || p.sizeMl || (p.line_items?.[0]?.size_ml) || rawApp?.size_ml || 750),
         arrivalRecord: arrivalObj,
+        vehicleNumber: vehicleNo || '',
+        arrivedCases: arrivedCasesVal,
+        expectedCases: expectedCasesVal,
+        arrivalNotes: arrivalNotesVal,
+        submittedDate: submittedDateVal,
         arrivalStatus,
         cancellationRecord: canRec || null,
         cancellationStatus,
@@ -845,6 +864,13 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           return st === 'under_review' && (pNo === pNum.toLowerCase() || pAppRef === appIdLower);
         });
 
+        const rejectedArrival = (this.allCasesProcessedList || []).find((c: any) => {
+          const pNo = String(c.permit_number || c.permitNumber || '').toLowerCase();
+          const pAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase();
+          const st = String(c.status || '').toLowerCase();
+          return st === 'rejected' && (pNo === pNum.toLowerCase() || pAppRef === appIdLower);
+        });
+
         const existingForPermit = existingCancellations.find((canApp: any) => {
           const cancelledNo = String(canApp.cancelledPermitNumber || canApp.cancelled_permit_number || canApp.application?.cancelled_permit_number || '').toLowerCase();
           const reasonText = String(canApp.cancellationReason || canApp.cancellation_reason || '').toLowerCase();
@@ -866,11 +892,13 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         const isAwaiting = Boolean(pendingArrival);
         let label = `${pNum} (${cases} Cases)`;
         if (isAwaiting) {
-          label += ' - (Stock Arrival Awaiting OIC Approval)';
+          label += ' - (Stock Cases Arrival Pending Approval)';
         } else if (isCancelled) {
           label += ' - (Cancelled)';
         } else if (isUnderProcess) {
           label += ' - (Cancellation Under Process)';
+        } else if (rejectedArrival) {
+          label += ' - (Previous Stock Arrival Rejected - Re-entry Allowed)';
         }
 
         this.availablePermitOptionsForArrival.push({
@@ -890,6 +918,12 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         return st === 'under_review' && pAppRef === appIdLower;
       });
       const isAwaiting = Boolean(pendingArrival);
+
+      const rejectedArrival = (this.allCasesProcessedList || []).find((c: any) => {
+        const pAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase();
+        const st = String(c.status || '').toLowerCase();
+        return st === 'rejected' && pAppRef === appIdLower;
+      });
 
       const existingForPermit = existingCancellations.find((canApp: any) => {
         const cancelledNo = String(canApp.cancelledPermitNumber || canApp.cancelled_permit_number || canApp.application?.cancelled_permit_number || '').toLowerCase();
@@ -916,11 +950,13 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
       let label = `${appId} (${fallbackDetail.totalCases || 0} Cases)`;
       if (isAwaiting) {
-        label += ' - (Stock Arrival Awaiting OIC Approval)';
+        label += ' - (Stock Cases Arrival Pending Approval)';
       } else if (isCancelled) {
         label += ' - (Cancelled)';
       } else if (isUnderProcess) {
         label += ' - (Cancellation Under Process)';
+      } else if (rejectedArrival) {
+        label += ' - (Previous Stock Arrival Rejected - Re-entry Allowed)';
       }
 
       this.availablePermitOptionsForArrival.push({
@@ -1023,8 +1059,128 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     });
   }
 
+  selectedArrivalReviewItem: any = null;
+  showArrivalReviewModal = false;
+  officerActionRemarks = '';
   pendingArrivalReviews: any[] = [];
   isProcessingAction = false;
+
+  getArrivalItemForRow(row: any): any {
+    const appId = row?.applicationId || row?.referenceNo || row?.reference_no || '';
+    const appIdLower = String(appId).toLowerCase().trim();
+    if (!appIdLower) return null;
+
+    const caseProcList = (this.allCasesProcessedList || []).filter((c: any) => {
+      const pNo = String(c.permit_number || c.permitNumber || '').toLowerCase().trim();
+      const pAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase().trim();
+      return pNo === appIdLower || pAppRef === appIdLower || pNo.startsWith(appIdLower);
+    });
+    caseProcList.sort((a: any, b: any) => (b.id || 0) - (a.id || 0));
+    if (caseProcList.length > 0) return caseProcList[0];
+
+    const arrRec = (this.allArrivalsList || []).find((a: any) => {
+      const pNo = String(a.permit_number || a.permitNumber || '').toLowerCase().trim();
+      const pAppRef = String(a.distributor_permit?.reference_no || a.distributor_permit || '').toLowerCase().trim();
+      return pNo === appIdLower || pAppRef === appIdLower || pNo.startsWith(appIdLower);
+    });
+    return arrRec || null;
+  }
+
+  getArrivalStatusForRow(row: any): string {
+    const item = this.getArrivalItemForRow(row);
+    if (!item) return 'pending_entry';
+    return String(item.status || '').toLowerCase().trim();
+  }
+
+  getPendingArrivalForItem(row: any): any {
+    const appId = row?.applicationId || row?.referenceNo || row?.reference_no || '';
+    const appIdLower = String(appId).toLowerCase().trim();
+    if (!appIdLower) return null;
+    return (this.allCasesProcessedList || []).find((c: any) => {
+      const pNo = String(c.permit_number || c.permitNumber || '').toLowerCase().trim();
+      const pAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase().trim();
+      const st = String(c.status || '').toLowerCase().trim();
+      return st === 'under_review' && (pNo === appIdLower || pAppRef === appIdLower || pNo.startsWith(appIdLower));
+    });
+  }
+
+  openArrivalReviewModal(item?: any, event?: Event, row?: any): void {
+    if (event) {
+      try { event.preventDefault(); } catch {}
+      try { event.stopPropagation(); } catch {}
+    }
+    this.officerActionRemarks = '';
+    if (item) {
+      this.selectedArrivalReviewItem = item;
+      this.showArrivalReviewModal = true;
+    } else if (row) {
+      const pendingItem = this.getPendingArrivalForItem(row);
+      if (pendingItem) {
+        this.selectedArrivalReviewItem = pendingItem;
+        this.showArrivalReviewModal = true;
+      } else {
+        this.openPermitDetailsModal(row, event);
+      }
+    }
+  }
+
+  closeArrivalReviewModal(): void {
+    this.showArrivalReviewModal = false;
+    this.selectedArrivalReviewItem = null;
+    this.officerActionRemarks = '';
+  }
+
+  confirmApproveArrival(): void {
+    if (!this.selectedArrivalReviewItem) return;
+    this.isProcessingAction = true;
+    this.permitService.performCasesProcessedAction(this.selectedArrivalReviewItem.id, 'approve', this.officerActionRemarks).subscribe({
+      next: () => {
+        this.isProcessingAction = false;
+        this.closeArrivalReviewModal();
+        if (typeof Swal !== 'undefined') {
+          Swal.fire('Approved!', 'Stock arrival approved successfully and stored in IMFL cases register.', 'success');
+        } else {
+          alert('Stock arrival approved successfully!');
+        }
+        this.loadPendingArrivalReviews();
+        this.loadApplications();
+      },
+      error: (err: any) => {
+        this.isProcessingAction = false;
+        if (typeof Swal !== 'undefined') {
+          Swal.fire('Error', 'Failed to approve stock arrival: ' + (err?.error?.message || err?.message || 'Server error'), 'error');
+        } else {
+          alert('Failed to approve stock arrival: ' + (err?.error?.message || err?.message || 'Server error'));
+        }
+      }
+    });
+  }
+
+  confirmRejectArrival(): void {
+    if (!this.selectedArrivalReviewItem) return;
+    this.isProcessingAction = true;
+    this.permitService.performCasesProcessedAction(this.selectedArrivalReviewItem.id, 'reject', this.officerActionRemarks).subscribe({
+      next: () => {
+        this.isProcessingAction = false;
+        this.closeArrivalReviewModal();
+        if (typeof Swal !== 'undefined') {
+          Swal.fire('Rejected!', 'Stock arrival rejected. Action re-opened for permit.', 'info');
+        } else {
+          alert('Stock arrival rejected.');
+        }
+        this.loadPendingArrivalReviews();
+        this.loadApplications();
+      },
+      error: (err: any) => {
+        this.isProcessingAction = false;
+        if (typeof Swal !== 'undefined') {
+          Swal.fire('Error', 'Failed to reject stock arrival: ' + (err?.error?.message || err?.message || 'Server error'), 'error');
+        } else {
+          alert('Failed to reject stock arrival: ' + (err?.error?.message || err?.message || 'Server error'));
+        }
+      }
+    });
+  }
 
   loadPendingArrivalReviews(): void {
     if (!this.isOfficerUser) return;
@@ -1040,57 +1196,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   approveArrivalReview(item: any): void {
-    Swal.fire({
-      title: 'Approve Stock Arrival?',
-      text: `Approve physical stock arrival for Permit ${item.permit_number} (${item.arrived_cases} cases, Vehicle ${item.vehicle_number})?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Yes, Approve',
-      cancelButtonText: 'Cancel'
-    }).then((res) => {
-      if (res.isConfirmed) {
-        this.isProcessingAction = true;
-        this.permitService.performCasesProcessedAction(item.id, 'approve').subscribe({
-          next: () => {
-            this.isProcessingAction = false;
-            Swal.fire('Approved!', 'Stock arrival approved and stored in IMFL cases register.', 'success');
-            this.loadPendingArrivalReviews();
-            this.loadApplications();
-          },
-          error: (err: any) => {
-            this.isProcessingAction = false;
-            Swal.fire('Error', 'Failed to approve stock arrival: ' + (err?.error?.message || err?.message || 'Server error'), 'error');
-          }
-        });
-      }
-    });
+    this.openArrivalReviewModal(item);
   }
 
   rejectArrivalReview(item: any): void {
-    Swal.fire({
-      title: 'Reject Stock Arrival',
-      input: 'textarea',
-      inputLabel: 'Reason for Rejection',
-      inputPlaceholder: 'Enter rejection remarks...',
-      showCancelButton: true,
-      confirmButtonText: 'Reject Arrival',
-      confirmButtonColor: '#dc3545'
-    }).then((res) => {
-      if (res.isConfirmed && res.value) {
-        this.isProcessingAction = true;
-        this.permitService.performCasesProcessedAction(item.id, 'reject', res.value).subscribe({
-          next: () => {
-            this.isProcessingAction = false;
-            Swal.fire('Rejected', 'Stock arrival record rejected.', 'info');
-            this.loadPendingArrivalReviews();
-          },
-          error: (err: any) => {
-            this.isProcessingAction = false;
-            Swal.fire('Error', 'Failed to reject: ' + (err?.error?.message || err?.message || 'Server error'), 'error');
-          }
-        });
-      }
-    });
+    this.openArrivalReviewModal(item);
   }
 
   showArrivalsRegisterModal = false;
@@ -2420,6 +2530,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       (!refNoUpper.startsWith('IMFLREV') && application?.applicationType === 'revalidation')
     );
 
+    const firstItem = application?.line_items?.[0] || application?.lineItems?.[0] || application?.items?.[0];
+    const brandName = application?.brand_name || application?.brandName || firstItem?.brand_name || firstItem?.brandName || firstItem?.selectedBrandName || 'N/A';
+    const sizeMl = Number(application?.size_ml || application?.sizeMl || firstItem?.size_ml || firstItem?.sizeMl || 750);
+    const cases = Number(application?.total_cases || application?.totalCases || application?.cases || 0);
+
     return {
       id: refNo,
       applicationId: refNo || 'N/A',
@@ -2432,6 +2547,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       currentStage: this.getCurrentStage(stageStr),
       statusGroup: this.getStatusGroup(stageStr, application),
       isActivatedSchedule,
+      brandName,
+      sizeMl,
+      cases,
       application
     };
   }
