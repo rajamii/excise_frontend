@@ -3,7 +3,7 @@
     [activeTab]="activeTab"
     [isFormView]="isFormView"
     [isOfficer]="isOfficerUser"
-    [customTitle]="isOfficerUser ? 'IMFL Requisition Cases Approval Applications' : ''"
+    [customTitle]="isOicDistributorUser ? 'IMFL Requisition Cases Approval Applications' : ''"
     (tabChange)="onTabChange($event)"
     (applyNew)="openApplyForm()"
     (viewArrivals)="openArrivalsRegisterModal()">
@@ -194,7 +194,7 @@
           <div class="register-header-bar" style="background:#0f172a; border-radius:8px 8px 0 0; padding: 12px 18px;">
             <h5 class="register-table-title" style="color:#f1f5f9; margin:0;">
               <i class="bi bi-grid-3x3-gap me-2"></i>
-              {{ isOfficerUser ? 'IMFL Requisition Cases Approval Applications' : 'Import Permit Application Entries' }}
+              {{ isOicDistributorUser ? 'IMFL Requisition Cases Approval Applications' : 'Import Permit Application Entries' }}
             </h5>
             <div class="register-info">
               <span class="entries-count" style="background:rgba(255,255,255,0.12); color:#e2e8f0; border:1px solid rgba(255,255,255,0.2);">{{ filteredRows.length }} Entries</span>
@@ -202,7 +202,7 @@
           </div>
 
           <!-- Officer Approval Table for IMFL Requisition Stock Arrival Cases -->
-          <div class="table-wrapper" *ngIf="!error && filteredRows.length > 0 && isOfficerUser">
+          <div class="table-wrapper" *ngIf="!error && filteredRows.length > 0 && isOicDistributorUser">
             <table class="table align-middle dp-entries-table">
               <thead>
                 <tr>
@@ -325,8 +325,8 @@
             </table>
           </div>
 
-          <!-- Distributor Licensee Table for IMFL Permits -->
-          <div class="table-wrapper" *ngIf="!error && filteredRows.length > 0 && !isOfficerUser">
+          <!-- Distributor Licensee & Admin Table for IMFL Permits -->
+          <div class="table-wrapper" *ngIf="!error && filteredRows.length > 0 && !isOicDistributorUser">
             <table class="table align-middle dp-entries-table">
               <thead>
                 <tr>

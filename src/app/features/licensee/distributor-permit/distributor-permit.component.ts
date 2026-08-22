@@ -254,7 +254,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return this.activeTabRows.reduce(
       (acc, row) => {
         acc.total += 1;
-        const stGroup = this.isOfficerUser ? this.getOfficerStatusGroup(row) : row.statusGroup;
+        const stGroup = this.isOicDistributorUser ? this.getOfficerStatusGroup(row) : row.statusGroup;
         if (stGroup === 'approved') acc.approved += 1;
         else if (stGroup === 'pending') acc.pending += 1;
         else if (stGroup === 'under_process') acc.underProcess += 1;
@@ -274,7 +274,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const validTo = parsedTo && !Number.isNaN(parsedTo.getTime()) ? parsedTo : null;
 
     return this.activeTabRows.filter((row) => {
-      const stGroup = this.isOfficerUser ? this.getOfficerStatusGroup(row) : row.statusGroup;
+      const stGroup = this.isOicDistributorUser ? this.getOfficerStatusGroup(row) : row.statusGroup;
       const matchesStatus = this.activeCardFilter === 'all' || stGroup === this.activeCardFilter;
       const matchesSearch = !q ||
         (row.applicationId || '').toLowerCase().includes(q) ||
@@ -1519,7 +1519,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   loadPendingArrivalReviews(): void {
-    if (!this.isOfficerUser) return;
+    if (!this.isOicDistributorUser) return;
     this.permitService.getCasesProcessed({ status: 'under_review' }).subscribe({
       next: (res: any[]) => {
         this.pendingArrivalReviews = Array.isArray(res) ? res : (res as any)?.results || [];
@@ -2167,6 +2167,32 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       return true;
     }
     return normalized.includes('officer') || normalized.includes('oic') || normalized.includes('permit') || normalized.includes('commissioner');
+  }
+
+  get isOicDistributorUser(): boolean {
+    const user = this.accountService.getCurrentUser() as any;
+    let roleId = Number(user?.role?.id || user?.roleId || user?.role_id || 0);
+    if (!roleId) {
+      try {
+        const cached = localStorage.getItem('currentUser') || localStorage.getItem('user');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          roleId = Number(parsed?.roleId || parsed?.role?.id || parsed?.user?.roleId || parsed?.user?.role?.id || 0);
+        }
+      } catch {}
+    }
+    const roleName = String(user?.role?.name || user?.role?.displayName || user?.role || '').toLowerCase();
+
+    if (roleId === 7) return true;
+    if ([1, 2, 3, 5, 6, 8, 9, 10, 11, 12, 16].includes(roleId)) return false;
+
+    return (
+      roleName.includes('officer_in_charge') ||
+      roleName.includes('oic distributor') ||
+      roleName.includes('oic_distributor') ||
+      roleName.includes('distributor oic') ||
+      roleName.includes('distributor_oic')
+    );
   }
 
   selectApplication(rawApp: any): void {
