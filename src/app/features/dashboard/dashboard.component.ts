@@ -510,7 +510,20 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.updateSingleWindowChart();
   }
 
+  get isSecretaryUser(): boolean {
+    const roleId = this.getCurrentRoleId();
+    if (roleId === 11) return true;
+    const user = (this.currentUser || this.roleService.getCurrentUser()) as any;
+    const roleName = String(user?.role?.name || user?.role?.displayName || user?.role || '').toLowerCase();
+    return roleName.includes('secretary');
+  }
+
   public updateAvailableChartModules(): void {
+    if (this.isSecretaryUser) {
+      this.availableChartModules = [];
+      this.selectedChartModule = '';
+      return;
+    }
     const roleId = this.getCurrentRoleId();
     const isITCell = roleId === 6;
     const isJointCommissioner = roleId === 9;
@@ -654,6 +667,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   public getFilteredCount(status: string): number {
+    if (this.isSecretaryUser) {
+      return 0;
+    }
     if (this.isOicUser()) {
       if (this.selectedChartModule === 'all') {
         const oicModules = ['transit', 'bldetails', 'hologram', 'hologramRequests'];
@@ -2657,6 +2673,16 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private loadDashboardData(forceRefresh = false) {
+    if (this.isSecretaryUser) {
+      this.isLoading = false;
+      this.isChartLoading = false;
+      this.dashboardCounts = { applied: 0, pending: 0, objection: 0, awaitingPayment: 0, approved: 0, rejected: 0 };
+      this.availableChartModules = [];
+      this.selectedChartModule = '';
+      this.dashboardLoadInFlight = false;
+      return;
+    }
+
     if (this.dashboardLoadInFlight && !forceRefresh) {
       return;
     }

@@ -88,7 +88,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     cancellation: 'Cancellation',
     transit: 'Transit Permit',
     hologram: 'New Procurement',
-    'distributor-permit': 'Import Permit'
+    'distributor-permit': 'Import Permit',
+    'officer-activity': 'Admin Activity'
   };
   private dbNavigationRoutes = new Set<string>();
   private dbPermissionTokens = new Set<string>();
@@ -550,6 +551,12 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     showOnlyForOic?: boolean;
     showOnlyForCommissioner?: boolean;
   }): boolean {
+    if (this.isSecretaryUser()) {
+      if (item.section === 'officer-activity') {
+        return true;
+      }
+      return false;
+    }
     if (this.isDistributorOic()) {
       if (item.section === 'imfl-requisition-cases' || item.section === 'officer-activity') {
         return true;
@@ -1060,28 +1067,21 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
   // Check if user is licensee/supply chain
   isLicenseeUser(): boolean {
+    const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
+    // Officer / Admin roles (including Secretary) are NEVER licensee users
+    if ([1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].includes(roleId) || this.isSecretaryUser() || this.isCommissionerUser() || this.isPermitSectionUser() || this.isSiteAdminUser()) {
+      return false;
+    }
+
     // Primary source: DB-backed dashboard layout.
     if (String(this.currentLayout || '').toLowerCase() === 'licensee') {
       return true;
     }
 
-    // DB-backed permission hints.
-    const licenseeTokens = ['licensee.module.view', 'licensee', 'licensee_applications'];
-    for (const token of licenseeTokens) {
-      if (this.dbPermissionTokens.has(token)) {
-        return true;
-      }
-    }
-    for (const permission of this.dbPermissionTokens) {
-      if (permission.includes('licensee')) {
-        return true;
-      }
-    }
-
     // Backward-compatible fallback while older role configs are being updated.
     return (this.currentUser?.permissions || []).includes('licensee.module.view')
-      || this.currentUser?.roleId === 2
-      || this.currentUser?.roleId === 16;
+      || roleId === 2
+      || roleId === 16;
   }
 
   private loadLicenseeMenuAccess(): void {
@@ -1679,6 +1679,14 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return this.getNormalizedRoleName().includes('itcell');
   }
 
+  isSecretaryUser(): boolean {
+    const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
+    if (roleId === 11) {
+      return true;
+    }
+    return this.getNormalizedRoleName().includes('secretary');
+  }
+
   private getNormalizedRoleName(): string {
     const roleName = String(
       this.currentUser?.role?.name ||
@@ -1692,8 +1700,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
   private canAccessCompanyCollaborationWorkflow(): boolean {
     const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
-    // Permit Section (5), Commissioner (10), and Distributor (16)
-    if ([5, 10, 16].includes(roleId)) {
+    // Permit Section (5), Commissioner (10), Secretary (11), and Distributor (16)
+    if ([5, 10, 11, 16].includes(roleId)) {
       return true;
     }
 
