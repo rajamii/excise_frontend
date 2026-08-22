@@ -325,15 +325,15 @@
                         }
                     </div>
 
-                    @for (permit of applicationData['permitWiseDetails']; track permit.permit_sequence || $index) {
+                    @for (permit of applicationData['permitWiseDetails']; track permit.permit_sequence || permit.permitSequence || $index) {
                     <div class="card mb-3 border shadow-sm">
                         <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
                             <span class="fw-bold text-dark">
                                 <i class="bi bi-file-earmark-text me-1 text-warning"></i>
-                                Permit Reference: {{ permit.permit_number || ('Permit #' + (permit.permit_sequence || ($index + 1))) }}
+                                Permit Reference: {{ permit.permit_number || permit.permitNumber || ('Permit #' + (permit.permit_sequence || permit.permitSequence || ($index + 1))) }}
                             </span>
                             <span class="badge bg-secondary">
-                                Total Cases: {{ permit.total_cases }} | BL: {{ permit.total_bulk_litres }} L
+                                Total Cases: {{ permit.total_cases || permit.totalCases }} | BL: {{ permit.total_bulk_litres || permit.totalBulkLitres }} L
                             </span>
                         </div>
                         <div class="card-body p-0">
@@ -351,25 +351,25 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @for (item of permit.line_items; track item.brand_id || $index) {
+                                        @for (item of (permit.line_items || permit.lineItems || []); track item.brand_id || item.brandId || $index) {
                                         <tr>
                                             <td>{{ $index + 1 }}</td>
-                                            <td class="fw-semibold text-primary">{{ item.brand_name }}</td>
-                                            <td>{{ item.size_ml }} ml</td>
+                                            <td class="fw-semibold text-primary">{{ item.brand_name || item.brandName }}</td>
+                                            <td>{{ item.size_ml || item.sizeMl }} ml</td>
                                             <td class="text-center fw-bold">{{ item.cases }}</td>
-                                            <td class="text-end text-success">₹{{ item.total_import | number:'1.2-2' }}</td>
-                                            <td class="text-end text-secondary">₹{{ item.total_additional_ed | number:'1.2-2' }}</td>
-                                            <td class="text-end fw-bold">{{ item.bulk_litres }} L</td>
+                                            <td class="text-end text-success">₹{{ (item.total_import || item.totalImport || 0) | number:'1.2-2' }}</td>
+                                            <td class="text-end text-secondary">₹{{ (item.total_additional_ed || item.totalAdditionalEd || item.totalAddEd || 0) | number:'1.2-2' }}</td>
+                                            <td class="text-end fw-bold">{{ (item.bulk_litres || item.bulkLitres || item.bl || 0) | number:'1.2-2' }} L</td>
                                         </tr>
                                         }
                                     </tbody>
                                     <tfoot class="table-light fw-bold">
                                         <tr>
                                             <td colspan="3" class="text-end">Permit Totals:</td>
-                                            <td class="text-center text-primary">{{ permit.total_cases }}</td>
-                                            <td class="text-end text-success">₹{{ permit.total_import_fee | number:'1.2-2' }}</td>
-                                            <td class="text-end text-secondary">₹{{ permit.total_additional_ed | number:'1.2-2' }}</td>
-                                            <td class="text-end text-dark">{{ permit.total_bulk_litres }} L</td>
+                                            <td class="text-center text-primary">{{ permit.total_cases || permit.totalCases }}</td>
+                                            <td class="text-end text-success">₹{{ (permit.total_import_fee || permit.totalImportFee || 0) | number:'1.2-2' }}</td>
+                                            <td class="text-end text-secondary">₹{{ (permit.total_additional_ed || permit.totalAdditionalEd || 0) | number:'1.2-2' }}</td>
+                                            <td class="text-end text-dark">{{ permit.total_bulk_litres || permit.totalBulkLitres }} L</td>
                                         </tr>
                                     </tfoot>
                                 </table>

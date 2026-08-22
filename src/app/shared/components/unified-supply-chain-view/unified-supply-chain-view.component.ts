@@ -1254,8 +1254,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
                 let revPermitWiseDetails = apiData?.permit_wise_details || apiData?.permitWiseDetails;
                 if (!Array.isArray(revPermitWiseDetails) || revPermitWiseDetails.length === 0) {
-                    if (dpRevDetail && Array.isArray(dpRevDetail.permit_wise_details)) {
-                        revPermitWiseDetails = dpRevDetail.permit_wise_details;
+                    if (dpRevDetail && typeof dpRevDetail === 'object') {
+                        revPermitWiseDetails = dpRevDetail.permit_wise_details || dpRevDetail.permitWiseDetails;
                     }
                 }
 
