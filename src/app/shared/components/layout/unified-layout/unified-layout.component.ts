@@ -89,7 +89,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     transit: 'Transit Permit',
     hologram: 'New Procurement',
     'distributor-permit': 'Import Permit',
-    'officer-activity': 'Admin Activity'
+    'officer-activity': 'Admin Activity',
+    'secretary-bulk-spirit': 'Bulk Spirit Overview'
   };
   private dbNavigationRoutes = new Set<string>();
   private dbPermissionTokens = new Set<string>();
@@ -107,6 +108,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     showOnlyForOic?: boolean;
     showOnlyForCommissioner?: boolean;
   }> = [
+    { section: 'secretary-bulk-spirit', label: 'Bulk Spirit Overview', icon: 'water_drop' },
     { section: 'new-license', label: 'New License', icon: 'add_business', hideForSiteAdmin: true, hideForPermitSection: true, hideForItCell: true, hideForOic: true },
     { section: 'license-renewal', label: 'License Renewal', icon: 'autorenew', hideForSiteAdmin: true, hideForPermitSection: true, hideForItCell: true, hideForOic: true },
     { section: 'special-permit', label: 'Dry Day Permit', icon: 'assignment_turned_in', hideForSiteAdmin: true, hideForPermitSection: true, hideForItCell: true, hideForOic: true },
@@ -552,7 +554,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     showOnlyForCommissioner?: boolean;
   }): boolean {
     if (this.isSecretaryUser()) {
-      if (item.section === 'officer-activity') {
+      if (item.section === 'secretary-bulk-spirit' || item.section === 'officer-activity') {
         return true;
       }
       return false;
