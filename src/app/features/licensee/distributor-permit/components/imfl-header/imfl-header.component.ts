@@ -15,6 +15,8 @@ export class ImflHeaderComponent {
   @Input() activeTab: ImflTabType = 'requisition';
   @Input() pendingCounts: Record<string, number> = {};
   @Input() isFormView = false;
+  @Input() isOfficer = false;
+  @Input() customTitle = '';
   @Output() tabChange = new EventEmitter<ImflTabType>();
   @Output() applyNew = new EventEmitter<void>();
   @Output() viewArrivals = new EventEmitter<void>();

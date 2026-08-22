@@ -574,6 +574,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     // Officer in Charge handles ONLY: Transit Applications, Bulk Spirit Details, Hologram Procurement, Hologram Requests
     const isOIC = this.isOicUser();
     if (isOIC) {
+      if (this.isDistributorOic()) {
+        this.availableChartModules = [
+          { value: 'distributor-permit-requisition', label: 'IMFL Requisition Cases' }
+        ];
+        this.selectedChartModule = 'distributor-permit-requisition';
+        return;
+      }
+
       this.availableChartModules = [
         { value: 'all', label: 'All Modules' },
         { value: 'transit', label: 'Transit Applications' },
@@ -2702,6 +2710,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   getSupplyChainPendingTotal(): number {
     const roleId = this.getCurrentRoleId();
     if (roleId === 4 || roleId === 8 || roleId === 9) return 0;
+    if (this.isDistributorOic()) {
+      return this.getSupplyChainPendingCount('distributor-permit-requisition');
+    }
     if (this.isDistributorUser()) {
       return this.getSupplyChainPendingCount('distributor-permit-requisition') +
              this.getSupplyChainPendingCount('distributor-permit-revalidation') +
@@ -3607,9 +3618,28 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     return normalized === 'distributor' || normalized.includes('distributor');
   }
 
+  public isDistributorOic(): boolean {
+    if (!this.isOicUser()) return false;
+
+    const accountUser: any = this.accountService?.getCurrentUser() || {};
+    const u: any = this.currentUser || accountUser || {};
+
+    const assignment = u?.oicAssignment || u?.oic_assignment || accountUser?.oicAssignment || accountUser?.oic_assignment;
+    const assignmentType = String(assignment?.assignmentType || assignment?.assignment_type || '').toLowerCase();
+
+    if (assignmentType === 'distributor') {
+      return true;
+    }
+
+    const username = String(u?.username || accountUser?.username || '').toLowerCase();
+    const estName = String(assignment?.establishmentName || assignment?.establishment_name || '').toLowerCase();
+
+    return username.startsWith('do') || estName.includes('distributor') || assignmentType.includes('distributor');
+  }
+
   isDistributorPermitSection(): boolean {
     const s = String(this.selectedSupplyChainSection || '').toLowerCase();
-    return s.includes('distributor-permit') || s.includes('imfl-requisition') || s.includes('imfl-revalidation') || s.includes('imfl-cancellation');
+    return s.includes('distributor-permit') || s.includes('imfl-requisition') || s.includes('imfl-revalidation') || s.includes('imfl-cancellation') || s.includes('imfl-requisition-cases');
   }
 
   isCommissionerUser(): boolean {

@@ -125,15 +125,15 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     { section: 'hologram-inventory', label: 'Inventory', icon: 'inventory_2', group: 'Hologram', showOnlyForOic: true },
     { section: 'commissioner-hologram-working-records', label: 'Working Records', icon: 'fact_check', group: 'Hologram', showOnlyForCommissioner: true },
     { section: 'commissioner-monthly-view-details', label: 'Monthly View Details', icon: 'calendar_month', showOnlyForCommissioner: true },
-    // ── Other ──
-      { section: 'stock-inventory', label: 'Stock Inventory', icon: 'inventory' },
-      { section: 'salesman-barman-registration', label: 'Salesman/Barman Registration', icon: 'badge' },
-      { section: 'company-registration', label: 'Company Registration', icon: 'apartment' },
-      { section: 'company-collaboration', label: 'Company Collaboration', icon: 'groups', hideForSiteAdmin: true },
-      { section: 'single-window', label: 'User Details', icon: 'manage_search', hideForSiteAdmin: true },
-      { section: 'payment-transactions', label: 'Transactions', icon: 'receipt_long', hideForSiteAdmin: true },
-      { section: 'officer-activity', label: 'Officer Activity', icon: 'assignment', hideForSiteAdmin: true }
-    ];
+    { section: 'imfl-requisition-cases', label: 'IMFL Requisition Cases', icon: 'assignment_turned_in', showOnlyForOic: true },
+    { section: 'stock-inventory', label: 'Stock Inventory', icon: 'inventory' },
+    { section: 'salesman-barman-registration', label: 'Salesman/Barman Registration', icon: 'badge' },
+    { section: 'company-registration', label: 'Company Registration', icon: 'apartment' },
+    { section: 'company-collaboration', label: 'Company Collaboration', icon: 'groups', hideForSiteAdmin: true },
+    { section: 'single-window', label: 'User Details', icon: 'manage_search', hideForSiteAdmin: true },
+    { section: 'payment-transactions', label: 'Transactions', icon: 'receipt_long', hideForSiteAdmin: true },
+    { section: 'officer-activity', label: 'Officer Activity', icon: 'assignment', hideForSiteAdmin: true }
+  ];
 
   constructor(
     private roleService: RoleService,
@@ -538,7 +538,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return req + rev + can;
   }
 
-  private shouldShowOfficerSectionItem(item: {
+  public shouldShowOfficerSectionItem(item: {
     section: string;
     label: string;
     icon: string;
@@ -550,6 +550,17 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     showOnlyForOic?: boolean;
     showOnlyForCommissioner?: boolean;
   }): boolean {
+    if (this.isDistributorOic()) {
+      if (item.section === 'imfl-requisition-cases' || item.section === 'officer-activity') {
+        return true;
+      }
+      return false;
+    } else if (this.isOicUser()) {
+      if (item.section === 'imfl-requisition-cases') {
+        return false;
+      }
+    }
+
     if (item.showOnlyForOic && !this.isOicUser()) return false;
     if (item.showOnlyForCommissioner && !this.isCommissionerUser()) return false;
     if (item.hideForSiteAdmin && this.isSiteAdminUser()) return false;
@@ -1017,9 +1028,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     for (let i = 0; i < index; i++) {
       if (this.officerSectionItems[i].group === item.group) return false;
     }
-    // At least one item in the group must be accessible
+    // At least one item in the group must be visible to the current user
     return this.officerSectionItems.some(
-      it => it.group === item.group && this.canAccessSection(it.section)
+      it => it.group === item.group && this.shouldShowOfficerSectionItem(it)
     );
   }
 
@@ -1594,6 +1605,26 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     ).toLowerCase();
     const normalized = roleName.replace(/[^a-z0-9]/g, '');
     return normalized.includes('officerincharge') || normalized === 'oic' || normalized === 'offcierincharge';
+  }
+
+  public isDistributorOic(): boolean {
+    if (!this.isOicUser()) return false;
+
+    const accountUser: any = this.accountService?.getCurrentUser() || {};
+    const roleUser: any = this.roleService?.getCurrentUser() || {};
+    const u: any = this.currentUser || this.user || accountUser || roleUser || {};
+
+    const assignment = u?.oicAssignment || u?.oic_assignment || accountUser?.oicAssignment || accountUser?.oic_assignment;
+    const assignmentType = String(assignment?.assignmentType || assignment?.assignment_type || '').toLowerCase();
+
+    if (assignmentType === 'distributor') {
+      return true;
+    }
+
+    const username = String(u?.username || accountUser?.username || '').toLowerCase();
+    const estName = String(assignment?.establishmentName || assignment?.establishment_name || '').toLowerCase();
+
+    return username.startsWith('do') || estName.includes('distributor') || assignmentType.includes('distributor');
   }
 
   isCommissionerUser(): boolean {

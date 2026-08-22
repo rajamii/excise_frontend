@@ -1301,8 +1301,24 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   get isOfficerUser(): boolean {
-    const roleId = Number(this.accountService.getCurrentUser()?.role?.id || 0);
-    return roleId === 5 || roleId === 10 || roleId === 12;
+    const user = this.accountService.getCurrentUser() as any;
+    let roleId = Number(user?.role?.id || user?.roleId || user?.role_id || 0);
+    if (!roleId) {
+      try {
+        const cached = localStorage.getItem('currentUser') || localStorage.getItem('user');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          roleId = Number(parsed?.roleId || parsed?.role?.id || parsed?.user?.roleId || parsed?.user?.role?.id || 0);
+        }
+      } catch {}
+    }
+    const roleName = String(user?.role?.name || user?.role?.displayName || user?.role || '').toLowerCase();
+    const normalized = roleName.replace(/[^a-z0-9]/g, '');
+
+    if ([5, 6, 7, 10, 12, 1, 3].includes(roleId)) {
+      return true;
+    }
+    return normalized.includes('officer') || normalized.includes('oic') || normalized.includes('permit') || normalized.includes('commissioner');
   }
 
   selectApplication(rawApp: any): void {
