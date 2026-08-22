@@ -125,11 +125,18 @@ export class WorkflowActionService {
           map((res: any) => res.allowed_action_configs || []),
           catchError(() => of([]))
         );
-      case 'cancellation':
-        return this.http.get<any>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/${id}/`).pipe(
-          map((res: any) => res.allowed_action_configs || []),
+      case 'cancellation': {
+        const targetId = id || data.referenceNo || '';
+        const idStr = String(targetId).toUpperCase();
+        const isImfl = idStr.startsWith('IMFL') || idStr.includes('IMFLCAN');
+        const cancellationUrl = isImfl
+          ? `${environment.apiBaseUrl}/transactional/distributor-permit/cancellation/${targetId}/`
+          : `${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/${targetId}/`;
+        return this.http.get<any>(cancellationUrl).pipe(
+          map((res: any) => res.allowed_action_configs || res.allowed_actions || []),
           catchError(() => of([]))
         );
+      }
 
       case 'hologram':
       case 'hologram-procurement':

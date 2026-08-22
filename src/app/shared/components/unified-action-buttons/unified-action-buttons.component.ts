@@ -1982,7 +1982,6 @@ private getTransitRejectSummary(): {
     if (this.itemType !== 'cancellation') {
       return configs;
     }
-
     return configs.filter(config => this.normalizeActionName(config?.action) !== 'REJECT');
   }
 
@@ -2075,6 +2074,20 @@ private getTransitRejectSummary(): {
       icon = 'bolt';
       color = 'success';
       tooltip = 'Force Excise Duty Payment & Move to Next Stage';
+    }
+
+    if (action === 'APPROVE') {
+      label = this.itemType === 'cancellation' ? 'Approve Cancellation' : (config?.label ?? 'Approve');
+      icon = 'check_circle';
+      color = 'success';
+      tooltip = 'Approve Application';
+    }
+
+    if (action === 'REJECT') {
+      label = this.itemType === 'cancellation' ? 'Reject Cancellation' : (config?.label ?? 'Reject');
+      icon = 'cancel';
+      color = 'warn';
+      tooltip = 'Reject Application';
     }
 
     if (action === 'PAY') {

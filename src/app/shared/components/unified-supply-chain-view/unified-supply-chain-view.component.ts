@@ -3297,7 +3297,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         }
 
         const rawAllowedActions = this.applicationData.allowedActions ?? this.applicationData['allowed_actions'];
-        if (Array.isArray(rawAllowedActions)) {
+        if (Array.isArray(rawAllowedActions) && rawAllowedActions.length > 0) {
             let actions = (rawAllowedActions as string[])
                 .map(a => String(a || '').toUpperCase().trim())
                 .filter(a => !!a && a !== 'VIEW');
@@ -3316,7 +3316,13 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 actions = actions.filter(a => a !== 'PAY' && a !== 'FORCE_PAY');
             }
 
-            return Array.from(new Set(actions));
+            if (actions.length > 0) {
+                return Array.from(new Set(actions));
+            }
+        }
+
+        if (this.applicationType === 'cancellation' && !this.isLicenseeContext()) {
+            return ['APPROVE'];
         }
 
         const status = String(this.applicationData.status || '').toUpperCase();
@@ -3342,7 +3348,9 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         const context = this.getUserContext();
 
         if (context === USER_CONTEXTS.COMMISSIONER) {
-            if (this.applicationType === 'cancellation' || stageId === 162 || status.includes('COMMISSIONER')) {
+            if (this.applicationType === 'cancellation') {
+                actions = ['APPROVE'];
+            } else if (stageId === 162 || status.includes('COMMISSIONER')) {
                 actions = ['APPROVE', 'REJECT'];
             } else if (this.applicationType === 'revalidation' || stageId === 160) {
                 actions = ['APPROVE', 'REJECT'];

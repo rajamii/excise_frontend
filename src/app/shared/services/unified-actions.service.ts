@@ -320,12 +320,14 @@ export class UnifiedActionsService {
           'Failed to approve revalidation'
         );
 
-      case 'cancellation':
+      case 'cancellation': {
+        const cancelId = item.id || item.referenceNo || item.reference_no || '';
         return this.toActionResult(
-          this.supplyChainService.performCancellationAction(item.id, 'APPROVE', 'Approved'),
+          this.supplyChainService.performCancellationAction(cancelId, 'APPROVE', 'Approved'),
           'Cancellation approved successfully',
           'Failed to approve cancellation'
         );
+      }
 
       case 'transit':
         return this.toActionResult(

@@ -347,7 +347,13 @@ export class SupplyChainService {
   }
 
   getCancellationById(id: string): Observable<any> {
-    return this.http.get<any>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/${id}/`).pipe(
+    const idStr = String(id || '').toUpperCase();
+    const isImfl = idStr.startsWith('IMFL') || idStr.includes('IMFLCAN');
+    const endpointUrl = isImfl
+      ? `${environment.apiBaseUrl}/transactional/distributor-permit/cancellation/${id}/`
+      : `${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/${id}/`;
+
+    return this.http.get<any>(endpointUrl).pipe(
       catchError((error) => {
         console.error('getCancellationById error', error);
         throw error;
@@ -365,8 +371,14 @@ export class SupplyChainService {
   }
 
   performCancellationAction(id: number | string, action: 'APPROVE' | 'REJECT' | 'SubmitPayslip' | 'ApprovePayslip' | 'RejectPayslip', role: string = 'permit-section'): Observable<any> {
+    const idStr = String(id || '').toUpperCase();
+    const isImfl = idStr.startsWith('IMFL') || idStr.includes('IMFLCAN');
+    const endpointUrl = isImfl
+      ? `${environment.apiBaseUrl}/transactional/distributor-permit/cancellation/${id}/perform_action/`
+      : `${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/${id}/perform_action/`;
+
     return this.http.post<any>(
-      `${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/${id}/perform_action/`,
+      endpointUrl,
       { action, role }
     ).pipe(
       tap(() => this.invalidateCache('cancellations:list')),
