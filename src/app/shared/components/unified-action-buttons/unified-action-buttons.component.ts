@@ -1989,24 +1989,7 @@ private getTransitRejectSummary(): {
     if (this.itemType !== 'revalidation') {
       return configs;
     }
-
-    if (this.context !== 'commissioner') {
-      return configs;
-    }
-
-    const currentUrl = this.router.url || '';
-    const isDetailView = currentUrl.includes('/supply-chain-view');
-
-    return configs.filter(config => {
-      const action = this.normalizeActionName(config?.action);
-      if (action === 'REJECT') {
-        return false;
-      }
-      if (!isDetailView && action === 'APPROVE') {
-        return false;
-      }
-      return true;
-    });
+    return configs;
   }
 
   private applyHologramCommissionerActionRules(configs: ActionButtonConfig[]): ActionButtonConfig[] {
@@ -2077,14 +2060,14 @@ private getTransitRejectSummary(): {
     }
 
     if (action === 'APPROVE') {
-      label = this.itemType === 'cancellation' ? 'Approve Cancellation' : (config?.label ?? 'Approve');
+      label = this.itemType === 'cancellation' ? 'Approve Cancellation' : (this.itemType === 'revalidation' ? 'Approve Revalidation' : (config?.label ?? 'Approve'));
       icon = 'check_circle';
       color = 'success';
       tooltip = 'Approve Application';
     }
 
     if (action === 'REJECT') {
-      label = this.itemType === 'cancellation' ? 'Reject Cancellation' : (config?.label ?? 'Reject');
+      label = this.itemType === 'cancellation' ? 'Reject Cancellation' : (this.itemType === 'revalidation' ? 'Reject Revalidation' : (config?.label ?? 'Reject'));
       icon = 'cancel';
       color = 'warn';
       tooltip = 'Reject Application';

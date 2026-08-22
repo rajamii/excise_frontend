@@ -1244,43 +1244,74 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 break;
 
             case 'revalidation':
-                mappedData['originalPermitNo'] = mappedData.referenceNo;
-                mappedData['originalPermitDate'] = mappedData.submissionDate;
-
-                const revalidationTotalBl = this.parseNumericValue(this.extractFieldValue(apiData, ['totalBl', 'total_bl']));
-                const revalidationBrAmount = this.parseNumericValue(this.extractFieldValue(apiData, ['revalidationBrAmount', 'revalidation_br_amount']));
-
-                if (revalidationTotalBl > 0) {
-                    mappedData['brAmount'] = revalidationTotalBl;
+                const revalidatedPermitNumber = this.extractFieldValue(apiData, ['revalidatedPermitNumber', 'revalidated_permit_number', 'originalPermitNo', 'original_permit_no']);
+                if (revalidatedPermitNumber) {
+                    mappedData['revalidatedPermitNumber'] = revalidatedPermitNumber;
+                    mappedData['originalPermitNo'] = revalidatedPermitNumber;
                 }
 
-                if (revalidationBrAmount > 0) {
-                    mappedData['revalidationAmount'] = revalidationBrAmount;
-                } else {
-                    mappedData['revalidationAmount'] = 1000;
+                const dpRevDetail = apiData?.distributor_permit_detail || apiData?.distributorPermitDetail || apiData?.distributor_permit || apiData?.distributorPermit;
+
+                let revPermitWiseDetails = apiData?.permit_wise_details || apiData?.permitWiseDetails;
+                if (!Array.isArray(revPermitWiseDetails) || revPermitWiseDetails.length === 0) {
+                    if (dpRevDetail && Array.isArray(dpRevDetail.permit_wise_details)) {
+                        revPermitWiseDetails = dpRevDetail.permit_wise_details;
+                    }
                 }
 
-                const revalidationStatus = mappedData.status || '';
-                if (revalidationStatus && revalidationStatus !== 'PENDING' && revalidationStatus.length > 10) {
-                    mappedData['reasonForRevalidation'] = revalidationStatus;
-                } else {
-                    mappedData['reasonForRevalidation'] = 'Permit revalidation requested';
+                if (Array.isArray(revPermitWiseDetails) && revPermitWiseDetails.length > 0) {
+                    mappedData['permitWiseDetails'] = revPermitWiseDetails;
+                    let totalImportFee = 0;
+                    let totalCases = 0;
+                    let totalBl = 0;
+
+                    revPermitWiseDetails.forEach((p: any) => {
+                        totalImportFee += Number(p.total_import_fee || p.totalImportFee || 0);
+                        totalCases += Number(p.total_cases || p.totalCases || 0);
+                        totalBl += Number(p.total_bulk_litres || p.totalBulkLitres || 0);
+                    });
+
+                    if (totalImportFee > 0) mappedData['brAmount'] = totalImportFee;
+                    if (totalCases > 0) mappedData['numberOfPermits'] = totalCases;
+                    if (totalBl > 0) mappedData['quantity'] = totalBl;
                 }
 
-                const revalidationDate = this.extractFieldValue(apiData, ['revalidationDate', 'revalidation_date']);
-                if (revalidationDate) {
-                    mappedData['expiryDate'] = this.parseDate(revalidationDate);
+                if (dpRevDetail) {
+                    if (!mappedData['supplierCompanyName']) {
+                        mappedData['supplierCompanyName'] = dpRevDetail.supplier_company_name || dpRevDetail.supplierCompanyName || '';
+                    }
+                    if (!mappedData['sourceAddress']) {
+                        mappedData['sourceAddress'] = dpRevDetail.source_address || dpRevDetail.sourceAddress || '';
+                    }
+                    if (!mappedData['origin']) {
+                        mappedData['origin'] = dpRevDetail.origin || '';
+                    }
+                    if (!mappedData['destination']) {
+                        mappedData['destination'] = dpRevDetail.destination || '';
+                    }
+                    if (!mappedData['routeDetails']) {
+                        mappedData['routeDetails'] = dpRevDetail.route_details || dpRevDetail.routeDetails || '';
+                    }
+                    if (!mappedData['logisticsPartner']) {
+                        mappedData['logisticsPartner'] = dpRevDetail.logistics_partner || dpRevDetail.logisticsPartner || '';
+                    }
+                    if (!mappedData['originalPermitDate']) {
+                        mappedData['originalPermitDate'] = dpRevDetail.submitted_at || dpRevDetail.approval_date || dpRevDetail.created_at;
+                    }
+                    if (!mappedData['expiryDate']) {
+                        mappedData['expiryDate'] = dpRevDetail.valid_up_to;
+                    }
+                }
+
+                const rawRevReason = this.extractFieldValue(apiData, ['revalidation_reason', 'revalidationReason', 'reason']);
+                if (rawRevReason) {
+                    mappedData['reasonForRevalidation'] = rawRevReason;
                 }
 
                 mappedData['newQuantity'] = mappedData['quantity'];
-                mappedData['newPurpose'] = mappedData['purpose'];
-                if (config.fieldMappings.detailsPermitsNumber) {
-                    mappedData['detailsPermitsNumber'] = this.extractFieldValue(apiData, config.fieldMappings.detailsPermitsNumber) || '';
-                }
-
-                if (!mappedData['checkpostEntry'] || mappedData['checkpostEntry'] === '') {
-                    const revalidationState = this.extractFieldValue(apiData, ['state']);
-                    mappedData['checkpostEntry'] = revalidationState ? `${revalidationState} Border` : 'Not specified';
+                mappedData['newPurpose'] = mappedData['purpose'] || 'Not specified';
+                if (!mappedData['revalidationAmount']) {
+                    mappedData['revalidationAmount'] = mappedData['brAmount'] || 0;
                 }
                 break;
 

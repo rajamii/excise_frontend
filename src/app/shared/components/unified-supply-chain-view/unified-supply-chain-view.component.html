@@ -230,8 +230,8 @@
                                     <td class="fw-semibold bg-light">Number of Permits</td>
                                     <td>
                                         {{ applicationData.numberOfPermits }}
-                                        <span *ngIf="applicationData.detailsPermitsNumber || applicationData.cancelledPermitNumber" class="text-muted ms-2">
-                                            (Permit No(s): {{ applicationData.detailsPermitsNumber || applicationData.cancelledPermitNumber }})
+                                        <span *ngIf="applicationData['detailsPermitsNumber'] || applicationData['cancelledPermitNumber']" class="text-muted ms-2">
+                                            (Permit No(s): {{ applicationData['detailsPermitsNumber'] || applicationData['cancelledPermitNumber'] }})
                                         </span>
                                     </td>
                                 </tr>
@@ -310,31 +310,75 @@
                     </div>
                 </div>
 
-                <div class="section-card mb-4">
-                    <h5 class="section-title">Revalidation Request Details</h5>
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <tbody>
-                                <tr>
-                                    <td class="fw-semibold bg-light detail-label-cell">Reason for Revalidation</td>
-                                    <td>{{ applicationData.reasonForRevalidation }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Requested New Quantity</td>
-                                    <td>{{ applicationData.newQuantity }} BL</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">New Purpose</td>
-                                    <td>{{ applicationData.newPurpose }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Revalidation Fee</td>
-                                    <td class="text-success fw-bold">₹{{ applicationData.revalidationAmount }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                <!-- ========== REVALIDATED PERMIT ALLOCATION BREAKDOWN CARD ========== -->
+                @if (applicationData['permitWiseDetails'] && applicationData['permitWiseDetails'].length > 0) {
+                <div class="section-card mb-4 border-warning">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="section-title text-warning m-0">
+                            <i class="bi bi-arrow-repeat me-2"></i>
+                            Revalidated Permit Allocation Breakdown
+                        </h5>
+                        @if (applicationData['revalidatedPermitNumber'] || applicationData.originalPermitNo) {
+                        <span class="badge bg-warning text-dark fs-6">
+                            Permit No: {{ applicationData['revalidatedPermitNumber'] || applicationData.originalPermitNo }}
+                        </span>
+                        }
                     </div>
+
+                    @for (permit of applicationData['permitWiseDetails']; track permit.permit_sequence || $index) {
+                    <div class="card mb-3 border shadow-sm">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+                            <span class="fw-bold text-dark">
+                                <i class="bi bi-file-earmark-text me-1 text-warning"></i>
+                                Permit Reference: {{ permit.permit_number || ('Permit #' + (permit.permit_sequence || ($index + 1))) }}
+                            </span>
+                            <span class="badge bg-secondary">
+                                Total Cases: {{ permit.total_cases }} | BL: {{ permit.total_bulk_litres }} L
+                            </span>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped align-middle m-0">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Brand Name</th>
+                                            <th>Size (ml)</th>
+                                            <th class="text-center">Cases</th>
+                                            <th class="text-end">Import Pass Fee</th>
+                                            <th class="text-end">Add. ED</th>
+                                            <th class="text-end">Total Bulk Litres</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (item of permit.line_items; track item.brand_id || $index) {
+                                        <tr>
+                                            <td>{{ $index + 1 }}</td>
+                                            <td class="fw-semibold text-primary">{{ item.brand_name }}</td>
+                                            <td>{{ item.size_ml }} ml</td>
+                                            <td class="text-center fw-bold">{{ item.cases }}</td>
+                                            <td class="text-end text-success">₹{{ item.total_import | number:'1.2-2' }}</td>
+                                            <td class="text-end text-secondary">₹{{ item.total_additional_ed | number:'1.2-2' }}</td>
+                                            <td class="text-end fw-bold">{{ item.bulk_litres }} L</td>
+                                        </tr>
+                                        }
+                                    </tbody>
+                                    <tfoot class="table-light fw-bold">
+                                        <tr>
+                                            <td colspan="3" class="text-end">Permit Totals:</td>
+                                            <td class="text-center text-primary">{{ permit.total_cases }}</td>
+                                            <td class="text-end text-success">₹{{ permit.total_import_fee | number:'1.2-2' }}</td>
+                                            <td class="text-end text-secondary">₹{{ permit.total_additional_ed | number:'1.2-2' }}</td>
+                                            <td class="text-end text-dark">{{ permit.total_bulk_litres }} L</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    }
                 </div>
+                }
 
                 <div class="section-card mb-4">
                     <h5 class="section-title">Original Application Specifications</h5>
@@ -389,7 +433,7 @@
                 <!-- Cancelled Permit Allocation Breakdown Card -->
                 <div class="section-card mb-4" *ngIf="applicationData['permitWiseDetails'] && applicationData['permitWiseDetails'].length > 0">
                     <h5 class="section-title text-danger d-flex align-items-center justify-content-between">
-                        <span><i class="bi bi-x-circle-fill me-2 text-danger"></i>Cancelled Permit Details ({{ applicationData.cancelledPermitNumber || applicationData.originalPermitNo }})</span>
+                        <span><i class="bi bi-x-circle-fill me-2 text-danger"></i>Cancelled Permit Details ({{ applicationData['cancelledPermitNumber'] || applicationData.originalPermitNo }})</span>
                         <span class="badge bg-danger fs-6">{{ applicationData['permitWiseDetails'].length }} Permit(s)</span>
                     </h5>
                     <div class="accordion" id="cancellationPermitBreakdownAccordion">
@@ -490,8 +534,8 @@
                                     <td class="fw-semibold bg-light">Number of Permits</td>
                                     <td>
                                         {{ applicationData.numberOfPermits }}
-                                        <span *ngIf="applicationData.detailsPermitsNumber || applicationData.cancelledPermitNumber" class="text-muted ms-2">
-                                            (Permit No(s): {{ applicationData.detailsPermitsNumber || applicationData.cancelledPermitNumber }})
+                                        <span *ngIf="applicationData['detailsPermitsNumber'] || applicationData['cancelledPermitNumber']" class="text-muted ms-2">
+                                            (Permit No(s): {{ applicationData['detailsPermitsNumber'] || applicationData['cancelledPermitNumber'] }})
                                         </span>
                                     </td>
                                 </tr>

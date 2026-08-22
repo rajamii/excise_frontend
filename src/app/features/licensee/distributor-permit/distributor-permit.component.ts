@@ -21,7 +21,7 @@ import { ImflCancellationComponent } from './components/imfl-cancellation/imfl-c
 import { ActionItem, UnifiedActionButtonsComponent } from '../../../shared/components/unified-action-buttons/unified-action-buttons.component';
 import { UnifiedActionsService } from '../../../shared/services/unified-actions.service';
 
-type DistributorPermitStatusFilter = 'all' | 'approved' | 'pending' | 'objection' | 'rejected';
+type DistributorPermitStatusFilter = 'all' | 'approved' | 'pending' | 'under_process' | 'objection' | 'rejected';
 type DistributorPermitStatusGroup = Exclude<DistributorPermitStatusFilter, 'all'>;
 
 interface DistributorPermitRow {
@@ -138,7 +138,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           }
         }
         const statusParam = String(params?.['status'] || '').toLowerCase() as DistributorPermitStatusFilter;
-        if (['all', 'approved', 'pending', 'objection', 'rejected'].includes(statusParam)) {
+        if (['all', 'approved', 'pending', 'under_process', 'objection', 'rejected'].includes(statusParam)) {
           this.activeCardFilter = statusParam;
         } else {
           this.autoSelectDefaultStatusFilter();
@@ -178,7 +178,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   autoSelectDefaultStatusFilter(): void {
     const statusParam = String(this.route.snapshot.queryParams['status'] || '').toLowerCase();
-    if (['all', 'approved', 'pending', 'objection', 'rejected'].includes(statusParam)) {
+    if (['all', 'approved', 'pending', 'under_process', 'objection', 'rejected'].includes(statusParam)) {
       this.activeCardFilter = statusParam as DistributorPermitStatusFilter;
       return;
     }
@@ -225,16 +225,18 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     });
   }
 
-  get counts(): Record<DistributorPermitStatusGroup, number> & { total: number } {
+  get counts(): { total: number; approved: number; pending: number; underProcess: number; objection: number; rejected: number } {
     return this.activeTabRows.reduce(
       (acc, row) => {
         acc.total += 1;
-        if (acc[row.statusGroup] !== undefined) {
-          acc[row.statusGroup] += 1;
-        }
+        if (row.statusGroup === 'approved') acc.approved += 1;
+        else if (row.statusGroup === 'pending') acc.pending += 1;
+        else if (row.statusGroup === 'under_process') acc.underProcess += 1;
+        else if (row.statusGroup === 'objection') acc.objection += 1;
+        else if (row.statusGroup === 'rejected') acc.rejected += 1;
         return acc;
       },
-      { total: 0, approved: 0, pending: 0, objection: 0, rejected: 0 }
+      { total: 0, approved: 0, pending: 0, underProcess: 0, objection: 0, rejected: 0 }
     );
   }
 
@@ -490,6 +492,188 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         this.isSubmittingCancellation = false;
         console.error('Error submitting cancellation request:', err);
         alert('Failed to submit cancellation request: ' + (err?.error?.message || err?.message || 'Server error'));
+      }
+    });
+  }
+
+  canRequestRevalidation(row: DistributorPermitRow | any): boolean {
+    return this.isApproved(row) && this.isDistributorUser;
+  }
+
+  showRevalidationModal = false;
+  revalidationTargetRow: DistributorPermitRow | null = null;
+  revalidationReasonType = 'Delay in Transit / Transport Issue';
+  revalidationReasonDetails = '';
+  revalidationDeclarationAccepted = false;
+  isSubmittingRevalidation = false;
+
+  selectedPermitNumberForRevalidation = '';
+  availablePermitOptionsForRevalidation: Array<{
+    permitNumber: string;
+    totalCases: number;
+    label: string;
+    isUnderProcess: boolean;
+    isCancelled: boolean;
+    detail: any;
+  }> = [];
+  selectedPermitDetailForRevalidation: any = null;
+
+  onRevalidatePermit(row: DistributorPermitRow | any, event?: Event): void {
+    if (event) {
+      try { event.preventDefault(); } catch {}
+      try { event.stopPropagation(); } catch {}
+    }
+    this.revalidationTargetRow = row;
+    this.revalidationReasonType = 'Delay in Transit / Transport Issue';
+    this.revalidationReasonDetails = '';
+    this.revalidationDeclarationAccepted = false;
+
+    const appId = row.applicationId || row.referenceNo || row.reference_no || '';
+    const rawApp = row.application || row;
+    const pDetails = rawApp?.permit_wise_details || rawApp?.permitWiseDetails || [];
+
+    const appIdLower = String(appId).toLowerCase();
+    const existingRevalidations = (this.applications || []).filter((a: any) => {
+      const isRev = String(a.referenceNo || a.reference_no || '').startsWith('IMFLREV') || a.applicationType === 'revalidation';
+      const refTarget = String(a.application?.distributor_permit || a.application?.distributorPermit || a.distributor_permit || '').toLowerCase();
+      const targetNo = String(a.application?.distributor_permit_ref_no || a.distributor_permit_ref_no || '').toLowerCase();
+      return isRev && (refTarget === appIdLower || targetNo === appIdLower || String(a.referenceNo).toLowerCase().includes(appIdLower));
+    });
+
+    const existingCancellations = (this.applications || []).filter((a: any) => {
+      const isCan = String(a.referenceNo || a.reference_no || '').startsWith('IMFLCAN') || a.applicationType === 'cancellation';
+      const refTarget = String(a.application?.distributor_permit || a.application?.distributorPermit || a.distributor_permit || '').toLowerCase();
+      const targetNo = String(a.application?.distributor_permit_ref_no || a.distributor_permit_ref_no || '').toLowerCase();
+      return isCan && (refTarget === appIdLower || targetNo === appIdLower || String(a.referenceNo).toLowerCase().includes(appIdLower));
+    });
+
+    this.availablePermitOptionsForRevalidation = [];
+
+    if (Array.isArray(pDetails) && pDetails.length > 0) {
+      pDetails.forEach((p: any) => {
+        const pNum = String(p.permit_number || p.permitNumber || appId);
+        const cases = Number(p.total_cases || p.totalCases || 0);
+
+        const existingForPermitRev = existingRevalidations.find((revApp: any) => {
+          const revNo = String(revApp.revalidatedPermitNumber || revApp.revalidated_permit_number || revApp.application?.revalidated_permit_number || '').toLowerCase();
+          const reasonText = String(revApp.revalidationReason || revApp.revalidation_reason || '').toLowerCase();
+          return (revNo && revNo === pNum.toLowerCase()) || reasonText.includes(pNum.toLowerCase());
+        });
+
+        const existingForPermitCan = existingCancellations.find((canApp: any) => {
+          const cancelledNo = String(canApp.cancelledPermitNumber || canApp.cancelled_permit_number || canApp.application?.cancelled_permit_number || '').toLowerCase();
+          const reasonText = String(canApp.cancellationReason || canApp.cancellation_reason || '').toLowerCase();
+          return (cancelledNo && cancelledNo === pNum.toLowerCase()) || reasonText.includes(pNum.toLowerCase());
+        });
+
+        let isCancelled = false;
+        let isUnderProcess = false;
+
+        if (existingForPermitCan) {
+          const st = String(existingForPermitCan['status'] || existingForPermitCan['currentStage'] || '').toUpperCase();
+          if (st.includes('APPROVED') || st.includes('COMPLETED')) {
+            isCancelled = true;
+          }
+        }
+
+        if (existingForPermitRev) {
+          const st = String(existingForPermitRev['status'] || existingForPermitRev['currentStage'] || '').toUpperCase();
+          if (!st.includes('REJECTED')) {
+            isUnderProcess = true;
+          }
+        }
+
+        let label = `${pNum} (${cases} Cases)`;
+        if (isCancelled) {
+          label += ' - (Cancelled)';
+        } else if (isUnderProcess) {
+          label += ' - (Revalidation Under Process)';
+        } else {
+          label += ' - (Available for Revalidation)';
+        }
+
+        this.availablePermitOptionsForRevalidation.push({
+          permitNumber: pNum,
+          totalCases: cases,
+          label,
+          isUnderProcess,
+          isCancelled,
+          detail: p
+        });
+      });
+    } else {
+      this.availablePermitOptionsForRevalidation.push({
+        permitNumber: appId,
+        totalCases: Number(row.cases || 0),
+        label: `${appId} - Single Permit`,
+        isUnderProcess: false,
+        isCancelled: false,
+        detail: null
+      });
+    }
+
+    const firstAvailable = this.availablePermitOptionsForRevalidation.find(opt => !opt.isCancelled && !opt.isUnderProcess);
+    this.selectedPermitNumberForRevalidation = firstAvailable ? firstAvailable.permitNumber : (this.availablePermitOptionsForRevalidation[0]?.permitNumber || appId);
+    this.onPermitSelectionChangeForRevalidation();
+
+    this.showRevalidationModal = true;
+  }
+
+  onPermitSelectionChangeForRevalidation(): void {
+    const opt = this.availablePermitOptionsForRevalidation.find(o => o.permitNumber === this.selectedPermitNumberForRevalidation);
+    this.selectedPermitDetailForRevalidation = opt ? opt.detail : null;
+  }
+
+  closeRevalidationModal(): void {
+    if (this.isSubmittingRevalidation) return;
+    this.showRevalidationModal = false;
+    this.revalidationTargetRow = null;
+    this.selectedPermitDetailForRevalidation = null;
+    this.selectedPermitNumberForRevalidation = '';
+    this.availablePermitOptionsForRevalidation = [];
+  }
+
+  confirmRevalidationSubmit(): void {
+    if (!this.revalidationTargetRow) return;
+    if (!this.selectedPermitNumberForRevalidation) {
+      alert('Please select a permit for revalidation.');
+      return;
+    }
+    const selectedOpt = this.availablePermitOptionsForRevalidation.find(o => o.permitNumber === this.selectedPermitNumberForRevalidation);
+    if (selectedOpt && (selectedOpt.isCancelled || selectedOpt.isUnderProcess)) {
+      alert(`Permit ${this.selectedPermitNumberForRevalidation} is ${selectedOpt.isCancelled ? 'cancelled' : 'already under process for revalidation'}.`);
+      return;
+    }
+
+    if (!this.revalidationDeclarationAccepted) {
+      alert('Please accept the declaration to proceed.');
+      return;
+    }
+    if (!this.revalidationReasonDetails.trim()) {
+      alert('Please enter detailed remarks/reason for revalidation.');
+      return;
+    }
+
+    const appId = this.revalidationTargetRow.applicationId;
+    const fullReason = `[Permit: ${this.selectedPermitNumberForRevalidation}] ${this.revalidationReasonType}: ${this.revalidationReasonDetails.trim()}`;
+
+    this.isSubmittingRevalidation = true;
+    this.permitService.createRevalidation({
+      distributor_permit: appId,
+      revalidated_permit_number: this.selectedPermitNumberForRevalidation,
+      permit_wise_details: this.selectedPermitDetailForRevalidation ? [this.selectedPermitDetailForRevalidation] : [],
+      revalidation_reason: fullReason
+    }).subscribe({
+      next: (res: any) => {
+        this.isSubmittingRevalidation = false;
+        this.closeRevalidationModal();
+        alert(`Permit revalidation request submitted successfully for Permit ${this.selectedPermitNumberForRevalidation}. Reference No: ${res.reference_no || res.id}`);
+        this.loadApplications();
+      },
+      error: (err: any) => {
+        this.isSubmittingRevalidation = false;
+        console.error('Error submitting revalidation request:', err);
+        alert('Failed to submit revalidation request: ' + (err?.error?.message || err?.message || 'Server error'));
       }
     });
   }
@@ -948,11 +1132,63 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.loadInitialData();
   }
 
-  getStatusGroup(status: string | undefined): DistributorPermitStatusGroup {
-    const value = String(status || '').toLowerCase();
+  getUserRoleInfo(): { isPermitSection: boolean; isCommissioner: boolean; isAdmin: boolean } {
+    const user = this.accountService.getCurrentUser() as any;
+    let roleId = Number(user?.role?.id || user?.roleId || user?.role_id || 0);
+    if (!roleId) {
+      try {
+        const cached = localStorage.getItem('currentUser') || localStorage.getItem('user');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          roleId = Number(parsed?.roleId || parsed?.role?.id || parsed?.user?.roleId || parsed?.user?.role?.id || 0);
+        }
+      } catch {}
+    }
+    const roleName = String(user?.role?.name || user?.role || '').toLowerCase();
+    const isCommissioner = roleId === 10 || roleName.includes('commissioner');
+    const isPermitSection = roleId === 5 || roleId === 6 || roleName.includes('permit') || roleName.includes('oic');
+    const isAdmin = roleId === 1 || roleId === 3 || roleName.includes('admin');
+
+    return { isPermitSection, isCommissioner, isAdmin };
+  }
+
+  getStatusGroup(statusStr: string | undefined, rawApp?: any): DistributorPermitStatusGroup {
+    const value = String(statusStr || rawApp?.status || '').toLowerCase();
+    const stageId = Number(rawApp?.current_stage_id || rawApp?.currentStageId || rawApp?.current_stage?.id || 0);
+    const isFinal = Boolean(rawApp?.current_stage_is_final || rawApp?.currentStageIsFinal || rawApp?.current_stage?.is_final);
+
+    if (isFinal || stageId === 151 || stageId === 165 || value.includes('approved by commissioner')) {
+      return 'approved';
+    }
+    if (stageId === 152 || value.includes('reject')) {
+      return 'rejected';
+    }
+    if (value.includes('object')) {
+      return 'objection';
+    }
+
+    const { isPermitSection, isCommissioner } = this.getUserRoleInfo();
+
+    const isCommissionerStage = stageId === 153 || stageId === 157 || stageId === 160 || stageId === 162 || stageId === 163 || value.includes('commissioner');
+    const isPermitSectionStage = stageId === 148 || stageId === 147 || stageId === 149 || stageId === 155 || stageId === 156 || value.includes('permit') || value.includes('oic');
+
+    if (isPermitSection) {
+      if (isCommissionerStage) {
+        return 'under_process';
+      }
+      if (isPermitSectionStage) {
+        return 'pending';
+      }
+    } else if (isCommissioner) {
+      if (isPermitSectionStage || stageId === 154 || value.includes('payment') || value.includes('awaiting')) {
+        return 'under_process';
+      }
+      if (isCommissionerStage) {
+        return 'pending';
+      }
+    }
+
     if (value.includes('approve')) return 'approved';
-    if (value.includes('reject')) return 'rejected';
-    if (value.includes('object')) return 'objection';
     return 'pending';
   }
 
@@ -1468,7 +1704,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       applicantName,
       supplierName,
       currentStage: this.getCurrentStage(stageStr),
-      statusGroup: this.getStatusGroup(stageStr),
+      statusGroup: this.getStatusGroup(stageStr, application),
       application
     };
   }

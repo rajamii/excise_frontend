@@ -116,19 +116,6 @@
   }
 }
 
-.awaiting-payment-requests {
-  --accent-start: #0284c7;
-  --accent-end: #0ea5e9;
-
-  .card-icon {
-    background: linear-gradient(135deg, #0284c7, #0ea5e9);
-  }
-
-  .card-value {
-    color: #0284c7;
-  }
-}
-
 .pending-requests {
   --accent-start: #e39b12;
   --accent-end: #f0b429;
@@ -139,6 +126,19 @@
 
   .card-value {
     color: #d97706;
+  }
+}
+
+.under-process-requests {
+  --accent-start: #0284c7;
+  --accent-end: #38bdf8;
+
+  .card-icon {
+    background: linear-gradient(135deg, #0284c7, #38bdf8);
+  }
+
+  .card-value {
+    color: #0284c7;
   }
 }
 
@@ -168,188 +168,6 @@
   }
 }
 
-.compact-filter-section {
-  border: 1px solid #e3e7ef;
-  border-radius: 12px;
-  padding: 8px 12px;
-  background: #fff;
-}
-
-.filter-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.filter-label-text {
-  white-space: nowrap;
-  flex-shrink: 0;
-  color: #516078;
-  font-size: 0.82rem;
-}
-
-.filter-input {
-  flex-shrink: 0;
-
-  &.filter-input--search {
-    width: 260px;
-  }
-
-  &.filter-input--date {
-    width: 145px;
-  }
-}
-
-.filter-date-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.filter-date-label {
-  font-size: 0.8rem;
-  color: #516078;
-  font-weight: 500;
-  white-space: nowrap;
-  margin: 0;
-}
-
-.filter-clear-btn {
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-.register-container {
-  margin-top: 14px;
-  border: 1px solid #e3e7ef;
-  border-radius: 12px;
-  overflow: hidden;
-  background: #fff;
-  position: relative;
-  z-index: 2;
-  pointer-events: auto !important;
-}
-
-.register-header-bar {
-  background: #f1f5f9;
-  color: #0f172a;
-  border-bottom: 1px solid #e2e8f0;
-  padding: 12px 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.register-table-title {
-  margin: 0;
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.entries-count {
-  background: #e2e8f0;
-  color: #334155;
-  padding: 4px 12px;
-  border-radius: 999px;
-  font-size: 0.82rem;
-  font-weight: 600;
-}
-
-.table {
-  margin: 0;
-  position: relative;
-  z-index: 3;
-  pointer-events: auto !important;
-}
-
-.table-wrapper {
-  position: relative;
-  z-index: 3;
-  pointer-events: auto !important;
-}
-
-.table thead th {
-  background: #f7f9fc;
-  color: #2d3954;
-  border-bottom: 1px solid #e3e7ef;
-}
-
-.table tbody tr {
-  transition: background-color 0.2s ease;
-}
-
-.table tbody tr:hover {
-  background-color: #f8fafc;
-}
-
-.table tbody td {
-  vertical-align: middle;
-  padding: 12px;
-  border-bottom: 1px solid #e5ebf5;
-  position: relative;
-  z-index: 3;
-  pointer-events: auto !important;
-}
-
-.dp-action-cell {
-  min-width: 150px;
-  pointer-events: auto !important;
-}
-
-.dp-action-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.25rem;
-}
-
-.dp-action-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 8px 14px;
-  min-width: 126px;
-  border: 1px solid #c7d2fe;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #eff6ff, #eef2ff);
-  color: #1d4ed8;
-  font-weight: 700;
-  font-size: 0.82rem;
-  position: relative;
-  z-index: 5;
-  pointer-events: auto !important;
-  cursor: pointer !important;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
-
-  &:hover {
-    transform: translateY(-1px);
-    border-color: #93c5fd;
-    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.16);
-  }
-
-  i {
-    font-size: 0.95rem;
-  }
-}
-
-.action-eye {
-  transition: color 0.2s ease, transform 0.2s ease;
-  will-change: color, transform;
-}
-
-.action-eye:hover {
-  transform: scale(1.1);
-}
-
-.action-eye i {
-  font-size: 1.1rem;
-  color: #2c64e8;
-}
-
 .status-badge,
 .payment-badge {
   display: inline-block;
@@ -369,6 +187,13 @@
   &--pending {
     background: #fef9c3;
     color: #a16207;
+  }
+
+  &--under_process,
+  &--under-process {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
   }
 
   &--objection {
@@ -401,6 +226,33 @@
 
 .error-state,
 .empty-state {
+  padding: 22px;
+  text-align: center;
+  color: #556277;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  i {
+    color: #64748b;
+  }
+}
+
+.error-state {
+  color: #dc2626;
+}
+
+.pagination-bar {
+  border-top: 1px solid #e2e8f0;
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
   padding: 22px;
   text-align: center;
   color: #556277;
