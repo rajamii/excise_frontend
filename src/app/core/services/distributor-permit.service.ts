@@ -149,4 +149,24 @@ export class DistributorPermitService {
       tap(() => this.clearCache())
     );
   }
+
+  createCasesProcessed(payload: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/cases-processed/`, payload);
+  }
+
+  getCasesProcessed(params?: any): Observable<any[]> {
+    let httpParams = new HttpParams();
+    if (params) {
+      Object.keys(params).forEach((k) => {
+        if (params[k] !== undefined && params[k] !== null && params[k] !== '') {
+          httpParams = httpParams.set(k, params[k]);
+        }
+      });
+    }
+    return this.http.get<any[]>(`${this.baseUrl}/cases-processed/`, { params: httpParams });
+  }
+
+  performCasesProcessedAction(id: number | string, action: string, remarks = ''): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/cases-processed/${id}/action/`, { action, remarks });
+  }
 }

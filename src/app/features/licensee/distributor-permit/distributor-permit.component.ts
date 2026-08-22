@@ -110,6 +110,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   searchFilter = '';
   dateFromFilter = '';
   dateToFilter = '';
+  allCasesProcessedList: any[] = [];
+  allArrivalsList: any[] = [];
   pageSizeOptions: number[] = [5, 10, 15];
   pageSize = 5;
   pageIndex = 0;
@@ -344,8 +346,20 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return true;
   }
 
+  hasPendingArrival(row: DistributorPermitRow | any): boolean {
+    const appId = String(row?.applicationId || row?.referenceNo || '').toLowerCase();
+    return (this.allCasesProcessedList || []).some((c: any) => {
+      const pNo = String(c.permit_number || c.permitNumber || '').toLowerCase();
+      const pAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase();
+      const st = String(c.status || '').toLowerCase();
+      return st === 'under_review' && (pAppRef === appId || pNo.includes(appId));
+    });
+  }
+
   canRequestCancellation(row: DistributorPermitRow | any): boolean {
-    return this.isApproved(row) && this.isDistributorUser;
+    if (!this.isApproved(row) || !this.isDistributorUser) return false;
+    if (this.hasPendingArrival(row)) return false;
+    return true;
   }
 
   showCancellationModal = false;
@@ -431,6 +445,17 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         let isUnderProcess = false;
         let isRevalidatedWaiting = false;
 
+        const pendingArrival = (this.allCasesProcessedList || []).find((c: any) => {
+          const pNo = String(c.permit_number || c.permitNumber || '').toLowerCase();
+          const pAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase();
+          const st = String(c.status || '').toLowerCase();
+          return st === 'under_review' && (pNo === pNum.toLowerCase() || pAppRef === appIdLower);
+        });
+
+        if (pendingArrival) {
+          isUnderProcess = true;
+        }
+
         if (existingForPermit) {
           const st = String(existingForPermit['status'] || existingForPermit['currentStage'] || '').toUpperCase();
           if (st.includes('APPROVED') || st.includes('COMPLETED')) {
@@ -454,7 +479,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         }
 
         let label = `${pNum} (${cases} Cases)`;
-        if (isCancelled) {
+        if (pendingArrival) {
+          label += ' - (Stock Arrival Awaiting OIC Approval)';
+        } else if (isCancelled) {
           label += ' - (Cancelled)';
         } else if (isUnderProcess) {
           label += ' - (Cancellation Under Process)';
@@ -475,21 +502,15 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         });
       });
     } else {
-      const now = new Date();
-      const validUpToStr = rawApp?.valid_up_to || rawApp?.validUpTo || row?.application?.valid_up_to || '';
-      const validUpToDate = validUpToStr ? new Date(validUpToStr) : null;
-      const isExpired = Boolean(validUpToDate && validUpToDate <= now);
-      const isActivatedSched = Boolean(
-        row?.isActivatedSchedule ||
-        rawApp?.is_activated_schedule ||
-        rawApp?.can_submit_application ||
-        String(row?.currentStage || rawApp?.status || '').toLowerCase().includes('activated') ||
-        String(row?.currentStage || rawApp?.status || '').toLowerCase().includes('ready for revalidation')
-      );
-      const isRevalidatedWaiting = isExpired || isActivatedSched || existingRevalidations.length > 0;
+      const pendingArrival = (this.allCasesProcessedList || []).find((c: any) => {
+        const pAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase();
+        const st = String(c.status || '').toLowerCase();
+        return st === 'under_review' && pAppRef === appIdLower;
+      });
+      const isUnderProcess = Boolean(pendingArrival);
       let label = `${appId} - Single Permit`;
-      if (isRevalidatedWaiting) {
-        label += ' - (Revalidation Waiting)';
+      if (pendingArrival) {
+        label += ' - (Stock Arrival Awaiting OIC Approval)';
       } else {
         label += ' - (Available)';
       }
@@ -497,9 +518,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         permitNumber: appId,
         totalCases: Number(row.cases || 0),
         label,
-        isUnderProcess: false,
+        isUnderProcess,
         isCancelled: false,
-        isRevalidated: isRevalidatedWaiting,
+        isRevalidated: false,
         detail: null
       });
     }
@@ -523,6 +544,109 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.selectedPermitDetail = null;
     this.selectedPermitNumberForCancellation = '';
     this.availablePermitOptionsForCancellation = [];
+  }
+
+  showPermitDetailsModal = false;
+  selectedPermitDetailsRow: any = null;
+  selectedPermitWiseItems: any[] = [];
+
+  openPermitDetailsModal(row: DistributorPermitRow | any, event?: Event): void {
+    if (event) {
+      try { event.preventDefault(); } catch {}
+      try { event.stopPropagation(); } catch {}
+    }
+    this.selectedPermitDetailsRow = row;
+    const appId = row.applicationId || row.referenceNo || row.reference_no || '';
+    const rawApp = row.application || row;
+    let pDetails = rawApp?.permit_wise_details || rawApp?.permitWiseDetails || [];
+
+    if (!Array.isArray(pDetails) || pDetails.length === 0) {
+      const matching = (this.applications || []).find((a: any) => {
+        const ref = String(a.referenceNo || a.reference_no || a.id || '').toLowerCase();
+        return ref === String(appId).toLowerCase();
+      });
+      if (matching) {
+        pDetails = matching.permit_wise_details || matching.permitWiseDetails || matching['application']?.permit_wise_details || [];
+      }
+    }
+
+    const appIdLower = String(appId).toLowerCase();
+
+    if (Array.isArray(pDetails) && pDetails.length > 0) {
+      this.selectedPermitWiseItems = pDetails.map((p: any) => {
+        const pNum = String(p.permit_number || p.permitNumber || appId);
+
+        const caseProc = (this.allCasesProcessedList || []).find((c: any) => {
+          const pNo = String(c.permit_number || c.permitNumber || '').toLowerCase();
+          const pAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase();
+          return pNo === pNum.toLowerCase() || pAppRef === appIdLower;
+        });
+
+        const arrRec = (this.allArrivalsList || []).find((a: any) => {
+          const pNo = String(a.permit_number || a.permitNumber || '').toLowerCase();
+          const pAppRef = String(a.distributor_permit?.reference_no || a.distributor_permit || '').toLowerCase();
+          return pNo === pNum.toLowerCase() || pAppRef === appIdLower;
+        });
+
+        const arrivalObj = caseProc || arrRec || null;
+
+        return {
+          ...p,
+          permitNumber: pNum,
+          totalCases: Number(p.total_cases || p.totalCases || 0),
+          brandName: p.brand_name || p.brandName || (p.line_items?.[0]?.brand_name) || 'N/A',
+          sizeMl: p.size_ml || p.sizeMl || (p.line_items?.[0]?.size_ml) || 750,
+          arrivalRecord: arrivalObj,
+          arrivalStatus: caseProc ? caseProc.status : (arrRec ? 'approved' : 'pending')
+        };
+      });
+    } else {
+      const caseProc = (this.allCasesProcessedList || []).find((c: any) => {
+        const pAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase();
+        return pAppRef === appIdLower;
+      });
+      const arrRec = (this.allArrivalsList || []).find((a: any) => {
+        const pAppRef = String(a.distributor_permit?.reference_no || a.distributor_permit || '').toLowerCase();
+        return pAppRef === appIdLower;
+      });
+
+      const arrivalObj = caseProc || arrRec || null;
+
+      this.selectedPermitWiseItems = [{
+        permitNumber: appId,
+        totalCases: Number(row.cases || rawApp?.cases || rawApp?.total_cases || 0),
+        brandName: rawApp?.brand_name || (rawApp?.line_items?.[0]?.brand_name) || 'N/A',
+        sizeMl: rawApp?.size_ml || (rawApp?.line_items?.[0]?.size_ml) || 750,
+        arrivalRecord: arrivalObj,
+        arrivalStatus: caseProc ? caseProc.status : (arrRec ? 'approved' : 'pending')
+      }];
+    }
+
+    this.showPermitDetailsModal = true;
+  }
+
+  closePermitDetailsModal(): void {
+    this.showPermitDetailsModal = false;
+    this.selectedPermitDetailsRow = null;
+    this.selectedPermitWiseItems = [];
+  }
+
+  isCurrentPermitDisabledForArrival(): boolean {
+    const selectedOpt = (this.availablePermitOptionsForArrival as any[]).find(o => o.permitNumber === this.selectedPermitNumberForArrival);
+    return Boolean(selectedOpt?.isAwaiting || selectedOpt?.isCancelled || selectedOpt?.isUnderProcess);
+  }
+
+  isCurrentPermitAwaitingArrival(): boolean {
+    return this.isCurrentPermitDisabledForArrival();
+  }
+
+  getCurrentPermitDisabledReason(): string {
+    const selectedOpt = (this.availablePermitOptionsForArrival as any[]).find(o => o.permitNumber === this.selectedPermitNumberForArrival);
+    if (!selectedOpt) return '';
+    if (selectedOpt.isAwaiting) return 'Physical stock arrival details for this permit have been submitted and are currently awaiting review by the Officer-in-Charge.';
+    if (selectedOpt.isCancelled) return 'This permit has been cancelled. Physical stock arrival details cannot be updated for a cancelled permit.';
+    if (selectedOpt.isUnderProcess) return 'A cancellation request is under process for this permit. Physical stock arrival details cannot be updated.';
+    return '';
   }
 
   confirmCancellationSubmit(): void {
@@ -588,6 +712,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     permitNumber: string;
     totalCases: number;
     label: string;
+    isAwaiting?: boolean;
+    isCancelled?: boolean;
+    isUnderProcess?: boolean;
     detail: any;
   }> = [];
   selectedPermitDetailForArrival: any = null;
@@ -623,20 +750,89 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       }
     }
 
+    const appIdLower = String(appId).toLowerCase();
+    const existingCancellations = (this.applications || []).filter((a: any) => {
+      const isCan = String(a.referenceNo || a.reference_no || '').startsWith('IMFLCAN') || a.applicationType === 'cancellation';
+      const refTarget = String(a.application?.distributor_permit || a.application?.distributorPermit || a.distributor_permit || '').toLowerCase();
+      const targetNo = String(a.application?.distributor_permit_ref_no || a.distributor_permit_ref_no || '').toLowerCase();
+      return isCan && (refTarget === appIdLower || targetNo === appIdLower || String(a.referenceNo).toLowerCase().includes(appIdLower));
+    });
+
     this.availablePermitOptionsForArrival = [];
 
     if (Array.isArray(pDetails) && pDetails.length > 0) {
       pDetails.forEach((p: any) => {
         const pNum = String(p.permit_number || p.permitNumber || appId);
         const cases = Number(p.total_cases || p.totalCases || 0);
+
+        const pendingArrival = (this.allCasesProcessedList || []).find((c: any) => {
+          const pNo = String(c.permit_number || c.permitNumber || '').toLowerCase();
+          const pAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase();
+          const st = String(c.status || '').toLowerCase();
+          return st === 'under_review' && (pNo === pNum.toLowerCase() || pAppRef === appIdLower);
+        });
+
+        const existingForPermit = existingCancellations.find((canApp: any) => {
+          const cancelledNo = String(canApp.cancelledPermitNumber || canApp.cancelled_permit_number || canApp.application?.cancelled_permit_number || '').toLowerCase();
+          const reasonText = String(canApp.cancellationReason || canApp.cancellation_reason || '').toLowerCase();
+          return (cancelledNo && cancelledNo === pNum.toLowerCase()) || reasonText.includes(pNum.toLowerCase());
+        });
+
+        let isCancelled = false;
+        let isUnderProcess = false;
+
+        if (existingForPermit) {
+          const st = String(existingForPermit['status'] || existingForPermit['currentStage'] || '').toUpperCase();
+          if (st.includes('APPROVED') || st.includes('COMPLETED')) {
+            isCancelled = true;
+          } else if (!st.includes('REJECTED')) {
+            isUnderProcess = true;
+          }
+        }
+
+        const isAwaiting = Boolean(pendingArrival);
+        let label = `${pNum} (${cases} Cases)`;
+        if (isAwaiting) {
+          label += ' - (Stock Arrival Awaiting OIC Approval)';
+        } else if (isCancelled) {
+          label += ' - (Cancelled)';
+        } else if (isUnderProcess) {
+          label += ' - (Cancellation Under Process)';
+        }
+
         this.availablePermitOptionsForArrival.push({
           permitNumber: pNum,
           totalCases: cases,
-          label: `${pNum} (${cases} Cases)`,
+          label,
+          isAwaiting,
+          isCancelled,
+          isUnderProcess,
           detail: p
         });
       });
     } else {
+      const pendingArrival = (this.allCasesProcessedList || []).find((c: any) => {
+        const pAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase();
+        const st = String(c.status || '').toLowerCase();
+        return st === 'under_review' && pAppRef === appIdLower;
+      });
+      const isAwaiting = Boolean(pendingArrival);
+
+      const existingForPermit = existingCancellations.find((canApp: any) => {
+        const cancelledNo = String(canApp.cancelledPermitNumber || canApp.cancelled_permit_number || canApp.application?.cancelled_permit_number || '').toLowerCase();
+        return (cancelledNo && cancelledNo === appIdLower);
+      });
+      let isCancelled = false;
+      let isUnderProcess = false;
+      if (existingForPermit) {
+        const st = String(existingForPermit['status'] || existingForPermit['currentStage'] || '').toUpperCase();
+        if (st.includes('APPROVED') || st.includes('COMPLETED')) {
+          isCancelled = true;
+        } else if (!st.includes('REJECTED')) {
+          isUnderProcess = true;
+        }
+      }
+
       const fallbackDetail = {
         permit_number: appId,
         permitNumber: appId,
@@ -644,10 +840,23 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         totalCases: Number(row.cases || rawApp?.cases || rawApp?.total_cases || 0),
         line_items: rawApp?.line_items || rawApp?.lineItems || []
       };
+
+      let label = `${appId} (${fallbackDetail.totalCases || 0} Cases)`;
+      if (isAwaiting) {
+        label += ' - (Stock Arrival Awaiting OIC Approval)';
+      } else if (isCancelled) {
+        label += ' - (Cancelled)';
+      } else if (isUnderProcess) {
+        label += ' - (Cancellation Under Process)';
+      }
+
       this.availablePermitOptionsForArrival.push({
         permitNumber: appId,
         totalCases: Number(fallbackDetail.totalCases || 0),
-        label: `${appId} (${fallbackDetail.totalCases || 0} Cases)`,
+        label,
+        isAwaiting,
+        isCancelled,
+        isUnderProcess,
         detail: fallbackDetail
       });
     }
@@ -693,6 +902,13 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       alert('Please select a permit number for arrival update.');
       return;
     }
+
+    const selectedOpt = (this.availablePermitOptionsForArrival as any[]).find(o => o.permitNumber === this.selectedPermitNumberForArrival);
+    if (selectedOpt?.isAwaiting) {
+      alert('Stock arrival details for this permit have already been submitted and are currently awaiting Distributor OIC approval.');
+      return;
+    }
+
     if (!this.arrivalVehicleNumber.trim()) {
       alert('Please enter Car / Vehicle Number.');
       return;
@@ -714,17 +930,92 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     };
 
     this.isSubmittingArrival = true;
-    this.permitService.createArrival(payload).subscribe({
+    this.permitService.createCasesProcessed(payload).subscribe({
       next: (res: any) => {
         this.isSubmittingArrival = false;
         this.closeArrivalModal();
-        alert(`Stock arrival details updated successfully for Permit ${this.selectedPermitNumberForArrival}. Vehicle: ${payload.vehicle_number}, Arrived Cases: ${payload.arrived_cases}.`);
+        Swal.fire({
+          icon: 'success',
+          title: 'Submitted for OIC Review',
+          text: `Stock arrival details for Permit ${this.selectedPermitNumberForArrival} have been submitted to Distributor OIC for review and approval.`
+        });
         this.loadApplications();
+        this.loadPendingArrivalReviews();
       },
       error: (err: any) => {
         this.isSubmittingArrival = false;
         console.error('Error submitting stock arrival:', err);
         alert('Failed to update stock arrival: ' + (err?.error?.message || err?.message || 'Server error'));
+      }
+    });
+  }
+
+  pendingArrivalReviews: any[] = [];
+  isProcessingAction = false;
+
+  loadPendingArrivalReviews(): void {
+    if (!this.isOfficerUser) return;
+    this.permitService.getCasesProcessed({ status: 'under_review' }).subscribe({
+      next: (res: any[]) => {
+        this.pendingArrivalReviews = Array.isArray(res) ? res : (res as any)?.results || [];
+      },
+      error: (err: any) => {
+        console.error('Error loading pending arrival reviews:', err);
+        this.pendingArrivalReviews = [];
+      }
+    });
+  }
+
+  approveArrivalReview(item: any): void {
+    Swal.fire({
+      title: 'Approve Stock Arrival?',
+      text: `Approve physical stock arrival for Permit ${item.permit_number} (${item.arrived_cases} cases, Vehicle ${item.vehicle_number})?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Approve',
+      cancelButtonText: 'Cancel'
+    }).then((res) => {
+      if (res.isConfirmed) {
+        this.isProcessingAction = true;
+        this.permitService.performCasesProcessedAction(item.id, 'approve').subscribe({
+          next: () => {
+            this.isProcessingAction = false;
+            Swal.fire('Approved!', 'Stock arrival approved and stored in IMFL cases register.', 'success');
+            this.loadPendingArrivalReviews();
+            this.loadApplications();
+          },
+          error: (err: any) => {
+            this.isProcessingAction = false;
+            Swal.fire('Error', 'Failed to approve stock arrival: ' + (err?.error?.message || err?.message || 'Server error'), 'error');
+          }
+        });
+      }
+    });
+  }
+
+  rejectArrivalReview(item: any): void {
+    Swal.fire({
+      title: 'Reject Stock Arrival',
+      input: 'textarea',
+      inputLabel: 'Reason for Rejection',
+      inputPlaceholder: 'Enter rejection remarks...',
+      showCancelButton: true,
+      confirmButtonText: 'Reject Arrival',
+      confirmButtonColor: '#dc3545'
+    }).then((res) => {
+      if (res.isConfirmed && res.value) {
+        this.isProcessingAction = true;
+        this.permitService.performCasesProcessedAction(item.id, 'reject', res.value).subscribe({
+          next: () => {
+            this.isProcessingAction = false;
+            Swal.fire('Rejected', 'Stock arrival record rejected.', 'info');
+            this.loadPendingArrivalReviews();
+          },
+          error: (err: any) => {
+            this.isProcessingAction = false;
+            Swal.fire('Error', 'Failed to reject: ' + (err?.error?.message || err?.message || 'Server error'), 'error');
+          }
+        });
       }
     });
   }
@@ -1846,6 +2137,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   private loadApplications(): void {
+    this.loadPendingArrivalReviews();
     forkJoin({
       requisitions: this.permitService.listApplications().pipe(catchError(() => of([]))),
       revalidations: this.permitService.getRevalidations().pipe(catchError(() => of([]))),

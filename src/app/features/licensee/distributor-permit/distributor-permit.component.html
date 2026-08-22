@@ -188,6 +188,59 @@
         </div>
       </div>
 
+      <!-- Officer Review Section: Stock Arrivals Under Review -->
+      <div class="card shadow-sm border-0 mb-4" *ngIf="isOfficerUser && pendingArrivalReviews.length > 0">
+        <div class="card-header bg-gradient bg-primary text-white d-flex justify-content-between align-items-center py-2 px-3">
+          <h6 class="m-0 fw-bold"><i class="bi bi-box-seam me-2"></i> Pending IMFL Stock Arrival Cases (Under Review)</h6>
+          <span class="badge bg-warning text-dark">{{ pendingArrivalReviews.length }} Pending Reviews</span>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Sl. No.</th>
+                  <th>App Ref. No.</th>
+                  <th>Permit No.</th>
+                  <th>Vehicle Registration No.</th>
+                  <th>Brand & Size</th>
+                  <th>Expected / Arrived</th>
+                  <th>Submitted By</th>
+                  <th>Submitted At</th>
+                  <th>Status</th>
+                  <th class="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of pendingArrivalReviews; let i = index">
+                  <td>{{ i + 1 }}</td>
+                  <td><span class="fw-bold text-dark">{{ item.application_ref || item.distributor_permit }}</span></td>
+                  <td><span class="badge bg-secondary">{{ item.permit_number }}</span></td>
+                  <td><i class="bi bi-truck me-1"></i> {{ item.vehicle_number }}</td>
+                  <td>{{ item.brand_name }} ({{ item.size_ml }} ml)</td>
+                  <td>
+                    <span class="fw-bold text-primary">{{ item.arrived_cases }}</span> / {{ item.expected_cases }} Cases
+                  </td>
+                  <td>{{ item.submitted_by_name || 'Distributor' }}</td>
+                  <td>{{ item.submitted_at | date:'dd-MMM-yyyy HH:mm' }}</td>
+                  <td><span class="badge bg-warning text-dark">Under Review</span></td>
+                  <td class="text-center">
+                    <div class="btn-group btn-group-sm">
+                      <button type="button" class="btn btn-success btn-sm fw-bold" (click)="approveArrivalReview(item)" [disabled]="isProcessingAction">
+                        <i class="bi bi-check-circle me-1"></i> Approve
+                      </button>
+                      <button type="button" class="btn btn-danger btn-sm fw-bold" (click)="rejectArrivalReview(item)" [disabled]="isProcessingAction">
+                        <i class="bi bi-x-circle me-1"></i> Reject
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- Tab 1: IMFL Requisition Table -->
       <div class="register-table" *ngIf="activeTab === 'requisition'">
         <div class="register-container">
@@ -235,6 +288,9 @@
                     <span class="status-badge status-badge--{{ row.statusGroup }}">
                       {{ row.currentStage }}
                     </span>
+                    <span class="badge bg-warning text-dark mt-1 d-block" *ngIf="hasPendingArrival(row)">
+                      <i class="bi bi-clock-history me-1"></i> Arrival Awaiting Approval
+                    </span>
                   </td>
                   <td class="dp-action-cell" (click)="$event.stopPropagation()">
                     <div class="dp-action-buttons">
@@ -247,6 +303,16 @@
                       >
                         <i class="bi bi-eye-fill"></i>
                         <span>View Details</span>
+                      </button>
+                      <button
+                        class="btn btn-sm btn-outline-primary fw-semibold me-1"
+                        type="button"
+                        title="View Permit Details & Arrival Status"
+                        (click)="openPermitDetailsModal(row, $event)"
+                        (mousedown)="$event.stopPropagation()"
+                      >
+                        <i class="bi bi-card-checklist me-1"></i>
+                        <span>Permit Details</span>
                       </button>
                       <button
                         class="btn btn-sm btn-info fw-semibold text-white me-1"
@@ -1248,10 +1314,18 @@
             [(ngModel)]="selectedPermitNumberForArrival"
             (change)="onPermitSelectionChangeForArrival()"
           >
-            <option *ngFor="let opt of availablePermitOptionsForArrival" [value]="opt.permitNumber">
+            <option *ngFor="let opt of availablePermitOptionsForArrival" [value]="opt.permitNumber" [disabled]="opt.isAwaiting || opt.isCancelled || opt.isUnderProcess">
               {{ opt.label }}
             </option>
           </select>
+        </div>
+
+        <div class="alert alert-warning border-warning d-flex align-items-center mb-3" *ngIf="isCurrentPermitDisabledForArrival()">
+          <i class="bi bi-exclamation-triangle-fill text-warning fs-3 me-3"></i>
+          <div>
+            <strong>Permit Stock Arrival Disabled</strong><br />
+            {{ getCurrentPermitDisabledReason() }}
+          </div>
         </div>
 
         <!-- Expected Details Breakdown Card -->
@@ -1363,7 +1437,7 @@
         <button
           type="button"
           class="btn btn-info px-4 text-white fw-bold"
-          [disabled]="isSubmittingArrival || !arrivalVehicleNumber.trim() || arrivalArrivedCases === null || arrivalArrivedCases < 0"
+          [disabled]="isSubmittingArrival || isCurrentPermitDisabledForArrival() || !arrivalVehicleNumber.trim() || arrivalArrivedCases === null || arrivalArrivedCases < 0"
           (click)="confirmArrivalSubmit()"
         >
           <span *ngIf="isSubmittingArrival" class="spinner-border spinner-border-sm me-2"></span>
@@ -1488,6 +1562,80 @@
         >
           Close
         </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Permit Wise Details Modal -->
+<div class="modal fade show d-block" tabindex="-1" style="background: rgba(0, 0, 0, 0.6); z-index: 1060;" *ngIf="showPermitDetailsModal">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-gradient bg-primary text-white py-3 px-4">
+        <h5 class="modal-title fw-bold">
+          <i class="bi bi-card-checklist me-2"></i>
+          Permit Wise Details - {{ selectedPermitDetailsRow?.applicationId || selectedPermitDetailsRow?.referenceNo }}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closePermitDetailsModal()"></button>
+      </div>
+      <div class="modal-body p-4" style="max-height: 75vh; overflow-y: auto;">
+        <div class="mb-3 d-flex justify-content-between align-items-center bg-light p-3 rounded border">
+          <div>
+            <strong>Applicant:</strong> {{ selectedPermitDetailsRow?.applicantName || 'N/A' }} <br />
+            <small class="text-muted">Supplier: {{ selectedPermitDetailsRow?.supplierName || 'N/A' }}</small>
+          </div>
+          <div class="text-end">
+            <span class="badge bg-info text-dark fs-6">{{ selectedPermitWiseItems.length }} Permit(s)</span>
+          </div>
+        </div>
+
+        <div class="accordion" id="permitDetailsAccordion">
+          <div class="card mb-3 border shadow-sm" *ngFor="let item of selectedPermitWiseItems; let idx = index">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center py-2 px-3">
+              <h6 class="m-0 fw-bold text-primary">
+                <i class="bi bi-card-heading me-2"></i>
+                Permit Number: {{ item.permitNumber }}
+              </h6>
+              <span class="badge" [ngClass]="{
+                'bg-warning text-dark': item.arrivalStatus === 'under_review',
+                'bg-success': item.arrivalStatus === 'approved',
+                'bg-danger': item.arrivalStatus === 'rejected',
+                'bg-secondary': item.arrivalStatus === 'pending'
+              }">
+                {{ item.arrivalStatus === 'under_review' ? 'Stock Arrival Awaiting OIC Approval' : (item.arrivalStatus === 'approved' ? 'Stock Arrival Approved' : (item.arrivalStatus === 'rejected' ? 'Stock Arrival Rejected' : 'Stock Arrival Pending')) }}
+              </span>
+            </div>
+            <div class="card-body p-3">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <div class="border-end pe-3">
+                    <h6 class="text-muted fs-7 text-uppercase fw-bold mb-2"><i class="bi bi-box me-1"></i> Allocation Details</h6>
+                    <p class="mb-1"><strong>Brand Name:</strong> {{ item.brandName }}</p>
+                    <p class="mb-1"><strong>Size (ml):</strong> {{ item.sizeMl }} ml</p>
+                    <p class="mb-0"><strong>Allocated Cases:</strong> <span class="badge bg-primary fs-7">{{ item.totalCases }} Cases</span></p>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div>
+                    <h6 class="text-muted fs-7 text-uppercase fw-bold mb-2"><i class="bi bi-truck me-1"></i> Physical Stock Arrival Entry</h6>
+                    <div *ngIf="item.arrivalRecord; else noArrivalBlock">
+                      <p class="mb-1"><strong>Vehicle / Car Registration No:</strong> <span class="fw-bold text-dark">{{ item.arrivalRecord.vehicle_number }}</span></p>
+                      <p class="mb-1"><strong>Arrived Cases:</strong> <span class="fw-bold text-success">{{ item.arrivalRecord.arrived_cases }} Cases</span> / {{ item.totalCases }} Expected</p>
+                      <p class="mb-1" *ngIf="item.arrivalRecord.submitted_at"><strong>Submitted On:</strong> {{ item.arrivalRecord.submitted_at | date:'dd-MMM-yyyy HH:mm' }}</p>
+                      <p class="mb-0 text-muted fst-italic" *ngIf="item.arrivalRecord.remarks"><strong>Arrival Notes:</strong> "{{ item.arrivalRecord.remarks }}"</p>
+                    </div>
+                    <ng-template #noArrivalBlock>
+                      <p class="text-muted mb-0"><i class="bi bi-info-circle me-1"></i> No physical stock arrival details submitted for this permit yet.</p>
+                    </ng-template>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer bg-light py-2 px-4">
+        <button type="button" class="btn btn-secondary px-4 btn-sm" (click)="closePermitDetailsModal()">Close</button>
       </div>
     </div>
   </div>
