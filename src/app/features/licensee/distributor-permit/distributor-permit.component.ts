@@ -27,6 +27,7 @@ type DistributorPermitStatusGroup = Exclude<DistributorPermitStatusFilter, 'all'
 interface DistributorPermitRow {
   id: string;
   applicationId: string;
+  distributorPermitRef: string;
   submittedOn: string;
   submittedDate: Date | null;
   paymentStatus: string;
@@ -1719,6 +1720,14 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const supplierName = application?.supplierCompanyName || application?.supplier_company_name || application?.distributor_permit_detail?.supplier_company_name || 'N/A';
     const stageStr = application?.current_stage?.name || application?.current_stage || application?.status || 'Pending';
 
+    const distributorPermitRef = application?.distributor_permit_ref_no
+      || application?.distributorPermitRefNo
+      || application?.distributor_permit_detail?.reference_no
+      || application?.distributor_permit_detail?.referenceNo
+      || (typeof application?.distributor_permit === 'string' ? application.distributor_permit : '')
+      || (typeof application?.distributorPermit === 'string' ? application.distributorPermit : '')
+      || supplierName;
+
     const refNoUpper = String(refNo).toUpperCase();
     const statusLower = String(application?.status || '').toLowerCase();
     const stageLower = String(stageStr).toLowerCase();
@@ -1734,6 +1743,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return {
       id: refNo,
       applicationId: refNo || 'N/A',
+      distributorPermitRef: distributorPermitRef || 'N/A',
       submittedOn: this.formatDate(dateValue),
       submittedDate,
       paymentStatus: application?.is_excise_duty_fee_paid ? 'Paid' : 'Pending',
