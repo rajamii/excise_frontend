@@ -1460,9 +1460,46 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.arrivalSearchTerm = '';
     this.arrivalMonthFilter = '';
 
-    this.permitService.getArrivals().subscribe({
-      next: (res: any[]) => {
-        this.arrivalRecords = Array.isArray(res) ? res : [];
+    forkJoin({
+      arrivals: this.permitService.getArrivals().pipe(catchError(() => of([] as any[]))),
+      processed: this.permitService.getCasesProcessed({ status: 'approved' }).pipe(catchError(() => of([] as any[])))
+    }).subscribe({
+      next: ({ arrivals, processed }) => {
+        const arrList = Array.isArray(arrivals) ? arrivals : (arrivals as any)?.results || [];
+        const procList = Array.isArray(processed) ? processed : (processed as any)?.results || [];
+
+        const mergedMap = new Map<string, any>();
+
+        for (const item of arrList) {
+          const key = String(item.permit_number || item.permitNumber || item.id).toLowerCase().trim();
+          mergedMap.set(key, {
+            ...item,
+            distributor_permit_ref: item.distributor_permit?.reference_no || item.distributor_permit || item.application_ref || item.distributorPermit || 'N/A'
+          });
+        }
+
+        for (const item of procList) {
+          const key = String(item.permit_number || item.permitNumber || item.id).toLowerCase().trim();
+          if (!mergedMap.has(key)) {
+            mergedMap.set(key, {
+              id: item.id,
+              distributor_permit: item.application_ref || item.distributor_permit?.reference_no || item.distributor_permit || 'N/A',
+              distributor_permit_ref: item.application_ref || item.distributor_permit?.reference_no || item.distributor_permit || 'N/A',
+              permit_number: item.permit_number || 'N/A',
+              vehicle_number: item.vehicle_number || item.vehicleNumber || 'N/A',
+              brand_name: item.brand_name || item.brandName || 'N/A',
+              size_ml: item.size_ml || item.sizeMl || 750,
+              expected_cases: item.expected_cases || item.expectedCases || 0,
+              arrived_cases: item.arrived_cases ?? item.arrivedCases ?? 0,
+              arrived_at: item.reviewed_at || item.submitted_at || item.created_at,
+              status: 'Approved',
+              remarks: item.officer_remarks || item.remarks || ''
+            });
+          }
+        }
+
+        this.arrivalRecords = Array.from(mergedMap.values());
+        this.allArrivalsList = arrList;
         this.isLoadingArrivalRecords = false;
       },
       error: (err: any) => {
@@ -1482,7 +1519,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const month = (this.arrivalMonthFilter || '').trim();
 
     return (this.arrivalRecords || []).filter(item => {
-      const dpRef = String(item.distributor_permit || item.distributorPermit || '').toLowerCase();
+      const dpRef = String(item.distributor_permit_ref || item.distributor_permit?.reference_no || item.distributor_permit || item.distributorPermit || item.application_ref || '').toLowerCase();
       const pNum = String(item.permit_number || item.permitNumber || '').toLowerCase();
       const vNum = String(item.vehicle_number || item.vehicleNumber || '').toLowerCase();
       const bName = String(item.brand_name || item.brandName || '').toLowerCase();
@@ -1490,8 +1527,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       const matchesSearch = !q || dpRef.includes(q) || pNum.includes(q) || vNum.includes(q) || bName.includes(q);
 
       let matchesMonth = true;
-      if (month && item.arrived_at) {
-        const itemMonth = String(item.arrived_at).substring(0, 7); // YYYY-MM
+      const dateVal = item.arrived_at || item.reviewed_at || item.submitted_at || item.created_at;
+      if (month && dateVal) {
+        const itemMonth = String(dateVal).substring(0, 7); // YYYY-MM
         matchesMonth = itemMonth === month;
       }
 

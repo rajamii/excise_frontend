@@ -1604,7 +1604,7 @@
             <tbody>
               <tr *ngFor="let item of filteredArrivalRecords; let i = index">
                 <td>{{ i + 1 }}</td>
-                <td class="fw-semibold text-primary">{{ item.distributor_permit }}</td>
+                <td class="fw-semibold text-primary">{{ item.distributor_permit_ref || item.distributor_permit?.reference_no || item.distributor_permit || item.application_ref || 'N/A' }}</td>
                 <td><span class="badge bg-secondary">{{ item.permit_number }}</span></td>
                 <td class="fw-bold text-dark">{{ item.vehicle_number }}</td>
                 <td class="text-truncate" style="max-width: 200px;" [title]="item.brand_name">{{ item.brand_name }}</td>
@@ -1925,52 +1925,64 @@
                 </p>
               </div>
             </div>
+
+            <!-- Officer Remarks Field Inside Box -->
+            <div class="mt-3 pt-3 border-top" *ngIf="selectedReviewPermitItem?.status === 'under_review'">
+              <label class="form-label fw-semibold">Officer Remarks / Comments (Optional):</label>
+              <textarea
+                class="form-control"
+                rows="2"
+                [(ngModel)]="officerActionRemarks"
+                placeholder="Enter officer review remarks or rejection reason for Permit {{ selectedReviewPermitItem.permitNumber }}..."
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- Permit Action Buttons INSIDE Box -->
+          <div class="card-footer bg-light py-2 px-3 d-flex justify-content-end gap-2 align-items-center">
+            <ng-container *ngIf="selectedReviewPermitItem?.status === 'under_review'">
+              <button
+                type="button"
+                class="btn btn-danger btn-sm px-3 fw-bold shadow-sm"
+                (click)="confirmRejectSelectedPermit()"
+                [disabled]="isProcessingAction"
+              >
+                <i class="bi bi-x-circle-fill me-1"></i> Reject Permit Arrival
+              </button>
+              <button
+                type="button"
+                class="btn btn-success btn-sm px-3 fw-bold shadow-sm"
+                (click)="confirmApproveSelectedPermit()"
+                [disabled]="isProcessingAction"
+              >
+                <i class="bi bi-check-circle-fill me-1"></i> Approve Permit Arrival
+              </button>
+            </ng-container>
+            <ng-container *ngIf="selectedReviewPermitItem?.status === 'approved'">
+              <span class="text-success fw-bold small"><i class="bi bi-check-circle-fill me-1"></i> Permit Arrival Approved</span>
+            </ng-container>
+            <ng-container *ngIf="selectedReviewPermitItem?.status === 'rejected'">
+              <span class="text-danger fw-bold small"><i class="bi bi-x-circle-fill me-1"></i> Permit Arrival Rejected</span>
+            </ng-container>
           </div>
         </div>
 
-        <!-- Officer Remarks Field -->
-        <div class="mb-3" *ngIf="selectedReviewPermitItem?.status === 'under_review'">
-          <label class="form-label fw-semibold">Officer Remarks / Comments (Optional):</label>
-          <textarea
-            class="form-control"
-            rows="3"
-            [(ngModel)]="officerActionRemarks"
-            placeholder="Enter officer review remarks, verification note, or rejection reason for this permit..."
-          ></textarea>
-        </div>
-
       </div>
+
+      <!-- OUTSIDE Box: Final Approve Modal Footer -->
       <div class="modal-footer bg-light py-3 px-4 d-flex justify-content-between align-items-center">
         <button type="button" class="btn btn-secondary px-4" (click)="closeArrivalReviewModal()" [disabled]="isProcessingAction">
           Close
         </button>
-        <div class="d-flex gap-2 align-items-center">
+        <div>
           <button
             type="button"
-            class="btn btn-danger px-3 fw-bold shadow-sm"
-            *ngIf="selectedReviewPermitItem?.status === 'under_review'"
-            (click)="confirmRejectSelectedPermit()"
-            [disabled]="isProcessingAction"
-          >
-            <i class="bi bi-x-circle-fill me-1"></i> Reject Permit Arrival
-          </button>
-          <button
-            type="button"
-            class="btn btn-success px-3 fw-bold shadow-sm"
-            *ngIf="selectedReviewPermitItem?.status === 'under_review'"
-            (click)="confirmApproveSelectedPermit()"
-            [disabled]="isProcessingAction"
-          >
-            <i class="bi bi-check-circle-fill me-1"></i> Approve Permit Arrival
-          </button>
-
-          <button
-            type="button"
-            class="btn btn-primary px-4 fw-bold shadow-sm ms-2"
+            class="btn btn-success btn-lg px-5 fw-bold shadow"
             (click)="finalizeApplicationReview()"
-            [disabled]="isProcessingAction"
+            [disabled]="!allSubmittedPermitsReviewed || isProcessingAction"
+            [title]="allSubmittedPermitsReviewed ? 'Finalize and approve application' : 'Please approve or reject all submitted permits first'"
           >
-            <i class="bi bi-check-all me-1"></i> Finalize Application Review
+            <i class="bi bi-check-all fs-5 me-1"></i> Final Approve
           </button>
         </div>
       </div>
