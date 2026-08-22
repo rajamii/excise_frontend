@@ -1024,7 +1024,7 @@
             <option
               *ngFor="let opt of availablePermitOptionsForCancellation"
               [value]="opt.permitNumber"
-              [disabled]="opt.isUnderProcess || opt.isCancelled || opt.isRevalidated"
+              [disabled]="opt.isUnderProcess || opt.isCancelled || opt.isRevalidated || opt.isArrivalApproved"
             >
               {{ opt.label }}
             </option>
@@ -1386,7 +1386,7 @@
             [(ngModel)]="selectedPermitNumberForArrival"
             (change)="onPermitSelectionChangeForArrival()"
           >
-            <option *ngFor="let opt of availablePermitOptionsForArrival" [value]="opt.permitNumber" [disabled]="opt.isAwaiting || opt.isCancelled || opt.isUnderProcess">
+            <option *ngFor="let opt of availablePermitOptionsForArrival" [value]="opt.permitNumber" [disabled]="opt.isApproved || opt.isAwaiting || opt.isCancelled || opt.isUnderProcess">
               {{ opt.label }}
             </option>
           </select>
