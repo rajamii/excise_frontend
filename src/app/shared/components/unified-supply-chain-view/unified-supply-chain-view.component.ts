@@ -3351,12 +3351,20 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 actions = actions.filter(a => a !== 'PAY' && a !== 'FORCE_PAY');
             }
 
+            if (String(this.applicationType).includes('revalidation')) {
+                actions = actions.filter(a => a !== 'REJECT');
+            }
+
             if (actions.length > 0) {
                 return Array.from(new Set(actions));
             }
         }
 
         if (this.applicationType === 'cancellation' && !this.isLicenseeContext()) {
+            return ['APPROVE'];
+        }
+
+        if (String(this.applicationType).includes('revalidation') && !this.isLicenseeContext()) {
             return ['APPROVE'];
         }
 
@@ -3383,12 +3391,12 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         const context = this.getUserContext();
 
         if (context === USER_CONTEXTS.COMMISSIONER) {
-            if (this.applicationType === 'cancellation') {
+            if (this.applicationType === 'cancellation' || String(this.applicationType).includes('revalidation')) {
                 actions = ['APPROVE'];
             } else if (stageId === 162 || status.includes('COMMISSIONER')) {
                 actions = ['APPROVE', 'REJECT'];
-            } else if (this.applicationType === 'revalidation' || stageId === 160) {
-                actions = ['APPROVE', 'REJECT'];
+            } else if (stageId === 160) {
+                actions = ['APPROVE'];
             } else if (status.includes('PAYSLIP') || status.includes('VERIF') || status.includes('FINAL')) {
                 actions = ['APPROVE', 'REJECT'];
             } else {

@@ -313,12 +313,14 @@ export class UnifiedActionsService {
         );
       }
 
-      case 'revalidation':
+      case 'revalidation': {
+        const revId = item.referenceNo || item.reference_no || item.id || '';
         return this.toActionResult(
-          this.supplyChainService.performRevalidationAction(item.id, 'APPROVE', 'Approved'),
+          this.supplyChainService.performRevalidationAction(revId, 'APPROVE', 'Approved'),
           'Revalidation approved successfully',
           'Failed to approve revalidation'
         );
+      }
 
       case 'cancellation': {
         const cancelId = item.id || item.referenceNo || item.reference_no || '';
@@ -406,12 +408,14 @@ export class UnifiedActionsService {
         );
       }
 
-      case 'revalidation':
+      case 'revalidation': {
+        const revId = item.referenceNo || item.reference_no || item.id || '';
         return this.toActionResult(
-          this.supplyChainService.performRevalidationAction(item.id, 'REJECT', reason),
+          this.supplyChainService.performRevalidationAction(revId, 'REJECT', reason),
           'Revalidation rejected successfully',
           'Failed to reject revalidation'
         );
+      }
 
       case 'cancellation':
         return this.toActionResult(

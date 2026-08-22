@@ -1986,8 +1986,9 @@ private getTransitRejectSummary(): {
   }
 
   private applyRevalidationCommissionerActionRules(configs: ActionButtonConfig[]): ActionButtonConfig[] {
-    if (this.itemType !== 'revalidation') {
-      return configs;
+    const type = String(this.itemType || '').toLowerCase();
+    if (type === 'revalidation' || type === 'imfl-revalidation') {
+      return configs.filter(config => this.normalizeActionName(config?.action) !== 'REJECT');
     }
     return configs;
   }

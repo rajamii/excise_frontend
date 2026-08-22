@@ -258,7 +258,13 @@ export class SupplyChainService {
   }
 
   getRevalidationDetail(id: string): Observable<any> {
-    return this.http.get<any>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/${id}/`).pipe(
+    const idStr = String(id || '').toUpperCase();
+    const isImfl = idStr.startsWith('IMFL') || idStr.includes('IMFLREV') || idStr.includes('IMFLREQ');
+    const endpointUrl = isImfl
+      ? `${environment.apiBaseUrl}/transactional/distributor-permit/revalidation/${id}/`
+      : `${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/${id}/`;
+
+    return this.http.get<any>(endpointUrl).pipe(
       catchError((error) => {
         console.error('getRevalidationDetail error', error);
         throw error;
@@ -296,9 +302,15 @@ export class SupplyChainService {
     );
   }
 
-  performRevalidationAction(id: string, action: 'APPROVE' | 'REJECT', role: string): Observable<any> {
+  performRevalidationAction(id: string, action: 'APPROVE' | 'REJECT', role: string = 'commissioner'): Observable<any> {
+    const idStr = String(id || '').toUpperCase();
+    const isImfl = idStr.startsWith('IMFL') || idStr.includes('IMFLREV') || idStr.includes('IMFLREQ');
+    const endpointUrl = isImfl
+      ? `${environment.apiBaseUrl}/transactional/distributor-permit/revalidation/${id}/perform_action/`
+      : `${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/${id}/perform_action/`;
+
     return this.http.post<any>(
-      `${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/${id}/perform_action/`,
+      endpointUrl,
       { action, role }
     ).pipe(
       tap(() => this.invalidateCache('revalidations:list')),
