@@ -636,11 +636,15 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
         let isCancelled = false;
         let isUnderProcess = false;
+        let underProcessReason = '';
 
         if (existingForPermitCan) {
           const st = String(existingForPermitCan['status'] || existingForPermitCan['currentStage'] || '').toUpperCase();
           if (st.includes('APPROVED') || st.includes('COMPLETED')) {
             isCancelled = true;
+          } else if (!st.includes('REJECTED')) {
+            isUnderProcess = true;
+            underProcessReason = 'Cancellation Under Process';
           }
         }
 
@@ -648,14 +652,15 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           const st = String(existingForPermitRev['status'] || existingForPermitRev['currentStage'] || '').toUpperCase();
           if (!st.includes('REJECTED')) {
             isUnderProcess = true;
+            underProcessReason = 'Revalidation Under Process';
           }
         }
 
         let label = `${pNum} (${cases} Cases)`;
         if (isCancelled) {
           label += ' - (Cancelled)';
-        } else if (isUnderProcess) {
-          label += ' - (Revalidation Under Process)';
+        } else if (isUnderProcess && underProcessReason) {
+          label += ` - (${underProcessReason})`;
         }
 
         this.availablePermitOptionsForRevalidation.push({
