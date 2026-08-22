@@ -559,7 +559,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             revalidation: {
                 service: this.isImflDistributorPermitSource() ? this.distributorPermitService : this.supplyChainService,
                 listMethod: this.isImflDistributorPermitSource() ? 'getRevalidations' : 'getRevalidationData',
-                detailMethod: this.isImflDistributorPermitSource() ? 'getApplication' : 'getRevalidationDetail',
+                detailMethod: this.isImflDistributorPermitSource() ? 'getRevalidationDetail' : 'getRevalidationDetail',
                 workflowId: WORKFLOW_IDS[APPLICATION_TYPES.REVALIDATION],
                 fieldMappings: {
                     id: this.isImflDistributorPermitSource() ? ['referenceNo', 'reference_no', 'id'] : ['id'],

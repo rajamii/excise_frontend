@@ -108,6 +108,10 @@ export class DistributorPermitService {
     return this.http.get<any[]>(`${this.baseUrl}/revalidation/`);
   }
 
+  getRevalidationDetail(referenceNo: string): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/revalidation/${encodeURIComponent(referenceNo)}/`);
+  }
+
   createRevalidation(payload: any): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/revalidation/`, payload).pipe(
       tap(() => this.clearCache())

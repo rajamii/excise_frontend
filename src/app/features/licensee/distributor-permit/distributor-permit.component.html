@@ -324,22 +324,26 @@
                   </td>
                   <td class="dp-action-cell" (click)="$event.stopPropagation()">
                     <div class="dp-action-buttons">
+                      <!-- Activated schedule not yet submitted: show Activate Revalidation -->
                       <button
-                        class="btn dp-action-button"
+                        class="btn btn-warning btn-sm fw-bold text-dark me-1"
                         type="button"
-                        *ngIf="row.application['is_activated_schedule'] || canRequestRevalidation(row)"
-                        title="Submit Revalidation Application"
+                        *ngIf="row.isActivatedSchedule"
+                        title="Your permit validity has expired. Click to submit revalidation application to Commissioner."
                         (click)="openRevalidationModal(row)"
+                        (mousedown)="openRevalidationModal(row)"
                       >
-                        <i class="bi bi-arrow-repeat"></i>
+                        <i class="bi bi-arrow-repeat me-1"></i>
                         <span>Submit Application</span>
                       </button>
+                      <!-- Submitted IMFLREV applications: View Details -->
                       <button
                         class="btn dp-action-button"
                         type="button"
-                        *ngIf="!row.application['is_activated_schedule'] && !canRequestRevalidation(row)"
+                        *ngIf="!row.isActivatedSchedule"
                         title="View Details"
                         (click)="onViewDetails(row)"
+                        (mousedown)="onViewDetails(row)"
                       >
                         <i class="bi bi-eye-fill"></i>
                         <span>View Details</span>
@@ -1078,37 +1082,49 @@
           </div>
         </div>
 
-        <div class="mb-3">
-          <label class="form-label fw-bold">Reason Category <span class="text-danger">*</span></label>
-          <select class="form-select" [(ngModel)]="revalidationReasonType">
-            <option value="Delay in Transit / Transport Issue">Delay in Transit / Transport Issue</option>
-            <option value="Logistics Partner Delay">Logistics Partner Delay</option>
-            <option value="Unavoidable Weather / Blockade">Unavoidable Weather / Blockade</option>
-            <option value="Other Technical / Administrative Reason">Other Technical / Administrative Reason</option>
-          </select>
+        <!-- Auto-activated schedule: informational notice -->
+        <div class="alert alert-info border-info d-flex align-items-start mb-3" *ngIf="revalidationTargetRow?.isActivatedSchedule">
+          <i class="bi bi-info-circle-fill text-info fs-5 me-3 mt-1"></i>
+          <div>
+            <strong>Permit Validity Expired — Revalidation Required</strong><br />
+            The permit <strong>{{ revalidationTargetRow!.applicationId }}</strong> has expired. Clicking <strong>Process &amp; Submit to Commissioner</strong> will create a revalidation application (IMFLREV/) and forward it to the Commissioner for approval to extend validity.
+          </div>
         </div>
 
-        <div class="mb-4">
-          <label class="form-label fw-bold">Detailed Reason for Revalidation <span class="text-danger">*</span></label>
-          <textarea
-            class="form-control"
-            rows="3"
-            [(ngModel)]="revalidationReasonDetails"
-            placeholder="Specify reason for requesting revalidation..."
-          ></textarea>
-        </div>
+        <!-- Manual revalidation: reason + declaration -->
+        <ng-container *ngIf="!revalidationTargetRow?.isActivatedSchedule">
+          <div class="mb-3">
+            <label class="form-label fw-bold">Reason Category <span class="text-danger">*</span></label>
+            <select class="form-select" [(ngModel)]="revalidationReasonType">
+              <option value="Delay in Transit / Transport Issue">Delay in Transit / Transport Issue</option>
+              <option value="Logistics Partner Delay">Logistics Partner Delay</option>
+              <option value="Unavoidable Weather / Blockade">Unavoidable Weather / Blockade</option>
+              <option value="Other Technical / Administrative Reason">Other Technical / Administrative Reason</option>
+            </select>
+          </div>
 
-        <div class="form-check mb-2">
-          <input
-            class="form-check-input"
-            type="checkbox"
-            id="revalCheck"
-            [(ngModel)]="revalidationDeclarationAccepted"
-          />
-          <label class="form-check-label text-secondary small" for="revalCheck">
-            I hereby declare that the information provided for permit revalidation is true and correct.
-          </label>
-        </div>
+          <div class="mb-4">
+            <label class="form-label fw-bold">Detailed Reason for Revalidation <span class="text-danger">*</span></label>
+            <textarea
+              class="form-control"
+              rows="3"
+              [(ngModel)]="revalidationReasonDetails"
+              placeholder="Specify reason for requesting revalidation..."
+            ></textarea>
+          </div>
+
+          <div class="form-check mb-2">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              id="revalCheck"
+              [(ngModel)]="revalidationDeclarationAccepted"
+            />
+            <label class="form-check-label text-secondary small" for="revalCheck">
+              I hereby declare that the information provided for permit revalidation is true and correct.
+            </label>
+          </div>
+        </ng-container>
       </div>
 
       <div class="modal-footer bg-light py-3">
@@ -1120,17 +1136,28 @@
         >
           Cancel
         </button>
+        <!-- Activated schedule: simple process button -->
         <button
+          *ngIf="revalidationTargetRow?.isActivatedSchedule"
+          type="button"
+          class="btn btn-warning px-4 text-dark fw-bold"
+          [disabled]="isSubmittingRevalidation || !selectedPermitNumberForRevalidation"
+          (click)="confirmRevalidationSubmit()"
+        >
+          <span *ngIf="isSubmittingRevalidation" class="spinner-border spinner-border-sm me-2"></span>
+          <i *ngIf="!isSubmittingRevalidation" class="bi bi-send-fill me-2"></i>
+          {{ isSubmittingRevalidation ? 'Submitting...' : 'Process & Submit to Commissioner' }}
+        </button>
+        <!-- Manual: needs reason + declaration -->
+        <button
+          *ngIf="!revalidationTargetRow?.isActivatedSchedule"
           type="button"
           class="btn btn-warning px-4 text-dark fw-bold"
           [disabled]="!revalidationDeclarationAccepted || !revalidationReasonDetails.trim() || isSubmittingRevalidation"
           (click)="confirmRevalidationSubmit()"
         >
-          <span
-            *ngIf="isSubmittingRevalidation"
-            class="spinner-border spinner-border-sm me-2"
-            role="status"
-          ></span>
+          <span *ngIf="isSubmittingRevalidation" class="spinner-border spinner-border-sm me-2"></span>
+          <i *ngIf="!isSubmittingRevalidation" class="bi bi-send-fill me-2"></i>
           {{ isSubmittingRevalidation ? 'Submitting...' : 'Submit Revalidation Request' }}
         </button>
       </div>

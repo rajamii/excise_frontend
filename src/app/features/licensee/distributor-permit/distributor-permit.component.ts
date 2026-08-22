@@ -34,6 +34,7 @@ interface DistributorPermitRow {
   supplierName: string;
   currentStage: string;
   statusGroup: DistributorPermitStatusGroup;
+  isActivatedSchedule: boolean;
   application: DistributorPermitApplication;
 }
 
@@ -215,20 +216,19 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return this.rows.filter((row) => {
       const ref = String(row.applicationId || '').toUpperCase();
       const appType = String(row.application?.['applicationType'] || '').toLowerCase();
-      const isActivatedSchedule = Boolean(row.application?.['is_activated_schedule'] || row.application?.['can_submit_application']);
 
       if (this.activeTab === 'requisition') {
-        // Only real requisition entries: IMFLREQ prefix, NOT a revalidation or cancellation type, NOT an activated schedule
+        // Only real requisition entries: not a revalidation/cancellation type and not an activated schedule
         return (
           !ref.startsWith('IMFLREV') &&
           !ref.startsWith('IMFLCAN') &&
           appType !== 'revalidation' &&
           appType !== 'cancellation' &&
-          !isActivatedSchedule
+          !row.isActivatedSchedule
         );
       } else if (this.activeTab === 'revalidation') {
         // Real IMFLREV rows OR activated schedule items ready for revalidation
-        return ref.startsWith('IMFLREV') || appType === 'revalidation' || isActivatedSchedule;
+        return ref.startsWith('IMFLREV') || appType === 'revalidation' || row.isActivatedSchedule;
       } else if (this.activeTab === 'cancellation') {
         return ref.startsWith('IMFLCAN') || appType === 'cancellation';
       }
@@ -662,29 +662,35 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (!this.revalidationDeclarationAccepted) {
-      alert('Please accept the declaration to proceed.');
-      return;
-    }
-    if (!this.revalidationReasonDetails.trim()) {
-      alert('Please enter detailed remarks/reason for revalidation.');
-      return;
+    const isActivatedSchedule = Boolean(this.revalidationTargetRow.isActivatedSchedule);
+
+    if (!isActivatedSchedule) {
+      if (!this.revalidationDeclarationAccepted) {
+        alert('Please accept the declaration to proceed.');
+        return;
+      }
+      if (!this.revalidationReasonDetails.trim()) {
+        alert('Please enter detailed remarks/reason for revalidation.');
+        return;
+      }
     }
 
     const appId = this.revalidationTargetRow.applicationId;
-    const fullReason = `[Permit: ${this.selectedPermitNumberForRevalidation}] ${this.revalidationReasonType}: ${this.revalidationReasonDetails.trim()}`;
+    const reason = isActivatedSchedule
+      ? `Auto-Revalidation: Permit ${this.selectedPermitNumberForRevalidation} validity expired. System initiated revalidation.`
+      : `[Permit: ${this.selectedPermitNumberForRevalidation}] ${this.revalidationReasonType}: ${this.revalidationReasonDetails.trim()}`;
 
     this.isSubmittingRevalidation = true;
     this.permitService.createRevalidation({
       distributor_permit: appId,
       revalidated_permit_number: this.selectedPermitNumberForRevalidation,
       permit_wise_details: this.selectedPermitDetailForRevalidation ? [this.selectedPermitDetailForRevalidation] : [],
-      revalidation_reason: fullReason
+      revalidation_reason: reason
     }).subscribe({
       next: (res: any) => {
         this.isSubmittingRevalidation = false;
         this.closeRevalidationModal();
-        alert(`Permit revalidation request submitted successfully for Permit ${this.selectedPermitNumberForRevalidation}. Reference No: ${res.reference_no || res.id}`);
+        alert(`Revalidation application submitted successfully! Reference No: ${res.reference_no || res.id}. It has been forwarded to the Commissioner for approval.`);
         this.loadApplications();
       },
       error: (err: any) => {
@@ -1713,6 +1719,18 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const supplierName = application?.supplierCompanyName || application?.supplier_company_name || application?.distributor_permit_detail?.supplier_company_name || 'N/A';
     const stageStr = application?.current_stage?.name || application?.current_stage || application?.status || 'Pending';
 
+    const refNoUpper = String(refNo).toUpperCase();
+    const statusLower = String(application?.status || '').toLowerCase();
+    const stageLower = String(stageStr).toLowerCase();
+    const isActivatedSchedule = Boolean(
+      application?.is_activated_schedule ||
+      application?.can_submit_application ||
+      statusLower.includes('activated') ||
+      stageLower.includes('activated') ||
+      stageLower.includes('ready for revalidation') ||
+      (!refNoUpper.startsWith('IMFLREV') && application?.applicationType === 'revalidation')
+    );
+
     return {
       id: refNo,
       applicationId: refNo || 'N/A',
@@ -1723,6 +1741,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       supplierName,
       currentStage: this.getCurrentStage(stageStr),
       statusGroup: this.getStatusGroup(stageStr, application),
+      isActivatedSchedule,
       application
     };
   }
