@@ -243,17 +243,14 @@ export class SidebarPendingBadgeService {
       case 'imfl-permit':
       case 'distributor-permit-requisition':
       case 'imfl-requisition':
-        if (mode === 'light') return of(0);
         return this.fetchDistributorPermitDashboardCounts('requisition', audience).pipe(map(d => d.total));
 
       case 'distributor-permit-revalidation':
       case 'imfl-revalidation':
-        if (mode === 'light') return of(0);
         return this.fetchDistributorPermitDashboardCounts('revalidation', audience).pipe(map(d => d.total));
 
       case 'distributor-permit-cancellation':
       case 'imfl-cancellation':
-        if (mode === 'light') return of(0);
         return this.fetchDistributorPermitDashboardCounts('cancellation', audience).pipe(map(d => d.total));
 
       case 'requisition':
