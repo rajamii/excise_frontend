@@ -362,6 +362,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     label: string;
     isUnderProcess: boolean;
     isCancelled: boolean;
+    isRevalidated: boolean;
     detail: any;
   }> = [];
   selectedPermitDetail: any = null;
@@ -388,6 +389,13 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       return isCan && (refTarget === appIdLower || targetNo === appIdLower || String(a.referenceNo).toLowerCase().includes(appIdLower));
     });
 
+    const existingRevalidations = (this.applications || []).filter((a: any) => {
+      const isRev = String(a.referenceNo || a.reference_no || '').startsWith('IMFLREV') || a.applicationType === 'revalidation';
+      const refTarget = String(a.application?.distributor_permit || a.application?.distributorPermit || a.distributor_permit || '').toLowerCase();
+      const targetNo = String(a.application?.distributor_permit_ref_no || a.distributor_permit_ref_no || '').toLowerCase();
+      return isRev && (refTarget === appIdLower || targetNo === appIdLower || String(a.referenceNo).toLowerCase().includes(appIdLower));
+    });
+
     this.availablePermitOptionsForCancellation = [];
 
     if (Array.isArray(pDetails) && pDetails.length > 0) {
@@ -401,8 +409,15 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           return (cancelledNo && cancelledNo === pNum.toLowerCase()) || reasonText.includes(pNum.toLowerCase());
         });
 
+        const existingForPermitRev = existingRevalidations.find((revApp: any) => {
+          const revNo = String(revApp.revalidatedPermitNumber || revApp.revalidated_permit_number || revApp.application?.revalidated_permit_number || '').toLowerCase();
+          const reasonText = String(revApp.revalidationReason || revApp.revalidation_reason || '').toLowerCase();
+          return (revNo && revNo === pNum.toLowerCase()) || reasonText.includes(pNum.toLowerCase()) || !revNo;
+        });
+
         let isCancelled = false;
         let isUnderProcess = false;
+        let isRevalidated = false;
 
         if (existingForPermit) {
           const st = String(existingForPermit['status'] || existingForPermit['currentStage'] || '').toUpperCase();
@@ -413,11 +428,25 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           }
         }
 
+        if (existingForPermitRev || row?.isActivatedSchedule || rawApp?.is_activated_schedule || rawApp?.valid_up_to) {
+          if (existingForPermitRev) {
+            const st = String(existingForPermitRev['status'] || existingForPermitRev['currentStage'] || '').toUpperCase();
+            if (!st.includes('REJECTED')) {
+              isRevalidated = true;
+            }
+          }
+          if (row?.isActivatedSchedule || rawApp?.is_activated_schedule) {
+            isRevalidated = true;
+          }
+        }
+
         let label = `${pNum} (${cases} Cases)`;
         if (isCancelled) {
           label += ' - (Cancelled)';
         } else if (isUnderProcess) {
           label += ' - (Cancellation Under Process)';
+        } else if (isRevalidated) {
+          label += ' - (Revalidated)';
         } else {
           label += ' - (Available)';
         }
@@ -428,21 +457,28 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           label,
           isUnderProcess,
           isCancelled,
+          isRevalidated,
           detail: p
         });
       });
     } else {
+      const isRevalidated = Boolean(row?.isActivatedSchedule || rawApp?.is_activated_schedule || existingRevalidations.length > 0);
+      let label = `${appId} - Single Permit`;
+      if (isRevalidated) {
+        label += ' - (Revalidated)';
+      }
       this.availablePermitOptionsForCancellation.push({
         permitNumber: appId,
         totalCases: Number(row.cases || 0),
-        label: `${appId} - Single Permit`,
+        label,
         isUnderProcess: false,
         isCancelled: false,
+        isRevalidated,
         detail: null
       });
     }
 
-    const firstAvailable = this.availablePermitOptionsForCancellation.find(opt => !opt.isCancelled && !opt.isUnderProcess);
+    const firstAvailable = this.availablePermitOptionsForCancellation.find(opt => !opt.isCancelled && !opt.isUnderProcess && !opt.isRevalidated);
     this.selectedPermitNumberForCancellation = firstAvailable ? firstAvailable.permitNumber : (this.availablePermitOptionsForCancellation[0]?.permitNumber || appId);
     this.onPermitSelectionChangeForCancellation();
 
@@ -470,8 +506,12 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       return;
     }
     const selectedOpt = this.availablePermitOptionsForCancellation.find(o => o.permitNumber === this.selectedPermitNumberForCancellation);
-    if (selectedOpt && (selectedOpt.isCancelled || selectedOpt.isUnderProcess)) {
-      alert(`Permit ${this.selectedPermitNumberForCancellation} is already ${selectedOpt.isCancelled ? 'cancelled' : 'under process for cancellation'}.`);
+    if (selectedOpt && (selectedOpt.isCancelled || selectedOpt.isUnderProcess || selectedOpt.isRevalidated)) {
+      if (selectedOpt.isRevalidated) {
+        alert(`Permit ${this.selectedPermitNumberForCancellation} has been revalidated / requires revalidation and cannot be cancelled.`);
+      } else {
+        alert(`Permit ${this.selectedPermitNumberForCancellation} is already ${selectedOpt.isCancelled ? 'cancelled' : 'under process for cancellation'}.`);
+      }
       return;
     }
 
@@ -548,7 +588,17 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
     const appId = row.applicationId || row.referenceNo || row.reference_no || '';
     const rawApp = row.application || row;
-    const pDetails = rawApp?.permit_wise_details || rawApp?.permitWiseDetails || [];
+    let pDetails = rawApp?.permit_wise_details || rawApp?.permitWiseDetails || [];
+
+    if (!Array.isArray(pDetails) || pDetails.length === 0) {
+      const matching = (this.applications || []).find((a: any) => {
+        const ref = String(a.referenceNo || a.reference_no || a.id || '').toLowerCase();
+        return ref === String(appId).toLowerCase();
+      });
+      if (matching) {
+        pDetails = matching.permit_wise_details || matching.permitWiseDetails || matching['application']?.permit_wise_details || [];
+      }
+    }
 
     const appIdLower = String(appId).toLowerCase();
     const existingRevalidations = (this.applications || []).filter((a: any) => {
@@ -606,8 +656,6 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           label += ' - (Cancelled)';
         } else if (isUnderProcess) {
           label += ' - (Revalidation Under Process)';
-        } else {
-          label += ' - (Available for Revalidation)';
         }
 
         this.availablePermitOptionsForRevalidation.push({
@@ -620,13 +668,23 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         });
       });
     } else {
+      const fallbackDetail = {
+        permit_number: appId,
+        permitNumber: appId,
+        total_cases: Number(row.cases || rawApp?.cases || rawApp?.total_cases || 0),
+        totalCases: Number(row.cases || rawApp?.cases || rawApp?.total_cases || 0),
+        total_bulk_litres: Number(rawApp?.total_bulk_litres || rawApp?.bulk_litres || 0),
+        total_import_fee: Number(rawApp?.total_import_value || rawApp?.total_import_fee || 0),
+        total_additional_ed: Number(rawApp?.total_additional_ed || 0),
+        line_items: rawApp?.line_items || rawApp?.lineItems || []
+      };
       this.availablePermitOptionsForRevalidation.push({
         permitNumber: appId,
-        totalCases: Number(row.cases || 0),
-        label: `${appId} - Single Permit`,
+        totalCases: Number(fallbackDetail.totalCases || 0),
+        label: `${appId} (${fallbackDetail.totalCases || 0} Cases)`,
         isUnderProcess: false,
         isCancelled: false,
-        detail: null
+        detail: fallbackDetail
       });
     }
 

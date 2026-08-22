@@ -859,7 +859,7 @@
             <option
               *ngFor="let opt of availablePermitOptionsForCancellation"
               [value]="opt.permitNumber"
-              [disabled]="opt.isUnderProcess || opt.isCancelled"
+              [disabled]="opt.isUnderProcess || opt.isCancelled || opt.isRevalidated"
             >
               {{ opt.label }}
             </option>
@@ -996,10 +996,13 @@
 
       <div class="modal-body p-4" *ngIf="revalidationTargetRow">
         <div class="alert alert-warning border-warning d-flex align-items-center mb-4">
-          <i class="bi bi-clock-history text-warning fs-4 me-3"></i>
+          <i class="bi bi-clock-history text-warning fs-3 me-3"></i>
           <div>
-            <strong>Revalidate Import Permit</strong><br />
-            You are initiating a revalidation request for Permit Application <strong>{{ revalidationTargetRow.applicationId }}</strong>.
+            <strong class="fs-6">Revalidate Import Permit</strong><br />
+            You are initiating a revalidation request for Permit Application <strong>{{ revalidationTargetRow.applicationId }}</strong>
+            <ng-container *ngIf="selectedPermitNumberForRevalidation">
+              &nbsp;&bull;&nbsp;Target Permit: <span class="badge bg-warning text-dark fs-6 font-monospace px-2 py-1 ms-1">{{ selectedPermitNumberForRevalidation }}</span>
+            </ng-container>.
           </div>
         </div>
 
@@ -1010,6 +1013,10 @@
               <div class="col-md-6">
                 <small class="text-muted d-block">Application Ref. No.</small>
                 <strong class="text-dark">{{ revalidationTargetRow.applicationId }}</strong>
+              </div>
+              <div class="col-md-6" *ngIf="selectedPermitNumberForRevalidation">
+                <small class="text-muted d-block">Target Permit No.</small>
+                <strong class="text-primary font-monospace fs-6">{{ selectedPermitNumberForRevalidation }}</strong>
               </div>
               <div class="col-md-6">
                 <small class="text-muted d-block">Submitted Date</small>
