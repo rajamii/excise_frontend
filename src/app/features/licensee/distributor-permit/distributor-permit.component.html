@@ -327,6 +327,17 @@
                       <button
                         class="btn dp-action-button"
                         type="button"
+                        *ngIf="row.application['is_activated_schedule'] || canRequestRevalidation(row)"
+                        title="Submit Revalidation Application"
+                        (click)="openRevalidationModal(row)"
+                      >
+                        <i class="bi bi-arrow-repeat"></i>
+                        <span>Submit Application</span>
+                      </button>
+                      <button
+                        class="btn dp-action-button"
+                        type="button"
+                        *ngIf="!row.application['is_activated_schedule'] && !canRequestRevalidation(row)"
                         title="View Details"
                         (click)="onViewDetails(row)"
                       >

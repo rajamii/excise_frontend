@@ -214,12 +214,23 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   get activeTabRows(): DistributorPermitRow[] {
     return this.rows.filter((row) => {
       const ref = String(row.applicationId || '').toUpperCase();
+      const appType = String(row.application?.['applicationType'] || '').toLowerCase();
+      const isActivatedSchedule = Boolean(row.application?.['is_activated_schedule'] || row.application?.['can_submit_application']);
+
       if (this.activeTab === 'requisition') {
-        return !ref.startsWith('IMFLREV') && !ref.startsWith('IMFLCAN');
+        // Only real requisition entries: IMFLREQ prefix, NOT a revalidation or cancellation type, NOT an activated schedule
+        return (
+          !ref.startsWith('IMFLREV') &&
+          !ref.startsWith('IMFLCAN') &&
+          appType !== 'revalidation' &&
+          appType !== 'cancellation' &&
+          !isActivatedSchedule
+        );
       } else if (this.activeTab === 'revalidation') {
-        return ref.startsWith('IMFLREV');
+        // Real IMFLREV rows OR activated schedule items ready for revalidation
+        return ref.startsWith('IMFLREV') || appType === 'revalidation' || isActivatedSchedule;
       } else if (this.activeTab === 'cancellation') {
-        return ref.startsWith('IMFLCAN');
+        return ref.startsWith('IMFLCAN') || appType === 'cancellation';
       }
       return true;
     });
@@ -497,7 +508,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   canRequestRevalidation(row: DistributorPermitRow | any): boolean {
-    return this.isApproved(row) && this.isDistributorUser;
+    if (!this.isDistributorUser) return false;
+    const raw = row?.application || row;
+    return Boolean(raw?.['is_activated_schedule'] || raw?.['can_submit_application']) || (this.isApproved(row) && !String(row?.applicationId || '').startsWith('IMFLREV'));
   }
 
   showRevalidationModal = false;
@@ -517,6 +530,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     detail: any;
   }> = [];
   selectedPermitDetailForRevalidation: any = null;
+
+  openRevalidationModal(row: DistributorPermitRow | any, event?: Event): void {
+    this.onRevalidatePermit(row, event);
+  }
 
   onRevalidatePermit(row: DistributorPermitRow | any, event?: Event): void {
     if (event) {
@@ -1548,6 +1565,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       const stageName = r?.current_stage?.name || r?.current_stage_name || r?.status || 'Pending';
       return {
         ...r,
+        applicationType: 'revalidation',
         referenceNo: refNo,
         reference_no: refNo,
         submittedAt: dateVal,

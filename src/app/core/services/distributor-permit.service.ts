@@ -58,9 +58,7 @@ export class DistributorPermitService {
 
   getDashboardCounts(tab: 'requisition' | 'revalidation' | 'cancellation' = 'requisition'): Observable<any> {
     const params = new HttpParams().set('tab', tab);
-    return this.getCachedOrFetch(`dashboard-counts:${tab}`, () =>
-      this.http.get<any>(`${this.baseUrl}/dashboard-counts/`, { params })
-    );
+    return this.http.get<any>(`${this.baseUrl}/dashboard-counts/`, { params });
   }
 
   listApplications(status?: string): Observable<DistributorPermitApplication[]> {
@@ -68,9 +66,7 @@ export class DistributorPermitService {
     if (status) {
       params = params.set('status', status);
     }
-    return this.getCachedOrFetch(`applications:${status || 'all'}`, () =>
-      this.http.get<DistributorPermitApplication[]>(`${this.baseUrl}/`, { params })
-    );
+    return this.http.get<DistributorPermitApplication[]>(`${this.baseUrl}/`, { params });
   }
 
   getApplication(referenceNo: string): Observable<DistributorPermitApplication> {
@@ -109,7 +105,7 @@ export class DistributorPermitService {
   }
 
   getRevalidations(): Observable<any[]> {
-    return this.getCachedOrFetch('revalidation:list', () => this.http.get<any[]>(`${this.baseUrl}/revalidation/`));
+    return this.http.get<any[]>(`${this.baseUrl}/revalidation/`);
   }
 
   createRevalidation(payload: any): Observable<any> {
@@ -119,7 +115,7 @@ export class DistributorPermitService {
   }
 
   getCancellations(): Observable<any[]> {
-    return this.getCachedOrFetch('cancellation:list', () => this.http.get<any[]>(`${this.baseUrl}/cancellation/`));
+    return this.http.get<any[]>(`${this.baseUrl}/cancellation/`);
   }
 
   getCancellation(referenceNo: string): Observable<any> {
@@ -133,8 +129,6 @@ export class DistributorPermitService {
   }
 
   getRevalidationSchedules(): Observable<any[]> {
-    return this.getCachedOrFetch('revalidation-schedules:list', () =>
-      this.http.get<any[]>(`${this.baseUrl}/revalidation-schedules/`)
-    );
+    return this.http.get<any[]>(`${this.baseUrl}/revalidation-schedules/`);
   }
 }
