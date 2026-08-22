@@ -612,7 +612,13 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         return {
           brand_id: master.brandId,
           size_ml: master.sizeMl,
-          cases: Number(value.cases || 0)
+          cases: Number(value.cases || 0),
+          pieces_per_case: master.piecesPerCase || 12,
+          edp_per_case: master.edpPerCase || 5800,
+          import_pass_fee_per_case: master.importPassFeePerCase || 1400,
+          mrp_per_bottle: master.mrpPerBottle || 850,
+          additional_ed_per_case: master.additionalEdPerCase || 350,
+          education_cess_per_case: master.educationCessPerCase || 60
         };
       })
       .filter(Boolean) as any[];
@@ -1021,6 +1027,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       totalImport: number;
       addEdPerCase: number;
       totalAddEd: number;
+      cess: number;
       bl: number;
     }>;
   }> {
