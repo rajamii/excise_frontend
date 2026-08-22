@@ -2547,12 +2547,14 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       brand: string;
       size: string;
       cases: number;
+      edp: number;
       importFee: number;
       totalImport: number;
+      cess: number;
+      mrp: number;
+      bl: number;
       addEdPerCase: number;
       totalAddEd: number;
-      cess: number;
-      bl: number;
     }>;
   }> {
     const rawRows = this.getBrandReviewRows();
