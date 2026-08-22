@@ -556,6 +556,26 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       try { event.stopPropagation(); } catch {}
     }
     this.selectedPermitDetailsRow = row;
+
+    if (!this.allCasesProcessedList || this.allCasesProcessedList.length === 0) {
+      this.permitService.getCasesProcessed().subscribe({
+        next: (res: any) => {
+          this.allCasesProcessedList = Array.isArray(res) ? res : res?.results || [];
+          this.buildPermitWiseDetailsItems(row);
+          this.showPermitDetailsModal = true;
+        },
+        error: () => {
+          this.buildPermitWiseDetailsItems(row);
+          this.showPermitDetailsModal = true;
+        }
+      });
+    } else {
+      this.buildPermitWiseDetailsItems(row);
+      this.showPermitDetailsModal = true;
+    }
+  }
+
+  private buildPermitWiseDetailsItems(row: any): void {
     const appId = row.applicationId || row.referenceNo || row.reference_no || '';
     const rawApp = row.application || row;
     let pDetails = rawApp?.permit_wise_details || rawApp?.permitWiseDetails || [];
@@ -571,58 +591,111 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }
 
     const appIdLower = String(appId).toLowerCase();
+    const existingCancellations = (this.applications || []).filter((a: any) => {
+      const isCan = String(a.referenceNo || a.reference_no || '').startsWith('IMFLCAN') || a.applicationType === 'cancellation';
+      const refTarget = String(a.application?.distributor_permit || a.application?.distributorPermit || a.distributor_permit || '').toLowerCase();
+      const targetNo = String(a.application?.distributor_permit_ref_no || a.distributor_permit_ref_no || '').toLowerCase();
+      return isCan && (refTarget === appIdLower || targetNo === appIdLower || String(a.referenceNo).toLowerCase().includes(appIdLower));
+    });
 
-    if (Array.isArray(pDetails) && pDetails.length > 0) {
-      this.selectedPermitWiseItems = pDetails.map((p: any) => {
-        const pNum = String(p.permit_number || p.permitNumber || appId);
+    const existingRevalidations = (this.applications || []).filter((a: any) => {
+      const isRev = String(a.referenceNo || a.reference_no || '').startsWith('IMFLREV') || a.applicationType === 'revalidation';
+      const refTarget = String(a.application?.distributor_permit || a.application?.distributorPermit || a.distributor_permit || '').toLowerCase();
+      const targetNo = String(a.application?.distributor_permit_ref_no || a.distributor_permit_ref_no || '').toLowerCase();
+      return isRev && (refTarget === appIdLower || targetNo === appIdLower || String(a.referenceNo).toLowerCase().includes(appIdLower));
+    });
 
-        const caseProc = (this.allCasesProcessedList || []).find((c: any) => {
-          const pNo = String(c.permit_number || c.permitNumber || '').toLowerCase();
-          const pAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase();
-          return pNo === pNum.toLowerCase() || pAppRef === appIdLower;
-        });
+    const itemsToMap = (Array.isArray(pDetails) && pDetails.length > 0) ? pDetails : [{
+      permit_number: appId,
+      total_cases: Number(row.cases || rawApp?.cases || rawApp?.total_cases || 0),
+      line_items: rawApp?.line_items || rawApp?.lineItems || []
+    }];
 
-        const arrRec = (this.allArrivalsList || []).find((a: any) => {
-          const pNo = String(a.permit_number || a.permitNumber || '').toLowerCase();
-          const pAppRef = String(a.distributor_permit?.reference_no || a.distributor_permit || '').toLowerCase();
-          return pNo === pNum.toLowerCase() || pAppRef === appIdLower;
-        });
+    this.selectedPermitWiseItems = itemsToMap.map((p: any) => {
+      const pNum = String(p.permit_number || p.permitNumber || appId);
+      const pNumLower = pNum.toLowerCase();
 
-        const arrivalObj = caseProc || arrRec || null;
+      // Resolve Brand Name
+      let brandName = p.brand_name || p.brandName;
+      if (!brandName || brandName === 'N/A') {
+        const lineItems = p.line_items || p.lineItems || rawApp?.line_items || rawApp?.lineItems || [];
+        if (Array.isArray(lineItems) && lineItems.length > 0) {
+          const first = lineItems[0];
+          brandName = first.brand_name || first.brandName || first.selectedBrandName || first.brand_details?.brand_name || first.brand_details?.name;
+        }
+      }
+      if (!brandName || brandName === 'N/A') {
+        brandName = rawApp?.brand_name || rawApp?.brandName || 'N/A';
+      }
 
-        return {
-          ...p,
-          permitNumber: pNum,
-          totalCases: Number(p.total_cases || p.totalCases || 0),
-          brandName: p.brand_name || p.brandName || (p.line_items?.[0]?.brand_name) || 'N/A',
-          sizeMl: p.size_ml || p.sizeMl || (p.line_items?.[0]?.size_ml) || 750,
-          arrivalRecord: arrivalObj,
-          arrivalStatus: caseProc ? caseProc.status : (arrRec ? 'approved' : 'pending')
-        };
-      });
-    } else {
+      // 1. Stock Arrival Record
       const caseProc = (this.allCasesProcessedList || []).find((c: any) => {
+        const pNo = String(c.permit_number || c.permitNumber || '').toLowerCase();
         const pAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase();
-        return pAppRef === appIdLower;
+        return pNo === pNumLower || pAppRef === appIdLower;
       });
+
       const arrRec = (this.allArrivalsList || []).find((a: any) => {
+        const pNo = String(a.permit_number || a.permitNumber || '').toLowerCase();
         const pAppRef = String(a.distributor_permit?.reference_no || a.distributor_permit || '').toLowerCase();
-        return pAppRef === appIdLower;
+        return pNo === pNumLower || pAppRef === appIdLower;
       });
 
       const arrivalObj = caseProc || arrRec || null;
+      let arrivalStatus = caseProc ? caseProc.status : (arrRec ? 'approved' : 'pending');
 
-      this.selectedPermitWiseItems = [{
-        permitNumber: appId,
-        totalCases: Number(row.cases || rawApp?.cases || rawApp?.total_cases || 0),
-        brandName: rawApp?.brand_name || (rawApp?.line_items?.[0]?.brand_name) || 'N/A',
-        sizeMl: rawApp?.size_ml || (rawApp?.line_items?.[0]?.size_ml) || 750,
+      // 2. Cancellation Record
+      const canRec = existingCancellations.find((canApp: any) => {
+        const cancelledNo = String(canApp.cancelledPermitNumber || canApp.cancelled_permit_number || canApp.application?.cancelled_permit_number || '').toLowerCase();
+        const reasonText = String(canApp.cancellationReason || canApp.cancellation_reason || '').toLowerCase();
+        return (cancelledNo && cancelledNo === pNumLower) || reasonText.includes(pNumLower) || !cancelledNo;
+      });
+
+      let cancellationStatus = null;
+      if (canRec) {
+        const st = String(canRec['status'] || canRec['currentStage'] || (canRec['current_stage'] as any)?.name || '').toUpperCase();
+        if (st.includes('APPROVED') || st.includes('COMPLETED')) {
+          cancellationStatus = 'approved';
+        } else if (st.includes('REJECTED')) {
+          cancellationStatus = 'rejected';
+        } else {
+          cancellationStatus = 'under_process';
+        }
+      }
+
+      // 3. Revalidation Record
+      const revRec = existingRevalidations.find((revApp: any) => {
+        const revNo = String(revApp.revalidatedPermitNumber || revApp.revalidated_permit_number || revApp.application?.revalidated_permit_number || '').toLowerCase();
+        const reasonText = String(revApp.revalidationReason || revApp.revalidation_reason || '').toLowerCase();
+        return (revNo && revNo === pNumLower) || reasonText.includes(pNumLower) || !revNo;
+      });
+
+      let revalidationStatus = null;
+      if (revRec) {
+        const st = String(revRec['status'] || revRec['currentStage'] || (revRec['current_stage'] as any)?.name || '').toUpperCase();
+        if (st.includes('APPROVED') || st.includes('COMPLETED')) {
+          revalidationStatus = 'approved';
+        } else if (st.includes('REJECTED')) {
+          revalidationStatus = 'rejected';
+        } else {
+          revalidationStatus = 'under_process';
+        }
+      }
+
+      return {
+        ...p,
+        permitNumber: pNum,
+        totalCases: Number(p.total_cases || p.totalCases || row.cases || rawApp?.cases || 0),
+        brandName: brandName || 'N/A',
+        sizeMl: Number(p.size_ml || p.sizeMl || (p.line_items?.[0]?.size_ml) || rawApp?.size_ml || 750),
         arrivalRecord: arrivalObj,
-        arrivalStatus: caseProc ? caseProc.status : (arrRec ? 'approved' : 'pending')
-      }];
-    }
-
-    this.showPermitDetailsModal = true;
+        arrivalStatus,
+        cancellationRecord: canRec || null,
+        cancellationStatus,
+        revalidationRecord: revRec || null,
+        revalidationStatus
+      };
+    });
   }
 
   closePermitDetailsModal(): void {
