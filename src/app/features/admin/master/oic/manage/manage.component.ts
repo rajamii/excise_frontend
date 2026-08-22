@@ -60,7 +60,11 @@ export class ManageComponent implements OnInit {
       officers: this.adminService.getOICOfficers()
     }).subscribe({
       next: ({ establishments, officers }) => {
-        this.establishments = Array.isArray(establishments) ? establishments : [];
+        const raw = Array.isArray(establishments) ? establishments : [];
+        this.establishments = raw.filter((est: any) => {
+          const cat = String(est?.categoryName || '').toLowerCase();
+          return !cat || cat.includes('manufacturing') || cat.includes('brewery') || cat.includes('distiller');
+        });
         this.oicCountByApplicationId = this.buildOicCountMap(officers);
         this.oicOfficersByApplicationId = this.buildOicOfficerMap(officers);
         this.isLoading = false;
