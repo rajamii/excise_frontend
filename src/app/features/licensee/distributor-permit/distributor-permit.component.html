@@ -298,6 +298,18 @@
                       </button>
 
                       <button
+                        class="btn btn-sm btn-success fw-semibold me-1"
+                        type="button"
+                        title="View & Print Authority Letter"
+                        *ngIf="isApproved(row)"
+                        (click)="openAuthorityLetter(row, $event)"
+                        (mousedown)="openAuthorityLetter(row, $event)"
+                      >
+                        <i class="bi bi-file-earmark-pdf-fill me-1"></i>
+                        <span>Authority Letter</span>
+                      </button>
+
+                      <button
                         class="btn btn-sm btn-outline-primary fw-semibold me-1"
                         type="button"
                         title="View Permit Details"
@@ -398,12 +410,12 @@
                         <span>Update Arrival</span>
                       </button>
                       <button
-                        class="btn btn-sm btn-success fw-semibold"
+                        class="btn btn-sm btn-success fw-semibold me-1"
                         type="button"
                         title="View & Print Authority Letter"
-                        *ngIf="isApproved(row) && canViewAuthorityLetter"
+                        *ngIf="isApproved(row)"
                         (click)="openAuthorityLetter(row, $event)"
-                        (mousedown)="$event.stopPropagation()"
+                        (mousedown)="openAuthorityLetter(row, $event)"
                       >
                         <i class="bi bi-file-earmark-pdf-fill me-1"></i>
                         <span>Authority Letter</span>

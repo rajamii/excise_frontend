@@ -317,26 +317,16 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   authorityLetterData: any = null;
 
   isApproved(row: DistributorPermitRow | any): boolean {
-    const stage = String(row?.currentStage || row?.status || row?.application?.status || '').toLowerCase();
-    const stageId = row?.application?.current_stage_id || row?.application?.currentStageId || row?.current_stage_id;
-    const isFinal = Boolean(row?.application?.current_stage_is_final || row?.application?.currentStageIsFinal);
-    return stageId === 151 || isFinal || stage.includes('approved');
+    if (!row) return false;
+    const stage = String(row?.currentStage || row?.status || row?.application?.status || (row as any)?.statusGroup || '').toLowerCase();
+    const stageId = Number(row?.application?.current_stage_id || row?.application?.currentStageId || row?.current_stage_id || row?.currentStageId || row?.application?.current_stage?.id || 0);
+    const isFinal = Boolean(row?.application?.current_stage_is_final || row?.application?.currentStageIsFinal || row?.application?.current_stage?.is_final);
+    const statusGroup = String(row?.statusGroup || '').toLowerCase();
+    return statusGroup === 'approved' || stageId === 151 || stageId === 165 || isFinal || stage.includes('approved') || stage.includes('completed');
   }
 
   get canViewAuthorityLetter(): boolean {
-    const user = this.accountService.getCurrentUser() as any;
-    let roleId = Number(user?.role?.id || user?.roleId || 0);
-    if (!roleId) {
-      try {
-        const cached = localStorage.getItem('currentUser') || localStorage.getItem('user');
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          roleId = Number(parsed?.roleId || parsed?.role?.id || parsed?.user?.roleId || parsed?.user?.role?.id || 0);
-        }
-      } catch {}
-    }
-    // Authority letter visible to Commissioner (10), Permit Section (5), and Admin (1, 3)
-    return roleId === 10 || roleId === 5 || roleId === 1 || roleId === 3;
+    return true;
   }
 
   get isDistributorUser(): boolean {
@@ -1851,26 +1841,34 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   openAuthorityLetter(row: DistributorPermitRow | any, event?: Event): void {
     if (event) {
-      event.preventDefault();
-      event.stopPropagation();
+      try { event.preventDefault(); } catch {}
+      try { event.stopPropagation(); } catch {}
     }
     const app = row?.application || row;
-    const ref = app?.referenceNo || app?.reference_no || app?.id || (row as any)?.applicationId || '';
+    const ref = String(app?.referenceNo || app?.reference_no || app?.id || (row as any)?.applicationId || (row as any)?.distributorPermitRef || '').trim();
 
-    // Build a clean, serializable object to avoid circular-reference errors
+    const matchingApp = (this.applications || []).find((a: any) => {
+      const aRef = String(a.referenceNo || a.reference_no || a.id || '').toLowerCase();
+      return aRef === ref.toLowerCase();
+    }) || app;
+
+    const rawApp = matchingApp?.application || matchingApp;
+
     const cleanApp = {
       reference_no: ref,
       referenceNo: ref,
-      applicant_name: app?.applicant_name || app?.applicantName || (row as any)?.applicantName || '',
-      supplier_company_name: app?.supplier_company_name || app?.supplierName || (row as any)?.supplierName || '',
-      source_address: app?.source_address || app?.applicantAddress || '',
-      origin: app?.origin || '',
-      destination: app?.destination || '',
-      route_details: app?.route_details || app?.routeDetails || '',
-      submitted_at: app?.submitted_at || app?.created_at || (row as any)?.submittedOn || '',
-      status: app?.status || (row as any)?.currentStage || 'Approved',
-      line_items: Array.isArray(app?.line_items) ? app.line_items
-               : Array.isArray(app?.lineItems)   ? app.lineItems
+      applicant_name: rawApp?.applicant_name || rawApp?.applicantName || (row as any)?.applicantName || this.applicantDisplayName || '',
+      supplier_company_name: rawApp?.supplier_company_name || rawApp?.supplierName || (row as any)?.supplierName || '',
+      source_address: rawApp?.source_address || rawApp?.applicantAddress || rawApp?.sourceAddress || '',
+      origin: rawApp?.origin || '',
+      destination: rawApp?.destination || '',
+      route_details: rawApp?.route_details || rawApp?.routeDetails || '',
+      submitted_at: rawApp?.submitted_at || rawApp?.created_at || (row as any)?.submittedOn || '',
+      status: rawApp?.status || (row as any)?.currentStage || 'Approved',
+      line_items: Array.isArray(rawApp?.line_items) && rawApp.line_items.length > 0 ? rawApp.line_items
+               : Array.isArray(rawApp?.lineItems) && rawApp.lineItems.length > 0     ? rawApp.lineItems
+               : Array.isArray(app?.line_items)                                       ? app.line_items
+               : Array.isArray(app?.lineItems)                                        ? app.lineItems
                : []
     };
 
