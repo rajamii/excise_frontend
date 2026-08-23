@@ -173,6 +173,10 @@ export interface ImflRequisitionDetailItem {
   validUpTo?: string;
   our_ref_no?: string;
   ourRefNo?: string;
+  distributor_name?: string;
+  distributorName?: string;
+  distributor_username?: string;
+  distributorUsername?: string;
   supplier_name?: string;
   supplierName?: string;
   origin?: string;
@@ -196,6 +200,10 @@ export interface ImflRevalidationDetailItem {
   submitted_at: string;
   referenceNo?: string;
   distilleryName?: string;
+  distributor_name?: string;
+  distributorName?: string;
+  distributor_username?: string;
+  distributorUsername?: string;
   spiritType?: string;
   totalBl?: number;
   revalidationDate?: string;
@@ -218,6 +226,10 @@ export interface ImflCancellationDetailItem {
   reference_no: string;
   requisition_ref: string;
   distillery_name: string;
+  distributor_name?: string;
+  distributorName?: string;
+  distributor_username?: string;
+  distributorUsername?: string;
   spirit_type: string;
   cancelled_bl: number;
   cancellation_fee: number;

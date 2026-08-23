@@ -216,11 +216,21 @@ export class SecretaryImflComponent implements OnInit {
     this.statusFilter = 'all';
   }
 
-  // List of unique Distilleries for ENA Filter
+  // List of Manufacturing Distilleries for ENA Filter (Sub-category: Distillery)
   get availableEnaDistilleries(): string[] {
-    const list: string[] = [];
+    const defaultDistilleries = [
+      'M/s Boudh Distillery Pvt Ltd',
+      'M/s Alpine Distilleries Pvt Ltd',
+      'Sikkim Distillery Limited'
+    ];
+    const list: string[] = [...defaultDistilleries];
     const addDist = (name?: string) => {
-      if (name && name !== 'all' && !list.includes(name)) list.push(name);
+      if (name && name !== 'all') {
+        const lower = name.toLowerCase();
+        if (!lower.includes('brewery') && !lower.includes('breweries') && !lower.includes('distributor') && !lower.includes('depot') && !list.includes(name)) {
+          list.push(name);
+        }
+      }
     };
     (this.overview?.requisitions || []).forEach(i => {
       if (this.isEnaRecord(i)) addDist(i.distilleryName || i.distillery_name);
@@ -234,20 +244,22 @@ export class SecretaryImflComponent implements OnInit {
     return list;
   }
 
-  // List of unique Distributors for IMFL Filter
+  // List of Distributors for IMFL Filter (User whose Role is Distributor)
   get availableImflDistributors(): string[] {
-    const list: string[] = [];
+    const list: string[] = ['DD01881001 (Distributor User)'];
     const addDist = (name?: string) => {
-      if (name && name !== 'all' && !list.includes(name)) list.push(name);
+      if (name && name !== 'all' && !list.includes(name)) {
+        list.push(name);
+      }
     };
     (this.overview?.requisitions || []).forEach(i => {
-      if (!this.isEnaRecord(i)) addDist(i.distilleryName || i.distillery_name || i.supplierName || i.supplier_name);
+      if (!this.isEnaRecord(i)) addDist(i.distributorName || i.distributor_name || i.distributorUsername || i.distributor_username);
     });
     (this.overview?.revalidations || []).forEach(i => {
-      if (!this.isEnaRecord(i)) addDist(i.distilleryName || i.distillery_name || i.establishmentName || i.establishment_name);
+      if (!this.isEnaRecord(i)) addDist(i.distributorName || i.distributor_name || i.distributorUsername || i.distributor_username);
     });
     (this.overview?.cancellations || []).forEach(i => {
-      if (!this.isEnaRecord(i)) addDist(i.distilleryName || i.distillery_name || i.establishmentName || i.establishment_name);
+      if (!this.isEnaRecord(i)) addDist(i.distributorName || i.distributor_name || i.distributorUsername || i.distributor_username);
     });
     return list;
   }
@@ -255,7 +267,22 @@ export class SecretaryImflComponent implements OnInit {
   private isEnaRecord(item: any): boolean {
     const sType = (item.spiritType || item.spirit_type || '').toLowerCase();
     const ref = (item.referenceNo || item.reference_no || '').toLowerCase();
-    return sType.includes('ena') || sType.includes('alcohol') || sType.includes('spirit') || sType.includes('grape') || ref.includes('req/0') || ref.includes('rev-ena') || ref.includes('cnc-ena') || ref.includes('can/');
+    
+    // Explicitly exclude any IMFL record (e.g., IMFLREQ, IMFLREV, IMFLCAN)
+    if (ref.includes('imfl') || sType.includes('imfl')) {
+      return false;
+    }
+
+    return (
+      sType.includes('ena') ||
+      sType.includes('alcohol') ||
+      sType.includes('spirit') ||
+      sType.includes('grape') ||
+      ref.startsWith('req/') ||
+      ref.startsWith('rev-ena') ||
+      ref.startsWith('cnc-ena') ||
+      ref.startsWith('can/')
+    );
   }
 
   get filteredRequisitions(): ImflRequisitionDetailItem[] {
@@ -267,9 +294,11 @@ export class SecretaryImflComponent implements OnInit {
     if (this.mainCategory === 'ena' && this.selectedDistilleryFilter !== 'all') {
       list = list.filter(i => (i.distilleryName || i.distillery_name) === this.selectedDistilleryFilter);
     }
-    // IMFL Distributor Filter
+    // IMFL Distributor Filter (matches Distributor User)
     if (this.mainCategory === 'imfl' && this.selectedDistributorFilter !== 'all') {
-      list = list.filter(i => (i.distilleryName || i.distillery_name || i.supplierName || i.supplier_name) === this.selectedDistributorFilter);
+      list = list.filter(i => 
+        (i.distributorName || i.distributor_name || i.distributorUsername || i.distributor_username || i.distilleryName || i.distillery_name) === this.selectedDistributorFilter
+      );
     }
 
     if (this.statusFilter === 'approved') {
@@ -281,7 +310,7 @@ export class SecretaryImflComponent implements OnInit {
       const q = this.searchQuery.toLowerCase().trim();
       list = list.filter(i => 
         ((i.referenceNo || i.reference_no) && (i.referenceNo || i.reference_no).toLowerCase().includes(q)) || 
-        ((i.distilleryName || i.distillery_name) && (i.distilleryName || i.distillery_name).toLowerCase().includes(q)) || 
+        ((i.distributorName || i.distributor_name || i.distilleryName || i.distillery_name) && (i.distributorName || i.distributor_name || i.distilleryName || i.distillery_name).toLowerCase().includes(q)) || 
         ((i.purposeName || i.purpose_name) && (i.purposeName || i.purpose_name).toLowerCase().includes(q)) ||
         ((i.spiritType || i.spirit_type) && (i.spiritType || i.spirit_type).toLowerCase().includes(q))
       );
@@ -298,7 +327,9 @@ export class SecretaryImflComponent implements OnInit {
       list = list.filter(i => (i.distilleryName || i.distillery_name) === this.selectedDistilleryFilter);
     }
     if (this.mainCategory === 'imfl' && this.selectedDistributorFilter !== 'all') {
-      list = list.filter(i => (i.distilleryName || i.distillery_name || i.establishmentName || i.establishment_name) === this.selectedDistributorFilter);
+      list = list.filter(i => 
+        (i.distributorName || i.distributor_name || i.distributorUsername || i.distributor_username || i.distilleryName || i.distillery_name || i.establishmentName || i.establishment_name) === this.selectedDistributorFilter
+      );
     }
 
     if (this.statusFilter === 'approved') {
