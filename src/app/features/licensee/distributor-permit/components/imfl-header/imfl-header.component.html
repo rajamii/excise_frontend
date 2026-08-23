@@ -1,6 +1,6 @@
 <div class="imfl-header-bar d-flex justify-content-between align-items-center mb-3 p-3 bg-white rounded-3 shadow-sm" *ngIf="!isFormView">
   <div class="d-flex align-items-center gap-2">
-    <button type="button" class="btn btn-light btn-sm rounded-circle p-2 shadow-sm border" title="Go Back">
+    <button type="button" class="btn btn-light btn-sm rounded-circle p-2 shadow-sm border" (click)="onBackClick()" title="Go Back">
       <i class="bi bi-arrow-left"></i>
     </button>
     <h4 class="m-0 fw-bold text-dark me-3">

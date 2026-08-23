@@ -1,5 +1,5 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { CommonModule, Location } from '@angular/common';
 import { MaterialModule } from '../../../../../shared/material.module';
 
 export type ImflTabType = 'requisition' | 'revalidation' | 'cancellation';
@@ -12,6 +12,8 @@ export type ImflTabType = 'requisition' | 'revalidation' | 'cancellation';
   styleUrl: './imfl-header.component.scss'
 })
 export class ImflHeaderComponent {
+  private readonly location = inject(Location);
+
   @Input() activeTab: ImflTabType = 'requisition';
   @Input() pendingCounts: Record<string, number> = {};
   @Input() isFormView = false;
@@ -20,6 +22,7 @@ export class ImflHeaderComponent {
   @Output() tabChange = new EventEmitter<ImflTabType>();
   @Output() applyNew = new EventEmitter<void>();
   @Output() viewArrivals = new EventEmitter<void>();
+  @Output() backClick = new EventEmitter<void>();
 
   selectTab(tab: ImflTabType): void {
     if (this.activeTab !== tab) {
@@ -34,5 +37,13 @@ export class ImflHeaderComponent {
 
   onViewArrivalsClick(): void {
     this.viewArrivals.emit();
+  }
+
+  onBackClick(): void {
+    if (this.backClick.observed) {
+      this.backClick.emit();
+    } else {
+      this.location.back();
+    }
   }
 }

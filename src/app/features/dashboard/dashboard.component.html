@@ -65,7 +65,7 @@
       class="supply-chain-content"
       [class.hologram-overview-wrapper]="selectedSupplyChainSection === 'hologram-overview'">
       <!-- Section Header -->
-      <div class="section-header">
+      <div class="section-header" *ngIf="selectedSupplyChainSection !== 'distributor-permit'">
         <div class="header-left">
           <button mat-icon-button (click)="clearSupplyChainSection()" class="back-button">
             <mat-icon>arrow_back</mat-icon>
