@@ -158,6 +158,8 @@
         <app-single-window-detail *ngIf="selectedSupplyChainSection === 'single-window-detail'"></app-single-window-detail>
         <app-payment-transactions *ngIf="selectedSupplyChainSection === 'payment-transactions'"></app-payment-transactions>
         <app-secretary-bulk-spirit *ngIf="selectedSupplyChainSection === 'secretary-bulk-spirit'"></app-secretary-bulk-spirit>
+        <app-secretary-licenses *ngIf="selectedSupplyChainSection === 'secretary-licenses'"></app-secretary-licenses>
+        <app-secretary-imfl *ngIf="selectedSupplyChainSection === 'secretary-imfl' || selectedSupplyChainSection === 'secretary-imfl-ena'"></app-secretary-imfl>
 
         <!-- IT Cell specific sections -->
         <app-itcell *ngIf="selectedSupplyChainSection === 'itcell-hologram'"></app-itcell>

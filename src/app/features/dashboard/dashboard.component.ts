@@ -43,6 +43,8 @@ import {
   isLicenseeWalletNavEligible
 } from '../../shared/utils/wallet-nav-eligibility.util';
 import { SecretaryBulkSpiritComponent } from '../secretary/components/secretary-bulk-spirit/secretary-bulk-spirit.component';
+import { SecretaryLicensesComponent } from '../secretary/components/secretary-licenses/secretary-licenses.component';
+import { SecretaryImflComponent } from '../secretary/components/secretary-imfl/secretary-imfl.component';
 
 // Supply Chain Components
 import { RequisitionComponent } from '../licensee/supplyChain/supplychaincomponents/requisition/requisition.component';
@@ -179,7 +181,9 @@ const CHART_BAR_LABELS_PLUGIN = [{
     SingleWindowComponent,
     SingleWindowDetailComponent,
     PaymentTransactionsComponent,
-    SecretaryBulkSpiritComponent
+    SecretaryBulkSpiritComponent,
+    SecretaryLicensesComponent,
+    SecretaryImflComponent
   ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
