@@ -129,6 +129,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     { section: 'commissioner-hologram-working-records', label: 'Working Records', icon: 'fact_check', group: 'Hologram', showOnlyForCommissioner: true },
     { section: 'secretary-licenses', label: 'Licenses', icon: 'verified' },
     { section: 'secretary-imfl-ena', label: 'IMFL & ENA', icon: 'local_shipping' },
+    { section: 'secretary-revenue', label: 'Revenue', icon: 'payments' },
     { section: 'commissioner-monthly-view-details', label: 'Monthly View Details', icon: 'calendar_month' },
     { section: 'imfl-requisition-cases', label: 'IMFL Requisition Cases', icon: 'assignment_turned_in', showOnlyForOic: true },
     { section: 'stock-inventory', label: 'Stock Inventory', icon: 'inventory' },
@@ -556,7 +557,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     showOnlyForCommissioner?: boolean;
   }): boolean {
     if (this.isSecretaryUser()) {
-      if (item.section === 'secretary-bulk-spirit' || item.section === 'secretary-licenses' || item.section === 'secretary-imfl' || item.section === 'secretary-imfl-ena' || item.section === 'officer-activity' || item.section === 'commissioner-monthly-view-details') {
+      if (item.section === 'secretary-bulk-spirit' || item.section === 'secretary-licenses' || item.section === 'secretary-imfl' || item.section === 'secretary-imfl-ena' || item.section === 'secretary-revenue' || item.section === 'officer-activity' || item.section === 'commissioner-monthly-view-details') {
         return true;
       }
       return false;

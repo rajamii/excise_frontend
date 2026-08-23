@@ -45,6 +45,7 @@ import {
 import { SecretaryBulkSpiritComponent } from '../secretary/components/secretary-bulk-spirit/secretary-bulk-spirit.component';
 import { SecretaryLicensesComponent } from '../secretary/components/secretary-licenses/secretary-licenses.component';
 import { SecretaryImflComponent } from '../secretary/components/secretary-imfl/secretary-imfl.component';
+import { SecretaryRevenueComponent } from '../secretary/components/secretary-revenue/secretary-revenue.component';
 
 // Supply Chain Components
 import { RequisitionComponent } from '../licensee/supplyChain/supplychaincomponents/requisition/requisition.component';
@@ -183,7 +184,8 @@ const CHART_BAR_LABELS_PLUGIN = [{
     PaymentTransactionsComponent,
     SecretaryBulkSpiritComponent,
     SecretaryLicensesComponent,
-    SecretaryImflComponent
+    SecretaryImflComponent,
+    SecretaryRevenueComponent
   ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']

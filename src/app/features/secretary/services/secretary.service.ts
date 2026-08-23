@@ -305,4 +305,81 @@ export class SecretaryService {
   getImflOverview(): Observable<SecretaryImflOverview> {
     return this.http.get<SecretaryImflOverview>(`${environment.apiBaseUrl}/api/secretary/imfl/`);
   }
+
+  getRevenueOverview(): Observable<SecretaryRevenueOverview> {
+    return this.http.get<SecretaryRevenueOverview>(`${environment.apiBaseUrl}/api/secretary/revenue/`);
+  }
+}
+
+export interface SecretaryRevenueHeadItem {
+  head_name: string;
+  headName?: string;
+  total_credit: number;
+  totalCredit?: number;
+  total_debit: number;
+  totalDebit?: number;
+  current_balance: number;
+  currentBalance?: number;
+  accounts_count: number;
+  accountsCount?: number;
+}
+
+export interface SecretaryTopContributorItem {
+  rank?: number;
+  tier_badge?: string;
+  tierBadge?: string;
+  user_id: string;
+  userId?: string;
+  licensee_name: string;
+  licenseeName?: string;
+  manufacturing_unit: string;
+  manufacturingUnit?: string;
+  category: string;
+  sub_category: string;
+  subCategory?: string;
+  total_revenue_contributed: number;
+  totalRevenueContributed?: number;
+  total_fd_amount: number;
+  totalFdAmount?: number;
+  current_balance: number;
+  currentBalance?: number;
+  wallets_count: number;
+  walletsCount?: number;
+}
+
+export interface SecretarySecurityDepositItem {
+  licensee_id: string;
+  licenseeId?: string;
+  user_id: string;
+  userId?: string;
+  licensee_name: string;
+  licenseeName?: string;
+  manufacturing_unit: string;
+  manufacturingUnit?: string;
+  category: string;
+  sub_category: string;
+  subCategory?: string;
+  fd_credit_amount: number;
+  fdCreditAmount?: number;
+  fd_current_balance: number;
+  fdCurrentBalance?: number;
+  status: string;
+  updated_at: string;
+  updatedAt?: string;
+}
+
+export interface SecretaryRevenueOverview {
+  summary_kpis: {
+    total_revenue_collected: number;
+    totalRevenueCollected?: number;
+    total_active_balance: number;
+    totalActiveBalance?: number;
+    total_security_deposit_fd: number;
+    totalSecurityDepositFd?: number;
+    top_contributors_count: number;
+    topContributorsCount?: number;
+  };
+  revenue_heads: SecretaryRevenueHeadItem[];
+  top_contributors: SecretaryTopContributorItem[];
+  security_deposits: SecretarySecurityDepositItem[];
 }
