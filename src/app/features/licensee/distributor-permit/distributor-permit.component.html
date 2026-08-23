@@ -1592,6 +1592,65 @@
       </div>
 
       <div class="modal-body p-4" style="max-height: 82vh; overflow-y: auto;">
+        <!-- Executive KPI Summary Cards Row -->
+        <div class="row g-3 mb-4">
+          <div class="col-md-3 col-sm-6">
+            <div class="card border-0 shadow-sm rounded-3 p-3" style="background-color: #eff6ff;">
+              <div class="d-flex align-items-center justify-content-between">
+                <div>
+                  <span class="text-uppercase small fw-bold text-primary d-block mb-1">Total Arrivals</span>
+                  <h4 class="fw-extrabold text-primary m-0">{{ filteredArrivalRecords.length }} <small class="fs-6 text-secondary fw-normal">Entries</small></h4>
+                </div>
+                <div class="rounded-circle bg-primary text-white p-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 44px; height: 44px;">
+                  <i class="bi bi-box-seam fs-5"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-3 col-sm-6">
+            <div class="card border-0 shadow-sm rounded-3 p-3" style="background-color: #f0f9ff;">
+              <div class="d-flex align-items-center justify-content-between">
+                <div>
+                  <span class="text-uppercase small fw-bold text-info d-block mb-1">Expected Cases</span>
+                  <h4 class="fw-extrabold text-info text-darken-2 m-0">{{ totalExpectedCasesSum }} <small class="fs-6 text-secondary fw-normal">Cases</small></h4>
+                </div>
+                <div class="rounded-circle bg-info text-white p-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 44px; height: 44px;">
+                  <i class="bi bi-clipboard-check fs-5"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-3 col-sm-6">
+            <div class="card border-0 shadow-sm rounded-3 p-3" style="background-color: #f0fdf4;">
+              <div class="d-flex align-items-center justify-content-between">
+                <div>
+                  <span class="text-uppercase small fw-bold text-success d-block mb-1">Arrived Stock</span>
+                  <h4 class="fw-extrabold text-success m-0">{{ totalArrivedCasesSum }} <small class="fs-6 text-secondary fw-normal">Cases</small></h4>
+                </div>
+                <div class="rounded-circle bg-success text-white p-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 44px; height: 44px;">
+                  <i class="bi bi-truck fs-5"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-3 col-sm-6">
+            <div class="card border-0 shadow-sm rounded-3 p-3" style="background-color: #f3e8ff;">
+              <div class="d-flex align-items-center justify-content-between">
+                <div>
+                  <span class="text-uppercase small fw-bold d-block mb-1" style="color: #7e22ce;">Total Volume (BL)</span>
+                  <h4 class="fw-extrabold m-0" style="color: #6b21a8;">{{ totalArrivedBulkLitresSum | number:'1.2-2' }} <small class="fs-6 text-secondary fw-normal">BL</small></h4>
+                </div>
+                <div class="rounded-circle text-white p-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 44px; height: 44px; background-color: #9333ea;">
+                  <i class="bi bi-droplet-fill fs-5"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Filters Header Bar -->
         <div class="row g-3 mb-4 align-items-center bg-light p-3 rounded-3 border">
           <div class="col-lg-5 col-md-6">
@@ -1663,6 +1722,7 @@
                 <th>Size</th>
                 <th class="text-center">Expected Cases</th>
                 <th class="text-center">Arrived Cases</th>
+                <th class="text-end">Bulk Litres (BL)</th>
                 <th>Arrived On</th>
                 <th>Status</th>
                 <th>Remarks</th>
@@ -1698,6 +1758,9 @@
                   <span class="badge bg-success fs-6 px-3 py-1">
                     {{ item.arrived_cases !== undefined && item.arrived_cases !== null ? item.arrived_cases : (item.arrivedCases !== undefined && item.arrivedCases !== null ? item.arrivedCases : (item.cases || 0)) }} Cases
                   </span>
+                </td>
+                <td class="text-end fw-bold" style="color: #6b21a8;">
+                  {{ getItemBulkLitres(item) | number:'1.2-2' }} BL
                 </td>
                 <td class="small text-muted fw-medium">
                   {{ (item.arrived_at || item.arrivedAt || item.reviewed_at || item.submitted_at || item.created_at) ? ((item.arrived_at || item.arrivedAt || item.reviewed_at || item.submitted_at || item.created_at) | date:'dd-MMM-yyyy HH:mm') : '22-Aug-2026' }}

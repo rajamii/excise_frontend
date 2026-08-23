@@ -1672,6 +1672,15 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     });
   }
 
+  get totalExpectedCasesSum(): number {
+    return this.filteredArrivalRecords.reduce((sum, item) => {
+      const val = item.expected_cases !== undefined && item.expected_cases !== null
+        ? item.expected_cases
+        : (item.expectedCases !== undefined && item.expectedCases !== null ? item.expectedCases : (item.cases || 0));
+      return sum + Number(val || 0);
+    }, 0);
+  }
+
   get totalArrivedCasesSum(): number {
     return this.filteredArrivalRecords.reduce((sum, item) => {
       const val = item.arrived_cases !== undefined && item.arrived_cases !== null
@@ -1679,6 +1688,24 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         : (item.arrivedCases !== undefined && item.arrivedCases !== null ? item.arrivedCases : (item.cases || 0));
       return sum + Number(val || 0);
     }, 0);
+  }
+
+  get totalArrivedBulkLitresSum(): number {
+    return this.filteredArrivalRecords.reduce((sum, item) => {
+      return sum + this.getItemBulkLitres(item);
+    }, 0);
+  }
+
+  getItemBulkLitres(item: any): number {
+    if (!item) return 0;
+    if (item.bulk_litres || item.bulkLitres || item.bl) {
+      return Number(item.bulk_litres || item.bulkLitres || item.bl || 0);
+    }
+    const cases = item.arrived_cases !== undefined && item.arrived_cases !== null
+      ? item.arrived_cases
+      : (item.arrivedCases !== undefined && item.arrivedCases !== null ? item.arrivedCases : (item.cases || 0));
+    const sizeMl = Number(item.size_ml || item.sizeMl || item.size || 750);
+    return (Number(cases || 0) * sizeMl * 12) / 1000;
   }
 
   canRequestRevalidation(row: DistributorPermitRow | any): boolean {
