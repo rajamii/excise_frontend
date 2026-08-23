@@ -224,6 +224,119 @@
   }
 }
 
+/* ── Modern IMFL Action Buttons ────────────────────────────── */
+.dp-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.btn-icon-only {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: all 0.2s ease-in-out;
+  border: 1px solid transparent;
+  flex-shrink: 0;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+  }
+}
+
+.btn-soft-primary {
+  background-color: #eff6ff !important;
+  color: #2563eb !important;
+  border-color: #bfdbfe !important;
+
+  &:hover {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
+  }
+}
+
+.btn-soft-info {
+  background-color: #f0f9ff !important;
+  color: #0284c7 !important;
+  border-color: #bae6fd !important;
+  font-weight: 600;
+  font-size: 0.78rem;
+  border-radius: 8px;
+  padding: 5px 10px;
+
+  &:hover {
+    background-color: #0284c7 !important;
+    color: #ffffff !important;
+  }
+}
+
+.btn-soft-cyan {
+  background-color: #ecfeff !important;
+  color: #0891b2 !important;
+  border-color: #a5f3fc !important;
+  font-weight: 600;
+  font-size: 0.78rem;
+  border-radius: 8px;
+  padding: 5px 10px;
+
+  &:hover {
+    background-color: #0891b2 !important;
+    color: #ffffff !important;
+  }
+}
+
+.btn-soft-success {
+  background-color: #f0fdf4 !important;
+  color: #16a34a !important;
+  border-color: #bbf7d0 !important;
+  font-weight: 600;
+  font-size: 0.78rem;
+  border-radius: 8px;
+  padding: 5px 10px;
+
+  &:hover {
+    background-color: #16a34a !important;
+    color: #ffffff !important;
+  }
+}
+
+.btn-soft-danger {
+  background-color: #fef2f2 !important;
+  color: #dc2626 !important;
+  border-color: #fecaca !important;
+  font-weight: 600;
+  font-size: 0.78rem;
+  border-radius: 8px;
+  padding: 5px 10px;
+
+  &:hover {
+    background-color: #dc2626 !important;
+    color: #ffffff !important;
+  }
+}
+
+.btn-soft-warning {
+  background-color: #fffbeb !important;
+  color: #d97706 !important;
+  border-color: #fde68a !important;
+  font-weight: 600;
+  font-size: 0.78rem;
+  border-radius: 8px;
+  padding: 5px 10px;
+
+  &:hover {
+    background-color: #d97706 !important;
+    color: #ffffff !important;
+  }
+}
+
 .compact-filter-section {
   background: #ffffff;
   padding: 12px 18px;
@@ -899,4 +1012,17 @@
 @keyframes fadeIn {
   from { opacity: 0; transform: scale(0.98); }
   to { opacity: 1; transform: scale(1); }
+}
+
+.modal-arrival-register-wide {
+  max-width: 1400px !important;
+  width: 95vw !important;
+}
+
+.bg-slate-100 {
+  background-color: #f1f5f9 !important;
+}
+
+.text-slate-800 {
+  color: #1e293b !important;
 }
