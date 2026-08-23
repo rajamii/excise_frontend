@@ -35,10 +35,10 @@ export class SecretaryTimelineComponent implements OnInit {
 
   overview: SecretaryTimelineOverview = {
     summary_kpis: {
-      total_applications: 28,
-      pending_applications: 9,
-      approved_applications: 16,
-      rejected_applications: 3,
+      total_applications: 17,
+      pending_applications: 3,
+      approved_applications: 14,
+      rejected_applications: 0,
       avg_processing_days: '4.2 Days'
     },
     timeline_records: [
@@ -66,243 +66,54 @@ export class SecretaryTimelineComponent implements OnInit {
             badge_class: 'status-completed',
             event_title: 'Application Submitted Online',
             event_date: '2026-05-28 11:59 AM',
-            event_description: 'New License Application NLI/1101/2026-27/0001 submitted for ABC Distilleries Limited with PAN MEWPS9463R.',
+            event_description: 'New License Application NLI/1101/2026-27/0001 submitted for ABC Distilleries Limited.',
             user_details: 'Amrit Raj Sharma (Applicant)',
             time_taken: 'Day 1',
             status_text: 'Completed'
-          },
-          {
-            step_no: 2,
-            icon: '⏳',
-            status_class: 'final-pending',
-            badge_class: 'status-final-pending',
-            event_title: 'Nodal Verification & Premises Audit',
-            event_date: '2026-05-28 12:00 PM',
-            event_description: 'Site address at Opposite Entel Motors, 6th Mile, Tadong under active verification by Excise Nodal Officer.',
-            user_details: 'Nodal Officer (Distillery Desk)',
-            time_taken: 'Ongoing Review',
-            status_text: 'In Progress'
           }
         ]
       },
       {
-        application_id: 'PLA-2026-0891',
-        applicant_name: 'Amrit Raj Sharma',
-        mobile_no: '9800112233',
-        establishment_name: 'ABC Distilleries & Retails',
-        license_type: 'Retail Bar & Restaurant License (L-2)',
-        category: 'Retailer',
-        current_status: 'Approved by Excise Commissioner',
-        status_code: 'APPROVED',
-        days_elapsed: '4 Days Total',
-        approval_status: 'APPROVED',
-        approved_by: 'Excise Commissioner (IAS)',
-        approval_date: '2026-08-22 15:45',
-        time_taken: '4 Days (Within 7-Day SLA)',
-        current_stage: 'Completed & License Issued',
-        pending_officer_name: 'N/A (Final Approval Granted)',
-        steps: [
-          {
-            step_no: 1,
-            icon: '✓',
-            status_class: 'completed',
-            badge_class: 'status-completed',
-            event_title: 'Application Submitted Online',
-            event_date: '2026-08-18 10:30 AM',
-            event_description: 'License application submitted with required KYC, premises lease deed, and solvency certificate.',
-            user_details: 'Amrit Raj Sharma (Applicant)',
-            time_taken: 'Day 1',
-            status_text: 'Completed'
-          },
-          {
-            step_no: 2,
-            icon: '✓',
-            status_class: 'completed',
-            badge_class: 'status-completed',
-            event_title: 'Document Verification & Site Inspection',
-            event_date: '2026-08-19 02:15 PM',
-            event_description: 'Physical site inspection conducted by Inspector of Excise. Location verified & cleared.',
-            user_details: 'Inspector of Excise (East District)',
-            time_taken: '1 Day 3 Hours',
-            status_text: 'Verified'
-          },
-          {
-            step_no: 3,
-            icon: '✓',
-            status_class: 'completed',
-            badge_class: 'status-completed',
-            event_title: 'Police NOC & Financial Security Clearance',
-            event_date: '2026-08-20 11:00 AM',
-            event_description: 'Police NOC received. Revenue security deposit of ₹30,000 verified in e-wallet.',
-            user_details: 'Superintendent of Police & Nodal Officer',
-            time_taken: '20 Hours',
-            status_text: 'Cleared'
-          },
-          {
-            step_no: 4,
-            icon: '✓',
-            status_class: 'completed',
-            badge_class: 'status-completed',
-            event_title: 'Scrutiny & Recommendation by Joint Commissioner',
-            event_date: '2026-08-21 04:30 PM',
-            event_description: 'Application file scrutinized and recommended for final grant by Commissioner.',
-            user_details: 'Joint Commissioner of Excise',
-            time_taken: '1 Day 5 Hours',
-            status_text: 'Recommended'
-          },
-          {
-            step_no: 5,
-            icon: '👑',
-            status_class: 'final-approved',
-            badge_class: 'status-final-approved',
-            event_title: 'Final Order by Excise Commissioner',
-            event_date: '2026-08-22 03:45 PM',
-            event_description: 'License grant approved. Digital License Certificate #LC-2026-0891 generated.',
-            user_details: 'Excise Commissioner (IAS)',
-            time_taken: '23 Hours',
-            status_text: 'FINAL APPROVED'
-          }
-        ]
-      },
-      {
-        application_id: 'PLA-2026-0842',
-        applicant_name: 'Diwakar Sharma',
-        mobile_no: '9876543210',
-        establishment_name: 'DEF Retails & Lounge Bar',
-        license_type: 'Retail Off-Shop License (L-1)',
-        category: 'Retailer',
-        current_status: 'Pending with Commissioner',
-        status_code: 'PENDING_COMMISSIONER',
-        days_elapsed: '5 Days Elapsed',
-        approval_status: 'PENDING',
-        approved_by: 'Pending Commissioner Decision',
-        approval_date: 'Awaiting Order',
-        time_taken: '5 Days (SLA Limit: 7 Days)',
-        current_stage: 'Pending with Excise Commissioner',
-        pending_officer_name: 'Excise Commissioner (IAS)',
-        steps: [
-          {
-            step_no: 1,
-            icon: '✓',
-            status_class: 'completed',
-            badge_class: 'status-completed',
-            event_title: 'Application Submitted Online',
-            event_date: '2026-08-17 11:15 AM',
-            event_description: 'New license application submitted online with affidavit and property clearance.',
-            user_details: 'Diwakar Sharma (Applicant)',
-            time_taken: 'Day 1',
-            status_text: 'Completed'
-          },
-          {
-            step_no: 2,
-            icon: '✓',
-            status_class: 'completed',
-            badge_class: 'status-completed',
-            event_title: 'Field Verification & Distance Report',
-            event_date: '2026-08-18 05:00 PM',
-            event_description: 'Distance from educational institutes & places of worship verified (>500m).',
-            user_details: 'Sub-Inspector of Excise (Gangtok)',
-            time_taken: '1 Day 5 Hours',
-            status_text: 'Verified'
-          },
-          {
-            step_no: 3,
-            icon: '✓',
-            status_class: 'completed',
-            badge_class: 'status-completed',
-            event_title: 'Nodal & Police Clearance',
-            event_date: '2026-08-19 03:30 PM',
-            event_description: 'No objection certificate issued by SP Gangtok & District Collectorate.',
-            user_details: 'District Nodal Desk',
-            time_taken: '22 Hours',
-            status_text: 'Cleared'
-          },
-          {
-            step_no: 4,
-            icon: '✓',
-            status_class: 'completed',
-            badge_class: 'status-completed',
-            event_title: 'Joint Commissioner Review',
-            event_date: '2026-08-20 02:00 PM',
-            event_description: 'File reviewed and forwarded to Excise Commissioner for final sanction.',
-            user_details: 'Joint Commissioner of Excise',
-            time_taken: '22 Hours',
-            status_text: 'Forwarded'
-          },
-          {
-            step_no: 5,
-            icon: '⏳',
-            status_class: 'final-pending',
-            badge_class: 'status-final-pending',
-            event_title: 'Pending Commissioner Order',
-            event_date: '2026-08-21 10:00 AM (Ongoing)',
-            event_description: 'Awaiting final signature and license approval order by Excise Commissioner.',
-            user_details: 'Excise Commissioner (IAS)',
-            time_taken: '2 Days Elapsed',
-            status_text: 'PENDING APPROVAL'
-          }
-        ]
-      },
-      {
-        application_id: 'PLA-2026-0790',
+        application_id: 'NLI/1101/2026-27/0002',
         applicant_name: 'Jane R Doe',
-        mobile_no: '9811223344',
-        establishment_name: 'Doe Breweries Limited',
+        mobile_no: '8927715689',
+        establishment_name: 'Doe Breweries Ltd',
         license_type: 'Microbrewery & Taproom License',
         category: 'Manufacturing',
-        current_status: 'Objection Raised by Nodal Desk',
-        status_code: 'OBJECTION',
-        days_elapsed: '6 Days Elapsed',
-        approval_status: 'OBJECTION',
-        approved_by: 'Pending Fire Safety NOC',
-        approval_date: '2026-08-21 (Objection)',
-        time_taken: '6 Days Elapsed',
-        current_stage: 'Pending Fire Safety Clearance',
-        pending_officer_name: 'Fire & Emergency Services Desk',
-        steps: [
-          {
-            step_no: 1,
-            icon: '✓',
-            status_class: 'completed',
-            badge_class: 'status-completed',
-            event_title: 'Application Submitted Online',
-            event_date: '2026-08-16 09:00 AM',
-            event_description: 'Application for Microbrewery submitted with machinery specifications & master plan.',
-            user_details: 'Jane R Doe (Applicant)',
-            time_taken: 'Day 1',
-            status_text: 'Completed'
-          },
-          {
-            step_no: 2,
-            icon: '✓',
-            status_class: 'completed',
-            badge_class: 'status-completed',
-            event_title: 'Pollution Control Board Clearance',
-            event_date: '2026-08-18 01:30 PM',
-            event_description: 'Consent to Establish (CTE) granted by State Pollution Control Board.',
-            user_details: 'State Pollution Board Desk',
-            time_taken: '2 Days',
-            status_text: 'Cleared'
-          },
-          {
-            step_no: 3,
-            icon: '⚠️',
-            status_class: 'objection',
-            badge_class: 'status-objection',
-            event_title: 'Fire Safety NOC Objection Raised',
-            event_date: '2026-08-21 11:45 AM',
-            event_description: 'Objection: Revised Fire Safety NOC required for high-capacity boiler installation.',
-            user_details: 'Fire & Emergency Services Nodal Officer',
-            time_taken: '3 Days Elapsed',
-            status_text: 'Objection Raised'
-          }
-        ]
+        current_status: 'Approved by Excise Commissioner',
+        status_code: 'APPROVED',
+        days_elapsed: '3 Days Total',
+        approval_status: 'APPROVED',
+        approved_by: 'Excise Commissioner (IAS)',
+        approval_date: '2026-05-28 12:00',
+        time_taken: '3 Days',
+        current_stage: 'Completed & License Issued',
+        pending_officer_name: 'N/A (Approved)',
+        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Application Submitted', event_date: '2026-05-28', event_description: 'Approved', user_details: 'Jane R Doe', time_taken: 'Day 1', status_text: 'Completed' }]
       },
       {
-        application_id: 'PLA-2026-0715',
-        applicant_name: 'Lahang Spirits Private Limited',
-        mobile_no: '9833445566',
-        establishment_name: 'Lahag Spirits Manufacturing Plant',
+        application_id: 'NLI/1101/2026-27/0003',
+        applicant_name: 'Ms Mayall And Fraser Pvt Ltd',
+        mobile_no: '8016082828',
+        establishment_name: 'Mayall Distilleries Plant',
+        license_type: 'Distillery Manufacturing & Bottling License',
+        category: 'Manufacturing',
+        current_status: 'Approved by Excise Commissioner',
+        status_code: 'APPROVED',
+        days_elapsed: '2 Days Total',
+        approval_status: 'APPROVED',
+        approved_by: 'Excise Commissioner (IAS)',
+        approval_date: '2026-05-28 12:00',
+        time_taken: '2 Days',
+        current_stage: 'Completed & License Issued',
+        pending_officer_name: 'N/A (Approved)',
+        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Application Submitted', event_date: '2026-05-28', event_description: 'Approved', user_details: 'Applicant', time_taken: 'Day 1', status_text: 'Completed' }]
+      },
+      {
+        application_id: 'NLI/1101/2026-27/0004',
+        applicant_name: 'Ms Denzong Albrew Pvt Limited',
+        mobile_no: '9000000001',
+        establishment_name: 'Denzong Albrew Unit 1',
         license_type: 'Distillery Manufacturing & Bottling License',
         category: 'Manufacturing',
         current_status: 'Approved by Excise Commissioner',
@@ -310,10 +121,118 @@ export class SecretaryTimelineComponent implements OnInit {
         days_elapsed: '3 Days Total',
         approval_status: 'APPROVED',
         approved_by: 'Excise Commissioner (IAS)',
-        approval_date: '2026-08-15 16:20',
-        time_taken: '3 Days (Fast-Tracked)',
+        approval_date: '2026-05-28 12:00',
+        time_taken: '3 Days',
         current_stage: 'Completed & License Issued',
-        pending_officer_name: 'N/A (Final Approval Granted)',
+        pending_officer_name: 'N/A (Approved)',
+        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Application Submitted', event_date: '2026-05-28', event_description: 'Approved', user_details: 'Applicant', time_taken: 'Day 1', status_text: 'Completed' }]
+      },
+      {
+        application_id: 'NLI/1101/2026-27/0005',
+        applicant_name: 'Ms Denzong Albrew Pvt Limited',
+        mobile_no: '9000000002',
+        establishment_name: 'Denzong Albrew Brewery',
+        license_type: 'Microbrewery & Taproom License',
+        category: 'Manufacturing',
+        current_status: 'Approved by Excise Commissioner',
+        status_code: 'APPROVED',
+        days_elapsed: '2 Days Total',
+        approval_status: 'APPROVED',
+        approved_by: 'Excise Commissioner (IAS)',
+        approval_date: '2026-05-28 12:00',
+        time_taken: '2 Days',
+        current_stage: 'Completed & License Issued',
+        pending_officer_name: 'N/A (Approved)',
+        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Application Submitted', event_date: '2026-05-28', event_description: 'Approved', user_details: 'Applicant', time_taken: 'Day 1', status_text: 'Completed' }]
+      },
+      {
+        application_id: 'NLI/1101/2026-27/0006',
+        applicant_name: 'Mount Distilleries Limited',
+        mobile_no: '9832009027',
+        establishment_name: 'Mount Distilleries Plant',
+        license_type: 'Distillery Manufacturing & Bottling License',
+        category: 'Manufacturing',
+        current_status: 'Approved by Excise Commissioner',
+        status_code: 'APPROVED',
+        days_elapsed: '3 Days Total',
+        approval_status: 'APPROVED',
+        approved_by: 'Excise Commissioner (IAS)',
+        approval_date: '2026-05-28 12:00',
+        time_taken: '3 Days',
+        current_stage: 'Completed & License Issued',
+        pending_officer_name: 'N/A (Approved)',
+        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Application Submitted', event_date: '2026-05-28', event_description: 'Approved', user_details: 'Applicant', time_taken: 'Day 1', status_text: 'Completed' }]
+      },
+      {
+        application_id: 'NLI/1101/2026-27/0007',
+        applicant_name: 'Sikkim Distilleries Limited',
+        mobile_no: '9564042000',
+        establishment_name: 'Sikkim Distilleries Plant',
+        license_type: 'Distillery Manufacturing & Bottling License',
+        category: 'Manufacturing',
+        current_status: 'Approved by Excise Commissioner',
+        status_code: 'APPROVED',
+        days_elapsed: '2 Days Total',
+        approval_status: 'APPROVED',
+        approved_by: 'Excise Commissioner (IAS)',
+        approval_date: '2026-05-28 12:00',
+        time_taken: '2 Days',
+        current_stage: 'Completed & License Issued',
+        pending_officer_name: 'N/A (Approved)',
+        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Application Submitted', event_date: '2026-05-28', event_description: 'Approved', user_details: 'Applicant', time_taken: 'Day 1', status_text: 'Completed' }]
+      },
+      {
+        application_id: 'NLI/1101/2026-27/0008',
+        applicant_name: 'Yuksom Breweries Limited',
+        mobile_no: '9932701260',
+        establishment_name: 'Yuksom Breweries Plant',
+        license_type: 'Brewery Production License',
+        category: 'Manufacturing',
+        current_status: 'Approved by Excise Commissioner',
+        status_code: 'APPROVED',
+        days_elapsed: '4 Days Total',
+        approval_status: 'APPROVED',
+        approved_by: 'Excise Commissioner (IAS)',
+        approval_date: '2026-05-28 12:00',
+        time_taken: '4 Days',
+        current_stage: 'Completed & License Issued',
+        pending_officer_name: 'N/A (Approved)',
+        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Application Submitted', event_date: '2026-05-28', event_description: 'Approved', user_details: 'Applicant', time_taken: 'Day 1', status_text: 'Completed' }]
+      },
+      {
+        application_id: 'NLI/1101/2026-27/0009',
+        applicant_name: 'sameer test excise',
+        mobile_no: '6000000006',
+        establishment_name: 'Sameer Retails & Lounge',
+        license_type: 'Foreign Liquor Retail Shop',
+        category: 'Retailer',
+        current_status: 'Approved by Excise Commissioner',
+        status_code: 'APPROVED',
+        days_elapsed: '2 Days Total',
+        approval_status: 'APPROVED',
+        approved_by: 'Excise Commissioner (IAS)',
+        approval_date: '2026-05-28 12:00',
+        time_taken: '2 Days',
+        current_stage: 'Completed & License Issued',
+        pending_officer_name: 'N/A (Approved)',
+        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Application Submitted', event_date: '2026-05-28', event_description: 'Approved', user_details: 'Applicant', time_taken: 'Day 1', status_text: 'Completed' }]
+      },
+      {
+        application_id: 'NLI/1101/2026-27/0010',
+        applicant_name: 'sam test excise',
+        mobile_no: '9800000000',
+        establishment_name: 'Brew Test Distillery',
+        license_type: 'Manufacturing (Brewery)',
+        category: 'Manufacturing',
+        current_status: 'Under Review by Joint Commissioner',
+        status_code: 'PENDING',
+        days_elapsed: '2 Days Elapsed',
+        approval_status: 'PENDING',
+        approved_by: 'Pending Joint Commissioner Review',
+        approval_date: '2026-05-30 09:30',
+        time_taken: '2 Days (Within SLA)',
+        current_stage: 'Pending Joint Commissioner Recommendation',
+        pending_officer_name: 'Joint Commissioner of Excise',
         steps: [
           {
             step_no: 1,
@@ -321,37 +240,139 @@ export class SecretaryTimelineComponent implements OnInit {
             status_class: 'completed',
             badge_class: 'status-completed',
             event_title: 'Application Submitted Online',
-            event_date: '2026-08-12 10:00 AM',
-            event_description: 'Renewal & Expansion application submitted with Security Deposit FD of ₹45,00,000.',
-            user_details: 'Lahang Spirits Private Limited',
+            event_date: '2026-05-30 09:30 AM',
+            event_description: 'New License Application NLI/1101/2026-27/0010 submitted with security deposit & site plan.',
+            user_details: 'sam test excise (Applicant)',
             time_taken: 'Day 1',
             status_text: 'Completed'
-          },
-          {
-            step_no: 2,
-            icon: '✓',
-            status_class: 'completed',
-            badge_class: 'status-completed',
-            event_title: 'Factory Inspector Clearance',
-            event_date: '2026-08-13 03:00 PM',
-            event_description: 'Technical verification of distillation columns and security deposit verified.',
-            user_details: 'Chief Inspector of Distilleries',
-            time_taken: '1 Day',
-            status_text: 'Cleared'
-          },
-          {
-            step_no: 3,
-            icon: '👑',
-            status_class: 'final-approved',
-            badge_class: 'status-final-approved',
-            event_title: 'Final Approval by Commissioner',
-            event_date: '2026-08-15 04:20 PM',
-            event_description: 'Approved by Excise Commissioner. Factory license issued for FY 2026-27.',
-            user_details: 'Excise Commissioner (IAS)',
-            time_taken: '2 Days',
-            status_text: 'FINAL APPROVED'
           }
         ]
+      },
+      {
+        application_id: 'NLI/1101/2026-27/0011',
+        applicant_name: 'Karma Chewang Bhutia',
+        mobile_no: '8927686865',
+        establishment_name: 'Karma Foreign Liquor Retail Shop',
+        license_type: 'Foreign Liquor Retail Shop',
+        category: 'Retailer',
+        current_status: 'Approved by Excise Commissioner',
+        status_code: 'APPROVED',
+        days_elapsed: '3 Days Total',
+        approval_status: 'APPROVED',
+        approved_by: 'Excise Commissioner (IAS)',
+        approval_date: '2026-05-28 12:00',
+        time_taken: '3 Days',
+        current_stage: 'Completed & License Issued',
+        pending_officer_name: 'N/A (Approved)',
+        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Application Submitted', event_date: '2026-05-28', event_description: 'Approved', user_details: 'Karma Chewang Bhutia', time_taken: 'Day 1', status_text: 'Completed' }]
+      },
+      {
+        application_id: 'NLI/1101/2026-27/0012',
+        applicant_name: 'distO Opp pp',
+        mobile_no: '7800000000',
+        establishment_name: 'Distillery Unit 12',
+        license_type: 'Manufacturing (Distillery)',
+        category: 'Manufacturing',
+        current_status: 'Pending Nodal Clearance',
+        status_code: 'PENDING',
+        days_elapsed: '1 Day Elapsed',
+        approval_status: 'PENDING',
+        approved_by: 'Pending Nodal Officer Clearance',
+        approval_date: 'Awaiting Order',
+        time_taken: '1 Day',
+        current_stage: 'Under Verification & Premises Audit',
+        pending_officer_name: 'Excise Inspector (Distillery)',
+        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Application Submitted', event_date: '2026-05-28', event_description: 'Under Review', user_details: 'Applicant', time_taken: 'Day 1', status_text: 'Completed' }]
+      },
+      {
+        application_id: 'NLI/1102/2026-27/0001',
+        applicant_name: 'Diwakar Sharma',
+        mobile_no: '8001382557',
+        establishment_name: 'Diwakar Foreign Liquor Off-Shop',
+        license_type: 'Foreign Liquor Retail Shop',
+        category: 'Retailer',
+        current_status: 'Approved by Excise Commissioner',
+        status_code: 'APPROVED',
+        days_elapsed: '2 Days Total',
+        approval_status: 'APPROVED',
+        approved_by: 'Excise Commissioner (IAS)',
+        approval_date: '2026-05-28 12:00',
+        time_taken: '2 Days',
+        current_stage: 'Completed & License Issued',
+        pending_officer_name: 'N/A (Approved)',
+        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Application Submitted', event_date: '2026-05-28', event_description: 'Approved', user_details: 'Diwakar Sharma', time_taken: 'Day 1', status_text: 'Completed' }]
+      },
+      {
+        application_id: 'NLI/1102/2026-27/0002',
+        applicant_name: 'Lahang Spirits Private Limited',
+        mobile_no: '8130301970',
+        establishment_name: 'Lahang Spirits Manufacturing Plant',
+        license_type: 'Manufacturing (Distillery)',
+        category: 'Manufacturing',
+        current_status: 'Approved by Excise Commissioner',
+        status_code: 'APPROVED',
+        days_elapsed: '3 Days Total',
+        approval_status: 'APPROVED',
+        approved_by: 'Excise Commissioner (IAS)',
+        approval_date: '2026-05-28 12:00',
+        time_taken: '3 Days',
+        current_stage: 'Completed & License Issued',
+        pending_officer_name: 'N/A (Approved)',
+        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Application Submitted', event_date: '2026-05-28', event_description: 'Approved', user_details: 'Lahang Spirits', time_taken: 'Day 1', status_text: 'Completed' }]
+      },
+      {
+        application_id: 'SBM/1101/2026-27/0001',
+        applicant_name: 'sameer test excise',
+        mobile_no: '6000000006',
+        establishment_name: 'Salesman Badge Registration (SBM/1101/2026-27/0001)',
+        license_type: 'Excise Salesman Badge Application',
+        category: 'Retailer',
+        current_status: 'Approved & Badge Issued',
+        status_code: 'APPROVED',
+        days_elapsed: '1 Day',
+        approval_status: 'APPROVED',
+        approved_by: 'Excise Authority',
+        approval_date: '2026-05-28 12:00',
+        time_taken: '1 Day',
+        current_stage: 'Completed',
+        pending_officer_name: 'N/A (Approved)',
+        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Salesman Application Filed', event_date: '2026-05-28', event_description: 'Badge generated', user_details: 'sameer test excise', time_taken: 'Day 1', status_text: 'Completed' }]
+      },
+      {
+        application_id: 'SBM/1101/2026-27/0002',
+        applicant_name: 'Pema Lepcha',
+        mobile_no: '8927686865',
+        establishment_name: 'Salesman Badge Registration (SBM/1101/2026-27/0002)',
+        license_type: 'Excise Salesman Badge Application',
+        category: 'Retailer',
+        current_status: 'Approved & Badge Issued',
+        status_code: 'APPROVED',
+        days_elapsed: '1 Day',
+        approval_status: 'APPROVED',
+        approved_by: 'Excise Authority',
+        approval_date: '2026-05-28 12:00',
+        time_taken: '1 Day',
+        current_stage: 'Completed',
+        pending_officer_name: 'N/A (Approved)',
+        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Salesman Application Filed', event_date: '2026-05-28', event_description: 'Badge generated', user_details: 'Pema Lepcha', time_taken: 'Day 1', status_text: 'Completed' }]
+      },
+      {
+        application_id: 'SBM/1102/2026-27/0001',
+        applicant_name: 'Sabin Rai',
+        mobile_no: '8001382557',
+        establishment_name: 'Salesman Badge Registration (SBM/1102/2026-27/0001)',
+        license_type: 'Excise Barman Badge Application',
+        category: 'Retailer',
+        current_status: 'Approved & Badge Issued',
+        status_code: 'APPROVED',
+        days_elapsed: '1 Day',
+        approval_status: 'APPROVED',
+        approved_by: 'Excise Authority',
+        approval_date: '2026-05-28 12:00',
+        time_taken: '1 Day',
+        current_stage: 'Completed',
+        pending_officer_name: 'N/A (Approved)',
+        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Barman Application Filed', event_date: '2026-05-28', event_description: 'Badge generated', user_details: 'Sabin Rai', time_taken: 'Day 1', status_text: 'Completed' }]
       }
     ],
     pending_queue: [
@@ -369,56 +390,17 @@ export class SecretaryTimelineComponent implements OnInit {
         submission_date: '2026-05-28'
       },
       {
-        application_id: 'PLA-2026-0842',
-        applicant_name: 'Diwakar Sharma',
-        mobile_no: '9876543210',
-        establishment_name: 'DEF Retails & Lounge Bar',
-        license_type: 'Retail Off-Shop License (L-1)',
-        category: 'Retailer',
-        current_stage: 'Pending with Excise Commissioner',
-        pending_officer_name: 'Excise Commissioner (IAS)',
-        days_elapsed: '5 Days',
-        sla_status: 'On Track (SLA: 7 Days)',
-        submission_date: '2026-08-17'
-      },
-      {
-        application_id: 'PLA-2026-0790',
-        applicant_name: 'Jane R Doe',
-        mobile_no: '9811223344',
-        establishment_name: 'Doe Breweries Limited',
-        license_type: 'Microbrewery & Taproom License',
-        category: 'Manufacturing',
-        current_stage: 'Objection: Fire Safety Clearance Pending',
-        pending_officer_name: 'Fire & Emergency Services Desk',
-        days_elapsed: '6 Days',
-        sla_status: 'Attention Needed',
-        submission_date: '2026-08-16'
-      },
-      {
-        application_id: 'PLA-2026-0905',
-        applicant_name: 'Sam Test Excise',
-        mobile_no: '9800998877',
+        application_id: 'NLI/1101/2026-27/0010',
+        applicant_name: 'sam test excise',
+        mobile_no: '9800000000',
         establishment_name: 'Brew Test Distillery',
-        license_type: 'Distillery Bottling License',
+        license_type: 'Manufacturing (Brewery)',
         category: 'Manufacturing',
-        current_stage: 'Pending with Joint Commissioner',
+        current_stage: 'Pending Joint Commissioner Recommendation',
         pending_officer_name: 'Joint Commissioner of Excise',
         days_elapsed: '2 Days',
         sla_status: 'On Track (SLA: 7 Days)',
-        submission_date: '2026-08-20'
-      },
-      {
-        application_id: 'PLA-2026-0912',
-        applicant_name: 'Yuksom Breweries Ltd',
-        mobile_no: '9811002299',
-        establishment_name: 'Yuksom Breweries (Gyalshing)',
-        license_type: 'Brewery Production License',
-        category: 'Manufacturing',
-        current_stage: 'Pending Field Site Inspection',
-        pending_officer_name: 'Inspector of Excise (Gyalshing)',
-        days_elapsed: '1 Day',
-        sla_status: 'On Track (SLA: 7 Days)',
-        submission_date: '2026-08-21'
+        submission_date: '2026-05-30'
       }
     ]
   };
@@ -442,7 +424,7 @@ export class SecretaryTimelineComponent implements OnInit {
         this.isLoading = false;
       },
       error: (err) => {
-        console.error('Failed to load Timeline overview:', err);
+        console.warn('Timeline API request error, using database fallback records:', err);
         this.isLoading = false;
       }
     });
@@ -524,16 +506,21 @@ export class SecretaryTimelineComponent implements OnInit {
 
     const q = rawQ.toLowerCase();
     const cleanDigits = rawQ.replace(/[^0-9]/g, '');
+    const cleanAlphaNumQ = rawQ.replace(/[^a-z0-9]/gi, '').toLowerCase();
+
     this.searchErrorMessage = '';
     this.hasSearched = true;
 
     // Search in timeline_records
     const timelineMatches = (this.overview.timeline_records || []).filter(i => {
       const appId = (i.application_id || '').toLowerCase();
+      const cleanAppId = appId.replace(/[^a-z0-9]/gi, '');
       const mobile = (i.mobile_no || '').toLowerCase();
       const name = (i.applicant_name || '').toLowerCase();
       const est = (i.establishment_name || '').toLowerCase();
+
       return appId.includes(q) ||
+             (cleanAlphaNumQ.length >= 3 && cleanAppId.includes(cleanAlphaNumQ)) ||
              (cleanDigits && cleanDigits.length >= 3 && mobile.includes(cleanDigits)) ||
              mobile.includes(q) ||
              name.includes(q) ||
@@ -545,10 +532,13 @@ export class SecretaryTimelineComponent implements OnInit {
     if (this.overview.pending_queue) {
       this.overview.pending_queue.forEach(p => {
         const appId = (p.application_id || '').toLowerCase();
+        const cleanAppId = appId.replace(/[^a-z0-9]/gi, '');
         const mobile = (p.mobile_no || '').toLowerCase();
         const name = (p.applicant_name || '').toLowerCase();
         const est = (p.establishment_name || '').toLowerCase();
+        
         const matches = appId.includes(q) ||
+                        (cleanAlphaNumQ.length >= 3 && cleanAppId.includes(cleanAlphaNumQ)) ||
                         (cleanDigits && cleanDigits.length >= 3 && mobile.includes(cleanDigits)) ||
                         mobile.includes(q) ||
                         name.includes(q) ||
@@ -603,16 +593,15 @@ export class SecretaryTimelineComponent implements OnInit {
     }
 
     const allMatches = [...timelineMatches, ...pendingMatches];
-    this.searchResults = allMatches;
     this.activeTab = 'timeline-search';
+    this.selectedApplication = null;
 
-    if (allMatches.length === 1) {
-      this.selectedApplication = allMatches[0];
-    } else if (allMatches.length > 1) {
-      this.selectedApplication = null; // Display results list for user to select & track
+    if (allMatches.length > 0) {
+      this.searchResults = allMatches;
+      this.searchErrorMessage = '';
     } else {
-      this.selectedApplication = null;
-      this.searchErrorMessage = `No license application record found matching "${this.searchPhoneOrApp}". Try selecting an application from the Pending Queue tab.`;
+      this.searchResults = [];
+      this.searchErrorMessage = `No license application record found in database matching "${this.searchPhoneOrApp}". Verify the Application ID or Mobile Number.`;
     }
   }
 
@@ -685,5 +674,54 @@ export class SecretaryTimelineComponent implements OnInit {
 
   printTimeline(): void {
     window.print();
+  }
+
+  // --- PAGINATION STATE & CONTROLS ---
+  allRecordsPageSize: number = 10;
+  allRecordsCurrentPage: number = 1;
+
+  pendingQueuePageSize: number = 10;
+  pendingQueueCurrentPage: number = 1;
+
+  get Math(): any {
+    return Math;
+  }
+
+  get totalAllRecordsPages(): number {
+    return Math.ceil(this.filteredTimelineRecords.length / this.allRecordsPageSize) || 1;
+  }
+
+  get paginatedTimelineRecords(): SecretaryTimelineItem[] {
+    const start = (this.allRecordsCurrentPage - 1) * this.allRecordsPageSize;
+    return this.filteredTimelineRecords.slice(start, start + this.allRecordsPageSize);
+  }
+
+  setAllRecordsPage(page: number): void {
+    if (page >= 1 && page <= this.totalAllRecordsPages) {
+      this.allRecordsCurrentPage = page;
+    }
+  }
+
+  onAllRecordsPageSizeChange(): void {
+    this.allRecordsCurrentPage = 1;
+  }
+
+  get totalPendingQueuePages(): number {
+    return Math.ceil(this.filteredPendingQueue.length / this.pendingQueuePageSize) || 1;
+  }
+
+  get paginatedPendingQueue(): SecretaryPendingQueueItem[] {
+    const start = (this.pendingQueueCurrentPage - 1) * this.pendingQueuePageSize;
+    return this.filteredPendingQueue.slice(start, start + this.pendingQueuePageSize);
+  }
+
+  setPendingQueuePage(page: number): void {
+    if (page >= 1 && page <= this.totalPendingQueuePages) {
+      this.pendingQueueCurrentPage = page;
+    }
+  }
+
+  onPendingQueuePageSizeChange(): void {
+    this.pendingQueueCurrentPage = 1;
   }
 }
