@@ -365,7 +365,7 @@
                       {{ row.paymentStatus }}
                     </span>
                   </td>
-                  <td>{{ row.applicantName }}</td>
+                  <td>{{ resolveApplicantName(row) }}</td>
                   <td class="permit-status" style="min-width: 270px;">
                     <div class="d-flex flex-column gap-1 align-items-start" style="font-size: 0.82rem;">
                       <!-- Show current requisition permit numbers if available -->
@@ -496,6 +496,7 @@
                   <th>Reference No.</th>
                   <th>Submitted On</th>
                   <th>Permit (Ref.)</th>
+                  <th>Applicant</th>
                   <th>Revalidation Extended (From-To)</th>
                   <th>Status / Current Stage</th>
                   <th>Action</th>
@@ -515,6 +516,7 @@
                       {{ (row.distributorPermitRef && row.distributorPermitRef !== 'N/A') ? row.distributorPermitRef : (row.supplierName && row.supplierName !== 'N/A' ? row.supplierName : 'IMFLREQ/2026-27/0001-P1') }}
                     </span>
                   </td>
+                  <td>{{ resolveApplicantName(row) }}</td>
                   <td>
                     <span class="badge bg-slate-100 text-slate-800 border px-2 py-1 font-monospace">
                       <i class="bi bi-calendar-range me-1 text-primary"></i>
@@ -598,6 +600,7 @@
                   <th>Reference No.</th>
                   <th>Submitted On</th>
                   <th>Permit (Ref.)</th>
+                  <th>Applicant</th>
                   <th>Status / Current Stage</th>
                   <th>Action</th>
                 </tr>
@@ -616,6 +619,7 @@
                       {{ (row.distributorPermitRef && row.distributorPermitRef !== 'N/A') ? row.distributorPermitRef : ((row.supplierName && row.supplierName !== 'N/A') ? row.supplierName : 'IMFLREQ/2026-27/0001-P1') }}
                     </span>
                   </td>
+                  <td>{{ resolveApplicantName(row) }}</td>
                   <td>
                     <span class="status-badge status-badge--{{ row.statusGroup }}">
                       {{ row.currentStage }}

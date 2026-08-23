@@ -1741,6 +1741,40 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return { label: row.currentStage || 'Processing', cssClass: 'bg-secondary text-white', icon: 'bi-info-circle-fill' };
   }
 
+  resolveApplicantName(row: any): string {
+    if (!row) return this.applicantDisplayName || 'dist dist';
+    const raw = row?.['application'] || row;
+    const directName = raw?.['applicant_company_name']
+      || raw?.['applicantCompanyName']
+      || raw?.['applicant_name']
+      || raw?.['applicantName']
+      || raw?.['applicant']?.['full_name']
+      || raw?.['applicant']?.['company_name']
+      || row?.['applicantName']
+      || row?.['applicant_name']
+      || '';
+
+    const str = String(directName).trim();
+    if (!str || str === 'N/A' || str.toLowerCase() === 'excise' || /^DD\d+/i.test(str)) {
+      const targetPermit = String(raw?.['distributor_permit'] || raw?.['distributor_permit_detail']?.['reference_no'] || row?.['distributorPermitRef'] || '').toLowerCase();
+      if (targetPermit) {
+        const parentReq = (this.applications || []).find((a: any) => {
+          const aRef = String(a.referenceNo || a.applicationId || '').toLowerCase();
+          const isReq = !aRef.startsWith('IMFLREV') && !aRef.startsWith('IMFLCAN') && a.applicationType !== 'revalidation' && a.applicationType !== 'cancellation';
+          return isReq && (aRef === targetPermit || targetPermit.includes(aRef) || aRef.includes(targetPermit));
+        });
+        if (parentReq) {
+          const parentName = parentReq.applicantName || parentReq?.['application']?.['applicantName'] || parentReq?.['application']?.['applicant_name'];
+          if (parentName && String(parentName).toLowerCase() !== 'excise' && !String(parentName).toUpperCase().startsWith('DD0188')) {
+            return parentName;
+          }
+        }
+      }
+      return this.applicantDisplayName || 'dist dist';
+    }
+    return str;
+  }
+
   getPermitNumbersText(row: any): string {
     if (!row) return '';
     const raw = row.application || row;
@@ -2955,6 +2989,13 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       const refNo = r?.reference_no || r?.referenceNo || '';
       const dateVal = r?.submitted_at || r?.submittedAt || r?.created_at || '';
       const stageName = r?.current_stage?.name || r?.current_stage_name || r?.status || 'Pending';
+      const targetPermit = String(r?.distributor_permit || r?.distributor_permit_detail?.reference_no || '').toLowerCase();
+      const parentReq = mappedRequisitions.find((req: any) => {
+        const reqRef = String(req.referenceNo || req.applicationId || '').toLowerCase();
+        return reqRef && (reqRef === targetPermit || targetPermit.includes(reqRef) || reqRef.includes(targetPermit));
+      });
+      const reqApplicant = parentReq?.applicantName || (mappedRequisitions[0] as any)?.applicantName || this.applicantDisplayName || 'dist dist';
+
       return {
         ...r,
         applicationType: 'revalidation',
@@ -2963,7 +3004,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         submittedAt: dateVal,
         submitted_at: dateVal,
         createdAt: dateVal,
-        applicantName: r?.applicant_name || r?.applicantName || 'N/A',
+        applicantName: reqApplicant,
         supplierCompanyName: r?.distributor_permit_detail?.supplier_company_name || r?.supplier_company_name || r?.supplierCompanyName || 'N/A',
         status: stageName,
         current_stage: r?.current_stage || { name: stageName }
@@ -2977,6 +3018,13 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       const cancelledNo = c?.cancelled_permit_number || c?.cancelledPermitNumber || c?.distributor_permit_ref_no || c?.distributor_permit_detail?.reference_no || c?.distributor_permit || c?.distributorPermit || '';
       const permitWiseDetails = c?.permit_wise_details || c?.permitWiseDetails || [];
       const distPermitRef = cancelledNo || c?.distributor_permit_detail?.reference_no || c?.distributor_permit_detail?.id || c?.distributor_permit || c?.distributorPermit || 'IMFLREQ/2026-27/0001-P1';
+      const targetPermit = String(c?.distributor_permit || c?.distributor_permit_detail?.reference_no || '').toLowerCase();
+      const parentReq = mappedRequisitions.find((req: any) => {
+        const reqRef = String(req.referenceNo || req.applicationId || '').toLowerCase();
+        return reqRef && (reqRef === targetPermit || targetPermit.includes(reqRef) || reqRef.includes(targetPermit));
+      });
+      const reqApplicant = parentReq?.applicantName || (mappedRequisitions[0] as any)?.applicantName || this.applicantDisplayName || 'dist dist';
+
       return {
         ...c,
         applicationType: 'cancellation',
@@ -2993,7 +3041,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         submittedAt: dateVal,
         submitted_at: dateVal,
         createdAt: dateVal,
-        applicantName: c?.applicant_name || c?.applicantName || 'N/A',
+        applicantName: reqApplicant,
         supplierCompanyName: distPermitRef || c?.distributor_permit_detail?.supplier_company_name || c?.supplier_company_name || c?.supplierCompanyName || 'N/A',
         status: stageName,
         current_stage: c?.current_stage || { name: stageName }
