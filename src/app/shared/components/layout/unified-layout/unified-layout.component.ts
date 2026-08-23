@@ -563,7 +563,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       }
       return false;
     }
-    if (this.isCommissionerUser() && (item.section === 'secretary-revenue' || item.section === 'secretary-timeline')) {
+    if ((this.isCommissionerUser() || this.isItCellUser()) && (item.section === 'secretary-revenue' || item.section === 'secretary-timeline')) {
       return true;
     }
     if (this.isDistributorOic()) {
@@ -1738,7 +1738,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     }
 
     if (section === 'secretary-revenue' || section === 'secretary-timeline') {
-      return this.isSecretaryUser() || this.isCommissionerUser();
+      return this.isSecretaryUser() || this.isCommissionerUser() || this.isItCellUser();
     }
 
     // Activity log should be visible for everyone (admins see officer activity, licensees see their own activity).

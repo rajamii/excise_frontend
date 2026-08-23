@@ -27,8 +27,11 @@ export class SecretaryTimelineComponent implements OnInit {
   selectedCategory: string = 'all';
   selectedStatus: string = 'all';
 
-  // Selected Application for Timeline View
+  // Search & Results State
   selectedApplication: SecretaryTimelineItem | null = null;
+  searchResults: SecretaryTimelineItem[] = [];
+  hasSearched: boolean = false;
+  searchErrorMessage: string = '';
 
   overview: SecretaryTimelineOverview = {
     summary_kpis: {
@@ -39,6 +42,49 @@ export class SecretaryTimelineComponent implements OnInit {
       avg_processing_days: '4.2 Days'
     },
     timeline_records: [
+      {
+        application_id: 'NLI/1101/2026-27/0001',
+        applicant_name: 'Amrit Raj Sharma',
+        mobile_no: '7908195062',
+        establishment_name: 'ABC Distilleries Limited',
+        license_type: 'Distillery Manufacturing & Bottling License',
+        category: 'Manufacturing',
+        current_status: 'Under Review by Excise Nodal Desk',
+        status_code: 'PENDING',
+        days_elapsed: '2 Days Elapsed',
+        approval_status: 'PENDING',
+        approved_by: 'Pending Nodal Officer Clearance',
+        approval_date: '2026-05-28 11:59',
+        time_taken: '2 Days (Within SLA)',
+        current_stage: 'Pending Nodal Officer Clearance',
+        pending_officer_name: 'Nodal Officer (Distillery Desk)',
+        steps: [
+          {
+            step_no: 1,
+            icon: '✓',
+            status_class: 'completed',
+            badge_class: 'status-completed',
+            event_title: 'Application Submitted Online',
+            event_date: '2026-05-28 11:59 AM',
+            event_description: 'New License Application NLI/1101/2026-27/0001 submitted for ABC Distilleries Limited with PAN MEWPS9463R.',
+            user_details: 'Amrit Raj Sharma (Applicant)',
+            time_taken: 'Day 1',
+            status_text: 'Completed'
+          },
+          {
+            step_no: 2,
+            icon: '⏳',
+            status_class: 'final-pending',
+            badge_class: 'status-final-pending',
+            event_title: 'Nodal Verification & Premises Audit',
+            event_date: '2026-05-28 12:00 PM',
+            event_description: 'Site address at Opposite Entel Motors, 6th Mile, Tadong under active verification by Excise Nodal Officer.',
+            user_details: 'Nodal Officer (Distillery Desk)',
+            time_taken: 'Ongoing Review',
+            status_text: 'In Progress'
+          }
+        ]
+      },
       {
         application_id: 'PLA-2026-0891',
         applicant_name: 'Amrit Raj Sharma',
@@ -251,9 +297,77 @@ export class SecretaryTimelineComponent implements OnInit {
             status_text: 'Objection Raised'
           }
         ]
+      },
+      {
+        application_id: 'PLA-2026-0715',
+        applicant_name: 'Lahang Spirits Private Limited',
+        mobile_no: '9833445566',
+        establishment_name: 'Lahag Spirits Manufacturing Plant',
+        license_type: 'Distillery Manufacturing & Bottling License',
+        category: 'Manufacturing',
+        current_status: 'Approved by Excise Commissioner',
+        status_code: 'APPROVED',
+        days_elapsed: '3 Days Total',
+        approval_status: 'APPROVED',
+        approved_by: 'Excise Commissioner (IAS)',
+        approval_date: '2026-08-15 16:20',
+        time_taken: '3 Days (Fast-Tracked)',
+        current_stage: 'Completed & License Issued',
+        pending_officer_name: 'N/A (Final Approval Granted)',
+        steps: [
+          {
+            step_no: 1,
+            icon: '✓',
+            status_class: 'completed',
+            badge_class: 'status-completed',
+            event_title: 'Application Submitted Online',
+            event_date: '2026-08-12 10:00 AM',
+            event_description: 'Renewal & Expansion application submitted with Security Deposit FD of ₹45,00,000.',
+            user_details: 'Lahang Spirits Private Limited',
+            time_taken: 'Day 1',
+            status_text: 'Completed'
+          },
+          {
+            step_no: 2,
+            icon: '✓',
+            status_class: 'completed',
+            badge_class: 'status-completed',
+            event_title: 'Factory Inspector Clearance',
+            event_date: '2026-08-13 03:00 PM',
+            event_description: 'Technical verification of distillation columns and security deposit verified.',
+            user_details: 'Chief Inspector of Distilleries',
+            time_taken: '1 Day',
+            status_text: 'Cleared'
+          },
+          {
+            step_no: 3,
+            icon: '👑',
+            status_class: 'final-approved',
+            badge_class: 'status-final-approved',
+            event_title: 'Final Approval by Commissioner',
+            event_date: '2026-08-15 04:20 PM',
+            event_description: 'Approved by Excise Commissioner. Factory license issued for FY 2026-27.',
+            user_details: 'Excise Commissioner (IAS)',
+            time_taken: '2 Days',
+            status_text: 'FINAL APPROVED'
+          }
+        ]
       }
     ],
     pending_queue: [
+      {
+        application_id: 'NLI/1101/2026-27/0001',
+        applicant_name: 'Amrit Raj Sharma',
+        mobile_no: '7908195062',
+        establishment_name: 'ABC Distilleries Limited',
+        license_type: 'Distillery Manufacturing & Bottling License',
+        category: 'Manufacturing',
+        current_stage: 'Pending Nodal Officer Clearance',
+        pending_officer_name: 'Nodal Officer (Distillery Desk)',
+        days_elapsed: '2 Days',
+        sla_status: 'On Track (SLA: 7 Days)',
+        submission_date: '2026-05-28'
+      },
       {
         application_id: 'PLA-2026-0842',
         applicant_name: 'Diwakar Sharma',
@@ -312,9 +426,9 @@ export class SecretaryTimelineComponent implements OnInit {
   constructor(private secretaryService: SecretaryService) {}
 
   ngOnInit(): void {
-    if (this.overview.timeline_records && this.overview.timeline_records.length > 0) {
-      this.selectedApplication = this.overview.timeline_records[0];
-    }
+    this.selectedApplication = null;
+    this.searchResults = [];
+    this.hasSearched = false;
     this.loadTimelineData();
   }
 
@@ -324,9 +438,6 @@ export class SecretaryTimelineComponent implements OnInit {
       next: (res) => {
         if (res && res.timeline_records && res.timeline_records.length > 0) {
           this.overview = res;
-          if (!this.selectedApplication) {
-            this.selectedApplication = res.timeline_records[0];
-          }
         }
         this.isLoading = false;
       },
@@ -402,50 +513,143 @@ export class SecretaryTimelineComponent implements OnInit {
   }
 
   performSearch(): void {
-    if (!this.searchPhoneOrApp.trim()) return;
-
-    const query = this.searchPhoneOrApp.toLowerCase().trim();
-    const match = (this.overview.timeline_records || []).find(
-      i => i.application_id.toLowerCase().includes(query) ||
-           i.mobile_no.includes(query) ||
-           i.applicant_name.toLowerCase().includes(query) ||
-           i.establishment_name.toLowerCase().includes(query)
-    );
-
-    if (match) {
-      this.selectedApplication = match;
+    const rawQ = (this.searchPhoneOrApp || '').trim();
+    if (!rawQ) {
+      this.searchErrorMessage = 'Please enter a valid Application Reference ID or Registered Mobile Number.';
+      this.selectedApplication = null;
+      this.searchResults = [];
+      this.hasSearched = false;
+      return;
     }
+
+    const q = rawQ.toLowerCase();
+    const cleanDigits = rawQ.replace(/[^0-9]/g, '');
+    this.searchErrorMessage = '';
+    this.hasSearched = true;
+
+    // Search in timeline_records
+    const timelineMatches = (this.overview.timeline_records || []).filter(i => {
+      const appId = (i.application_id || '').toLowerCase();
+      const mobile = (i.mobile_no || '').toLowerCase();
+      const name = (i.applicant_name || '').toLowerCase();
+      const est = (i.establishment_name || '').toLowerCase();
+      return appId.includes(q) ||
+             (cleanDigits && cleanDigits.length >= 3 && mobile.includes(cleanDigits)) ||
+             mobile.includes(q) ||
+             name.includes(q) ||
+             est.includes(q);
+    });
+
+    // Also search in pending_queue and construct items for any not in timelineMatches
+    const pendingMatches: SecretaryTimelineItem[] = [];
+    if (this.overview.pending_queue) {
+      this.overview.pending_queue.forEach(p => {
+        const appId = (p.application_id || '').toLowerCase();
+        const mobile = (p.mobile_no || '').toLowerCase();
+        const name = (p.applicant_name || '').toLowerCase();
+        const est = (p.establishment_name || '').toLowerCase();
+        const matches = appId.includes(q) ||
+                        (cleanDigits && cleanDigits.length >= 3 && mobile.includes(cleanDigits)) ||
+                        mobile.includes(q) ||
+                        name.includes(q) ||
+                        est.includes(q);
+
+        if (matches && !timelineMatches.some(t => t.application_id.toLowerCase() === p.application_id.toLowerCase())) {
+          pendingMatches.push({
+            application_id: p.application_id,
+            applicant_name: p.applicant_name,
+            mobile_no: p.mobile_no,
+            establishment_name: p.establishment_name,
+            license_type: p.license_type,
+            category: p.category,
+            current_status: p.current_stage,
+            status_code: 'PENDING',
+            days_elapsed: p.days_elapsed,
+            approval_status: 'PENDING',
+            approved_by: `Pending with ${p.pending_officer_name}`,
+            approval_date: 'Awaiting Final Approval',
+            time_taken: p.days_elapsed,
+            current_stage: p.current_stage,
+            pending_officer_name: p.pending_officer_name,
+            steps: [
+              {
+                step_no: 1,
+                icon: '✓',
+                status_class: 'completed',
+                badge_class: 'status-completed',
+                event_title: 'Application Submitted Online',
+                event_date: `${p.submission_date} 10:00 AM`,
+                event_description: 'License application submitted online and fee acknowledged.',
+                user_details: `${p.applicant_name} (Applicant)`,
+                time_taken: 'Day 1',
+                status_text: 'Completed'
+              },
+              {
+                step_no: 2,
+                icon: '⏳',
+                status_class: 'final-pending',
+                badge_class: 'status-final-pending',
+                event_title: p.current_stage,
+                event_date: 'Ongoing Review',
+                event_description: `File is under active review by ${p.pending_officer_name}.`,
+                user_details: p.pending_officer_name,
+                time_taken: p.days_elapsed,
+                status_text: 'PENDING'
+              }
+            ]
+          });
+        }
+      });
+    }
+
+    const allMatches = [...timelineMatches, ...pendingMatches];
+    this.searchResults = allMatches;
+    this.activeTab = 'timeline-search';
+
+    if (allMatches.length === 1) {
+      this.selectedApplication = allMatches[0];
+    } else if (allMatches.length > 1) {
+      this.selectedApplication = null; // Display results list for user to select & track
+    } else {
+      this.selectedApplication = null;
+      this.searchErrorMessage = `No license application record found matching "${this.searchPhoneOrApp}". Try selecting an application from the Pending Queue tab.`;
+    }
+  }
+
+  quickSearch(term: string): void {
+    this.searchPhoneOrApp = term;
+    this.performSearch();
   }
 
   clearSearch(): void {
     this.searchPhoneOrApp = '';
+    this.searchErrorMessage = '';
     this.selectedCategory = 'all';
     this.selectedStatus = 'all';
-    if (this.overview.timeline_records && this.overview.timeline_records.length > 0) {
-      this.selectedApplication = this.overview.timeline_records[0];
-    }
+    this.selectedApplication = null;
+    this.searchResults = [];
+    this.hasSearched = false;
+  }
+
+  backToSearchResults(): void {
+    this.selectedApplication = null;
   }
 
   get filteredTimelineRecords(): SecretaryTimelineItem[] {
     let list = this.overview.timeline_records || [];
 
     if (this.selectedCategory !== 'all') {
-      list = list.filter(i => (i.category || '').toLowerCase() === this.selectedCategory.toLowerCase());
+      const selCat = this.selectedCategory.toLowerCase();
+      list = list.filter(i => {
+        const cat = (i.category || '').toLowerCase();
+        return cat.includes(selCat) || selCat.includes(cat);
+      });
     }
 
     if (this.selectedStatus !== 'all') {
       list = list.filter(i => (i.status_code || '').toLowerCase() === this.selectedStatus.toLowerCase());
     }
 
-    if (this.searchPhoneOrApp.trim()) {
-      const q = this.searchPhoneOrApp.toLowerCase().trim();
-      list = list.filter(i => 
-        i.application_id.toLowerCase().includes(q) ||
-        i.mobile_no.includes(q) ||
-        i.applicant_name.toLowerCase().includes(q) ||
-        i.establishment_name.toLowerCase().includes(q)
-      );
-    }
     return list;
   }
 
@@ -453,19 +657,13 @@ export class SecretaryTimelineComponent implements OnInit {
     let list = this.overview.pending_queue || [];
 
     if (this.selectedCategory !== 'all') {
-      list = list.filter(i => (i.category || '').toLowerCase() === this.selectedCategory.toLowerCase());
+      const selCat = this.selectedCategory.toLowerCase();
+      list = list.filter(i => {
+        const cat = (i.category || '').toLowerCase();
+        return cat.includes(selCat) || selCat.includes(cat);
+      });
     }
 
-    if (this.searchPhoneOrApp.trim()) {
-      const q = this.searchPhoneOrApp.toLowerCase().trim();
-      list = list.filter(i => 
-        i.application_id.toLowerCase().includes(q) ||
-        i.mobile_no.includes(q) ||
-        i.applicant_name.toLowerCase().includes(q) ||
-        i.establishment_name.toLowerCase().includes(q) ||
-        i.pending_officer_name.toLowerCase().includes(q)
-      );
-    }
     return list;
   }
 
