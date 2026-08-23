@@ -345,6 +345,9 @@ export interface SecretaryTopContributorItem {
   currentBalance?: number;
   wallets_count: number;
   walletsCount?: number;
+  updated_at?: string;
+  month?: string;
+  financial_year?: string;
 }
 
 export interface SecretarySecurityDepositItem {
@@ -366,6 +369,8 @@ export interface SecretarySecurityDepositItem {
   status: string;
   updated_at: string;
   updatedAt?: string;
+  month?: string;
+  financial_year?: string;
 }
 
 export interface SecretaryRevenueOverview {
