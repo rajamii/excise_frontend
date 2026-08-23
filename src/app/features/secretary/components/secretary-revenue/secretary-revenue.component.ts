@@ -1,3 +1,4 @@
+// Secretary Revenue Component Implementation
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -35,17 +36,18 @@ export class SecretaryRevenueComponent implements OnInit {
 
   overview: SecretaryRevenueOverview = {
     summary_kpis: {
-      total_revenue_collected: 45890000.0,
-      total_active_balance: 115200000.0,
-      total_security_deposit_fd: 38000000.0,
+      total_revenue_collected: 75631457.0,
+      net_excise_revenue_collected: 64873457.0,
+      total_active_balance: 1228683461.0,
+      total_security_deposit_fd: 288000.0,
       top_contributors_count: 12
     },
     revenue_heads: [
-      { head_name: 'Excise/Additional Duty', total_credit: 21306100.0, total_debit: 1370709.8, current_balance: 19935390.2, accounts_count: 8 },
-      { head_name: 'Security Deposit (FD)', total_credit: 38000000.0, total_debit: 500000.0, current_balance: 37500000.0, accounts_count: 12 },
-      { head_name: 'Hologram Procurement', total_credit: 15500000.0, total_debit: 2100000.0, current_balance: 13400000.0, accounts_count: 6 },
-      { head_name: 'License Fees', total_credit: 8500000.0, total_debit: 1200000.0, current_balance: 7300000.0, accounts_count: 15 },
-      { head_name: 'Education Cess', total_credit: 4200000.0, total_debit: 350000.0, current_balance: 3850000.0, accounts_count: 10 }
+      { head_name: 'Excise/Additional Duty', total_credit: 49104952.0, total_debit: 14527267.3, current_balance: 1034577699.7, accounts_count: 10 },
+      { head_name: 'Hologram Procurement', total_credit: 15350000.0, total_debit: 2075000.0, current_balance: 63335000.0, accounts_count: 10 },
+      { head_name: 'Education Cess', total_credit: 10470000.0, total_debit: 80743.51, current_balance: 10489256.49, accounts_count: 10 },
+      { head_name: 'License Fees', total_credit: 418505.0, total_debit: 235000.0, current_balance: 110183505.0, accounts_count: 14 },
+      { head_name: 'Security Deposit (FD)', total_credit: 288000.0, total_debit: 190000.0, current_balance: 10098000.0, accounts_count: 14 }
     ],
     top_contributors: [
       { rank: 1, tier_badge: 'Tier 1 Top Contributor', user_id: 'AS01AF8001', licensee_name: 'Amrit Raj Sharma', manufacturing_unit: 'ABC Distilleries Limited', category: 'Manufacturing', sub_category: 'Distillery', total_revenue_contributed: 21306100.0, total_fd_amount: 5000000.0, current_balance: 19935390.2, wallets_count: 4 },

@@ -562,6 +562,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       }
       return false;
     }
+    if (this.isCommissionerUser() && item.section === 'secretary-revenue') {
+      return true;
+    }
     if (this.isDistributorOic()) {
       if (item.section === 'imfl-requisition-cases' || item.section === 'officer-activity') {
         return true;
@@ -1731,6 +1734,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
     if (section === 'special-permit') {
       return roleId === 4 || roleId === 10;
+    }
+
+    if (section === 'secretary-revenue') {
+      return this.isSecretaryUser() || this.isCommissionerUser();
     }
 
     // Activity log should be visible for everyone (admins see officer activity, licensees see their own activity).

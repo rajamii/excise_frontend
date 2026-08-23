@@ -372,6 +372,8 @@ export interface SecretaryRevenueOverview {
   summary_kpis: {
     total_revenue_collected: number;
     totalRevenueCollected?: number;
+    net_excise_revenue_collected?: number;
+    netExciseRevenueCollected?: number;
     total_active_balance: number;
     totalActiveBalance?: number;
     total_security_deposit_fd: number;
