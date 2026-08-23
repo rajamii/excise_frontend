@@ -129,9 +129,9 @@
         <app-dailyhologramrecordregister
           *ngIf="selectedSupplyChainSection === 'commissioner-hologram-working-records' && isCommissionerUser()">
         </app-dailyhologramrecordregister>
-        <app-hologram-monthly-report
-          *ngIf="selectedSupplyChainSection === 'commissioner-monthly-view-details' && isCommissionerUser()">
-        </app-hologram-monthly-report>
+<app-hologram-monthly-report
+  *ngIf="selectedSupplyChainSection === 'commissioner-monthly-view-details' && (isCommissionerUser() || isSecretaryUser)">
+</app-hologram-monthly-report>
         <app-hologramprocurement
           *ngIf="selectedSupplyChainSection === 'hologram' && !isCommissionerUser()"></app-hologramprocurement>
         <app-hologramrequest *ngIf="selectedSupplyChainSection === 'hologram-request'"></app-hologramrequest>
