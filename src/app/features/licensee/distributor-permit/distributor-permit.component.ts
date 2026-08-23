@@ -1708,6 +1708,93 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return (Number(cases || 0) * sizeMl * 12) / 1000;
   }
 
+  getPermitStatusInfo(row: DistributorPermitRow | any): { label: string; cssClass: string; icon: string } {
+    if (!row) {
+      return { label: 'N/A', cssClass: 'bg-secondary text-white', icon: 'bi-dash-circle' };
+    }
+
+    const st = String(row.currentStage || row.status || '').toUpperCase();
+    const arrivalStatus = this.getArrivalStatusForRow(row);
+
+    if (st.includes('CANCEL') || st.includes('SURRENDER')) {
+      return { label: 'Cancelled', cssClass: 'bg-danger text-white', icon: 'bi-x-circle-fill' };
+    }
+
+    if (st.includes('EXPIRED') || row.isActivatedSchedule) {
+      return { label: 'Expired (Revalidate)', cssClass: 'bg-warning text-dark', icon: 'bi-clock-history' };
+    }
+
+    if (st.includes('APPROVED') || this.isApproved(row)) {
+      if (arrivalStatus === 'approved') {
+        return { label: 'Arrival Approved', cssClass: 'bg-success text-white', icon: 'bi-check-circle-fill' };
+      }
+      if (arrivalStatus === 'under_review') {
+        return { label: 'Arrival Under Review', cssClass: 'bg-warning text-dark', icon: 'bi-hourglass-split' };
+      }
+      return { label: 'Permit Issued', cssClass: 'bg-info text-white', icon: 'bi-card-checklist' };
+    }
+
+    if (st.includes('SUBMIT') || st.includes('PENDING') || st.includes('SCRUTINY') || st.includes('RECOMMEND')) {
+      return { label: 'Under Scrutiny', cssClass: 'bg-warning text-dark', icon: 'bi-hourglass-top' };
+    }
+
+    return { label: row.currentStage || 'Processing', cssClass: 'bg-secondary text-white', icon: 'bi-info-circle-fill' };
+  }
+
+  getPermitNumbersText(row: any): string {
+    if (!row) return '';
+    const raw = row.application || row;
+    const pDetails = raw?.permit_wise_details || raw?.permitWiseDetails || row?.permitWiseDetails || [];
+    if (Array.isArray(pDetails) && pDetails.length > 0) {
+      return pDetails.map((p: any) => `${p.permit_number || p.permitNumber} (${p.total_cases || p.totalCases || 0} Cases)`).join(', ');
+    }
+    const appId = row.applicationId || row.referenceNo || row.id;
+    if (appId && this.isApproved(row)) {
+      return `${appId}-P1`;
+    }
+    return '';
+  }
+
+  getCancelledPermitNumbersText(row: any): string {
+    if (!row) return '';
+    const appId = String(row?.applicationId || row?.referenceNo || '').toLowerCase();
+    if (!appId) return '';
+    const match: any = (this.applications || []).find((a: any) => {
+      const isCan = String(a?.['referenceNo'] || a?.['reference_no'] || '').startsWith('IMFLCAN') || a?.['applicationType'] === 'cancellation';
+      const target = String(a?.['application']?.['distributor_permit'] || a?.['distributor_permit'] || '').toLowerCase();
+      return isCan && target === appId;
+    });
+    if (match) {
+      return match['cancelledPermitNumber'] || match['cancelled_permit_number'] || match['application']?.['cancelled_permit_number'] || 'Cancelled';
+    }
+    return '';
+  }
+
+  getRevalidatedPermitNumbersText(row: any): string {
+    if (!row) return '';
+    const appId = String(row?.applicationId || row?.referenceNo || '').toLowerCase();
+    if (!appId) return '';
+    const match: any = (this.applications || []).find((a: any) => {
+      const isRev = String(a?.['referenceNo'] || a?.['reference_no'] || '').startsWith('IMFLREV') || a?.['applicationType'] === 'revalidation';
+      const target = String(a?.['application']?.['distributor_permit'] || a?.['distributor_permit'] || '').toLowerCase();
+      return isRev && target === appId;
+    });
+    if (match) {
+      return match['revalidatedPermitNumber'] || match['revalidated_permit_number'] || match['application']?.['revalidated_permit_number'] || 'Revalidated';
+    }
+    return '';
+  }
+
+  getArrivedPermitNumbersText(row: any): string {
+    if (!row) return '';
+    const arrivalStatus = this.getArrivalStatusForRow(row);
+    if (arrivalStatus === 'approved') {
+      const arrivalItem = this.getArrivalItemForRow(row);
+      return arrivalItem?.permit_number || arrivalItem?.permitNumber || 'Stock Arrived & Approved';
+    }
+    return '';
+  }
+
   canRequestRevalidation(row: DistributorPermitRow | any): boolean {
     if (!this.isDistributorUser) return false;
     const raw = row?.application || row;

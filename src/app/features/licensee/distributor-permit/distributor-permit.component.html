@@ -346,9 +346,9 @@
                   <th>Submitted On</th>
                   <th>Payment</th>
                   <th>Applicant</th>
-                  <th>Supplier/Establishment</th>
+                  <th style="min-width: 270px;">Permit Status</th>
                   <th>Current Stage</th>
-                  <th>Action</th>
+                  <th style="min-width: 240px;">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -366,7 +366,33 @@
                     </span>
                   </td>
                   <td>{{ row.applicantName }}</td>
-                  <td>{{ row.supplierName }}</td>
+                  <td class="permit-status" style="min-width: 270px;">
+                    <div class="d-flex flex-column gap-1 align-items-start" style="font-size: 0.82rem;">
+                      <!-- Show current requisition permit numbers if available -->
+                      <div class="permit-numbers-list mb-1" *ngIf="getPermitNumbersText(row)">
+                        <small class="text-muted fw-bold d-block" style="font-size: 0.72rem;">Permit Number(s):</small>
+                        <span class="badge bg-slate-100 text-slate-800 border font-monospace px-2 py-1">{{ getPermitNumbersText(row) }}</span>
+                      </div>
+
+                      <!-- Show arrived permits -->
+                      <span class="badge bg-success text-white" *ngIf="getArrivedPermitNumbersText(row)">
+                        <i class="bi bi-check-circle me-1"></i>Arrived: {{ getArrivedPermitNumbersText(row) }}
+                      </span>
+
+                      <!-- Show revalidated status -->
+                      <span class="badge bg-warning text-dark" *ngIf="getRevalidatedPermitNumbersText(row)">
+                        <i class="bi bi-arrow-repeat me-1"></i>Revalidated: {{ getRevalidatedPermitNumbersText(row) }}
+                      </span>
+
+                      <!-- Show cancelled permits -->
+                      <span class="badge bg-danger text-white" *ngIf="getCancelledPermitNumbersText(row)">
+                        <i class="bi bi-x-circle me-1"></i>Cancelled: {{ getCancelledPermitNumbersText(row) }}
+                      </span>
+
+                      <!-- Show empty dash if no permits generated yet -->
+                      <span class="text-muted fw-semibold" *ngIf="!getPermitNumbersText(row) && !getArrivedPermitNumbersText(row) && !getRevalidatedPermitNumbersText(row) && !getCancelledPermitNumbersText(row)">—</span>
+                    </div>
+                  </td>
                   <td>
                     <span class="status-badge status-badge--{{ row.statusGroup }}">
                       {{ row.currentStage }}
@@ -376,59 +402,66 @@
                     </span>
                   </td>
                   <td class="dp-action-cell" (click)="$event.stopPropagation()">
-                    <div class="dp-action-buttons">
-                      <button
-                        class="btn btn-icon-only btn-soft-primary"
-                        type="button"
-                        title="View Details"
-                        (click)="onViewDetails(row)"
-                        (mousedown)="onViewDetails(row)"
-                      >
-                        <i class="bi bi-eye-fill"></i>
-                      </button>
-                      <button
-                        class="btn btn-sm btn-soft-info"
-                        type="button"
-                        title="View Permit Details & Arrival Status"
-                        (click)="openPermitDetailsModal(row, $event)"
-                        (mousedown)="openPermitDetailsModal(row, $event)"
-                      >
-                        <i class="bi bi-card-checklist me-1"></i>
-                        <span>Permit Details</span>
-                      </button>
-                      <button
-                        class="btn btn-sm btn-soft-cyan"
-                        type="button"
-                        *ngIf="canUpdateArrival(row)"
-                        title="Record physical stock arrival for approved permit"
-                        (click)="openArrivalModal(row, $event)"
-                        (mousedown)="openArrivalModal(row, $event)"
-                      >
-                        <i class="bi bi-truck me-1"></i>
-                        <span>Update Arrival</span>
-                      </button>
-                      <button
-                        class="btn btn-sm btn-soft-success"
-                        type="button"
-                        title="View & Print Authority Letter"
-                        *ngIf="isApproved(row)"
-                        (click)="openAuthorityLetter(row, $event)"
-                        (mousedown)="openAuthorityLetter(row, $event)"
-                      >
-                        <i class="bi bi-file-earmark-pdf-fill me-1"></i>
-                        <span>Authority Letter</span>
-                      </button>
-                      <button
-                        class="btn btn-sm btn-soft-danger"
-                        type="button"
-                        title="Request Cancellation"
-                        *ngIf="canRequestCancellation(row)"
-                        (click)="onCancelPermit(row, $event)"
-                        (mousedown)="onCancelPermit(row, $event)"
-                      >
-                        <i class="bi bi-x-circle me-1"></i>
-                        <span>Cancel Permit</span>
-                      </button>
+                    <div class="dp-action-buttons-box">
+                      <!-- Row 1 Action Buttons -->
+                      <div class="dp-action-row">
+                        <button
+                          class="btn btn-icon-only btn-primary-solid"
+                          type="button"
+                          title="View Details"
+                          (click)="onViewDetails(row)"
+                          (mousedown)="onViewDetails(row)"
+                        >
+                          <i class="bi bi-eye-fill"></i>
+                        </button>
+                        <button
+                          class="btn btn-sm btn-info-solid"
+                          type="button"
+                          title="View Permit Details & Arrival Status"
+                          (click)="openPermitDetailsModal(row, $event)"
+                          (mousedown)="openPermitDetailsModal(row, $event)"
+                        >
+                          <i class="bi bi-card-checklist me-1"></i>
+                          <span>Permit Details</span>
+                        </button>
+                        <button
+                          class="btn btn-sm btn-cyan-solid"
+                          type="button"
+                          *ngIf="canUpdateArrival(row)"
+                          title="Record physical stock arrival for approved permit"
+                          (click)="openArrivalModal(row, $event)"
+                          (mousedown)="openArrivalModal(row, $event)"
+                        >
+                          <i class="bi bi-truck me-1"></i>
+                          <span>Update Arrival</span>
+                        </button>
+                      </div>
+
+                      <!-- Row 2 Action Buttons -->
+                      <div class="dp-action-row" *ngIf="isApproved(row) || canRequestCancellation(row)">
+                        <button
+                          class="btn btn-sm btn-success-solid"
+                          type="button"
+                          title="View & Print Authority Letter"
+                          *ngIf="isApproved(row)"
+                          (click)="openAuthorityLetter(row, $event)"
+                          (mousedown)="openAuthorityLetter(row, $event)"
+                        >
+                          <i class="bi bi-file-earmark-pdf-fill me-1"></i>
+                          <span>Authority Letter</span>
+                        </button>
+                        <button
+                          class="btn btn-sm btn-danger-solid"
+                          type="button"
+                          title="Request Cancellation"
+                          *ngIf="canRequestCancellation(row)"
+                          (click)="onCancelPermit(row, $event)"
+                          (mousedown)="onCancelPermit(row, $event)"
+                        >
+                          <i class="bi bi-x-circle me-1"></i>
+                          <span>Cancel Permit</span>
+                        </button>
+                      </div>
                     </div>
                   </td>
                 </tr>
