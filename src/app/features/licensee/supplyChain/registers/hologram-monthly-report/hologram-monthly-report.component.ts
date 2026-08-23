@@ -1832,30 +1832,60 @@ export class HologramMonthlyReportComponent implements OnInit {
     this.loadHologramRequestLicensees();
   }
 
+  private isDistilleryOrBreweryUnitName(name: string): boolean {
+    if (!name || !name.trim()) return false;
+    const lower = name.trim().toLowerCase();
+    if (lower.includes('distributor') || lower.includes('wholesaler') || lower.includes('retailer')) {
+      return false;
+    }
+    return true;
+  }
+
   private loadCreatedDistilleryBreweryNames(): void {
+    // 1. Load from secretary manufacturing factories API to get all distilleries & breweries
+    this.http.get<any>(`${environment.apiBaseUrl}/api/secretary/bulk-spirit/factories/`).subscribe({
+      next: (res) => {
+        const factories = res?.factories || [];
+        for (const f of factories) {
+          const name = (f?.establishment_name || f?.company_name || '').trim();
+          if (name && this.isDistilleryOrBreweryUnitName(name)) {
+            if (!this.createdDistilleryBreweryNames.includes(name)) {
+              this.createdDistilleryBreweryNames.push(name);
+            }
+            const normalized = this.normalizeManufacturingUnitName(name);
+            if (normalized && f.id) {
+              this.licenseeIdByNormalizedName.set(normalized, f.id);
+            }
+          }
+        }
+        this.updateManufacturingUnits();
+      },
+      error: () => {}
+    });
+
+    // 2. Load from new license applications / license list API
     this.http.get<any>(`${this.licenseApiBase}/list/?page_size=2000`).subscribe({
       next: (payload) => {
         const rows = this.extractRows(payload);
-        const result = new Set<string>();
+        const result = new Set<string>(this.createdDistilleryBreweryNames);
         for (const row of rows) {
           if (!this.isDistilleryOrBrewery(row)) {
             continue;
           }
           const name = this.extractLicenseeName(row);
-          if (name) {
+          if (name && this.isDistilleryOrBreweryUnitName(name)) {
             result.add(name);
             const normalized = this.normalizeManufacturingUnitName(name);
-            const licId = String(row?.licensee_id ?? row?.licenseeId ?? '').trim();
+            const licId = String(row?.licensee_id ?? row?.licenseeId ?? row?.id ?? '').trim();
             if (normalized && licId) {
               this.licenseeIdByNormalizedName.set(normalized, licId);
             }
           }
         }
-        this.createdDistilleryBreweryNames = Array.from(result).sort((a, b) => a.localeCompare(b));
+        this.createdDistilleryBreweryNames = Array.from(result).filter(n => this.isDistilleryOrBreweryUnitName(n)).sort((a, b) => a.localeCompare(b));
         this.updateManufacturingUnits();
       },
       error: () => {
-        this.createdDistilleryBreweryNames = [];
         this.updateManufacturingUnits();
       }
     });
@@ -1868,7 +1898,7 @@ export class HologramMonthlyReportComponent implements OnInit {
         const names = new Set<string>();
         for (const row of rows) {
           const name = String(row?.establishment_name || row?.establishmentName || '').trim();
-          if (name) {
+          if (name && this.isDistilleryOrBreweryUnitName(name)) {
             names.add(name);
           }
         }
@@ -1889,7 +1919,7 @@ export class HologramMonthlyReportComponent implements OnInit {
         const names = new Set<string>();
         for (const row of rows) {
           const name = this.extractManufacturingUnitName(row);
-          if (name) {
+          if (name && this.isDistilleryOrBreweryUnitName(name)) {
             names.add(name);
           }
         }
@@ -1940,7 +1970,7 @@ export class HologramMonthlyReportComponent implements OnInit {
     const names = new Set<string>();
     for (const entry of dailyEntries || []) {
       const name = this.extractManufacturingUnitName(entry);
-      if (name) {
+      if (name && this.isDistilleryOrBreweryUnitName(name)) {
         names.add(name);
       }
       const normalized = this.normalizeManufacturingUnitName(name);
@@ -1952,7 +1982,7 @@ export class HologramMonthlyReportComponent implements OnInit {
 
     for (const roll of rollsDetails || []) {
       const name = this.extractManufacturingUnitName(roll);
-      if (name) {
+      if (name && this.isDistilleryOrBreweryUnitName(name)) {
         names.add(name);
       }
       const normalized = this.normalizeManufacturingUnitName(name);
@@ -1969,7 +1999,10 @@ export class HologramMonthlyReportComponent implements OnInit {
       ...Array.from(names)
     ]);
 
-    this.manufacturingUnits = Array.from(merged).sort((a, b) => a.localeCompare(b));
+    this.manufacturingUnits = Array.from(merged)
+      .filter(name => this.isDistilleryOrBreweryUnitName(name))
+      .sort((a, b) => a.localeCompare(b));
+
     if (!this.selectedManufacturingUnit && this.manufacturingUnits.length > 0) {
       this.selectedManufacturingUnit = this.manufacturingUnits[0];
     } else if (this.selectedManufacturingUnit && !this.manufacturingUnits.includes(this.selectedManufacturingUnit)) {
@@ -1989,7 +2022,10 @@ export class HologramMonthlyReportComponent implements OnInit {
       ...this.manufacturingUnits
     ]);
 
-    this.manufacturingUnits = Array.from(merged).sort((a, b) => a.localeCompare(b));
+    this.manufacturingUnits = Array.from(merged)
+      .filter(name => this.isDistilleryOrBreweryUnitName(name))
+      .sort((a, b) => a.localeCompare(b));
+
     if (!this.selectedManufacturingUnit && this.manufacturingUnits.length > 0) {
       this.selectedManufacturingUnit = this.manufacturingUnits[0];
     } else if (this.selectedManufacturingUnit && !this.manufacturingUnits.includes(this.selectedManufacturingUnit)) {
