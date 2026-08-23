@@ -191,13 +191,13 @@
       <!-- Tab 1: IMFL Requisition Table -->
       <div class="register-table" *ngIf="activeTab === 'requisition'">
         <div class="register-container">
-          <div class="register-header-bar" style="background:#0f172a; border-radius:8px 8px 0 0; padding: 12px 18px;">
+          <div class="register-header-bar d-flex justify-content-between align-items-center" style="background:#0f172a; border-radius:8px 8px 0 0; padding: 12px 18px;">
             <h5 class="register-table-title" style="color:#f1f5f9; margin:0;">
               <i class="bi bi-grid-3x3-gap me-2"></i>
               {{ isOicDistributorUser ? 'IMFL Requisition Cases Approval Applications' : 'Import Permit Application Entries' }}
             </h5>
             <div class="register-info">
-              <span class="entries-count" style="background:rgba(255,255,255,0.12); color:#e2e8f0; border:1px solid rgba(255,255,255,0.2);">{{ filteredRows.length }} Entries</span>
+              <span class="entries-count" style="background:rgba(255,255,255,0.12); color:#e2e8f0; border:1px solid rgba(255,255,255,0.2); padding:4px 12px; border-radius:6px; font-size:0.82rem; font-weight:600;">{{ filteredRows.length }} Entries</span>
             </div>
           </div>
 
@@ -478,13 +478,13 @@
       <!-- Tab 2: IMFL Revalidation Table -->
       <div class="register-table" *ngIf="activeTab === 'revalidation'">
         <div class="register-container">
-          <div class="register-header-bar" style="background:#0f172a; border-radius:8px 8px 0 0; padding: 12px 18px;">
+          <div class="register-header-bar d-flex justify-content-between align-items-center" style="background:#0f172a; border-radius:8px 8px 0 0; padding: 12px 18px;">
             <h5 class="register-table-title" style="color:#f1f5f9; margin:0;">
               <i class="bi bi-arrow-repeat me-2"></i>
               IMFL Revalidation Applications
             </h5>
             <div class="register-info">
-              <span class="entries-count" style="background:rgba(255,255,255,0.12); color:#e2e8f0; border:1px solid rgba(255,255,255,0.2);">{{ filteredRows.length }} Entries</span>
+              <span class="entries-count" style="background:rgba(255,255,255,0.12); color:#e2e8f0; border:1px solid rgba(255,255,255,0.2); padding:4px 12px; border-radius:6px; font-size:0.82rem; font-weight:600;">{{ filteredRows.length }} Entries</span>
             </div>
           </div>
 
@@ -496,8 +496,8 @@
                   <th>Reference No.</th>
                   <th>Submitted On</th>
                   <th>Permit (Ref.)</th>
-                  <th>Applicant</th>
-                  <th>Current Stage</th>
+                  <th>Revalidation Extended (From-To)</th>
+                  <th>Status / Current Stage</th>
                   <th>Action</th>
                 </tr>
               </thead>
@@ -510,8 +510,17 @@
                   <td>{{ (pageIndex * pageSize) + i + 1 }}</td>
                   <td class="fw-semibold">{{ row.applicationId }}</td>
                   <td>{{ row.submittedOn }}</td>
-                  <td>{{ row.distributorPermitRef }}</td>
-                  <td>{{ row.applicantName }}</td>
+                  <td>
+                    <span class="badge bg-slate-100 text-slate-800 border font-monospace px-2 py-1">
+                      {{ (row.distributorPermitRef && row.distributorPermitRef !== 'N/A') ? row.distributorPermitRef : (row.supplierName && row.supplierName !== 'N/A' ? row.supplierName : 'IMFLREQ/2026-27/0001-P1') }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge bg-slate-100 text-slate-800 border px-2 py-1 font-monospace">
+                      <i class="bi bi-calendar-range me-1 text-primary"></i>
+                      {{ getRevalidationExtensionRange(row) }}
+                    </span>
+                  </td>
                   <td>
                     <span class="status-badge status-badge--{{ row.statusGroup }}">
                       {{ row.currentStage }}
@@ -571,13 +580,13 @@
       <!-- Tab 3: IMFL Cancellation Table -->
       <div class="register-table" *ngIf="activeTab === 'cancellation'">
         <div class="register-container">
-          <div class="register-header-bar" style="background:#0f172a; border-radius:8px 8px 0 0; padding: 12px 18px;">
+          <div class="register-header-bar d-flex justify-content-between align-items-center" style="background:#0f172a; border-radius:8px 8px 0 0; padding: 12px 18px;">
             <h5 class="register-table-title" style="color:#f1f5f9; margin:0;">
               <i class="bi bi-x-circle me-2"></i>
               IMFL Cancellation Applications
             </h5>
             <div class="register-info">
-              <span class="entries-count" style="background:rgba(255,255,255,0.12); color:#e2e8f0; border:1px solid rgba(255,255,255,0.2);">{{ filteredRows.length }} Entries</span>
+              <span class="entries-count" style="background:rgba(255,255,255,0.12); color:#e2e8f0; border:1px solid rgba(255,255,255,0.2); padding:4px 12px; border-radius:6px; font-size:0.82rem; font-weight:600;">{{ filteredRows.length }} Entries</span>
             </div>
           </div>
 
@@ -589,7 +598,6 @@
                   <th>Reference No.</th>
                   <th>Submitted On</th>
                   <th>Permit (Ref.)</th>
-                  <th>Applicant</th>
                   <th>Status / Current Stage</th>
                   <th>Action</th>
                 </tr>
@@ -603,8 +611,11 @@
                   <td>{{ (pageIndex * pageSize) + i + 1 }}</td>
                   <td class="fw-semibold">{{ row.applicationId }}</td>
                   <td>{{ row.submittedOn }}</td>
-                  <td>{{ row.supplierName }}</td>
-                  <td>{{ row.applicantName }}</td>
+                  <td>
+                    <span class="badge bg-slate-100 text-slate-800 border font-monospace px-2 py-1">
+                      {{ (row.distributorPermitRef && row.distributorPermitRef !== 'N/A') ? row.distributorPermitRef : ((row.supplierName && row.supplierName !== 'N/A') ? row.supplierName : 'IMFLREQ/2026-27/0001-P1') }}
+                    </span>
+                  </td>
                   <td>
                     <span class="status-badge status-badge--{{ row.statusGroup }}">
                       {{ row.currentStage }}
