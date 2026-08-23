@@ -13,7 +13,7 @@
     </h4>
   </div>
 
-  <div class="d-flex align-items-center gap-2" *ngIf="!isOfficer">
+  <div class="d-flex align-items-center gap-2" *ngIf="!isOfficer && activeTab === 'requisition'">
     <button
       type="button"
       class="btn btn-outline-info btn-sm fw-bold px-3 py-2 rounded-pill shadow-sm"
@@ -28,7 +28,7 @@
       type="button"
       class="btn btn-danger btn-sm fw-bold px-3 py-2 text-white bg-gradient border-0 rounded-pill shadow-sm"
       (click)="onApplyNewClick()"
-      style="background: linear-gradient(135deg, #ff416c, #ff4b2b);"
+      style="background: linear-gradient(135deg, #ef4444, #dc2626) !important; color: #ffffff !important; opacity: 1 !important; display: inline-flex; align-items: center;"
     >
       <i class="bi bi-plus-circle-fill me-1"></i>
       Apply for Import Permit

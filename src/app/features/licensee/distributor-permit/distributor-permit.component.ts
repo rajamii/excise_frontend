@@ -205,6 +205,15 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     });
   }
 
+  closeFormView(): void {
+    this.isFormView = false;
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { mode: null },
+      queryParamsHandling: 'merge'
+    });
+  }
+
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
