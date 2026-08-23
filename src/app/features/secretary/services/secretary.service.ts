@@ -3,6 +3,20 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
+export interface BrandStock {
+  brand_name: string;
+  liquor_type: string;
+  pack_size_ml: number;
+  bottles_per_case: number;
+  cases_stock: number;
+  total_bottles: number;
+  total_bl: number;
+  edp_code: string;
+  alcohol_strength: string;
+  mrp_per_bottle: number;
+  status: string;
+}
+
 export interface ManufacturingFactory {
   id: string;
   establishment_name: string;
@@ -24,6 +38,7 @@ export interface ManufacturingFactory {
   approved_requisitions_count: number;
   active_transit_permits_count: number;
   dispatched_bl: number;
+  brand_stocks?: BrandStock[];
 }
 
 export interface SecretaryBulkSpiritSummary {
