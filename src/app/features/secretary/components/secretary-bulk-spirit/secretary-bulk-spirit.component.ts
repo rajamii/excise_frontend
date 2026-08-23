@@ -64,15 +64,15 @@ export class SecretaryBulkSpiritComponent implements OnInit {
     this.error = null;
 
     this.secretaryService.getBulkSpiritFactories().subscribe({
-      next: (res) => {
+      next: (res: any) => {
         const rawList = res.factories || [];
-        this.factories = rawList.map(f => this.normalizeFactory(f));
+        this.factories = rawList.map((f: any) => this.normalizeFactory(f));
         this.recalculateSummary();
         this.applyFiltersAndSort();
         this.isLoading = false;
         this.cdr.detectChanges();
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Error fetching factories:', err);
         this.error = 'Failed to load manufacturing units data. Please try again.';
         this.isLoading = false;
@@ -228,7 +228,7 @@ export class SecretaryBulkSpiritComponent implements OnInit {
     }, 3500);
   }
 
-  formatNumber(val: number): string {
+  formatNumber(val?: number): string {
     return (val || 0).toLocaleString('en-IN');
   }
 
@@ -361,9 +361,10 @@ export class SecretaryBulkSpiritComponent implements OnInit {
     };
   }
 
-  getStockPercentage(bl: number): number {
+  getStockPercentage(bl?: number): number {
+    const val = bl || 0;
     const maxCapacity = 250000;
-    const pct = Math.round((bl / maxCapacity) * 100);
+    const pct = Math.round((val / maxCapacity) * 100);
     return Math.min(Math.max(pct, 15), 100);
   }
 }

@@ -10,18 +10,20 @@ import {
   SecretaryRevenueHeadItem
 } from '../../services/secretary.service';
 
+import { SecretaryTimelineComponent } from '../secretary-timeline/secretary-timeline.component';
+
 @Component({
   selector: 'app-secretary-revenue',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SecretaryTimelineComponent],
   templateUrl: './secretary-revenue.component.html',
   styleUrls: ['./secretary-revenue.component.scss']
 })
 export class SecretaryRevenueComponent implements OnInit {
   isLoading = false;
 
-  // View Mode Sub-tabs: 'overview' | 'top-contributors' | 'security-deposits'
-  activeTab: 'overview' | 'top-contributors' | 'security-deposits' = 'overview';
+  // View Mode Sub-tabs: 'overview' | 'top-contributors' | 'security-deposits' | 'timeline'
+  activeTab: 'overview' | 'top-contributors' | 'security-deposits' | 'timeline' = 'overview';
 
   // Filters: Financial Year, Month, Category, Search
   selectedFinancialYear: string = '2026-2027';
@@ -88,7 +90,7 @@ export class SecretaryRevenueComponent implements OnInit {
     });
   }
 
-  setTab(tab: 'overview' | 'top-contributors' | 'security-deposits'): void {
+  setTab(tab: 'overview' | 'top-contributors' | 'security-deposits' | 'timeline'): void {
     this.activeTab = tab;
   }
 

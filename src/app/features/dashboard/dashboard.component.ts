@@ -46,6 +46,7 @@ import { SecretaryBulkSpiritComponent } from '../secretary/components/secretary-
 import { SecretaryLicensesComponent } from '../secretary/components/secretary-licenses/secretary-licenses.component';
 import { SecretaryImflComponent } from '../secretary/components/secretary-imfl/secretary-imfl.component';
 import { SecretaryRevenueComponent } from '../secretary/components/secretary-revenue/secretary-revenue.component';
+import { SecretaryTimelineComponent } from '../secretary/components/secretary-timeline/secretary-timeline.component';
 
 // Supply Chain Components
 import { RequisitionComponent } from '../licensee/supplyChain/supplychaincomponents/requisition/requisition.component';
@@ -185,7 +186,8 @@ const CHART_BAR_LABELS_PLUGIN = [{
     SecretaryBulkSpiritComponent,
     SecretaryLicensesComponent,
     SecretaryImflComponent,
-    SecretaryRevenueComponent
+    SecretaryRevenueComponent,
+    SecretaryTimelineComponent
   ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']

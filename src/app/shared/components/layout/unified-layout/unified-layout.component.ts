@@ -130,6 +130,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     { section: 'secretary-licenses', label: 'Licenses', icon: 'verified' },
     { section: 'secretary-imfl-ena', label: 'IMFL & ENA', icon: 'local_shipping' },
     { section: 'secretary-revenue', label: 'Revenue', icon: 'payments' },
+    { section: 'secretary-timeline', label: 'License Timeline Tracker', icon: 'timeline' },
     { section: 'commissioner-monthly-view-details', label: 'Monthly View Details', icon: 'calendar_month' },
     { section: 'imfl-requisition-cases', label: 'IMFL Requisition Cases', icon: 'assignment_turned_in', showOnlyForOic: true },
     { section: 'stock-inventory', label: 'Stock Inventory', icon: 'inventory' },
@@ -557,12 +558,12 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     showOnlyForCommissioner?: boolean;
   }): boolean {
     if (this.isSecretaryUser()) {
-      if (item.section === 'secretary-bulk-spirit' || item.section === 'secretary-licenses' || item.section === 'secretary-imfl' || item.section === 'secretary-imfl-ena' || item.section === 'secretary-revenue' || item.section === 'officer-activity' || item.section === 'commissioner-monthly-view-details') {
+      if (item.section === 'secretary-bulk-spirit' || item.section === 'secretary-licenses' || item.section === 'secretary-imfl' || item.section === 'secretary-imfl-ena' || item.section === 'secretary-revenue' || item.section === 'secretary-timeline' || item.section === 'officer-activity' || item.section === 'commissioner-monthly-view-details') {
         return true;
       }
       return false;
     }
-    if (this.isCommissionerUser() && item.section === 'secretary-revenue') {
+    if (this.isCommissionerUser() && (item.section === 'secretary-revenue' || item.section === 'secretary-timeline')) {
       return true;
     }
     if (this.isDistributorOic()) {
@@ -1736,7 +1737,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return roleId === 4 || roleId === 10;
     }
 
-    if (section === 'secretary-revenue') {
+    if (section === 'secretary-revenue' || section === 'secretary-timeline') {
       return this.isSecretaryUser() || this.isCommissionerUser();
     }
 

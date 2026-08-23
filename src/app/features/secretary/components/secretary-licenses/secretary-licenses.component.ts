@@ -231,9 +231,9 @@ export class SecretaryLicensesComponent implements OnInit {
   get filteredDryDayPermits(): DryDayPermitItem[] {
     let list = this.overview?.dry_day_permits || [];
     if (this.statusFilter === 'approved') {
-      list = list.filter(i => i.is_approved || i.status.toLowerCase().includes('approved'));
+      list = list.filter(i => i.is_approved || (i.status || '').toLowerCase().includes('approved'));
     } else if (this.statusFilter === 'pending') {
-      list = list.filter(i => !i.is_approved && !i.status.toLowerCase().includes('approved'));
+      list = list.filter(i => !i.is_approved && !(i.status || '').toLowerCase().includes('approved'));
     }
     if (this.searchQuery.trim()) {
       const q = this.searchQuery.toLowerCase().trim();
@@ -250,9 +250,9 @@ export class SecretaryLicensesComponent implements OnInit {
   get filteredSalesmanBarman(): SalesmanBarmanItem[] {
     let list = this.overview?.salesman_barman_applications || [];
     if (this.statusFilter === 'approved') {
-      list = list.filter(i => i.is_approved || i.status.toLowerCase().includes('approved'));
+      list = list.filter(i => i.is_approved || (i.status || '').toLowerCase().includes('approved'));
     } else if (this.statusFilter === 'pending') {
-      list = list.filter(i => !i.is_approved && !i.status.toLowerCase().includes('approved'));
+      list = list.filter(i => !i.is_approved && !(i.status || '').toLowerCase().includes('approved'));
     }
     if (this.searchQuery.trim()) {
       const q = this.searchQuery.toLowerCase().trim();
@@ -269,9 +269,9 @@ export class SecretaryLicensesComponent implements OnInit {
   get filteredCompanyRegistrations(): CompanyRegistrationItem[] {
     let list = this.overview?.company_registrations || [];
     if (this.statusFilter === 'approved') {
-      list = list.filter(i => i.is_approved || i.status.toLowerCase().includes('approved'));
+      list = list.filter(i => i.is_approved || (i.status || '').toLowerCase().includes('approved'));
     } else if (this.statusFilter === 'pending') {
-      list = list.filter(i => !i.is_approved && !i.status.toLowerCase().includes('approved'));
+      list = list.filter(i => !i.is_approved && !(i.status || '').toLowerCase().includes('approved'));
     }
     if (this.searchQuery.trim()) {
       const q = this.searchQuery.toLowerCase().trim();
@@ -288,9 +288,9 @@ export class SecretaryLicensesComponent implements OnInit {
   get filteredCompanyCollaborations(): CompanyCollaborationItem[] {
     let list = this.overview?.company_collaborations || [];
     if (this.statusFilter === 'approved') {
-      list = list.filter(i => i.is_approved || i.status.toLowerCase().includes('approved'));
+      list = list.filter(i => i.is_approved || (i.status || '').toLowerCase().includes('approved'));
     } else if (this.statusFilter === 'pending') {
-      list = list.filter(i => !i.is_approved && !i.status.toLowerCase().includes('approved'));
+      list = list.filter(i => !i.is_approved && !(i.status || '').toLowerCase().includes('approved'));
     }
     if (this.searchQuery.trim()) {
       const q = this.searchQuery.toLowerCase().trim();

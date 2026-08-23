@@ -309,10 +309,10 @@ export class SecretaryImflComponent implements OnInit {
     if (this.searchQuery.trim()) {
       const q = this.searchQuery.toLowerCase().trim();
       list = list.filter(i => 
-        ((i.referenceNo || i.reference_no) && (i.referenceNo || i.reference_no).toLowerCase().includes(q)) || 
-        ((i.distributorName || i.distributor_name || i.distilleryName || i.distillery_name) && (i.distributorName || i.distributor_name || i.distilleryName || i.distillery_name).toLowerCase().includes(q)) || 
-        ((i.purposeName || i.purpose_name) && (i.purposeName || i.purpose_name).toLowerCase().includes(q)) ||
-        ((i.spiritType || i.spirit_type) && (i.spiritType || i.spirit_type).toLowerCase().includes(q))
+        (i.referenceNo || i.reference_no || '').toLowerCase().includes(q) || 
+        (i.distributorName || i.distributor_name || i.distilleryName || i.distillery_name || '').toLowerCase().includes(q) || 
+        (i.purposeName || i.purpose_name || '').toLowerCase().includes(q) ||
+        (i.spiritType || i.spirit_type || '').toLowerCase().includes(q)
       );
     }
     return list;
@@ -369,10 +369,10 @@ export class SecretaryImflComponent implements OnInit {
     if (this.searchQuery.trim()) {
       const q = this.searchQuery.toLowerCase().trim();
       list = list.filter(i => 
-        ((i.referenceNo || i.reference_no) && (i.referenceNo || i.reference_no).toLowerCase().includes(q)) || 
-        ((i.requisitionRef || i.requisition_ref) && (i.requisitionRef || i.requisition_ref).toLowerCase().includes(q)) ||
-        ((i.distilleryName || i.distillery_name) && (i.distilleryName || i.distillery_name).toLowerCase().includes(q)) || 
-        (i.reason && i.reason.toLowerCase().includes(q))
+        (i.referenceNo || i.reference_no || '').toLowerCase().includes(q) || 
+        (i.requisitionRef || i.requisition_ref || '').toLowerCase().includes(q) ||
+        (i.distilleryName || i.distillery_name || '').toLowerCase().includes(q) || 
+        (i.reason || '').toLowerCase().includes(q)
       );
     }
     return list;
