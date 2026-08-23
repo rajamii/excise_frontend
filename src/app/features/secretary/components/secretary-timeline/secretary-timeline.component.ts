@@ -302,6 +302,66 @@ export class SecretaryTimelineComponent implements OnInit {
     this.hasSearched = false;
   }
 
+  getExactCalculatedProcessingTime(app: any): string {
+    if (!app) return 'N/A';
+
+    const steps = app.steps || [];
+    if (Array.isArray(steps) && steps.length > 0) {
+      const firstStep = steps[0];
+      const submissionDateStr = firstStep?.event_date || firstStep?.eventDate;
+
+      if (submissionDateStr && !submissionDateStr.includes('Awaiting')) {
+        // Find decision step (Commissioner step or final approved step or last completed step)
+        let decisionStep = steps.find((s: any) => 
+          (s.event_title || '').toLowerCase().includes('commissioner') || 
+          s.status_text === 'FINAL APPROVED' ||
+          s.status_class === 'final-approved'
+        );
+
+        if (!decisionStep) {
+          const completedSteps = steps.filter((s: any) => s.status_text === 'Completed' || s.status_text === 'FINAL APPROVED');
+          decisionStep = completedSteps.length > 0 ? completedSteps[completedSteps.length - 1] : steps[0];
+        }
+
+        const decisionDateStr = decisionStep?.event_date || decisionStep?.eventDate || app.approval_date;
+        if (decisionDateStr && !decisionDateStr.includes('Pending') && !decisionDateStr.includes('Awaiting')) {
+          try {
+            const startDt = new Date(submissionDateStr.replace(/-/g, '/'));
+            const endDt = new Date(decisionDateStr.replace(/-/g, '/'));
+
+            if (!isNaN(startDt.getTime()) && !isNaN(endDt.getTime())) {
+              const diffMs = Math.max(0, endDt.getTime() - startDt.getTime());
+              const totalMins = Math.floor(diffMs / (1000 * 60));
+              const totalHours = Math.floor(totalMins / 60);
+              const days = Math.floor(totalHours / 24);
+              const hours = totalHours % 24;
+              const mins = totalMins % 60;
+
+              if (days > 0) {
+                if (hours > 0 && mins > 0) return `${days} Day${days > 1 ? 's' : ''} ${hours} Hr${hours > 1 ? 's' : ''} ${mins} Min${mins > 1 ? 's' : ''}`;
+                if (hours > 0) return `${days} Day${days > 1 ? 's' : ''} ${hours} Hr${hours > 1 ? 's' : ''}`;
+                if (mins > 0) return `${days} Day${days > 1 ? 's' : ''} ${mins} Min${mins > 1 ? 's' : ''}`;
+                return `${days} Day${days > 1 ? 's' : ''}`;
+              }
+              if (hours > 0) {
+                if (mins > 0) return `${hours} Hr${hours > 1 ? 's' : ''} ${mins} Min${mins > 1 ? 's' : ''}`;
+                return `${hours} Hr${hours > 1 ? 's' : ''}`;
+              }
+              if (mins > 0) {
+                return `${mins} Minute${mins > 1 ? 's' : ''}`;
+              }
+              return 'Less than 1 Minute';
+            }
+          } catch (e) {
+            console.error('Error calculating processing time:', e);
+          }
+        }
+      }
+    }
+
+    return this.getDisplayProcessingTime(app);
+  }
+
   getDisplayProcessingTime(rec: any): string {
     if (!rec) return '2 Days 4 Hours';
 
