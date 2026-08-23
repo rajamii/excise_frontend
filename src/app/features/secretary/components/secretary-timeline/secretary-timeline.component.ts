@@ -35,374 +35,14 @@ export class SecretaryTimelineComponent implements OnInit {
 
   overview: SecretaryTimelineOverview = {
     summary_kpis: {
-      total_applications: 17,
-      pending_applications: 3,
-      approved_applications: 14,
+      total_applications: 0,
+      pending_applications: 0,
+      approved_applications: 0,
       rejected_applications: 0,
-      avg_processing_days: '4.2 Days'
+      avg_processing_days: '0 Days'
     },
-    timeline_records: [
-      {
-        application_id: 'NLI/1101/2026-27/0001',
-        applicant_name: 'sam',
-        mobile_no: '8729364850',
-        establishment_name: 'ABC Distilleries Limited',
-        license_type: 'Distillery Manufacturing & Bottling License',
-        category: 'Manufacturing',
-        current_status: 'Under Review by Excise Nodal Desk',
-        status_code: 'PENDING',
-        days_elapsed: '2 Days Elapsed',
-        approval_status: 'PENDING',
-        approved_by: 'Pending Nodal Officer Clearance',
-        approval_date: '2026-05-28 11:59',
-        time_taken: '2 Days (Within SLA)',
-        current_stage: 'Pending Nodal Officer Clearance',
-        pending_officer_name: 'Nodal Officer (Distillery Desk)',
-        steps: [
-          {
-            step_no: 1,
-            icon: '✓',
-            status_class: 'completed',
-            badge_class: 'status-completed',
-            event_title: 'Application Submitted Online',
-            event_date: '2026-05-28 11:59 AM',
-            event_description: 'New License Application NLI/1101/2026-27/0001 submitted for ABC Distilleries Limited.',
-            user_details: 'Sam (Applicant)',
-            time_taken: 'Day 1',
-            status_text: 'Completed'
-          }
-        ]
-      },
-      {
-        application_id: 'NLI/1101/2026-27/0002',
-        applicant_name: 'Jane R Doe',
-        mobile_no: '8927715689',
-        establishment_name: 'Doe Breweries Ltd',
-        license_type: 'Microbrewery & Taproom License',
-        category: 'Manufacturing',
-        current_status: 'Approved by Excise Commissioner',
-        status_code: 'APPROVED',
-        days_elapsed: '3 Days Total',
-        approval_status: 'APPROVED',
-        approved_by: 'Excise Commissioner (IAS)',
-        approval_date: '2026-05-28 12:00',
-        time_taken: '3 Days',
-        current_stage: 'Completed & License Issued',
-        pending_officer_name: 'N/A (Approved)',
-        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Application Submitted', event_date: '2026-05-28', event_description: 'Approved', user_details: 'Jane R Doe', time_taken: 'Day 1', status_text: 'Completed' }]
-      },
-      {
-        application_id: 'NLI/1101/2026-27/0003',
-        applicant_name: 'Ms Mayall And Fraser Pvt Ltd',
-        mobile_no: '8016082828',
-        establishment_name: 'Mayall Distilleries Plant',
-        license_type: 'Distillery Manufacturing & Bottling License',
-        category: 'Manufacturing',
-        current_status: 'Approved by Excise Commissioner',
-        status_code: 'APPROVED',
-        days_elapsed: '2 Days Total',
-        approval_status: 'APPROVED',
-        approved_by: 'Excise Commissioner (IAS)',
-        approval_date: '2026-05-28 12:00',
-        time_taken: '2 Days',
-        current_stage: 'Completed & License Issued',
-        pending_officer_name: 'N/A (Approved)',
-        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Application Submitted', event_date: '2026-05-28', event_description: 'Approved', user_details: 'Applicant', time_taken: 'Day 1', status_text: 'Completed' }]
-      },
-      {
-        application_id: 'NLI/1101/2026-27/0004',
-        applicant_name: 'Ms Denzong Albrew Pvt Limited',
-        mobile_no: '9000000001',
-        establishment_name: 'Denzong Albrew Unit 1',
-        license_type: 'Distillery Manufacturing & Bottling License',
-        category: 'Manufacturing',
-        current_status: 'Approved by Excise Commissioner',
-        status_code: 'APPROVED',
-        days_elapsed: '3 Days Total',
-        approval_status: 'APPROVED',
-        approved_by: 'Excise Commissioner (IAS)',
-        approval_date: '2026-05-28 12:00',
-        time_taken: '3 Days',
-        current_stage: 'Completed & License Issued',
-        pending_officer_name: 'N/A (Approved)',
-        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Application Submitted', event_date: '2026-05-28', event_description: 'Approved', user_details: 'Applicant', time_taken: 'Day 1', status_text: 'Completed' }]
-      },
-      {
-        application_id: 'NLI/1101/2026-27/0005',
-        applicant_name: 'Ms Denzong Albrew Pvt Limited',
-        mobile_no: '9000000002',
-        establishment_name: 'Denzong Albrew Brewery',
-        license_type: 'Microbrewery & Taproom License',
-        category: 'Manufacturing',
-        current_status: 'Approved by Excise Commissioner',
-        status_code: 'APPROVED',
-        days_elapsed: '2 Days Total',
-        approval_status: 'APPROVED',
-        approved_by: 'Excise Commissioner (IAS)',
-        approval_date: '2026-05-28 12:00',
-        time_taken: '2 Days',
-        current_stage: 'Completed & License Issued',
-        pending_officer_name: 'N/A (Approved)',
-        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Application Submitted', event_date: '2026-05-28', event_description: 'Approved', user_details: 'Applicant', time_taken: 'Day 1', status_text: 'Completed' }]
-      },
-      {
-        application_id: 'NLI/1101/2026-27/0006',
-        applicant_name: 'Mount Distilleries Limited',
-        mobile_no: '9832009027',
-        establishment_name: 'Mount Distilleries Plant',
-        license_type: 'Distillery Manufacturing & Bottling License',
-        category: 'Manufacturing',
-        current_status: 'Approved by Excise Commissioner',
-        status_code: 'APPROVED',
-        days_elapsed: '3 Days Total',
-        approval_status: 'APPROVED',
-        approved_by: 'Excise Commissioner (IAS)',
-        approval_date: '2026-05-28 12:00',
-        time_taken: '3 Days',
-        current_stage: 'Completed & License Issued',
-        pending_officer_name: 'N/A (Approved)',
-        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Application Submitted', event_date: '2026-05-28', event_description: 'Approved', user_details: 'Applicant', time_taken: 'Day 1', status_text: 'Completed' }]
-      },
-      {
-        application_id: 'NLI/1101/2026-27/0007',
-        applicant_name: 'Sikkim Distilleries Limited',
-        mobile_no: '9564042000',
-        establishment_name: 'Sikkim Distilleries Plant',
-        license_type: 'Distillery Manufacturing & Bottling License',
-        category: 'Manufacturing',
-        current_status: 'Approved by Excise Commissioner',
-        status_code: 'APPROVED',
-        days_elapsed: '2 Days Total',
-        approval_status: 'APPROVED',
-        approved_by: 'Excise Commissioner (IAS)',
-        approval_date: '2026-05-28 12:00',
-        time_taken: '2 Days',
-        current_stage: 'Completed & License Issued',
-        pending_officer_name: 'N/A (Approved)',
-        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Application Submitted', event_date: '2026-05-28', event_description: 'Approved', user_details: 'Applicant', time_taken: 'Day 1', status_text: 'Completed' }]
-      },
-      {
-        application_id: 'NLI/1101/2026-27/0008',
-        applicant_name: 'Yuksom Breweries Limited',
-        mobile_no: '9932701260',
-        establishment_name: 'Yuksom Breweries Plant',
-        license_type: 'Brewery Production License',
-        category: 'Manufacturing',
-        current_status: 'Approved by Excise Commissioner',
-        status_code: 'APPROVED',
-        days_elapsed: '4 Days Total',
-        approval_status: 'APPROVED',
-        approved_by: 'Excise Commissioner (IAS)',
-        approval_date: '2026-05-28 12:00',
-        time_taken: '4 Days',
-        current_stage: 'Completed & License Issued',
-        pending_officer_name: 'N/A (Approved)',
-        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Application Submitted', event_date: '2026-05-28', event_description: 'Approved', user_details: 'Applicant', time_taken: 'Day 1', status_text: 'Completed' }]
-      },
-      {
-        application_id: 'NLI/1101/2026-27/0009',
-        applicant_name: 'sameer test excise',
-        mobile_no: '6000000006',
-        establishment_name: 'Sameer Retails & Lounge',
-        license_type: 'Foreign Liquor Retail Shop',
-        category: 'Retailer',
-        current_status: 'Approved by Excise Commissioner',
-        status_code: 'APPROVED',
-        days_elapsed: '2 Days Total',
-        approval_status: 'APPROVED',
-        approved_by: 'Excise Commissioner (IAS)',
-        approval_date: '2026-05-28 12:00',
-        time_taken: '2 Days',
-        current_stage: 'Completed & License Issued',
-        pending_officer_name: 'N/A (Approved)',
-        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Application Submitted', event_date: '2026-05-28', event_description: 'Approved', user_details: 'Applicant', time_taken: 'Day 1', status_text: 'Completed' }]
-      },
-      {
-        application_id: 'NLI/1101/2026-27/0010',
-        applicant_name: 'sam test excise',
-        mobile_no: '9800000000',
-        establishment_name: 'Brew Test Distillery',
-        license_type: 'Manufacturing (Brewery)',
-        category: 'Manufacturing',
-        current_status: 'Under Review by Joint Commissioner',
-        status_code: 'PENDING',
-        days_elapsed: '2 Days Elapsed',
-        approval_status: 'PENDING',
-        approved_by: 'Pending Joint Commissioner Review',
-        approval_date: '2026-05-30 09:30',
-        time_taken: '2 Days (Within SLA)',
-        current_stage: 'Pending Joint Commissioner Recommendation',
-        pending_officer_name: 'Joint Commissioner of Excise',
-        steps: [
-          {
-            step_no: 1,
-            icon: '✓',
-            status_class: 'completed',
-            badge_class: 'status-completed',
-            event_title: 'Application Submitted Online',
-            event_date: '2026-05-30 09:30 AM',
-            event_description: 'New License Application NLI/1101/2026-27/0010 submitted with security deposit & site plan.',
-            user_details: 'sam test excise (Applicant)',
-            time_taken: 'Day 1',
-            status_text: 'Completed'
-          }
-        ]
-      },
-      {
-        application_id: 'NLI/1101/2026-27/0011',
-        applicant_name: 'Karma Chewang Bhutia',
-        mobile_no: '8927686865',
-        establishment_name: 'Karma Foreign Liquor Retail Shop',
-        license_type: 'Foreign Liquor Retail Shop',
-        category: 'Retailer',
-        current_status: 'Approved by Excise Commissioner',
-        status_code: 'APPROVED',
-        days_elapsed: '3 Days Total',
-        approval_status: 'APPROVED',
-        approved_by: 'Excise Commissioner (IAS)',
-        approval_date: '2026-05-28 12:00',
-        time_taken: '3 Days',
-        current_stage: 'Completed & License Issued',
-        pending_officer_name: 'N/A (Approved)',
-        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Application Submitted', event_date: '2026-05-28', event_description: 'Approved', user_details: 'Karma Chewang Bhutia', time_taken: 'Day 1', status_text: 'Completed' }]
-      },
-      {
-        application_id: 'NLI/1101/2026-27/0012',
-        applicant_name: 'distO Opp pp',
-        mobile_no: '7800000000',
-        establishment_name: 'Distillery Unit 12',
-        license_type: 'Manufacturing (Distillery)',
-        category: 'Manufacturing',
-        current_status: 'Pending Nodal Clearance',
-        status_code: 'PENDING',
-        days_elapsed: '1 Day Elapsed',
-        approval_status: 'PENDING',
-        approved_by: 'Pending Nodal Officer Clearance',
-        approval_date: 'Awaiting Order',
-        time_taken: '1 Day',
-        current_stage: 'Under Verification & Premises Audit',
-        pending_officer_name: 'Excise Inspector (Distillery)',
-        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Application Submitted', event_date: '2026-05-28', event_description: 'Under Review', user_details: 'Applicant', time_taken: 'Day 1', status_text: 'Completed' }]
-      },
-      {
-        application_id: 'NLI/1102/2026-27/0001',
-        applicant_name: 'Diwakar Sharma',
-        mobile_no: '8001382557',
-        establishment_name: 'Diwakar Foreign Liquor Off-Shop',
-        license_type: 'Foreign Liquor Retail Shop',
-        category: 'Retailer',
-        current_status: 'Approved by Excise Commissioner',
-        status_code: 'APPROVED',
-        days_elapsed: '2 Days Total',
-        approval_status: 'APPROVED',
-        approved_by: 'Excise Commissioner (IAS)',
-        approval_date: '2026-05-28 12:00',
-        time_taken: '2 Days',
-        current_stage: 'Completed & License Issued',
-        pending_officer_name: 'N/A (Approved)',
-        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Application Submitted', event_date: '2026-05-28', event_description: 'Approved', user_details: 'Diwakar Sharma', time_taken: 'Day 1', status_text: 'Completed' }]
-      },
-      {
-        application_id: 'NLI/1102/2026-27/0002',
-        applicant_name: 'Lahang Spirits Private Limited',
-        mobile_no: '8130301970',
-        establishment_name: 'Lahang Spirits Manufacturing Plant',
-        license_type: 'Manufacturing (Distillery)',
-        category: 'Manufacturing',
-        current_status: 'Approved by Excise Commissioner',
-        status_code: 'APPROVED',
-        days_elapsed: '3 Days Total',
-        approval_status: 'APPROVED',
-        approved_by: 'Excise Commissioner (IAS)',
-        approval_date: '2026-05-28 12:00',
-        time_taken: '3 Days',
-        current_stage: 'Completed & License Issued',
-        pending_officer_name: 'N/A (Approved)',
-        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Application Submitted', event_date: '2026-05-28', event_description: 'Approved', user_details: 'Lahang Spirits', time_taken: 'Day 1', status_text: 'Completed' }]
-      },
-      {
-        application_id: 'SBM/1101/2026-27/0001',
-        applicant_name: 'sameer test excise',
-        mobile_no: '6000000006',
-        establishment_name: 'Salesman Badge Registration (SBM/1101/2026-27/0001)',
-        license_type: 'Excise Salesman Badge Application',
-        category: 'Retailer',
-        current_status: 'Approved & Badge Issued',
-        status_code: 'APPROVED',
-        days_elapsed: '1 Day',
-        approval_status: 'APPROVED',
-        approved_by: 'Excise Authority',
-        approval_date: '2026-05-28 12:00',
-        time_taken: '1 Day',
-        current_stage: 'Completed',
-        pending_officer_name: 'N/A (Approved)',
-        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Salesman Application Filed', event_date: '2026-05-28', event_description: 'Badge generated', user_details: 'sameer test excise', time_taken: 'Day 1', status_text: 'Completed' }]
-      },
-      {
-        application_id: 'SBM/1101/2026-27/0002',
-        applicant_name: 'Pema Lepcha',
-        mobile_no: '8927686865',
-        establishment_name: 'Salesman Badge Registration (SBM/1101/2026-27/0002)',
-        license_type: 'Excise Salesman Badge Application',
-        category: 'Retailer',
-        current_status: 'Approved & Badge Issued',
-        status_code: 'APPROVED',
-        days_elapsed: '1 Day',
-        approval_status: 'APPROVED',
-        approved_by: 'Excise Authority',
-        approval_date: '2026-05-28 12:00',
-        time_taken: '1 Day',
-        current_stage: 'Completed',
-        pending_officer_name: 'N/A (Approved)',
-        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Salesman Application Filed', event_date: '2026-05-28', event_description: 'Badge generated', user_details: 'Pema Lepcha', time_taken: 'Day 1', status_text: 'Completed' }]
-      },
-      {
-        application_id: 'SBM/1102/2026-27/0001',
-        applicant_name: 'Sabin Rai',
-        mobile_no: '8001382557',
-        establishment_name: 'Salesman Badge Registration (SBM/1102/2026-27/0001)',
-        license_type: 'Excise Barman Badge Application',
-        category: 'Retailer',
-        current_status: 'Approved & Badge Issued',
-        status_code: 'APPROVED',
-        days_elapsed: '1 Day',
-        approval_status: 'APPROVED',
-        approved_by: 'Excise Authority',
-        approval_date: '2026-05-28 12:00',
-        time_taken: '1 Day',
-        current_stage: 'Completed',
-        pending_officer_name: 'N/A (Approved)',
-        steps: [{ step_no: 1, icon: '✓', status_class: 'completed', badge_class: 'status-completed', event_title: 'Barman Application Filed', event_date: '2026-05-28', event_description: 'Badge generated', user_details: 'Sabin Rai', time_taken: 'Day 1', status_text: 'Completed' }]
-      }
-    ],
-    pending_queue: [
-      {
-        application_id: 'NLI/1101/2026-27/0001',
-        applicant_name: 'Sam',
-        mobile_no: '8364957564',
-        establishment_name: 'ABC Distilleries Limited',
-        license_type: 'Distillery Manufacturing & Bottling License',
-        category: 'Manufacturing',
-        current_stage: 'Pending Nodal Officer Clearance',
-        pending_officer_name: 'Nodal Officer (Distillery Desk)',
-        days_elapsed: '2 Days',
-        sla_status: 'On Track (SLA: 7 Days)',
-        submission_date: '2026-05-28'
-      },
-      {
-        application_id: 'NLI/1101/2026-27/0010',
-        applicant_name: 'sam test excise',
-        mobile_no: '9800000000',
-        establishment_name: 'Brew Test Distillery',
-        license_type: 'Manufacturing (Brewery)',
-        category: 'Manufacturing',
-        current_stage: 'Pending Joint Commissioner Recommendation',
-        pending_officer_name: 'Joint Commissioner of Excise',
-        days_elapsed: '2 Days',
-        sla_status: 'On Track (SLA: 7 Days)',
-        submission_date: '2026-05-30'
-      }
-    ]
+    timeline_records: [],
+    pending_queue: []
   };
 
   constructor(private secretaryService: SecretaryService) {}
@@ -417,14 +57,68 @@ export class SecretaryTimelineComponent implements OnInit {
   loadTimelineData(): void {
     this.isLoading = true;
     this.secretaryService.getTimelineOverview().subscribe({
-      next: (res) => {
-        if (res && res.timeline_records && res.timeline_records.length > 0) {
-          this.overview = res;
+      next: (res: any) => {
+        if (res) {
+          const records = res.timeline_records || res.timelineRecords || [];
+          const queue = res.pending_queue || res.pendingQueue || [];
+          const kpis = res.summary_kpis || res.summaryKpis || {};
+
+          this.overview = {
+            summary_kpis: {
+              total_applications: kpis.total_applications ?? kpis.totalApplications ?? records.length,
+              pending_applications: kpis.pending_applications ?? kpis.pendingApplications ?? queue.length,
+              approved_applications: kpis.approved_applications ?? kpis.approvedApplications ?? records.filter((r: any) => (r.approval_status || r.approvalStatus) === 'APPROVED').length,
+              rejected_applications: kpis.rejected_applications ?? kpis.rejectedApplications ?? 0,
+              avg_processing_days: kpis.avg_processing_days ?? kpis.avgProcessingDays ?? '4.2 Days'
+            },
+            timeline_records: records.map((r: any) => ({
+              application_id: r.application_id || r.applicationId || '',
+              applicant_name: r.applicant_name || r.applicantName || '',
+              mobile_no: r.mobile_no || r.mobileNo || r.mobile_number || r.mobileNumber || '',
+              establishment_name: r.establishment_name || r.establishmentName || '',
+              license_type: r.license_type || r.licenseType || '',
+              category: r.category || '',
+              current_status: r.current_status || r.currentStatus || '',
+              status_code: r.status_code || r.statusCode || 'PENDING',
+              days_elapsed: r.days_elapsed || r.daysElapsed || '1 Day',
+              approval_status: r.approval_status || r.approvalStatus || 'PENDING',
+              approved_by: r.approved_by || r.approvedBy || '',
+              approval_date: r.approval_date || r.approvalDate || '',
+              time_taken: r.time_taken || r.timeTaken || '',
+              current_stage: r.current_stage || r.currentStage || '',
+              pending_officer_name: r.pending_officer_name || r.pendingOfficerName || '',
+              steps: (r.steps || []).map((s: any) => ({
+                step_no: s.step_no ?? s.stepNo ?? 1,
+                icon: s.icon || '✓',
+                status_class: s.status_class || s.statusClass || 'completed',
+                badge_class: s.badge_class || s.badgeClass || 'status-completed',
+                event_title: s.event_title || s.eventTitle || '',
+                event_date: s.event_date || s.eventDate || '',
+                event_description: s.event_description || s.eventDescription || '',
+                user_details: s.user_details || s.userDetails || '',
+                time_taken: s.time_taken || s.timeTaken || '',
+                status_text: s.status_text || s.statusText || 'Completed'
+              }))
+            })),
+            pending_queue: queue.map((p: any) => ({
+              application_id: p.application_id || p.applicationId || '',
+              applicant_name: p.applicant_name || p.applicantName || '',
+              mobile_no: p.mobile_no || p.mobileNo || p.mobile_number || p.mobileNumber || '',
+              establishment_name: p.establishment_name || p.establishmentName || '',
+              license_type: p.license_type || p.licenseType || '',
+              category: p.category || '',
+              current_stage: p.current_stage || p.currentStage || '',
+              pending_officer_name: p.pending_officer_name || p.pendingOfficerName || '',
+              days_elapsed: p.days_elapsed || p.daysElapsed || '1 Day',
+              sla_status: p.sla_status || p.slaStatus || 'On Track',
+              submission_date: p.submission_date || p.submissionDate || ''
+            }))
+          };
         }
         this.isLoading = false;
       },
       error: (err) => {
-        console.warn('Timeline API request error, using database fallback records:', err);
+        console.error('Timeline API request error:', err);
         this.isLoading = false;
       }
     });
@@ -588,20 +282,8 @@ export class SecretaryTimelineComponent implements OnInit {
       this.searchResults = allMatches;
       this.searchErrorMessage = '';
     } else {
-      // Direct lookup for 7908195062 or any registered contact to guarantee search success
-      if (cleanDigits.includes('7908195062') || cleanDigits.length >= 7) {
-        const found7908 = (this.overview.timeline_records || []).find(r => (r.mobile_no || '').includes('7908195062') || r.application_id === 'NLI/1101/2026-27/0001');
-        if (found7908) {
-          this.searchResults = [found7908];
-          this.searchErrorMessage = '';
-        } else {
-          this.searchResults = [];
-          this.searchErrorMessage = `No license application record found in database matching "${this.searchPhoneOrApp}". Verify the Application ID or Mobile Number.`;
-        }
-      } else {
-        this.searchResults = [];
-        this.searchErrorMessage = `No license application record found in database matching "${this.searchPhoneOrApp}". Verify the Application ID or Mobile Number.`;
-      }
+      this.searchResults = [];
+      this.searchErrorMessage = `No license application record found in database matching "${this.searchPhoneOrApp}". Verify the Application ID or Mobile Number.`;
     }
   }
 
