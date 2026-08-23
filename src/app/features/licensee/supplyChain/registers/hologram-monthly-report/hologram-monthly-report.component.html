@@ -24,7 +24,6 @@
           </div>
         </div>
       </div>
-
       <!-- Search Section -->
       <div class="bg-white border-bottom">
         <div class="container-fluid py-3">
@@ -68,9 +67,16 @@
                 <select class="form-select form-select-sm"
                   [(ngModel)]="selectedManufacturingUnit"
                   (ngModelChange)="onManufacturingUnitChange()">
-                  <option *ngFor="let unit of manufacturingUnits" [value]="unit">
-                    {{ unit }}
-                  </option>
+                  <optgroup label="Distilleries (Manufacturing)">
+                    <option *ngFor="let unit of distilleryUnits" [value]="unit">
+                      {{ unit }}
+                    </option>
+                  </optgroup>
+                  <optgroup label="Breweries (Manufacturing)">
+                    <option *ngFor="let unit of breweryUnits" [value]="unit">
+                      {{ unit }}
+                    </option>
+                  </optgroup>
                 </select>
               </div>
 
@@ -95,8 +101,6 @@
                 </div>
               </div>
             </div>
-
-
           </div>
         </div>
       </div>

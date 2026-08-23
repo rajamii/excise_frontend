@@ -105,6 +105,21 @@ export class HologramMonthlyReportComponent implements OnInit {
   selectedManufacturingUnit: string = '';
   commissionerMode = false;
   manufacturingUnits: string[] = [];
+  distilleryUnits: string[] = [
+    'ABC Distilleries Limited',
+    'Lahag Spirits Private Limited',
+    'Mount Distilleries Limited',
+    'Ms Denzong Albrew Pvt Limited',
+    'Ms Mayall & Fraser Pvt Ltd',
+    'Sikkim Distillery Limited',
+    'distq'
+  ];
+  breweryUnits: string[] = [
+    'Doe Breweries Limited',
+    'Ms Denzong Albrew Pvt Ltd',
+    'Yuksom Breweries Limited',
+    'brew test'
+  ];
   private licenseeIdByNormalizedName = new Map<string, string>();
 
   // Date filter for table rows
@@ -116,7 +131,19 @@ export class HologramMonthlyReportComponent implements OnInit {
   approvedEntriesCount: number = 0;
   isLoading: boolean = false;
   establishmentLine: string = '';
-  private createdDistilleryBreweryNames: string[] = [];
+  private createdDistilleryBreweryNames: string[] = [
+    'ABC Distilleries Limited',
+    'Doe Breweries Limited',
+    'Lahag Spirits Private Limited',
+    'Mount Distilleries Limited',
+    'Ms Denzong Albrew Pvt Ltd',
+    'Ms Denzong Albrew Pvt Limited',
+    'Ms Mayall & Fraser Pvt Ltd',
+    'Sikkim Distillery Limited',
+    'Yuksom Breweries Limited',
+    'distq',
+    'brew test'
+  ];
   private oicMappedEstablishmentNames: string[] = [];
   private hologramRequestLicenseeNames: string[] = [];
 
@@ -148,6 +175,7 @@ export class HologramMonthlyReportComponent implements OnInit {
 
     if (this.commissionerMode) {
       this.establishmentLine = 'All mapped Distillery/Brewery units';
+      this.updateManufacturingUnits();
       this.loadDropdownSources();
     } else {
       this.loadProfileHeaderLine();
@@ -1962,6 +1990,15 @@ export class HologramMonthlyReportComponent implements OnInit {
     return [];
   }
 
+  private isBreweryUnit(name: string, entity?: any): boolean {
+    const combined = `${name || ''} ${entity?.sub_category || ''} ${entity?.subCategory || ''} ${entity?.license_sub_category_name || ''}`.toLowerCase();
+    return combined.includes('brew');
+  }
+
+  private isDistilleryUnit(name: string, entity?: any): boolean {
+    return !this.isBreweryUnit(name, entity);
+  }
+
   private updateManufacturingUnitsFromData(dailyEntries: any[], rollsDetails: any[]): void {
     if (!this.commissionerMode) {
       return;
@@ -1999,14 +2036,21 @@ export class HologramMonthlyReportComponent implements OnInit {
       ...Array.from(names)
     ]);
 
-    this.manufacturingUnits = Array.from(merged)
+    const unitList = Array.from(merged)
       .filter(name => this.isDistilleryOrBreweryUnitName(name))
       .sort((a, b) => a.localeCompare(b));
 
-    if (!this.selectedManufacturingUnit && this.manufacturingUnits.length > 0) {
-      this.selectedManufacturingUnit = this.manufacturingUnits[0];
-    } else if (this.selectedManufacturingUnit && !this.manufacturingUnits.includes(this.selectedManufacturingUnit)) {
-      this.selectedManufacturingUnit = this.manufacturingUnits[0] || '';
+    this.distilleryUnits = unitList.filter(name => this.isDistilleryUnit(name));
+    this.breweryUnits = unitList.filter(name => this.isBreweryUnit(name));
+
+    this.manufacturingUnits = [
+      ...this.distilleryUnits,
+      ...this.breweryUnits
+    ];
+
+    const validSelectedFromData = this.distilleryUnits.includes(this.selectedManufacturingUnit) || this.breweryUnits.includes(this.selectedManufacturingUnit);
+    if (!validSelectedFromData) {
+      this.selectedManufacturingUnit = this.distilleryUnits[0] || this.breweryUnits[0] || '';
     }
   }
 
@@ -2019,17 +2063,24 @@ export class HologramMonthlyReportComponent implements OnInit {
       ...this.createdDistilleryBreweryNames,
       ...this.oicMappedEstablishmentNames,
       ...this.hologramRequestLicenseeNames,
-      ...this.manufacturingUnits
+      ...this.manufacturingUnits.filter(u => u !== 'All Units' && u !== 'Distillery' && u !== 'Brewery')
     ]);
 
-    this.manufacturingUnits = Array.from(merged)
+    const unitList = Array.from(merged)
       .filter(name => this.isDistilleryOrBreweryUnitName(name))
       .sort((a, b) => a.localeCompare(b));
 
-    if (!this.selectedManufacturingUnit && this.manufacturingUnits.length > 0) {
-      this.selectedManufacturingUnit = this.manufacturingUnits[0];
-    } else if (this.selectedManufacturingUnit && !this.manufacturingUnits.includes(this.selectedManufacturingUnit)) {
-      this.selectedManufacturingUnit = this.manufacturingUnits[0] || '';
+    this.distilleryUnits = unitList.filter(name => this.isDistilleryUnit(name));
+    this.breweryUnits = unitList.filter(name => this.isBreweryUnit(name));
+
+    this.manufacturingUnits = [
+      ...this.distilleryUnits,
+      ...this.breweryUnits
+    ];
+
+    const validSelected = this.distilleryUnits.includes(this.selectedManufacturingUnit) || this.breweryUnits.includes(this.selectedManufacturingUnit);
+    if (!validSelected) {
+      this.selectedManufacturingUnit = this.distilleryUnits[0] || this.breweryUnits[0] || '';
     }
   }
 
@@ -2038,20 +2089,29 @@ export class HologramMonthlyReportComponent implements OnInit {
       return true;
     }
 
-    const selected = this.normalizeManufacturingUnitName(this.selectedManufacturingUnit);
-    const current = this.normalizeManufacturingUnitName(this.extractManufacturingUnitName(entity));
-
-    if (!selected) {
-      return true;
-    }
-    if (!current) {
-      // Some backend rows (daily/roll) may not include manufacturing unit fields.
-      // Do not hide such rows in commissioner monthly view.
+    const selected = (this.selectedManufacturingUnit || '').trim();
+    if (selected === 'All Units' || selected === 'All Distilleries & Breweries' || selected === 'ALL_UNITS') {
       return true;
     }
 
-    // Handle variants like "Sikkim Distillery Ltd | Unit A" vs "Sikkim Distillery Ltd"
-    return current === selected || current.startsWith(selected) || selected.startsWith(current);
+    const currentUnitName = this.extractManufacturingUnitName(entity);
+
+    if (selected === 'Distillery') {
+      return this.isDistilleryUnit(currentUnitName, entity);
+    }
+
+    if (selected === 'Brewery') {
+      return this.isBreweryUnit(currentUnitName, entity);
+    }
+
+    const normalizedSelected = this.normalizeManufacturingUnitName(selected);
+    const normalizedCurrent = this.normalizeManufacturingUnitName(currentUnitName);
+
+    if (!normalizedSelected || !normalizedCurrent) {
+      return true;
+    }
+
+    return normalizedCurrent === normalizedSelected || normalizedCurrent.startsWith(normalizedSelected) || normalizedSelected.startsWith(normalizedCurrent);
   }
 
   private extractManufacturingUnitName(row: any): string {
