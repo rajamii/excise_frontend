@@ -480,12 +480,15 @@ export class SecretaryService {
 export interface SecretaryRevenueHeadItem {
   head_name?: string;
   headName?: string;
+  head_of_account?: string;
+  headOfAccount?: string;
   total_credit?: number;
   totalCredit?: number;
   total_debit?: number;
   totalDebit?: number;
   current_balance?: number;
   currentBalance?: number;
+  total_paid_to_excise?: number;
   accounts_count?: number;
   accountsCount?: number;
 }

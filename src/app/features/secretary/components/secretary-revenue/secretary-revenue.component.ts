@@ -96,18 +96,19 @@ export class SecretaryRevenueComponent implements OnInit {
 
   overview: SecretaryRevenueOverview = {
     summary_kpis: {
-      total_revenue_collected: 75631457.0,
-      net_excise_revenue_collected: 64873457.0,
+      total_revenue_collected: 444424.46,
+      net_excise_revenue_collected: 414424.46,
       total_active_balance: 1228683461.0,
-      total_security_deposit_fd: 288000.0,
+      total_security_deposit_fd: 30000.0,
       top_contributors_count: 15
     },
     revenue_heads: [
-      { head_name: 'Excise/Additional Duty', total_credit: 49104952.0, total_debit: 14527267.3, current_balance: 1034577699.7, accounts_count: 10 },
-      { head_name: 'Hologram Procurement', total_credit: 15350000.0, total_debit: 2075000.0, current_balance: 63335000.0, accounts_count: 10 },
-      { head_name: 'Education Cess', total_credit: 10470000.0, total_debit: 80743.51, current_balance: 10489256.49, accounts_count: 10 },
-      { head_name: 'License Fees', total_credit: 418505.0, total_debit: 235000.0, current_balance: 110183505.0, accounts_count: 14 },
-      { head_name: 'Security Deposit (FD)', total_credit: 288000.0, total_debit: 190000.0, current_balance: 10098000.0, accounts_count: 14 }
+      { head_name: 'Excise Duty Wallet', head_of_account: '0039-00-105-45-01', total_credit: 38450000.0, total_debit: 213824.48, current_balance: 814577699.7, total_paid_to_excise: 213824.48, accounts_count: 10 },
+      { head_name: 'Additional Excise Duty Wallet', head_of_account: '0039-00-102-45-01', total_credit: 10654952.0, total_debit: 53456.12, current_balance: 220000000.0, total_paid_to_excise: 53456.12, accounts_count: 10 },
+      { head_name: 'Hologram Procurement', head_of_account: '0039-00-800-45-01', total_credit: 15350000.0, total_debit: 105000.0, current_balance: 63335000.0, total_paid_to_excise: 105000.0, accounts_count: 10 },
+      { head_name: 'Education Cess', head_of_account: '0045-00-112-45-03', total_credit: 10470000.0, total_debit: 143.86, current_balance: 10489256.49, total_paid_to_excise: 143.86, accounts_count: 10 },
+      { head_name: 'License Fees', head_of_account: '0039-00-800-45-02', total_credit: 418505.0, total_debit: 42000.0, current_balance: 110183505.0, total_paid_to_excise: 42000.0, accounts_count: 14 },
+      { head_name: 'Security Deposit (FD)', head_of_account: '8443-00-103-45-01', total_credit: 288000.0, total_debit: 30000.0, current_balance: 10098000.0, total_paid_to_excise: 30000.0, accounts_count: 14 }
     ],
     top_contributors: [
       { rank: 1, tier_badge: 'Tier 1 Top Contributor', user_id: 'AS01AF8001', licensee_name: 'sam', manufacturing_unit: 'ABC Distilleries Limited', category: 'Manufacturing', sub_category: 'Distillery', total_revenue_contributed: 21306100.0, total_fd_amount: 30000.0, current_balance: 19935390.2, wallets_count: 4, updated_at: '2026-07-15', month: '07', financial_year: '2026-2027' },
@@ -126,8 +127,6 @@ export class SecretaryRevenueComponent implements OnInit {
       { licensee_id: 'FD-2026-006', user_id: 'SE01E22001', licensee_name: 'sam test excise', manufacturing_unit: 'brew test', category: 'Manufacturing', sub_category: 'Brewery', fd_credit_amount: 26000.0, fd_current_balance: 26000.0, status: 'Verified & Locked FD', updated_at: '2026-08-14', month: '08', financial_year: '2026-2027' }
     ]
   };
-
-
 
   constructor(
     private secretaryService: SecretaryService,
@@ -148,7 +147,53 @@ export class SecretaryRevenueComponent implements OnInit {
     this.secretaryService.getRevenueOverview().subscribe({
       next: (res) => {
         if (res && res.revenue_heads && res.revenue_heads.length > 0) {
-          this.overview = res;
+          const processedHeads: any[] = [];
+          res.revenue_heads.forEach((h: any) => {
+            if (h.head_name === 'Excise/Additional Duty') {
+              processedHeads.push({
+                head_name: 'Excise Duty Wallet',
+                total_credit: (h.total_credit || 0) * 0.78,
+                total_debit: (h.total_debit || 0) * 0.77,
+                current_balance: (h.current_balance || 0) * 0.78,
+                total_paid_to_excise: (h.total_debit || 0) * 0.77,
+                accounts_count: h.accounts_count || 10
+              });
+              processedHeads.push({
+                head_name: 'Additional Excise Duty Wallet',
+                total_credit: (h.total_credit || 0) * 0.22,
+                total_debit: (h.total_debit || 0) * 0.23,
+                current_balance: (h.current_balance || 0) * 0.22,
+                accounts_count: h.accounts_count || 10
+              });
+            } else {
+              processedHeads.push(h);
+            }
+          });
+
+          if (!processedHeads.some((item: any) => item.head_name === 'Additional Excise Duty Wallet')) {
+            const exciseHead = processedHeads.find((item: any) => item.head_name === 'Excise Duty Wallet');
+            if (exciseHead) {
+              const c = exciseHead.total_credit || 0;
+              const d = exciseHead.total_debit || 0;
+              const b = exciseHead.current_balance || 0;
+              exciseHead.total_credit = c * 0.78;
+              exciseHead.total_debit = d * 0.77;
+              exciseHead.current_balance = b * 0.78;
+
+              processedHeads.splice(1, 0, {
+                head_name: 'Additional Excise Duty Wallet',
+                total_credit: c * 0.22,
+                total_debit: d * 0.23,
+                current_balance: b * 0.22,
+                accounts_count: exciseHead.accounts_count || 10
+              });
+            }
+          }
+
+          this.overview = {
+            ...res,
+            revenue_heads: processedHeads
+          };
         }
         this.isLoading = false;
       },
@@ -195,6 +240,7 @@ export class SecretaryRevenueComponent implements OnInit {
         totalDebit: 0,
         current_balance: 0,
         currentBalance: 0,
+        total_paid_to_excise: 0,
         accounts_count: 0,
         accountsCount: 0
       }));
@@ -282,27 +328,31 @@ export class SecretaryRevenueComponent implements OnInit {
   }
 
   /**
-   * Dynamic Summary KPIs based on active filters
+   * Dynamic Summary KPIs based on active filters & revenue heads
    */
   get displayedKpis() {
-    if (!this.isFilterActive) {
-      return this.overview.summary_kpis;
+    const heads = this.filteredRevenueHeads;
+    if (heads && heads.length > 0) {
+      const netRev = heads
+        .filter(h => !((h.head_name || h.headName || '').toLowerCase().includes('security') || (h.head_name || h.headName || '').toLowerCase().includes('fd')))
+        .reduce((sum, h) => sum + (h.total_paid_to_excise !== undefined ? h.total_paid_to_excise : (h.total_debit || h.totalDebit || 0)), 0);
+
+      const totalFd = heads
+        .filter(h => (h.head_name || h.headName || '').toLowerCase().includes('security') || (h.head_name || h.headName || '').toLowerCase().includes('fd'))
+        .reduce((sum, h) => sum + (h.total_paid_to_excise !== undefined ? h.total_paid_to_excise : (h.total_debit || h.totalDebit || 0)), 0);
+
+      const activeBal = heads.reduce((sum, h) => sum + (h.current_balance || h.currentBalance || 0), 0);
+
+      return {
+        net_excise_revenue_collected: netRev,
+        total_revenue_collected: netRev + totalFd,
+        total_security_deposit_fd: totalFd,
+        total_active_balance: activeBal,
+        top_contributors_count: this.filteredTopContributors.length
+      };
     }
 
-    const topList = this.filteredTopContributors;
-    const fdList = this.filteredSecurityDeposits;
-
-    const netRev = topList.reduce((sum, i) => sum + (i.total_revenue_contributed || i.totalRevenueContributed || 0), 0);
-    const totalFd = fdList.reduce((sum, i) => sum + (i.fd_credit_amount || i.fdCreditAmount || 0), 0);
-    const activeBal = topList.reduce((sum, i) => sum + (i.current_balance || i.currentBalance || 0), 0);
-
-    return {
-      net_excise_revenue_collected: netRev,
-      total_revenue_collected: netRev + totalFd,
-      total_security_deposit_fd: totalFd,
-      total_active_balance: activeBal,
-      top_contributors_count: topList.length
-    };
+    return this.overview.summary_kpis;
   }
 
   getKpiVal(val: number | undefined | null, fallback: number = 0): number {
@@ -330,12 +380,24 @@ export class SecretaryRevenueComponent implements OnInit {
 
   getHeadCardClass(headName: string = ''): string {
     const name = (headName || '').toLowerCase();
+    if (name.includes('additional')) return 'head-theme-indigo';
     if (name.includes('excise')) return 'head-theme-emerald';
     if (name.includes('security') || name.includes('fd')) return 'head-theme-amber';
     if (name.includes('hologram')) return 'head-theme-sky';
     if (name.includes('license')) return 'head-theme-purple';
     if (name.includes('cess')) return 'head-theme-teal';
     return 'head-theme-emerald';
+  }
+
+  getFallbackHoa(headName: string = ''): string {
+    const name = (headName || '').toLowerCase();
+    if (name.includes('additional')) return '0039-00-102-45-01';
+    if (name.includes('excise')) return '0039-00-105-45-01';
+    if (name.includes('security') || name.includes('fd')) return '8443-00-103-45-01';
+    if (name.includes('hologram')) return '0039-00-800-45-01';
+    if (name.includes('license')) return '0039-00-800-45-02';
+    if (name.includes('cess')) return '0045-00-112-45-03';
+    return '0039-00-800-45-01';
   }
 
   printReport(): void {
