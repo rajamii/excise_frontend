@@ -1,5 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Location, CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -52,8 +53,14 @@ export class SecretaryBulkSpiritComponent implements OnInit {
 
   constructor(
     private secretaryService: SecretaryService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private location: Location,
+    private router: Router
   ) {}
+
+  goBack(): void {
+    this.router.navigate(['/dashboard']);
+  }
 
   ngOnInit(): void {
     this.loadData();

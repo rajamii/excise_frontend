@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Location, CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { 
   SecretaryService, 
@@ -180,7 +181,17 @@ export class SecretaryImflComponent implements OnInit {
     ]
   };
 
-  constructor(private secretaryService: SecretaryService) {}
+
+
+  constructor(
+    private secretaryService: SecretaryService,
+    private location: Location,
+    private router: Router
+  ) {}
+
+  goBack(): void {
+    this.router.navigate(['/dashboard']);
+  }
 
   ngOnInit(): void {
     this.loadImflData();

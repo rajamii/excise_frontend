@@ -1,6 +1,6 @@
-// Secretary Revenue Component Implementation
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Location, CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { 
   SecretaryService, 
@@ -10,20 +10,18 @@ import {
   SecretaryRevenueHeadItem
 } from '../../services/secretary.service';
 
-import { SecretaryTimelineComponent } from '../secretary-timeline/secretary-timeline.component';
-
 @Component({
   selector: 'app-secretary-revenue',
   standalone: true,
-  imports: [CommonModule, FormsModule, SecretaryTimelineComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './secretary-revenue.component.html',
   styleUrls: ['./secretary-revenue.component.scss']
 })
 export class SecretaryRevenueComponent implements OnInit {
   isLoading = false;
 
-  // View Mode Sub-tabs: 'overview' | 'top-contributors' | 'security-deposits' | 'timeline'
-  activeTab: 'overview' | 'top-contributors' | 'security-deposits' | 'timeline' = 'overview';
+  // View Mode Sub-tabs: 'overview' | 'top-contributors' | 'security-deposits'
+  activeTab: 'overview' | 'top-contributors' | 'security-deposits' = 'overview';
 
   // Filters: Financial Year, Month, Category, Search
   selectedFinancialYear: string = '2026-2027';
@@ -68,7 +66,17 @@ export class SecretaryRevenueComponent implements OnInit {
     ]
   };
 
-  constructor(private secretaryService: SecretaryService) {}
+
+
+  constructor(
+    private secretaryService: SecretaryService,
+    private location: Location,
+    private router: Router
+  ) {}
+
+  goBack(): void {
+    this.router.navigate(['/dashboard']);
+  }
 
   ngOnInit(): void {
     this.loadRevenueData();
@@ -90,7 +98,7 @@ export class SecretaryRevenueComponent implements OnInit {
     });
   }
 
-  setTab(tab: 'overview' | 'top-contributors' | 'security-deposits' | 'timeline'): void {
+  setTab(tab: 'overview' | 'top-contributors' | 'security-deposits'): void {
     this.activeTab = tab;
   }
 

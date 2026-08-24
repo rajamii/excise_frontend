@@ -1,6 +1,7 @@
 // Secretary Timeline & License Workflow Tracking Component
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Location, CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { 
   SecretaryService, 
@@ -45,7 +46,15 @@ export class SecretaryTimelineComponent implements OnInit {
     pending_queue: []
   };
 
-  constructor(private secretaryService: SecretaryService) {}
+  constructor(
+    private secretaryService: SecretaryService,
+    private location: Location,
+    private router: Router
+  ) {}
+
+  goBack(): void {
+    this.router.navigate(['/dashboard']);
+  }
 
   ngOnInit(): void {
     this.selectedApplication = null;

@@ -4322,7 +4322,23 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
       'hologram-overview': 'Hologram Overview',
       'officer-activity': 'Officer Activity',
-      'system-monitoring': 'System Monitoring'
+      'system-monitoring': 'System Monitoring',
+
+      // Secretary Admin Workspace Sections
+      'secretary-licenses': 'License Applications Management',
+      'licenses': 'License Applications Management',
+      'secretary-imfl': 'IMFL & ENA Management',
+      'imfl': 'IMFL & ENA Management',
+      'secretary-bulk-spirit': 'Bulk Spirit Overview Management',
+      'overview': 'Bulk Spirit Overview Management',
+      'secretary-revenue': 'Revenue & Wallet Management',
+      'revenue': 'Revenue & Wallet Management',
+      'secretary-timeline': 'License Timeline Tracker Management',
+      'timeline': 'License Timeline Tracker Management',
+      'secretary-monthly': 'Monthly View Details Management',
+      'monthly': 'Monthly View Details Management',
+      'secretary-admin-activity': 'Admin Activity Management',
+      'admin-activity': 'Admin Activity Management'
     };
 
     return titles[this.selectedSupplyChainSection || ''] || 'Management';

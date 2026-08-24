@@ -1,5 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef, NgZone } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Location, CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { 
   SecretaryService, 
@@ -57,8 +58,14 @@ export class SecretaryLicensesComponent implements OnInit {
   constructor(
     private secretaryService: SecretaryService,
     private cdr: ChangeDetectorRef,
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    private location: Location,
+    private router: Router
   ) {}
+
+  goBack(): void {
+    this.router.navigate(['/dashboard']);
+  }
 
   ngOnInit(): void {
     this.loadLicensesData();
