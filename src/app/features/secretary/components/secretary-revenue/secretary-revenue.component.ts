@@ -23,6 +23,122 @@ export class SecretaryRevenueComponent implements OnInit {
   // View Mode Sub-tabs: 'overview' | 'top-contributors' | 'security-deposits'
   activeTab: 'overview' | 'top-contributors' | 'security-deposits' = 'overview';
 
+  // Targeted Amount for Financial Year (CM Target)
+  targetRevenueAmount: number = 20000000; // Default ₹2,00,00,000 (2 Crores)
+
+  setTargetPreset(amount: number): void {
+    this.targetRevenueAmount = amount;
+  }
+
+  // Checked Target Scope State for each Revenue Head
+  selectedTargetHeads: { [headName: string]: boolean } = {};
+
+  toggleHeadTarget(headName: string): void {
+    const key = (headName || '').trim();
+    this.selectedTargetHeads[key] = !this.isHeadTargetActive(key);
+  }
+
+  isHeadTargetActive(headName: string): boolean {
+    const key = (headName || '').trim();
+    if (this.selectedTargetHeads[key] === undefined) {
+      return true; // Default active (checked)
+    }
+    return this.selectedTargetHeads[key];
+  }
+
+  get activeTargetHeadsCount(): number {
+    return this.filteredRevenueHeads.filter(h => this.isHeadTargetActive(h.head_name || h.headName || '')).length;
+  }
+
+  get activeTargetHeadsNames(): string {
+    const active = this.filteredRevenueHeads
+      .filter(h => this.isHeadTargetActive(h.head_name || h.headName || ''))
+      .map(h => h.head_name || h.headName || '');
+    if (active.length === 0) return 'No Heads Selected';
+    if (active.length === this.filteredRevenueHeads.length) return 'All Revenue Heads Scope';
+    return active.join(', ');
+  }
+
+  selectAllTargetHeads(active: boolean): void {
+    this.filteredRevenueHeads.forEach(h => {
+      const key = (h.head_name || h.headName || '').trim();
+      this.selectedTargetHeads[key] = active;
+    });
+  }
+
+  selectPresetTargetHeads(preset: 'duty-hologram' | 'excise-only'): void {
+    this.filteredRevenueHeads.forEach(h => {
+      const key = (h.head_name || h.headName || '').trim();
+      const lower = key.toLowerCase();
+      if (preset === 'duty-hologram') {
+        this.selectedTargetHeads[key] = lower.includes('excise') || lower.includes('hologram');
+      } else if (preset === 'excise-only') {
+        this.selectedTargetHeads[key] = lower.includes('excise duty wallet') && !lower.includes('additional');
+      }
+    });
+  }
+
+  get totalAchievedRevenue(): number {
+    const heads = this.filteredRevenueHeads;
+    if (!heads || heads.length === 0) return 0;
+
+    return heads
+      .filter(h => this.isHeadTargetActive(h.head_name || h.headName || ''))
+      .reduce((sum, h) => sum + (h.total_paid_to_excise !== undefined ? h.total_paid_to_excise : (h.total_debit || h.totalDebit || 0)), 0);
+  }
+
+  get currentHeadTargetShare(): number {
+    const activeCount = this.activeTargetHeadsCount;
+    if (activeCount <= 0 || !this.targetRevenueAmount || this.targetRevenueAmount <= 0) return 0;
+    return this.targetRevenueAmount / activeCount;
+  }
+
+  get targetProgressPercent(): number {
+    if (!this.targetRevenueAmount || this.targetRevenueAmount <= 0) return 0;
+    const pct = (this.totalAchievedRevenue / this.targetRevenueAmount) * 100;
+    return Math.min(100, Math.round(pct * 100) / 100);
+  }
+
+  get remainingTargetNeeded(): number {
+    if (!this.targetRevenueAmount) return 0;
+    return Math.max(0, this.targetRevenueAmount - this.totalAchievedRevenue);
+  }
+
+  get isOverallTargetExceeded(): boolean {
+    return this.totalAchievedRevenue >= (this.targetRevenueAmount || 0);
+  }
+
+  get overallSurplusAmount(): number {
+    return Math.max(0, this.totalAchievedRevenue - (this.targetRevenueAmount || 0));
+  }
+
+  getHeadProgressPercent(headPaid: number = 0, headName: string = ''): number {
+    if (headName && !this.isHeadTargetActive(headName)) return 0;
+    const headTarget = this.currentHeadTargetShare;
+    if (headTarget <= 0) return 0;
+    const pct = (headPaid / headTarget) * 100;
+    return Math.min(100, Math.round(pct * 100) / 100);
+  }
+
+  getHeadTargetDifference(headPaid: number = 0): number {
+    const headTarget = this.currentHeadTargetShare;
+    return headPaid - headTarget; // positive if surplus, negative if shortfall
+  }
+
+  isHeadTargetExceeded(headPaid: number = 0): boolean {
+    return this.getHeadTargetDifference(headPaid) >= 0;
+  }
+
+  getHeadRemainingNeeded(headPaid: number = 0): number {
+    const diff = this.getHeadTargetDifference(headPaid);
+    return diff < 0 ? Math.abs(diff) : 0;
+  }
+
+  getHeadSurplusAmount(headPaid: number = 0): number {
+    const diff = this.getHeadTargetDifference(headPaid);
+    return diff > 0 ? diff : 0;
+  }
+
   // Filters: Financial Year, Month, Category, Search
   selectedFinancialYear: string = '2026-2027';
   selectedMonth: string = 'all';
