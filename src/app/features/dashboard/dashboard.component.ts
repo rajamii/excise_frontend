@@ -3698,8 +3698,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private enforceSectionAccess(): void {
     if (String(this.selectedSupplyChainSection || '') === 'payment-transactions') {
-      const roleId = Number(this.currentUser?.roleId || 0);
-      if (roleId !== 1 && roleId !== 3) {
+      if (this.isLicenseeUser()) {
         this.selectedSupplyChainSection = null;
         this.router.navigate([], {
           relativeTo: this.route,

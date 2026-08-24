@@ -558,12 +558,12 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     showOnlyForCommissioner?: boolean;
   }): boolean {
     if (this.isSecretaryUser()) {
-      if (item.section === 'secretary-bulk-spirit' || item.section === 'secretary-licenses' || item.section === 'secretary-imfl' || item.section === 'secretary-imfl-ena' || item.section === 'secretary-revenue' || item.section === 'secretary-timeline' || item.section === 'officer-activity' || item.section === 'commissioner-monthly-view-details') {
+      if (item.section === 'secretary-bulk-spirit' || item.section === 'secretary-licenses' || item.section === 'secretary-imfl' || item.section === 'secretary-imfl-ena' || item.section === 'secretary-revenue' || item.section === 'secretary-timeline' || item.section === 'officer-activity' || item.section === 'commissioner-monthly-view-details' || item.section === 'single-window' || item.section === 'payment-transactions') {
         return true;
       }
       return false;
     }
-    if ((this.isCommissionerUser() || this.isItCellUser()) && (item.section === 'secretary-revenue' || item.section === 'secretary-timeline')) {
+    if ((this.isCommissionerUser() || this.isItCellUser()) && (item.section === 'secretary-revenue' || item.section === 'secretary-timeline' || item.section === 'single-window' || item.section === 'payment-transactions')) {
       return true;
     }
     if (this.isDistributorOic()) {
@@ -1750,12 +1750,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return this.isDistributorUser();
     }
 
-    if (section === 'single-window' || section === 'single-window-detail') {
-      return roleId === 3 || roleId === 1;
-    }
-
-    if (section === 'payment-transactions') {
-      return roleId === 3;
+    if (section === 'single-window' || section === 'single-window-detail' || section === 'payment-transactions') {
+      return !this.isLicenseeUser();
     }
 
     if (section === 'company-registration') {
@@ -1803,6 +1799,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
     if ((roleId === 5 || roleId === 10 || this.isPermitSectionUser() || this.isCommissionerUser()) && (section === 'distributor-permit' || section === 'imfl-permit')) {
       return true;
+    }
+
+    if (section === 'single-window' || section === 'single-window-detail' || section === 'payment-transactions') {
+      return !this.isLicenseeUser();
     }
 
 
