@@ -41,7 +41,12 @@ export class SecretaryRevenueComponent implements OnInit {
   isHeadTargetActive(headName: string): boolean {
     const key = (headName || '').trim();
     if (this.selectedTargetHeads[key] === undefined) {
-      return true; // Default active (checked)
+      const lower = key.toLowerCase();
+      // Active ON for all heads EXCEPT Education Cess and Security Deposit (FD)
+      if (lower.includes('cess') || lower.includes('security') || lower.includes('fd')) {
+        return false;
+      }
+      return true;
     }
     return this.selectedTargetHeads[key];
   }
@@ -63,18 +68,6 @@ export class SecretaryRevenueComponent implements OnInit {
     this.filteredRevenueHeads.forEach(h => {
       const key = (h.head_name || h.headName || '').trim();
       this.selectedTargetHeads[key] = active;
-    });
-  }
-
-  selectPresetTargetHeads(preset: 'duty-hologram' | 'excise-only'): void {
-    this.filteredRevenueHeads.forEach(h => {
-      const key = (h.head_name || h.headName || '').trim();
-      const lower = key.toLowerCase();
-      if (preset === 'duty-hologram') {
-        this.selectedTargetHeads[key] = lower.includes('excise') || lower.includes('hologram');
-      } else if (preset === 'excise-only') {
-        this.selectedTargetHeads[key] = lower.includes('excise duty wallet') && !lower.includes('additional');
-      }
     });
   }
 
