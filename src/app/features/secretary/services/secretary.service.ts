@@ -421,9 +421,7 @@ export class SecretaryService {
   }
 
   getLicensesOverview(): Observable<SecretaryLicensesOverview> {
-    return this.getCachedOrFetch('secretary:licenses-overview', () =>
-      this.http.get<SecretaryLicensesOverview>(`${environment.apiBaseUrl}/api/secretary/licenses/`)
-    );
+    return this.http.get<SecretaryLicensesOverview>(`${environment.apiBaseUrl}/api/secretary/licenses/`);
   }
 
   getImflOverview(): Observable<SecretaryImflOverview> {

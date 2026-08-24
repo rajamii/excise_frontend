@@ -1936,6 +1936,14 @@ mat-card-content {
         padding-top: 16px;
     }
 
+    // Allow scroll for secretary-licenses which has tall table content
+    .section-content:has(app-secretary-licenses),
+    .section-content:has(app-secretary-bulk-spirit),
+    .section-content:has(app-secretary-imfl),
+    .section-content:has(app-secretary-revenue) {
+        overflow: visible;
+    }
+
     &.hologram-overview-wrapper {
         overflow: visible;
     }
