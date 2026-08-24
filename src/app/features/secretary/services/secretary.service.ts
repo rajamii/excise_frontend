@@ -566,12 +566,34 @@ export interface SecretaryTimelineStep {
   event_date?: string;
   event_description?: string;
   user_details?: string;
+  forwarded_info?: string;
+  objection_info?: {
+    field_name?: string;
+    remarks?: string;
+    raised_by?: string;
+    raised_on?: string;
+    is_resolved?: boolean;
+    resolved_by?: string;
+  };
+  payment_breakdown?: {
+    license_fee?: {
+      amount?: number;
+      paid_at?: string;
+      status?: string;
+    };
+    security_deposit?: {
+      amount?: number;
+      paid_at?: string;
+      status?: string;
+    };
+  };
   time_taken?: string;
   status_text?: string;
 }
 
 export interface SecretaryTimelineItem {
   application_id: string;
+  license_no?: string;
   applicant_name: string;
   mobile_no: string;
   establishment_name: string;

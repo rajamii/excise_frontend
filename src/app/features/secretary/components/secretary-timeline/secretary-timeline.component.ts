@@ -311,12 +311,22 @@ export class SecretaryTimelineComponent implements OnInit {
       const submissionDateStr = firstStep?.event_date || firstStep?.eventDate;
 
       if (submissionDateStr && !submissionDateStr.includes('Awaiting')) {
-        // Find decision step (Commissioner step or final approved step or last completed step)
+        // Find decision step: target Excise Commissioner Grant Approval (Step 5) or Final License Certificate Issued (Step 7)
         let decisionStep = steps.find((s: any) => 
-          (s.event_title || '').toLowerCase().includes('commissioner') || 
-          s.status_text === 'FINAL APPROVED' ||
-          s.status_class === 'final-approved'
+          (s.event_title || '').toLowerCase().includes('excise commissioner') || 
+          (s.event_title || '').toLowerCase().includes('commissioner grant') ||
+          s.step_no === 5 ||
+          s.stepNo === 5
         );
+
+        if (!decisionStep) {
+          decisionStep = steps.find((s: any) => 
+            s.status_text === 'FINAL APPROVED' ||
+            s.status_class === 'final-approved' ||
+            s.step_no === 7 ||
+            s.stepNo === 7
+          );
+        }
 
         if (!decisionStep) {
           const completedSteps = steps.filter((s: any) => s.status_text === 'Completed' || s.status_text === 'FINAL APPROVED');
