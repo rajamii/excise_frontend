@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { HologramDataService } from '../../services/hologram-data.service';
 import { SupplyChainProfileService } from '../../../../../core/services/supply-chain-profile.service';
+import { SecretaryService } from '../../../../secretary/services/secretary.service';
 import { environment } from '../../../../../../environments/environment';
 
 interface StatementRow {
@@ -152,7 +153,8 @@ export class HologramMonthlyReportComponent implements OnInit {
     private route: ActivatedRoute,
     private http: HttpClient,
     private hologramService: HologramDataService,
-    private supplyChainProfileService: SupplyChainProfileService
+    private supplyChainProfileService: SupplyChainProfileService,
+    private secretaryService: SecretaryService
   ) {}
 
   ngOnInit(): void {
@@ -1871,7 +1873,7 @@ export class HologramMonthlyReportComponent implements OnInit {
 
   private loadCreatedDistilleryBreweryNames(): void {
     // 1. Load from secretary manufacturing factories API to get all distilleries & breweries
-    this.http.get<any>(`${environment.apiBaseUrl}/api/secretary/bulk-spirit/factories/`).subscribe({
+    this.secretaryService.getBulkSpiritFactories().subscribe({
       next: (res) => {
         const factories = res?.factories || [];
         for (const f of factories) {

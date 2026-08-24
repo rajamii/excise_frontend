@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, tap, finalize, shareReplay } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
 export interface BrandStock {
@@ -352,8 +352,49 @@ export interface SecretaryImflOverview {
 })
 export class SecretaryService {
   private baseUrl = `${environment.apiBaseUrl}/api/secretary/bulk-spirit`;
+  private readonly cacheTtlMs = 5 * 60_000;
+  private responseCache = new Map<string, { value: unknown; fetchedAt: number }>();
+  private inflightRequests = new Map<string, Observable<unknown>>();
 
   constructor(private http: HttpClient) {}
+
+  private getCachedOrFetch<T>(key: string, requestFactory: () => Observable<T>): Observable<T> {
+    const cachedEntry = this.responseCache.get(key);
+    const now = Date.now();
+    if (cachedEntry && now - cachedEntry.fetchedAt < this.cacheTtlMs) {
+      return new Observable<T>((subscriber) => {
+        subscriber.next(cachedEntry.value as T);
+        subscriber.complete();
+      });
+    }
+
+    const inflightRequest = this.inflightRequests.get(key);
+    if (inflightRequest) return inflightRequest as Observable<T>;
+
+    const request$ = requestFactory().pipe(
+      tap((value) => this.responseCache.set(key, { value, fetchedAt: Date.now() })),
+      finalize(() => this.inflightRequests.delete(key)),
+      shareReplay({ bufferSize: 1, refCount: false })
+    );
+    this.inflightRequests.set(key, request$ as Observable<unknown>);
+    return request$;
+  }
+
+  public invalidateCache(...keys: string[]): void {
+    for (const key of keys) {
+      this.responseCache.delete(key);
+      this.inflightRequests.delete(key);
+    }
+  }
+
+  public invalidateCacheByPrefix(prefix: string): void {
+    for (const key of Array.from(this.responseCache.keys())) {
+      if (key.startsWith(prefix)) {
+        this.responseCache.delete(key);
+        this.inflightRequests.delete(key);
+      }
+    }
+  }
 
   getManufacturingFactories(subCategory?: string, search?: string): Observable<{ count: number; factories: Array<ManufacturingFactory> }> {
     let params = new HttpParams();
@@ -363,7 +404,10 @@ export class SecretaryService {
     if (search && search.trim()) {
       params = params.set('search', search.trim());
     }
-    return this.http.get<{ count: number; factories: Array<ManufacturingFactory> }>(`${this.baseUrl}/factories/`, { params });
+    const cacheKey = `secretary:factories:${subCategory || 'all'}:${(search || '').trim()}`;
+    return this.getCachedOrFetch(cacheKey, () =>
+      this.http.get<{ count: number; factories: Array<ManufacturingFactory> }>(`${this.baseUrl}/factories/`, { params })
+    );
   }
 
   getBulkSpiritFactories(subCategory?: string, search?: string): Observable<{ count: number; factories: Array<ManufacturingFactory> }> {
@@ -371,23 +415,33 @@ export class SecretaryService {
   }
 
   getBulkSpiritSummary(): Observable<SecretaryBulkSpiritSummary> {
-    return this.http.get<SecretaryBulkSpiritSummary>(`${this.baseUrl}/summary/`);
+    return this.getCachedOrFetch('secretary:summary', () =>
+      this.http.get<SecretaryBulkSpiritSummary>(`${this.baseUrl}/summary/`)
+    );
   }
 
   getLicensesOverview(): Observable<SecretaryLicensesOverview> {
-    return this.http.get<SecretaryLicensesOverview>(`${environment.apiBaseUrl}/api/secretary/licenses/`);
+    return this.getCachedOrFetch('secretary:licenses-overview', () =>
+      this.http.get<SecretaryLicensesOverview>(`${environment.apiBaseUrl}/api/secretary/licenses/`)
+    );
   }
 
   getImflOverview(): Observable<SecretaryImflOverview> {
-    return this.http.get<SecretaryImflOverview>(`${environment.apiBaseUrl}/api/secretary/imfl/`);
+    return this.getCachedOrFetch('secretary:imfl-overview', () =>
+      this.http.get<SecretaryImflOverview>(`${environment.apiBaseUrl}/api/secretary/imfl/`)
+    );
   }
 
   getRevenueOverview(): Observable<SecretaryRevenueOverview> {
-    return this.http.get<SecretaryRevenueOverview>(`${environment.apiBaseUrl}/api/secretary/revenue/`);
+    return this.getCachedOrFetch('secretary:revenue-overview', () =>
+      this.http.get<SecretaryRevenueOverview>(`${environment.apiBaseUrl}/api/secretary/revenue/`)
+    );
   }
 
   getTimelineOverview(): Observable<SecretaryTimelineOverview> {
-    return this.http.get<SecretaryTimelineOverview>(`${environment.apiBaseUrl}/api/secretary/timeline/`);
+    return this.getCachedOrFetch('secretary:timeline-overview', () =>
+      this.http.get<SecretaryTimelineOverview>(`${environment.apiBaseUrl}/api/secretary/timeline/`)
+    );
   }
 }
 
