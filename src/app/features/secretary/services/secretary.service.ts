@@ -206,14 +206,45 @@ export interface CompanyCollaborationItem {
 
 export interface NewLicenseApplicationItem {
   application_id?: string;
+  license_no?: string;
   applicant_name?: string;
+  establishment_name?: string;
+  company_name?: string;
   category?: string;
   sub_category?: string;
-  premises_address?: string;
-  proposed_investment?: number;
+  excise_district?: string;
+  mobile_number?: string;
+  email?: string;
+  financial_year?: string;
+  is_approved?: boolean;
+  is_fee_paid?: boolean;
+  fee_amount?: number;
+  expiry_date?: string;
   status?: string;
-  submitted_at?: string;
-  submittedAt?: string;
+  current_stage?: string;
+  created_at?: string;
+}
+
+export interface LicenseRenewalAppItem {
+  application_id?: string;
+  old_license_no?: string;
+  new_license_no?: string;
+  license_no?: string;
+  applicant_name?: string;
+  establishment_name?: string;
+  category?: string;
+  sub_category?: string;
+  excise_district?: string;
+  mobile_number?: string;
+  email?: string;
+  financial_year?: string;
+  is_approved?: boolean;
+  is_fee_paid?: boolean;
+  fee_amount?: number;
+  expiry_date?: string;
+  status?: string;
+  current_stage?: string;
+  created_at?: string;
 }
 
 export interface SpecialPermitItem {
@@ -241,6 +272,8 @@ export interface SecretaryLicensesOverview {
     salesman_barman_count?: number;
     company_registrations_count?: number;
     company_collaborations_count?: number;
+    new_license_apps_count?: number;
+    license_renewals_count?: number;
     total_licenses_count?: number;
   };
   dry_day_permits?: Array<DryDayPermitItem>;
@@ -252,6 +285,7 @@ export interface SecretaryLicensesOverview {
   company_registrations?: Array<CompanyRegistrationItem>;
   company_collaborations?: Array<CompanyCollaborationItem>;
   new_license_applications?: Array<NewLicenseApplicationItem>;
+  license_renewals?: Array<LicenseRenewalAppItem>;
   special_permits?: Array<SpecialPermitItem>;
 }
 

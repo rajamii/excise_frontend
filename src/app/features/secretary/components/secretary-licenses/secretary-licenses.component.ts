@@ -7,7 +7,9 @@ import {
   DryDayPermitItem, 
   SalesmanBarmanItem, 
   CompanyRegistrationItem, 
-  CompanyCollaborationItem
+  CompanyCollaborationItem,
+  NewLicenseApplicationItem,
+  LicenseRenewalAppItem
 } from '../../services/secretary.service';
 
 @Component({
@@ -21,12 +23,16 @@ export class SecretaryLicensesComponent implements OnInit {
   isLoading = false;
 
   // Raw data from API
+  rawNewLicenseApps: NewLicenseApplicationItem[] = [];
+  rawLicenseRenewals: LicenseRenewalAppItem[] = [];
   rawDryDayPermits: DryDayPermitItem[] = [];
   rawSalesmanBarman: SalesmanBarmanItem[] = [];
   rawCompanyRegistrations: CompanyRegistrationItem[] = [];
   rawCompanyCollaborations: CompanyCollaborationItem[] = [];
 
-  // Filtered arrays bound directly in template (NO getters)
+  // Filtered arrays bound directly in template
+  filteredNewLicenseApps: NewLicenseApplicationItem[] = [];
+  filteredLicenseRenewals: LicenseRenewalAppItem[] = [];
   filteredDryDayPermits: DryDayPermitItem[] = [];
   filteredSalesmanBarman: SalesmanBarmanItem[] = [];
   filteredCompanyRegistrations: CompanyRegistrationItem[] = [];
@@ -34,12 +40,14 @@ export class SecretaryLicensesComponent implements OnInit {
 
   // KPI summary counts
   totalCount = 0;
+  newLicenseCount = 0;
+  renewalCount = 0;
   dryDayCount = 0;
   sbmCount = 0;
   compRegCount = 0;
   compCollabCount = 0;
 
-  activeTab: 'dry-day' | 'salesman-barman' | 'company-registration' | 'company-collaboration' = 'dry-day';
+  activeTab: 'new-license' | 'license-renewal' | 'dry-day' | 'salesman-barman' | 'company-registration' | 'company-collaboration' = 'new-license';
   statusFilter: 'all' | 'approved' | 'pending' = 'all';
   searchQuery = '';
 
@@ -64,24 +72,28 @@ export class SecretaryLicensesComponent implements OnInit {
         this.ngZone.run(() => {
           console.log('Licenses API raw response:', res);
           if (res) {
+            const rawNla = res.new_license_applications || res.newLicenseApplications || [];
+            const rawRen = res.license_renewals || res.licenseRenewals || [];
             const rawDryDay = res.dry_day_permits || res.dryDayPermits || [];
             const rawSbm = res.salesman_barman_applications || res.salesmanBarmanApplications || [];
             const rawCompReg = res.company_registrations || res.companyRegistrations || [];
             const rawCompCollab = res.company_collaborations || res.companyCollaborations || [];
 
+            this.rawNewLicenseApps = Array.isArray(rawNla) ? rawNla.map((i: any) => this.normalizeNewLicenseApp(i)) : [];
+            this.rawLicenseRenewals = Array.isArray(rawRen) ? rawRen.map((i: any) => this.normalizeLicenseRenewal(i)) : [];
             this.rawDryDayPermits = Array.isArray(rawDryDay) ? rawDryDay.map((i: any) => this.normalizeDryDay(i)) : [];
             this.rawSalesmanBarman = Array.isArray(rawSbm) ? rawSbm.map((i: any) => this.normalizeSbm(i)) : [];
             this.rawCompanyRegistrations = Array.isArray(rawCompReg) ? rawCompReg.map((i: any) => this.normalizeCompReg(i)) : [];
             this.rawCompanyCollaborations = Array.isArray(rawCompCollab) ? rawCompCollab.map((i: any) => this.normalizeCompCollab(i)) : [];
 
             const kpis = res.summary_kpis || res.summaryKpis || {};
+            this.newLicenseCount = kpis.new_license_apps_count ?? kpis.newLicenseAppsCount ?? this.rawNewLicenseApps.length;
+            this.renewalCount = kpis.license_renewals_count ?? kpis.licenseRenewalsCount ?? this.rawLicenseRenewals.length;
             this.dryDayCount = kpis.dry_day_permits_count ?? kpis.dryDayPermitsCount ?? this.rawDryDayPermits.length;
             this.sbmCount = kpis.salesman_barman_count ?? kpis.salesmanBarmanCount ?? this.rawSalesmanBarman.length;
             this.compRegCount = kpis.company_registrations_count ?? kpis.companyRegistrationsCount ?? this.rawCompanyRegistrations.length;
             this.compCollabCount = kpis.company_collaborations_count ?? kpis.companyCollaborationsCount ?? this.rawCompanyCollaborations.length;
-            this.totalCount = kpis.total_licenses_count ?? kpis.totalLicensesCount ?? (this.dryDayCount + this.sbmCount + this.compRegCount + this.compCollabCount);
-
-            console.log(`Parsed: DryDay=${this.rawDryDayPermits.length}, SBM=${this.rawSalesmanBarman.length}, CompReg=${this.rawCompanyRegistrations.length}, CompCollab=${this.rawCompanyCollaborations.length}`);
+            this.totalCount = kpis.total_licenses_count ?? kpis.totalLicensesCount ?? (this.newLicenseCount + this.renewalCount + this.dryDayCount + this.sbmCount + this.compRegCount + this.compCollabCount);
           }
           this.isLoading = false;
           this.applyFilters();
@@ -100,6 +112,33 @@ export class SecretaryLicensesComponent implements OnInit {
 
   applyFilters(): void {
     const q = (this.searchQuery || '').toLowerCase().trim();
+
+    this.filteredNewLicenseApps = this.rawNewLicenseApps.filter(i => {
+      if (this.statusFilter === 'approved' && !i.is_approved) return false;
+      if (this.statusFilter === 'pending' && i.is_approved) return false;
+      if (q) {
+        return String(i.application_id).toLowerCase().includes(q) ||
+               String(i.license_no).toLowerCase().includes(q) ||
+               String(i.applicant_name).toLowerCase().includes(q) ||
+               String(i.establishment_name).toLowerCase().includes(q) ||
+               String(i.category).toLowerCase().includes(q) ||
+               String(i.sub_category).toLowerCase().includes(q);
+      }
+      return true;
+    });
+
+    this.filteredLicenseRenewals = this.rawLicenseRenewals.filter(i => {
+      if (this.statusFilter === 'approved' && !i.is_approved) return false;
+      if (this.statusFilter === 'pending' && i.is_approved) return false;
+      if (q) {
+        return String(i.application_id).toLowerCase().includes(q) ||
+               String(i.old_license_no).toLowerCase().includes(q) ||
+               String(i.new_license_no).toLowerCase().includes(q) ||
+               String(i.applicant_name).toLowerCase().includes(q) ||
+               String(i.establishment_name).toLowerCase().includes(q);
+      }
+      return true;
+    });
 
     this.filteredDryDayPermits = this.rawDryDayPermits.filter(i => {
       if (this.statusFilter === 'approved' && !i.is_approved) return false;
@@ -155,12 +194,99 @@ export class SecretaryLicensesComponent implements OnInit {
     this.cdr.detectChanges();
   }
 
-  setTab(tab: 'dry-day' | 'salesman-barman' | 'company-registration' | 'company-collaboration'): void {
+  getExpiryCountdown(expiryDateStr?: string | null): { dateDisplay: string; daysLeftText: string; isPending: boolean } {
+    if (!expiryDateStr || expiryDateStr.includes('Pending') || expiryDateStr.includes('Awaiting') || expiryDateStr.includes('N/A')) {
+      return { dateDisplay: 'Awaiting Grant', daysLeftText: 'Pending Grant', isPending: true };
+    }
+
+    try {
+      const parts = expiryDateStr.trim().split('-');
+      if (parts.length === 3) {
+        const monthNames: { [key: string]: number } = {
+          'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+          'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+        };
+        const day = parseInt(parts[0], 10);
+        const month = monthNames[parts[1]] ?? 2;
+        const year = parseInt(parts[2], 10);
+
+        const expiryDt = new Date(year, month, day);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const diffTime = expiryDt.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays > 0) {
+          return { dateDisplay: expiryDateStr, daysLeftText: `${diffDays} Days Left`, isPending: false };
+        } else if (diffDays === 0) {
+          return { dateDisplay: expiryDateStr, daysLeftText: 'Expires Today', isPending: false };
+        } else {
+          return { dateDisplay: expiryDateStr, daysLeftText: 'Expired', isPending: false };
+        }
+      }
+    } catch (e) {
+      console.error('Error computing expiry countdown:', e);
+    }
+
+    return { dateDisplay: expiryDateStr, daysLeftText: 'Valid', isPending: false };
+  }
+
+  setTab(tab: 'new-license' | 'license-renewal' | 'dry-day' | 'salesman-barman' | 'company-registration' | 'company-collaboration'): void {
     this.activeTab = tab;
     this.searchQuery = '';
     this.statusFilter = 'all';
     this.applyFilters();
     this.cdr.detectChanges();
+  }
+
+  private normalizeNewLicenseApp(item: any): NewLicenseApplicationItem {
+    if (!item) item = {};
+    return {
+      application_id: String(item.application_id || item.applicationId || ''),
+      license_no: String(item.license_no || item.licenseNo || (item.is_approved ? 'NA/2026-27/001' : 'Awaiting Grant')),
+      applicant_name: String(item.applicant_name || item.applicantName || 'Authorized Licensee'),
+      establishment_name: String(item.establishment_name || item.establishmentName || item.company_name || 'Unit'),
+      company_name: String(item.company_name || item.companyName || ''),
+      category: String(item.category || 'Retailer'),
+      sub_category: String(item.sub_category || item.subCategory || 'Foreign Liquor Retail Shop'),
+      excise_district: String(item.excise_district || item.exciseDistrict || 'Gangtok'),
+      mobile_number: String(item.mobile_number || item.mobileNumber || ''),
+      email: String(item.email || ''),
+      financial_year: String(item.financial_year || item.financialYear || '2026-27'),
+      is_approved: item.is_approved === true || item.isApproved === true,
+      is_fee_paid: item.is_fee_paid === true || item.isFeePaid === true,
+      fee_amount: Number(item.fee_amount ?? item.feeAmount ?? 15000),
+      expiry_date: String(item.expiry_date || item.expiryDate || '31-Mar-2027'),
+      status: String(item.status || 'Under Review'),
+      current_stage: String(item.current_stage || item.currentStage || 'Scrutiny'),
+      created_at: String(item.created_at || item.createdAt || '')
+    };
+  }
+
+  private normalizeLicenseRenewal(item: any): LicenseRenewalAppItem {
+    if (!item) item = {};
+    return {
+      application_id: String(item.application_id || item.applicationId || ''),
+      old_license_no: String(item.old_license_no || item.oldLicenseNo || 'NA/2025-26/001'),
+      new_license_no: String(item.new_license_no || item.newLicenseNo || 'NA/2026-27/001'),
+      license_no: String(item.license_no || item.licenseNo || item.new_license_no || item.old_license_no || ''),
+      applicant_name: String(item.applicant_name || item.applicantName || 'Licensee'),
+      establishment_name: String(item.establishment_name || item.establishmentName || ''),
+      category: String(item.category || 'Retailer'),
+      sub_category: String(item.sub_category || item.subCategory || ''),
+      excise_district: String(item.excise_district || item.exciseDistrict || 'Gangtok'),
+      mobile_number: String(item.mobile_number || item.mobileNumber || ''),
+      email: String(item.email || ''),
+      financial_year: String(item.financial_year || item.financialYear || '2026-27'),
+      is_approved: item.is_approved === true || item.isApproved === true,
+      is_fee_paid: item.is_fee_paid === true || item.isFeePaid === true,
+      fee_amount: Number(item.fee_amount ?? item.feeAmount ?? 20000),
+      expiry_date: String(item.expiry_date || item.expiryDate || '31-Mar-2027'),
+      status: String(item.status || 'Renewal Under Review'),
+      current_stage: String(item.current_stage || item.currentStage || 'Review'),
+      created_at: String(item.created_at || item.createdAt || '')
+    };
   }
 
   private normalizeDryDay(item: any): DryDayPermitItem {
