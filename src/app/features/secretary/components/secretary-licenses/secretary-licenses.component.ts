@@ -55,6 +55,77 @@ export class SecretaryLicensesComponent implements OnInit {
   selectedDetailItem: any = null;
   selectedDetailType = '';
 
+  // Pagination State
+  pageSize = 5;
+  currentPageMap: { [key: string]: number } = {
+    'new-license': 1,
+    'license-renewal': 1,
+    'dry-day': 1,
+    'salesman-barman': 1,
+    'company-registration': 1,
+    'company-collaboration': 1
+  };
+
+  onPageSizeChange(): void {
+    Object.keys(this.currentPageMap).forEach(key => {
+      this.currentPageMap[key] = 1;
+    });
+    this.cdr.detectChanges();
+  }
+
+  getCurrentPage(tabKey: string): number {
+    return this.currentPageMap[tabKey] || 1;
+  }
+
+  setPage(tabKey: string, page: number): void {
+    const maxPages = this.getTotalPagesForTab(tabKey);
+    if (page >= 1 && page <= maxPages) {
+      this.currentPageMap[tabKey] = page;
+      this.cdr.detectChanges();
+    }
+  }
+
+  getPaginatedList<T>(list: T[], tabKey: string): T[] {
+    const page = this.getCurrentPage(tabKey);
+    const start = (page - 1) * this.pageSize;
+    return (list || []).slice(start, start + this.pageSize);
+  }
+
+  getListForTab(tabKey: string): any[] {
+    switch (tabKey) {
+      case 'new-license': return this.filteredNewLicenseApps;
+      case 'license-renewal': return this.filteredLicenseRenewals;
+      case 'dry-day': return this.filteredDryDayPermits;
+      case 'salesman-barman': return this.filteredSalesmanBarman;
+      case 'company-registration': return this.filteredCompanyRegistrations;
+      case 'company-collaboration': return this.filteredCompanyCollaborations;
+      default: return [];
+    }
+  }
+
+  getTotalPagesForTab(tabKey: string): number {
+    const len = this.getListForTab(tabKey).length;
+    return Math.ceil(len / this.pageSize) || 1;
+  }
+
+  getPageNumbersForTab(tabKey: string): number[] {
+    const pages = this.getTotalPagesForTab(tabKey);
+    return Array.from({ length: pages }, (_, i) => i + 1);
+  }
+
+  getStartIndex(tabKey: string): number {
+    const len = this.getListForTab(tabKey).length;
+    if (len === 0) return 0;
+    const page = this.getCurrentPage(tabKey);
+    return (page - 1) * this.pageSize + 1;
+  }
+
+  getEndIndex(tabKey: string): number {
+    const len = this.getListForTab(tabKey).length;
+    const page = this.getCurrentPage(tabKey);
+    return Math.min(page * this.pageSize, len);
+  }
+
   constructor(
     private secretaryService: SecretaryService,
     private cdr: ChangeDetectorRef,
@@ -197,6 +268,7 @@ export class SecretaryLicensesComponent implements OnInit {
   }
 
   onFilterChange(): void {
+    this.currentPageMap[this.activeTab] = 1;
     this.applyFilters();
     this.cdr.detectChanges();
   }
@@ -241,6 +313,7 @@ export class SecretaryLicensesComponent implements OnInit {
 
   setTab(tab: 'new-license' | 'license-renewal' | 'dry-day' | 'salesman-barman' | 'company-registration' | 'company-collaboration'): void {
     this.activeTab = tab;
+    this.currentPageMap[tab] = 1;
     this.searchQuery = '';
     this.statusFilter = 'all';
     this.applyFilters();

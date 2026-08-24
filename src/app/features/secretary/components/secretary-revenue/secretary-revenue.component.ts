@@ -33,6 +33,67 @@ export class SecretaryRevenueComponent implements OnInit {
   selectedContributor: SecretaryTopContributorItem | null = null;
   selectedSecurityDeposit: SecretarySecurityDepositItem | null = null;
 
+  // Pagination State
+  pageSize = 5;
+  currentPageMap: { [key: string]: number } = {
+    'overview': 1,
+    'top-contributors': 1,
+    'security-deposits': 1
+  };
+
+  onPageSizeChange(): void {
+    Object.keys(this.currentPageMap).forEach(key => {
+      this.currentPageMap[key] = 1;
+    });
+  }
+
+  getCurrentPage(tabKey: string): number {
+    return this.currentPageMap[tabKey] || 1;
+  }
+
+  setPage(tabKey: string, page: number): void {
+    const maxPages = this.getTotalPagesForTab(tabKey);
+    if (page >= 1 && page <= maxPages) {
+      this.currentPageMap[tabKey] = page;
+    }
+  }
+
+  getPaginatedList<T>(list: T[], tabKey: string): T[] {
+    const page = this.getCurrentPage(tabKey);
+    const start = (page - 1) * this.pageSize;
+    return (list || []).slice(start, start + this.pageSize);
+  }
+
+  getListForTab(tabKey: string): any[] {
+    if (tabKey === 'overview') return this.filteredRevenueHeads;
+    if (tabKey === 'top-contributors') return this.filteredTopContributors;
+    if (tabKey === 'security-deposits') return this.filteredSecurityDeposits;
+    return [];
+  }
+
+  getTotalPagesForTab(tabKey: string): number {
+    const len = this.getListForTab(tabKey).length;
+    return Math.ceil(len / this.pageSize) || 1;
+  }
+
+  getPageNumbersForTab(tabKey: string): number[] {
+    const pages = this.getTotalPagesForTab(tabKey);
+    return Array.from({ length: pages }, (_, i) => i + 1);
+  }
+
+  getStartIndex(tabKey: string): number {
+    const len = this.getListForTab(tabKey).length;
+    if (len === 0) return 0;
+    const page = this.getCurrentPage(tabKey);
+    return (page - 1) * this.pageSize + 1;
+  }
+
+  getEndIndex(tabKey: string): number {
+    const len = this.getListForTab(tabKey).length;
+    const page = this.getCurrentPage(tabKey);
+    return Math.min(page * this.pageSize, len);
+  }
+
   overview: SecretaryRevenueOverview = {
     summary_kpis: {
       total_revenue_collected: 75631457.0,
@@ -100,6 +161,7 @@ export class SecretaryRevenueComponent implements OnInit {
 
   setTab(tab: 'overview' | 'top-contributors' | 'security-deposits'): void {
     this.activeTab = tab;
+    this.currentPageMap[tab] = 1;
   }
 
   clearFilters(): void {

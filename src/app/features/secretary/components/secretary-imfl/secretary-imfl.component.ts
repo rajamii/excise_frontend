@@ -34,6 +34,67 @@ export class SecretaryImflComponent implements OnInit {
   selectedDetailItem: any = null;
   selectedDetailType: string = '';
 
+  // Pagination State
+  pageSize = 5;
+  currentPageMap: { [key: string]: number } = {
+    'requisition': 1,
+    'revalidation': 1,
+    'cancellation': 1
+  };
+
+  onPageSizeChange(): void {
+    Object.keys(this.currentPageMap).forEach(key => {
+      this.currentPageMap[key] = 1;
+    });
+  }
+
+  getCurrentPage(tabKey: string): number {
+    return this.currentPageMap[tabKey] || 1;
+  }
+
+  setPage(tabKey: string, page: number): void {
+    const maxPages = this.getTotalPagesForTab(tabKey);
+    if (page >= 1 && page <= maxPages) {
+      this.currentPageMap[tabKey] = page;
+    }
+  }
+
+  getPaginatedList<T>(list: T[], tabKey: string): T[] {
+    const page = this.getCurrentPage(tabKey);
+    const start = (page - 1) * this.pageSize;
+    return (list || []).slice(start, start + this.pageSize);
+  }
+
+  getListForTab(tabKey: string): any[] {
+    if (tabKey === 'requisition') return this.filteredRequisitions;
+    if (tabKey === 'revalidation') return this.filteredRevalidations;
+    if (tabKey === 'cancellation') return this.filteredCancellations;
+    return [];
+  }
+
+  getTotalPagesForTab(tabKey: string): number {
+    const len = this.getListForTab(tabKey).length;
+    return Math.ceil(len / this.pageSize) || 1;
+  }
+
+  getPageNumbersForTab(tabKey: string): number[] {
+    const pages = this.getTotalPagesForTab(tabKey);
+    return Array.from({ length: pages }, (_, i) => i + 1);
+  }
+
+  getStartIndex(tabKey: string): number {
+    const len = this.getListForTab(tabKey).length;
+    if (len === 0) return 0;
+    const page = this.getCurrentPage(tabKey);
+    return (page - 1) * this.pageSize + 1;
+  }
+
+  getEndIndex(tabKey: string): number {
+    const len = this.getListForTab(tabKey).length;
+    const page = this.getCurrentPage(tabKey);
+    return Math.min(page * this.pageSize, len);
+  }
+
   overview: SecretaryImflOverview = {
     summary_kpis: {
       requisitions_count: 2,
@@ -215,6 +276,9 @@ export class SecretaryImflComponent implements OnInit {
 
   setMainCategory(cat: 'ena' | 'imfl'): void {
     this.mainCategory = cat;
+    this.currentPageMap['requisition'] = 1;
+    this.currentPageMap['revalidation'] = 1;
+    this.currentPageMap['cancellation'] = 1;
     this.searchQuery = '';
     this.statusFilter = 'all';
     this.selectedDistilleryFilter = 'all';
@@ -223,6 +287,7 @@ export class SecretaryImflComponent implements OnInit {
 
   setSubTab(tab: 'requisition' | 'revalidation' | 'cancellation'): void {
     this.activeSubTab = tab;
+    this.currentPageMap[tab] = 1;
     this.searchQuery = '';
     this.statusFilter = 'all';
   }

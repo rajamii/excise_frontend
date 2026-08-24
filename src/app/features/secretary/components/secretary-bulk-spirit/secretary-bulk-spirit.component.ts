@@ -51,6 +51,44 @@ export class SecretaryBulkSpiritComponent implements OnInit {
   directiveRemarks = '';
   directiveSavedSuccess = false;
 
+  // Pagination State
+  pageSize = 5;
+  currentPage = 1;
+
+  onPageSizeChange(): void {
+    this.currentPage = 1;
+    this.cdr.detectChanges();
+  }
+
+  setPage(page: number): void {
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
+      this.cdr.detectChanges();
+    }
+  }
+
+  get paginatedFactories(): ManufacturingFactory[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return (this.filteredFactories || []).slice(start, start + this.pageSize);
+  }
+
+  get totalPages(): number {
+    return Math.ceil((this.filteredFactories || []).length / this.pageSize) || 1;
+  }
+
+  get pageNumbers(): number[] {
+    return Array.from({ length: this.totalPages }, (_, i) => i + 1);
+  }
+
+  get startIndex(): number {
+    if (this.filteredFactories.length === 0) return 0;
+    return (this.currentPage - 1) * this.pageSize + 1;
+  }
+
+  get endIndex(): number {
+    return Math.min(this.currentPage * this.pageSize, this.filteredFactories.length);
+  }
+
   constructor(
     private secretaryService: SecretaryService,
     private cdr: ChangeDetectorRef,
@@ -173,6 +211,7 @@ export class SecretaryBulkSpiritComponent implements OnInit {
     }
 
     this.filteredFactories = result;
+    this.currentPage = 1;
   }
 
   // Open full dynamic detail page
