@@ -1779,8 +1779,13 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return roleId === 4 || roleId === 10;
     }
 
-    if (section === 'secretary-revenue' || section === 'secretary-timeline') {
-      if (this.isJointCommissionerUser()) return false;
+    if (section === 'secretary-revenue') {
+      if (this.isJointCommissionerUser() || this.isItCellUser() || this.isPermitSectionUser() || this.isDistrictUser() || this.isSiteEnquiryOfficer()) return false;
+      return this.isSecretaryUser() || this.isCommissionerUser();
+    }
+
+    if (section === 'secretary-timeline') {
+      if (this.isJointCommissionerUser() || this.isPermitSectionUser() || this.isDistrictUser() || this.isSiteEnquiryOfficer()) return false;
       return this.isSecretaryUser() || this.isCommissionerUser() || this.isItCellUser();
     }
 
@@ -1794,7 +1799,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     }
 
     if (section === 'single-window' || section === 'single-window-detail' || section === 'payment-transactions') {
-      if (this.isJointCommissionerUser() || this.isDistrictUser() || this.isSiteEnquiryOfficer()) {
+      if (this.isJointCommissionerUser() || this.isDistrictUser() || this.isSiteEnquiryOfficer() || this.isPermitSectionUser() || this.isItCellUser()) {
         return false;
       }
       return !this.isLicenseeUser();
@@ -1848,7 +1853,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     }
 
     if (section === 'single-window' || section === 'single-window-detail' || section === 'payment-transactions') {
-      if (this.isJointCommissionerUser() || this.isDistrictUser() || this.isSiteEnquiryOfficer()) {
+      if (this.isJointCommissionerUser() || this.isDistrictUser() || this.isSiteEnquiryOfficer() || this.isPermitSectionUser() || this.isItCellUser()) {
         return false;
       }
       return !this.isLicenseeUser();
