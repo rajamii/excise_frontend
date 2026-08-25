@@ -13,6 +13,7 @@ import Swal from 'sweetalert2';
 import { EnaRequisitionService } from '../../core/services/ena-requisition.service';
 import { SupplyChainService } from '../../features/licensee/supplyChain/services/supplychain.service';
 import { HologramDataService } from '../../features/licensee/supplyChain/services/hologram-data.service';
+import { PaymentIntegrationService } from '../../core/services/payment-integration.service';
 import { ApplicationType } from '../constants/application.constants';
 import { SidebarPendingBadgeService } from './sidebar-pending-badge.service';
 
@@ -39,7 +40,8 @@ export class UnifiedActionsService {
     private enaRequisitionService: EnaRequisitionService,
     private supplyChainService: SupplyChainService,
     private hologramService: HologramDataService,
-    private sidebarPendingBadgeService: SidebarPendingBadgeService
+    private sidebarPendingBadgeService: SidebarPendingBadgeService,
+    private paymentIntegrationService: PaymentIntegrationService
   ) { }
 
   /**
@@ -55,8 +57,13 @@ export class UnifiedActionsService {
     return this.executeActionInternal(action, item, itemType, context, options).pipe(
       tap((result) => {
         if (result && result.success !== false) {
-          console.log(`🔄 UNIFIED ACTIONS: Action ${action} executed successfully. Requesting sidebar pending badge refresh.`);
+          console.log(`🔄 UNIFIED ACTIONS: Action ${action} executed successfully. Requesting sidebar pending badge refresh & clearing wallet cache.`);
           this.sidebarPendingBadgeService.triggerRefresh();
+          try {
+            this.paymentIntegrationService.clearWalletCache();
+          } catch (e) {
+            console.warn('Could not clear wallet cache on action:', e);
+          }
         }
       })
     );

@@ -79,12 +79,11 @@ export class PaymentIntegrationService {
   }
 
   clearWalletCache(licenseeId?: string): void {
-    const prefix = licenseeId ? `wallet:${licenseeId}:` : 'wallet:';
     for (const key of Array.from(this.responseCache.keys())) {
-      if (key.startsWith(prefix)) this.responseCache.delete(key);
+      if (key.startsWith('wallet:')) this.responseCache.delete(key);
     }
     for (const key of Array.from(this.inflightRequests.keys())) {
-      if (key.startsWith(prefix)) this.inflightRequests.delete(key);
+      if (key.startsWith('wallet:')) this.inflightRequests.delete(key);
     }
   }
 
@@ -106,7 +105,10 @@ export class PaymentIntegrationService {
     );
   }
 
-  getWalletSummary(licenseeId: string, moduleType?: string): Observable<WalletSummaryResponse> {
+  getWalletSummary(licenseeId: string, moduleType?: string, forceRefresh: boolean = false): Observable<WalletSummaryResponse> {
+    if (forceRefresh) {
+      this.clearWalletCache(licenseeId);
+    }
     let params = new HttpParams();
     if (moduleType) {
       params = params.set('module_type', moduleType);
@@ -117,7 +119,10 @@ export class PaymentIntegrationService {
     );
   }
 
-  getWalletRecharge(licenseeId: string, limit = 200): Observable<WalletTransactionResponse> {
+  getWalletRecharge(licenseeId: string, limit = 200, forceRefresh: boolean = false): Observable<WalletTransactionResponse> {
+    if (forceRefresh) {
+      this.clearWalletCache(licenseeId);
+    }
     const params = new HttpParams().set('limit', String(limit));
     return this.getCachedOrFetch(`wallet:${licenseeId}:recharge:${limit}`, () =>
       this.http.get<WalletTransactionResponse>(`${this.baseUrl}/wallet/${licenseeId}/recharge/`, { params })
@@ -139,7 +144,10 @@ export class PaymentIntegrationService {
     );
   }
 
-  getWalletHistory(licenseeId: string, limit = 500): Observable<WalletTransactionResponse> {
+  getWalletHistory(licenseeId: string, limit = 500, forceRefresh: boolean = false): Observable<WalletTransactionResponse> {
+    if (forceRefresh) {
+      this.clearWalletCache(licenseeId);
+    }
     const params = new HttpParams().set('limit', String(limit));
     return this.getCachedOrFetch(`wallet:${licenseeId}:history:${limit}`, () =>
       this.http.get<WalletTransactionResponse>(`${this.baseUrl}/wallet/${licenseeId}/history/`, { params })

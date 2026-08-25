@@ -1713,7 +1713,7 @@ private initializeWalletContextAndLoadData(): void {
     this.cleanupModalArtifacts();
     this.selectedWalletForHistory = wallet;
     this.clearWalletHistoryFilters(false);
-    this.walletHistoryFiltered = [...this.getActiveWalletTxns()];
+    this.refreshWalletHistoryFromApi();
 
     // Set current month automatically when opening wallet history
     this.setCurrentMonthAutomatically();
@@ -1735,12 +1735,28 @@ private initializeWalletContextAndLoadData(): void {
     if (this.selectedWalletForHistory === wallet) return;
     this.selectedWalletForHistory = wallet;
     this.clearWalletHistoryFilters(false);
-    this.walletHistoryFiltered = [...this.getActiveWalletTxns()];
+    this.refreshWalletHistoryFromApi();
 
     // Set current month automatically when switching wallets
     this.setCurrentMonthAutomatically();
 
     this.updateWalletHistoryPagination();
+  }
+
+  refreshWalletHistoryFromApi(): void {
+    const licenseeId = this.activeLicenseeId || 'NA/1101/2026-27/0006';
+    this.paymentIntegrationService.getWalletHistory(licenseeId, 500, true).pipe(
+      catchError((error) => {
+        console.error('Failed to force refresh wallet history from API:', error);
+        return of({ results: [] } as any);
+      })
+    ).subscribe((response) => {
+      if (response) {
+        this.applyWalletHistory(response);
+        this.walletHistoryFiltered = [...this.getActiveWalletTxns()];
+        this.applyWalletHistoryFilters();
+      }
+    });
   }
 
   openHologramHistory(): void {
@@ -1798,7 +1814,7 @@ private initializeWalletContextAndLoadData(): void {
   clearWalletHistoryFilters(apply: boolean = true): void {
     this.walletHistoryFilters = { transactionId: '', from: '', to: '', month: String(new Date().getMonth() + 1).padStart(2, '0'), type: '', minAmount: '', maxAmount: '' };
     if (apply) {
-      this.walletHistoryFiltered = [...this.getActiveWalletTxns()];
+      this.refreshWalletHistoryFromApi();
     }
     // Reset to first page when clearing filters
     this.walletHistoryCurrentPage = 1;

@@ -2278,6 +2278,11 @@ export class RequisitionComponent implements OnInit, OnDestroy {
    * Get comma-separated list of cancelled permit numbers
    */
   getCancelledPermitNumbers(item: TableData): string {
+    if (!item || !item.status) return '';
+    const st = String(item.status).toUpperCase();
+    if (st.includes('PENDING') || st.includes('SUBMITTED') || st.includes('REJECTED') || st.includes('DRAFT')) {
+      return '';
+    }
     return item.arrivalCancelledPermitNumbers || '';
   }
 
@@ -2285,6 +2290,11 @@ export class RequisitionComponent implements OnInit, OnDestroy {
    * Get comma-separated list of arrived permit numbers  
    */
   getArrivedPermitNumbers(item: TableData): string {
+    if (!item || !item.status) return '';
+    const st = String(item.status).toUpperCase();
+    if (st.includes('PENDING') || st.includes('SUBMITTED') || st.includes('REJECTED') || st.includes('DRAFT')) {
+      return '';
+    }
     return item.arrivalApprovedPermitNumbers || '';
   }
 
@@ -2292,6 +2302,11 @@ export class RequisitionComponent implements OnInit, OnDestroy {
    * Get list of permit numbers that went to revalidation
    */
   getRevalidatedPermitNumbers(item: TableData): string {
+    if (!item || !item.status) return '';
+    const st = String(item.status).toUpperCase();
+    if (st.includes('PENDING') || st.includes('SUBMITTED') || st.includes('REJECTED') || st.includes('DRAFT')) {
+      return '';
+    }
     if (!item.detailsPermitsNumber) return '';
     
     const permits = item.detailsPermitsNumber.split(',').map(p => p.trim()).filter(Boolean);

@@ -119,7 +119,7 @@ export class SidebarPendingBadgeService {
             catchError(() => of([] as any[]))
           );
           tasks[section] = reqs$.pipe(
-            map((items) => this.countRequisitionPendingReview(items)),
+            map((items) => this.countRequisitionAwaitingPayment(items)),
             catchError(() => of(0))
           );
           tasks[`${section}:payment`] = reqs$.pipe(
@@ -273,7 +273,7 @@ export class SidebarPendingBadgeService {
         if (audience === 'licensee') {
           return this.enaRequisitionService.getRequisitions().pipe(
             map((response) => this.toArray(response)),
-            map((items) => this.countRequisitionPendingReview(items))
+            map((items) => this.countRequisitionAwaitingPayment(items))
           );
         }
         return this.enaRequisitionService.getRequisitions().pipe(
@@ -702,15 +702,22 @@ export class SidebarPendingBadgeService {
    */
   public countRequisitionAwaitingPayment(items: any[]): number {
     return (items || []).filter((item) => {
+      const actions = this.extractAllowedActions(item);
+      if (actions.includes('PAY')) return true;
+
       const status = String(item?.status ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
       const stageName = String(
         item?.current_stage_name ?? item?.currentStageName ?? ''
       ).toLowerCase().replace(/[^a-z0-9]/g, '');
       const combined = `${status} ${stageName}`;
 
-      // Exclude anything that has already moved past payment
-      const postPaymentMarkers = ['forwardedpayslip', 'approvedpayslip', 'rejectedpayslip', 'paymentcompleted', 'paymentdone', 'permitsection'];
-      if (postPaymentMarkers.some(m => combined.includes(m))) return false;
+      // Exclude non-actionable licensee stages
+      const nonPaymentMarkers = [
+        'pending', 'submit', 'submitted', 'forwardedcommissioner', 'forwardedoic',
+        'forwardedpayslip', 'approvedpayslip', 'rejectedpayslip', 'paymentcompleted',
+        'paymentdone', 'permitsection', 'approved', 'rejected', 'cancelled', 'draft'
+      ];
+      if (nonPaymentMarkers.some(m => combined.includes(m))) return false;
 
       // Exclude if a payment reference already exists
       const hasPaymentRef = Boolean(
@@ -725,7 +732,7 @@ export class SidebarPendingBadgeService {
       if (stageId === 29) return true;
 
       // Fallback: match by status/stage name containing "approved commissioner"
-      return combined.includes('approvedcommissioner');
+      return combined.includes('approvedcommissioner') || combined.includes('awaitingpayment');
     }).length;
   }
 
