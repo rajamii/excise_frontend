@@ -382,6 +382,34 @@ export class RegistrationManagementComponent implements OnInit {
     return user.roleId === 10;
   }
 
+  isCompanyApprovedAndPaid(row: any): boolean {
+    if (!row) return false;
+
+    const isExplicitlyApproved = Boolean(row?.is_approved || row?.isApproved || row?.raw?.is_approved || row?.raw?.isApproved);
+    const stage = String(row?.currentStageRaw || row?.currentStage || '').toLowerCase().trim();
+
+    // If stage is still in progress (permit section, commissioner, awaiting payment, etc.), print button must be hidden.
+    const isPendingOrInProgress =
+      stage.includes('permit') ||
+      stage.includes('commissioner') ||
+      stage.includes('payment') ||
+      stage.includes('awaiting') ||
+      stage.includes('district') ||
+      stage.includes('objection') ||
+      stage.includes('reject') ||
+      stage.includes('initial');
+
+    if (isPendingOrInProgress) {
+      return false;
+    }
+
+    if (isExplicitlyApproved) {
+      return true;
+    }
+
+    return stage === 'approved' || stage === 'company registration: approved';
+  }
+
   isPaymentSuccess(row: any): boolean {
     return String(row.paymentStatus || '').toLowerCase().includes('success');
   }
@@ -554,7 +582,7 @@ export class RegistrationManagementComponent implements OnInit {
           } else if (this.counts.objection > 0) {
             this.activeCardFilter = 'objection';
             this.statusFilter = 'objection';
-          } else if (this.counts.awaitingPayment > 0) {
+          } else if (this.isLicenseeUser() && this.counts.awaitingPayment > 0) {
             this.activeCardFilter = 'awaiting-payment';
             this.statusFilter = 'awaiting-payment';
           }
@@ -624,7 +652,7 @@ export class RegistrationManagementComponent implements OnInit {
           } else if (this.counts.objection > 0) {
             this.activeCardFilter = 'objection';
             this.statusFilter = 'objection';
-          } else if (this.counts.awaitingPayment > 0) {
+          } else if (this.isLicenseeUser() && this.counts.awaitingPayment > 0) {
             this.activeCardFilter = 'awaiting-payment';
             this.statusFilter = 'awaiting-payment';
           }
@@ -666,8 +694,11 @@ export class RegistrationManagementComponent implements OnInit {
           : this.formatStageName(rawStage || 'submitted');
 
         let finalStatusGroup = statusGroup;
-        if (this.isLicenseeUser() && computedStage === 'Awaiting Payment') {
-          finalStatusGroup = 'awaiting-payment';
+        if (this.isLicenseeUser()) {
+          const stageStr = String(rawStage || computedStage || '').toLowerCase();
+          if (stageStr.includes('payment') || stageStr.includes('awaiting')) {
+            finalStatusGroup = 'awaiting-payment';
+          }
         }
 
         const transactions = Array.isArray(item?.transactions) ? item.transactions : [];
@@ -688,6 +719,8 @@ export class RegistrationManagementComponent implements OnInit {
           currentStage: computedStage,
           currentStageRaw: String(rawStage || 'submitted'),
           statusGroup: finalStatusGroup,
+          is_approved: Boolean(item?.is_approved || item?.isApproved),
+          raw: item,
           hasObjectionHistory,
           hasObjectionUpdate
         };

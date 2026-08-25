@@ -52,8 +52,8 @@
           </div>
         </div>
       </div>
-      <!-- Awaiting Payment Card -->
-      <div class="col-xl col-lg-6 col-md-6" *ngIf="(currentSection === 'salesman-barman-registration' || currentSection === 'company-registration' || currentSection === 'company-collaboration' || currentSection === 'label-registration') && counts.awaitingPayment && counts.awaitingPayment > 0">
+      <!-- Awaiting Payment Card (Licensee Only) -->
+      <div class="col-xl col-lg-6 col-md-6" *ngIf="isLicenseeUser() && (currentSection === 'salesman-barman-registration' || currentSection === 'company-registration' || currentSection === 'company-collaboration' || currentSection === 'label-registration') && counts.awaitingPayment && counts.awaitingPayment > 0">
         <div
           class="summary-card awaiting-payment-requests summary-card-clickable"
           role="button"
@@ -264,7 +264,7 @@
                     <i class="bi bi-printer"></i>
                   </button>
                   <button
-                    *ngIf="currentSection === 'company-registration' && row.statusGroup === 'approved'"
+                    *ngIf="currentSection === 'company-registration' && isCompanyApprovedAndPaid(row)"
                     class="btn btn-link p-0 action-print ms-2 text-success"
                     title="Print Certificate"
                     (click)="printLicense(row)"
