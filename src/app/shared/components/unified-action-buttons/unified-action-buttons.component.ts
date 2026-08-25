@@ -242,9 +242,9 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
 
     console.log('?? UNIFIED BUTTONS: Loading action configs for item:', this.item);
 
-    // For new-license, always resolve actions from backend current-stage permissions.
+    // For license/registration modules, always resolve actions from backend current-stage permissions.
     // This avoids showing stale actions after an officer has already forwarded/approved.
-    if (this.itemType === 'new-license') {
+    if (['new-license', 'company-registration', 'company-collaboration', 'salesman-barman-registration'].includes(String(this.itemType || ''))) {
       this.loadActionsFromBackend();
       return;
     }

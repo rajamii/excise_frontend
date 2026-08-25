@@ -3417,7 +3417,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 } else if (status.includes('PAYSLIP') || status.includes('PAYMENT')) {
                     actions = ['VERIFY', 'FORWARD', 'REJECT'];
                 } else {
-                    actions = ['FORWARD', 'REJECT', 'RAISE_OBJECTION'];
+                    actions = ['FORWARD', 'APPROVE', 'REJECT', 'RAISE_OBJECTION'];
                 }
             }
         } else if (context === USER_CONTEXTS.LICENSEE) {
