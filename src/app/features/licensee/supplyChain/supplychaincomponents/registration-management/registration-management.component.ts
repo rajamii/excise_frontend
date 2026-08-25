@@ -13,6 +13,8 @@ import { ObjectionDetailsDialogComponent } from '../new-license/objection-detail
 import { SalesmanBarmanResolveObjectionsDialogComponent } from './salesman-barman-resolve-objections-dialog.component';
 import { PrintApplicationComponent } from '../../../licensee-dashboard/application-table/print-application/print-application.component';
 import { UnifiedDashboardService } from '../../../../../core/services/unified-dashboard.service';
+import { ReadApiCacheInterceptor } from '../../../../../core/interceptors/read-api-cache.interceptor';
+import { SidebarPendingBadgeService } from '../../../../../shared/services/sidebar-pending-badge.service';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -77,7 +79,8 @@ export class RegistrationManagementComponent implements OnInit {
     private route: ActivatedRoute,
     private roleService: RoleService,
     private dialog: MatDialog,
-    private unifiedDashboardService: UnifiedDashboardService
+    private unifiedDashboardService: UnifiedDashboardService,
+    private sidebarPendingBadgeService: SidebarPendingBadgeService
   ) {}
 
   ngOnInit(): void {
@@ -435,6 +438,7 @@ export class RegistrationManagementComponent implements OnInit {
   }
 
   private loadData(): void {
+    ReadApiCacheInterceptor.clearCache();
     this.error = null;
     this.isLoading = true;
 
