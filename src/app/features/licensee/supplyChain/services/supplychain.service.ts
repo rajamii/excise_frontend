@@ -302,12 +302,14 @@ export class SupplyChainService {
     );
   }
 
-  performRevalidationAction(id: string, action: 'APPROVE' | 'REJECT', role: string = 'commissioner'): Observable<any> {
-    const idStr = String(id || '').toUpperCase();
+  performRevalidationAction(id: string | number, action: 'APPROVE' | 'REJECT', role: string = 'commissioner'): Observable<any> {
+    const rawId = String(id || '').trim();
+    const encodedId = encodeURIComponent(rawId);
+    const idStr = rawId.toUpperCase();
     const isImfl = idStr.startsWith('IMFL') || idStr.includes('IMFLREV') || idStr.includes('IMFLREQ');
     const endpointUrl = isImfl
-      ? `${environment.apiBaseUrl}/transactional/distributor-permit/revalidation/${id}/perform_action/`
-      : `${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/${id}/perform_action/`;
+      ? `${environment.apiBaseUrl}/transactional/distributor-permit/revalidation/${encodedId}/perform_action/`
+      : `${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/${encodedId}/perform_action/`;
 
     return this.http.post<any>(
       endpointUrl,

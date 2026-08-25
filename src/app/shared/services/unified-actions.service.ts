@@ -330,7 +330,7 @@ export class UnifiedActionsService {
       }
 
       case 'revalidation': {
-        const revId = item.referenceNo || item.reference_no || item.id || '';
+        const revId = item.id || item.referenceNo || item.reference_no || '';
         return this.toActionResult(
           this.supplyChainService.performRevalidationAction(revId, 'APPROVE', 'Approved'),
           'Revalidation approved successfully',
@@ -425,7 +425,7 @@ export class UnifiedActionsService {
       }
 
       case 'revalidation': {
-        const revId = item.referenceNo || item.reference_no || item.id || '';
+        const revId = item.id || item.referenceNo || item.reference_no || '';
         return this.toActionResult(
           this.supplyChainService.performRevalidationAction(revId, 'REJECT', reason),
           'Revalidation rejected successfully',
