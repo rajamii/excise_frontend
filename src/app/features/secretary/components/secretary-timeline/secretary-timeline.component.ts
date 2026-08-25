@@ -22,6 +22,7 @@ export class SecretaryTimelineComponent implements OnInit {
 
   // Active View Tab: 'timeline-search' | 'pending-queue' | 'all-applications'
   activeTab: 'timeline-search' | 'pending-queue' | 'all-applications' = 'timeline-search';
+  previousTab: 'timeline-search' | 'pending-queue' | 'all-applications' = 'timeline-search';
 
   // Search Inputs
   searchPhoneOrApp: string = '';
@@ -135,14 +136,19 @@ export class SecretaryTimelineComponent implements OnInit {
 
   setTab(tab: 'timeline-search' | 'pending-queue' | 'all-applications'): void {
     this.activeTab = tab;
+    if (tab === 'pending-queue' || tab === 'all-applications') {
+      this.selectedApplication = null;
+    }
   }
 
   selectApplication(item: SecretaryTimelineItem): void {
+    this.previousTab = this.activeTab;
     this.selectedApplication = item;
     this.activeTab = 'timeline-search';
   }
 
   selectPendingApplication(pending: SecretaryPendingQueueItem): void {
+    this.previousTab = this.activeTab;
     const found = (this.overview.timeline_records || []).find(
       t => t.application_id.toLowerCase() === pending.application_id.toLowerCase()
     );
@@ -195,6 +201,27 @@ export class SecretaryTimelineComponent implements OnInit {
       };
     }
     this.activeTab = 'timeline-search';
+  }
+
+  closeInspectedWorkflow(): void {
+    this.selectedApplication = null;
+    if (this.previousTab) {
+      this.activeTab = this.previousTab;
+    }
+  }
+
+  getPreviousTabLabel(): string {
+    if (this.hasSearched && this.searchResults.length > 0) {
+      return 'Search Results';
+    }
+    switch (this.previousTab) {
+      case 'pending-queue':
+        return 'Pending Applications Queue';
+      case 'all-applications':
+        return 'All License Records';
+      default:
+        return 'Timeline & Workflow Tracker';
+    }
   }
 
   performSearch(): void {
@@ -424,7 +451,7 @@ export class SecretaryTimelineComponent implements OnInit {
   }
 
   backToSearchResults(): void {
-    this.selectedApplication = null;
+    this.closeInspectedWorkflow();
   }
 
   get filteredTimelineRecords(): SecretaryTimelineItem[] {
