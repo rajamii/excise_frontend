@@ -388,17 +388,28 @@ export class RevalidationComponent implements OnInit {
   }
 
   private isPendingLikeStatus(item: TableData): boolean {
-    // For commissioner: pending = action required RIGHT NOW (allowedActions has APPROVE)
+    const statusToken = this.normalizeToken(item?.status);
+    if (statusToken.includes('approv') || statusToken.includes('reject') || statusToken.includes('invalid') || statusToken.includes('expire')) {
+      return false;
+    }
+
+    // For commissioner: pending = action required RIGHT NOW or forwarded to commissioner awaiting action
     if (this.isCommissioner()) {
       const actions: string[] = item?.allowedActions ?? [];
-      return Array.isArray(actions) && actions.includes('APPROVE');
+      const hasApprove = Array.isArray(actions) && (actions.includes('APPROVE') || actions.includes('REJECT'));
+      if (hasApprove) return true;
+      return statusToken.includes('forwardedtocommissioner') || statusToken === 'pending';
     }
-    // For permit section: same — only pending when action is needed right now
+
+    // For permit section: pending when action is needed right now by permit section
     if (this.isPermitSection()) {
       const actions: string[] = item?.allowedActions ?? [];
-      return Array.isArray(actions) && (actions.includes('APPROVE') || actions.includes('REJECT') ||
+      const hasAction = Array.isArray(actions) && (actions.includes('APPROVE') || actions.includes('REJECT') ||
              actions.includes('FORWARD') || actions.includes('VERIFY'));
+      if (hasAction) return true;
+      return statusToken.includes('permitsection') || statusToken === 'pending';
     }
+
     if (this.isInvalidLikeStatus(item) || this.isApprovedLikeStatus(item) || this.isActionRequiredLikeStatus(item)) {
       return false;
     }
@@ -494,10 +505,14 @@ export class RevalidationComponent implements OnInit {
           if (result.message) {
             alert(result.message);
           }
-          // Reload data if it was a backend action
-          if (['APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'EXTEND'].includes(event.action)) {
-            this.loadRevalidationData();
-          }
+          this.supplyChainService.clearCache();
+          try {
+            const interceptorModule = require('../../../../../core/interceptors/read-api-cache.interceptor');
+            if (interceptorModule?.ReadApiCacheInterceptor) {
+              interceptorModule.ReadApiCacheInterceptor.clearCache();
+            }
+          } catch (e) {}
+          this.loadRevalidationData();
         } else {
           alert(`Action failed: ${result.message}`);
         }

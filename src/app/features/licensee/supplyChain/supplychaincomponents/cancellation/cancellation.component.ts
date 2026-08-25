@@ -165,13 +165,13 @@ export class CancellationComponent implements OnInit {
           const permitNo = item.distributor_permit || item.distributor_permit_ref_no || item.cancelledPermitNumber || item.permitNumber || '-';
 
           const mappedItem = {
-            id: item.reference_no || item.id || item.pk || `fallback-${index}-${secureRandomToken(8)}`,
+            id: item.id || item.pk || item.reference_no || item.referenceNo || `fallback-${index}-${secureRandomToken(8)}`,
             referenceNo: refNo,
             submissionDate: subDate,
             requestDate: subDate,
             distilleryName: distName,
             establishmentName: estName,
-            status: item.status || 'Forwarded To Commissioner',
+            status: item.current_stage_name || item.currentStageName || item.status || 'Forwarded To Commissioner',
             amount: (item.distributor_permit_detail?.total_import_value || item.totalCancellationAmount || item.cancellationBrAmount || '0.00').toString(),
             workflowId: item.workflow || item.workflow_id || 17,
             currentStage: item.current_stage || item.currentStage || 162,
@@ -228,10 +228,14 @@ export class CancellationComponent implements OnInit {
           if (result.message) {
             alert(result.message);
           }
-          // Reload data if it was a backend action
-          if (['APPROVE', 'REJECT', 'FORWARD', 'VERIFY'].includes(event.action)) {
-            this.loadCancellationData();
-          }
+          this.supplyChainService.clearCache();
+          try {
+            const interceptorModule = require('../../../../../core/interceptors/read-api-cache.interceptor');
+            if (interceptorModule?.ReadApiCacheInterceptor) {
+              interceptorModule.ReadApiCacheInterceptor.clearCache();
+            }
+          } catch (e) {}
+          this.loadCancellationData();
         } else {
           alert(`Action failed: ${result.message}`);
         }
@@ -282,23 +286,38 @@ export class CancellationComponent implements OnInit {
 
   private isActionablePending(item: TableData): boolean {
     const actions: string[] = item?.allowedActions ?? [];
-    const hasActions = Array.isArray(actions) && actions.length > 0;
+    const hasActionableAction = Array.isArray(actions) && actions.some(a => [
+      'APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'APPROVEPAYSLIP', 'REJECTPAYSLIP', 'PAY'
+    ].includes(String(a || '').toUpperCase()));
+
+    if (Array.isArray(actions) && actions.length > 0) {
+      if (hasActionableAction) return true;
+      return false;
+    }
+
+    const st = this.normalizeStatus(item.status);
+    if (st.includes('approv') || st.includes('reject') || st.includes('cancel')) {
+      return false;
+    }
+
+    if (Array.isArray(actions) && actions.length === 0) {
+      return false;
+    }
 
     if (this.isCommissioner()) {
-      if (hasActions) {
-        return actions.includes('APPROVE') || actions.includes('APPROVEPAYSLIP');
+      if (st === 'pending') return true;
+      if (st.includes('commissioner') && st.includes('forward') && !st.includes('approv') && !st.includes('reject')) {
+        return true;
       }
-      const st = this.normalizeStatus(item.status);
-      return (st.includes('commissioner') && st.includes('forward')) || st === 'pending';
+      return false;
     }
     if (this.isPermitSection()) {
-      if (hasActions) {
-        return actions.includes('APPROVE') || actions.includes('REJECT') ||
-               actions.includes('FORWARD') || actions.includes('VERIFY') ||
-               actions.includes('APPROVEPAYSLIP') || actions.includes('REJECTPAYSLIP');
+      if (st.includes('commissioner')) return false;
+      if (st === 'pending') return true;
+      if (st.includes('permitsection') && (st.includes('forward') || st.includes('payslip') || st.includes('submit')) && !st.includes('approv') && !st.includes('reject')) {
+        return true;
       }
-      const st = this.normalizeStatus(item.status);
-      return st === 'pending' || (st.includes('permitsection') && (st.includes('forward') || st.includes('payslip') || st.includes('submit')));
+      return false;
     }
     return this.isPendingLikeStatus(item.status);
   }

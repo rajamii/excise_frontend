@@ -41,7 +41,12 @@ export class SupplyChainService {
     return request$;
   }
 
-  private invalidateCache(...keys: string[]): void {
+  public clearCache(): void {
+    this.responseCache.clear();
+    this.inflightRequests.clear();
+  }
+
+  public invalidateCache(...keys: string[]): void {
     for (const key of keys) {
       this.responseCache.delete(key);
       this.inflightRequests.delete(key);
