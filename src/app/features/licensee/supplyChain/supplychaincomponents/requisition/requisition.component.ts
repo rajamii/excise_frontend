@@ -231,9 +231,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
           if (result.message) {
             alert(result.message);
           }
-          if (['APPROVE', 'REJECT', 'FORWARD', 'VERIFY'].includes(event.action)) {
-            this.loadData();
-          }
+          this.enaRequisitionService.clearCache();
+          this.loadData();
         } else {
           alert(`Action failed: ${result.message}`);
         }
@@ -254,6 +253,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   // Load data based on user type
   loadData(): void {
     console.log('DEBUG: Loading requisition data...');
+    this.enaRequisitionService.clearCache();
 
     forkJoin({
       requisitions: this.enaRequisitionService.getRequisitions().pipe(catchError(() => of([]))),
@@ -2659,23 +2659,32 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   private isPendingLikeStatus(item: TableData): boolean {
-    // For commissioner: pending = action required (via allowedActions APPROVE) OR the record
-    // has plain PENDING status (just submitted, awaiting commissioner review — backend may
-    // not populate allowedActions at this initial stage yet), OR the status indicates
-    // the item has been forwarded to the commissioner (e.g. "FORWARDED COMMISSIONER").
+    // For commissioner: pending = action required (via allowedActions APPROVE/REJECT/etc.)
     if (this.isCommissioner()) {
       const actions: string[] = item?.allowedActions ?? [];
-      if (Array.isArray(actions) && actions.includes('APPROVE')) return true;
+      const hasActionableAction = Array.isArray(actions) && (
+        actions.includes('APPROVE') || actions.includes('REJECT') ||
+        actions.includes('FORWARD') || actions.includes('VERIFY')
+      );
+      if (hasActionableAction) return true;
+
       const statusToken = this.normalizeStageToken(item?.status);
       const stageToken = this.normalizeStageToken(item?.currentStageName);
       const combined = `${statusToken} ${stageToken}`;
-      // Plain PENDING = just submitted
+
+      // Exclude approved/rejected/cancelled stages
+      if (combined.includes('approv') || combined.includes('reject') || combined.includes('cancel')) {
+        return false;
+      }
+
+      // If backend explicitly returned empty allowedActions, Commissioner has already acted
+      if (Array.isArray(actions) && actions.length === 0) {
+        return false;
+      }
+
+      // Plain PENDING = just submitted initial requisition
       if (statusToken === 'pending' || stageToken === 'pending') return true;
-      // Forwarded to commissioner and not yet approved/rejected by commissioner
-      if (combined.includes('commissioner') &&
-          combined.includes('forward') &&
-          !combined.includes('approv') &&
-          !combined.includes('reject')) return true;
+
       return false;
     }
     // For permit section: pending = action required (via allowedActions) OR the record
@@ -2691,12 +2700,13 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       const statusToken = this.normalizeStageToken(item?.status);
       const stageToken = this.normalizeStageToken(item?.currentStageName);
       const combined = `${statusToken} ${stageToken}`;
+      // If the record has been forwarded to Commissioner, Permit Section has already acted
+      if (combined.includes('commissioner')) return false;
+
       // Plain PENDING = just submitted by licensee
       if (statusToken === 'pending' || stageToken === 'pending') return true;
       // Status indicates the item is currently AT the Permit Section stage:
       //  • "FORWARDED PAYSLIP PERMIT SECTION" → payslip back at PS for approval
-      //  • Any other "forwarded * permit section" or "payslip * permit section" variant
-      // Condition: contains 'permitsection' + (a forwarding/payslip indicator) AND not yet approved/rejected
       if (combined.includes('permitsection') &&
           (combined.includes('forward') || combined.includes('payslip') || combined.includes('submit')) &&
           !combined.includes('approv') &&

@@ -57,13 +57,22 @@ export class UnifiedActionsService {
     return this.executeActionInternal(action, item, itemType, context, options).pipe(
       tap((result) => {
         if (result && result.success !== false) {
-          console.log(`🔄 UNIFIED ACTIONS: Action ${action} executed successfully. Requesting sidebar pending badge refresh & clearing wallet cache.`);
+          console.log(`🔄 UNIFIED ACTIONS: Action ${action} executed successfully. Requesting sidebar pending badge refresh & clearing caches.`);
           this.sidebarPendingBadgeService.triggerRefresh();
           try {
             this.paymentIntegrationService.clearWalletCache();
           } catch (e) {
             console.warn('Could not clear wallet cache on action:', e);
           }
+          try {
+            this.enaRequisitionService.clearCache();
+          } catch (e) {}
+          try {
+            const interceptorModule = require('../../core/interceptors/read-api-cache.interceptor');
+            if (interceptorModule?.ReadApiCacheInterceptor) {
+              interceptorModule.ReadApiCacheInterceptor.clearCache();
+            }
+          } catch (e) {}
         }
       })
     );
