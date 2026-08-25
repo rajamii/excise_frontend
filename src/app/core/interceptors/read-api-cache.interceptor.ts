@@ -3,11 +3,22 @@ import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { finalize, shareReplay, tap } from 'rxjs/operators';
 
-@Injectable()
+@Injectable({ providedIn: 'root' })
 export class ReadApiCacheInterceptor implements HttpInterceptor {
+  private static instance: ReadApiCacheInterceptor | null = null;
   private readonly cacheTtlMs = 5 * 60_000;
   private readonly cache = new Map<string, { response: HttpResponse<unknown>; fetchedAt: number }>();
   private readonly inflight = new Map<string, Observable<HttpEvent<unknown>>>();
+
+  constructor() {
+    ReadApiCacheInterceptor.instance = this;
+  }
+
+  public static clearCache(): void {
+    if (ReadApiCacheInterceptor.instance) {
+      ReadApiCacheInterceptor.instance.clear();
+    }
+  }
 
   private readonly cacheablePatterns = [
     /\/masters\/license\/me\/?/,
@@ -73,10 +84,10 @@ export class ReadApiCacheInterceptor implements HttpInterceptor {
   }
 
   private shouldClearOnMutation(url: string): boolean {
-    return /\/transactional\/|\/masters\/license\//.test(url);
+    return true;
   }
 
-  private clear(): void {
+  public clear(): void {
     this.cache.clear();
     this.inflight.clear();
   }

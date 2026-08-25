@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, BehaviorSubject, finalize, map, of, shareReplay, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { ReadApiCacheInterceptor } from '../interceptors/read-api-cache.interceptor';
 
 @Injectable({
   providedIn: 'root'
@@ -56,6 +57,7 @@ export class LicenseApplicationService {
       this.responseCache.delete(key);
       this.inflightRequests.delete(key);
     }
+    ReadApiCacheInterceptor.clearCache();
   }
 
   public invalidateNewLicenseDashboardCache(): void {
@@ -71,6 +73,7 @@ export class LicenseApplicationService {
     this.invalidateRenewalDashboardCache();
     this.responseCache.clear();
     this.inflightRequests.clear();
+    ReadApiCacheInterceptor.clearCache();
   }
 
   getPassPhoto(): File | null {

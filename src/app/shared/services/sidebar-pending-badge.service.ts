@@ -8,6 +8,7 @@ import { SupplyChainService } from '../../features/licensee/supplyChain/services
 import { HologramDataService } from '../../features/licensee/supplyChain/services/hologram-data.service';
 import { DistributorPermitService } from '../../core/services/distributor-permit.service';
 import { LicenseApplicationService } from '../../core/services/license-application.service';
+import { ReadApiCacheInterceptor } from '../../core/interceptors/read-api-cache.interceptor';
 import { environment } from '../../../environments/environment';
 
 type PendingCountsBySection = Record<string, number>;
@@ -30,6 +31,7 @@ export class SidebarPendingBadgeService {
     if (this.licenseApplicationService) {
       this.licenseApplicationService.invalidateAllDashboardCaches();
     }
+    ReadApiCacheInterceptor.clearCache();
     this.refreshNeededSource.next();
   }
 
