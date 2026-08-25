@@ -1069,17 +1069,28 @@ private getTransitRejectSummary(): {
       const breakdownHtml = hasAdditional
         ? `
           <div style="margin-top:16px; border-radius:10px; border:1px solid #d1fae5; overflow:hidden;">
-            <div style="background:linear-gradient(135deg,#065f46,#059669); color:#fff; padding:8px 14px; font-size:13px; font-weight:600; letter-spacing:0.5px;">
-              &#9783; Fee Breakup
+            <div style="background:linear-gradient(135deg,#065f46,#059669); color:#fff; padding:10px 16px; font-size:14px; font-weight:600; letter-spacing:0.5px; display:flex; justify-content:space-between; align-items:center;">
+              <span>&#9783; Fee Breakup (Itemized)</span>
+              <span style="font-size:12px; font-weight:400; opacity:0.95;">Total: &#8377;${this.formatInr(licenseFee)}</span>
             </div>
-            <div style="padding:10px 10px 4px;">
+            <div style="padding:12px 12px 4px; background:#ffffff;">
               ${feeRow('Base License Fee', baseLicenseFee)}
               ${pachwaiSelected ? feeRow('Pachwai (Additional)', pachwaiFee) : ''}
               ${draughtSelected ? feeRow('Draught Beer (Additional)', draughtFee) : ''}
               ${miniBarSelected ? feeRow(`Mini Bar (Additional x${miniBarQty || 1})`, miniBarFee) : ''}
+
+              <!-- Total Row inside Fee Breakup -->
+              <div style="display:flex; justify-content:space-between; align-items:center;
+                          padding:11px 14px; border-radius:8px; margin-top:8px; margin-bottom:6px;
+                          background:#ecfdf5; border:1.5px solid #10b981;">
+                <span style="color:#065f46; font-size:14px; font-weight:700;">Total Fee Breakup</span>
+                <span style="font-weight:800; color:#065f46; font-size:16px;">&#8377;${this.formatInr(licenseFee)}</span>
+              </div>
             </div>
-            <div style="padding:6px 14px 10px; font-size:11.5px; color:#6b7280; font-style:italic;">
-              &#9432; Additional charges are applied to both License Fee and Security Deposit.
+            <div style="padding:10px 16px; font-size:12.5px; color:#047857; background:#f0fdf4; border-top:1px dashed #a7f3d0; line-height:1.5;">
+              &#9432; <b>Fee Calculation Summary:</b><br/>
+              &bull; Base License Fee (&#8377;${this.formatInr(baseLicenseFee)}) + Additional Charges (&#8377;${this.formatInr(additionalTotal)}) = <b>&#8377;${this.formatInr(licenseFee)} Total Fee Breakup</b>.<br/>
+              ${securityFee > 0 ? `&bull; The fee breakup total of <b>&#8377;${this.formatInr(licenseFee)}</b> applies to the <b>License Fee</b> (&#8377;${this.formatInr(licenseFee)}) and an equal <b>Security Deposit</b> (&#8377;${this.formatInr(securityFee)}), totaling <b>&#8377;${this.formatInr(total)} Total Payable</b>.` : ''}
             </div>
           </div>
         `
@@ -1099,33 +1110,33 @@ private getTransitRejectSummary(): {
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="white"/>
                 </svg>
               </div>
-              <div style="font-size:20px; font-weight:700; color:#065f46; line-height:1.2;">Proceed to Pay</div>
-              <div style="font-size:12px; color:#6b7280; margin-top:4px;">Review your payment summary before proceeding</div>
+              <div style="font-size:22px; font-weight:700; color:#065f46; line-height:1.2;">Proceed to Pay</div>
+              <div style="font-size:13px; color:#6b7280; margin-top:4px;">Review your payment summary before proceeding</div>
             </div>
 
             <!-- Fee Summary -->
             <div style="border-radius:10px; border:1px solid #d1fae5; overflow:hidden; margin-bottom:12px;">
-              <div style="background:#ecfdf5; padding:8px 14px; font-size:12px; font-weight:600;
+              <div style="background:#ecfdf5; padding:10px 16px; font-size:12px; font-weight:600;
                           color:#065f46; letter-spacing:0.6px; text-transform:uppercase;">
                 Payment Summary
               </div>
-              <div style="padding:10px 10px 4px;">
+              <div style="padding:12px 12px 4px; background:#ffffff;">
                 ${feeRow('License Fee', licenseFee, true)}
                 ${securityFee > 0 ? feeRow('Security Deposit', securityFee, true) : ''}
               </div>
               <!-- Total -->
               <div style="display:flex; justify-content:space-between; align-items:center;
-                          padding:12px 14px; background:linear-gradient(135deg,#065f46,#10b981);
+                          padding:14px 16px; background:linear-gradient(135deg,#065f46,#10b981);
                           border-top:1px solid #6ee7c7;">
-                <span style="color:#d1fae5; font-size:14px; font-weight:600;">Total Payable</span>
-                <span style="color:#ffffff; font-size:18px; font-weight:800;">&#8377;${this.formatInr(total)}</span>
+                <span style="color:#d1fae5; font-size:15px; font-weight:600;">Total Payable</span>
+                <span style="color:#ffffff; font-size:20px; font-weight:800;">&#8377;${this.formatInr(total)}</span>
               </div>
             </div>
 
             ${breakdownHtml}
 
             <!-- Info note -->
-            <div style="margin-top:12px; padding:12px 16px; background:#f0f9ff; border:1px solid #bae6fd;
+            <div style="margin-top:14px; padding:14px 16px; background:#f0f9ff; border:1px solid #bae6fd;
                         border-radius:8px; font-size:13px; color:#0369a1; text-align: left; display:flex; flex-direction:column; gap:8px;">
               <div style="font-weight: 700; display:flex; gap:8px; align-items:center;">
                 <span style="font-size:16px;">&#8505;</span>
@@ -1134,7 +1145,7 @@ private getTransitRejectSummary(): {
               <ul style="margin: 0; padding-left: 20px; line-height: 1.5; color:#334155;">
                 <li><b>License Fee:</b> Pay by navigating to the <b>License Fee Wallet</b> tab and clicking <b>Pay Now</b>.</li>
                 ${!isRenewal ? `
-                <li style="background: #fffbeb; padding: 6px 10px; border-radius: 4px; border: 1px solid #fde68a; margin-top: 6px; color: #b45309; list-style-type: none; margin-left: -20px;">
+                <li style="background: #fffbeb; padding: 8px 12px; border-radius: 6px; border: 1px solid #fde68a; margin-top: 8px; color: #b45309; list-style-type: none; margin-left: -20px;">
                   &#9888; &nbsp;<b>Security Deposit:</b> Simply <b>recharge/add money</b> to the <b>Security Deposit Wallet</b>. Recharging is sufficient to mark it as paid, and the amount will remain in your wallet as active security balance (it will not be debited).
                 </li>
                 ` : ''}
@@ -1153,7 +1164,7 @@ private getTransitRejectSummary(): {
           confirmButton: 'swal-proceed-confirm',
           cancelButton: 'swal-proceed-cancel'
         },
-        width: '540px',
+        width: '700px',
         didOpen: (popup) => {
           popup.style.background = 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 40%, #ecfdf5 100%)';
           popup.style.boxShadow = '0 24px 60px rgba(5,150,105,0.18), 0 4px 16px rgba(5,150,105,0.10)';
