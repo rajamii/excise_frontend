@@ -1052,25 +1052,25 @@ export class LicenseApplicationService {
 
   getNewLicenseDashboardCounts(): Observable<any> {
     return this.getCachedOrFetch('new-license:dashboard-counts', () =>
-      this.http.get(`${this.newLicenseUrl}/dashboard-counts/`)
+      this.http.get(`${this.newLicenseUrl}/dashboard-counts/?_t=${Date.now()}`)
     );
   }
 
   getNewLicenseApplicationsByStatus(): Observable<any> {
     return this.getCachedOrFetch('new-license:list-by-status', () =>
-      this.http.get(`${this.newLicenseUrl}/list-by-status/`)
+      this.http.get(`${this.newLicenseUrl}/list-by-status/?_t=${Date.now()}`)
     );
   }
 
   getLicenseRenewalDashboardCounts(): Observable<any> {
     return this.getCachedOrFetch('license-renewal:dashboard-counts', () =>
-      this.http.get(`${this.renewalLicenseUrl}/dashboard-counts/`)
+      this.http.get(`${this.renewalLicenseUrl}/dashboard-counts/?_t=${Date.now()}`)
     );
   }
 
   getLicenseRenewalApplicationsByStatus(): Observable<any> {
     return this.getCachedOrFetch('license-renewal:list-by-status', () =>
-      this.http.get(`${this.renewalLicenseUrl}/list-by-status/`)
+      this.http.get(`${this.renewalLicenseUrl}/list-by-status/?_t=${Date.now()}`)
     );
   }
 

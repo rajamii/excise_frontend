@@ -848,16 +848,16 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
     private getNewLicenseApplicationById(id: string): Observable<any> {
         const encodedId = encodeURIComponent(id);
-        return this.http.get<any>(`${environment.apiBaseUrl}/transactional/new_license_application/detail/${encodedId}/`);
+        return this.http.get<any>(`${environment.apiBaseUrl}/transactional/new_license_application/detail/${encodedId}/?_t=${Date.now()}`);
     }
 
     private getLicenseRenewalApplications(): Observable<any> {
-        return this.http.get<any>(`${environment.apiBaseUrl}/transactional/license_renewal_application/list/`);
+        return this.http.get<any>(`${environment.apiBaseUrl}/transactional/license_renewal_application/list/?_t=${Date.now()}`);
     }
 
     private getLicenseRenewalApplicationById(id: string): Observable<any> {
         const encodedId = encodeURIComponent(id);
-        return this.http.get<any>(`${environment.apiBaseUrl}/transactional/license_renewal_application/detail/${encodedId}/`);
+        return this.http.get<any>(`${environment.apiBaseUrl}/transactional/license_renewal_application/detail/${encodedId}/?_t=${Date.now()}`);
     }
 
     private loadByIdWithFallback(config: ServiceConfig, id: string, refNo: string): void {

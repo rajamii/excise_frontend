@@ -7,6 +7,7 @@ import { Router } from '@angular/router';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { RoleService } from '../../../../../core/services/role.service';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
+import { SidebarPendingBadgeService } from '../../../../../shared/services/sidebar-pending-badge.service';
 
 interface RenewalCounts {
   applied: number;
@@ -50,6 +51,7 @@ export class LicenseRenewalDashboardComponent implements OnInit {
   private router = inject(Router);
   private roleService = inject(RoleService);
   private licenseApplicationService = inject(LicenseApplicationService);
+  private sidebarPendingBadgeService = inject(SidebarPendingBadgeService);
 
   isLoading = false;
   error: string | null = null;
@@ -66,6 +68,9 @@ export class LicenseRenewalDashboardComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadData();
+    this.sidebarPendingBadgeService.refreshNeeded$.subscribe(() => {
+      this.loadData();
+    });
   }
 
   isLicenseeUser(): boolean {

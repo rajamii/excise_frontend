@@ -13,6 +13,7 @@ import {
   LicenseRenewalAppItem
 } from '../../services/secretary.service';
 import { SidebarPendingBadgeService } from '../../../../shared/services/sidebar-pending-badge.service';
+import { RoleService } from '../../../../core/services/role.service';
 
 @Component({
   selector: 'app-secretary-licenses',
@@ -130,6 +131,7 @@ export class SecretaryLicensesComponent implements OnInit {
   constructor(
     private secretaryService: SecretaryService,
     private sidebarPendingBadgeService: SidebarPendingBadgeService,
+    private roleService: RoleService,
     private cdr: ChangeDetectorRef,
     private ngZone: NgZone,
     private location: Location,
@@ -146,6 +148,62 @@ export class SecretaryLicensesComponent implements OnInit {
       console.log('🔄 SecretaryLicensesComponent: Reloading licenses overview due to refresh notification');
       this.loadLicensesData();
     });
+  }
+
+  isPendingForCurrentUser(item: any): boolean {
+    if (item?.is_approved === true || item?.isApproved === true) return false;
+
+    const currentStage = String(
+      item?.current_stage ||
+      item?.currentStage ||
+      item?.current_stage_name ||
+      item?.currentStageName ||
+      item?.status ||
+      ''
+    ).toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+
+    const currentUser = this.roleService.getCurrentUser();
+    if (!currentUser) return !item?.is_approved;
+
+    const roleId = Number(currentUser.roleId || (currentUser as any).role_id || currentUser.role?.id || 0);
+    const roleName = String(currentUser.role?.name || currentUser.role?.displayName || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+
+    // Site admin / Top system admin (Role 1): show all non-approved applications in Pending tab
+    if (roleId === 1 || roleName.includes('siteadmin') || roleName === 'admin') {
+      return !item?.is_approved;
+    }
+
+    // Sub Enquiry Officer / Site Inquiry Officer / Site Officer (Role 8)
+    if (roleId === 8 || roleName.includes('enquiry') || roleName.includes('inquiry') || roleName.includes('siteofficer') || roleName.includes('site')) {
+      return currentStage.includes('siteenquiry') || currentStage.includes('siteinquiry') || currentStage.includes('subenquiry') || currentStage.includes('siteofficer') || currentStage.includes('site');
+    }
+
+    // District User (Role 4)
+    if (roleId === 4 || roleName.includes('district')) {
+      return currentStage.includes('districtuser') || currentStage.includes('district');
+    }
+
+    // Joint Commissioner (Role 9)
+    if (roleId === 9 || roleName.includes('joint')) {
+      return currentStage.includes('jointcommissioner') || currentStage.includes('joint');
+    }
+
+    // Commissioner (Role 10)
+    if (roleId === 10 || (roleName.includes('commissioner') && !roleName.includes('joint'))) {
+      return currentStage.includes('commissioner') && !currentStage.includes('joint');
+    }
+
+    // Single Window (Role 3)
+    if (roleId === 3 || roleName.includes('single')) {
+      return currentStage.includes('singlewindow') || currentStage.includes('single');
+    }
+
+    // Secretary (Role 11)
+    if (roleId === 11 || roleName.includes('secretary')) {
+      return currentStage.includes('secretary');
+    }
+
+    return !item?.is_approved;
   }
 
   loadLicensesData(): void {
@@ -199,7 +257,7 @@ export class SecretaryLicensesComponent implements OnInit {
 
     this.filteredNewLicenseApps = this.rawNewLicenseApps.filter(i => {
       if (this.statusFilter === 'approved' && !i.is_approved) return false;
-      if (this.statusFilter === 'pending' && i.is_approved) return false;
+      if (this.statusFilter === 'pending' && !this.isPendingForCurrentUser(i)) return false;
       if (q) {
         return String(i.application_id).toLowerCase().includes(q) ||
                String(i.license_no).toLowerCase().includes(q) ||

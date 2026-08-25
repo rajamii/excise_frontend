@@ -13,6 +13,7 @@ import { ApplicationMovementComponent } from '../../../licensee-dashboard/applic
 import { RoleService } from '../../../../../core/services/role.service';
 import { PaymentIntegrationService } from '../../../../../core/services/payment-integration.service';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
+import { SidebarPendingBadgeService } from '../../../../../shared/services/sidebar-pending-badge.service';
 import { timeout } from 'rxjs';
 import { ResolveObjectionsDialogComponent } from './resolve-objections-dialog/resolve-objections-dialog.component';
 import { ObjectionDetailsDialogComponent } from './objection-details-dialog/objection-details-dialog.component';
@@ -72,6 +73,7 @@ export class NewLicenseDashboardComponent implements OnInit {
   private roleService = inject(RoleService);
   private paymentIntegrationService = inject(PaymentIntegrationService);
   private licenseApplicationService = inject(LicenseApplicationService);
+  private sidebarPendingBadgeService = inject(SidebarPendingBadgeService);
   private readonly apiBase = `${environment.apiBaseUrl}/transactional/new_license_application`;
 
   isLoading = false;
@@ -121,6 +123,10 @@ export class NewLicenseDashboardComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadData();
+    this.sidebarPendingBadgeService.refreshNeeded$.subscribe(() => {
+      console.log('🔄 NewLicenseDashboardComponent: Refreshing data due to refreshNeeded signal');
+      this.loadData();
+    });
   }
 
   isLicenseeUser(): boolean {

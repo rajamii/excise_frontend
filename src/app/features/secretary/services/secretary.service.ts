@@ -455,7 +455,7 @@ export class SecretaryService {
   }
 
   getLicensesOverview(): Observable<SecretaryLicensesOverview> {
-    return this.http.get<SecretaryLicensesOverview>(`${environment.apiBaseUrl}/api/secretary/licenses/`);
+    return this.http.get<SecretaryLicensesOverview>(`${environment.apiBaseUrl}/api/secretary/licenses/?_t=${Date.now()}`);
   }
 
   getImflOverview(): Observable<SecretaryImflOverview> {
