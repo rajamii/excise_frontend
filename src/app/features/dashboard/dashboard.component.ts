@@ -529,11 +529,6 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   public updateAvailableChartModules(): void {
-    if (this.isSecretaryUser) {
-      this.availableChartModules = [];
-      this.selectedChartModule = '';
-      return;
-    }
     const roleId = this.getCurrentRoleId();
     const isITCell = roleId === 6;
     const isJointCommissioner = roleId === 9;
@@ -635,18 +630,19 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const modules = [
       { value: 'all', label: 'All Modules' },
       { value: 'newLicense', label: 'New Licenses' },
-      { value: 'renewal', label: 'Renewals' },
-      { value: 'salesman', label: 'Salesman / Barman' },
-      { value: 'company', label: 'Company Reg.' },
-      { value: 'company-collaboration', label: 'Company Collab.' },
-      { value: 'label-registration', label: 'Label Reg.' }
+      { value: 'renewal', label: 'License Renewals' },
+      { value: 'specialPermit', label: 'Dry Day Permits' },
+      { value: 'salesman', label: 'Salesman / Barman Registration' },
+      { value: 'company', label: 'Company Registration' },
+      { value: 'company-collaboration', label: 'Company Collaboration' },
+      { value: 'label-registration', label: 'Label Registration' }
     ];
 
     const isAdmin = roleId === 1 || roleId === 3;
-    // isCommissioner here means the full Commissioner (roleId 10), not Joint Commissioner
     const isCommissioner = roleId === 10;
+    const isExecutive = isAdmin || isCommissioner || this.isSecretaryUser;
 
-    if (isAdmin || isCommissioner || this.isDistributorUser()) {
+    if (isExecutive || this.isDistributorUser()) {
       modules.push(
         { value: 'distributor-permit-requisition', label: 'IMFL Requisition' },
         { value: 'distributor-permit-revalidation', label: 'IMFL Revalidation' },
@@ -654,32 +650,29 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       );
     }
 
-    // Distillery-only supply chain items: Requisition, Revalidation, Cancellation
-    if (isAdmin || isCommissioner || this.showDistilleryMenus) {
+    // Distillery supply chain items: Requisition, Revalidation, Cancellation
+    if (isExecutive || this.showDistilleryMenus) {
       modules.push(
-        { value: 'requisition', label: 'Requisitions' },
-        { value: 'revalidation', label: 'Revalidations' },
-        { value: 'cancellation', label: 'Cancellations' }
+        { value: 'requisition', label: 'Bulk Spirit Requisition' },
+        { value: 'revalidation', label: 'Bulk Spirit Revalidation' },
+        { value: 'cancellation', label: 'Bulk Spirit Cancellation' }
       );
     }
 
     // Brewery/Distillery/OIC supply chain items: Transit, Hologram
-    if (isAdmin || isOIC || this.showBreweryOrDistilleryMenus) {
+    if (isExecutive || isOIC || this.showBreweryOrDistilleryMenus) {
       modules.push({ value: 'transit', label: 'Transit Applications' });
     }
-    if (isAdmin || isCommissioner || isOIC || this.showBreweryOrDistilleryMenus) {
+    if (isExecutive || isOIC || this.showBreweryOrDistilleryMenus) {
       modules.push({ value: 'hologram', label: 'Hologram Procurement' });
     }
-    if (this.showSpecialPermitChartOption) {
-      modules.push({ value: 'specialPermit', label: 'Dry Day Permits' });
-    }
     this.availableChartModules = modules;
+    if (!this.selectedChartModule) {
+      this.selectedChartModule = 'all';
+    }
   }
 
   public getFilteredCount(status: string): number {
-    if (this.isSecretaryUser) {
-      return 0;
-    }
     if (this.isOicUser()) {
       if (this.selectedChartModule === 'all') {
         const oicModules = ['transit', 'bldetails', 'hologram', 'hologramRequests'];
@@ -2683,16 +2676,6 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private loadDashboardData(forceRefresh = false) {
-    if (this.isSecretaryUser) {
-      this.isLoading = false;
-      this.isChartLoading = false;
-      this.dashboardCounts = { applied: 0, pending: 0, objection: 0, awaitingPayment: 0, approved: 0, rejected: 0 };
-      this.availableChartModules = [];
-      this.selectedChartModule = '';
-      this.dashboardLoadInFlight = false;
-      return;
-    }
-
     if (this.dashboardLoadInFlight && !forceRefresh) {
       return;
     }
