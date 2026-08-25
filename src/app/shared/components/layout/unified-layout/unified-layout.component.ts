@@ -557,13 +557,31 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     showOnlyForOic?: boolean;
     showOnlyForCommissioner?: boolean;
   }): boolean {
+    if (this.isJointCommissionerUser()) {
+      if (['secretary-timeline', 'secretary-revenue', 'single-window', 'payment-transactions'].includes(item.section)) {
+        return false;
+      }
+    }
+    if (this.isDistrictUser() || this.isSiteEnquiryOfficer() || this.isPermitSectionUser()) {
+      if (['single-window', 'payment-transactions'].includes(item.section)) {
+        return false;
+      }
+    }
+    if (this.isItCellUser()) {
+      if (['secretary-revenue', 'single-window', 'payment-transactions'].includes(item.section)) {
+        return false;
+      }
+    }
     if (this.isSecretaryUser()) {
       if (item.section === 'secretary-bulk-spirit' || item.section === 'secretary-licenses' || item.section === 'secretary-imfl' || item.section === 'secretary-imfl-ena' || item.section === 'secretary-revenue' || item.section === 'secretary-timeline' || item.section === 'officer-activity' || item.section === 'commissioner-monthly-view-details' || item.section === 'single-window' || item.section === 'payment-transactions') {
         return true;
       }
       return false;
     }
-    if ((this.isCommissionerUser() || this.isItCellUser()) && (item.section === 'secretary-revenue' || item.section === 'secretary-timeline' || item.section === 'single-window' || item.section === 'payment-transactions')) {
+    if (this.isCommissionerUser() && (item.section === 'secretary-revenue' || item.section === 'secretary-timeline' || item.section === 'single-window' || item.section === 'payment-transactions')) {
+      return true;
+    }
+    if (this.isItCellUser() && item.section === 'secretary-timeline') {
       return true;
     }
     if (this.isDistributorOic()) {
@@ -1641,6 +1659,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     if (roleId === 10) {
       return true;
     }
+    if (roleId === 9) {
+      return false;
+    }
 
     const roleName = String(
       this.currentUser?.role?.name ||
@@ -1650,7 +1671,28 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       ''
     ).toLowerCase();
     const normalized = roleName.replace(/[^a-z0-9]/g, '');
+    if (normalized.includes('joint')) return false;
     return normalized.includes('commissioner');
+  }
+
+  isJointCommissionerUser(): boolean {
+    const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
+    if (roleId === 9) return true;
+    const normalized = this.getNormalizedRoleName();
+    return normalized.includes('jointcommissioner') || (normalized.includes('joint') && normalized.includes('commissioner'));
+  }
+
+  isDistrictUser(): boolean {
+    const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
+    if (roleId === 4) return true;
+    return this.getNormalizedRoleName().includes('district');
+  }
+
+  isSiteEnquiryOfficer(): boolean {
+    const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
+    if (roleId === 8) return true;
+    const name = this.getNormalizedRoleName();
+    return name.includes('enquiry') || name.includes('inquiry') || name.includes('site');
   }
 
   isPermitSectionUser(): boolean {
@@ -1738,6 +1780,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     }
 
     if (section === 'secretary-revenue' || section === 'secretary-timeline') {
+      if (this.isJointCommissionerUser()) return false;
       return this.isSecretaryUser() || this.isCommissionerUser() || this.isItCellUser();
     }
 
@@ -1751,6 +1794,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     }
 
     if (section === 'single-window' || section === 'single-window-detail' || section === 'payment-transactions') {
+      if (this.isJointCommissionerUser() || this.isDistrictUser() || this.isSiteEnquiryOfficer()) {
+        return false;
+      }
       return !this.isLicenseeUser();
     }
 
@@ -1802,6 +1848,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     }
 
     if (section === 'single-window' || section === 'single-window-detail' || section === 'payment-transactions') {
+      if (this.isJointCommissionerUser() || this.isDistrictUser() || this.isSiteEnquiryOfficer()) {
+        return false;
+      }
       return !this.isLicenseeUser();
     }
 
