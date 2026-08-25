@@ -1889,7 +1889,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         };
 
         if (source && contextMap[source]) {
-            return contextMap[source];
+            const mapped = contextMap[source];
+            if (mapped !== USER_CONTEXTS.LICENSEE || !isOfficer) {
+                return mapped;
+            }
         }
 
         if (this.roleService.hasRole(10) || this.roleService.hasRole(11) || this.roleService.hasRole(12) || this.roleService.hasRole(1) || this.roleService.hasRole(3) || this.roleService.hasRole(4) || this.roleService.hasRole(8) || this.roleService.hasRole(9)) {
