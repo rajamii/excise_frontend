@@ -1,5 +1,5 @@
 import { Component, Inject, PLATFORM_ID, OnInit, ChangeDetectorRef } from '@angular/core';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { Location, CommonModule, isPlatformBrowser } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -459,6 +459,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     private readonly isBrowser: boolean;
 
     constructor(
+        private location: Location,
         private route: ActivatedRoute,
         private router: Router,
         private http: HttpClient,
@@ -3913,13 +3914,29 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         this.distributorPermitService.clearCache();
         this.sidebarPendingBadgeService.triggerRefresh();
 
+        // 1. If user navigated from within the app, return directly to exact origin page
+        if (this.isBrowser && typeof window !== 'undefined' && window.history.length > 1) {
+            this.location.back();
+            return;
+        }
+
+        // 2. Explicit Fallbacks when window history is not available
         if (source === 'secretary-licenses') {
             this.router.navigate(['/dashboard'], { queryParams: { section: 'secretary-licenses' } });
             return;
         }
 
-        if (source === 'secretary-timeline' || source === 'commissioner-dashboard' || source === 'commissioner') {
+        if (source === 'secretary-timeline') {
             this.router.navigate(['/dashboard'], { queryParams: { section: 'secretary-timeline' } });
+            return;
+        }
+
+        if (source === 'commissioner-dashboard' || source === 'commissioner') {
+            if (this.roleService.hasRole(10)) {
+                this.router.navigate(['/officer-dashboard/commissioner']);
+            } else {
+                this.router.navigate(['/dashboard'], { queryParams: { section: 'secretary-timeline' } });
+            }
             return;
         }
 
