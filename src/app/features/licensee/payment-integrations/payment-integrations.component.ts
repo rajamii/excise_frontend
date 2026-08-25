@@ -152,6 +152,7 @@ export class PaymentIntegrationsComponent implements OnInit {
     this.isWalletLoading = true;
     this.clearMessages();
 
+    this.paymentService.clearWalletCache(licenseeId);
     this.paymentService
       .getWalletBalance(licenseeId)
       .pipe(finalize(() => (this.isWalletLoading = false)))

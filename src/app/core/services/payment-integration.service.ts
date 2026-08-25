@@ -99,7 +99,10 @@ export class PaymentIntegrationService {
     return this.http.get<ModuleHoaResponse>(`${this.baseUrl}/modules/${moduleCode}/hoas/`);
   }
 
-  getWalletBalance(licenseeId: string): Observable<WalletBalanceResponse> {
+  getWalletBalance(licenseeId: string, forceRefresh: boolean = false): Observable<WalletBalanceResponse> {
+    if (forceRefresh) {
+      this.clearWalletCache(licenseeId);
+    }
     return this.getCachedOrFetch(`wallet:${licenseeId}:balance`, () =>
       this.http.get<WalletBalanceResponse>(`${this.baseUrl}/wallet/${licenseeId}/`)
     );

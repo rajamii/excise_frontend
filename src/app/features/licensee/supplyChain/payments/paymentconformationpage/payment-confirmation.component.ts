@@ -528,6 +528,8 @@ private initializeWalletContextAndLoadData(): void {
     this.licenseFeeWalletTransactions = [];
     this.walletHistoryFiltered = [];
 
+    this.paymentIntegrationService.clearWalletCache(licenseeId);
+
     forkJoin({
       summary: this.paymentIntegrationService.getWalletSummary(licenseeId).pipe(
         catchError((error) => {
@@ -1745,7 +1747,8 @@ private initializeWalletContextAndLoadData(): void {
 
   refreshWalletHistoryFromApi(): void {
     const licenseeId = this.activeLicenseeId || 'NA/1101/2026-27/0006';
-    this.paymentIntegrationService.getWalletHistory(licenseeId, 500, true).pipe(
+    this.paymentIntegrationService.clearWalletCache(licenseeId);
+    this.paymentIntegrationService.getWalletHistory(licenseeId, 500).pipe(
       catchError((error) => {
         console.error('Failed to force refresh wallet history from API:', error);
         return of({ results: [] } as any);
