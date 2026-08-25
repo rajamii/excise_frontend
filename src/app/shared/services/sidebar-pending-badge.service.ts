@@ -78,15 +78,14 @@ export class SidebarPendingBadgeService {
     for (const section of normalized) {
       const imflTab = this.mapDistributorPermitBadgeTab(section);
       const isDashboardSection =
-        audience === 'licensee' &&
-        (section === 'new-license' ||
-         section === 'license-renewal' ||
-         section === 'license-renewal-application' ||
-         section === 'salesman-barman-registration' ||
-         section === 'salesman-barman' ||
-         section === 'company-registration' ||
-         section === 'company-collaboration' ||
-         section === 'special-permit');
+        section === 'new-license' ||
+        section === 'license-renewal' ||
+        section === 'license-renewal-application' ||
+        section === 'salesman-barman-registration' ||
+        section === 'salesman-barman' ||
+        section === 'company-registration' ||
+        section === 'company-collaboration' ||
+        section === 'special-permit';
 
       if (imflTab) {
         const detail$ = this.fetchDistributorPermitDashboardCounts(imflTab, audience).pipe(shareReplay(1));
