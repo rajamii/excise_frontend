@@ -1857,13 +1857,18 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     getUserContext(): UserContext {
         const source = this.route.snapshot.queryParamMap.get('source');
 
-        // Verify if user is an officer (Role 5, 10, 12, etc.)
-        const isOfficer = this.roleService.hasRole(5) || 
-                          this.roleService.hasRole(10) || 
-                          this.roleService.hasRole(12) || 
+        // Verify if user is an officer (all non-licensee roles: 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
+        const isOfficer = this.roleService.hasRole(1) || 
+                          this.roleService.hasRole(3) || 
+                          this.roleService.hasRole(4) || 
+                          this.roleService.hasRole(5) || 
                           this.roleService.hasRole(6) || 
                           this.roleService.hasRole(7) || 
-                          this.roleService.hasRole(9);
+                          this.roleService.hasRole(8) ||
+                          this.roleService.hasRole(9) ||
+                          this.roleService.hasRole(10) ||
+                          this.roleService.hasRole(11) ||
+                          this.roleService.hasRole(12);
 
         if (!isOfficer) {
             return USER_CONTEXTS.LICENSEE;
@@ -1882,23 +1887,22 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             'licensee': USER_CONTEXTS.LICENSEE
         };
 
-        if (this.roleService.hasRole(10) || this.roleService.hasRole(12)) {
+        if (source && contextMap[source]) {
+            return contextMap[source];
+        }
+
+        if (this.roleService.hasRole(10) || this.roleService.hasRole(11) || this.roleService.hasRole(12) || this.roleService.hasRole(1) || this.roleService.hasRole(3) || this.roleService.hasRole(4) || this.roleService.hasRole(8) || this.roleService.hasRole(9)) {
             return USER_CONTEXTS.COMMISSIONER;
         }
         if (this.roleService.hasRole(5)) {
             return USER_CONTEXTS.PERMIT_SECTION;
         }
 
-        if (source && contextMap[source]) {
-            return contextMap[source];
-        }
-
         const currentUrl = this.router.url;
         if (currentUrl.includes('commissioner')) return USER_CONTEXTS.COMMISSIONER;
         if (currentUrl.includes('permit-section')) return USER_CONTEXTS.PERMIT_SECTION;
-        if (currentUrl.includes('dashboard') && currentUrl.includes('section=')) return USER_CONTEXTS.LICENSEE;
 
-        return USER_CONTEXTS.LICENSEE;
+        return USER_CONTEXTS.COMMISSIONER;
     }
 
     isLicenseeContext(): boolean {
@@ -3436,7 +3440,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             finalActions = finalActions.filter(a => a !== 'PAY' && a !== 'FORCE_PAY');
         }
 
-        return finalActions;
+        return finalActions.length > 0 ? finalActions : null;
     }
 
     canViewSiteEnquiryReport(): boolean {
@@ -3903,6 +3907,26 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
     goBack(): void {
         const source = this.route.snapshot.queryParamMap.get('source');
+
+        // Always invalidate all cached counts & lists before returning to dashboard
+        this.licenseApplicationService.invalidateAllDashboardCaches();
+        this.distributorPermitService.clearCache();
+        this.sidebarPendingBadgeService.triggerRefresh();
+
+        if (source === 'secretary-licenses') {
+            this.router.navigate(['/dashboard'], { queryParams: { section: 'secretary-licenses' } });
+            return;
+        }
+
+        if (source === 'secretary-timeline' || source === 'commissioner-dashboard' || source === 'commissioner') {
+            this.router.navigate(['/dashboard'], { queryParams: { section: 'secretary-timeline' } });
+            return;
+        }
+
+        if (source === 'single-window' || source === 'single-window-detail') {
+            this.router.navigate(['/dashboard'], { queryParams: { section: 'single-window' } });
+            return;
+        }
 
         if (source === 'distributor-permit' || source === 'imfl-requisition') {
             const tabParam = this.applicationType === 'cancellation' ? 'cancellation' : (this.applicationType === 'revalidation' ? 'revalidation' : 'requisition');

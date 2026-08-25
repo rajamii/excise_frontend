@@ -7,6 +7,7 @@ import { EnaRequisitionService } from '../../core/services/ena-requisition.servi
 import { SupplyChainService } from '../../features/licensee/supplyChain/services/supplychain.service';
 import { HologramDataService } from '../../features/licensee/supplyChain/services/hologram-data.service';
 import { DistributorPermitService } from '../../core/services/distributor-permit.service';
+import { LicenseApplicationService } from '../../core/services/license-application.service';
 import { environment } from '../../../environments/environment';
 
 type PendingCountsBySection = Record<string, number>;
@@ -26,6 +27,9 @@ export class SidebarPendingBadgeService {
     console.log('🔄 BADGE SERVICE: Clearing cache and triggering sidebar refresh');
     this.countsCache.clear();
     this.distributorPermitService.clearCache();
+    if (this.licenseApplicationService) {
+      this.licenseApplicationService.invalidateAllDashboardCaches();
+    }
     this.refreshNeededSource.next();
   }
 
@@ -34,7 +38,8 @@ export class SidebarPendingBadgeService {
     private enaRequisitionService: EnaRequisitionService,
     private supplyChainService: SupplyChainService,
     private hologramService: HologramDataService,
-    private distributorPermitService: DistributorPermitService
+    private distributorPermitService: DistributorPermitService,
+    private licenseApplicationService: LicenseApplicationService
   ) {
     this.hologramService.requestUpdate$.subscribe(() => {
       console.log('🔄 BADGE SERVICE: Received hologram request update notification, triggering sidebar refresh');

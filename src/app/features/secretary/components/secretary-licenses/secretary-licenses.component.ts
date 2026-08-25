@@ -12,6 +12,7 @@ import {
   NewLicenseApplicationItem,
   LicenseRenewalAppItem
 } from '../../services/secretary.service';
+import { SidebarPendingBadgeService } from '../../../../shared/services/sidebar-pending-badge.service';
 
 @Component({
   selector: 'app-secretary-licenses',
@@ -128,6 +129,7 @@ export class SecretaryLicensesComponent implements OnInit {
 
   constructor(
     private secretaryService: SecretaryService,
+    private sidebarPendingBadgeService: SidebarPendingBadgeService,
     private cdr: ChangeDetectorRef,
     private ngZone: NgZone,
     private location: Location,
@@ -140,6 +142,10 @@ export class SecretaryLicensesComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadLicensesData();
+    this.sidebarPendingBadgeService.refreshNeeded$.subscribe(() => {
+      console.log('🔄 SecretaryLicensesComponent: Reloading licenses overview due to refresh notification');
+      this.loadLicensesData();
+    });
   }
 
   loadLicensesData(): void {

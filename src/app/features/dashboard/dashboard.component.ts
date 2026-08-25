@@ -1446,6 +1446,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.handleQueryParams();
     this.initializeDashboard();
     this.initializeProfessionalFeatures();
+    this.sidebarPendingBadgeService.refreshNeeded$.subscribe(() => {
+      console.log('🔄 DashboardComponent: Reloading dashboard data due to refresh notification');
+      this.loadDashboardData(true);
+    });
   }
 
   private initializeProfessionalFeatures(): void {
@@ -2205,13 +2209,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.loadUserActivities();
         }
 
-        // Returning to /dashboard should reuse cached dashboard data unless the user
-        // explicitly refreshes or performs an action that changes counts.
-        if (!this.selectedSupplyChainSection) {
-          this.activeTable = 'approved';
-          if (this.dashboardInitLoadHandled) {
-            this.loadDashboardData();
-          }
+        // Always force refresh dashboard data when navigating back or switching sections
+        if (this.dashboardInitLoadHandled) {
+          this.loadDashboardData(true);
         }
       });
   }
@@ -2696,18 +2696,13 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
-    // If no specific section is selected, load dashboard stats
-    if (!this.selectedSupplyChainSection) {
-      if (this.isDistributorUser()) {
-        this.loadDashboardStatsLight(forceRefresh);
-      } else if (this.isLicenseeUser()) {
-        this.loadDashboardStats(forceRefresh);
-      } else {
-        this.loadDashboardStatsLight(forceRefresh);
-      }
+    // Always refresh stats and module counts when loadDashboardData is invoked
+    if (this.isDistributorUser()) {
+      this.loadDashboardStatsLight(forceRefresh);
+    } else if (this.isLicenseeUser()) {
+      this.loadDashboardStats(forceRefresh);
     } else {
-      this.isLoading = false; // Directly show the section
-      this.dashboardLoadInFlight = false;
+      this.loadDashboardStatsLight(forceRefresh);
     }
   }
 

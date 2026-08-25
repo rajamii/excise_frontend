@@ -51,19 +51,26 @@ export class LicenseApplicationService {
     return request$;
   }
 
-  private invalidateCache(...keys: string[]): void {
+  public invalidateCache(...keys: string[]): void {
     for (const key of keys) {
       this.responseCache.delete(key);
       this.inflightRequests.delete(key);
     }
   }
 
-  private invalidateNewLicenseDashboardCache(): void {
+  public invalidateNewLicenseDashboardCache(): void {
     this.invalidateCache('new-license:dashboard-counts', 'new-license:list-by-status');
   }
 
-  private invalidateRenewalDashboardCache(): void {
+  public invalidateRenewalDashboardCache(): void {
     this.invalidateCache('license-renewal:dashboard-counts', 'license-renewal:list-by-status');
+  }
+
+  public invalidateAllDashboardCaches(): void {
+    this.invalidateNewLicenseDashboardCache();
+    this.invalidateRenewalDashboardCache();
+    this.responseCache.clear();
+    this.inflightRequests.clear();
   }
 
   getPassPhoto(): File | null {
