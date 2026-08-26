@@ -180,7 +180,6 @@
                                                 <th>Total Import Fee</th>
                                                 <th>Add. ED / Case</th>
                                                 <th>Total Add. ED</th>
-                                                <th>Bulk Litres</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -192,8 +191,7 @@
                                                 <td>₹{{ item.import_pass_fee_per_case || item.importPassFeePerCase }}</td>
                                                 <td class="fw-bold text-success">₹{{ item.total_import || item.totalImport | number:'1.2-2' }}</td>
                                                 <td>₹{{ item.additional_ed_per_case || item.additionalEdPerCase }}</td>
-                                                <td>₹{{ item.total_additional_ed || item.totalAdditionalEd | number:'1.2-2' }}</td>
-                                                <td>{{ item.bulk_litres || item.bulkLitres | number:'1.2-2' }} BL</td>
+                                                <td class="fw-bold">₹{{ item.total_additional_ed || item.totalAdditionalEd | number:'1.2-2' }}</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -202,9 +200,7 @@
                                     <div class="p-2 bg-light rounded border mt-3 d-flex flex-wrap gap-3 justify-content-around text-center">
                                         <div><small class="text-muted d-block">Total Cases</small><strong>{{ pDetail.total_cases || pDetail.totalCases }}</strong></div>
                                         <div><small class="text-muted d-block">Total Import Fee</small><strong class="text-success">₹{{ pDetail.total_import_fee || pDetail.totalImportFee | number:'1.2-2' }}</strong></div>
-                                        <div><small class="text-muted d-block">Total Edu Cess</small><strong>₹{{ pDetail.total_education_cess || pDetail.totalEducationCess || 0 | number:'1.2-2' }}</strong></div>
                                         <div><small class="text-muted d-block">Total Add. ED</small><strong>₹{{ pDetail.total_additional_ed || pDetail.totalAdditionalEd | number:'1.2-2' }}</strong></div>
-                                        <div><small class="text-muted d-block">Total Bulk Litres</small><strong>{{ pDetail.total_bulk_litres || pDetail.totalBulkLitres | number:'1.3-3' }} BL</strong></div>
                                     </div>
                                 </div>
                             </div>
