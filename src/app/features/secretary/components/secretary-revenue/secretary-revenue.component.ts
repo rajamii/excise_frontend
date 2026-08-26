@@ -79,7 +79,7 @@ export class SecretaryRevenueComponent implements OnInit, OnDestroy {
 
     return heads
       .filter(h => this.isHeadTargetActive(h.head_name || h.headName || ''))
-      .reduce((sum, h) => sum + (h.total_paid_to_excise !== undefined ? h.total_paid_to_excise : (h.total_debit || h.totalDebit || 0)), 0);
+      .reduce((sum, h) => sum + this.getHeadPaidAmount(h), 0);
   }
 
   get currentHeadTargetShare(): number {
@@ -273,9 +273,7 @@ export class SecretaryRevenueComponent implements OnInit, OnDestroy {
       next: (res) => {
         this.ngZone.run(() => {
           this.clearLoadingTimeout();
-          if (res) {
-            this.overview = res;
-          }
+          this.overview = this.normalizeRevenueOverview(res);
           this.isLoading = false;
           this.cdr.detectChanges();
         });
@@ -315,9 +313,110 @@ export class SecretaryRevenueComponent implements OnInit, OnDestroy {
     };
   }
 
-  setTab(tab: 'overview' | 'top-contributors' | 'security-deposits'): void {
+  private normalizeRevenueOverview(res?: SecretaryRevenueOverview | null): SecretaryRevenueOverview {
+    const response = res || this.getFallbackRevenueOverview();
+    const responseHeads = Array.isArray(response.revenue_heads) ? response.revenue_heads : [];
+    const responseHeadMap = new Map<string, SecretaryRevenueHeadItem>();
+
+    responseHeads.forEach(head => {
+      const headName = this.normalizeHeadName(head.head_name || head.headName || '');
+      if (headName) {
+        responseHeadMap.set(headName, head);
+      }
+    });
+
+    const normalizedHeads = this.fallbackRevenueHeads.map(fallbackHead => {
+      const fallbackName = fallbackHead.head_name || fallbackHead.headName || '';
+      const liveHead = responseHeadMap.get(this.normalizeHeadName(fallbackName));
+      return this.normalizeRevenueHead({ ...fallbackHead, ...(liveHead || {}) });
+    });
+
+    responseHeads.forEach(head => {
+      const headName = this.normalizeHeadName(head.head_name || head.headName || '');
+      const alreadyIncluded = normalizedHeads.some(existing => this.normalizeHeadName(existing.head_name || existing.headName || '') === headName);
+      if (!alreadyIncluded) {
+        normalizedHeads.push(this.normalizeRevenueHead(head));
+      }
+    });
+
+    const totalFd = normalizedHeads
+      .filter(head => this.isSecurityDepositHead(head.head_name || head.headName || ''))
+      .reduce((sum, head) => sum + this.getHeadPaidAmount(head), 0);
+    const netRevenue = normalizedHeads
+      .filter(head => !this.isSecurityDepositHead(head.head_name || head.headName || ''))
+      .reduce((sum, head) => sum + this.getHeadPaidAmount(head), 0);
+    const activeBalance = normalizedHeads.reduce((sum, head) => sum + this.readAmount(head.current_balance, head.currentBalance), 0);
+
+    return {
+      summary_kpis: {
+        total_revenue_collected: this.readAmount(response.summary_kpis?.total_revenue_collected, netRevenue + totalFd),
+        net_excise_revenue_collected: this.readAmount(response.summary_kpis?.net_excise_revenue_collected, netRevenue),
+        total_active_balance: this.readAmount(response.summary_kpis?.total_active_balance, activeBalance),
+        total_security_deposit_fd: this.readAmount(response.summary_kpis?.total_security_deposit_fd, totalFd),
+        top_contributors_count: Number(response.summary_kpis?.top_contributors_count || (response.top_contributors || []).length || 0)
+      },
+      revenue_heads: normalizedHeads,
+      top_contributors: Array.isArray(response.top_contributors) ? response.top_contributors : [],
+      security_deposits: Array.isArray(response.security_deposits) ? response.security_deposits : []
+    };
+  }
+
+  private normalizeRevenueHead(head: SecretaryRevenueHeadItem): SecretaryRevenueHeadItem {
+    const headName = head.head_name || head.headName || '';
+    const totalDebit = this.readAmount(head.total_paid_to_excise, head.total_debit, head.totalDebit);
+    const totalCredit = this.readAmount(head.total_credit, head.totalCredit);
+    const currentBalance = this.readAmount(head.current_balance, head.currentBalance);
+
+    return {
+      ...head,
+      head_name: headName,
+      head_of_account: head.head_of_account || head.headOfAccount || this.getFallbackHoa(headName),
+      total_credit: totalCredit,
+      totalCredit,
+      total_debit: totalDebit,
+      totalDebit: totalDebit,
+      total_paid_to_excise: totalDebit,
+      current_balance: currentBalance,
+      currentBalance,
+      accounts_count: Number(head.accounts_count ?? head.accountsCount ?? 0),
+      accountsCount: Number(head.accounts_count ?? head.accountsCount ?? 0),
+      application_fee_paid: head.application_fee_paid === undefined ? undefined : this.readAmount(head.application_fee_paid),
+      billdesk_paid_total: head.billdesk_paid_total === undefined ? undefined : this.readAmount(head.billdesk_paid_total),
+      fd_saved_amount: head.fd_saved_amount === undefined ? undefined : this.readAmount(head.fd_saved_amount)
+    };
+  }
+
+  private normalizeHeadName(headName: string): string {
+    return String(headName || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  }
+
+  private isSecurityDepositHead(headName: string): boolean {
+    const normalizedName = this.normalizeHeadName(headName);
+    return normalizedName.includes('security') || normalizedName.includes('fd');
+  }
+
+  private readAmount(...values: Array<number | string | null | undefined>): number {
+    for (const value of values) {
+      if (value === null || value === undefined || value === '') {
+        continue;
+      }
+      const amount = Number(value);
+      if (Number.isFinite(amount)) {
+        return amount;
+      }
+    }
+    return 0;
+  }
+
+  setTab(tab: 'overview' | 'top-contributors' | 'security-deposits', event?: Event): void {
+    event?.preventDefault();
+    event?.stopPropagation();
+    if (this.activeTab === tab) {
+      return;
+    }
     this.activeTab = tab;
     this.currentPageMap[tab] = 1;
+    this.cdr.detectChanges();
   }
 
   clearFilters(): void {
@@ -341,21 +440,6 @@ export class SecretaryRevenueComponent implements OnInit, OnDestroy {
    */
   get filteredRevenueHeads(): SecretaryRevenueHeadItem[] {
     let list = this.overview?.revenue_heads || [];
-
-    if (this.isFilterActive && this.filteredTopContributors.length === 0 && this.filteredSecurityDeposits.length === 0) {
-      return list.map(h => ({
-        ...h,
-        total_credit: 0,
-        totalCredit: 0,
-        total_debit: 0,
-        totalDebit: 0,
-        current_balance: 0,
-        currentBalance: 0,
-        total_paid_to_excise: 0,
-        accounts_count: 0,
-        accountsCount: 0
-      }));
-    }
 
     if (this.searchQuery.trim()) {
       const q = this.searchQuery.toLowerCase().trim();
@@ -446,13 +530,13 @@ export class SecretaryRevenueComponent implements OnInit, OnDestroy {
     if (heads && heads.length > 0) {
       const netRev = heads
         .filter(h => !((h.head_name || h.headName || '').toLowerCase().includes('security') || (h.head_name || h.headName || '').toLowerCase().includes('fd')))
-        .reduce((sum, h) => sum + (h.total_paid_to_excise !== undefined ? h.total_paid_to_excise : (h.total_debit || h.totalDebit || 0)), 0);
+        .reduce((sum, h) => sum + this.getHeadPaidAmount(h), 0);
 
       const totalFd = heads
         .filter(h => (h.head_name || h.headName || '').toLowerCase().includes('security') || (h.head_name || h.headName || '').toLowerCase().includes('fd'))
-        .reduce((sum, h) => sum + (h.total_paid_to_excise !== undefined ? h.total_paid_to_excise : (h.total_debit || h.totalDebit || 0)), 0);
+        .reduce((sum, h) => sum + this.getHeadPaidAmount(h), 0);
 
-      const activeBal = heads.reduce((sum, h) => sum + (h.current_balance || h.currentBalance || 0), 0);
+      const activeBal = heads.reduce((sum, h) => sum + this.readAmount(h.current_balance, h.currentBalance), 0);
 
       return {
         net_excise_revenue_collected: netRev,
@@ -509,6 +593,48 @@ export class SecretaryRevenueComponent implements OnInit, OnDestroy {
     if (name.includes('license')) return '0039-00-800-45-02';
     if (name.includes('cess')) return '0045-00-112-45-03';
     return '0039-00-800-45-01';
+  }
+
+  getHeadDebitAmount(head: SecretaryRevenueHeadItem): number {
+    return this.readAmount(head.total_debit, head.totalDebit, head.total_paid_to_excise);
+  }
+
+  getHeadPaidAmount(head: SecretaryRevenueHeadItem): number {
+    return this.readAmount(head.total_paid_to_excise, head.total_debit, head.totalDebit);
+  }
+
+  trackByHeadName(_: number, head: SecretaryRevenueHeadItem): string {
+    return this.normalizeHeadName(head.head_name || head.headName || '');
+  }
+
+  trackByContributor(_: number, item: SecretaryTopContributorItem): string {
+    return String(item.user_id || item.userId || item.licensee_name || item.licenseeName || item.rank || '');
+  }
+
+  trackBySecurityDeposit(_: number, item: SecretarySecurityDepositItem): string {
+    return String(item.licensee_id || item.licenseeId || item.user_id || item.userId || '');
+  }
+
+  getHeadUtilizationLabel(headName: string = ''): string {
+    const normalizedName = headName.toLowerCase();
+    if (normalizedName.includes('security') || normalizedName.includes('fd')) {
+      return 'Verified FD Amount Saved:';
+    }
+    if (normalizedName.includes('license')) {
+      return 'License/Application Fees Paid:';
+    }
+    return 'Wallet Amount Paid to Excise:';
+  }
+
+  getHeadPaidLabel(headName: string = ''): string {
+    const normalizedName = headName.toLowerCase();
+    if (normalizedName.includes('security') || normalizedName.includes('fd')) {
+      return 'Security Deposit (FD) Saved:';
+    }
+    if (normalizedName.includes('license')) {
+      return 'Total License Fees Received:';
+    }
+    return 'Total Paid to Excise Dept:';
   }
 
   printReport(): void {

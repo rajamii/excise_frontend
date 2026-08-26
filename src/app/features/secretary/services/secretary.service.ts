@@ -491,6 +491,10 @@ export interface SecretaryRevenueHeadItem {
   current_balance?: number;
   currentBalance?: number;
   total_paid_to_excise?: number;
+  amount_source?: string;
+  application_fee_paid?: number;
+  billdesk_paid_total?: number;
+  fd_saved_amount?: number;
   accounts_count?: number;
   accountsCount?: number;
 }
