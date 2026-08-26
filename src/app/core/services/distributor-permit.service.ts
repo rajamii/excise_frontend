@@ -106,7 +106,7 @@ export class DistributorPermitService {
   }
 
   getWalletBalances(): Observable<{ excise_balance: number; education_cess_balance: number }> {
-    return this.http.get<{ excise_balance: number; education_cess_balance: number }>(`${this.baseUrl}/wallet-balances/`);
+    return this.http.get<{ excise_balance: number; education_cess_balance: number }>(`${this.baseUrl}/wallet-balances/?_t=${Date.now()}`);
   }
 
   getRevalidations(): Observable<any[]> {

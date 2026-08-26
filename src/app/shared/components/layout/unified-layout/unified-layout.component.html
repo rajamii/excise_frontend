@@ -65,7 +65,7 @@
             </button>
 
             <!-- IMFL Permit Group (Requisition, Revalidation, Cancellation) for Distributor, Commissioner, Permit Section -->
-            <ng-container *ngIf="isDistributorUser() || isCommissionerUser() || isPermitSectionUser()">
+            <ng-container *ngIf="showDistributorPermitMenu">
               <button class="nav-item imfl-permit-nav-item" (click)="imflPermitExpanded = !imflPermitExpanded"
                 [class.active]="imflPermitExpanded && isDashboardSectionActive('distributor-permit')"
                 [class.group-expanded]="imflPermitExpanded">
@@ -238,40 +238,6 @@
               <mat-icon class="nav-icon">label</mat-icon>
               <span class="nav-text">Label Registration</span>
             </button>
-
-            <!-- IMFL Permit Group for Licensee Distributor Users -->
-            <ng-container *ngIf="isLicenseeUser() && showDistributorPermitMenu">
-              <button class="nav-item imfl-permit-nav-item" (click)="imflPermitExpanded = !imflPermitExpanded"
-                [class.active]="imflPermitExpanded && isDashboardSectionActive('distributor-permit')"
-                [class.group-expanded]="imflPermitExpanded">
-                <mat-icon class="nav-icon">local_shipping</mat-icon>
-                <span class="nav-text">IMFL Permit</span>
-                <span class="nav-badge nav-badge--group" *ngIf="!imflPermitExpanded && getImflPermitTotalPendingCount() > 0">{{ getImflPermitTotalPendingCount() }}</span>
-                <span class="nav-badge nav-badge--payment" *ngIf="!imflPermitExpanded && getPendingCount('distributor-permit:payment') as payCount" title="Awaiting Payment"><mat-icon>payment</mat-icon></span>
-                <mat-icon class="nav-chevron">{{ imflPermitExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
-              </button>
-
-              <ng-container *ngIf="imflPermitExpanded">
-                <button class="nav-item nav-item--sub imfl-permit-sub-item" (click)="navigateToImflPermitTab('requisition')" [class.active]="isDashboardSectionActive('distributor-permit') && isImflTabActive('requisition')">
-                  <mat-icon class="nav-icon">description</mat-icon>
-                  <span class="nav-text">IMFL Requisition</span>
-                  <span class="nav-badge" *ngIf="(getPendingCount('distributor-permit') || getPendingCount('distributor-permit-requisition') || getPendingCount('imfl-requisition')) as pending">{{ pending }}</span>
-                  <span class="nav-badge nav-badge--payment" *ngIf="getPendingCount('distributor-permit:payment') as payCount" title="Awaiting Payment"><mat-icon>payment</mat-icon></span>
-                </button>
-
-                <button class="nav-item nav-item--sub imfl-permit-sub-item" (click)="navigateToImflPermitTab('revalidation')" [class.active]="isDashboardSectionActive('distributor-permit') && isImflTabActive('revalidation')">
-                  <mat-icon class="nav-icon">refresh</mat-icon>
-                  <span class="nav-text">IMFL Revalidation</span>
-                  <span class="nav-badge" *ngIf="getPendingCount('distributor-permit-revalidation') || getPendingCount('imfl-revalidation') as pending">{{ pending }}</span>
-                </button>
-
-                <button class="nav-item nav-item--sub imfl-permit-sub-item" (click)="navigateToImflPermitTab('cancellation')" [class.active]="isDashboardSectionActive('cancellation') || (isDashboardSectionActive('distributor-permit') && isImflTabActive('cancellation'))">
-                  <mat-icon class="nav-icon">cancel</mat-icon>
-                  <span class="nav-text">IMFL Cancellation</span>
-                  <span class="nav-badge" *ngIf="getPendingCount('distributor-permit-cancellation') || getPendingCount('imfl-cancellation') as pending">{{ pending }}</span>
-                </button>
-              </ng-container>
-            </ng-container>
 
             <!-- License Activity — last item for licensees -->
             <button class="nav-item license-activity-nav-item" (click)="navigateToSupplyChain('officer-activity')" [class.active]="isDashboardSectionActive('officer-activity')">

@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, OnDestroy, inject, Input, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy, inject, Input, Output, EventEmitter, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -184,6 +184,7 @@ const DEFAULT_WALLET_HOA_BY_TYPE: Record<AddMoneyWalletType, string> = {
 export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDestroy {
   Math = Math;
   private sidebarBadgeService = inject(SidebarPendingBadgeService);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly optimisticPaymentStorageKey = 'wallet.optimistic.payments';
   private readonly pendingPaymentStorageKey = 'wallet.pending.payment.context';
   private readonly isBrowser = typeof window !== 'undefined';
@@ -492,15 +493,24 @@ private initializeWalletContextAndLoadData(): void {
   
   // Now resolve the module type ONLY for this specific ID, 
   // don't let it pick a random preferred one from a list.
-  this.http.get<MyLicenseRow[]>(`${this.licenseApiBase}/me/`).subscribe((licenses) => {
+  this.http.get<MyLicenseRow[]>(`${this.licenseApiBase}/me/`).subscribe({
+    next: (licenses) => {
       const rows = Array.isArray(licenses) ? licenses : [];
-      // Find the specific row matching the session ID
-      const activeRow = rows.find(r => (r.license_id || r.licenseId) === licenseeId);
+      const activeRow = rows.find(r => 
+        (r.license_id || r.licenseId) === licenseeId ||
+        (r as any)?.applicant?.username === licenseeId ||
+        (r as any)?.username === licenseeId ||
+        (r as any)?.user_id === licenseeId
+      ) || (rows.length > 0 ? rows[0] : null);
       
       const resolvedModuleType = this.resolveModuleTypeFromLicense(activeRow);
       this.applyResolvedModuleType(resolvedModuleType);
       
       this.loadWalletDataFromBackend(licenseeId);
+    },
+    error: () => {
+      this.loadWalletDataFromBackend(licenseeId);
+    }
   });
 }
 
@@ -604,6 +614,7 @@ private initializeWalletContextAndLoadData(): void {
           this.openPendingWalletPaymentConfirmation();
         }
       }
+      this.cdr.detectChanges();
     });
   }
 

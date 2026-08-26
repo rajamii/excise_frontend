@@ -21,6 +21,7 @@ import { LicenseApplicationService } from '../../../core/services/license-applic
 import { MasterService } from '../../../core/services/master.service';
 import { SpecialPermitService } from '../../../core/services/special-permit.service';
 import { DistributorPermitService } from '../../../core/services/distributor-permit.service';
+import { PaymentIntegrationService } from '../../../core/services/payment-integration.service';
 import { ActionButtonConfig } from '../../../core/services/action-config.service';
 import { LicenseCategory } from '../../../core/models/license-category.model';
 import { LicenseFee } from '../../../core/models/license-fee.model';
@@ -475,6 +476,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         private masterService: MasterService,
         private specialPermitService: SpecialPermitService,
         private distributorPermitService: DistributorPermitService,
+        private paymentIntegrationService: PaymentIntegrationService,
         private roleService: RoleService,
         private unifiedActionsService: UnifiedActionsService,
         private unifiedDashboardService: UnifiedDashboardService,
@@ -4711,19 +4713,55 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         this.paymentEduCessTotal = eduCess;
         this.paymentBrandStockItems = brandItems;
 
+        this.loadLiveWalletBalances((exBal, cessBal) => {
+            this.paymentExciseCurrentBalance = exBal;
+            this.paymentCessCurrentBalance = cessBal;
+            this.showImflPaymentConfirmationModal = true;
+            this.cdr.detectChanges();
+        });
+    }
+
+    private loadLiveWalletBalances(callback: (exciseBal: number, cessBal: number) => void): void {
+        const user = this.roleService.getCurrentUser();
+        const licenseeId = String(
+            (this.applicationData as any)?.licensee_id ||
+            (this.applicationData as any)?.applicant ||
+            (this.applicationData as any)?.applicant_id ||
+            (user as any)?.licensee_id ||
+            (user as any)?.username ||
+            ''
+        ).trim();
+
+        if (licenseeId) {
+            this.paymentIntegrationService.getWalletBalance(licenseeId, true).subscribe({
+                next: (wbRes: any) => {
+                    const wallets = wbRes?.results || [];
+                    const exW = wallets.find((w: any) => String(w.wallet_type).toLowerCase() === 'excise');
+                    const cessW = wallets.find((w: any) => String(w.wallet_type).toLowerCase() === 'education_cess');
+                    const exBal = exW ? Number(exW.current_balance || 0) : 0;
+                    const cessBal = cessW ? Number(cessW.current_balance || 0) : 0;
+
+                    if (exBal > 0 || cessBal > 0) {
+                        callback(exBal, cessBal);
+                        return;
+                    }
+                    this.fallbackPermitWalletBalances(callback);
+                },
+                error: () => this.fallbackPermitWalletBalances(callback)
+            });
+        } else {
+            this.fallbackPermitWalletBalances(callback);
+        }
+    }
+
+    private fallbackPermitWalletBalances(callback: (exciseBal: number, cessBal: number) => void): void {
         this.distributorPermitService.getWalletBalances().subscribe({
-            next: (res) => {
-                this.paymentExciseCurrentBalance = Number(res.excise_balance || 0);
-                this.paymentCessCurrentBalance = Number(res.education_cess_balance || 0);
-                this.showImflPaymentConfirmationModal = true;
-                this.cdr.detectChanges();
+            next: (res: any) => {
+                const exBal = Number(res?.excise_balance ?? res?.exciseBalance ?? 0);
+                const cessBal = Number(res?.education_cess_balance ?? res?.educationCessBalance ?? 0);
+                callback(exBal, cessBal);
             },
-            error: () => {
-                this.paymentExciseCurrentBalance = 0;
-                this.paymentCessCurrentBalance = 0;
-                this.showImflPaymentConfirmationModal = true;
-                this.cdr.detectChanges();
-            }
+            error: () => callback(0, 0)
         });
     }
 

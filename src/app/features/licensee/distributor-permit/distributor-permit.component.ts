@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormArray, FormBuilder, FormGroup, FormsModule, Validators } from '@angular/forms';
 import { Subject, catchError, finalize, forkJoin, of, takeUntil } from 'rxjs';
@@ -13,6 +13,7 @@ import {
   DistributorSupplier
 } from '../../../core/models/distributor-permit.model';
 import { DistributorPermitService } from '../../../core/services/distributor-permit.service';
+import { PaymentIntegrationService } from '../../../core/services/payment-integration.service';
 import { MaterialModule } from '../../../shared/material.module';
 import { ImflHeaderComponent, ImflTabType } from './components/imfl-header/imfl-header.component';
 import { ImflRevalidationComponent } from './components/imfl-revalidation/imfl-revalidation.component';
@@ -65,6 +66,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   private readonly profileService = inject(SupplyChainProfileService);
   private readonly unifiedActionsService = inject(UnifiedActionsService);
   private readonly sidebarPendingBadgeService = inject(SidebarPendingBadgeService);
+  private readonly paymentIntegrationService = inject(PaymentIntegrationService);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroy$ = new Subject<void>();
 
   readonly applicantForm = this.fb.group({
@@ -2646,17 +2649,55 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.paymentAddEdTotal = addEd;
     this.paymentEduCessTotal = eduCess;
 
+    this.loadLiveWalletBalances((exBal, cessBal) => {
+      this.paymentExciseCurrentBalance = exBal;
+      this.paymentCessCurrentBalance = cessBal;
+      this.showPaymentConfirmationModal = true;
+      this.cdr.detectChanges();
+    });
+  }
+
+  private loadLiveWalletBalances(callback: (exciseBal: number, cessBal: number) => void): void {
+    const user = this.accountService.getCurrentUser() || (this.profileService as any)?.profile;
+    const licenseeId = String(
+      (this.paymentApplicationToProcess as any)?.licensee_id ||
+      (this.paymentApplicationToProcess as any)?.applicant ||
+      (this.paymentApplicationToProcess as any)?.applicant_id ||
+      (user as any)?.licensee_id ||
+      (user as any)?.username ||
+      ''
+    ).trim();
+
+    if (licenseeId) {
+      this.paymentIntegrationService.getWalletBalance(licenseeId, true).subscribe({
+        next: (wbRes: any) => {
+          const wallets = wbRes?.results || [];
+          const exW = wallets.find((w: any) => String(w.wallet_type).toLowerCase() === 'excise');
+          const cessW = wallets.find((w: any) => String(w.wallet_type).toLowerCase() === 'education_cess');
+          const exBal = exW ? Number(exW.current_balance || 0) : 0;
+          const cessBal = cessW ? Number(cessW.current_balance || 0) : 0;
+
+          if (exBal > 0 || cessBal > 0) {
+            callback(exBal, cessBal);
+            return;
+          }
+          this.fallbackPermitWalletBalances(callback);
+        },
+        error: () => this.fallbackPermitWalletBalances(callback)
+      });
+    } else {
+      this.fallbackPermitWalletBalances(callback);
+    }
+  }
+
+  private fallbackPermitWalletBalances(callback: (exciseBal: number, cessBal: number) => void): void {
     this.permitService.getWalletBalances().subscribe({
-      next: (res) => {
-        this.paymentExciseCurrentBalance = Number(res.excise_balance || 0);
-        this.paymentCessCurrentBalance = Number(res.education_cess_balance || 0);
-        this.showPaymentConfirmationModal = true;
+      next: (res: any) => {
+        const exBal = Number(res?.excise_balance ?? res?.exciseBalance ?? 0);
+        const cessBal = Number(res?.education_cess_balance ?? res?.educationCessBalance ?? 0);
+        callback(exBal, cessBal);
       },
-      error: () => {
-        this.paymentExciseCurrentBalance = 0;
-        this.paymentCessCurrentBalance = 0;
-        this.showPaymentConfirmationModal = true;
-      }
+      error: () => callback(0, 0)
     });
   }
 
