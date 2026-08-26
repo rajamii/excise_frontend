@@ -42,7 +42,7 @@ interface BrandOption {
 }
 
 interface WalletDeductionPreview {
-  walletType: 'excise' | 'education_cess';
+  walletType: string;
   label: string;
   before: number;
   deduction: number;
@@ -1154,7 +1154,8 @@ export class TransitPermitComponent implements OnInit {
       return;
     }
 
-    const exciseDeduction = this.getTotalExciseDuty() + this.getTotalAdditionalExcise();
+    const exciseDutyDeduction = this.getTotalExciseDuty();
+    const additionalExciseDeduction = this.getTotalAdditionalExcise();
     const educationDeduction = this.getTotalEducationCess();
 
     this.paymentIntegrationService.getWalletSummary(licenseId).subscribe({
@@ -1167,26 +1168,46 @@ export class TransitPermitComponent implements OnInit {
         const exciseBefore = Number(exciseRow?.currentBalance ?? exciseRow?.current_balance ?? 0);
         const educationBefore = Number(educationRow?.currentBalance ?? educationRow?.current_balance ?? 0);
 
-        this.walletPreviews = [
-          {
+        const previews: WalletDeductionPreview[] = [];
+
+        if (additionalExciseDeduction > 0) {
+          previews.push({
             walletType: 'excise',
-            label: 'Excise Wallet (includes Additional Excise)',
+            label: 'Excise Duty (Excise Wallet)',
             before: exciseBefore,
-            deduction: exciseDeduction,
-            after: exciseBefore - exciseDeduction
-          },
-          {
-            walletType: 'education_cess',
-            label: 'Education Cess Wallet',
-            before: educationBefore,
-            deduction: educationDeduction,
-            after: educationBefore - educationDeduction
-          }
-        ];
+            deduction: exciseDutyDeduction,
+            after: exciseBefore - exciseDutyDeduction
+          });
+          previews.push({
+            walletType: 'additional_excise',
+            label: 'Additional Excise Duty (Excise Wallet)',
+            before: exciseBefore - exciseDutyDeduction,
+            deduction: additionalExciseDeduction,
+            after: exciseBefore - exciseDutyDeduction - additionalExciseDeduction
+          });
+        } else {
+          previews.push({
+            walletType: 'excise',
+            label: 'Excise Duty (Excise Wallet)',
+            before: exciseBefore,
+            deduction: exciseDutyDeduction,
+            after: exciseBefore - exciseDutyDeduction
+          });
+        }
+
+        previews.push({
+          walletType: 'education_cess',
+          label: 'Education Cess Wallet',
+          before: educationBefore,
+          deduction: educationDeduction,
+          after: educationBefore - educationDeduction
+        });
+
+        this.walletPreviews = previews;
 
         const insuff = this.walletPreviews.find(w => w.after < 0);
         this.paymentPreviewError = insuff
-          ? `Insufficient ${insuff.label}. Add wallet balance before proceeding.`
+          ? `Insufficient balance for ${insuff.label}. Add wallet balance before proceeding.`
           : '';
         this.validationErrors = this.paymentPreviewError ? [this.paymentPreviewError] : [];
 
