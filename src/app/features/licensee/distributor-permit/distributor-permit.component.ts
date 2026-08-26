@@ -2078,6 +2078,12 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   revalidationDeclarationAccepted = false;
   isSubmittingRevalidation = false;
 
+  // Revalidation payment confirmation state
+  showRevalidationPaymentModal = false;
+  revalidationFeeAmount = 1000;
+  revalidationCurrentExciseBalance = 0;
+  revalidationProjectedExciseBalance = 0;
+
   selectedPermitNumberForRevalidation = '';
   availablePermitOptionsForRevalidation: Array<{
     permitNumber: string;
@@ -2118,52 +2124,67 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }
 
     const appIdLower = String(appId).toLowerCase().trim();
+    const isTargetActivatedSchedule = Boolean(row?.isActivatedSchedule || rawApp?.is_activated_schedule);
+
     const existingRevalidations = (this.applications || []).filter((a: any) => {
-      const isRev = String(a.referenceNo || a.reference_no || '').startsWith('IMFLREV') || a.applicationType === 'revalidation';
+      const aRef = String(a.referenceNo || a.reference_no || a.id || '').trim();
+      const aRefLower = aRef.toLowerCase();
+
+      // Must be a real submitted IMFLREV reference number that is NOT an activated schedule row
+      const isRealSubmittedRev = aRef.toUpperCase().startsWith('IMFLREV') && !a.isActivatedSchedule && !a.is_activated_schedule && !a['application']?.is_activated_schedule;
+      if (!isRealSubmittedRev) return false;
+
+      // Cannot be the same application row being opened
+      if (aRefLower === appIdLower) return false;
+
       const refTarget = String(a.application?.distributor_permit || a.application?.distributorPermit || a.distributor_permit || a.distributorPermitRef || '').toLowerCase().trim();
       const targetNo = String(a.application?.distributor_permit_ref_no || a.distributor_permit_ref_no || a.revalidated_permit_number || a.revalidatedPermitNumber || '').toLowerCase().trim();
       const remarksText = String(a.remarks || a.revalidation_reason || a.revalidationReason || a.application?.remarks || '').toLowerCase().trim();
-      return isRev && (
+      return (
         (refTarget && (refTarget === appIdLower || refTarget.includes(appIdLower) || appIdLower.includes(refTarget))) ||
         (targetNo && (targetNo === appIdLower || targetNo.includes(appIdLower) || appIdLower.includes(targetNo))) ||
-        (remarksText && remarksText.includes(appIdLower)) ||
-        String(a.referenceNo || a.reference_no || '').toLowerCase().includes(appIdLower)
+        (remarksText && remarksText.includes(appIdLower))
       );
     });
 
     const existingCancellations = (this.applications || []).filter((a: any) => {
-      const isCan = String(a.referenceNo || a.reference_no || '').startsWith('IMFLCAN') || a.applicationType === 'cancellation';
+      const aRef = String(a.referenceNo || a.reference_no || a.id || '').trim();
+      const aRefLower = aRef.toLowerCase();
+
+      // Must be a real submitted IMFLCAN reference
+      const isRealSubmittedCan = aRef.toUpperCase().startsWith('IMFLCAN') || a.applicationType === 'cancellation';
+      if (!isRealSubmittedCan) return false;
+
+      if (aRefLower === appIdLower) return false;
+
       const refTarget = String(a.application?.distributor_permit || a.application?.distributorPermit || a.distributor_permit || a.distributorPermitRef || '').toLowerCase().trim();
       const targetNo = String(a.application?.distributor_permit_ref_no || a.distributor_permit_ref_no || a.cancelled_permit_number || a.cancelledPermitNumber || '').toLowerCase().trim();
       const remarksText = String(a.remarks || a.cancellation_reason || a.cancellationReason || a.application?.remarks || '').toLowerCase().trim();
-      return isCan && (
+      return (
         (refTarget && (refTarget === appIdLower || refTarget.includes(appIdLower) || appIdLower.includes(refTarget))) ||
         (targetNo && (targetNo === appIdLower || targetNo.includes(appIdLower) || appIdLower.includes(targetNo))) ||
-        (remarksText && remarksText.includes(appIdLower)) ||
-        String(a.referenceNo || a.reference_no || '').toLowerCase().includes(appIdLower)
+        (remarksText && remarksText.includes(appIdLower))
       );
     });
 
     this.availablePermitOptionsForRevalidation = [];
 
     if (Array.isArray(pDetails) && pDetails.length > 0) {
-      const isSinglePermit = pDetails.length === 1;
       pDetails.forEach((p: any) => {
         const pNum = String(p.permit_number || p.permitNumber || appId);
         const cases = Number(p.total_cases || p.totalCases || 0);
+        const pNumLower = pNum.toLowerCase().trim();
 
         const existingForPermitRev = existingRevalidations.find((revApp: any) => {
           const revNo = String(revApp.revalidatedPermitNumber || revApp.revalidated_permit_number || revApp.application?.revalidated_permit_number || revApp.application?.revalidatedPermitNumber || revApp.distributor_permit || '').toLowerCase().trim();
           const reasonText = String(revApp.revalidationReason || revApp.revalidation_reason || revApp.application?.revalidation_reason || revApp.remarks || revApp.application?.remarks || '').toLowerCase().trim();
-          const pNumLower = pNum.toLowerCase().trim();
-          return (revNo && (revNo === pNumLower || revNo.includes(pNumLower) || pNumLower.includes(revNo))) || (reasonText && reasonText.includes(pNumLower)) || isSinglePermit;
+          return (revNo && (revNo === pNumLower || revNo.includes(pNumLower) || pNumLower.includes(revNo))) || (reasonText && reasonText.includes(pNumLower));
         });
 
         const existingForPermitCan = existingCancellations.find((canApp: any) => {
           const cancelledNo = String(canApp.cancelledPermitNumber || canApp.cancelled_permit_number || canApp.application?.cancelled_permit_number || canApp.application?.cancelledPermitNumber || canApp.distributor_permit || '').toLowerCase().trim();
           const reasonText = String(canApp.cancellationReason || canApp.cancellation_reason || canApp.application?.cancellation_reason || canApp.remarks || canApp.application?.remarks || '').toLowerCase().trim();
-          const pNumLower = pNum.toLowerCase().trim();
-          return (cancelledNo && (cancelledNo === pNumLower || cancelledNo.includes(pNumLower) || pNumLower.includes(cancelledNo))) || (reasonText && reasonText.includes(pNumLower)) || isSinglePermit;
+          return (cancelledNo && (cancelledNo === pNumLower || cancelledNo.includes(pNumLower) || pNumLower.includes(cancelledNo))) || (reasonText && reasonText.includes(pNumLower));
         });
 
         let isCancelled = false;
@@ -2240,6 +2261,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   isCurrentPermitDisabledForRevalidation(): boolean {
     const opt = this.availablePermitOptionsForRevalidation.find(o => o.permitNumber === this.selectedPermitNumberForRevalidation);
     if (!opt) return false;
+    if (this.revalidationTargetRow?.isActivatedSchedule) {
+      return Boolean(opt.isCancelled);
+    }
     return Boolean(opt.isUnderProcess || opt.isCancelled);
   }
 
@@ -2258,13 +2282,12 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       alert('Please select a permit for revalidation.');
       return;
     }
+    const isActivatedSchedule = Boolean(this.revalidationTargetRow.isActivatedSchedule);
     const selectedOpt = this.availablePermitOptionsForRevalidation.find(o => o.permitNumber === this.selectedPermitNumberForRevalidation);
-    if (selectedOpt && (selectedOpt.isCancelled || selectedOpt.isUnderProcess)) {
+    if (selectedOpt && (selectedOpt.isCancelled || (!isActivatedSchedule && selectedOpt.isUnderProcess))) {
       alert(`Permit ${this.selectedPermitNumberForRevalidation} is ${selectedOpt.isCancelled ? 'cancelled' : 'already under process for revalidation'}.`);
       return;
     }
-
-    const isActivatedSchedule = Boolean(this.revalidationTargetRow.isActivatedSchedule);
 
     if (!isActivatedSchedule) {
       if (!this.revalidationDeclarationAccepted) {
@@ -2277,6 +2300,34 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       }
     }
 
+    // Calculate fee and open payment confirmation modal
+    const permitWiseDetails = this.selectedPermitDetailForRevalidation ? [this.selectedPermitDetailForRevalidation] : [];
+    const uniquePermitNos = new Set(
+      permitWiseDetails
+        .map((p: any) => p?.permit_number || p?.permitNumber || '')
+        .filter((n: string) => !!n)
+    );
+    const numPermits = uniquePermitNos.size || 1;
+    this.revalidationFeeAmount = 1000 * numPermits;
+
+    // Load live wallet balance and show confirmation popup
+    this.loadLiveWalletBalances((exBal, cessBal) => {
+      this.revalidationCurrentExciseBalance = exBal;
+      this.revalidationProjectedExciseBalance = exBal - this.revalidationFeeAmount;
+      this.showRevalidationPaymentModal = true;
+      this.cdr.detectChanges();
+    });
+  }
+
+  closeRevalidationPaymentModal(): void {
+    this.showRevalidationPaymentModal = false;
+  }
+
+  executeRevalidationSubmit(): void {
+    this.showRevalidationPaymentModal = false;
+    if (!this.revalidationTargetRow) return;
+
+    const isActivatedSchedule = Boolean(this.revalidationTargetRow.isActivatedSchedule);
     const appId = this.revalidationTargetRow.applicationId;
     const reason = isActivatedSchedule
       ? `Auto-Revalidation: Permit ${this.selectedPermitNumberForRevalidation} validity expired. System initiated revalidation.`
@@ -2292,7 +2343,13 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       next: (res: any) => {
         this.isSubmittingRevalidation = false;
         this.closeRevalidationModal();
-        alert(`Revalidation application submitted successfully! Reference No: ${res.reference_no || res.id}. It has been forwarded to the Commissioner for approval.`);
+        this.paymentIntegrationService.clearWalletCache();
+        const refNo = res.reference_no || res.id || '';
+        alert(
+          `Revalidation Application ${refNo} Submitted Successfully!\n\n` +
+          `• Revalidation Fee Debited: ₹${this.revalidationFeeAmount.toFixed(2)}\n` +
+          `• Application forwarded to Commissioner for approval.`
+        );
         this.loadApplications();
       },
       error: (err: any) => {
@@ -2898,35 +2955,62 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   private loadLiveWalletBalances(callback: (exciseBal: number, cessBal: number) => void): void {
     const user = this.accountService.getCurrentUser() || (this.profileService as any)?.profile;
+    const targetRowApp = (this.revalidationTargetRow as any)?.application || this.revalidationTargetRow ||
+                         (this.cancellationTargetRow as any)?.application || this.cancellationTargetRow ||
+                         (this.paymentApplicationToProcess as any);
+
     const licenseeId = String(
-      (this.paymentApplicationToProcess as any)?.licensee_id ||
-      (this.paymentApplicationToProcess as any)?.applicant ||
-      (this.paymentApplicationToProcess as any)?.applicant_id ||
+      targetRowApp?.licensee_id ||
+      targetRowApp?.licenseeId ||
+      targetRowApp?.applicant ||
+      targetRowApp?.applicant_id ||
       (user as any)?.licensee_id ||
       (user as any)?.username ||
       ''
     ).trim();
 
-    if (licenseeId) {
-      this.paymentIntegrationService.getWalletBalance(licenseeId, true).subscribe({
-        next: (wbRes: any) => {
-          const wallets = wbRes?.results || [];
-          const exW = wallets.find((w: any) => String(w.wallet_type).toLowerCase() === 'excise');
-          const cessW = wallets.find((w: any) => String(w.wallet_type).toLowerCase() === 'education_cess');
-          const exBal = exW ? Number(exW.current_balance || 0) : 0;
-          const cessBal = cessW ? Number(cessW.current_balance || 0) : 0;
-
-          if (exBal > 0 || cessBal > 0) {
-            callback(exBal, cessBal);
-            return;
-          }
-          this.fallbackPermitWalletBalances(callback);
-        },
-        error: () => this.fallbackPermitWalletBalances(callback)
-      });
-    } else {
-      this.fallbackPermitWalletBalances(callback);
-    }
+    this.permitService.getWalletBalances().subscribe({
+      next: (res: any) => {
+        const exBal = Number(res?.excise_balance ?? res?.exciseBalance ?? 0);
+        const cessBal = Number(res?.education_cess_balance ?? res?.educationCessBalance ?? 0);
+        if (exBal > 0 || cessBal > 0) {
+          callback(exBal, cessBal);
+          return;
+        }
+        if (licenseeId) {
+          this.paymentIntegrationService.getWalletBalance(licenseeId, true).subscribe({
+            next: (wbRes: any) => {
+              const wallets = wbRes?.results || [];
+              const exW = wallets.find((w: any) => String(w.wallet_type || w.wallet_type_code || '').toLowerCase() === 'excise');
+              const cessW = wallets.find((w: any) => String(w.wallet_type || w.wallet_type_code || '').toLowerCase() === 'education_cess');
+              const exB = exW ? Number(exW.current_balance || 0) : 0;
+              const cessB = cessW ? Number(cessW.current_balance || 0) : 0;
+              callback(exB, cessB);
+            },
+            error: () => callback(exBal, cessBal)
+          });
+        } else {
+          callback(exBal, cessBal);
+        }
+      },
+      error: () => {
+        if (licenseeId) {
+          this.paymentIntegrationService.getWalletBalance(licenseeId, true).subscribe({
+            next: (wbRes: any) => {
+              const wallets = wbRes?.results || [];
+              const exW = wallets.find((w: any) => String(w.wallet_type || w.wallet_type_code || '').toLowerCase() === 'excise');
+              const cessW = wallets.find((w: any) => String(w.wallet_type || w.wallet_type_code || '').toLowerCase() === 'education_cess');
+              const exB = exW ? Number(exW.current_balance || 0) : 0;
+              const cessB = cessW ? Number(cessW.current_balance || 0) : 0;
+              callback(exB, cessB);
+            },
+            error: () => callback(0, 0)
+          });
+        } else {
+          callback(0, 0);
+        }
+      }
+    });
   }
 
   private fallbackPermitWalletBalances(callback: (exciseBal: number, cessBal: number) => void): void {

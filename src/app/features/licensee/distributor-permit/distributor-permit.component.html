@@ -1602,11 +1602,23 @@
           </div>
         </ng-container>
 
-        <div class="alert alert-danger border-danger d-flex align-items-center mb-3" *ngIf="isCurrentPermitDisabledForRevalidation()">
+        <!-- Disabled alert: only show when permit is actually blocked (not for Request Import Permit Revalidation tab) -->
+        <div class="alert alert-danger border-danger d-flex align-items-center mb-3"
+          *ngIf="isCurrentPermitDisabledForRevalidation() && !revalidationTargetRow?.isActivatedSchedule">
           <i class="bi bi-exclamation-octagon-fill text-danger fs-3 me-3"></i>
           <div>
             <strong>Permit Revalidation Disabled</strong><br />
             This permit cannot be revalidated because a revalidation or cancellation request is already under process, or the permit is cancelled.
+          </div>
+        </div>
+
+        <!-- Fee notice -->
+        <div class="alert alert-warning border-warning d-flex align-items-start mb-3"
+          *ngIf="!isCurrentPermitDisabledForRevalidation()">
+          <i class="bi bi-wallet2 text-warning fs-5 me-3 mt-1"></i>
+          <div>
+            <strong>Revalidation Processing Fee</strong><br />
+            A fee of <strong>₹1,000 per permit</strong> will be debited from your Excise Duty wallet on submission.
           </div>
         </div>
       </div>
@@ -1620,7 +1632,7 @@
         >
           Cancel
         </button>
-        <!-- Activated schedule: simple process button -->
+        <!-- Activated schedule: process & pay button -->
         <button
           *ngIf="revalidationTargetRow?.isActivatedSchedule"
           type="button"
@@ -1629,10 +1641,10 @@
           (click)="confirmRevalidationSubmit()"
         >
           <span *ngIf="isSubmittingRevalidation" class="spinner-border spinner-border-sm me-2"></span>
-          <i *ngIf="!isSubmittingRevalidation" class="bi bi-send-fill me-2"></i>
-          {{ isSubmittingRevalidation ? 'Submitting...' : 'Process & Submit to Commissioner' }}
+          <i *ngIf="!isSubmittingRevalidation" class="bi bi-credit-card-fill me-2"></i>
+          {{ isSubmittingRevalidation ? 'Submitting...' : 'Pay ₹1,000 & Submit to Commissioner' }}
         </button>
-        <!-- Manual: needs reason + declaration -->
+        <!-- Manual: needs reason + declaration + payment -->
         <button
           *ngIf="!revalidationTargetRow?.isActivatedSchedule"
           type="button"
@@ -1641,8 +1653,83 @@
           (click)="confirmRevalidationSubmit()"
         >
           <span *ngIf="isSubmittingRevalidation" class="spinner-border spinner-border-sm me-2"></span>
-          <i *ngIf="!isSubmittingRevalidation" class="bi bi-send-fill me-2"></i>
-          {{ isSubmittingRevalidation ? 'Submitting...' : 'Submit Revalidation Request' }}
+          <i *ngIf="!isSubmittingRevalidation" class="bi bi-credit-card-fill me-2"></i>
+          {{ isSubmittingRevalidation ? 'Submitting...' : 'Proceed to Payment & Submit' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- REVALIDATION PAYMENT CONFIRMATION MODAL -->
+<div
+  class="modal fade show d-block"
+  tabindex="-1"
+  *ngIf="showRevalidationPaymentModal"
+  style="background-color: rgba(0,0,0,0.65); z-index: 1080;"
+>
+  <div class="modal-dialog modal-dialog-centered" style="max-width: 500px;">
+    <div class="modal-content shadow border-0 rounded-4">
+      <div class="modal-header bg-warning text-dark border-0 rounded-top-4 py-3 px-4">
+        <h5 class="modal-title fw-bold">
+          <i class="bi bi-credit-card-fill me-2"></i> Confirm Revalidation Payment
+        </h5>
+        <button type="button" class="btn-close" (click)="closeRevalidationPaymentModal()" [disabled]="isSubmittingRevalidation"></button>
+      </div>
+      <div class="modal-body px-4 py-4">
+
+        <!-- Fee debit row -->
+        <div class="d-flex justify-content-between align-items-center py-3 border-bottom">
+          <div>
+            <div class="fw-bold text-dark">Revalidation Processing Fee</div>
+            <small class="text-muted">Debited from Excise Duty Wallet</small>
+          </div>
+          <span class="badge bg-danger fs-6 px-3 py-2">−₹{{ revalidationFeeAmount.toFixed(2) }}</span>
+        </div>
+
+        <!-- Excise Duty Wallet summary -->
+        <div class="mt-3 p-3 bg-light rounded-3 border">
+          <div class="fw-semibold text-dark mb-2">
+            <i class="bi bi-wallet2 me-1 text-warning"></i> Excise Duty Wallet
+          </div>
+          <div class="d-flex justify-content-between small mb-1">
+            <span class="text-muted">Current Balance:</span>
+            <span class="fw-semibold">₹{{ revalidationCurrentExciseBalance.toFixed(2) }}</span>
+          </div>
+          <div class="d-flex justify-content-between small mb-1">
+            <span class="text-muted">Revalidation Fee:</span>
+            <span class="text-danger fw-semibold">−₹{{ revalidationFeeAmount.toFixed(2) }}</span>
+          </div>
+          <div class="d-flex justify-content-between small fw-bold border-top pt-2 mt-1">
+            <span>Projected Balance:</span>
+            <span [class]="revalidationProjectedExciseBalance >= 0 ? 'text-success' : 'text-danger'">
+              ₹{{ revalidationProjectedExciseBalance.toFixed(2) }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Warning if insufficient -->
+        <div class="alert alert-danger border-danger mt-3 mb-0 py-2 small"
+          *ngIf="revalidationProjectedExciseBalance < 0">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i>
+          <strong>Insufficient Balance.</strong> Please recharge your Excise Duty wallet before submitting.
+        </div>
+
+        <p class="text-muted small mt-3 mb-0">
+          By confirming, ₹{{ revalidationFeeAmount.toFixed(2) }} will be debited from your Excise Duty wallet and the revalidation application will be forwarded to the Commissioner.
+        </p>
+      </div>
+      <div class="modal-footer bg-light border-0 rounded-bottom-4 py-3 px-4">
+        <button type="button" class="btn btn-outline-secondary px-4"
+          (click)="closeRevalidationPaymentModal()" [disabled]="isSubmittingRevalidation">
+          Back
+        </button>
+        <button type="button" class="btn btn-success px-4 fw-bold"
+          [disabled]="revalidationProjectedExciseBalance < 0 || isSubmittingRevalidation"
+          (click)="executeRevalidationSubmit()">
+          <span *ngIf="isSubmittingRevalidation" class="spinner-border spinner-border-sm me-2"></span>
+          <i *ngIf="!isSubmittingRevalidation" class="bi bi-check-circle-fill me-2"></i>
+          {{ isSubmittingRevalidation ? 'Submitting...' : 'Confirm & Submit Application' }}
         </button>
       </div>
     </div>
