@@ -19,7 +19,8 @@ export class ManageComponent implements OnInit {
   licenseCategory: LicenseCategory = { 
     licenseCategory: '', 
     description: '',
-    isSpecialPermitAllowed: false
+    isSpecialPermitAllowed: false,
+    isDistributorUser: false
   };
   isEditMode = false;
 

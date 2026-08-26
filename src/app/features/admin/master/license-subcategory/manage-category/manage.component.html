@@ -43,6 +43,26 @@
         </mat-slide-toggle>
       </div>
 
+      <!-- Distributor User Toggle Card -->
+      <div class="permit-toggle-card mt-3" [class.permit-active]="licenseCategory.isDistributorUser">
+        <div class="permit-toggle-left">
+          <div class="permit-icon" [class.permit-icon-active]="licenseCategory.isDistributorUser">
+            <mat-icon>account_balance_wallet</mat-icon>
+          </div>
+          <div class="permit-text">
+            <span class="permit-title">Is Distributor User?</span>
+            <span class="permit-subtitle">
+              Licensees of this category can view both Supply Chain Wallets and License Fee Wallets when Commissioner approves and is awaiting payment
+            </span>
+          </div>
+        </div>
+        <mat-slide-toggle
+          name="isDistributorUser"
+          [(ngModel)]="licenseCategory.isDistributorUser"
+          color="primary">
+        </mat-slide-toggle>
+      </div>
+
     </mat-dialog-content>
 
     <mat-dialog-actions class="dialog-actions">

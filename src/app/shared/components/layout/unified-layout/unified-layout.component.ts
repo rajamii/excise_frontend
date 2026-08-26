@@ -76,6 +76,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   /** Manufacturing licensees (including non–brewery/distillery) who may use Payment & Wallet. */
   showManufacturingWalletNav = false;
   showSpecialPermitMenu = false;
+  showDistributorPermitMenu = false;
 
   myLicenses: any[] = [];
   selectedLicenseGroupKey = '';
@@ -1133,24 +1134,22 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     }
     this.lastMenuAccessUserKey = key;
 
-    this.licenseMeService.getMyLicenses().subscribe({
-      next: (licenses) => {
+    forkJoin({
+      licenses: this.licenseMeService.getMyLicenses().pipe(catchError(() => of([]))),
+      categories: this.http.get<any>(`${environment.apiBaseUrl}/masters/core/license-categories/`).pipe(catchError(() => of([])))
+    }).subscribe({
+      next: ({ licenses, categories }) => {
         const licenseRows = Array.isArray(licenses) ? licenses : [];
+        const categoryRows = Array.isArray(categories) ? categories : (Array.isArray((categories as any)?.results) ? (categories as any).results : []);
         this.myLicenses = licenseRows;
         this.ensureSelectedLicenseGroup();
 
-        // Avoid heavy application list APIs during login; derive menu visibility from issued licenses.
-        this.applySubtypeMenuRules(licenseRows);
+        this.applySubtypeMenuRules(licenseRows, categoryRows);
       },
-      error: (error) => {
-        console.error('Failed to evaluate menu access from combined sources:', error);
-        this.showDistilleryMenus = false;
-        this.showBreweryOrDistilleryMenus = false;
-        this.hasBreweryOrDistilleryWalletViews = false;
-        this.showManufacturingWalletNav = false;
+      error: () => {
         this.myLicenses = [];
         this.selectedLicenseGroupKey = '';
-        this.triggerUiRefresh();
+        this.applySubtypeMenuRules([], []);
       }
     });
   }
@@ -1452,28 +1451,57 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       .replaceAll("'", '&#39;');
   }
 
-  private applySubtypeMenuRules(rows: any[]): void {
+  private applySubtypeMenuRules(rows: any[], categoryMasters?: any[]): void {
     const hasDistilleryAny = rows.some((item) => this.isDistillery(item));
     const hasBreweryAny = rows.some((item) => this.isBrewery(item));
     const menuRows = filterRowsForSupplyChainSidebarMenus(rows);
     const hasDistillery = menuRows.some((item) => this.isDistillery(item));
     const hasBrewery = menuRows.some((item) => this.isBrewery(item));
 
-    // Distillery: full supply-chain menu (hidden until license fee paid if still awaiting payment).
     this.showDistilleryMenus = hasDistillery;
-    // Brewery OR Distillery: transit + hologram menus.
     this.showBreweryOrDistilleryMenus = hasDistillery || hasBrewery;
     this.hasBreweryOrDistilleryWalletViews = hasDistilleryAny || hasBreweryAny;
-    // Wallet becomes visible once the source application reaches `awaiting_payment`
-    // (Awaiting License Fee Payment) or final approval.
     this.showManufacturingWalletNav = this.computeWalletNavVisible(rows);
 
-    // Dynamic: show Special Permit menu only if ANY active license has is_special_permit_allowed=true
-    // or if the user is District User (roleId 4) or Commissioner (roleId 10)
     const userRoleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
-    this.showSpecialPermitMenu = [4, 10].includes(userRoleId) || rows.some((row) =>
-      row?.isSpecialPermitAllowed === true || row?.is_special_permit_allowed === true
-    );
+
+    const distributorCategorySet = new Set<string>();
+    const specialPermitCategorySet = new Set<string>();
+
+    if (Array.isArray(categoryMasters)) {
+      categoryMasters.forEach((cat: any) => {
+        const cId = String(cat.id || '').trim();
+        const cName = String(cat.licenseCategory || cat.license_category || '').trim().toLowerCase();
+        if (cat.isDistributorUser || cat.is_distributor_user) {
+          if (cId) distributorCategorySet.add(cId);
+          if (cName) distributorCategorySet.add(cName);
+        }
+        if (cat.isSpecialPermitAllowed || cat.is_special_permit_allowed) {
+          if (cId) specialPermitCategorySet.add(cId);
+          if (cName) specialPermitCategorySet.add(cName);
+        }
+      });
+    }
+
+    this.showSpecialPermitMenu = [4, 10].includes(userRoleId) || rows.some((row) => {
+      const isSpecFromRow = row?.isSpecialPermitAllowed === true || row?.is_special_permit_allowed === true;
+      const catObj = row?.license_category ?? row?.licenseCategory;
+      const catVal = String(catObj || '').trim().toLowerCase();
+      const catIdVal = String(row?.license_category_id || row?.licenseCategoryId || (catObj && typeof catObj === 'object' ? catObj.id : '') || '').trim();
+      return isSpecFromRow || specialPermitCategorySet.has(catVal) || specialPermitCategorySet.has(catIdVal);
+    });
+
+    const userCat = (this.user as any)?.licenseCategory || (this.currentUser as any)?.licenseCategory;
+    const userCatIsDistributor = !!(userCat && typeof userCat === 'object' && (userCat.isDistributorUser || userCat.is_distributor_user));
+
+    this.showDistributorPermitMenu = [4, 10, 15].includes(userRoleId) || userCatIsDistributor || rows.some((row) => {
+      const isDistFromRow = row?.isDistributorUser === true || row?.is_distributor_user === true;
+      const catObj = row?.license_category ?? row?.licenseCategory;
+      const isDistFromCatObj = catObj && typeof catObj === 'object' && (catObj.isDistributorUser === true || catObj.is_distributor_user === true);
+      const catVal = String(catObj || '').trim().toLowerCase();
+      const catIdVal = String(row?.license_category_id || row?.licenseCategoryId || (catObj && typeof catObj === 'object' ? catObj.id : '') || '').trim();
+      return isDistFromRow || isDistFromCatObj || distributorCategorySet.has(catVal) || distributorCategorySet.has(catIdVal);
+    });
 
     console.log('Resolved menu flags:', {
       hasDistillery,
@@ -1481,7 +1509,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       showDistilleryMenus: this.showDistilleryMenus,
       showBreweryOrDistilleryMenus: this.showBreweryOrDistilleryMenus,
       showManufacturingWalletNav: this.showManufacturingWalletNav,
-      showSpecialPermitMenu: this.showSpecialPermitMenu
+      showSpecialPermitMenu: this.showSpecialPermitMenu,
+      showDistributorPermitMenu: this.showDistributorPermitMenu
     });
 
     if (rows.length > 0) {

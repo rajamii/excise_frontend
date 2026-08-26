@@ -2570,11 +2570,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (!this.licenseeMenuAccessResolved) {
       return false;
     }
-    return this.showManufacturingWalletNav && this.showBreweryOrDistilleryWalletViews;
+    return this.showManufacturingWalletNav || this.showBreweryOrDistilleryWalletViews;
   }
 
   setWalletViewMode(mode: 'wallets' | 'others'): void {
-    if (this.isLicenseeUser() && this.licenseeMenuAccessResolved && !this.showBreweryOrDistilleryWalletViews) {
+    if (this.isLicenseeUser() && this.licenseeMenuAccessResolved && !this.showBreweryOrDistilleryWalletViews && !this.showManufacturingWalletNav) {
       mode = 'others';
     }
     if (!mode || this.walletViewMode === mode) return;

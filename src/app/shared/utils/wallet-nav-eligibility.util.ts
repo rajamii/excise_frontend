@@ -116,7 +116,8 @@ export function isWalletEnabledStage(item: any): boolean {
  * Show Payment & Wallet when:
  * - A license has been issued (`license_id`), or
  * - The new-license application is approved / awaiting payment **and** has category + subcategory
- *   from the user's selection (works for Joint Commissioner → Commissioner forward stages).
+ *   from the user's selection (works for Joint Commissioner → Commissioner forward stages), OR
+ * - The application/license category has `is_distributor_user` enabled.
  */
 export function isLicenseeWalletNavEligible(item: any): boolean {
   const hasLicenseId = !!(item?.license_id || item?.licenseId);
@@ -138,6 +139,18 @@ export function isLicenseeWalletNavEligible(item: any): boolean {
   if (!isWalletEnabledStage(item)) {
     return false;
   }
+
+  const catObj = item?.license_category ?? item?.licenseCategory;
+  const isDistributor = !!(
+    item?.is_distributor_user ??
+    item?.isDistributorUser ??
+    (catObj && typeof catObj === 'object' ? (catObj.is_distributor_user ?? catObj.isDistributorUser) : false)
+  );
+
+  if (isDistributor) {
+    return true;
+  }
+
   return hasLicenseCategoryAndSubcategorySelected(item);
 }
 

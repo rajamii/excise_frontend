@@ -4,4 +4,5 @@ export class LicenseCategory {
     description?: any;
     isActive?: boolean;
     isSpecialPermitAllowed?: boolean;
+    isDistributorUser?: boolean;
   }

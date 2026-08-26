@@ -2,18 +2,19 @@ import { Component, Inject, OnInit } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import Swal from 'sweetalert2';
 import { MaterialModule } from '../../../../../shared/material.module';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { LicenseCategory } from '../../../../../core/models/license-category.model';
 import { AdminService } from '../../../admin.service';
 
 @Component({
   selector: 'app-manage-category',
   standalone: true,
-  imports: [MaterialModule],
+  imports: [MaterialModule, MatSlideToggleModule],
   templateUrl: './manage.component.html',
   styleUrl: './manage.component.scss'
 })
 export class ManageComponent implements OnInit {
-  licenseCategory: LicenseCategory = { licenseCategory: '', isSpecialPermitAllowed: false };
+  licenseCategory: LicenseCategory = { licenseCategory: '', isSpecialPermitAllowed: false, isDistributorUser: false };
   isEditMode = false;
 
   constructor(
