@@ -2409,6 +2409,85 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return [this.selectedPermitDetailForRevalidation];
   }
 
+  getRevalidationItemImportFee(item: any): number {
+    const cases = Number(item?.cases || item?.total_cases || item?.totalCases || 0);
+    const rate = Number(item?.import_pass_fee_per_case || item?.importPassFeePerCase || item?.import_fee || item?.importFee || 1400);
+    const direct = Number(item?.total_import ?? item?.totalImport ?? item?.total_import_fee ?? item?.totalImportFee ?? 0);
+    if (direct > 0) return direct;
+    return cases > 0 ? (rate * cases) : 0;
+  }
+
+  getRevalidationItemAddEd(item: any): number {
+    const cases = Number(item?.cases || item?.total_cases || item?.totalCases || 0);
+    const rate = Number(item?.additional_ed_per_case || item?.additionalEdPerCase || item?.additional_ed || item?.additionalEd || item?.add_ed || item?.addEd || 350);
+    const direct = Number(item?.total_additional_ed ?? item?.totalAdditionalEd ?? item?.total_add_ed ?? item?.totalAddEd ?? 0);
+    if (direct > 0) return direct;
+    return cases > 0 ? (rate * cases) : 0;
+  }
+
+  getRevalidationItemBL(item: any): number {
+    const cases = Number(item?.cases || item?.total_cases || item?.totalCases || 0);
+    const sizeMl = Number(item?.size_ml || item?.sizeMl || 330);
+    const pieces = Number(item?.pieces_per_case || item?.piecesPerCase || (sizeMl <= 330 ? 24 : (sizeMl <= 500 ? 24 : 12)));
+    const direct = Number(item?.bulk_litres ?? item?.bulkLitres ?? item?.bl ?? item?.total_bulk_litres ?? item?.totalBulkLitres ?? 0);
+    if (direct > 0) return direct;
+    return cases > 0 ? ((cases * sizeMl * pieces) / 1000) : 0;
+  }
+
+  getPermitTotalCases(pDetail: any): number {
+    const items = pDetail?.line_items || pDetail?.lineItems || [];
+    if (Array.isArray(items) && items.length > 0) {
+      return items.reduce((acc: number, it: any) => acc + Number(it?.cases || 0), 0);
+    }
+    return Number(pDetail?.total_cases || pDetail?.totalCases || 0);
+  }
+
+  getPermitTotalImportFee(pDetail: any): number {
+    const items = pDetail?.line_items || pDetail?.lineItems || [];
+    if (Array.isArray(items) && items.length > 0) {
+      return items.reduce((acc: number, it: any) => acc + this.getRevalidationItemImportFee(it), 0);
+    }
+    const direct = Number(pDetail?.total_import_fee || pDetail?.totalImportFee || pDetail?.total_import || pDetail?.totalImport || 0);
+    if (direct > 0) return direct;
+    return this.getPermitTotalCases(pDetail) * 1400;
+  }
+
+  getPermitTotalAddEd(pDetail: any): number {
+    const items = pDetail?.line_items || pDetail?.lineItems || [];
+    if (Array.isArray(items) && items.length > 0) {
+      return items.reduce((acc: number, it: any) => acc + this.getRevalidationItemAddEd(it), 0);
+    }
+    const direct = Number(pDetail?.total_additional_ed || pDetail?.totalAdditionalEd || pDetail?.total_add_ed || pDetail?.totalAddEd || 0);
+    if (direct > 0) return direct;
+    return this.getPermitTotalCases(pDetail) * 350;
+  }
+
+  getPermitTotalBL(pDetail: any): number {
+    const items = pDetail?.line_items || pDetail?.lineItems || [];
+    if (Array.isArray(items) && items.length > 0) {
+      return items.reduce((acc: number, it: any) => acc + this.getRevalidationItemBL(it), 0);
+    }
+    const direct = Number(pDetail?.total_bulk_litres || pDetail?.totalBulkLitres || pDetail?.bulk_litres || pDetail?.bl || 0);
+    if (direct > 0) return direct;
+    return (this.getPermitTotalCases(pDetail) * 330 * 24) / 1000;
+  }
+
+  getRevalidationGrandTotalCases(): number {
+    return this.getSelectedRevalidationPermitsList().reduce((acc, p) => acc + this.getPermitTotalCases(p), 0);
+  }
+
+  getRevalidationGrandTotalImportFee(): number {
+    return this.getSelectedRevalidationPermitsList().reduce((acc, p) => acc + this.getPermitTotalImportFee(p), 0);
+  }
+
+  getRevalidationGrandTotalAddEd(): number {
+    return this.getSelectedRevalidationPermitsList().reduce((acc, p) => acc + this.getPermitTotalAddEd(p), 0);
+  }
+
+  getRevalidationGrandTotalBL(): number {
+    return this.getSelectedRevalidationPermitsList().reduce((acc, p) => acc + this.getPermitTotalBL(p), 0);
+  }
+
   isCurrentPermitDisabledForRevalidation(): boolean {
     const opt = this.availablePermitOptionsForRevalidation.find(o => o.permitNumber === this.selectedPermitNumberForRevalidation);
     if (!opt) return false;
