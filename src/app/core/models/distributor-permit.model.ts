@@ -70,9 +70,15 @@ export interface DistributorPermitApplication {
 
 export interface DistributorSupplier {
   id: number;
+  supplier_master_name?: string;
+  supplierMasterName?: string;
+  supplier_name?: string;
   company_name: string;
+  companyName?: string;
   post?: string;
   address: string;
+  route_details?: string;
+  routeDetails?: string;
   state?: string;
   is_active?: boolean;
 }
@@ -87,4 +93,6 @@ export interface DistributorBrandMaster {
   mrpPerBottle: number;
   additionalEdPerCase: number;
   educationCessPerCase: number;
+  supplierId?: number;
+  supplierName?: string;
 }

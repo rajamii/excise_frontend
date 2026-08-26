@@ -2174,6 +2174,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return this.lineItems.controls.reduce((sum, _, index) => sum + this.getLineAdditionalEd(index), 0);
   }
 
+  get totalBulkLitres(): number {
+    return this.lineItems.controls.reduce((sum, _, index) => sum + this.getLineBulkLitres(index), 0);
+  }
+
   get applicantDisplayName(): string {
     return String(this.applicantForm.controls.applicantCompanyName.value || '').trim() || 'Applicant';
   }
@@ -2694,22 +2698,38 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return Number(this.getLineSummary(index)?.educationCessPerCase || 0);
   }
 
+  getLineEduCessPerCase(index: number): number {
+    return this.getLineCessPerCase(index);
+  }
+
   getLineTotalAddEd(index: number): number {
     return this.getLineAdditionalEd(index);
   }
 
+  getLineTotalEduCess(index: number): number {
+    return this.getLineCess(index);
+  }
+
   getUniqueBrandNames(): string[] {
     const names = new Set<string>();
-    (this.brandMaster || []).forEach((b) => {
-      if (b.brandName) names.add(b.brandName);
+    const selectedSupId = this.supplierForm.controls.selectedSupplierId.value;
+    (this.brandMaster || []).forEach((b: any) => {
+      if (b.brandName) {
+        if (!selectedSupId || String(b.supplierId) === String(selectedSupId)) {
+          names.add(b.brandName);
+        }
+      }
     });
     return Array.from(names).sort();
   }
 
   getAvailableSizesForBrand(brandName: string): DistributorBrandMaster[] {
     if (!brandName) return [];
+    const selectedSupId = this.supplierForm.controls.selectedSupplierId.value;
     return (this.brandMaster || []).filter(
-      (b) => b.brandName?.toLowerCase() === brandName.toLowerCase()
+      (b: any) =>
+        b.brandName?.toLowerCase() === brandName.toLowerCase() &&
+        (!selectedSupId || String(b.supplierId) === String(selectedSupId))
     );
   }
 
@@ -2722,12 +2742,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   getSupplierLabel(option: DistributorSupplier): string {
-    const parts = [
-      option.company_name,
-      option.address,
-      option.state
-    ].filter((value) => !!String(value || '').trim());
-    return parts.join(' • ');
+    if (!option) return '';
+    return option.supplier_master_name || option.supplierMasterName || option.supplier_name || option.company_name || option.address || '';
   }
 
   getBrandReviewRows(): Array<{
@@ -3093,15 +3109,22 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       ) || this.cleanValue(account?.username);
       const address = this.cleanValue(account?.address);
 
-      if (companyName && !this.cleanValue(this.applicantForm.controls.applicantCompanyName.value)) {
+      if (companyName) {
         this.applicantForm.controls.applicantCompanyName.setValue(companyName, { emitEvent: false });
       }
-      if (signatoryName && !this.cleanValue(this.applicantForm.controls.authorizedSignatory.value)) {
+      if (signatoryName) {
         this.applicantForm.controls.authorizedSignatory.setValue(signatoryName, { emitEvent: false });
       }
-      if (address && !this.cleanValue(this.applicantForm.controls.applicantAddress.value)) {
+      if (address) {
         this.applicantForm.controls.applicantAddress.setValue(address, { emitEvent: false });
       }
+
+      const destAddress = address ? `Excise Warehouse / Bonded Warehouse, ${address}` : 'Central Excise Warehouse / Sikkim Bonded Warehouse, Rangpo, East Sikkim';
+      this.routeForm.controls.destination.setValue(destAddress, { emitEvent: false });
+      this.routeForm.controls.destination.disable({ emitEvent: false });
+
+      // Disable Step 1 controls to make Step 1 completely uneditable
+      this.applicantForm.disable({ emitEvent: false });
     };
 
     const current = this.accountService.getUserProfileSync() || this.accountService.getCurrentUser();
@@ -3123,9 +3146,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           }
 
           const profileName = this.cleanValue(profile.manufacturingUnitName || profile.licenseeId);
-          if (profileName && !this.cleanValue(this.applicantForm.controls.applicantCompanyName.value)) {
+          if (profileName) {
             this.applicantForm.controls.applicantCompanyName.setValue(profileName, { emitEvent: false });
           }
+          this.applicantForm.disable({ emitEvent: false });
         },
         error: () => {
           // Leave the account fallback in place.
@@ -3136,6 +3160,19 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   private applySupplierById(supplierId: string): void {
     const supplier = this.suppliers.find((item) => String(item.id) === String(supplierId));
     if (!supplier) {
+      this.supplierForm.patchValue({
+        supplierCompanyName: '',
+        sourceAddress: ''
+      }, { emitEvent: false });
+      this.supplierForm.controls.supplierCompanyName.enable({ emitEvent: false });
+      this.supplierForm.controls.sourceAddress.enable({ emitEvent: false });
+
+      this.routeForm.patchValue({
+        origin: '',
+        routeDetails: ''
+      }, { emitEvent: false });
+      this.routeForm.controls.origin.enable({ emitEvent: false });
+      this.routeForm.controls.routeDetails.enable({ emitEvent: false });
       return;
     }
 
@@ -3143,8 +3180,36 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       supplierCompanyName: supplier.company_name || '',
       sourceAddress: supplier.address || ''
     }, { emitEvent: false });
-    this.routeForm.controls.origin.setValue(supplier.address || '', { emitEvent: false });
+    this.supplierForm.controls.supplierCompanyName.disable({ emitEvent: false });
+    this.supplierForm.controls.sourceAddress.disable({ emitEvent: false });
+
+    const routeText = (supplier as any).route_details || (supplier as any).routeDetails || '';
+    this.routeForm.patchValue({
+      origin: supplier.address || '',
+      routeDetails: routeText
+    }, { emitEvent: false });
+    this.routeForm.controls.origin.disable({ emitEvent: false });
+    this.routeForm.controls.routeDetails.disable({ emitEvent: false });
+    this.routeForm.controls.transportMode.setValue('Road', { emitEvent: false });
+    this.routeForm.controls.transportMode.disable({ emitEvent: false });
+
+    this.resetBrandRowsForSupplier(supplier.id);
     this.syncBrandStepValidity();
+  }
+
+  private resetBrandRowsForSupplier(supplierId: number | string): void {
+    const validBrandNames = new Set(
+      (this.brandMaster || [])
+        .filter((b: any) => !supplierId || String(b.supplierId) === String(supplierId))
+        .map((b: any) => b.brandName)
+    );
+
+    this.lineItems.controls.forEach((control) => {
+      const selectedBrand = control.get('selectedBrandName')?.value;
+      if (selectedBrand && !validBrandNames.has(selectedBrand)) {
+        control.patchValue({ selectedBrandName: '', brandKey: '' });
+      }
+    });
   }
 
   private mapApplicationRow(application: any): DistributorPermitRow {

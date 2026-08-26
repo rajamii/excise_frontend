@@ -752,12 +752,15 @@
                   <th>Brand Name</th>
                   <th>Size / Package</th>
                   <th>Cases</th>
+                  <th>Bulk Litres (BL)</th>
                   <th>EDP</th>
                   <th>Import Pass Fee</th>
                   <th>Total Import</th>
                   <th>MRP</th>
                   <th>Add. ED / Case</th>
                   <th>Total Add. ED</th>
+                  <th>Edu. Cess / Case</th>
+                  <th>Total Edu. Cess</th>
                   <th></th>
                 </tr>
               </thead>
@@ -791,12 +794,15 @@
                       <input matInput type="number" min="1" formControlName="cases" aria-label="Cases" title="Cases">
                     </mat-form-field>
                   </td>
+                  <td><strong>{{ getLineBulkLitres(i) | number:'1.2-2' }} BL</strong></td>
                   <td>{{ getLineEdp(i) | currency:'INR':'symbol':'1.2-2' }}</td>
                   <td>{{ getLineImportFee(i) | currency:'INR':'symbol':'1.2-2' }}</td>
                   <td>{{ getLineImport(i) | currency:'INR':'symbol':'1.2-2' }}</td>
                   <td>{{ getLineMrp(i) | currency:'INR':'symbol':'1.2-2' }}</td>
                   <td>{{ getLineAdditionalEdPerCase(i) | currency:'INR':'symbol':'1.2-2' }}</td>
                   <td>{{ getLineTotalAddEd(i) | currency:'INR':'symbol':'1.2-2' }}</td>
+                  <td>{{ getLineEduCessPerCase(i) | currency:'INR':'symbol':'1.2-2' }}</td>
+                  <td>{{ getLineTotalEduCess(i) | currency:'INR':'symbol':'1.2-2' }}</td>
                   <td>
                     <button mat-icon-button type="button" (click)="removeLineItem(i)" [disabled]="lineItems.length === 1" title="Remove row">
                       <mat-icon>delete</mat-icon>
@@ -816,8 +822,10 @@
 
           <div class="dp-summary">
             <span>Total Cases <strong>{{ totalCases }}</strong></span>
+            <span>Total Bulk Litres (BL) <strong>{{ totalBulkLitres | number:'1.2-2' }} BL</strong></span>
             <span>Total Import <strong>{{ totalImport | currency:'INR':'symbol':'1.2-2' }}</strong></span>
             <span>Total Add. ED <strong>{{ totalAdditionalEd | currency:'INR':'symbol':'1.2-2' }}</strong></span>
+            <span>Total Edu. Cess <strong>{{ totalCess | currency:'INR':'symbol':'1.2-2' }}</strong></span>
           </div>
 
           <!-- Permit Allocation Summary (Max 600 Cases per Permit) -->
@@ -843,8 +851,10 @@
                             <th>Brand Name</th>
                             <th>Size / Package</th>
                             <th class="text-center">Cases</th>
+                            <th class="text-end">Bulk Litres (BL)</th>
                             <th class="text-end">Total Import</th>
                             <th class="text-end">Total Add. ED</th>
+                            <th class="text-end">Total Edu. Cess</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -853,8 +863,10 @@
                             <td class="fw-medium">{{ item.brand }}</td>
                             <td>{{ item.size }}</td>
                             <td class="text-center fw-bold">{{ item.cases }}</td>
+                            <td class="text-end fw-bold">{{ item.bl | number:'1.2-2' }} BL</td>
                             <td class="text-end text-success fw-semibold">{{ item.totalImport | currency:'INR':'symbol':'1.2-2' }}</td>
                             <td class="text-end">{{ item.totalAddEd | currency:'INR':'symbol':'1.2-2' }}</td>
+                            <td class="text-end">{{ item.cess | currency:'INR':'symbol':'1.2-2' }}</td>
                           </tr>
                         </tbody>
                       </table>
@@ -863,8 +875,10 @@
                     <!-- Subtotal Summary Bar for this Permit -->
                     <div class="p-2 bg-light rounded border d-flex flex-wrap gap-3 justify-content-around text-center">
                       <div><small class="text-muted d-block">Cases</small><strong>{{ permit.totalCases }}</strong></div>
+                      <div><small class="text-muted d-block">Bulk Litres</small><strong>{{ permit.totalBulkLitres | number:'1.2-2' }} BL</strong></div>
                       <div><small class="text-muted d-block">Total Import</small><strong class="text-success">{{ permit.totalImport | currency:'INR':'symbol':'1.2-2' }}</strong></div>
                       <div><small class="text-muted d-block">Total Add. ED</small><strong>{{ permit.totalAddEd | currency:'INR':'symbol':'1.2-2' }}</strong></div>
+                      <div><small class="text-muted d-block">Total Edu. Cess</small><strong>{{ permit.totalCess | currency:'INR':'symbol':'1.2-2' }}</strong></div>
                     </div>
                   </div>
                 </div>
@@ -974,12 +988,15 @@
                               <th>Brand</th>
                               <th>Size</th>
                               <th>Cases</th>
+                              <th>Bulk Litres (BL)</th>
                               <th>EDP</th>
                               <th>Import Fee</th>
                               <th>Total Import</th>
                               <th>MRP</th>
                               <th>Add. ED / Case</th>
                               <th>Total Add. ED</th>
+                              <th>Edu. Cess / Case</th>
+                              <th>Total Edu. Cess</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -987,12 +1004,15 @@
                               <td>{{ item.brand }}</td>
                               <td>{{ item.size }}</td>
                               <td>{{ item.cases }}</td>
+                              <td><strong>{{ item.bl | number:'1.2-2' }} BL</strong></td>
                               <td>{{ item.edp | currency:'INR':'symbol':'1.2-2' }}</td>
                               <td>{{ item.importFee | currency:'INR':'symbol':'1.2-2' }}</td>
                               <td>{{ item.totalImport | currency:'INR':'symbol':'1.2-2' }}</td>
                               <td>{{ item.mrp | currency:'INR':'symbol':'1.2-2' }}</td>
                               <td>{{ item.addEdPerCase | currency:'INR':'symbol':'1.2-2' }}</td>
                               <td>{{ item.totalAddEd | currency:'INR':'symbol':'1.2-2' }}</td>
+                              <td>{{ (item.cases ? item.cess / item.cases : 0) | currency:'INR':'symbol':'1.2-2' }}</td>
+                              <td>{{ item.cess | currency:'INR':'symbol':'1.2-2' }}</td>
                             </tr>
                           </tbody>
                         </table>
@@ -1001,8 +1021,10 @@
                       <!-- Subtotal Summary Bar for this Permit -->
                       <div class="p-2 bg-light rounded border d-flex flex-wrap gap-3 justify-content-around text-center">
                         <div><small class="text-muted d-block">Permit Cases</small><strong>{{ permit.totalCases }}</strong></div>
+                        <div><small class="text-muted d-block">Bulk Litres</small><strong>{{ permit.totalBulkLitres | number:'1.2-2' }} BL</strong></div>
                         <div><small class="text-muted d-block">Total Import</small><strong class="text-success">{{ permit.totalImport | currency:'INR':'symbol':'1.2-2' }}</strong></div>
                         <div><small class="text-muted d-block">Total Add. ED</small><strong>{{ permit.totalAddEd | currency:'INR':'symbol':'1.2-2' }}</strong></div>
+                        <div><small class="text-muted d-block">Total Edu. Cess</small><strong>{{ permit.totalCess | currency:'INR':'symbol':'1.2-2' }}</strong></div>
                       </div>
                     </div>
                   </div>

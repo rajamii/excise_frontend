@@ -80,9 +80,7 @@ export class DistributorPermitService {
   }
 
   getSuppliers(): Observable<DistributorSupplier[]> {
-    return this.getCachedOrFetch('suppliers:active', () =>
-      this.http.get<DistributorSupplier[]>(`${this.baseUrl}/suppliers/?active_only=1`)
-    );
+    return this.http.get<DistributorSupplier[]>(`${this.baseUrl}/suppliers/`);
   }
 
   getBrandMaster(q = ''): Observable<{ success: boolean; data: DistributorBrandMaster[]; total: number }> {
