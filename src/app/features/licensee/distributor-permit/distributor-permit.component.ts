@@ -910,7 +910,15 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.cancellationRefundEducationCess = cessSum;
     this.cancellationTotalRefund = importFeeSum + addEdSum + cessSum;
 
-    this.cancellationFeeAmount = 1000;
+    // Fee = Rs.1000 per permit number being cancelled
+    const permitWiseDetails = this.selectedPermitDetail ? [this.selectedPermitDetail] : [];
+    const uniquePermitNos = new Set(
+      permitWiseDetails
+        .map((p: any) => p?.permit_number || p?.permitNumber || '')
+        .filter((n: string) => !!n)
+    );
+    const numPermits = uniquePermitNos.size || 1;
+    this.cancellationFeeAmount = 1000 * numPermits;
     this.cancellationNetExciseChange = (importFeeSum + addEdSum) - this.cancellationFeeAmount;
     this.cancellationNetCessChange = cessSum;
 
