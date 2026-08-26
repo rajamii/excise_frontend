@@ -1199,8 +1199,15 @@
             [(ngModel)]="cancellationReasonDetails"
           ></textarea>
         </div>
+        <div class="alert alert-danger border-danger d-flex align-items-center mb-3" *ngIf="isCurrentPermitDisabledForCancellation()">
+          <i class="bi bi-exclamation-octagon-fill text-danger fs-3 me-3"></i>
+          <div>
+            <strong>Permit Cancellation Disabled</strong><br />
+            This permit cannot be cancelled because a cancellation request is already under process, or the permit is already cancelled / stock arrival approved.
+          </div>
+        </div>
 
-        <div class="form-check p-3 bg-light rounded border">
+        <div class="form-check p-3 bg-light rounded border mb-4">
           <input
             class="form-check-input"
             type="checkbox"
@@ -1225,7 +1232,7 @@
         <button
           type="button"
           class="btn btn-danger px-4"
-          [disabled]="!cancellationDeclarationAccepted || !cancellationReasonDetails.trim() || isSubmittingCancellation"
+          [disabled]="!cancellationDeclarationAccepted || !cancellationReasonDetails.trim() || isSubmittingCancellation || isCurrentPermitDisabledForCancellation()"
           (click)="confirmCancellationSubmit()"
         >
           <span
@@ -1398,6 +1405,14 @@
             </label>
           </div>
         </ng-container>
+
+        <div class="alert alert-danger border-danger d-flex align-items-center mb-3" *ngIf="isCurrentPermitDisabledForRevalidation()">
+          <i class="bi bi-exclamation-octagon-fill text-danger fs-3 me-3"></i>
+          <div>
+            <strong>Permit Revalidation Disabled</strong><br />
+            This permit cannot be revalidated because a revalidation or cancellation request is already under process, or the permit is cancelled.
+          </div>
+        </div>
       </div>
 
       <div class="modal-footer bg-light py-3">
@@ -1414,7 +1429,7 @@
           *ngIf="revalidationTargetRow?.isActivatedSchedule"
           type="button"
           class="btn btn-warning px-4 text-dark fw-bold"
-          [disabled]="isSubmittingRevalidation || !selectedPermitNumberForRevalidation"
+          [disabled]="isSubmittingRevalidation || !selectedPermitNumberForRevalidation || isCurrentPermitDisabledForRevalidation()"
           (click)="confirmRevalidationSubmit()"
         >
           <span *ngIf="isSubmittingRevalidation" class="spinner-border spinner-border-sm me-2"></span>
@@ -1426,7 +1441,7 @@
           *ngIf="!revalidationTargetRow?.isActivatedSchedule"
           type="button"
           class="btn btn-warning px-4 text-dark fw-bold"
-          [disabled]="!revalidationDeclarationAccepted || !revalidationReasonDetails.trim() || isSubmittingRevalidation"
+          [disabled]="!revalidationDeclarationAccepted || !revalidationReasonDetails.trim() || isSubmittingRevalidation || isCurrentPermitDisabledForRevalidation()"
           (click)="confirmRevalidationSubmit()"
         >
           <span *ngIf="isSubmittingRevalidation" class="spinner-border spinner-border-sm me-2"></span>
@@ -1487,7 +1502,7 @@
             [(ngModel)]="selectedPermitNumberForArrival"
             (change)="onPermitSelectionChangeForArrival()"
           >
-            <option *ngFor="let opt of availablePermitOptionsForArrival" [value]="opt.permitNumber" [disabled]="opt.isApproved || opt.isAwaiting || opt.isCancelled || opt.isUnderProcess">
+            <option *ngFor="let opt of availablePermitOptionsForArrival" [value]="opt.permitNumber" [disabled]="opt.isApproved || opt.isAwaiting || opt.isCancelled || opt.isUnderProcess || opt.isRevalidated">
               {{ opt.label }}
             </option>
           </select>
@@ -1543,6 +1558,7 @@
                 class="form-control"
                 placeholder="e.g. SK-01-AB-1234"
                 [(ngModel)]="arrivalVehicleNumber"
+                [disabled]="isCurrentPermitDisabledForArrival()"
               />
             </div>
             <div class="col-md-6">
@@ -1580,6 +1596,7 @@
                 placeholder="Enter arrived number of cases"
                 [(ngModel)]="arrivalArrivedCases"
                 min="0"
+                [disabled]="isCurrentPermitDisabledForArrival()"
               />
             </div>
           </div>
@@ -1593,6 +1610,7 @@
               rows="2"
               placeholder="Enter any discrepancy, condition of seal, or transport remarks..."
               [(ngModel)]="arrivalRemarks"
+              [disabled]="isCurrentPermitDisabledForArrival()"
             ></textarea>
           </div>
         </div>
