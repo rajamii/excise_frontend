@@ -1082,7 +1082,7 @@ private initializeWalletContextAndLoadData(): void {
     });
 
     this.exciseWalletTransactions = mappedModalHistory.filter(item =>
-      item.walletType === 'excise' || item.walletType === 'brewery' || item.walletType === ''
+      item.walletType === 'excise' || item.walletType === 'additional_excise' || item.walletType === 'additional_ed' || item.walletType === 'brewery' || item.walletType === ''
     );
     this.educationWalletTransactions = mappedModalHistory.filter(item => item.walletType === 'education_cess');
     this.hologramWalletTransactions = mappedModalHistory.filter(item => item.walletType === 'hologram');
@@ -1170,6 +1170,7 @@ private initializeWalletContextAndLoadData(): void {
     const walletType = walletTypeRaw || this.normalizeWalletTypeKey(this.inferWalletTypeFromHoa(hoa));
     const txnId = String(this.pickAny(row, ['transaction_id', 'transactionId'], '')).toUpperCase();
     const reference = String(this.pickAny(row, ['reference_no', 'referenceNo'], '')).toUpperCase();
+    const remarks = String(this.pickAny(row, ['remarks', 'remark', 'description'], '')).toLowerCase();
 
     if (reference.startsWith('DP/') || reference.startsWith('SP/')) {
       return 'Dry Day Permit Fee Paid';
@@ -1203,18 +1204,28 @@ private initializeWalletContextAndLoadData(): void {
       return 'Hologram Procurement';
     }
     if (sourceModule.includes('cancellation') || txnId.startsWith('CAN-') || reference.startsWith('CAN/')) {
-      return 'Cancellation';
+      return 'IMFL Cancellation Fee';
     }
     if (sourceModule.includes('revalidation') || txnId.startsWith('REV-') || reference.startsWith('REV/')) {
-      return 'Revalidation';
+      return 'IMFL Revalidation Fee';
     }
     if (sourceModule.includes('transit') || txnId.startsWith('TRP-') || reference.startsWith('TRP/')) {
-      if (txnId.includes('ADDITIONAL_EXCISE')) return 'Transit - Additional Excise';
-      if (txnId.includes('EXCISE_DUTY')) return 'Transit - Excise Duty';
-      return 'Transit';
+      if (txnId.includes('ADDITIONAL_EXCISE') || sourceModule.includes('additional')) return 'Transit - Additional Excise Duty';
+      if (txnId.includes('EXCISE_DUTY') || sourceModule.includes('excise')) return 'Transit - Excise Duty';
+      if (walletType === 'education_cess' || sourceModule.includes('cess')) return 'Transit - Education Duty';
+      return 'Transit Permit Fee';
     }
-    if (sourceModule.includes('requisition') || txnId.startsWith('REQ-') || reference.startsWith('NHP/') || reference.startsWith('REQ/')) {
-      return 'Requisition';
+    if (sourceModule.includes('requisition') || txnId.includes('REQ') || reference.includes('REQ') || reference.startsWith('NHP/')) {
+      if (txnId.includes('EXCISE-ADD') || sourceModule.includes('additional') || remarks.includes('add. ed') || remarks.includes('additional excise') || walletType === 'additional_excise') {
+        return 'IMFL Requisition Additional Excise Duty';
+      }
+      if (txnId.includes('EXCISE-ED') || sourceModule.includes('excise') || remarks.includes('import pass fee') || walletType === 'excise') {
+        return 'IMFL Requisition Excise Duty';
+      }
+      if (txnId.includes('CESS') || sourceModule.includes('cess') || walletType === 'education_cess') {
+        return 'IMFL Requisition Education Duty';
+      }
+      return 'IMFL Requisition Fee';
     }
     if (sourceModule.includes('wallet')) {
       return 'Wallet Recharge';
