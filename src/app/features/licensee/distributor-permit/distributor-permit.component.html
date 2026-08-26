@@ -513,7 +513,7 @@
                   <td>{{ row.submittedOn }}</td>
                   <td>
                     <span class="badge bg-slate-100 text-slate-800 border font-monospace px-2 py-1">
-                      {{ (row.distributorPermitRef && row.distributorPermitRef !== 'N/A') ? row.distributorPermitRef : (row.supplierName && row.supplierName !== 'N/A' ? row.supplierName : 'IMFLREQ/2026-27/0001-P1') }}
+                      {{ getRevalidationPermitRef(row) }}
                     </span>
                   </td>
                   <td>{{ resolveApplicantName(row) }}</td>

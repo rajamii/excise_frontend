@@ -2102,6 +2102,63 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return '';
   }
 
+  getRevalidationPermitRef(row: any): string {
+    if (!row) return 'N/A';
+    const raw = row?.['application'] || row;
+    const appId = String(row?.applicationId || row?.referenceNo || row?.reference_no || '').trim();
+
+    // 1. Check direct revalidated_permit_number field
+    const directRevNo = String(
+      raw?.['revalidated_permit_number'] ||
+      raw?.['revalidatedPermitNumber'] ||
+      raw?.['original_permit_no'] ||
+      raw?.['originalPermitNo'] ||
+      ''
+    ).trim();
+
+    if (directRevNo && directRevNo !== 'N/A' && directRevNo !== appId) {
+      return directRevNo;
+    }
+
+    // 2. Check permit_wise_details on raw application
+    let pDetails = raw?.['permit_wise_details'] || raw?.['permitWiseDetails'] || [];
+    if (!Array.isArray(pDetails) || pDetails.length === 0) {
+      const parent = (this.applications || []).find((a: any) => {
+        const aRef = String(a.referenceNo || a.reference_no || a.id || '').trim();
+        return aRef === appId || aRef === String(raw?.['distributor_permit'] || '');
+      });
+      if (parent) {
+        const parentRaw = (parent as any)?.['application'] || parent;
+        pDetails = parentRaw?.['permit_wise_details'] || parentRaw?.['permitWiseDetails'] || [];
+      }
+    }
+
+    if (Array.isArray(pDetails) && pDetails.length > 0) {
+      const pNums = pDetails
+        .map((p: any) => String(p?.permit_number || p?.permitNumber || '').trim())
+        .filter((n: string) => Boolean(n));
+      if (pNums.length > 0) {
+        return pNums.join(', ');
+      }
+    }
+
+    // 3. Fallback to direct revalidated number or distributor permit reference with -P1
+    if (directRevNo && directRevNo !== 'N/A') {
+      return directRevNo;
+    }
+
+    const distRef = String(row?.distributorPermitRef || raw?.distributor_permit || raw?.distributorPermit || '').trim();
+    if (distRef && distRef !== 'N/A') {
+      return distRef;
+    }
+
+    if (appId && !appId.startsWith('IMFLREV')) {
+      return `${appId}-P1`;
+    }
+
+    return appId || 'N/A';
+  }
+
   getRevalidationExtensionRange(row: any): string {
     if (!row) return 'N/A';
     const raw = row?.['application'] || row;
