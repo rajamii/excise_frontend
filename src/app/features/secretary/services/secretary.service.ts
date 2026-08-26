@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, tap, finalize, shareReplay } from 'rxjs';
+import { Observable, tap, finalize, shareReplay, timeout } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
 export interface BrandStock {
@@ -465,9 +465,11 @@ export class SecretaryService {
   }
 
   getRevenueOverview(): Observable<SecretaryRevenueOverview> {
-    return this.getCachedOrFetch('secretary:revenue-overview', () =>
-      this.http.get<SecretaryRevenueOverview>(`${environment.apiBaseUrl}/api/secretary/revenue/`)
-    );
+    // Always fetch fresh — bypass cache so spinner resolves and live DB data is shown.
+    // timeout(15000) ensures the spinner always stops even if auth refresh hangs.
+    return this.http.get<SecretaryRevenueOverview>(
+      `${environment.apiBaseUrl}/api/secretary/revenue/?_t=${Date.now()}`
+    ).pipe(timeout(15000));
   }
 
   getTimelineOverview(): Observable<SecretaryTimelineOverview> {

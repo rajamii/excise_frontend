@@ -1,7 +1,7 @@
 import { isPlatformBrowser } from '@angular/common';
 import { HttpEvent, HttpHandler, HttpInterceptor, HttpRequest, HttpErrorResponse } from '@angular/common/http';
 import { Inject, Injectable, PLATFORM_ID } from '@angular/core';
-import { Observable, catchError, switchMap, throwError, BehaviorSubject, filter, take } from 'rxjs';
+import { Observable, catchError, switchMap, throwError, BehaviorSubject, filter, take, timeout } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 
 @Injectable()
@@ -112,13 +112,15 @@ export class JwtRefreshInterceptor implements HttpInterceptor {
         })
       );
     } else {
-      // If a refresh is already in progress, wait until it's done
+      // If a refresh is already in progress, wait until it's done (max 10s to prevent infinite hang)
       return this.refreshTokenSubject.pipe(
         filter(token => token != null),
         take(1),
+        timeout(10000),
         switchMap((token) => {
           return next.handle(this.addToken(req, token as string));
-        })
+        }),
+        catchError(() => throwError(() => new Error('Token refresh timed out')))
       );
     }
   }

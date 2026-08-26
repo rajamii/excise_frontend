@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ChangeDetectorRef, NgZone } from '@angular/core';
 import { Location, CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -17,8 +17,10 @@ import {
   templateUrl: './secretary-revenue.component.html',
   styleUrls: ['./secretary-revenue.component.scss']
 })
-export class SecretaryRevenueComponent implements OnInit {
+export class SecretaryRevenueComponent implements OnInit, OnDestroy {
   isLoading = false;
+  loadError = '';
+  private loadingTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   // View Mode Sub-tabs: 'overview' | 'top-contributors' | 'security-deposits'
   activeTab: 'overview' | 'top-contributors' | 'security-deposits' = 'overview';
@@ -142,6 +144,23 @@ export class SecretaryRevenueComponent implements OnInit {
   selectedContributor: SecretaryTopContributorItem | null = null;
   selectedSecurityDeposit: SecretarySecurityDepositItem | null = null;
 
+  private readonly fallbackRevenueHeads: SecretaryRevenueHeadItem[] = [
+    ['Excise Duty Wallet', '0039-00-105-45-01'],
+    ['Additional Excise Duty Wallet', '0039-00-102-45-01'],
+    ['Hologram Procurement', '0039-00-800-45-01'],
+    ['Education Cess', '0045-00-112-45-03'],
+    ['License Fees', '0039-00-800-45-02'],
+    ['Security Deposit (FD)', '8443-00-103-45-01']
+  ].map(([head_name, head_of_account]) => ({
+    head_name,
+    head_of_account,
+    total_credit: 0,
+    total_debit: 0,
+    current_balance: 0,
+    total_paid_to_excise: 0,
+    accounts_count: 0
+  }));
+
   // Pagination State
   pageSize = 5;
   currentPageMap: { [key: string]: number } = {
@@ -205,42 +224,23 @@ export class SecretaryRevenueComponent implements OnInit {
 
   overview: SecretaryRevenueOverview = {
     summary_kpis: {
-      total_revenue_collected: 444424.46,
-      net_excise_revenue_collected: 414424.46,
-      total_active_balance: 1228683461.0,
-      total_security_deposit_fd: 30000.0,
-      top_contributors_count: 15
+      total_revenue_collected: 0,
+      net_excise_revenue_collected: 0,
+      total_active_balance: 0,
+      total_security_deposit_fd: 0,
+      top_contributors_count: 0
     },
-    revenue_heads: [
-      { head_name: 'Excise Duty Wallet', head_of_account: '0039-00-105-45-01', total_credit: 38450000.0, total_debit: 213824.48, current_balance: 814577699.7, total_paid_to_excise: 213824.48, accounts_count: 10 },
-      { head_name: 'Additional Excise Duty Wallet', head_of_account: '0039-00-102-45-01', total_credit: 10654952.0, total_debit: 53456.12, current_balance: 220000000.0, total_paid_to_excise: 53456.12, accounts_count: 10 },
-      { head_name: 'Hologram Procurement', head_of_account: '0039-00-800-45-01', total_credit: 15350000.0, total_debit: 105000.0, current_balance: 63335000.0, total_paid_to_excise: 105000.0, accounts_count: 10 },
-      { head_name: 'Education Cess', head_of_account: '0045-00-112-45-03', total_credit: 10470000.0, total_debit: 143.86, current_balance: 10489256.49, total_paid_to_excise: 143.86, accounts_count: 10 },
-      { head_name: 'License Fees', head_of_account: '0039-00-800-45-02', total_credit: 418505.0, total_debit: 42000.0, current_balance: 110183505.0, total_paid_to_excise: 42000.0, accounts_count: 14 },
-      { head_name: 'Security Deposit (FD)', head_of_account: '8443-00-103-45-01', total_credit: 288000.0, total_debit: 30000.0, current_balance: 10098000.0, total_paid_to_excise: 30000.0, accounts_count: 14 }
-    ],
-    top_contributors: [
-      { rank: 1, tier_badge: 'Tier 1 Top Contributor', user_id: 'AS01AF8001', licensee_name: 'sam', manufacturing_unit: 'ABC Distilleries Limited', category: 'Manufacturing', sub_category: 'Distillery', total_revenue_contributed: 21306100.0, total_fd_amount: 30000.0, current_balance: 19935390.2, wallets_count: 4, updated_at: '2026-07-15', month: '07', financial_year: '2026-2027' },
-      { rank: 2, tier_badge: 'Tier 1 Top Contributor', user_id: 'LP01D54001', licensee_name: 'Lahang Spirits Private Limited', manufacturing_unit: 'Lahag Spirits Private Limited', category: 'Manufacturing', sub_category: 'Distillery', total_revenue_contributed: 17240000.0, total_fd_amount: 25000.0, current_balance: 13832900.0, wallets_count: 3, updated_at: '2026-07-20', month: '07', financial_year: '2026-2027' },
-      { rank: 3, tier_badge: 'Tier 1 Top Contributor', user_id: 'MF01E99001', licensee_name: 'Ms Mayall And Fraser Pvt Ltd', manufacturing_unit: 'Ms Mayall & Fraser Pvt Ltd', category: 'Manufacturing', sub_category: 'Distillery', total_revenue_contributed: 15000000.0, total_fd_amount: 25000.0, current_balance: 9986342.7, wallets_count: 5, updated_at: '2026-08-01', month: '08', financial_year: '2026-2027' },
-      { rank: 4, tier_badge: 'Tier 2 Contributor', user_id: 'SL057A1001', licensee_name: 'Sikkim Distilleries Limited', manufacturing_unit: 'Sikkim Distillery Limited', category: 'Manufacturing', sub_category: 'Distillery', total_revenue_contributed: 11430001.0, total_fd_amount: 30000.0, current_balance: 2637100.0, wallets_count: 4, updated_at: '2026-08-05', month: '08', financial_year: '2026-2027' },
-      { rank: 5, tier_badge: 'Tier 2 Contributor', user_id: 'JD01135001', licensee_name: 'Jane R Doe', manufacturing_unit: 'Doe Breweries Limited', category: 'Manufacturing', sub_category: 'Brewery', total_revenue_contributed: 1905000.0, total_fd_amount: 30000.0, current_balance: 1397800.0, wallets_count: 4, updated_at: '2026-08-10', month: '08', financial_year: '2026-2027' },
-      { rank: 6, tier_badge: 'Tier 2 Contributor', user_id: 'DD01881001', licensee_name: 'Sikkim Himalayan Bottlers Pvt Ltd', manufacturing_unit: 'Gangtok Central Spirits Depot', category: 'Distributor', sub_category: 'Distributor', total_revenue_contributed: 1650000.0, total_fd_amount: 25000.0, current_balance: 1450000.0, wallets_count: 3, updated_at: '2026-08-12', month: '08', financial_year: '2026-2027' }
-    ],
-    security_deposits: [
-      { licensee_id: 'NA/1102/2026-27/0001', user_id: 'MS02BAD001', licensee_name: 'Diwakar Sharma', manufacturing_unit: 'DEF Retails', category: 'Retail', sub_category: 'Retailer', fd_credit_amount: 7000.0, fd_current_balance: 2000.0, status: 'Verified & Locked FD', updated_at: '2026-07-15', month: '07', financial_year: '2026-2027' },
-      { licensee_id: 'FD-2026-002', user_id: 'SL057A1001', licensee_name: 'Sikkim Distilleries Limited', manufacturing_unit: 'Sikkim Distillery Limited', category: 'Manufacturing', sub_category: 'Distillery', fd_credit_amount: 30000.0, fd_current_balance: 10000.0, status: 'Verified & Locked FD', updated_at: '2026-08-05', month: '08', financial_year: '2026-2027' },
-      { licensee_id: 'FD-2026-003', user_id: 'JD01135001', licensee_name: 'Jane R Doe', manufacturing_unit: 'Doe Breweries Limited', category: 'Manufacturing', sub_category: 'Brewery', fd_credit_amount: 30000.0, fd_current_balance: 5000.0, status: 'Verified & Locked FD', updated_at: '2026-08-10', month: '08', financial_year: '2026-2027' },
-      { licensee_id: 'FD-2026-004', user_id: 'MF01E99001', licensee_name: 'Ms Mayall And Fraser Pvt Ltd', manufacturing_unit: 'Ms Mayall & Fraser Pvt Ltd', category: 'Manufacturing', sub_category: 'Distillery', fd_credit_amount: 25000.0, fd_current_balance: 5000.0, status: 'Verified & Locked FD', updated_at: '2026-08-01', month: '08', financial_year: '2026-2027' },
-      { licensee_id: 'FD-2026-005', user_id: 'YL018FD001', licensee_name: 'Yuksom Breweries Limited', manufacturing_unit: 'Yuksom Breweries Limited', category: 'Manufacturing', sub_category: 'Brewery', fd_credit_amount: 25000.0, fd_current_balance: 0.0, status: 'Verified & Locked FD', updated_at: '2026-08-12', month: '08', financial_year: '2026-2027' },
-      { licensee_id: 'FD-2026-006', user_id: 'SE01E22001', licensee_name: 'sam test excise', manufacturing_unit: 'brew test', category: 'Manufacturing', sub_category: 'Brewery', fd_credit_amount: 26000.0, fd_current_balance: 26000.0, status: 'Verified & Locked FD', updated_at: '2026-08-14', month: '08', financial_year: '2026-2027' }
-    ]
+    revenue_heads: this.fallbackRevenueHeads,
+    top_contributors: [],
+    security_deposits: []
   };
 
   constructor(
     private secretaryService: SecretaryService,
     private location: Location,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone
   ) {}
 
   goBack(): void {
@@ -251,66 +251,68 @@ export class SecretaryRevenueComponent implements OnInit {
     this.loadRevenueData();
   }
 
+  ngOnDestroy(): void {
+    this.clearLoadingTimeout();
+  }
+
   loadRevenueData(): void {
     this.isLoading = true;
+    this.loadError = '';
+    this.clearLoadingTimeout();
+    this.loadingTimeoutId = setTimeout(() => {
+      this.ngZone.run(() => {
+        if (!this.isLoading) return;
+        this.overview = this.getFallbackRevenueOverview();
+        this.loadError = 'Revenue API is taking too long. Showing available revenue heads with zero values.';
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      });
+    }, 16000);
+
     this.secretaryService.getRevenueOverview().subscribe({
       next: (res) => {
-        if (res && res.revenue_heads && res.revenue_heads.length > 0) {
-          const processedHeads: any[] = [];
-          res.revenue_heads.forEach((h: any) => {
-            if (h.head_name === 'Excise/Additional Duty') {
-              processedHeads.push({
-                head_name: 'Excise Duty Wallet',
-                total_credit: (h.total_credit || 0) * 0.78,
-                total_debit: (h.total_debit || 0) * 0.77,
-                current_balance: (h.current_balance || 0) * 0.78,
-                total_paid_to_excise: (h.total_debit || 0) * 0.77,
-                accounts_count: h.accounts_count || 10
-              });
-              processedHeads.push({
-                head_name: 'Additional Excise Duty Wallet',
-                total_credit: (h.total_credit || 0) * 0.22,
-                total_debit: (h.total_debit || 0) * 0.23,
-                current_balance: (h.current_balance || 0) * 0.22,
-                accounts_count: h.accounts_count || 10
-              });
-            } else {
-              processedHeads.push(h);
-            }
-          });
-
-          if (!processedHeads.some((item: any) => item.head_name === 'Additional Excise Duty Wallet')) {
-            const exciseHead = processedHeads.find((item: any) => item.head_name === 'Excise Duty Wallet');
-            if (exciseHead) {
-              const c = exciseHead.total_credit || 0;
-              const d = exciseHead.total_debit || 0;
-              const b = exciseHead.current_balance || 0;
-              exciseHead.total_credit = c * 0.78;
-              exciseHead.total_debit = d * 0.77;
-              exciseHead.current_balance = b * 0.78;
-
-              processedHeads.splice(1, 0, {
-                head_name: 'Additional Excise Duty Wallet',
-                total_credit: c * 0.22,
-                total_debit: d * 0.23,
-                current_balance: b * 0.22,
-                accounts_count: exciseHead.accounts_count || 10
-              });
-            }
+        this.ngZone.run(() => {
+          this.clearLoadingTimeout();
+          if (res) {
+            this.overview = res;
           }
-
-          this.overview = {
-            ...res,
-            revenue_heads: processedHeads
-          };
-        }
-        this.isLoading = false;
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        });
       },
       error: (err) => {
-        console.error('Failed to load Secretary Revenue overview:', err);
-        this.isLoading = false;
+        this.ngZone.run(() => {
+          this.clearLoadingTimeout();
+          console.error('Failed to load Secretary Revenue overview:', err);
+          this.overview = this.getFallbackRevenueOverview();
+          this.loadError = 'Unable to load live revenue data. Showing available revenue heads with zero values.';
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        });
       }
     });
+  }
+
+  private clearLoadingTimeout(): void {
+    if (this.loadingTimeoutId) {
+      clearTimeout(this.loadingTimeoutId);
+      this.loadingTimeoutId = null;
+    }
+  }
+
+  private getFallbackRevenueOverview(): SecretaryRevenueOverview {
+    return {
+      summary_kpis: {
+        total_revenue_collected: 0,
+        net_excise_revenue_collected: 0,
+        total_active_balance: 0,
+        total_security_deposit_fd: 0,
+        top_contributors_count: 0
+      },
+      revenue_heads: this.fallbackRevenueHeads,
+      top_contributors: [],
+      security_deposits: []
+    };
   }
 
   setTab(tab: 'overview' | 'top-contributors' | 'security-deposits'): void {
