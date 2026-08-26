@@ -1917,6 +1917,13 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         const context = this.getUserContext();
         const action = (event.action || '').toUpperCase();
 
+        if (action === 'PAY' || action === 'FORCE_PAY') {
+            if (this.isImflRequisition()) {
+                this.openImflPaymentConfirmationModal(event.item);
+                return;
+            }
+        }
+
         if (action === 'APPROVE') {
             this.handleApproveWithDynamicPrechecks(event.item, context);
             return;
@@ -4544,6 +4551,219 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             printWindow.print();
             printWindow.close();
         }, 500);
+    }
+
+    showImflPaymentConfirmationModal = false;
+    paymentExciseCurrentBalance = 0;
+    paymentCessCurrentBalance = 0;
+    paymentImportFeeTotal = 0;
+    paymentAddEdTotal = 0;
+    paymentEduCessTotal = 0;
+    isPaymentAgreed = false;
+    isSubmittingPayment = false;
+    paymentBrandStockItems: any[] = [];
+    paymentApplicationToProcess: any = null;
+
+    get paymentExciseDeduction(): number {
+        return (this.paymentImportFeeTotal || 0) + (this.paymentAddEdTotal || 0);
+    }
+
+    get paymentExciseBalanceAfter(): number {
+        return (this.paymentExciseCurrentBalance || 0) - this.paymentExciseDeduction;
+    }
+
+    get paymentCessBalanceAfter(): number {
+        return (this.paymentCessCurrentBalance || 0) - (this.paymentEduCessTotal || 0);
+    }
+
+    get isPaymentBalanceInsufficient(): boolean {
+        return this.paymentExciseBalanceAfter < 0 || this.paymentCessBalanceAfter < 0;
+    }
+
+    get paymentInsufficientErrorMessage(): string {
+        if (this.paymentExciseBalanceAfter < 0 && this.paymentCessBalanceAfter < 0) {
+            return 'Insufficient Excise Wallet and Education Cess Wallet balances. Add wallet balance before proceeding.';
+        }
+        if (this.paymentExciseBalanceAfter < 0) {
+            return '* Insufficient balance in Excise / Additional Wallet. Add funds to proceed.';
+        }
+        if (this.paymentCessBalanceAfter < 0) {
+            return '* Insufficient balance in Education Cess Wallet. Add funds to proceed.';
+        }
+        return '';
+    }
+
+    openImflPaymentConfirmationModal(item?: any): void {
+        const app = item || this.applicationData;
+        if (!app) return;
+        this.paymentApplicationToProcess = app;
+        this.isPaymentAgreed = false;
+        this.isSubmittingPayment = false;
+
+        const appData = this.applicationData as any;
+
+        let importFee = Number(app.total_import_value ?? app.totalImportValue ?? app.total_import_fee ?? app.totalImportFee ?? appData?.total_import_value ?? appData?.total_import_fee ?? 0);
+        let addEd = Number(app.total_additional_ed ?? app.totalAdditionalEd ?? app.total_add_ed ?? app.totalAddEd ?? appData?.total_additional_ed ?? appData?.total_add_ed ?? 0);
+        let eduCess = Number(app.total_education_cess ?? app.totalEducationCess ?? app.total_edu_cess ?? app.totalEduCess ?? appData?.total_education_cess ?? appData?.total_edu_cess ?? 0);
+
+        const brandItems: any[] = [];
+        const lineItems = app.lineItems || app.line_items || appData?.lineItems || appData?.line_items || [];
+
+        if (Array.isArray(lineItems) && lineItems.length > 0) {
+            let calcImport = 0;
+            let calcAddEd = 0;
+            let calcEduCess = 0;
+
+            lineItems.forEach((li: any) => {
+                const cases = Number(li.cases ?? li.no_of_cases ?? li.noOfCases ?? li.quantity ?? li.qty ?? li.permit_qty_cases ?? 0);
+                let bpc = Number(li.bottlesPerCase ?? li.bottles_per_case ?? li.bpc ?? li.pack_size ?? 0);
+                const bottleSize = li.bottleSizeMl || li.bottle_size_ml || li.size || 750;
+
+                if (!bpc || bpc <= 0) {
+                    const sizeNum = Number(bottleSize);
+                    if (sizeNum === 750 || sizeNum === 650 || sizeNum === 700) bpc = 12;
+                    else if (sizeNum === 375 || sizeNum === 500) bpc = 24;
+                    else if (sizeNum === 180) bpc = 48;
+                    else bpc = 12;
+                }
+
+                const importFeeRate = Number(li.importPassFeePerCase || li.import_pass_fee_per_case || li.import_fee || li.importFee || 0);
+                const addEdRate = Number(li.additionalEdPerCase || li.additional_ed_per_case || li.additional_ed || li.add_ed || li.additionalEd || 0);
+                const cessRate = Number(li.educationCessPerCase || li.education_cess_per_case || li.education_cess || li.cess || 0);
+
+                const itemImport = Number(li.total_import ?? li.totalImport ?? (importFeeRate * cases));
+                const itemAddEd = Number(li.total_additional_ed ?? li.totalAdditionalEd ?? li.total_add_ed ?? li.totalAddEd ?? (addEdRate * cases));
+                const itemCess = Number(li.total_education_cess ?? li.totalEducationCess ?? li.total_edu_cess ?? li.totalEduCess ?? (cessRate * cases));
+
+                calcImport += itemImport;
+                calcAddEd += itemAddEd;
+                calcEduCess += itemCess;
+
+                const deduction = cases * bpc;
+                const currentStock = li.currentStock !== undefined ? Number(li.currentStock) : (li.current_stock !== undefined ? Number(li.current_stock) : null);
+                const stockAfter = currentStock !== null ? (currentStock - deduction) : null;
+
+                brandItems.push({
+                    brandName: li.brandName || li.brand_name || li.brand || 'IMFL Brand',
+                    bottleSizeMl: bottleSize,
+                    deductionPieces: deduction,
+                    currentStock: currentStock,
+                    stockAfter: stockAfter
+                });
+            });
+
+            if (calcImport > 0 || calcAddEd > 0 || calcEduCess > 0) {
+                importFee = calcImport;
+                addEd = calcAddEd;
+                eduCess = calcEduCess;
+            }
+        } else {
+            const details = app.permitWiseDetails || app.permit_wise_details || appData?.permitWiseDetails || appData?.permit_wise_details || [];
+            if (Array.isArray(details) && details.length > 0) {
+                let calcImport = 0;
+                let calcAddEd = 0;
+                let calcEduCess = 0;
+
+                details.forEach((p: any) => {
+                    const items = p.items || [];
+                    items.forEach((item: any) => {
+                        const cases = Number(item.cases || 0);
+                        calcImport += Number(item.totalImport || item.total_import_fee || (item.importFee || 0) * cases);
+                        calcAddEd += Number(item.totalAddEd || item.total_additional_ed || (item.addEdPerCase || 0) * cases);
+                        calcEduCess += Number(item.cess || item.total_education_cess || 0);
+
+                        const bpc = Number(item.bottlesPerCase || 12);
+                        const deduction = cases * bpc;
+                        brandItems.push({
+                            brandName: item.brandName || item.brand_name || item.brand || 'IMFL Brand',
+                            bottleSizeMl: item.bottleSizeMl || 750,
+                            deductionPieces: deduction,
+                            currentStock: null,
+                            stockAfter: null
+                        });
+                    });
+                });
+
+                if (calcImport > 0 || calcAddEd > 0 || calcEduCess > 0) {
+                    importFee = calcImport;
+                    addEd = calcAddEd;
+                    eduCess = calcEduCess;
+                }
+            }
+        }
+
+        if (importFee === 0 && addEd === 0 && eduCess === 0) {
+            const totalImportVal = Number(app.paymentAmount || app.payment_amount || app.totalImportValue || app.total_import_value || app.amount || 0);
+            if (totalImportVal > 0) {
+                const excisePortion = Math.round(totalImportVal * 0.85 * 100) / 100;
+                eduCess = Math.round((totalImportVal - excisePortion) * 100) / 100;
+                importFee = Math.round(excisePortion * 0.75 * 100) / 100;
+                addEd = Math.round((excisePortion - importFee) * 100) / 100;
+            }
+        } else if (addEd === 0 && importFee > 0) {
+            const totalExcise = importFee;
+            importFee = Math.round(totalExcise * 0.75 * 100) / 100;
+            addEd = Math.round((totalExcise - importFee) * 100) / 100;
+        }
+
+        this.paymentImportFeeTotal = importFee;
+        this.paymentAddEdTotal = addEd;
+        this.paymentEduCessTotal = eduCess;
+        this.paymentBrandStockItems = brandItems;
+
+        this.distributorPermitService.getWalletBalances().subscribe({
+            next: (res) => {
+                this.paymentExciseCurrentBalance = Number(res.excise_balance || 0);
+                this.paymentCessCurrentBalance = Number(res.education_cess_balance || 0);
+                this.showImflPaymentConfirmationModal = true;
+                this.cdr.detectChanges();
+            },
+            error: () => {
+                this.paymentExciseCurrentBalance = 0;
+                this.paymentCessCurrentBalance = 0;
+                this.showImflPaymentConfirmationModal = true;
+                this.cdr.detectChanges();
+            }
+        });
+    }
+
+    closeImflPaymentConfirmationModal(): void {
+        this.showImflPaymentConfirmationModal = false;
+        this.paymentApplicationToProcess = null;
+        this.isPaymentAgreed = false;
+        this.isSubmittingPayment = false;
+        this.cdr.detectChanges();
+    }
+
+    confirmExecuteImflPayment(): void {
+        const app = this.paymentApplicationToProcess || this.applicationData;
+        if (!app || !this.isPaymentAgreed || this.isPaymentBalanceInsufficient || this.isSubmittingPayment) {
+            return;
+        }
+
+        this.isSubmittingPayment = true;
+        const appId = app.id || app.referenceNo || app.reference_no || this.getWorkflowApplicationId(app);
+
+        this.http.post<any>(
+            `${environment.apiBaseUrl}/transactional/distributor-permit/${encodeURIComponent(appId)}/perform-action/`,
+            { action: 'PAY' }
+        ).subscribe({
+            next: (res) => {
+                this.isSubmittingPayment = false;
+                this.showImflPaymentConfirmationModal = false;
+                this.snackBar.open(res.message || 'Payment completed successfully. Application forwarded to Permit Section.', 'Close', { duration: 4000 });
+                this.distributorPermitService.clearCache();
+                this.sidebarPendingBadgeService.triggerRefresh();
+                const currentRef = app.referenceNo || app.reference_no || appId;
+                this.loadApplicationData(currentRef, appId);
+                this.cdr.detectChanges();
+            },
+            error: (err) => {
+                this.isSubmittingPayment = false;
+                this.snackBar.open(err?.error?.detail || err?.error?.message || 'Failed to complete payment for IMFL Requisition', 'Close', { duration: 4000 });
+                this.cdr.detectChanges();
+            }
+        });
     }
 
 }

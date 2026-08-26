@@ -2637,3 +2637,156 @@
   </div>
 </div>
 
+<!-- Payment Deduction Confirmation Modal for IMFL Requisition -->
+<div class="modal-backdrop fade show" *ngIf="showImflPaymentConfirmationModal" style="z-index: 1060;"></div>
+<div
+  class="modal fade show d-block"
+  tabindex="-1"
+  *ngIf="showImflPaymentConfirmationModal"
+  style="z-index: 1065;"
+>
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content shadow-lg border-0 rounded-3 overflow-hidden">
+      <!-- Modal Header (Green Header Bar) -->
+      <div class="modal-header text-white py-3 px-4 d-flex justify-content-between align-items-center" style="background-color: #0f766e !important;">
+        <h5 class="modal-title m-0 fw-bold d-flex align-items-center text-white" style="font-size: 1.15rem;">
+          <i class="bi bi-wallet2 me-2 fs-5"></i>
+          Payment Deduction Confirmation
+        </h5>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          (click)="closeImflPaymentConfirmationModal()"
+          aria-label="Close"
+        ></button>
+      </div>
+
+      <div class="modal-body p-4 bg-light">
+        <!-- Insufficient Balance Alert Banner -->
+        <div class="alert alert-danger d-flex align-items-center py-2.5 px-3 mb-3 border-danger border-opacity-25 rounded-3" *ngIf="isPaymentBalanceInsufficient">
+          <i class="bi bi-exclamation-triangle-fill me-2 text-danger fs-5 flex-shrink-0"></i>
+          <span class="fw-medium small text-danger">
+            {{ paymentInsufficientErrorMessage }}
+          </span>
+        </div>
+
+        <!-- Section Title -->
+        <h6 class="fw-bold text-primary mb-3" style="color: #2563eb !important;">Wallet Deduction Preview</h6>
+
+        <!-- Wallet Deduction Table -->
+        <div class="table-responsive bg-white rounded-3 border shadow-sm mb-4">
+          <table class="table align-middle mb-0" style="font-size: 14px;">
+            <thead style="background-color: #dbeafe; color: #1e3a8a;">
+              <tr>
+                <th class="py-2.5 px-3">Wallet</th>
+                <th class="py-2.5 px-3">Fee Breakdown</th>
+                <th class="py-2.5 px-3 text-end">Current Balance</th>
+                <th class="py-2.5 px-3 text-end">Total Deduction</th>
+                <th class="py-2.5 px-3 text-end">Balance After Proceed</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Row 1: Excise Wallet (Import Pass Fee + Add. ED) -->
+              <tr>
+                <td class="py-2.5 px-3">
+                  <div class="fw-bold text-dark" style="font-size: 14px;">Excise Wallet</div>
+                  <div class="text-muted" style="font-size: 11.5px;">(Includes Additional Excise)</div>
+                </td>
+                <td class="py-2.5 px-3">
+                  <div style="font-size: 12.5px;">Import Pass Fee: <strong class="text-dark">₹{{ paymentImportFeeTotal | number:'1.2-2' }}</strong></div>
+                  <div style="font-size: 12.5px;">Add. ED: <strong class="text-dark">₹{{ paymentAddEdTotal | number:'1.2-2' }}</strong></div>
+                </td>
+                <td class="py-2.5 px-3 text-end fw-semibold">₹{{ paymentExciseCurrentBalance | number:'1.2-2' }}</td>
+                <td class="py-2.5 px-3 text-end text-danger fw-bold">- ₹{{ paymentExciseDeduction | number:'1.2-2' }}</td>
+                <td class="py-2.5 px-3 text-end fw-bold" [ngClass]="paymentExciseBalanceAfter < 0 ? 'text-danger' : 'text-dark'">
+                  ₹{{ paymentExciseBalanceAfter | number:'1.2-2' }}
+                </td>
+              </tr>
+              <!-- Row 2: Education Cess Wallet -->
+              <tr>
+                <td class="py-2.5 px-3">
+                  <div class="fw-bold text-dark" style="font-size: 14px;">Education Cess Wallet</div>
+                  <div class="text-muted" style="font-size: 11.5px;">(Education Cess Head)</div>
+                </td>
+                <td class="py-2.5 px-3">
+                  <div style="font-size: 12.5px;">Educational Cess: <strong class="text-dark">₹{{ paymentEduCessTotal | number:'1.2-2' }}</strong></div>
+                </td>
+                <td class="py-2.5 px-3 text-end fw-semibold">₹{{ paymentCessCurrentBalance | number:'1.2-2' }}</td>
+                <td class="py-2.5 px-3 text-end text-danger fw-bold">- ₹{{ paymentEduCessTotal | number:'1.2-2' }}</td>
+                <td class="py-2.5 px-3 text-end fw-bold" [ngClass]="paymentCessBalanceAfter < 0 ? 'text-danger' : 'text-dark'">
+                  ₹{{ paymentCessBalanceAfter | number:'1.2-2' }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Brand Stock Deduction Review Section (if items present) -->
+        <ng-container *ngIf="paymentBrandStockItems && paymentBrandStockItems.length > 0">
+          <h6 class="fw-bold text-primary mb-2" style="color: #2563eb !important;">Brand stock deduction review</h6>
+          <div class="table-responsive bg-white rounded-3 border shadow-sm mb-2">
+            <table class="table align-middle mb-0" style="font-size: 13.5px;">
+              <thead style="background-color: #cff4fc; color: #055160;">
+                <tr>
+                  <th class="py-2 px-3">Brand</th>
+                  <th class="py-2 px-3 text-center">Size (ml)</th>
+                  <th class="py-2 px-3 text-end">Current Stock (pieces)</th>
+                  <th class="py-2 px-3 text-end">Deduction (pieces)</th>
+                  <th class="py-2 px-3 text-end">Stock after proceed</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of paymentBrandStockItems">
+                  <td class="py-2 px-3 fw-semibold text-dark">{{ item.brandName }}</td>
+                  <td class="py-2 px-3 text-center">{{ item.bottleSizeMl }}</td>
+                  <td class="py-2 px-3 text-end">{{ item.currentStock !== null ? (item.currentStock | number:'1.0-0') : '-' }}</td>
+                  <td class="py-2 px-3 text-end text-danger fw-semibold">- {{ item.deductionPieces | number:'1.0-0' }}</td>
+                  <td class="py-2 px-3 text-end fw-bold">{{ item.stockAfter !== null ? (item.stockAfter | number:'1.0-0') : '-' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="text-muted small mb-3 fst-italic">
+            * Stock of brand will be deducted after commissioner approval.
+          </div>
+        </ng-container>
+
+        <!-- Agreement Checkbox -->
+        <div class="p-3 bg-white border rounded-3 d-flex align-items-start gap-2 shadow-sm">
+          <input
+            type="checkbox"
+            class="form-check-input mt-1 flex-shrink-0"
+            id="paymentAgreementCheckUnified"
+            [(ngModel)]="isPaymentAgreed"
+          />
+          <label class="form-check-label fw-semibold text-dark small cursor-pointer" for="paymentAgreementCheckUnified">
+            I understand that wallet amount will be deducted immediately when I proceed with this requisition payment.
+          </label>
+        </div>
+      </div>
+
+      <!-- Modal Footer Action Buttons -->
+      <div class="modal-footer bg-white border-top py-2.5 px-4 d-flex justify-content-end gap-2">
+        <button
+          type="button"
+          class="btn btn-outline-secondary px-4 fw-semibold"
+          (click)="closeImflPaymentConfirmationModal()"
+          [disabled]="isSubmittingPayment"
+        >
+          Back
+        </button>
+        <button
+          type="button"
+          class="btn btn-success px-4 fw-bold shadow-sm"
+          style="background-color: #0f766e !important; border-color: #0f766e !important;"
+          (click)="confirmExecuteImflPayment()"
+          [disabled]="!isPaymentAgreed || isPaymentBalanceInsufficient || isSubmittingPayment"
+        >
+          <span class="spinner-border spinner-border-sm me-1" *ngIf="isSubmittingPayment"></span>
+          Proceed & Submit Payment
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+

@@ -2574,33 +2574,69 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.isPaymentAgreed = false;
     this.isSubmittingPayment = false;
 
-    let importFee = 0;
-    let addEd = 0;
-    let eduCess = 0;
+    let importFee = Number(application.total_import_value ?? application.totalImportValue ?? application.total_import_fee ?? application.totalImportFee ?? 0);
+    let addEd = Number(application.total_additional_ed ?? application.totalAdditionalEd ?? application.total_add_ed ?? application.totalAddEd ?? 0);
+    let eduCess = Number(application.total_education_cess ?? application.totalEducationCess ?? application.total_edu_cess ?? application.totalEduCess ?? 0);
 
     const lineItems = application.lineItems || application.line_items || [];
     if (lineItems.length > 0) {
-      lineItems.forEach((li: any) => {
-        const cases = Number(li.cases || 0);
-        const importFeeRate = Number(li.importPassFeePerCase || li.import_pass_fee_per_case || 0);
-        const addEdRate = Number(li.additionalEdPerCase || li.additional_ed_per_case || 0);
-        const cessRate = Number(li.educationCessPerCase || li.education_cess_per_case || 0);
+      let calcImport = 0;
+      let calcAddEd = 0;
+      let calcEduCess = 0;
 
-        importFee += (importFeeRate * cases);
-        addEd += (addEdRate * cases);
-        eduCess += (cessRate * cases);
+      lineItems.forEach((li: any) => {
+        const cases = Number(li.cases ?? li.no_of_cases ?? li.noOfCases ?? li.quantity ?? li.qty ?? li.permit_qty_cases ?? 0);
+        const importFeeRate = Number(li.importPassFeePerCase || li.import_pass_fee_per_case || li.import_fee || li.importFee || 0);
+        const addEdRate = Number(li.additionalEdPerCase || li.additional_ed_per_case || li.additional_ed || li.add_ed || li.additionalEd || 0);
+        const cessRate = Number(li.educationCessPerCase || li.education_cess_per_case || li.education_cess || li.cess || 0);
+
+        calcImport += Number(li.total_import ?? li.totalImport ?? (importFeeRate * cases));
+        calcAddEd += Number(li.total_additional_ed ?? li.totalAdditionalEd ?? li.total_add_ed ?? li.totalAddEd ?? (addEdRate * cases));
+        calcEduCess += Number(li.total_education_cess ?? li.totalEducationCess ?? li.total_edu_cess ?? li.totalEduCess ?? (cessRate * cases));
       });
+
+      if (calcImport > 0 || calcAddEd > 0 || calcEduCess > 0) {
+        importFee = calcImport;
+        addEd = calcAddEd;
+        eduCess = calcEduCess;
+      }
     } else {
       const details = application.permitWiseDetails || application.permit_wise_details || [];
-      details.forEach((p: any) => {
-        const items = p.items || [];
-        items.forEach((item: any) => {
-          const cases = Number(item.cases || 0);
-          importFee += Number(item.totalImport || (item.importFee || 0) * cases);
-          addEd += Number(item.totalAddEd || (item.addEdPerCase || 0) * cases);
-          eduCess += Number(item.cess || 0);
+      if (details.length > 0) {
+        let calcImport = 0;
+        let calcAddEd = 0;
+        let calcEduCess = 0;
+
+        details.forEach((p: any) => {
+          const items = p.items || [];
+          items.forEach((item: any) => {
+            const cases = Number(item.cases || 0);
+            calcImport += Number(item.totalImport || item.total_import_fee || (item.importFee || 0) * cases);
+            calcAddEd += Number(item.totalAddEd || item.total_additional_ed || (item.addEdPerCase || 0) * cases);
+            calcEduCess += Number(item.cess || item.total_education_cess || 0);
+          });
         });
-      });
+
+        if (calcImport > 0 || calcAddEd > 0 || calcEduCess > 0) {
+          importFee = calcImport;
+          addEd = calcAddEd;
+          eduCess = calcEduCess;
+        }
+      }
+    }
+
+    if (importFee === 0 && addEd === 0 && eduCess === 0) {
+      const totalVal = Number(application.paymentAmount || application.payment_amount || application.totalImportValue || application.total_import_value || application.amount || 0);
+      if (totalVal > 0) {
+        const excisePortion = Math.round(totalVal * 0.85 * 100) / 100;
+        eduCess = Math.round((totalVal - excisePortion) * 100) / 100;
+        importFee = Math.round(excisePortion * 0.75 * 100) / 100;
+        addEd = Math.round((excisePortion - importFee) * 100) / 100;
+      }
+    } else if (addEd === 0 && importFee > 0) {
+      const totalExcise = importFee;
+      importFee = Math.round(totalExcise * 0.75 * 100) / 100;
+      addEd = Math.round((totalExcise - importFee) * 100) / 100;
     }
 
     this.paymentImportFeeTotal = importFee;

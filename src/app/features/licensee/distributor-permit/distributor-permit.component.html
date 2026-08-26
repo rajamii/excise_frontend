@@ -2241,8 +2241,9 @@
             <thead style="background-color: #dbeafe; color: #1e3a8a;">
               <tr>
                 <th class="py-2.5 px-3">Wallet</th>
+                <th class="py-2.5 px-3">Fee Breakdown</th>
                 <th class="py-2.5 px-3 text-end">Current Balance</th>
-                <th class="py-2.5 px-3 text-end">Deduction</th>
+                <th class="py-2.5 px-3 text-end">Total Deduction</th>
                 <th class="py-2.5 px-3 text-end">Balance After Proceed</th>
               </tr>
             </thead>
@@ -2250,11 +2251,15 @@
               <!-- Row 1: Excise Wallet (Import Pass Fee + Add. ED) -->
               <tr>
                 <td class="py-2.5 px-3">
-                  <div class="fw-semibold text-dark">Excise Wallet (includes Additional Excise)</div>
-                  <div class="text-muted" style="font-size: 11.5px;">Import Pass Fee (₹{{ paymentImportFeeTotal | number:'1.2-2' }}) + Add. ED (₹{{ paymentAddEdTotal | number:'1.2-2' }})</div>
+                  <div class="fw-bold text-dark" style="font-size: 14px;">Excise Wallet</div>
+                  <div class="text-muted" style="font-size: 11.5px;">(Includes Additional Excise)</div>
+                </td>
+                <td class="py-2.5 px-3">
+                  <div style="font-size: 12.5px;">Import Pass Fee: <strong class="text-dark">₹{{ paymentImportFeeTotal | number:'1.2-2' }}</strong></div>
+                  <div style="font-size: 12.5px;">Add. ED: <strong class="text-dark">₹{{ paymentAddEdTotal | number:'1.2-2' }}</strong></div>
                 </td>
                 <td class="py-2.5 px-3 text-end fw-semibold">₹{{ paymentExciseCurrentBalance | number:'1.2-2' }}</td>
-                <td class="py-2.5 px-3 text-end text-danger fw-semibold">- ₹{{ paymentExciseDeduction | number:'1.2-2' }}</td>
+                <td class="py-2.5 px-3 text-end text-danger fw-bold">- ₹{{ paymentExciseDeduction | number:'1.2-2' }}</td>
                 <td class="py-2.5 px-3 text-end fw-bold" [ngClass]="paymentExciseBalanceAfter < 0 ? 'text-danger' : 'text-dark'">
                   ₹{{ paymentExciseBalanceAfter | number:'1.2-2' }}
                 </td>
@@ -2262,11 +2267,14 @@
               <!-- Row 2: Education Cess Wallet -->
               <tr>
                 <td class="py-2.5 px-3">
-                  <div class="fw-semibold text-dark">Education Cess Wallet</div>
-                  <div class="text-muted" style="font-size: 11.5px;">Educational Cess (₹{{ paymentEduCessTotal | number:'1.2-2' }})</div>
+                  <div class="fw-bold text-dark" style="font-size: 14px;">Education Cess Wallet</div>
+                  <div class="text-muted" style="font-size: 11.5px;">(Education Cess Head)</div>
+                </td>
+                <td class="py-2.5 px-3">
+                  <div style="font-size: 12.5px;">Educational Cess: <strong class="text-dark">₹{{ paymentEduCessTotal | number:'1.2-2' }}</strong></div>
                 </td>
                 <td class="py-2.5 px-3 text-end fw-semibold">₹{{ paymentCessCurrentBalance | number:'1.2-2' }}</td>
-                <td class="py-2.5 px-3 text-end text-danger fw-semibold">- ₹{{ paymentEduCessTotal | number:'1.2-2' }}</td>
+                <td class="py-2.5 px-3 text-end text-danger fw-bold">- ₹{{ paymentEduCessTotal | number:'1.2-2' }}</td>
                 <td class="py-2.5 px-3 text-end fw-bold" [ngClass]="paymentCessBalanceAfter < 0 ? 'text-danger' : 'text-dark'">
                   ₹{{ paymentCessBalanceAfter | number:'1.2-2' }}
                 </td>
