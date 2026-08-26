@@ -1233,7 +1233,7 @@
           type="button"
           class="btn btn-danger px-4"
           [disabled]="!cancellationDeclarationAccepted || !cancellationReasonDetails.trim() || isSubmittingCancellation || isCurrentPermitDisabledForCancellation()"
-          (click)="confirmCancellationSubmit()"
+          (click)="openCancellationConfirmationModal()"
         >
           <span
             *ngIf="isSubmittingCancellation"
@@ -1241,6 +1241,202 @@
             role="status"
           ></span>
           {{ isSubmittingCancellation ? 'Submitting...' : 'Submit Cancellation Request' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PERMIT CANCELLATION FINANCIAL CONFIRMATION MODAL -->
+<div
+  class="modal fade show"
+  tabindex="-1"
+  *ngIf="showCancellationConfirmationModal"
+  style="display: block; background: rgba(0, 0, 0, 0.6); z-index: 1060;"
+>
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content shadow-lg border-0">
+      <!-- Modal Header -->
+      <div class="modal-header bg-danger text-white py-3">
+        <h5 class="modal-title fw-bold">
+          <i class="bi bi-shield-check me-2"></i>Confirm Permit Cancellation & Wallet Refund Adjustment
+        </h5>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          (click)="closeCancellationConfirmationModal()"
+          [disabled]="isSubmittingCancellation"
+        ></button>
+      </div>
+
+      <div class="modal-body p-4">
+        <!-- Target Info Alert -->
+        <div class="alert alert-light border border-secondary border-opacity-25 shadow-sm rounded-3 mb-4">
+          <div class="row align-items-center">
+            <div class="col-md-6 border-end">
+              <span class="text-secondary small d-block">Application Ref. No.</span>
+              <strong class="fs-6 text-dark font-monospace">{{ cancellationTargetRow?.applicationId }}</strong>
+            </div>
+            <div class="col-md-6 ps-md-3">
+              <span class="text-secondary small d-block">Cancelled Permit Number</span>
+              <span class="badge bg-danger fs-6 font-monospace px-3 py-1">{{ selectedPermitNumberForCancellation }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3-Part Financial Breakdown Card -->
+        <div class="card mb-4 border-primary border-opacity-25 shadow-sm">
+          <div class="card-header bg-primary bg-opacity-10 py-2 px-3 fw-bold text-primary d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-receipt me-2"></i> Financial Adjustment Breakdown</span>
+            <span class="badge bg-primary fs-7">Flat Fee & Direct Refund</span>
+          </div>
+          <div class="card-body p-3">
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered align-middle mb-0" style="font-size: 13.5px;">
+                <thead class="table-light">
+                  <tr>
+                    <th>Adjustment Component</th>
+                    <th>Destination / Wallet</th>
+                    <th class="text-center">Entry Type</th>
+                    <th class="text-end">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Cancellation Processing Fee -->
+                  <tr>
+                    <td class="fw-semibold text-danger">
+                      <i class="bi bi-dash-circle-fill me-1"></i> Cancellation Processing Fee
+                    </td>
+                    <td><span class="badge bg-secondary">Excise Duty Wallet</span></td>
+                    <td class="text-center"><span class="badge bg-danger text-white">DEBIT</span></td>
+                    <td class="text-end fw-bold text-danger">-₹{{ cancellationFeeAmount | number:'1.2-2' }}</td>
+                  </tr>
+
+                  <!-- Excise Duty Refund -->
+                  <tr>
+                    <td class="fw-semibold text-success">
+                      <i class="bi bi-arrow-down-left-circle-fill me-1"></i> Excise Duty Refund (Import Pass Fee)
+                    </td>
+                    <td><span class="badge bg-primary">Excise Duty Wallet</span></td>
+                    <td class="text-center"><span class="badge bg-success text-white">CREDIT</span></td>
+                    <td class="text-end fw-bold text-success">+₹{{ cancellationRefundImportFee | number:'1.2-2' }}</td>
+                  </tr>
+
+                  <!-- Additional Excise Duty Refund -->
+                  <tr *ngIf="cancellationRefundAddEd > 0">
+                    <td class="fw-semibold text-success">
+                      <i class="bi bi-arrow-down-left-circle-fill me-1"></i> Additional Excise Duty Refund
+                    </td>
+                    <td><span class="badge bg-primary">Additional Excise Wallet</span></td>
+                    <td class="text-center"><span class="badge bg-success text-white">CREDIT</span></td>
+                    <td class="text-end fw-bold text-success">+₹{{ cancellationRefundAddEd | number:'1.2-2' }}</td>
+                  </tr>
+
+                  <!-- Education Cess Refund -->
+                  <tr *ngIf="cancellationRefundEducationCess > 0">
+                    <td class="fw-semibold text-success">
+                      <i class="bi bi-arrow-down-left-circle-fill me-1"></i> Education Duty / Cess Refund
+                    </td>
+                    <td><span class="badge bg-info text-dark">Education Duty Wallet</span></td>
+                    <td class="text-center"><span class="badge bg-success text-white">CREDIT</span></td>
+                    <td class="text-end fw-bold text-success">+₹{{ cancellationRefundEducationCess | number:'1.2-2' }}</td>
+                  </tr>
+                </tbody>
+                <tfoot class="table-group-divider fw-bold bg-light">
+                  <tr>
+                    <td colspan="3" class="text-end text-dark">Total Permit Refund Amount:</td>
+                    <td class="text-end text-success fs-6">₹{{ cancellationTotalRefund | number:'1.2-2' }}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Wallet Balances Current vs. Projected Card -->
+        <div class="card border-success border-opacity-50 bg-success bg-opacity-10 shadow-sm mb-3">
+          <div class="card-header bg-success bg-opacity-20 py-2 px-3 fw-bold text-success text-darken-2">
+            <i class="bi bi-wallet2 me-2"></i> Wallet Balance Preview (Current vs. Projected)
+          </div>
+          <div class="card-body p-3">
+            <div class="row g-3">
+              <!-- Excise Wallet Projection -->
+              <div class="col-md-6">
+                <div class="p-3 bg-white rounded border shadow-xs h-100">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-bold text-primary"><i class="bi bi-safe me-1"></i> Excise Duty Wallet</span>
+                    <span class="badge" [ngClass]="cancellationNetExciseChange >= 0 ? 'bg-success' : 'bg-danger'">
+                      {{ cancellationNetExciseChange >= 0 ? '+' : '' }}₹{{ cancellationNetExciseChange | number:'1.2-2' }} Net
+                    </span>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center text-secondary small mb-1">
+                    <span>Current Balance:</span>
+                    <span>₹{{ cancellationCurrentExciseBalance | number:'1.2-2' }}</span>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center text-danger small mb-1">
+                    <span>Less Fee Debit:</span>
+                    <span>-₹{{ cancellationFeeAmount | number:'1.2-2' }}</span>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center text-success small mb-2">
+                    <span>Plus Duty Refund:</span>
+                    <span>+₹{{ cancellationRefundImportFee + cancellationRefundAddEd | number:'1.2-2' }}</span>
+                  </div>
+                  <div class="border-top pt-2 d-flex justify-content-between align-items-center">
+                    <strong class="text-dark">Projected Balance:</strong>
+                    <strong class="fs-6 text-success">₹{{ cancellationProjectedExciseBalance | number:'1.2-2' }}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Education Duty Wallet Projection -->
+              <div class="col-md-6">
+                <div class="p-3 bg-white rounded border shadow-xs h-100">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-bold text-info text-darken-2"><i class="bi bi-mortarboard me-1"></i> Education Duty Wallet</span>
+                    <span class="badge bg-success">+₹{{ cancellationNetCessChange | number:'1.2-2' }} Net</span>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center text-secondary small mb-1">
+                    <span>Current Balance:</span>
+                    <span>₹{{ cancellationCurrentCessBalance | number:'1.2-2' }}</span>
+                  </div>
+                  <div class="d-flex justify-content-between align-items-center text-success small mb-2">
+                    <span>Plus Cess Refund:</span>
+                    <span>+₹{{ cancellationRefundEducationCess | number:'1.2-2' }}</span>
+                  </div>
+                  <div class="border-top pt-2 d-flex justify-content-between align-items-center">
+                    <strong class="text-dark">Projected Balance:</strong>
+                    <strong class="fs-6 text-success">₹{{ cancellationProjectedCessBalance | number:'1.2-2' }}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer bg-light py-3">
+        <button
+          type="button"
+          class="btn btn-secondary px-4"
+          (click)="closeCancellationConfirmationModal()"
+          [disabled]="isSubmittingCancellation"
+        >
+          <i class="bi bi-arrow-left me-1"></i> Back
+        </button>
+        <button
+          type="button"
+          class="btn btn-danger px-4 fw-bold"
+          [disabled]="isSubmittingCancellation"
+          (click)="confirmCancellationSubmit()"
+        >
+          <span
+            *ngIf="isSubmittingCancellation"
+            class="spinner-border spinner-border-sm me-2"
+            role="status"
+          ></span>
+          <i *ngIf="!isSubmittingCancellation" class="bi bi-check-circle-fill me-2"></i>
+          {{ isSubmittingCancellation ? 'Processing Refund & Submitting...' : 'Confirm & Submit Cancellation' }}
         </button>
       </div>
     </div>

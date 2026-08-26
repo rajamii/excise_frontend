@@ -1203,7 +1203,19 @@ private initializeWalletContextAndLoadData(): void {
     if (sourceModule.includes('hologram_procurement') || txnId.startsWith('HGP-')) {
       return 'Hologram Procurement';
     }
-    if (sourceModule.includes('cancellation') || txnId.startsWith('CAN-') || reference.startsWith('CAN/')) {
+    if (sourceModule.includes('cancellation') || txnId.startsWith('CAN-') || reference.startsWith('CAN/') || reference.startsWith('IMFLCAN/')) {
+      if (txnId.includes('EXCISE-ADD') || sourceModule.includes('additional') || remarks.includes('add. ed') || remarks.includes('additional excise')) {
+        return 'IMFL Requisition Additional ED Refund';
+      }
+      if (txnId.includes('EXCISE-ED') || sourceModule.includes('imfl_permit_cancellation_excise') || remarks.includes('import pass fee') || remarks.includes('excise duty refund')) {
+        return 'IMFL Requisition Excise Duty Refund';
+      }
+      if (txnId.includes('CESS') || sourceModule.includes('cess') || walletType === 'education_cess' || remarks.includes('education duty')) {
+        return 'IMFL Requisition Education Duty Refund';
+      }
+      if (txnId.includes('FEE') || sourceModule.includes('fee') || remarks.includes('processing fee') || remarks.includes('debit')) {
+        return 'IMFL Cancellation Fee';
+      }
       return 'IMFL Cancellation Fee';
     }
     if (sourceModule.includes('revalidation') || txnId.startsWith('REV-') || reference.startsWith('REV/')) {

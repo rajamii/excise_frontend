@@ -823,6 +823,113 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return '';
   }
 
+  // Cancellation Refund & Financial Confirmation State
+  showCancellationConfirmationModal = false;
+  cancellationFeeAmount = 1000;
+  cancellationRefundImportFee = 0;
+  cancellationRefundAddEd = 0;
+  cancellationRefundEducationCess = 0;
+  cancellationTotalRefund = 0;
+  cancellationNetExciseChange = 0;
+  cancellationNetCessChange = 0;
+  cancellationCurrentExciseBalance = 0;
+  cancellationProjectedExciseBalance = 0;
+  cancellationCurrentCessBalance = 0;
+  cancellationProjectedCessBalance = 0;
+
+  openCancellationConfirmationModal(): void {
+    if (!this.cancellationTargetRow) return;
+    if (!this.selectedPermitNumberForCancellation) {
+      alert('Please select a permit to cancel.');
+      return;
+    }
+    const selectedOpt = this.availablePermitOptionsForCancellation.find(o => o.permitNumber === this.selectedPermitNumberForCancellation);
+    if (selectedOpt && (selectedOpt.isCancelled || selectedOpt.isUnderProcess || selectedOpt.isRevalidated || (selectedOpt as any).isArrivalApproved)) {
+      if ((selectedOpt as any).isArrivalApproved) {
+        alert(`Stock arrival for Permit ${this.selectedPermitNumberForCancellation} has been approved by OIC and completed. Permits with completed stock arrival cannot be cancelled.`);
+      } else if (selectedOpt.isRevalidated) {
+        alert(`Permit ${this.selectedPermitNumberForCancellation} validity has expired and is waiting for revalidation. Please submit and complete revalidation before attempting to cancel.`);
+      } else {
+        alert(`Permit ${this.selectedPermitNumberForCancellation} is already ${selectedOpt.isCancelled ? 'cancelled' : 'under process for cancellation'}.`);
+      }
+      return;
+    }
+
+    if (!this.cancellationDeclarationAccepted) {
+      alert('Please accept the declaration to proceed.');
+      return;
+    }
+    if (!this.cancellationReasonDetails.trim()) {
+      alert('Please enter detailed remarks/reason for cancellation.');
+      return;
+    }
+
+    let importFeeSum = 0;
+    let addEdSum = 0;
+    let cessSum = 0;
+
+    const rawApp = this.cancellationTargetRow.application || this.cancellationTargetRow;
+    const detail = this.selectedPermitDetail || {};
+    const lineItems = detail.line_items || detail.lineItems || rawApp.line_items || rawApp.lineItems || [];
+
+    if (Array.isArray(lineItems) && lineItems.length > 0) {
+      lineItems.forEach((item: any) => {
+        const cases = Number(item.cases || item.total_cases || item.totalCases || detail.total_cases || detail.totalCases || 0);
+        const importFeeRate = Number(item.import_pass_fee_per_case || item.importPassFeePerCase || 1400);
+        const addEdRate = Number(item.additional_ed_per_case || item.additionalEdPerCase || 350);
+        const cessRate = Number(item.education_cess_per_case || item.educationCessPerCase || 60);
+
+        let importFee = Number(item.total_import ?? item.totalImport ?? item.total_import_fee ?? item.totalImportFee ?? 0);
+        if (importFee === 0 && cases > 0) importFee = importFeeRate * cases;
+
+        let addEd = Number(item.total_additional_ed ?? item.totalAdditionalEd ?? item.total_add_ed ?? item.totalAddEd ?? 0);
+        if (addEd === 0 && cases > 0 && item.additional_ed_per_case !== 0) addEd = addEdRate * cases;
+
+        let cess = Number(item.total_education_cess ?? item.totalEducationCess ?? item.total_edu_cess ?? item.totalEduCess ?? item.cess ?? 0);
+        if (cess === 0 && cases > 0) cess = cessRate * cases;
+
+        importFeeSum += importFee;
+        addEdSum += addEd;
+        cessSum += cess;
+      });
+    }
+
+    const detailCases = Number(detail.total_cases || detail.totalCases || detail.cases || 0);
+    if (importFeeSum === 0 && detail) {
+      importFeeSum = Number(detail.total_import_fee || detail.totalImportFee || detail.total_import || (1400 * detailCases));
+    }
+    if (addEdSum === 0 && detail && detail.total_additional_ed !== undefined) {
+      addEdSum = Number(detail.total_additional_ed || detail.totalAdditionalEd || (350 * detailCases));
+    }
+    if (cessSum === 0 && detail) {
+      cessSum = Number(detail.total_education_cess || detail.totalEducationCess || detail.total_edu_cess || (60 * detailCases));
+    }
+
+    this.cancellationRefundImportFee = importFeeSum;
+    this.cancellationRefundAddEd = addEdSum;
+    this.cancellationRefundEducationCess = cessSum;
+    this.cancellationTotalRefund = importFeeSum + addEdSum + cessSum;
+
+    this.cancellationFeeAmount = 1000;
+    this.cancellationNetExciseChange = (importFeeSum + addEdSum) - this.cancellationFeeAmount;
+    this.cancellationNetCessChange = cessSum;
+
+    this.loadLiveWalletBalances((exBal, cessBal) => {
+      this.cancellationCurrentExciseBalance = exBal;
+      this.cancellationProjectedExciseBalance = exBal + this.cancellationNetExciseChange;
+
+      this.cancellationCurrentCessBalance = cessBal;
+      this.cancellationProjectedCessBalance = cessBal + this.cancellationNetCessChange;
+
+      this.showCancellationConfirmationModal = true;
+      this.cdr.detectChanges();
+    });
+  }
+
+  closeCancellationConfirmationModal(): void {
+    this.showCancellationConfirmationModal = false;
+  }
+
   confirmCancellationSubmit(): void {
     if (!this.cancellationTargetRow) return;
     if (!this.selectedPermitNumberForCancellation) {
@@ -862,8 +969,16 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }).subscribe({
       next: (res: any) => {
         this.isSubmittingCancellation = false;
+        this.showCancellationConfirmationModal = false;
         this.closeCancellationModal();
-        alert(`Permit cancellation request submitted successfully for Permit ${this.selectedPermitNumberForCancellation}. Reference No: ${res.reference_no || res.id}`);
+        this.paymentIntegrationService.clearWalletCache();
+        const refNo = res.reference_no || res.id || '';
+        alert(`IMFL Permit Cancellation Request ${refNo} Submitted Successfully!\n\n` +
+          `• Cancellation Processing Fee Debited: ₹${this.cancellationFeeAmount.toFixed(2)}\n` +
+          `• Excise Duty Refund Credited: ₹${this.cancellationRefundImportFee.toFixed(2)}\n` +
+          `• Additional Excise Duty Refund Credited: ₹${this.cancellationRefundAddEd.toFixed(2)}\n` +
+          `• Education Duty Refund Credited: ₹${this.cancellationRefundEducationCess.toFixed(2)}\n` +
+          `• Total Refund Credited: ₹${this.cancellationTotalRefund.toFixed(2)}`);
         this.loadApplications();
       },
       error: (err: any) => {
