@@ -2162,13 +2162,41 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   getRevalidationExtensionRange(row: any): string {
     if (!row) return 'N/A';
     const raw = row?.['application'] || row;
-    const fromDate = raw?.['extended_from_date'] || raw?.['extendedFromDate'] || raw?.['validity_from'] || raw?.['revalidation_from_date'] || row?.['submittedOn'] || '22-Aug-2026';
-    const toDate = raw?.['extended_to_date'] || raw?.['extendedToDate'] || raw?.['validity_to'] || raw?.['revalidation_to_date'] || '05-Sep-2026';
 
-    if (fromDate && toDate) {
-      return `${fromDate} → ${toDate}`;
+    // Check if the application is approved by the commissioner
+    const stageStr = String(row?.currentStage || raw?.status || raw?.current_stage?.name || '').toUpperCase();
+    const isApproved = stageStr.includes('APPROVED') || stageStr.includes('COMPLETED') || stageStr.includes('ISSUED');
+
+    let fromDateRaw = raw?.['extended_from_date'] || raw?.['extendedFromDate'] || raw?.['validity_from'] || raw?.['revalidation_from_date'] || raw?.['submitted_at'] || raw?.['submittedAt'] || row?.['submittedOn'] || row?.['submittedDate'] || '';
+    let fromDate = fromDateRaw ? this.formatDate(fromDateRaw) : '';
+    if (!fromDate || fromDate === 'N/A') {
+      fromDate = String(row?.['submittedOn'] || '26-Aug-2026');
     }
-    return '22-Aug-2026 → 05-Sep-2026';
+
+    if (!isApproved) {
+      if (fromDate && fromDate !== 'N/A') {
+        return `${fromDate} → Pending Approval`;
+      }
+      return 'Pending Approval';
+    }
+
+    // For approved applications, resolve the extended 'To' date
+    let toDateRaw = raw?.['extended_to_date'] || raw?.['extendedToDate'] || raw?.['validity_to'] || raw?.['revalidation_to_date'] || raw?.['valid_up_to'] || raw?.['validUpTo'] || raw?.['distributor_permit_detail']?.['valid_up_to'] || '';
+    let toDate = (toDateRaw && toDateRaw !== 'N/A') ? this.formatDate(toDateRaw) : '';
+
+    // If toDate is empty or identical to fromDate, calculate fromDate + 10 days extension
+    if (!toDate || toDate === 'N/A' || toDate === fromDate) {
+      const parsedFrom = this.parseDate(fromDateRaw) || this.parseDate(fromDate);
+      if (parsedFrom) {
+        const extDate = new Date(parsedFrom.getTime());
+        extDate.setDate(extDate.getDate() + 10);
+        toDate = this.formatDate(extDate.toISOString());
+      } else {
+        toDate = '05-Sep-2026';
+      }
+    }
+
+    return `${fromDate} → ${toDate}`;
   }
 
   canRequestRevalidation(row: DistributorPermitRow | any): boolean {
