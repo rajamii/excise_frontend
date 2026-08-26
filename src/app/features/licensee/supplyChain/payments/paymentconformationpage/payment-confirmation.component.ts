@@ -1219,6 +1219,9 @@ private initializeWalletContextAndLoadData(): void {
       return 'IMFL Cancellation Fee';
     }
     if (sourceModule.includes('revalidation') || txnId.startsWith('REV-') || txnId.includes('REVAL') || reference.startsWith('REV/') || reference.startsWith('IMFLREV/')) {
+      if (sourceModule.includes('ena') || remarks.includes('ena') || reference.startsWith('REV/') || txnId.includes('ENA')) {
+        return 'ENA Revalidation Fee';
+      }
       return 'IMFL Revalidation Fee';
     }
     if (sourceModule.includes('transit') || txnId.startsWith('TRP-') || reference.startsWith('TRP/')) {
