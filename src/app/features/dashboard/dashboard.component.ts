@@ -4667,6 +4667,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   shouldShowStatCard(type: string): boolean {
     const roleId = this.currentUser?.roleId;
     
+    if (type === 'awaitingPayment') {
+      if (roleId === 10 || this.isCommissionerUser()) {
+        return false;
+      }
+    }
+
     // All roles can see basic stats
     if (['applied', 'pending', 'objection', 'approved', 'rejected', 'awaitingPayment'].includes(type)) {
       return true;
