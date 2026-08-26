@@ -56,8 +56,11 @@ export class DistributorPermitService {
     this.inflightRequests.clear();
   }
 
-  getDashboardCounts(tab: 'requisition' | 'revalidation' | 'cancellation' = 'requisition'): Observable<any> {
-    const params = new HttpParams().set('tab', tab);
+  getDashboardCounts(tab: 'requisition' | 'revalidation' | 'cancellation' = 'requisition', force = false): Observable<any> {
+    let params = new HttpParams().set('tab', tab);
+    if (force) {
+      params = params.set('_t', Date.now().toString());
+    }
     return this.http.get<any>(`${this.baseUrl}/dashboard-counts/`, { params });
   }
 

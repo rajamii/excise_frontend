@@ -21,6 +21,8 @@ import { ImflCancellationComponent } from './components/imfl-cancellation/imfl-c
 import { ActionItem, UnifiedActionButtonsComponent } from '../../../shared/components/unified-action-buttons/unified-action-buttons.component';
 import { UnifiedActionsService } from '../../../shared/services/unified-actions.service';
 
+import { SidebarPendingBadgeService } from '../../../shared/services/sidebar-pending-badge.service';
+
 type DistributorPermitStatusFilter = 'all' | 'approved' | 'pending' | 'under_process' | 'objection' | 'rejected';
 type DistributorPermitStatusGroup = Exclude<DistributorPermitStatusFilter, 'all'>;
 
@@ -62,6 +64,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   private readonly accountService = inject(AccountService);
   private readonly profileService = inject(SupplyChainProfileService);
   private readonly unifiedActionsService = inject(UnifiedActionsService);
+  private readonly sidebarPendingBadgeService = inject(SidebarPendingBadgeService);
   private readonly destroy$ = new Subject<void>();
 
   readonly applicantForm = this.fb.group({
@@ -3151,6 +3154,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   private loadApplications(): void {
+    this.sidebarPendingBadgeService.triggerRefresh();
     forkJoin({
       requisitions: this.permitService.listApplications().pipe(catchError(() => of([]))),
       revalidations: this.permitService.getRevalidations().pipe(catchError(() => of([]))),

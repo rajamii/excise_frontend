@@ -57,21 +57,36 @@ export class SidebarPendingBadgeService {
     });
   }
 
+  private getCurrentUserKey(): string {
+    try {
+      const accountRaw = localStorage.getItem('account') || localStorage.getItem('currentUser') || localStorage.getItem('user');
+      if (accountRaw) {
+        const parsed = JSON.parse(accountRaw);
+        return String(parsed?.id || parsed?.username || parsed?.email || 'anon').trim();
+      }
+    } catch (e) {}
+    return 'anon';
+  }
+
   refresh(
     sections: string[],
     force = false,
     options?: { audience?: BadgeAudience; mode?: BadgeMode }
   ): Observable<PendingCountsBySection> {
+    const userKey = this.getCurrentUserKey();
     const normalized = this.normalizeSections(sections);
     const audience: BadgeAudience = options?.audience ?? 'officer';
     const mode: BadgeMode = options?.mode ?? 'light';
-    const key = `${audience}:${mode}:${normalized.join('|')}`;
+    const key = `${userKey}:${audience}:${mode}:${normalized.join('|')}`;
 
     if (!force) {
       const cached = this.countsCache.get(key);
       if (cached && Date.now() - cached.fetchedAt < this.cacheTtlMs) {
         return of(cached.counts);
       }
+    } else {
+      this.countsCache.delete(key);
+      ReadApiCacheInterceptor.clearCache();
     }
 
     const tasks: Record<string, Observable<number>> = {};
@@ -88,7 +103,7 @@ export class SidebarPendingBadgeService {
         section === 'special-permit';
 
       if (imflTab) {
-        const detail$ = this.fetchDistributorPermitDashboardCounts(imflTab, audience).pipe(shareReplay(1));
+        const detail$ = this.fetchDistributorPermitDashboardCounts(imflTab, audience, force).pipe(shareReplay(1));
         tasks[section] = detail$.pipe(map(d => d.total));
         tasks[`${section}:payment`] = detail$.pipe(map(d => d.payment));
       } else if (isDashboardSection) {
@@ -103,7 +118,7 @@ export class SidebarPendingBadgeService {
           'special-permit': `${this.apiBase}/special-permit/dashboard-counts/`
         };
         const url = urlMap[section];
-        const detail$ = this.fetchDashboardCountsDetail(url, audience).pipe(shareReplay(1));
+        const detail$ = this.fetchDashboardCountsDetail(url, audience, force).pipe(shareReplay(1));
 
         tasks[section] = detail$.pipe(map(d => d.total));
         tasks[`${section}:payment`] = detail$.pipe(map(d => d.payment));
@@ -155,8 +170,13 @@ export class SidebarPendingBadgeService {
     );
   }
 
-  private fetchDashboardCountsDetail(url: string, audience: BadgeAudience): Observable<{ total: number; payment: number }> {
-    return this.http.get<any>(url).pipe(
+  private fetchDashboardCountsDetail(url: string, audience: BadgeAudience, force = false): Observable<{ total: number; payment: number }> {
+    let finalUrl = url;
+    if (force) {
+      const sep = finalUrl.includes('?') ? '&' : '?';
+      finalUrl = `${finalUrl}${sep}_t=${Date.now()}`;
+    }
+    return this.http.get<any>(finalUrl).pipe(
       map((counts) => {
         const pending = Number(counts?.pending || 0);
         if (audience !== 'licensee') return { total: pending, payment: 0 };
@@ -181,9 +201,10 @@ export class SidebarPendingBadgeService {
 
   private fetchDistributorPermitDashboardCounts(
     tab: 'requisition' | 'revalidation' | 'cancellation',
-    audience: BadgeAudience
+    audience: BadgeAudience,
+    force = false
   ): Observable<{ total: number; payment: number }> {
-    return this.distributorPermitService.getDashboardCounts(tab).pipe(
+    return this.distributorPermitService.getDashboardCounts(tab, force).pipe(
       map((counts) => {
         const pending = Number(counts?.pending || 0);
         if (audience !== 'licensee') return { total: pending, payment: 0 };
