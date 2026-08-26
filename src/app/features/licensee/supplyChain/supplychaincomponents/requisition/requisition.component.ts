@@ -2700,6 +2700,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       const statusToken = this.normalizeStageToken(item?.status);
       const stageToken = this.normalizeStageToken(item?.currentStageName);
       const combined = `${statusToken} ${stageToken}`;
+      // Awaiting payment from applicant is under process for Permit Section (no officer action needed)
+      if (combined.includes('awaiting') || (combined.includes('payment') && !combined.includes('payslip'))) return false;
       // If the record has been forwarded to Commissioner, Permit Section has already acted
       if (combined.includes('commissioner')) return false;
 
@@ -2714,7 +2716,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       return false;
     }
     if (this.isApprovedCommissionerAwaitingPayment(item)) {
-      return true;
+      return false;
     }
     if (this.isApprovedLikeStatus(item) || this.isRejectedLikeStatus(item)) {
       return false;

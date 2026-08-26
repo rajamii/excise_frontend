@@ -2835,6 +2835,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       return 'objection';
     }
 
+    if (stageId === 144 || value.includes('awaiting payment') || value.includes('awaiting_payment') || (value.includes('awaiting') && value.includes('pay')) || value.includes('awaiting')) {
+      return 'under_process';
+    }
+
     const { isPermitSection, isCommissioner } = this.getUserRoleInfo();
 
     const isCommissionerStage = stageId === 153 || stageId === 157 || stageId === 160 || stageId === 162 || stageId === 163 || value.includes('commissioner');
