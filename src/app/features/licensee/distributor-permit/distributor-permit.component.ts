@@ -2306,7 +2306,12 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
     const supplier = this.supplierForm.getRawValue();
     const route = this.routeForm.getRawValue();
-    const supplierName = supplier.supplierCompanyName || '';
+    const selectedSupplierId = this.supplierForm.get('supplierId')?.value;
+    const matchedSupplier = this.suppliers.find((s) => String(s.id) === String(selectedSupplierId));
+    const selectedSupplierLabel = matchedSupplier
+      ? (matchedSupplier.supplier_master_name || matchedSupplier.supplierMasterName || matchedSupplier.supplier_name || matchedSupplier.company_name || '')
+      : '';
+    const supplierName = supplier.supplierCompanyName || selectedSupplierLabel || 'IMFL Supplier';
     const srcAddress = supplier.sourceAddress || '';
     const logistics = supplier.logisticsPartner || '';
     const routeText = this.buildRouteDetails(route);
@@ -2524,8 +2529,157 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.selectedApplication = null;
   }
 
+  showPaymentConfirmationModal = false;
+  paymentApplicationToProcess: any = null;
+  paymentExciseCurrentBalance = 0;
+  paymentCessCurrentBalance = 0;
+  paymentImportFeeTotal = 0;
+  paymentAddEdTotal = 0;
+  paymentEduCessTotal = 0;
+  isPaymentAgreed = false;
+  isSubmittingPayment = false;
+
+  get paymentExciseDeduction(): number {
+    return (this.paymentImportFeeTotal || 0) + (this.paymentAddEdTotal || 0);
+  }
+
+  get paymentExciseBalanceAfter(): number {
+    return (this.paymentExciseCurrentBalance || 0) - this.paymentExciseDeduction;
+  }
+
+  get paymentCessBalanceAfter(): number {
+    return (this.paymentCessCurrentBalance || 0) - (this.paymentEduCessTotal || 0);
+  }
+
+  get isPaymentBalanceInsufficient(): boolean {
+    return this.paymentExciseBalanceAfter < 0 || this.paymentCessBalanceAfter < 0;
+  }
+
+  get paymentInsufficientErrorMessage(): string {
+    if (this.paymentExciseBalanceAfter < 0 && this.paymentCessBalanceAfter < 0) {
+      return 'Insufficient Excise Wallet and Education Cess Wallet balances. Add wallet balance before proceeding.';
+    }
+    if (this.paymentExciseBalanceAfter < 0) {
+      return 'Insufficient Excise Wallet (includes Additional Excise). Add wallet balance before proceeding.';
+    }
+    if (this.paymentCessBalanceAfter < 0) {
+      return 'Insufficient Education Cess Wallet. Add wallet balance before proceeding.';
+    }
+    return '';
+  }
+
+  openPaymentConfirmationModal(application: any): void {
+    if (!application) return;
+    this.paymentApplicationToProcess = application;
+    this.isPaymentAgreed = false;
+    this.isSubmittingPayment = false;
+
+    let importFee = 0;
+    let addEd = 0;
+    let eduCess = 0;
+
+    const lineItems = application.lineItems || application.line_items || [];
+    if (lineItems.length > 0) {
+      lineItems.forEach((li: any) => {
+        const cases = Number(li.cases || 0);
+        const importFeeRate = Number(li.importPassFeePerCase || li.import_pass_fee_per_case || 0);
+        const addEdRate = Number(li.additionalEdPerCase || li.additional_ed_per_case || 0);
+        const cessRate = Number(li.educationCessPerCase || li.education_cess_per_case || 0);
+
+        importFee += (importFeeRate * cases);
+        addEd += (addEdRate * cases);
+        eduCess += (cessRate * cases);
+      });
+    } else {
+      const details = application.permitWiseDetails || application.permit_wise_details || [];
+      details.forEach((p: any) => {
+        const items = p.items || [];
+        items.forEach((item: any) => {
+          const cases = Number(item.cases || 0);
+          importFee += Number(item.totalImport || (item.importFee || 0) * cases);
+          addEd += Number(item.totalAddEd || (item.addEdPerCase || 0) * cases);
+          eduCess += Number(item.cess || 0);
+        });
+      });
+    }
+
+    this.paymentImportFeeTotal = importFee;
+    this.paymentAddEdTotal = addEd;
+    this.paymentEduCessTotal = eduCess;
+
+    this.permitService.getWalletBalances().subscribe({
+      next: (res) => {
+        this.paymentExciseCurrentBalance = Number(res.excise_balance || 0);
+        this.paymentCessCurrentBalance = Number(res.education_cess_balance || 0);
+        this.showPaymentConfirmationModal = true;
+      },
+      error: () => {
+        this.paymentExciseCurrentBalance = 0;
+        this.paymentCessCurrentBalance = 0;
+        this.showPaymentConfirmationModal = true;
+      }
+    });
+  }
+
+  closePaymentConfirmationModal(): void {
+    this.showPaymentConfirmationModal = false;
+    this.paymentApplicationToProcess = null;
+    this.isPaymentAgreed = false;
+    this.isSubmittingPayment = false;
+  }
+
+  confirmExecutePayment(): void {
+    if (!this.paymentApplicationToProcess || !this.isPaymentAgreed || this.isPaymentBalanceInsufficient || this.isSubmittingPayment) {
+      return;
+    }
+
+    this.isSubmittingPayment = true;
+    const refNo = this.paymentApplicationToProcess.referenceNo || this.paymentApplicationToProcess.reference_no || this.paymentApplicationToProcess.id;
+
+    this.unifiedActionsService.executeAction(
+      'PAY',
+      { referenceNo: refNo, id: refNo } as any,
+      'requisition',
+      this.detailActionContext
+    )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (result: any) => {
+          this.isSubmittingPayment = false;
+          if (result?.success === false) {
+            void Swal.fire({
+              title: 'Payment Failed',
+              text: result.message || 'Unable to process wallet payment.',
+              icon: 'error'
+            });
+            return;
+          }
+          this.closePaymentConfirmationModal();
+          void Swal.fire({
+            title: 'Payment Successful',
+            text: 'Requisition payment completed and application forwarded to Permit Section.',
+            icon: 'success'
+          });
+          this.loadInitialData();
+        },
+        error: (err: any) => {
+          this.isSubmittingPayment = false;
+          void Swal.fire({
+            title: 'Payment Failed',
+            text: err?.error?.detail || err?.error?.message || err?.message || 'Unable to process wallet payment.',
+            icon: 'error'
+          });
+        }
+      });
+  }
+
   onModalActionClicked(event: { action: string; item: ActionItem }): void {
     if (!event?.action || !event?.item) {
+      return;
+    }
+
+    if (event.action === 'PAY' || event.action === 'FORCE_PAY') {
+      this.openPaymentConfirmationModal(event.item);
       return;
     }
 
@@ -3176,8 +3330,17 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const compName =
+      (supplier as any).supplier_name ||
+      (supplier as any).supplierName ||
+      supplier.company_name ||
+      (supplier as any).companyName ||
+      (supplier as any).supplier_master_name ||
+      (supplier as any).supplierMasterName ||
+      '';
+
     this.supplierForm.patchValue({
-      supplierCompanyName: supplier.company_name || '',
+      supplierCompanyName: compName,
       sourceAddress: supplier.address || ''
     }, { emitEvent: false });
     this.supplierForm.controls.supplierCompanyName.disable({ emitEvent: false });
