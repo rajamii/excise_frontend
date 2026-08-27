@@ -81,7 +81,12 @@ export class BlockManageDialogComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.data) {
-      this.block = { ...this.data };
+      const name = this.data.blockName || this.data.gpuName || (this.data as any).block_name || (this.data as any).gpu_name || '';
+      this.block = {
+        ...this.data,
+        blockName: name,
+        gpuName: name
+      };
       this.isEditMode = true;
     }
 
@@ -98,19 +103,33 @@ export class BlockManageDialogComponent implements OnInit {
   }
 
   onSave(): void {
-    if (!this.block.blockName || !this.block.subcategory) {
+    const name = String(this.block.blockName || this.block.gpuName || '').trim();
+    if (!name || !this.block.subcategory) {
       Swal.fire('Warning', 'All fields are required.', 'warning');
       return;
     }
+    const payload = {
+      ...this.block,
+      gpu_name: name,
+      gpuName: name,
+      block_name: name,
+      blockName: name,
+      subcategory: this.block.subcategory,
+      isActive: this.block.isActive ?? true,
+      is_active: this.block.isActive ?? true
+    };
     const req = this.isEditMode
-      ? this.adminService.updateBlock(this.block.id!, this.block)
-      : this.adminService.addBlock(this.block);
+      ? this.adminService.updateBlock(this.block.id!, payload)
+      : this.adminService.addBlock(payload);
     req.subscribe({
       next: () => {
         Swal.fire('Success', `Block ${this.isEditMode ? 'updated' : 'added'}!`, 'success');
         this.dialogRef.close(true);
       },
-      error: () => Swal.fire('Error', 'Failed to save block.', 'error')
+      error: (err: any) => {
+        const errorMsg = err?.error?.gpuName?.[0] || err?.error?.gpu_name?.[0] || err?.error?.blockName?.[0] || err?.error?.block_name?.[0] || err?.error?.detail || 'Failed to save block.';
+        Swal.fire('Error', errorMsg, 'error');
+      }
     });
   }
 

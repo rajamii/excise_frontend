@@ -77,7 +77,15 @@ export class BlocksWardsComponent implements OnInit {
     this.masterService.getBlocks().subscribe({
       next: (data: any) => {
         const list = Array.isArray(data) ? data : [];
-        this.blocks = [...list].sort((a, b) => a.blockName.localeCompare(b.blockName));
+        this.blocks = list.map((item: any) => {
+          const name = item.blockName || item.block_name || item.gpuName || item.gpu_name || '';
+          return {
+            ...item,
+            blockName: name,
+            gpuName: name,
+            subcategoryName: item.subcategoryName || item.subcategory_name || ''
+          };
+        }).sort((a: any, b: any) => (a.blockName || '').localeCompare(b.blockName || ''));
       },
       error: () => Swal.fire('Error', 'Failed to load blocks.', 'error')
     });

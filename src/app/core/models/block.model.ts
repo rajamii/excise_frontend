@@ -1,7 +1,13 @@
 export interface Block {
   id?: number;
-  blockName: string;
+  blockName?: string;
+  block_name?: string;
+  gpuName?: string;
+  gpu_name?: string;
   subcategory?: number;
   subcategoryName?: string;
-  isActive: boolean;
+  subcategory_name?: string;
+  isActive?: boolean;
+  is_active?: boolean;
 }
+
