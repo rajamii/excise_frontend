@@ -148,6 +148,14 @@ export interface Objection {
   resolvedAt?: string;
   resolvedBy?: string;
   resolvedByName?: string;
+  /** ISO 8601 datetime by which the objection must be resolved */
+  deadlineAt?: string | null;
+  /**
+   * Seconds remaining until the objection deadline.
+   * 0    → deadline has passed.
+   * null → no deadline set (legacy objections before this feature).
+   */
+  timeRemainingSeconds?: number | null;
 }
 
 /**

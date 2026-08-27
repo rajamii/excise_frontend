@@ -25,10 +25,24 @@ export class Objection {
   application!: string | NewLicenseApplication;
   fieldName!: string;
   remarks!: string;
-  raisedBy!: Account | null;
+  raisedBy?: number | null;
+  raisedByName?: string | null;
   isResolved!: boolean;
-  raisedOn!: string;
+  /** ISO 8601 datetime when the objection was raised */
+  raisedAt!: string;
+  /** @deprecated use raisedAt */
+  raisedOn?: string;
+  resolvedAt?: string | null;
   resolvedOn?: string | null;
+  resolvedByName?: string | null;
+  /** ISO 8601 datetime by which the objection must be resolved */
+  deadlineAt?: string | null;
+  /**
+   * Seconds remaining until the objection deadline.
+   * 0  → deadline has passed.
+   * null → no deadline set (legacy objection).
+   */
+  timeRemainingSeconds?: number | null;
 }
 
 export class NewLicenseApplication {

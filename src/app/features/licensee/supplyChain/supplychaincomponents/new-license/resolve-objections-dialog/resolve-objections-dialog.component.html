@@ -11,57 +11,96 @@
   } @else if (unresolvedObjections.length === 0) {
     <div class="empty">No unresolved objections found.</div>
   } @else {
-    <div class="hint">
-      Update only the fields mentioned in objections, then submit to send back to the officer.
-      <div class="hint-sub">All fields are required, and values must be updated (not same as current).</div>
-    </div>
+    <!-- Objection Deadline Banner -->
+    @if (objectionDeadline) {
+      <div class="deadline-banner"
+           [class.deadline-ok]="deadlineUrgency === 'ok'"
+           [class.deadline-warn]="deadlineUrgency === 'warn'"
+           [class.deadline-critical]="deadlineUrgency === 'critical' || deadlineUrgency === 'expired'">
+        <mat-icon>{{ deadlineUrgency === 'expired' ? 'cancel' : 'timer' }}</mat-icon>
+        <span>
+          @if (deadlineUrgency === 'expired') {
+            <strong>Deadline Passed</strong> — This application will be auto-rejected by the system.
+          } @else {
+            <strong>Resolve by: {{ objectionDeadline | date:'dd-MMM-yyyy, h:mm a' }}</strong>
+            &nbsp;—&nbsp; Time remaining: <strong>{{ deadlineCountdown }}</strong>
+          }
+        </span>
+      </div>
+    }
 
-    <form [formGroup]="form" class="form">
-      @for (obj of unresolvedObjections; track obj) {
-        <div class="item">
-          <div class="item-head">
-            <div class="field">{{ label(obj.fieldName) }}</div>
-            <div class="remark">
-              <mat-icon class="warn">error</mat-icon>
-              <span>{{ obj.remarks }}</span>
+    <!-- ── When deadline has passed: lock out editing entirely ──────────────── -->
+    @if (deadlineExpired) {
+      <div class="deadline-lockout">
+        <mat-icon class="lockout-icon">lock</mat-icon>
+        <div>
+          <p class="lockout-title">Submission Window Closed</p>
+          <p class="lockout-body">
+            The deadline to resolve this objection has passed. You can no longer submit
+            corrections. This application has been (or will shortly be) automatically
+            rejected by the system.
+          </p>
+          <p class="lockout-body">
+            Please contact the excise department if you believe this is an error.
+          </p>
+        </div>
+      </div>
+    } @else {
+      <!-- Normal editing UI when deadline has NOT passed -->
+      <div class="hint">
+        Update only the fields mentioned in objections, then submit to send back to the officer.
+        <div class="hint-sub">All fields are required, and values must be updated (not same as current).</div>
+      </div>
+
+      <form [formGroup]="form" class="form">
+        @for (obj of unresolvedObjections; track obj) {
+          <div class="item">
+            <div class="item-head">
+              <div class="field">{{ label(obj.fieldName) }}</div>
+              <div class="remark">
+                <mat-icon class="warn">error</mat-icon>
+                <span>{{ obj.remarks }}</span>
+              </div>
             </div>
-          </div>
 
-          <div class="current" *ngIf="currentValue(obj.fieldName) as cv">
-            <span class="current-label">Current:</span>
-            @if (isDocumentPath(cv)) {
-              <a class="doc-link" [href]="getDocumentUrl(cv)" target="_blank" rel="noopener">
-                <mat-icon>description</mat-icon>
-                View Document
-              </a>
+            <div class="current" *ngIf="currentValue(obj.fieldName) as cv">
+              <span class="current-label">Current:</span>
+              @if (isDocumentPath(cv)) {
+                <a class="doc-link" [href]="getDocumentUrl(cv)" target="_blank" rel="noopener">
+                  <mat-icon>description</mat-icon>
+                  View Document
+                </a>
+              } @else {
+                <span class="current-value" style="white-space: pre-wrap;">{{ cv }}</span>
+              }
+            </div>
+
+            @if (isFileField(obj.fieldName, currentValue(obj.fieldName))) {
+              <div class="file-row">
+                <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx" (change)="onFileSelected(obj.fieldName, $event)" />
+              </div>
             } @else {
-              <span class="current-value" style="white-space: pre-wrap;">{{ cv }}</span>
+              <mat-form-field appearance="outline" class="field-input">
+                <mat-label>Correct Value</mat-label>
+                <textarea matInput *ngIf="obj.fieldName.toLowerCase().includes('address')" [formControlName]="obj.fieldName" rows="3"></textarea>
+                <input matInput *ngIf="!obj.fieldName.toLowerCase().includes('address')" [type]="inputTypeFor(obj.fieldName)" [formControlName]="obj.fieldName" />
+                <mat-error *ngIf="form.get(obj.fieldName)?.touched && form.get(obj.fieldName)?.invalid">
+                  {{ errorText(obj.fieldName) }}
+                </mat-error>
+              </mat-form-field>
             }
           </div>
-
-          @if (isFileField(obj.fieldName, currentValue(obj.fieldName))) {
-            <div class="file-row">
-              <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx" (change)="onFileSelected(obj.fieldName, $event)" />
-            </div>
-           } @else {
-             <mat-form-field appearance="outline" class="field-input">
-               <mat-label>Correct Value</mat-label>
-               <textarea matInput *ngIf="obj.fieldName.toLowerCase().includes('address')" [formControlName]="obj.fieldName" rows="3"></textarea>
-               <input matInput *ngIf="!obj.fieldName.toLowerCase().includes('address')" [type]="inputTypeFor(obj.fieldName)" [formControlName]="obj.fieldName" />
-               <mat-error *ngIf="form.get(obj.fieldName)?.touched && form.get(obj.fieldName)?.invalid">
-                 {{ errorText(obj.fieldName) }}
-               </mat-error>
-             </mat-form-field>
-           }
-         </div>
-       }
-     </form>
+        }
+      </form>
+    }
   }
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
   <button mat-button type="button" (click)="close()">Close</button>
-  <button mat-raised-button color="primary" type="button" (click)="submit()" [disabled]="!canSubmit">
-    Submit Corrections
-  </button>
+  @if (!deadlineExpired) {
+    <button mat-raised-button color="primary" type="button" (click)="submit()" [disabled]="!canSubmit">
+      Submit Corrections
+    </button>
+  }
 </mat-dialog-actions>

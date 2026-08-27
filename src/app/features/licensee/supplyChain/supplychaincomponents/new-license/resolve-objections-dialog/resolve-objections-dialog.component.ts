@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, Inject, OnDestroy, OnInit } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -22,6 +22,8 @@ export interface ResolveObjectionsDialogData {
   applicationId: string;
 }
 
+type DeadlineUrgency = 'ok' | 'warn' | 'critical' | 'expired';
+
 @Component({
   selector: 'app-resolve-objections-dialog',
   standalone: true,
@@ -38,7 +40,7 @@ export interface ResolveObjectionsDialogData {
   templateUrl: './resolve-objections-dialog.component.html',
   styleUrls: ['./resolve-objections-dialog.component.scss']
 })
-export class ResolveObjectionsDialogComponent implements OnInit {
+export class ResolveObjectionsDialogComponent implements OnInit, OnDestroy {
   private readonly allowedFileExtensions = ['jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx'];
   private readonly allowedMimeTypes = [
     'image/jpeg',
@@ -57,6 +59,12 @@ export class ResolveObjectionsDialogComponent implements OnInit {
   application: any = null;
 
   form = new FormGroup({});
+
+  /** Earliest deadline among unresolved objections. */
+  objectionDeadline: Date | null = null;
+  deadlineCountdown = '';
+  deadlineUrgency: DeadlineUrgency = 'ok';
+  private _countdownInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private http: HttpClient,
@@ -103,12 +111,62 @@ export class ResolveObjectionsDialogComponent implements OnInit {
 
         this.form = new FormGroup(group);
         this.isLoading = false;
+        this._initDeadline();
       },
       error: () => {
         this.error = 'Failed to load objections.';
         this.isLoading = false;
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    if (this._countdownInterval !== null) {
+      clearInterval(this._countdownInterval);
+      this._countdownInterval = null;
+    }
+  }
+
+  // â”€â”€ Deadline countdown helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+  private _initDeadline(): void {
+    const deadlines = this.unresolvedObjections
+      .map(o => o.deadlineAt ? new Date(o.deadlineAt).getTime() : null)
+      .filter((d): d is number => d !== null && !isNaN(d));
+
+    if (deadlines.length === 0) { this.objectionDeadline = null; return; }
+
+    this.objectionDeadline = new Date(Math.min(...deadlines));
+    this._tickDeadline();
+    this._countdownInterval = setInterval(() => this._tickDeadline(), 1_000);
+  }
+
+  private _tickDeadline(): void {
+    if (!this.objectionDeadline) return;
+    const remaining = this.objectionDeadline.getTime() - Date.now();
+    if (remaining <= 0) {
+      this.deadlineCountdown = '0 min';
+      this.deadlineUrgency = 'expired';
+      if (this._countdownInterval !== null) { clearInterval(this._countdownInterval); this._countdownInterval = null; }
+      return;
+    }
+    this.deadlineUrgency = remaining <= 3_600_000 ? 'critical' : remaining <= 86_400_000 ? 'warn' : 'ok';
+    const s = Math.floor(remaining / 1_000);
+    const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    const parts: string[] = [];
+    if (d > 0) parts.push(`${d} day${d !== 1 ? 's' : ''}`);
+    if (h > 0) parts.push(`${h} hr${h !== 1 ? 's' : ''}`);
+    if (m > 0) parts.push(`${m} min`);
+    if (d === 0 && h === 0) parts.push(`${sec} sec`);
+    this.deadlineCountdown = parts.join(', ') || '< 1 min';
+  }
+
+  // ── End deadline helpers ─────────────────────────────────────────────────
+
+  /** True when the objection deadline has passed — blocks all form submission. */
+  get deadlineExpired(): boolean {
+    return this.deadlineUrgency === 'expired' ||
+      (this.objectionDeadline !== null && this.objectionDeadline.getTime() < Date.now());
   }
 
   get unresolvedObjections(): Objection[] {
@@ -256,6 +314,11 @@ export class ResolveObjectionsDialogComponent implements OnInit {
     const appId = String(this.data?.applicationId || '').trim();
     if (!appId) return;
 
+    if (this.deadlineExpired) {
+      void Swal.fire('Deadline Passed', 'The deadline for resolving objections on this application has passed. Submissions are no longer accepted.', 'error');
+      return;
+    }
+
     if (this.unresolvedObjections.length === 0) {
       void Swal.fire('No Objections', 'No unresolved objections found.', 'info');
       return;
@@ -331,6 +394,7 @@ export class ResolveObjectionsDialogComponent implements OnInit {
 
   get canSubmit(): boolean {
     if (this.isLoading) return false;
+    if (this.deadlineExpired) return false;
     if (this.unresolvedObjections.length === 0) return false;
     if (this.form.invalid) return false;
 

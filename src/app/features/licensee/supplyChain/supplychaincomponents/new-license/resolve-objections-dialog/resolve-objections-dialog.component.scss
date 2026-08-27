@@ -10,6 +10,25 @@
   color: rgba(0, 0, 0, 0.72);
 }
 
+// ── Objection Deadline Banner ──────────────────────────────────────────────
+.deadline-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin: 6px 0 10px;
+  font-size: 0.875rem;
+  border-left-width: 4px;
+  border-left-style: solid;
+
+  mat-icon { font-size: 20px; width: 20px; height: 20px; flex-shrink: 0; }
+}
+.deadline-ok       { background: #ecfdf5; border-color: #10b981; color: #065f46; mat-icon { color: #059669; } }
+.deadline-warn     { background: #fffbeb; border-color: #f59e0b; color: #78350f; mat-icon { color: #d97706; } }
+.deadline-critical { background: #fef2f2; border-color: #ef4444; color: #7f1d1d; mat-icon { color: #dc2626; } }
+// ─────────────────────────────────────────────────────────────────────────────
+
 .hint {
   margin: 6px 0 14px;
   padding: 10px 12px;
@@ -105,3 +124,43 @@
   background: rgba(0, 0, 0, 0.04);
   color: rgba(0, 0, 0, 0.72);
 }
+
+.deadline-lockout {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 18px 20px;
+  background: #fef2f2;
+  border: 1.5px solid #fecaca;
+  border-left: 5px solid #ef4444;
+  border-radius: 10px;
+  margin: 12px 0 20px;
+
+  .lockout-icon {
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+    color: #dc2626;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .lockout-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #991b1b;
+    margin: 0 0 6px 0;
+  }
+
+  .lockout-body {
+    font-size: 0.875rem;
+    color: #7f1d1d;
+    margin: 0 0 4px 0;
+    line-height: 1.45;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+

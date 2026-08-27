@@ -24,6 +24,29 @@
           <mat-icon>error_outline</mat-icon>
           <span>Unresolved &nbsp;·&nbsp; {{ unresolved.length }} field(s) need correction</span>
         </div>
+
+        <!-- ── Objection Deadline Banner ─────────────────────────────────── -->
+        @if (objectionDeadline) {
+          <div class="od-deadline-banner"
+               [class.od-deadline-ok]="deadlineUrgency === 'ok'"
+               [class.od-deadline-warn]="deadlineUrgency === 'warn'"
+               [class.od-deadline-critical]="deadlineUrgency === 'critical' || deadlineUrgency === 'expired'">
+            <mat-icon class="od-deadline-icon">
+              {{ deadlineUrgency === 'expired' ? 'cancel' : 'timer' }}
+            </mat-icon>
+            <span class="od-deadline-text">
+              @if (deadlineUrgency === 'expired') {
+                <strong>Deadline Passed</strong> — Application will be auto-rejected by the system.
+              } @else {
+                <strong>Resolve by: {{ objectionDeadline | date:'dd-MMM-yyyy, h:mm a' }}</strong>
+                &nbsp;—&nbsp;
+                Time remaining: <strong>{{ deadlineCountdown }}</strong>
+              }
+            </span>
+          </div>
+        }
+        <!-- ─────────────────────────────────────────────────────────────── -->
+
         <div class="od-list">
           @for (obj of unresolved; track obj) {
             <div class="od-card od-card-red">

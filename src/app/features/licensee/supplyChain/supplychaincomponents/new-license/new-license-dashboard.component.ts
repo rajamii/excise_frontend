@@ -179,19 +179,21 @@ export class NewLicenseDashboardComponent implements OnInit {
         };
         this.allRows = this.flattenGroupedData(grouped);
 
-        // Default to "Pending" filter for all users (admin + licensee) when there are pending items.
-        // Objection has higher priority than pending.
-        // If no objection/pending items exist, show all applications (no filter).
+        // Calculate actual counts from rows
+        const actualObjectionCount = this.allRows.filter(r => r.statusGroup === 'objection').length;
+        const actualAwaitingPaymentCount = this.allRows.filter(r => r.statusGroup === 'awaiting-payment').length;
+        const actualPendingCount = this.allRows.filter(r => r.statusGroup === 'pending').length;
+
+        // Default to Objection if any exist, then Awaiting Payment, then Pending, else Total Applications ('')
         if (this.activeSummaryFilter === '') {
-          const objectionCount = Number((counts as any)?.objection || 0);
-          const pendingCount = Number(counts?.pending || 0);
-          const awaitingPaymentCount = this.allRows.filter(r => r.statusGroup === 'awaiting-payment').length;
-          if (objectionCount > 0) {
+          if (actualObjectionCount > 0) {
             this.activeSummaryFilter = 'objection';
-          } else if (awaitingPaymentCount > 0) {
+          } else if (actualAwaitingPaymentCount > 0) {
             this.activeSummaryFilter = 'awaiting-payment';
-          } else if (pendingCount > 0) {
+          } else if (actualPendingCount > 0) {
             this.activeSummaryFilter = 'pending';
+          } else {
+            this.activeSummaryFilter = '';
           }
         }
 
@@ -223,11 +225,22 @@ export class NewLicenseDashboardComponent implements OnInit {
       return matchesSearch;
     });
 
+    const calculated = this.calculateCounts(this.summaryRows);
+    this.serverCounts.awaitingPayment = this.allRows.filter(r => r.statusGroup === 'awaiting-payment').length;
+    const canUseServerCounts = this.allRows.length === 0 && !this.searchFilter && !this.dateFilter && !this.monthFilter;
+    this.counts = canUseServerCounts ? this.serverCounts : calculated;
+
+    // If currently focused on a filter (e.g. 'objection') but that filter has 0 entries, reset to Total Applications ('')
+    if (this.activeSummaryFilter) {
+      const activeCount = this.counts[this.activeSummaryFilter as keyof NewLicenseCounts] ?? 0;
+      if (activeCount === 0) {
+        this.activeSummaryFilter = '';
+      }
+    }
+
     this.filteredRows = this.summaryRows.filter((row) => {
       // Date filter
       if (this.dateFilter) {
-        const rowDate = (row.submittedOn || '').split('T')[0];
-        // submittedOn may be formatted as "dd-MMM-yyyy", convert to ISO for comparison
         const isoDate = this.toIsoDate(row.submittedOn);
         if (isoDate !== this.dateFilter) return false;
       }
@@ -245,13 +258,6 @@ export class NewLicenseDashboardComponent implements OnInit {
 
       return true;
     });
-
-    const calculated = this.calculateCounts(this.summaryRows);
-    this.serverCounts.awaitingPayment = this.allRows.filter(r => r.statusGroup === 'awaiting-payment').length;
-    const canUseServerCounts = this.allRows.length === 0 && !this.searchFilter && !this.dateFilter && !this.monthFilter;
-    this.counts = canUseServerCounts ? this.serverCounts : calculated;
-
-    this.syncActiveSummaryFilter();
 
     // Reset pagination whenever filters change.
     this.pageIndex = 0;

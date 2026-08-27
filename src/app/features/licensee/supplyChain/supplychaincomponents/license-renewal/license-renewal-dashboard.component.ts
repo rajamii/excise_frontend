@@ -143,6 +143,14 @@ export class LicenseRenewalDashboardComponent implements OnInit {
   }
 
   applyFilters(): void {
+    if (this.activeSummaryFilter) {
+      const activeCount = this.activeSummaryFilter === 'awaiting-payment'
+        ? this.counts.awaitingPayment
+        : (this.counts[this.activeSummaryFilter as keyof RenewalCounts] ?? 0);
+      if (activeCount === 0) {
+        this.activeSummaryFilter = '';
+      }
+    }
     const q = this.searchFilter.trim().toLowerCase();
     const rows = this.allRows.filter((row) => {
       const matchesSearch =

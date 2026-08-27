@@ -202,3 +202,54 @@
   color: #1e293b;
   word-break: break-word;
 }
+
+// ── Objection Deadline Banner ──────────────────────────────────────────────────
+.od-deadline-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  font-size: 0.875rem;
+  border-left-width: 4px;
+  border-left-style: solid;
+
+  .od-deadline-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  .od-deadline-text {
+    line-height: 1.4;
+  }
+}
+
+// ── ok: > 24 h remaining (teal / green-ish) ──────────────────────────────────
+.od-deadline-ok {
+  background: #ecfdf5;
+  border-color: #10b981;
+  color: #065f46;
+
+  .od-deadline-icon { color: #059669; }
+}
+
+// ── warn: ≤ 24 h remaining (amber) ───────────────────────────────────────────
+.od-deadline-warn {
+  background: #fffbeb;
+  border-color: #f59e0b;
+  color: #78350f;
+
+  .od-deadline-icon { color: #d97706; }
+}
+
+// ── critical / expired: ≤ 1 h or past deadline (red) ─────────────────────────
+.od-deadline-critical {
+  background: #fef2f2;
+  border-color: #ef4444;
+  color: #7f1d1d;
+
+  .od-deadline-icon { color: #dc2626; }
+}
