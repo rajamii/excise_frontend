@@ -1894,10 +1894,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           brandName: app.brandName || firstLine.selectedBrandName || firstLine.brand_name || 'IMFL General Brand',
           size_ml: app.sizeMl || firstLine.size_ml || 750,
           sizeMl: app.sizeMl || firstLine.size_ml || 750,
-          expected_cases: firstPermit.total_cases || firstPermit.totalCases || app.cases || 600,
-          expectedCases: firstPermit.total_cases || firstPermit.totalCases || app.cases || 600,
-          arrived_cases: firstPermit.total_cases || firstPermit.totalCases || app.cases || 600,
-          arrivedCases: firstPermit.total_cases || firstPermit.totalCases || app.cases || 600,
+          expected_cases: firstPermit.total_cases || firstPermit.totalCases || app.cases || 700,
+          expectedCases: firstPermit.total_cases || firstPermit.totalCases || app.cases || 700,
+          arrived_cases: firstPermit.total_cases || firstPermit.totalCases || app.cases || 700,
+          arrivedCases: firstPermit.total_cases || firstPermit.totalCases || app.cases || 700,
           arrived_at: app.submittedDate || app.submittedOn || new Date().toISOString(),
           arrivedAt: app.submittedDate || app.submittedOn || new Date().toISOString(),
           status: 'Approved',
@@ -3662,7 +3662,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     for (const row of rawRows) {
       let remCases = row.cases;
       while (remCases > 0) {
-        const available = 600 - currentCases;
+        const available = 700 - currentCases;
         if (available <= 0) {
           permits.push(this.buildPermitSummaryObject(currentPermitIndex, currentItems));
           currentPermitIndex++;
@@ -3670,7 +3670,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           currentItems = [];
         }
 
-        const allocated = Math.min(remCases, 600 - currentCases);
+        const allocated = Math.min(remCases, 700 - currentCases);
         currentItems.push({
           ...row,
           cases: allocated,
@@ -3700,7 +3700,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const totalBulkLitres = items.reduce((sum, item) => sum + item.bl, 0);
     return {
       permitIndex,
-      permitName: `Permit #${permitIndex} (Max 600 Cases)`,
+      permitName: `Permit #${permitIndex} (Max 700 Cases)`,
       totalCases,
       totalImport,
       totalAddEd,
