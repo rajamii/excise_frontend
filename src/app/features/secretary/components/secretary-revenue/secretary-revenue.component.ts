@@ -314,11 +314,12 @@ export class SecretaryRevenueComponent implements OnInit, OnDestroy {
   }
 
   private normalizeRevenueOverview(res?: SecretaryRevenueOverview | null): SecretaryRevenueOverview {
-    const response = res || this.getFallbackRevenueOverview();
-    const responseHeads = Array.isArray(response.revenue_heads) ? response.revenue_heads : [];
-    const responseHeadMap = new Map<string, SecretaryRevenueHeadItem>();
+    const response: any = res || this.getFallbackRevenueOverview();
+    const rawHeads = response.revenue_heads || response.revenueHeads;
+    const responseHeads = Array.isArray(rawHeads) ? rawHeads : [];
+    const responseHeadMap = new Map<string, any>();
 
-    responseHeads.forEach(head => {
+    responseHeads.forEach((head: any) => {
       const headName = this.normalizeHeadName(head.head_name || head.headName || '');
       if (headName) {
         responseHeadMap.set(headName, head);
@@ -328,10 +329,13 @@ export class SecretaryRevenueComponent implements OnInit, OnDestroy {
     const normalizedHeads = this.fallbackRevenueHeads.map(fallbackHead => {
       const fallbackName = fallbackHead.head_name || fallbackHead.headName || '';
       const liveHead = responseHeadMap.get(this.normalizeHeadName(fallbackName));
-      return this.normalizeRevenueHead({ ...fallbackHead, ...(liveHead || {}) });
+      if (liveHead) {
+        return this.normalizeRevenueHead(liveHead);
+      }
+      return this.normalizeRevenueHead(fallbackHead);
     });
 
-    responseHeads.forEach(head => {
+    responseHeads.forEach((head: any) => {
       const headName = this.normalizeHeadName(head.head_name || head.headName || '');
       const alreadyIncluded = normalizedHeads.some(existing => this.normalizeHeadName(existing.head_name || existing.headName || '') === headName);
       if (!alreadyIncluded) {
@@ -347,42 +351,49 @@ export class SecretaryRevenueComponent implements OnInit, OnDestroy {
       .reduce((sum, head) => sum + this.getHeadPaidAmount(head), 0);
     const activeBalance = normalizedHeads.reduce((sum, head) => sum + this.readAmount(head.current_balance, head.currentBalance), 0);
 
+    const summaryKpis = response.summary_kpis || response.summaryKpis || {};
+    const topContribs = response.top_contributors || response.topContributors || [];
+    const secDeposits = response.security_deposits || response.securityDeposits || [];
+
     return {
       summary_kpis: {
-        total_revenue_collected: this.readAmount(response.summary_kpis?.total_revenue_collected, netRevenue + totalFd),
-        net_excise_revenue_collected: this.readAmount(response.summary_kpis?.net_excise_revenue_collected, netRevenue),
-        total_active_balance: this.readAmount(response.summary_kpis?.total_active_balance, activeBalance),
-        total_security_deposit_fd: this.readAmount(response.summary_kpis?.total_security_deposit_fd, totalFd),
-        top_contributors_count: Number(response.summary_kpis?.top_contributors_count || (response.top_contributors || []).length || 0)
+        total_revenue_collected: this.readAmount(summaryKpis.total_revenue_collected, summaryKpis.totalRevenueCollected, netRevenue + totalFd),
+        net_excise_revenue_collected: this.readAmount(summaryKpis.net_excise_revenue_collected, summaryKpis.netExciseRevenueCollected, netRevenue),
+        total_active_balance: this.readAmount(summaryKpis.total_active_balance, summaryKpis.totalActiveBalance, activeBalance),
+        total_security_deposit_fd: this.readAmount(summaryKpis.total_security_deposit_fd, summaryKpis.totalSecurityDepositFd, totalFd),
+        top_contributors_count: Number(summaryKpis.top_contributors_count ?? summaryKpis.topContributorsCount ?? topContribs.length ?? 0)
       },
       revenue_heads: normalizedHeads,
-      top_contributors: Array.isArray(response.top_contributors) ? response.top_contributors : [],
-      security_deposits: Array.isArray(response.security_deposits) ? response.security_deposits : []
+      top_contributors: Array.isArray(topContribs) ? topContribs : [],
+      security_deposits: Array.isArray(secDeposits) ? secDeposits : []
     };
   }
 
-  private normalizeRevenueHead(head: SecretaryRevenueHeadItem): SecretaryRevenueHeadItem {
+  private normalizeRevenueHead(head: any): SecretaryRevenueHeadItem {
     const headName = head.head_name || head.headName || '';
-    const totalDebit = this.readAmount(head.total_paid_to_excise, head.total_debit, head.totalDebit);
-    const totalCredit = this.readAmount(head.total_credit, head.totalCredit);
-    const currentBalance = this.readAmount(head.current_balance, head.currentBalance);
+    const totalDebit = this.readAmount(head.totalPaidToExcise, head.total_paid_to_excise, head.totalDebit, head.total_debit);
+    const totalCredit = this.readAmount(head.totalCredit, head.total_credit);
+    const currentBalance = this.readAmount(head.currentBalance, head.current_balance);
 
     return {
       ...head,
       head_name: headName,
+      headName: headName,
       head_of_account: head.head_of_account || head.headOfAccount || this.getFallbackHoa(headName),
+      headOfAccount: head.head_of_account || head.headOfAccount || this.getFallbackHoa(headName),
       total_credit: totalCredit,
-      totalCredit,
+      totalCredit: totalCredit,
       total_debit: totalDebit,
       totalDebit: totalDebit,
       total_paid_to_excise: totalDebit,
+      totalPaidToExcise: totalDebit,
       current_balance: currentBalance,
-      currentBalance,
+      currentBalance: currentBalance,
       accounts_count: Number(head.accounts_count ?? head.accountsCount ?? 0),
       accountsCount: Number(head.accounts_count ?? head.accountsCount ?? 0),
-      application_fee_paid: head.application_fee_paid === undefined ? undefined : this.readAmount(head.application_fee_paid),
-      billdesk_paid_total: head.billdesk_paid_total === undefined ? undefined : this.readAmount(head.billdesk_paid_total),
-      fd_saved_amount: head.fd_saved_amount === undefined ? undefined : this.readAmount(head.fd_saved_amount)
+      application_fee_paid: head.application_fee_paid === undefined && head.applicationFeePaid === undefined ? undefined : this.readAmount(head.applicationFeePaid, head.application_fee_paid),
+      billdesk_paid_total: head.billdesk_paid_total === undefined && head.billdeskPaidTotal === undefined ? undefined : this.readAmount(head.billdeskPaidTotal, head.billdesk_paid_total),
+      fd_saved_amount: head.fd_saved_amount === undefined && head.fdSavedAmount === undefined ? undefined : this.readAmount(head.fdSavedAmount, head.fd_saved_amount)
     };
   }
 
@@ -595,12 +606,12 @@ export class SecretaryRevenueComponent implements OnInit, OnDestroy {
     return '0039-00-800-45-01';
   }
 
-  getHeadDebitAmount(head: SecretaryRevenueHeadItem): number {
-    return this.readAmount(head.total_debit, head.totalDebit, head.total_paid_to_excise);
+  getHeadDebitAmount(head: any): number {
+    return this.readAmount(head.total_paid_to_excise, head.totalPaidToExcise, head.total_debit, head.totalDebit);
   }
 
-  getHeadPaidAmount(head: SecretaryRevenueHeadItem): number {
-    return this.readAmount(head.total_paid_to_excise, head.total_debit, head.totalDebit);
+  getHeadPaidAmount(head: any): number {
+    return this.readAmount(head.total_paid_to_excise, head.totalPaidToExcise, head.total_debit, head.totalDebit);
   }
 
   trackByHeadName(_: number, head: SecretaryRevenueHeadItem): string {
