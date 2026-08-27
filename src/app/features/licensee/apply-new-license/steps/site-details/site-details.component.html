@@ -104,28 +104,6 @@
           }
         </mat-form-field>
 
-        @if (!isRuralSubdivision) {
-          <mat-form-field appearance="outline">
-            <mat-label>Location Name</mat-label>
-            <mat-select formControlName="location" required>
-              @if (locations.length === 0 && siteDetailsForm.get('siteDistrict')?.value) {
-                <mat-option disabled>No locations available</mat-option>
-              }
-              @if (locations.length === 0 && !siteDetailsForm.get('siteDistrict')?.value) {
-                <mat-option disabled>Please select district first</mat-option>
-              }
-              @for (location of locations; track location.id) {
-                <mat-option [value]="location.id">
-                  {{ location.locationDescription }}
-                </mat-option>
-              }
-            </mat-select>
-            @if (siteDetailsForm.controls['location'].invalid && siteDetailsForm.controls['location'].touched) {
-              <mat-error>{{ getErrorMessage('location') }}</mat-error>
-            }
-          </mat-form-field>
-        }
-
         @if (isRuralSubdivision) {
           <mat-form-field appearance="outline">
             <mat-label>Block</mat-label>
@@ -159,11 +137,11 @@
                 <mat-option disabled>Please select block first</mat-option>
               }
             } @else {
-              @if (wards.length === 0 && siteDetailsForm.get('location')?.value) {
+              @if (wards.length === 0 && siteDetailsForm.get('locationSubcategory')?.value) {
                 <mat-option disabled>No wards available</mat-option>
               }
-              @if (wards.length === 0 && !siteDetailsForm.get('location')?.value) {
-                <mat-option disabled>Please select location first</mat-option>
+              @if (wards.length === 0 && !siteDetailsForm.get('locationSubcategory')?.value) {
+                <mat-option disabled>Please select location subcategory first</mat-option>
               }
             }
             @for (ward of wards; track ward.id) {

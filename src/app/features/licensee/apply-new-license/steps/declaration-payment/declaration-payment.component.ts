@@ -852,11 +852,11 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       console.log('Road OK:', siteData.road);
     }
 
-    if (!siteData?.location_category) {
-      console.error('Missing: Location Category');
-      missingFields.push('Location Category');
+    if (!siteData?.location_subcategory) {
+      console.error('Missing: Location Subcategory');
+      missingFields.push('Location Subcategory');
     } else {
-      console.log('Location Category OK');
+      console.log('Location Subcategory OK');
     }
 
     const categoryId = siteData?.location_category;
@@ -874,13 +874,6 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
         missingFields.push('Block');
       } else {
         console.log('Block OK');
-      }
-    } else {
-      if (!siteData?.location) {
-        console.error('Missing: Location Name');
-        missingFields.push('Location Name');
-      } else {
-        console.log('Location Name OK');
       }
     }
 
