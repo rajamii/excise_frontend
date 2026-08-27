@@ -71,18 +71,18 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
 
   readonly applicantForm = this.fb.group({
-    applicantCompanyName: ['', Validators.required],
+    applicantCompanyName: [{ value: '', disabled: true }, Validators.required],
     authorizedSignatory: ['', Validators.required],
-    applicationDate: [this.todayIso(), Validators.required],
-    addressedTo: ['Commissioner of Excise, Excise Department, Govt. of Sikkim', Validators.required],
-    applicantAddress: ['']
+    applicationDate: [{ value: this.todayIso(), disabled: true }, Validators.required],
+    addressedTo: [{ value: 'Commissioner of Excise, Excise Department, Govt. of Sikkim', disabled: true }, Validators.required],
+    applicantAddress: ['', Validators.required]
   });
 
   readonly supplierForm = this.fb.group({
     selectedSupplierId: [''],
-    supplierCompanyName: ['', Validators.required],
-    logisticsPartner: [''],
-    sourceAddress: ['', Validators.required]
+    supplierCompanyName: [{ value: '', disabled: true }, Validators.required],
+    logisticsPartner: ['', Validators.required],
+    sourceAddress: [{ value: '', disabled: true }, Validators.required]
   });
 
   readonly brandStepForm = this.fb.group({});
@@ -127,7 +127,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.addLineItem();
-    this.brandStepForm.setValidators(() => this.isBrandStepValid() ? null : { lineItemsInvalid: true });
+    this.brandStepForm.setValidators(() => this.isBrandStepValidPublic ? null : { lineItemsInvalid: true });
     this.syncBrandStepValidity();
     this.loadInitialData();
     this.loadApplicantDefaults();
@@ -3739,6 +3739,31 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   trackByIndex(index: number): number {
     return index;
+  }
+
+  // Form validation helpers
+  get isApplicantStepValid(): boolean {
+    // For applicant step, disabled controls don't count toward validity
+    // Just check that the applicant company name and address have values
+    const companyName = this.applicantForm.get('applicantCompanyName')?.value;
+    const address = this.applicantForm.get('applicantAddress')?.value;
+    return !!companyName && !!address;
+  }
+
+  get isSupplierStepValid(): boolean {
+    return this.supplierForm.valid;
+  }
+
+  get isBrandStepValidPublic(): boolean {
+    return this.isBrandStepValid();
+  }
+
+  get isRouteStepValid(): boolean {
+    return this.routeForm.valid;
+  }
+
+  get isReviewStepValid(): boolean {
+    return this.reviewForm.valid;
   }
 
   private loadInitialData(): void {

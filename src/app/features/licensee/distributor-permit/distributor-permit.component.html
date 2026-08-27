@@ -674,7 +674,7 @@
           <form [formGroup]="applicantForm" class="dp-form-grid dp-form-grid--card">
             <mat-form-field appearance="outline">
               <mat-label>Applicant Company Name</mat-label>
-              <input matInput formControlName="applicantCompanyName" aria-label="Applicant Company Name" title="Applicant Company Name">
+              <input matInput formControlName="applicantCompanyName" readonly aria-label="Applicant Company Name" title="Auto-populated from company registration">
             </mat-form-field>
 
             <mat-form-field appearance="outline">
@@ -684,12 +684,12 @@
 
             <mat-form-field appearance="outline">
               <mat-label>Application Date</mat-label>
-              <input matInput type="date" formControlName="applicationDate" aria-label="Application Date" title="Application Date">
+              <input matInput type="date" formControlName="applicationDate" readonly aria-label="Application Date" title="Auto-populated with today's date">
             </mat-form-field>
 
             <mat-form-field appearance="outline">
               <mat-label>Addressed To</mat-label>
-              <input matInput formControlName="addressedTo" aria-label="Addressed To" title="Addressed To">
+              <input matInput formControlName="addressedTo" readonly aria-label="Addressed To" title="Auto-populated address">
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="dp-col-span">
@@ -699,7 +699,9 @@
           </form>
 
           <div class="dp-form-actions">
-            <button mat-stroked-button matStepperNext type="button">Continue</button>
+            <button mat-raised-button color="primary" matStepperNext type="button" [disabled]="!isApplicantStepValid">
+              Continue
+            </button>
           </div>
         </mat-step>
 
@@ -718,23 +720,25 @@
 
             <mat-form-field appearance="outline">
               <mat-label>Supplier Company Name</mat-label>
-              <input matInput formControlName="supplierCompanyName" aria-label="Supplier Company Name" title="Supplier Company Name">
+              <input matInput formControlName="supplierCompanyName" readonly aria-label="Supplier Company Name" title="Auto-populated from supplier selection">
             </mat-form-field>
 
             <mat-form-field appearance="outline">
               <mat-label>C/O Logistics Partner</mat-label>
-              <input matInput formControlName="logisticsPartner" aria-label="C/O Logistics Partner" title="C/O Logistics Partner">
+              <input matInput formControlName="logisticsPartner" placeholder="Enter logistics partner name" aria-label="C/O Logistics Partner" title="C/O Logistics Partner">
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="dp-col-span">
               <mat-label>Full Source Address</mat-label>
-              <textarea matInput rows="3" formControlName="sourceAddress" aria-label="Full Source Address" title="Full Source Address"></textarea>
+              <textarea matInput rows="3" formControlName="sourceAddress" readonly aria-label="Full Source Address" title="Auto-populated from supplier selection"></textarea>
             </mat-form-field>
           </form>
 
           <div class="dp-form-actions">
             <button mat-stroked-button matStepperPrevious type="button">Back</button>
-            <button mat-raised-button color="primary" matStepperNext type="button">Continue</button>
+            <button mat-raised-button color="primary" matStepperNext type="button" [disabled]="!isSupplierStepValid">
+              Continue
+            </button>
           </div>
         </mat-step>
 
@@ -888,7 +892,9 @@
 
           <div class="dp-form-actions">
             <button mat-stroked-button matStepperPrevious type="button">Back</button>
-            <button mat-raised-button color="primary" matStepperNext type="button">Continue</button>
+            <button mat-raised-button color="primary" matStepperNext type="button" [disabled]="!isBrandStepValidPublic">
+              Continue
+            </button>
           </div>
         </mat-step>
 
@@ -917,7 +923,7 @@
             </mat-form-field>
 
             <mat-form-field appearance="outline">
-              <mat-label>Vehicle / Container Number</mat-label>
+              <mat-label>Vehicle / Container Number *</mat-label>
               <input matInput formControlName="vehicleNumber" aria-label="Vehicle / Container Number" title="Vehicle / Container Number">
             </mat-form-field>
 
@@ -929,7 +935,9 @@
 
           <div class="dp-form-actions">
             <button mat-stroked-button matStepperPrevious type="button">Back</button>
-            <button mat-raised-button color="primary" matStepperNext type="button">Review</button>
+            <button mat-raised-button color="primary" matStepperNext type="button" [disabled]="!isRouteStepValid || !routeForm.get('vehicleNumber')?.value?.trim()">
+              Review
+            </button>
           </div>
         </mat-step>
 
@@ -1046,10 +1054,12 @@
           </div>
 
           <div class="dp-form-actions">
-            <button mat-stroked-button matStepperPrevious type="button">Back</button>
-            <button mat-raised-button color="primary" type="button" (click)="submit()" [disabled]="isSubmitting">
+            <button mat-stroked-button matStepperPrevious type="button" [disabled]="isSubmitting">
+              Back
+            </button>
+            <button mat-raised-button color="primary" type="button" (click)="submit()" [disabled]="isSubmitting || !isReviewStepValid">
               <mat-icon>send</mat-icon>
-              Submit Application
+              {{ isSubmitting ? 'Submitting...' : 'Submit Application' }}
             </button>
           </div>
         </mat-step>
