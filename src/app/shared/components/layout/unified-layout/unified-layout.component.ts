@@ -226,7 +226,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
         // IMPORTANT: Update the role service with the actual logged-in user
         this.updateRoleServiceWithActualUser(acc);
-        this.sidebarPendingBadgeService.triggerRefresh();
+        this.refreshSidebarBadges(false, 'light');
         this.setupInitialSidebarState();
         this.loadLicenseeMenuAccess();
         

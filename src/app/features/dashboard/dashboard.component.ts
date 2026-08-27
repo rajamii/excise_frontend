@@ -16,7 +16,7 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subject, takeUntil, forkJoin, finalize, of, catchError, interval, skip, take, map, tap } from 'rxjs';
+import { Subject, takeUntil, forkJoin, finalize, of, catchError, interval, skip, take, map, tap, debounceTime } from 'rxjs';
 
 import { DashboardConfig, User } from '../../core/models/dashboard.models';
 import { RoleService } from '../../core/services/role.service';
@@ -1446,10 +1446,15 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.handleQueryParams();
     this.initializeDashboard();
     this.initializeProfessionalFeatures();
-    this.sidebarPendingBadgeService.refreshNeeded$.subscribe(() => {
-      console.log('🔄 DashboardComponent: Reloading dashboard data due to refresh notification');
-      this.loadDashboardData(true);
-    });
+    this.sidebarPendingBadgeService.refreshNeeded$
+      .pipe(
+        debounceTime(300),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        console.log('🔄 DashboardComponent: Reloading dashboard data due to refresh notification');
+        this.loadDashboardData(true);
+      });
   }
 
   private initializeProfessionalFeatures(): void {
@@ -2676,7 +2681,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private loadDashboardData(forceRefresh = false) {
-    if (this.dashboardLoadInFlight && !forceRefresh) {
+    if (this.dashboardLoadInFlight) {
       return;
     }
 
@@ -2696,14 +2701,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
-    // Always refresh stats and module counts when loadDashboardData is invoked
-    if (this.isDistributorUser()) {
-      this.loadDashboardStatsLight(forceRefresh);
-    } else if (this.isLicenseeUser()) {
-      this.loadDashboardStats(forceRefresh);
-    } else {
-      this.loadDashboardStatsLight(forceRefresh);
-    }
+    // Keep initial load fast for all roles by fetching only lightweight counts.
+    // Full lists are fetched on-demand when user clicks a table card.
+    this.loadDashboardStatsLight(forceRefresh);
   }
 
   getSupplyChainPendingCount(section: string): number {
