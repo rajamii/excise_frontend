@@ -9,7 +9,7 @@
       <ng-template mat-tab-label>
         <mat-icon class="tab-icon">location_city</mat-icon>
         <span class="tab-label-text">Blocks</span>
-        <span class="count-badge">{{ blocks.length }}</span>
+        <span class="count-badge">{{ filteredBlocks.length }}</span>
       </ng-template>
 
       <div class="tab-body">
@@ -20,8 +20,42 @@
           </button>
         </div>
 
+        <!-- Filter Bar for Blocks -->
+        <div class="filter-bar">
+          <div class="search-box">
+            <mat-icon class="search-icon">search</mat-icon>
+            <input type="text"
+                   [(ngModel)]="blockSearchText"
+                   placeholder="Search Block Name / GPU..."
+                   class="search-input" />
+            <button *ngIf="blockSearchText" class="clear-btn" (click)="blockSearchText = ''" title="Clear">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+
+          <div class="search-box">
+            <mat-icon class="search-icon">category</mat-icon>
+            <input type="text"
+                   [(ngModel)]="blockSubcategorySearchText"
+                   placeholder="Search Location Subcategory..."
+                   class="search-input" />
+            <button *ngIf="blockSubcategorySearchText" class="clear-btn" (click)="blockSubcategorySearchText = ''" title="Clear">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+
+          <button *ngIf="blockSearchText || blockSubcategorySearchText"
+                  class="reset-btn" (click)="clearBlockFilters()" title="Reset Filters">
+            <mat-icon>restart_alt</mat-icon> Reset
+          </button>
+
+          <div class="filter-count-badge">
+            Showing {{ filteredBlocks.length }} of {{ blocks.length }} blocks
+          </div>
+        </div>
+
         <div class="table-wrapper">
-          <mat-table [dataSource]="blocks" class="data-table">
+          <mat-table [dataSource]="filteredBlocks" class="data-table">
 
             <ng-container matColumnDef="sno">
               <mat-header-cell *matHeaderCellDef class="sno-col">#</mat-header-cell>
@@ -30,7 +64,7 @@
 
             <ng-container matColumnDef="blockName">
               <mat-header-cell *matHeaderCellDef>Block Name</mat-header-cell>
-              <mat-cell *matCellDef="let row">{{ row.blockName }}</mat-cell>
+              <mat-cell *matCellDef="let row">{{ row.blockName || row.gpuName }}</mat-cell>
             </ng-container>
 
             <ng-container matColumnDef="subcategory">
@@ -54,10 +88,10 @@
             <mat-row *matRowDef="let row; columns: blockColumns;"></mat-row>
           </mat-table>
 
-          @if (blocks.length === 0) {
+          @if (filteredBlocks.length === 0) {
             <div class="empty-state">
               <mat-icon>inbox</mat-icon>
-              <p>No blocks found.</p>
+              <p>{{ (blockSearchText || blockSubcategorySearchText) ? 'No blocks matching filter criteria.' : 'No blocks found.' }}</p>
             </div>
           }
         </div>
@@ -71,7 +105,7 @@
       <ng-template mat-tab-label>
         <mat-icon class="tab-icon">map</mat-icon>
         <span class="tab-label-text">Wards</span>
-        <span class="count-badge">{{ urbanWards.length + ruralWards.length }}</span>
+        <span class="count-badge">{{ filteredUrbanWards.length + filteredRuralWards.length }}</span>
       </ng-template>
 
       <div class="tab-body ward-tab-body">
@@ -84,7 +118,7 @@
             <ng-template mat-tab-label>
               <mat-icon class="inner-tab-icon urban-icon">location_on</mat-icon>
               <span class="tab-label-text">Urban Wards</span>
-              <span class="count-badge urban-badge">{{ urbanWards.length }}</span>
+              <span class="count-badge urban-badge">{{ filteredUrbanWards.length }}</span>
             </ng-template>
 
             <div class="inner-tab-body">
@@ -95,8 +129,42 @@
                 </button>
               </div>
 
+              <!-- Filter Bar for Urban Wards -->
+              <div class="filter-bar">
+                <div class="search-box">
+                  <mat-icon class="search-icon">search</mat-icon>
+                  <input type="text"
+                         [(ngModel)]="urbanSearchText"
+                         placeholder="Search Ward Name / No..."
+                         class="search-input" />
+                  <button *ngIf="urbanSearchText" class="clear-btn" (click)="urbanSearchText = ''" title="Clear">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
+
+                <div class="search-box">
+                  <mat-icon class="search-icon">category</mat-icon>
+                  <input type="text"
+                         [(ngModel)]="urbanSubcategorySearchText"
+                         placeholder="Search Location Subcategory..."
+                         class="search-input" />
+                  <button *ngIf="urbanSubcategorySearchText" class="clear-btn" (click)="urbanSubcategorySearchText = ''" title="Clear">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
+
+                <button *ngIf="urbanSearchText || urbanSubcategorySearchText"
+                        class="reset-btn" (click)="clearUrbanWardFilters()" title="Reset Filters">
+                  <mat-icon>restart_alt</mat-icon> Reset
+                </button>
+
+                <div class="filter-count-badge">
+                  Showing {{ filteredUrbanWards.length }} of {{ urbanWards.length }} urban wards
+                </div>
+              </div>
+
               <div class="table-wrapper">
-                <mat-table [dataSource]="urbanWards" class="data-table">
+                <mat-table [dataSource]="filteredUrbanWards" class="data-table">
 
                   <ng-container matColumnDef="sno">
                     <mat-header-cell *matHeaderCellDef class="sno-col">#</mat-header-cell>
@@ -136,10 +204,10 @@
                   <mat-row *matRowDef="let row; columns: urbanColumns;"></mat-row>
                 </mat-table>
 
-                @if (urbanWards.length === 0) {
+                @if (filteredUrbanWards.length === 0) {
                   <div class="empty-state">
                     <mat-icon>inbox</mat-icon>
-                    <p>No urban wards found.</p>
+                    <p>{{ (urbanSearchText || urbanSubcategorySearchText) ? 'No urban wards matching filter criteria.' : 'No urban wards found.' }}</p>
                   </div>
                 }
               </div>
@@ -151,7 +219,7 @@
             <ng-template mat-tab-label>
               <mat-icon class="inner-tab-icon rural-icon">nature_people</mat-icon>
               <span class="tab-label-text">Rural Wards</span>
-              <span class="count-badge rural-badge">{{ ruralWards.length }}</span>
+              <span class="count-badge rural-badge">{{ filteredRuralWards.length }}</span>
             </ng-template>
 
             <div class="inner-tab-body">
@@ -162,8 +230,42 @@
                 </button>
               </div>
 
+              <!-- Filter Bar for Rural Wards -->
+              <div class="filter-bar">
+                <div class="search-box">
+                  <mat-icon class="search-icon">search</mat-icon>
+                  <input type="text"
+                         [(ngModel)]="ruralSearchText"
+                         placeholder="Search Ward Name / No..."
+                         class="search-input" />
+                  <button *ngIf="ruralSearchText" class="clear-btn" (click)="ruralSearchText = ''" title="Clear">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
+
+                <div class="search-box">
+                  <mat-icon class="search-icon">business</mat-icon>
+                  <input type="text"
+                         [(ngModel)]="ruralBlockSearchText"
+                         placeholder="Search Block / GPU..."
+                         class="search-input" />
+                  <button *ngIf="ruralBlockSearchText" class="clear-btn" (click)="ruralBlockSearchText = ''" title="Clear">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
+
+                <button *ngIf="ruralSearchText || ruralBlockSearchText"
+                        class="reset-btn" (click)="clearRuralWardFilters()" title="Reset Filters">
+                  <mat-icon>restart_alt</mat-icon> Reset
+                </button>
+
+                <div class="filter-count-badge">
+                  Showing {{ filteredRuralWards.length }} of {{ ruralWards.length }} rural wards
+                </div>
+              </div>
+
               <div class="table-wrapper">
-                <mat-table [dataSource]="ruralWards" class="data-table">
+                <mat-table [dataSource]="filteredRuralWards" class="data-table">
 
                   <ng-container matColumnDef="sno">
                     <mat-header-cell *matHeaderCellDef class="sno-col">#</mat-header-cell>
@@ -203,10 +305,10 @@
                   <mat-row *matRowDef="let row; columns: ruralColumns;"></mat-row>
                 </mat-table>
 
-                @if (ruralWards.length === 0) {
+                @if (filteredRuralWards.length === 0) {
                   <div class="empty-state">
                     <mat-icon>inbox</mat-icon>
-                    <p>No rural wards found.</p>
+                    <p>{{ (ruralSearchText || ruralBlockSearchText) ? 'No rural wards matching filter criteria.' : 'No rural wards found.' }}</p>
                   </div>
                 }
               </div>

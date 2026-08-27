@@ -9,6 +9,7 @@ import { Block } from '../../../../core/models/block.model';
 import { Ward } from '../../../../core/models/ward.model';
 import { RuralWard } from '../../../../core/models/rural-ward.model';
 import { MasterLocation } from '../../../../core/models/master-location.model';
+import { LocationSubcategory } from '../../../../core/models/location-subcategory.model';
 
 import { BlockManageDialogComponent } from './dialogs/block-manage-dialog.component';
 import { UrbanWardManageDialogComponent } from './dialogs/urban-ward-manage-dialog.component';
@@ -26,17 +27,24 @@ export class BlocksWardsComponent implements OnInit {
   // ── Blocks ──────────────────────────────────────────────────────────────
   blockColumns: string[] = ['sno', 'blockName', 'subcategory', 'actions'];
   blocks: Block[] = [];
+  blockSearchText = '';
+  blockSubcategorySearchText = '';
 
   // ── Urban Wards ──────────────────────────────────────────────────────────
   urbanColumns: string[] = ['sno', 'wardName', 'wardNumber', 'locationCode', 'actions'];
   urbanWards: Ward[] = [];
+  urbanSearchText = '';
+  urbanSubcategorySearchText = '';
 
   // Location lookup map: locationCode → locationDescription
   locationMap = new Map<number, string>();
+  subcategories: LocationSubcategory[] = [];
 
   // ── Rural Wards ──────────────────────────────────────────────────────────
   ruralColumns: string[] = ['sno', 'wardName', 'wardNumber', 'block', 'actions'];
   ruralWards: RuralWard[] = [];
+  ruralSearchText = '';
+  ruralBlockSearchText = '';
 
   constructor(
     private masterService: MasterService,
@@ -46,9 +54,19 @@ export class BlocksWardsComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadLocations();
+    this.loadSubcategories();
     this.loadBlocks();
     this.loadUrbanWards();
     this.loadRuralWards();
+  }
+
+  loadSubcategories(): void {
+    this.masterService.getLocationSubcategories().subscribe({
+      next: (data: any) => {
+        this.subcategories = Array.isArray(data) ? data : [];
+      },
+      error: () => {}
+    });
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -89,6 +107,21 @@ export class BlocksWardsComponent implements OnInit {
       },
       error: () => Swal.fire('Error', 'Failed to load blocks.', 'error')
     });
+  }
+
+  get filteredBlocks(): Block[] {
+    const qName = this.blockSearchText.trim().toLowerCase();
+    const qSub = this.blockSubcategorySearchText.trim().toLowerCase();
+    return this.blocks.filter(b => {
+      const matchName = !qName || (b.blockName || '').toLowerCase().includes(qName) || (b.gpuName || '').toLowerCase().includes(qName);
+      const matchSub = !qSub || (b.subcategoryName || '').toLowerCase().includes(qSub);
+      return matchName && matchSub;
+    });
+  }
+
+  clearBlockFilters(): void {
+    this.blockSearchText = '';
+    this.blockSubcategorySearchText = '';
   }
 
   onAddBlock(): void {
@@ -133,6 +166,22 @@ export class BlocksWardsComponent implements OnInit {
     });
   }
 
+  get filteredUrbanWards(): Ward[] {
+    const qWard = this.urbanSearchText.trim().toLowerCase();
+    const qSub = this.urbanSubcategorySearchText.trim().toLowerCase();
+    return this.urbanWards.filter(w => {
+      const matchWard = !qWard || (w.wardName || '').toLowerCase().includes(qWard) || String(w.wardNumber ?? '').includes(qWard);
+      const subName = (w.subcategoryName || this.getLocationName(w.locationCode) || '').toLowerCase();
+      const matchSub = !qSub || subName.includes(qSub);
+      return matchWard && matchSub;
+    });
+  }
+
+  clearUrbanWardFilters(): void {
+    this.urbanSearchText = '';
+    this.urbanSubcategorySearchText = '';
+  }
+
   onAddUrbanWard(): void {
     this.dialog.open(UrbanWardManageDialogComponent, { width: '480px' })
       .afterClosed().subscribe(saved => { if (saved) this.loadUrbanWards(); });
@@ -173,6 +222,22 @@ export class BlocksWardsComponent implements OnInit {
       },
       error: () => Swal.fire('Error', 'Failed to load rural wards.', 'error')
     });
+  }
+
+  get filteredRuralWards(): RuralWard[] {
+    const qWard = this.ruralSearchText.trim().toLowerCase();
+    const qBlock = this.ruralBlockSearchText.trim().toLowerCase();
+    return this.ruralWards.filter(w => {
+      const matchWard = !qWard || (w.wardName || '').toLowerCase().includes(qWard) || String(w.wardNumber ?? '').includes(qWard);
+      const blockName = (w.blockName || '').toLowerCase();
+      const matchBlock = !qBlock || blockName.includes(qBlock);
+      return matchWard && matchBlock;
+    });
+  }
+
+  clearRuralWardFilters(): void {
+    this.ruralSearchText = '';
+    this.ruralBlockSearchText = '';
   }
 
   onAddRuralWard(): void {
