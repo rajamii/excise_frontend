@@ -464,11 +464,23 @@ export class SecretaryService {
     );
   }
 
-  getRevenueOverview(): Observable<SecretaryRevenueOverview> {
-    // Always fetch fresh — bypass cache so spinner resolves and live DB data is shown.
-    // timeout(15000) ensures the spinner always stops even if auth refresh hangs.
+  getRevenueOverview(params?: { financial_year?: string; month?: string; category?: string; search?: string }): Observable<SecretaryRevenueOverview> {
+    const queryParts: string[] = [`_t=${Date.now()}`];
+    if (params?.financial_year && params.financial_year !== 'all') {
+      queryParts.push(`financial_year=${encodeURIComponent(params.financial_year)}`);
+    }
+    if (params?.month && params.month !== 'all') {
+      queryParts.push(`month=${encodeURIComponent(params.month)}`);
+    }
+    if (params?.category && params.category !== 'all') {
+      queryParts.push(`category=${encodeURIComponent(params.category)}`);
+    }
+    if (params?.search && params.search.trim()) {
+      queryParts.push(`search=${encodeURIComponent(params.search.trim())}`);
+    }
+    const queryString = queryParts.join('&');
     return this.http.get<SecretaryRevenueOverview>(
-      `${environment.apiBaseUrl}/api/secretary/revenue/?_t=${Date.now()}`
+      `${environment.apiBaseUrl}/api/secretary/revenue/?${queryString}`
     ).pipe(timeout(15000));
   }
 

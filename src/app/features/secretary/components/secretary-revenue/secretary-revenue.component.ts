@@ -2,6 +2,8 @@ import { Component, OnDestroy, OnInit, ChangeDetectorRef, NgZone } from '@angula
 import { Location, CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { Subject, Subscription } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { 
   SecretaryService, 
   SecretaryRevenueOverview, 
@@ -247,12 +249,32 @@ export class SecretaryRevenueComponent implements OnInit, OnDestroy {
     this.router.navigate(['/dashboard']);
   }
 
+  private searchSubject = new Subject<string>();
+  private searchSub?: Subscription;
+
   ngOnInit(): void {
+    this.searchSub = this.searchSubject.pipe(
+      debounceTime(350),
+      distinctUntilChanged()
+    ).subscribe(() => {
+      this.loadRevenueData();
+    });
     this.loadRevenueData();
   }
 
   ngOnDestroy(): void {
     this.clearLoadingTimeout();
+    this.searchSub?.unsubscribe();
+  }
+
+  onFilterChange(): void {
+    this.currentPageMap[this.activeTab] = 1;
+    this.loadRevenueData();
+  }
+
+  onSearchInput(val: string): void {
+    this.searchQuery = val;
+    this.searchSubject.next(val);
   }
 
   loadRevenueData(): void {
@@ -269,7 +291,14 @@ export class SecretaryRevenueComponent implements OnInit, OnDestroy {
       });
     }, 16000);
 
-    this.secretaryService.getRevenueOverview().subscribe({
+    const filterParams = {
+      financial_year: this.selectedFinancialYear,
+      month: this.selectedMonth,
+      category: this.selectedCategoryFilter,
+      search: this.searchQuery
+    };
+
+    this.secretaryService.getRevenueOverview(filterParams).subscribe({
       next: (res) => {
         this.ngZone.run(() => {
           this.clearLoadingTimeout();
@@ -435,6 +464,7 @@ export class SecretaryRevenueComponent implements OnInit, OnDestroy {
     this.selectedMonth = 'all';
     this.selectedCategoryFilter = 'all';
     this.searchQuery = '';
+    this.loadRevenueData();
   }
 
   get isFilterActive(): boolean {
