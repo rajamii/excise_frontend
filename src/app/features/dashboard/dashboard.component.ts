@@ -496,19 +496,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         {
           ...this.singleWindowChartData.datasets[0],
           data: [
-            appliedValue,
-            isAllModules
-              ? (isPermitSection ? this.getSupplyChainPendingTotal() : ((this.dashboardCounts.pending || 0) + this.getSupplyChainPendingTotal()))
-              : (sourceCounts.pending || 0),
-            isAllModules
-              ? (isPermitSection ? this.getSupplyChainApprovedTotal() : ((this.dashboardCounts.approved || 0) + this.getSupplyChainApprovedTotal()))
-              : (sourceCounts.approved || 0),
-            isAllModules
-              ? (isPermitSection ? this.getSupplyChainObjectionTotal() : ((this.dashboardCounts.objection || 0) + this.getSupplyChainObjectionTotal()))
-              : (sourceCounts.objection || 0),
-            isAllModules
-              ? (isPermitSection ? this.getSupplyChainRejectedTotal() : ((this.dashboardCounts.rejected || 0) + this.getSupplyChainRejectedTotal()))
-              : (sourceCounts.rejected || 0)
+            this.getFilteredCount('applied'),
+            this.getFilteredCount('pending'),
+            this.getFilteredCount('approved'),
+            this.getFilteredCount('objection'),
+            this.getFilteredCount('rejected')
           ]
         }
       ]
@@ -713,10 +705,16 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return this.getModuleTotal(this.selectedChartModule);
     }
     if (status === 'pending') {
+      const awaiting = !this.shouldShowStatCard('awaitingPayment')
+        ? (this.selectedChartModule === 'all'
+            ? ((this.dashboardCounts.awaitingPayment || 0) + this.getSupplyChainAwaitingPaymentTotal())
+            : (sourceCounts.awaitingPayment || (sourceCounts as any)?.awaiting_payment || 0))
+        : 0;
+
       if (this.selectedChartModule === 'all') {
-        return (this.dashboardCounts.pending || 0) + this.getSupplyChainPendingTotal();
+        return (this.dashboardCounts.pending || 0) + this.getSupplyChainPendingTotal() + awaiting;
       }
-      return sourceCounts.pending || 0;
+      return (sourceCounts.pending || 0) + awaiting;
     }
     if (status === 'awaitingPayment') {
       if (this.selectedChartModule === 'all') {
@@ -4665,10 +4663,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Statistics display logic
   shouldShowStatCard(type: string): boolean {
-    const roleId = this.currentUser?.roleId;
+    const roleId = Number(this.currentUser?.roleId || this.currentUser?.role?.id || this.getCurrentRoleId() || 0);
     
     if (type === 'awaitingPayment') {
-      if (roleId === 10 || this.isCommissionerUser()) {
+      const isAdministrativeUser = [1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].includes(roleId) || 
+                                   this.isCommissionerUser() || this.isSecretaryUser;
+      if (isAdministrativeUser) {
         return false;
       }
     }
