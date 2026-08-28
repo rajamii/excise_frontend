@@ -345,7 +345,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   get canViewAuthorityLetter(): boolean {
-    return true;
+    return this.isOfficerUser;
   }
 
   get isDistributorUser(): boolean {

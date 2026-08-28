@@ -301,7 +301,7 @@
                         class="btn btn-sm btn-soft-success me-1"
                         type="button"
                         title="View & Print Authority Letter"
-                        *ngIf="isApproved(row)"
+                        *ngIf="isApproved(row) && canViewAuthorityLetter"
                         (click)="openAuthorityLetter(row, $event)"
                         (mousedown)="openAuthorityLetter(row, $event)"
                       >
@@ -443,7 +443,7 @@
                           class="btn btn-sm btn-success-solid"
                           type="button"
                           title="View & Print Authority Letter"
-                          *ngIf="isApproved(row)"
+                          *ngIf="isApproved(row) && canViewAuthorityLetter"
                           (click)="openAuthorityLetter(row, $event)"
                           (mousedown)="openAuthorityLetter(row, $event)"
                         >

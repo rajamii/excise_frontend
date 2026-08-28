@@ -3524,6 +3524,13 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     }
 
     get canViewAuthorityLetter(): boolean {
+        if (this.isLicenseeContext()) {
+            return false;
+        }
+        const context = this.getUserContext();
+        if (context === USER_CONTEXTS.LICENSEE) {
+            return false;
+        }
         const current = this.roleService.getCurrentUser();
         let roleId = Number(current?.roleId || (current as any)?.role?.id || 0);
         if (!roleId) {
@@ -3535,7 +3542,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 }
             } catch {}
         }
-        return roleId === 10 || roleId === 5 || roleId === 1 || roleId === 3;
+        if (roleId === 2) {
+            return false;
+        }
+        return roleId === 10 || roleId === 5 || roleId === 1 || roleId === 3 || roleId === 6 || roleId === 7 || roleId === 9 || roleId === 12 || roleId === 14;
     }
 
     openAuthorityLetterModal(): void {
