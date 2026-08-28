@@ -42,70 +42,109 @@
     }
     
         <!-- Final Letter Content -->
+    <!-- Final Letter Content -->
     @else if (cancellationLetterData) {
       <div id="cancellationFinalLetterPrintSection" class="final-letter-container">
         <div class="print-watermark" aria-hidden="true">
           <span *ngFor="let row of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70]">SIKKIM EXCISE</span>
         </div>
         <!-- Official Letter Header -->
-        <div class="letter-header">
-          <!-- Government Seal -->
-          <div class="seal-container">
-            <img src="assets/icons/fav-icon-black.png" alt="Government Seal" class="govt-seal" />
+        <div class="letter-header d-flex justify-content-between align-items-center mb-3">
+          <!-- Left: State Emblem -->
+          <div class="header-seal-left">
+            <img src="assets/emblem_2.jpg" alt="Government Emblem" class="govt-seal" style="height: 75px; width: auto; object-fit: contain;" />
           </div>
           
-          <!-- Department Title -->
-          <div class="dept-title">GOVERNMENT OF SIKKIM</div>
-          <div class="dept-subtitle">SIKKIM EXCISE DEPARTMENT</div>
-          <div class="dept-address">MG MARG, GANGTOK-737101</div>
-          <div class="dept-contact">
-            <div>Website: www.excise.sikkim.gov.in</div>
-            <div>E-mail: excise.dept&#64;sikkim.gov.in</div>
+          <!-- Center: Department Title -->
+          <div class="header-center text-center flex-grow-1 px-2">
+            <div class="dept-title" style="font-size: 22px; font-weight: 800; letter-spacing: 1.5px; color: #1e3a8a; text-transform: uppercase; margin: 0;">EXCISE DEPARTMENT</div>
+            <div class="dept-subtitle" style="font-size: 15px; font-weight: 700; letter-spacing: 1px; color: #1e3a8a; text-transform: uppercase; margin: 4px 0 0 0;">GOVERNMENT OF SIKKIM</div>
+          </div>
+
+          <!-- Right: Sikkim Logo -->
+          <div class="header-seal-right">
+            <img src="assets/fav-icon.png" alt="Sikkim Logo" class="govt-seal" style="height: 75px; width: auto; object-fit: contain;" />
           </div>
         </div>
 
+        <div style="border-bottom: 2px solid #334155; margin-bottom: 25px;"></div>
+
         <!-- Letter Number and Date -->
-        <div class="letter-meta">
-          <div class="letter-number">
-            <strong>No. {{ cancellationLetterData.letterNumber }}</strong>
+        <div class="letter-meta d-flex justify-content-between align-items-center mb-4">
+          <div class="letter-number" style="font-size: 14px;">
+            <strong>No. <span style="text-decoration: underline;">{{ cancellationLetterData.letterNumber }}</span> / Excise</strong>
           </div>
-          <div class="letter-date">
-            <strong>Dated: {{ cancellationLetterData.letterDate | date: 'dd/MM/yyyy' }}</strong>
+          <div class="letter-date" style="font-size: 14px;">
+            <strong>Dated: <span style="text-decoration: underline;">{{ cancellationLetterData.letterDate | date: 'dd/MM/yyyy' }}</span></strong>
           </div>
         </div>
 
         <!-- Addressee -->
-        <div class="addressee-section">
-          <div class="to-line"><strong>To,</strong></div>
-          <div class="addressee-details">
+        <div class="addressee-section mb-4" style="text-align: left; font-size: 14px; line-height: 1.6;">
+          <div class="to-line mb-1"><strong>To,</strong></div>
+          <div class="addressee-details ps-4">
             <div class="addressee-name"><strong>{{ cancellationLetterData.exciseOfficerName }},</strong></div>
-            <div class="company-name"><strong>{{ cancellationLetterData.distilleryName }},</strong></div>
-            <div class="company-address">{{ cancellationLetterData.distilleryAddress }}.</div>
+            <div class="company-name"><strong>M/s {{ cancellationLetterData.distilleryName }},</strong></div>
+            <div class="company-address" style="max-width: 650px;">{{ cancellationLetterData.distilleryAddress }}</div>
           </div>
         </div>
 
         <!-- Subject Line -->
-        <div class="subject-section">
-          <div class="subject-line">
+        <div class="subject-section mb-4">
+          <div class="subject-line text-start" style="font-size: 14px;">
             @if (letterType === 'cancellation') {
-              <strong>Sub: Cancellation of Import Permits nos. {{ getFormattedPermitNumbers() }}, both dated {{ cancellationLetterData.originalPermitDate | date: 'dd.MM.yyyy' }}.</strong>
+              <strong>Sub: <u>Cancellation of {{ getCancellationPermitCount() }} Import Permit i.e import permit no: {{ getFormattedPermitNumbers() }} all dated : {{ cancellationLetterData.originalPermitDate | date: 'dd.MM.yyyy' }}.</u></strong>
             } @else if (letterType === 'revalidation') {
-              <strong>Sub: Revalidation of import permit nos. {{ getFormattedPermitNumbers() }}, all dated: {{ cancellationLetterData.originalPermitDate | date: 'dd/MM/yyyy' }}.</strong>
+              <strong>Sub: <u>Revalidation of import permit no. {{ getFormattedPermitNumbers() }}, all dated: {{ cancellationLetterData.originalPermitDate | date: 'dd.MM.yyyy' }}.</u></strong>
             }
           </div>
         </div>
 
         <!-- Letter Body -->
-        <div class="letter-body">
+        <div class="letter-body mb-5 text-justify" style="font-size: 14px; line-height: 1.8; text-indent: 45px;">
           @if (letterType === 'cancellation') {
-            <p class="body-text">
-              Reference your letter dated <strong>{{ cancellationLetterData.referenceDate | date: 'dd.MM.yyyy' }}</strong> on the subject cited above, I have been directed to inform you that the aforementioned permits stand cancelled.
+            <p class="body-text mb-0">
+              Reference letter dated. <strong>{{ cancellationLetterData.referenceDate | date: 'dd.MM.yyyy' }}</strong> on the subject cited above, this is to inform you that the aforementioned permit stand cancelled.
             </p>
           } @else if (letterType === 'revalidation') {
-            <p class="body-text">
-              Reference your application letter dated <strong>{{ cancellationLetterData.referenceDate | date: 'dd.MM.yyyy' }}</strong> forwarded from <strong>{{ cancellationLetterData.distilleryName }}</strong>, I have been directed to inform you that the import permit nos. <strong>{{ getFormattedPermitNumbers() }}</strong> is hereby revalidated up to <strong>{{ cancellationLetterData.approvedDate | date: 'dd.MM.yyyy' }}</strong>.
+            <p class="body-text mb-0">
+              Reference your application letter dated. <strong>{{ cancellationLetterData.referenceDate | date: 'dd.MM.yyyy' }}</strong> forwarded from <strong>M/s {{ cancellationLetterData.applicantName || 'Dzongri ventures, Lumsey' }}</strong>, this is to inform you that the import permits no <strong>{{ getFormattedPermitNumbers() }}</strong>, all dated: <strong>{{ cancellationLetterData.originalPermitDate | date: 'dd.MM.yyyy' }}</strong> is hereby revalidated up to <strong>{{ cancellationLetterData.approvedDate | date: 'dd.MM.yyyy' }}</strong>.
             </p>
           }
+        </div>
+
+        <!-- Official Stamp & Signatures -->
+        <div class="d-flex justify-content-between align-items-end my-5 pt-3">
+          <!-- Left: Round Seal -->
+          <div class="text-center ps-2">
+            <div style="width: 105px; height: 105px; border: 2px dashed #1e3a8a; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #1e3a8a; font-size: 10px; font-weight: bold; text-transform: uppercase; transform: rotate(-5deg); padding: 5px;">
+              <span>Excise Department</span>
+              <span style="font-size: 14px; line-height: 1;">★</span>
+              <span>Govt. of Sikkim</span>
+            </div>
+          </div>
+
+          <!-- Right: Commissioner Signature -->
+          <div class="text-center pe-2" style="line-height: 1.3;">
+            <div style="height: 48px; margin-bottom: 2px;">
+              <img src="assets/EC_Sign_1.png" alt="Signature" style="max-height: 46px; object-fit: contain;" />
+            </div>
+            <div class="fw-bold" style="font-size: 14px; color: #0f172a;">B. Chhetri (SES)</div>
+            <div class="fw-bold" style="font-size: 13px; color: #0f172a;">Commissioner of Excise</div>
+            <div class="fw-bold" style="font-size: 13px; color: #0f172a; text-decoration: underline;">Excise Headquarters/Gangtok</div>
+            <div style="font-size: 12px; color: #334155;">File no: {{ cancellationLetterData.fileNumber || 'GOS/71/EX/HQ/2026-27' }}</div>
+            <div style="font-size: 12px; color: #555; margin-top: 2px;">Commissioner<br>Excise Department<br>Government of Sikkim</div>
+          </div>
+        </div>
+
+        <!-- Official Footer -->
+        <div class="border-top pt-3 mt-4 text-center text-muted" style="font-size: 11px; line-height: 1.4;">
+          <div>Excise Headquarters, M. G. Marg, Gangtok - 737 101</div>
+          <div class="d-flex justify-content-center gap-3 mt-1">
+            <span>🌐 excise.sikkim.gov.in</span>
+            <span>✉ excise.dept&#64;sikkim.gov.in</span>
+            <span>📞 03592-203963</span>
+          </div>
         </div>
       </div>
 

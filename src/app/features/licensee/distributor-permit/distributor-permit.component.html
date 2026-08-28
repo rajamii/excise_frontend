@@ -530,11 +530,11 @@
                   </td>
                   <td class="dp-action-cell" (click)="$event.stopPropagation()">
                     <div class="dp-action-buttons">
-                      <!-- Activated schedule not yet submitted: show Activate Revalidation -->
+                      <!-- Activated schedule not yet submitted: show Activate Revalidation (Licensee only) -->
                       <button
                         class="btn btn-sm btn-soft-warning"
                         type="button"
-                        *ngIf="row.isActivatedSchedule"
+                        *ngIf="row.isActivatedSchedule && !isOfficerUser"
                         title="Your permit validity has expired. Click to submit revalidation application to Commissioner."
                         (click)="openRevalidationModal(row)"
                         (mousedown)="openRevalidationModal(row)"
@@ -555,11 +555,11 @@
                         <span>Update Arrival</span>
                       </button>
 
-                      <!-- Submitted IMFLREV applications: View Details -->
+                      <!-- Submitted IMFLREV applications / Officer View: View Details -->
                       <button
                         class="btn btn-icon-only btn-soft-primary"
                         type="button"
-                        *ngIf="!row.isActivatedSchedule"
+                        *ngIf="!row.isActivatedSchedule || isOfficerUser"
                         title="View Details"
                         (click)="onViewDetails(row)"
                         (mousedown)="onViewDetails(row)"

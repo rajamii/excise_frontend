@@ -248,6 +248,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           !row.isActivatedSchedule
         );
       } else if (this.activeTab === 'revalidation') {
+        if (this.isOfficerUser) {
+          // Officers (e.g. Commissioner) should only see submitted IMFLREV applications, NOT unsubmitted activated schedules
+          return (ref.startsWith('IMFLREV') || appType === 'revalidation') && !row.isActivatedSchedule;
+        }
         // Real IMFLREV rows OR activated schedule items ready for revalidation
         return ref.startsWith('IMFLREV') || appType === 'revalidation' || row.isActivatedSchedule;
       } else if (this.activeTab === 'cancellation') {

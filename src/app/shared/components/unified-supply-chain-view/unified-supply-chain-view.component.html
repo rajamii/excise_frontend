@@ -2157,8 +2157,16 @@
                             <i class="bi bi-printer me-2"></i>Print Application
                         </button>
 
-                        <button class="btn btn-success btn-lg application-footer-actions__print" type="button" *ngIf="isImflDistributorPermitSource() && isApprovedApplication() && canViewAuthorityLetter" (click)="openAuthorityLetterModal()">
+                        <button class="btn btn-success btn-lg application-footer-actions__print" type="button" *ngIf="isImflRequisition() && isApprovedApplication() && canViewAuthorityLetter" (click)="openAuthorityLetterModal()">
                             <i class="bi bi-file-earmark-pdf-fill me-2"></i>Authority Letter (Import Pass)
+                        </button>
+
+                        <button class="btn btn-warning btn-lg application-footer-actions__print" type="button" *ngIf="isImflRevalidation()" (click)="openRevalidationLetterModal()">
+                            <i class="bi bi-file-earmark-pdf-fill me-2"></i>Print Revalidation Letter
+                        </button>
+
+                        <button class="btn btn-danger btn-lg application-footer-actions__print" type="button" *ngIf="isImflCancellation()" (click)="openCancellationLetterModal()">
+                            <i class="bi bi-file-earmark-pdf-fill me-2"></i>Print Cancellation Letter
                         </button>
                     </div>
                 </div>
@@ -2627,6 +2635,238 @@
             </ol>
             <div class="fst-italic text-muted mt-2" style="font-size: 10px;">
               This pass is granted under and subject to the provisions of the Sikkim Excise Act, 1992, the rules, regulation and orders made there under and the conditions specified above.
+            </div>
+          </div>
+
+        </div>
+      </div>
+      
+    </div>
+  </div>
+</div>
+
+<!-- IMFL REVALIDATION AUTHORIZATION LETTER MODAL -->
+<div class="modal-backdrop fade show" *ngIf="revalidationLetterModalOpen" style="z-index: 1060;"></div>
+<div class="modal fade show d-block" tabindex="-1" *ngIf="revalidationLetterModalOpen" style="z-index: 1065;" (click)="closeRevalidationLetterModal()">
+  <div class="modal-dialog modal-lg modal-dialog-centered" style="max-width: 850px;" (click)="$event.stopPropagation()">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+      
+      <!-- Modal Header (Controls) -->
+      <div class="modal-header bg-dark text-white px-4 py-3 no-print d-flex justify-content-between align-items-center">
+        <h5 class="modal-title fs-5 fw-bold mb-0">
+          <i class="bi bi-file-earmark-pdf-fill text-warning me-2"></i>
+          IMFL Revalidation Authorization Letter
+        </h5>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-warning btn-sm fw-bold px-3" (click)="printRevalidationLetter()">
+            <i class="bi bi-printer-fill me-1"></i> Print / Download PDF
+          </button>
+          <button type="button" class="btn btn-primary btn-sm fw-bold px-3" (click)="openRevalidationFullPage()">
+            <i class="bi bi-box-arrow-up-right me-1"></i> Full Page View
+          </button>
+          <button type="button" class="btn-close btn-close-white" (click)="closeRevalidationLetterModal()"></button>
+        </div>
+      </div>
+
+      <!-- Modal Body (Printable Revalidation Letter) -->
+      <div class="modal-body p-4 bg-light" style="max-height: 85vh; overflow-y: auto;">
+        <div id="imflRevalidationLetterPrintArea" class="final-letter-paper p-5 bg-white shadow-sm border mx-auto" style="width: 100%; max-width: 750px; font-family: 'Times New Roman', Times, serif; color: #111; line-height: 1.6; position: relative;">
+          
+          <!-- Top Header with State Emblem and Logo -->
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="header-seal-left">
+              <img src="assets/emblem_2.jpg" alt="Government Emblem" style="height: 75px; width: auto; object-fit: contain;" />
+            </div>
+            
+            <div class="text-center flex-grow-1 px-2">
+              <div style="font-size: 22px; font-weight: 800; letter-spacing: 1.5px; color: #1e3a8a; text-transform: uppercase; margin: 0;">
+                EXCISE DEPARTMENT
+              </div>
+              <div style="font-size: 15px; font-weight: 700; letter-spacing: 1px; color: #1e3a8a; text-transform: uppercase; margin-top: 4px;">
+                GOVERNMENT OF SIKKIM
+              </div>
+            </div>
+
+            <div class="header-seal-right">
+              <img src="assets/fav-icon.png" alt="Sikkim Logo" style="height: 75px; width: auto; object-fit: contain;" />
+            </div>
+          </div>
+
+          <div style="border-bottom: 2px solid #334155; margin-bottom: 25px;"></div>
+
+          <!-- Dispatch No & Date -->
+          <div class="d-flex justify-content-between align-items-center mb-4 fw-bold" style="font-size: 14px;">
+            <div>No. <span style="text-decoration: underline;">{{ getRevalidationLetterNo() }}</span> / Excise</div>
+            <div>Dated: <span style="text-decoration: underline;">{{ getRevalidationLetterDate() | date: 'dd/MM/yyyy' }}</span></div>
+          </div>
+
+          <!-- To Address Section -->
+          <div class="mb-4" style="font-size: 14px; line-height: 1.6;">
+            <div class="fw-bold mb-1">To,</div>
+            <div class="ps-4">
+              <div class="fw-bold">The Excise Officer-in-Charge,</div>
+              <div class="fw-bold">{{ getRevalidationSupplierName() }},</div>
+              <div style="max-width: 650px;">{{ getRevalidationSupplierAddress() }}</div>
+            </div>
+          </div>
+
+          <!-- Subject Line -->
+          <div class="mb-4" style="font-size: 14px;">
+            <strong>Sub: <u>Revalidation of import permit no. {{ getRevalidationPermitNumbers() }}, all dated: {{ getRevalidationOriginalDate() | date: 'dd.MM.yyyy' }}.</u></strong>
+          </div>
+
+          <!-- Letter Body Paragraph -->
+          <div class="mb-5 text-justify" style="font-size: 14px; line-height: 1.8; text-indent: 45px;">
+            Reference your application letter dated. <strong>{{ getRevalidationRefDate() | date: 'dd.MM.yyyy' }}</strong> forwarded from <strong>M/s {{ getRevalidationApplicantName() }}, {{ getRevalidationApplicantLocation() }}</strong>, this is to inform you that the import permits no <strong>{{ getRevalidationPermitNumbers() }}</strong>, all dated: <strong>{{ getRevalidationOriginalDate() | date: 'dd.MM.yyyy' }}</strong> is hereby revalidated up to <strong>{{ getRevalidationValidUpTo() | date: 'dd.MM.yyyy' }}</strong>.
+          </div>
+
+          <!-- Official Stamp & Commissioner Signature Block -->
+          <div class="d-flex justify-content-between align-items-end my-5 pt-3">
+            <!-- Left: Round Stamp -->
+            <div class="text-center ps-2">
+              <div style="width: 105px; height: 105px; border: 2px dashed #1e3a8a; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #1e3a8a; font-size: 10px; font-weight: bold; text-transform: uppercase; transform: rotate(-5deg); padding: 5px;">
+                <span>Excise Department</span>
+                <span style="font-size: 14px; line-height: 1;">★</span>
+                <span>Govt. of Sikkim</span>
+              </div>
+            </div>
+
+            <!-- Right: Signature and Designation -->
+            <div class="text-center pe-2" style="line-height: 1.3;">
+              <div style="height: 48px; margin-bottom: 2px;">
+                <img src="assets/EC_Sign_1.png" alt="Signature" style="max-height: 46px; object-fit: contain;" />
+              </div>
+              <div class="fw-bold" style="font-size: 14px; color: #0f172a;">B. Chhetri (SES)</div>
+              <div class="fw-bold" style="font-size: 13px; color: #0f172a;">Commissioner of Excise</div>
+              <div class="fw-bold" style="font-size: 13px; color: #0f172a; text-decoration: underline;">Excise Headquarters/Gangtok</div>
+              <div style="font-size: 12px; color: #334155;">File no: GOS/71/EX/HQ/2026-27</div>
+              <div style="font-size: 12px; color: #555; margin-top: 2px;">Commissioner<br>Excise Department<br>Government of Sikkim</div>
+            </div>
+          </div>
+
+          <!-- Footer Information -->
+          <div class="border-top pt-3 mt-4 text-center text-muted" style="font-size: 11px; line-height: 1.4;">
+            <div>Excise Headquarters, M. G. Marg, Gangtok - 737 101</div>
+            <div class="d-flex justify-content-center gap-3 mt-1">
+              <span>🌐 excise.sikkim.gov.in</span>
+              <span>✉ excise.dept&#64;sikkim.gov.in</span>
+              <span>📞 03592-203963</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      
+    </div>
+  </div>
+</div>
+
+<!-- IMFL CANCELLATION AUTHORIZATION LETTER MODAL -->
+<div class="modal-backdrop fade show" *ngIf="cancellationLetterModalOpen" style="z-index: 1060;"></div>
+<div class="modal fade show d-block" tabindex="-1" *ngIf="cancellationLetterModalOpen" style="z-index: 1065;" (click)="closeCancellationLetterModal()">
+  <div class="modal-dialog modal-lg modal-dialog-centered" style="max-width: 850px;" (click)="$event.stopPropagation()">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+      
+      <!-- Modal Header (Controls) -->
+      <div class="modal-header bg-dark text-white px-4 py-3 no-print d-flex justify-content-between align-items-center">
+        <h5 class="modal-title fs-5 fw-bold mb-0">
+          <i class="bi bi-file-earmark-pdf-fill text-danger me-2"></i>
+          IMFL Cancellation Letter
+        </h5>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-danger btn-sm fw-bold px-3" (click)="printCancellationLetter()">
+            <i class="bi bi-printer-fill me-1"></i> Print / Download PDF
+          </button>
+          <button type="button" class="btn btn-primary btn-sm fw-bold px-3" (click)="openCancellationFullPage()">
+            <i class="bi bi-box-arrow-up-right me-1"></i> Full Page View
+          </button>
+          <button type="button" class="btn-close btn-close-white" (click)="closeCancellationLetterModal()"></button>
+        </div>
+      </div>
+
+      <!-- Modal Body (Printable Cancellation Letter) -->
+      <div class="modal-body p-4 bg-light" style="max-height: 85vh; overflow-y: auto;">
+        <div id="imflCancellationLetterPrintArea" class="final-letter-paper p-5 bg-white shadow-sm border mx-auto" style="width: 100%; max-width: 750px; font-family: 'Times New Roman', Times, serif; color: #111; line-height: 1.6; position: relative;">
+          
+          <!-- Top Header with State Emblem and Logo -->
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="header-seal-left">
+              <img src="assets/emblem_2.jpg" alt="Government Emblem" style="height: 75px; width: auto; object-fit: contain;" />
+            </div>
+            
+            <div class="text-center flex-grow-1 px-2">
+              <div style="font-size: 22px; font-weight: 800; letter-spacing: 1.5px; color: #1e3a8a; text-transform: uppercase; margin: 0;">
+                EXCISE DEPARTMENT
+              </div>
+              <div style="font-size: 15px; font-weight: 700; letter-spacing: 1px; color: #1e3a8a; text-transform: uppercase; margin-top: 4px;">
+                GOVERNMENT OF SIKKIM
+              </div>
+            </div>
+
+            <div class="header-seal-right">
+              <img src="assets/fav-icon.png" alt="Sikkim Logo" style="height: 75px; width: auto; object-fit: contain;" />
+            </div>
+          </div>
+
+          <div style="border-bottom: 2px solid #334155; margin-bottom: 25px;"></div>
+
+          <!-- Dispatch No & Date -->
+          <div class="d-flex justify-content-between align-items-center mb-4 fw-bold" style="font-size: 14px;">
+            <div>No. <span style="text-decoration: underline;">{{ getCancellationLetterNo() }}</span> / Excise</div>
+            <div>Dated: <span style="text-decoration: underline;">{{ getCancellationLetterDate() | date: 'dd/MM/yyyy' }}</span></div>
+          </div>
+
+          <!-- To Address Section -->
+          <div class="mb-4" style="font-size: 14px; line-height: 1.6;">
+            <div class="fw-bold mb-1">To,</div>
+            <div class="ps-4">
+              <div class="fw-bold">The Managing Director,</div>
+              <div class="fw-bold">M/s {{ getCancellationLicenseeName() }},</div>
+              <div style="max-width: 650px;">{{ getCancellationLicenseeAddress() }}</div>
+            </div>
+          </div>
+
+          <!-- Subject Line -->
+          <div class="mb-4" style="font-size: 14px;">
+            <strong>Sub: <u>Cancellation of {{ getCancellationPermitCount() }} Import Permit i.e import permit no: {{ getCancellationPermitNumbers() }} /Excise all dated : {{ getCancellationOriginalDate() | date: 'dd.MM.yyyy' }}.</u></strong>
+          </div>
+
+          <!-- Letter Body Paragraph -->
+          <div class="mb-5 text-justify" style="font-size: 14px; line-height: 1.8; text-indent: 45px;">
+            Reference letter dated. <strong>{{ getCancellationRefDate() | date: 'dd.MM.yyyy' }}</strong> on the subject cited above, this is to inform you that the aforementioned permit stand cancelled.
+          </div>
+
+          <!-- Official Stamp & Commissioner Signature Block -->
+          <div class="d-flex justify-content-between align-items-end my-5 pt-3">
+            <!-- Left: Round Stamp -->
+            <div class="text-center ps-2">
+              <div style="width: 105px; height: 105px; border: 2px dashed #1e3a8a; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #1e3a8a; font-size: 10px; font-weight: bold; text-transform: uppercase; transform: rotate(-5deg); padding: 5px;">
+                <span>Excise Department</span>
+                <span style="font-size: 14px; line-height: 1;">★</span>
+                <span>Govt. of Sikkim</span>
+              </div>
+            </div>
+
+            <!-- Right: Signature and Designation -->
+            <div class="text-center pe-2" style="line-height: 1.3;">
+              <div style="height: 48px; margin-bottom: 2px;">
+                <img src="assets/EC_Sign_1.png" alt="Signature" style="max-height: 46px; object-fit: contain;" />
+              </div>
+              <div class="fw-bold" style="font-size: 14px; color: #0f172a;">B. Chhetri (SES)</div>
+              <div class="fw-bold" style="font-size: 13px; color: #0f172a;">Commissioner Excise</div>
+              <div class="fw-bold" style="font-size: 13px; color: #0f172a; text-decoration: underline;">Excise Headquarters/Gangtok</div>
+              <div style="font-size: 12px; color: #334155;">File no. GOS/276/Ex/HQ/2026-27.</div>
+              <div style="font-size: 12px; color: #555; margin-top: 2px;">Commissioner<br>Excise Department<br>Govt. of Sikkim</div>
+            </div>
+          </div>
+
+          <!-- Footer Information -->
+          <div class="border-top pt-3 mt-4 text-center text-muted" style="font-size: 11px; line-height: 1.4;">
+            <div>Excise Headquarters, M. G. Marg, Gangtok - 737 101</div>
+            <div class="d-flex justify-content-center gap-3 mt-1">
+              <span>🌐 excise.sikkim.gov.in</span>
+              <span>✉ excise.dept&#64;sikkim.gov.in</span>
+              <span>📞 03592-203963</span>
             </div>
           </div>
 

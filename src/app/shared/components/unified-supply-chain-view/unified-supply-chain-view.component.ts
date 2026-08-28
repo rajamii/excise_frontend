@@ -1661,7 +1661,9 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     }
 
     isImflRequisition(): boolean {
-        return this.applicationType === 'requisition' && this.isImflDistributorPermitSource();
+        const type = String(this.applicationType || '').toLowerCase();
+        const ref = String(this.applicationData?.['referenceNo'] || this.applicationData?.['reference_no'] || this.applicationData?.['id'] || '').toUpperCase();
+        return (type === 'requisition' || type === 'imfl-requisition') && this.isImflDistributorPermitSource() && !ref.startsWith('IMFLREV') && !ref.startsWith('IMFLCAN');
     }
 
     private sumImflBulkLitres(lineItems: any[]): number {
@@ -3622,6 +3624,268 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
           </html>
         `);
         win.document.close();
+    }
+
+    isImflRevalidation(): boolean {
+        const type = String(this.applicationType || '').toLowerCase();
+        const ref = String(this.applicationData?.['referenceNo'] || this.applicationData?.['reference_no'] || this.applicationData?.['id'] || '').toUpperCase();
+        return type === 'revalidation' || type === 'imfl-revalidation' || ref.startsWith('IMFLREV');
+    }
+
+    isImflCancellation(): boolean {
+        const type = String(this.applicationType || '').toLowerCase();
+        const ref = String(this.applicationData?.['referenceNo'] || this.applicationData?.['reference_no'] || this.applicationData?.['id'] || '').toUpperCase();
+        return type === 'cancellation' || type === 'imfl-cancellation' || ref.startsWith('IMFLCAN');
+    }
+
+    revalidationLetterModalOpen = false;
+
+    openRevalidationLetterModal(): void {
+        this.revalidationLetterModalOpen = true;
+        this.cdr.detectChanges();
+    }
+
+    closeRevalidationLetterModal(): void {
+        this.revalidationLetterModalOpen = false;
+        this.cdr.detectChanges();
+    }
+
+    getRevalidationLetterNo(): string {
+        return this.applicationData?.['letter_number'] || this.applicationData?.['dispatch_number'] || '2142';
+    }
+
+    getRevalidationLetterDate(): Date {
+        const d = this.applicationData?.['approval_date'] || this.applicationData?.['approved_at'] || this.applicationData?.['submitted_at'] || this.applicationData?.['created_at'];
+        return d ? new Date(d) : new Date();
+    }
+
+    getRevalidationSupplierName(): string {
+        const app = this.applicationData;
+        const dp = app?.['distributor_permit_detail'] || app?.['distributor_permit'] || {};
+        return app?.['supplier_company_name'] || app?.['supplierCompanyName'] || dp.supplier_company_name || dp.supplierCompanyName || 'M/s Anheuser Busch Inbev India Limited';
+    }
+
+    getRevalidationSupplierAddress(): string {
+        const app = this.applicationData;
+        const dp = app?.['distributor_permit_detail'] || app?.['distributor_permit'] || {};
+        return app?.['supplier_address'] || app?.['source_address'] || dp.source_address || dp.supplier_address || 'Sub-Lease at M/s Celebrity Breweries (P) Ltd., Plot No. 258, 259, 260, 261, 339 & 1143, Mouza-Aima & Somsara, J.L. No. 51 & 35, P.O. Hanral, P.S.Dadpur, Dist. Hooghly, West Bengal, Pin Code – 712149.';
+    }
+
+    getRevalidationApplicantName(): string {
+        const app = this.applicationData;
+        const dp = app?.['distributor_permit_detail'] || app?.['distributor_permit'] || {};
+        return app?.['applicant_name'] || app?.['applicantName'] || dp.applicant_name || dp.applicantName || 'Dzongri ventures';
+    }
+
+    getRevalidationApplicantLocation(): string {
+        const app = this.applicationData;
+        const dp = app?.['distributor_permit_detail'] || app?.['distributor_permit'] || {};
+        return app?.['applicant_address'] || dp.destination || dp.applicant_address || 'Lumsey';
+    }
+
+    getRevalidationPermitNumbers(): string {
+        const app = this.applicationData;
+        const dp = app?.['distributor_permit_detail'] || app?.['distributor_permit'] || {};
+        if (app?.['revalidated_permit_number'] || app?.['revalidatedPermitNumber']) {
+            return String(app['revalidated_permit_number'] || app['revalidatedPermitNumber']);
+        }
+        if (Array.isArray(app?.['permit_wise_details']) && app['permit_wise_details'].length > 0) {
+            const list = app['permit_wise_details'].map((p: any) => p.permit_number || p.permitNumber || String(p)).filter(Boolean);
+            if (list.length === 1) return list[0];
+            if (list.length === 2) return `${list[0]} to ${list[1]}`;
+            return `${list[0]} to ${list[list.length - 1]}`;
+        }
+        if (Array.isArray(dp.permit_wise_details) && dp.permit_wise_details.length > 0) {
+            const list = dp.permit_wise_details.map((p: any) => p.permit_number || p.permitNumber || String(p)).filter(Boolean);
+            if (list.length === 1) return list[0];
+            if (list.length === 2) return `${list[0]} to ${list[1]}`;
+            return `${list[0]} to ${list[list.length - 1]}`;
+        }
+        const origRef = dp.reference_no || dp.referenceNo || 'CIV/670 to CIV/675/Ex';
+        return origRef;
+    }
+
+    getRevalidationOriginalDate(): Date {
+        const app = this.applicationData;
+        const dp = app?.['distributor_permit_detail'] || app?.['distributor_permit'] || {};
+        const d = dp.approval_date || dp.approved_at || dp.submitted_at || dp.created_at || '2026-03-20';
+        return new Date(d);
+    }
+
+    getRevalidationRefDate(): Date {
+        const app = this.applicationData;
+        const d = app?.['submitted_at'] || app?.['submittedAt'] || app?.['created_at'] || Date.now();
+        return new Date(d);
+    }
+
+    getRevalidationValidUpTo(): Date {
+        const app = this.applicationData;
+        const dp = app?.['distributor_permit_detail'] || app?.['distributor_permit'] || {};
+        if (app?.['valid_up_to'] || app?.['validUpTo']) {
+            return new Date(app['valid_up_to'] || app['validUpTo']);
+        }
+        const refDate = this.getRevalidationRefDate();
+        const extended = new Date(refDate);
+        extended.setDate(extended.getDate() + 35);
+        return extended;
+    }
+
+    printRevalidationLetter(): void {
+        const printContents = document.getElementById('imflRevalidationLetterPrintArea')?.innerHTML;
+        if (!printContents) return;
+        const win = window.open('', '_blank', 'width=900,height=1000');
+        if (!win) return;
+        win.document.write(`
+          <html>
+            <head>
+              <title>IMFL Revalidation Authorization Letter - ${this.applicationData?.['referenceNo'] || ''}</title>
+              <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+              <style>
+                @page { size: A4 portrait; margin: 8mm; }
+                * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                body { font-family: 'Times New Roman', Times, serif; padding: 20px; background: white; color: #111; font-size: 13px; line-height: 1.6; }
+                .final-letter-paper { border: none !important; box-shadow: none !important; padding: 0 !important; max-width: 100% !important; }
+              </style>
+            </head>
+            <body>
+              <div class="final-letter-paper">${printContents}</div>
+              <script>
+                setTimeout(() => { window.print(); window.close(); }, 500);
+              </script>
+            </body>
+          </html>
+        `);
+        win.document.close();
+    }
+
+    openRevalidationFullPage(): void {
+        const ref = this.applicationData?.['referenceNo'] || this.applicationData?.['reference_no'] || this.applicationData?.['id'] || '';
+        this.router.navigate(['/unified-letter-view/revalidation'], {
+            queryParams: {
+                id: ref,
+                ref: ref,
+                source: 'distributor-permit'
+            }
+        });
+    }
+
+    cancellationLetterModalOpen = false;
+
+    openCancellationLetterModal(): void {
+        this.cancellationLetterModalOpen = true;
+        this.cdr.detectChanges();
+    }
+
+    closeCancellationLetterModal(): void {
+        this.cancellationLetterModalOpen = false;
+        this.cdr.detectChanges();
+    }
+
+    getCancellationLetterNo(): string {
+        return this.applicationData?.['letter_number'] || this.applicationData?.['dispatch_number'] || '3447';
+    }
+
+    getCancellationLetterDate(): Date {
+        const d = this.applicationData?.['approval_date'] || this.applicationData?.['approved_at'] || this.applicationData?.['submitted_at'] || this.applicationData?.['created_at'];
+        return d ? new Date(d) : new Date();
+    }
+
+    getCancellationLicenseeName(): string {
+        const app = this.applicationData;
+        const dp = app?.['distributor_permit_detail'] || app?.['distributor_permit'] || {};
+        return app?.['applicant_name'] || app?.['applicantName'] || dp.applicant_name || dp.applicantName || 'Lahag Spirits (P) Ltd';
+    }
+
+    getCancellationLicenseeAddress(): string {
+        const app = this.applicationData;
+        const dp = app?.['distributor_permit_detail'] || app?.['distributor_permit'] || {};
+        return dp.applicant_address || dp.source_address || dp.destination || app?.['applicant_address'] || 'Manpur, South Sikkim';
+    }
+
+    getCancellationPermitNumbers(): string {
+        const app = this.applicationData;
+        const dp = app?.['distributor_permit_detail'] || app?.['distributor_permit'] || {};
+        if (app?.['cancelled_permit_number'] || app?.['cancelledPermitNumber']) {
+            return String(app['cancelled_permit_number'] || app['cancelledPermitNumber']);
+        }
+        if (Array.isArray(app?.['cancelled_permits_details']) && app['cancelled_permits_details'].length > 0) {
+            const list = app['cancelled_permits_details'].map((p: any) => p.permit_number || p.permitNumber || String(p)).filter(Boolean);
+            if (list.length === 1) return list[0];
+            if (list.length === 2) return `${list[0]} to ${list[1]}`;
+            return `${list[0]} to ${list[list.length - 1]}`;
+        }
+        if (Array.isArray(dp.permit_wise_details) && dp.permit_wise_details.length > 0) {
+            const list = dp.permit_wise_details.map((p: any) => p.permit_number || p.permitNumber || String(p)).filter(Boolean);
+            if (list.length === 1) return list[0];
+            if (list.length === 2) return `${list[0]} to ${list[1]}`;
+            return `${list[0]} to ${list[list.length - 1]}`;
+        }
+        const origRef = dp.reference_no || dp.referenceNo || '1384 to 1395';
+        return origRef;
+    }
+
+    getCancellationPermitCount(): string {
+        const app = this.applicationData;
+        const dp = app?.['distributor_permit_detail'] || app?.['distributor_permit'] || {};
+        if (Array.isArray(app?.['cancelled_permits_details']) && app['cancelled_permits_details'].length > 0) {
+            return `${app['cancelled_permits_details'].length}`;
+        }
+        if (Array.isArray(dp.permit_wise_details) && dp.permit_wise_details.length > 0) {
+            return `${dp.permit_wise_details.length}`;
+        }
+        return '12';
+    }
+
+    getCancellationOriginalDate(): Date {
+        const app = this.applicationData;
+        const dp = app?.['distributor_permit_detail'] || app?.['distributor_permit'] || {};
+        const d = dp.approval_date || dp.approved_at || dp.submitted_at || dp.created_at || '2026-01-23';
+        return new Date(d);
+    }
+
+    getCancellationRefDate(): Date {
+        const app = this.applicationData;
+        const d = app?.['submitted_at'] || app?.['submittedAt'] || app?.['created_at'] || Date.now();
+        return new Date(d);
+    }
+
+    printCancellationLetter(): void {
+        const printContents = document.getElementById('imflCancellationLetterPrintArea')?.innerHTML;
+        if (!printContents) return;
+        const win = window.open('', '_blank', 'width=900,height=1000');
+        if (!win) return;
+        win.document.write(`
+          <html>
+            <head>
+              <title>IMFL Cancellation Letter - ${this.applicationData?.['referenceNo'] || ''}</title>
+              <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+              <style>
+                @page { size: A4 portrait; margin: 8mm; }
+                * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                body { font-family: 'Times New Roman', Times, serif; padding: 20px; background: white; color: #111; font-size: 13px; line-height: 1.6; }
+                .final-letter-paper { border: none !important; box-shadow: none !important; padding: 0 !important; max-width: 100% !important; }
+              </style>
+            </head>
+            <body>
+              <div class="final-letter-paper">${printContents}</div>
+              <script>
+                setTimeout(() => { window.print(); window.close(); }, 500);
+              </script>
+            </body>
+          </html>
+        `);
+        win.document.close();
+    }
+
+    openCancellationFullPage(): void {
+        const ref = this.applicationData?.['referenceNo'] || this.applicationData?.['reference_no'] || this.applicationData?.['id'] || '';
+        this.router.navigate(['/unified-letter-view/cancellation'], {
+            queryParams: {
+                id: ref,
+                ref: ref,
+                source: 'distributor-permit'
+            }
+        });
     }
 
     openSiteEnquiryReportModal(): void {
