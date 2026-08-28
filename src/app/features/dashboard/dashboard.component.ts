@@ -749,7 +749,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     prefetched?: { hologram?: any[]; requisition?: any[]; revalidation?: any[]; cancellation?: any[]; transit?: any[] },
     onComplete?: () => void
   ): void {
-    const isAdminOrOfficer = [1, 3, 5, 6, 7, 9, 10].includes(Number(this.currentUser?.roleId || 0));
+    const isAdminOrOfficer = [1, 3, 5, 6, 7, 9, 10, 11, 12].includes(Number(this.currentUser?.roleId || 0));
     if (!this.isLicenseeUser() && !this.isDistributorUser() && !isAdminOrOfficer) {
       onComplete?.();
       return;
