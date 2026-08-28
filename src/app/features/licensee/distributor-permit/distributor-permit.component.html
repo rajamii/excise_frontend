@@ -218,7 +218,7 @@
               </thead>
               <tbody>
                 <tr
-                  *ngFor="let row of pagedRows; let i = index"
+                  *ngFor="let row of pagedRows; trackBy: trackByRow; let i = index"
                   class="dp-table-row"
                   [class.dp-table-row--active]="selectedApplication?.referenceNo === row.applicationId"
                 >
@@ -353,7 +353,7 @@
               </thead>
               <tbody>
                 <tr
-                  *ngFor="let row of pagedRows; let i = index"
+                  *ngFor="let row of pagedRows; trackBy: trackByRow; let i = index"
                   class="dp-table-row"
                   [class.dp-table-row--active]="selectedApplication?.referenceNo === row.applicationId"
                 >
@@ -504,7 +504,7 @@
               </thead>
               <tbody>
                 <tr
-                  *ngFor="let row of pagedRows; let i = index"
+                  *ngFor="let row of pagedRows; trackBy: trackByRow; let i = index"
                   class="dp-table-row"
                   [class.dp-table-row--active]="selectedApplication?.referenceNo === row.applicationId"
                 >
@@ -607,7 +607,7 @@
               </thead>
               <tbody>
                 <tr
-                  *ngFor="let row of pagedRows; let i = index"
+                  *ngFor="let row of pagedRows; trackBy: trackByRow; let i = index"
                   class="dp-table-row"
                   [class.dp-table-row--active]="selectedApplication?.referenceNo === row.applicationId"
                 >

@@ -179,13 +179,16 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   onTabChange(tab: ImflTabType): void {
+    if (this.activeTab === tab) return;
     this.activeTab = tab;
     this.pageIndex = 0;
     this.autoSelectDefaultStatusFilter();
+    this.cdr.markForCheck();
     this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { tab },
-      queryParamsHandling: 'merge'
+      queryParams: { tab, ref: null, id: null, mode: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
     });
   }
 
@@ -229,8 +232,23 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return this.lineItems;
   }
 
+  private _cachedRows: DistributorPermitRow[] = [];
+  private _arrivalItemCache = new Map<string, any>();
+
   get rows(): DistributorPermitRow[] {
-    return this.applications.map((application) => this.mapApplicationRow(application));
+    if (this._cachedRows.length === 0 && this.applications.length > 0) {
+      this.rebuildRows();
+    }
+    return this._cachedRows;
+  }
+
+  rebuildRows(): void {
+    this._arrivalItemCache.clear();
+    this._cachedRows = (this.applications || []).map((application) => this.mapApplicationRow(application));
+  }
+
+  trackByRow(index: number, row: DistributorPermitRow): string | number {
+    return row.applicationId || (row as any).distributorPermitRef || index;
   }
 
   get activeTabRows(): DistributorPermitRow[] {
@@ -1437,6 +1455,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const appIdLower = String(appId).toLowerCase().trim();
     if (!appIdLower) return null;
 
+    if (this._arrivalItemCache.has(appIdLower)) {
+      return this._arrivalItemCache.get(appIdLower);
+    }
+
     const caseProcList = (this.allCasesProcessedList || []).filter((c: any) => {
       const pNo = String(c.permit_number || c.permitNumber || '').toLowerCase().trim();
       const pAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase().trim();
@@ -1451,6 +1473,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     });
 
     if (caseProcList.length === 0 && arrRecList.length === 0) {
+      this._arrivalItemCache.set(appIdLower, null);
       return null;
     }
 
@@ -1464,7 +1487,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
     const latest = caseProcList[0] || arrRecList[0];
 
-    return {
+    const result = {
       ...latest,
       vehicle_number: vehicleNumbers.join(', '),
       arrived_cases: totalArrived,
@@ -1473,6 +1496,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       size_ml: row?.sizeMl || latest.size_ml || 750,
       status: caseProcList.some(c => String(c.status).toLowerCase() === 'under_review') ? 'under_review' : (latest.status || 'approved')
     };
+
+    this._arrivalItemCache.set(appIdLower, result);
+    return result;
   }
 
   getArrivalStatusForRow(row: any): string {
@@ -3924,6 +3950,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       ...mappedRevalidations,
       ...mappedCancellations
     ];
+    this.rebuildRows();
     this.autoSelectDefaultStatusFilter();
     this.applyFilters();
     const refParam = this.route.snapshot.queryParams['ref'] || this.route.snapshot.queryParams['id'];
