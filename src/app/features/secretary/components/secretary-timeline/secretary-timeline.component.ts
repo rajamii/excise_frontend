@@ -106,6 +106,10 @@ export class SecretaryTimelineComponent implements OnInit {
                 event_date: s.event_date || s.eventDate || '',
                 event_description: s.event_description || s.eventDescription || '',
                 user_details: s.user_details || s.userDetails || '',
+                forwarded_info: s.forwarded_info || s.forwardedInfo || null,
+                objection_info: s.objection_info || s.objectionInfo || null,
+                rejection_info: s.rejection_info || s.rejectionInfo || null,
+                payment_breakdown: s.payment_breakdown || s.paymentBreakdown || null,
                 time_taken: s.time_taken || s.timeTaken || '',
                 status_text: s.status_text || s.statusText || 'Completed'
               }))
@@ -347,13 +351,22 @@ export class SecretaryTimelineComponent implements OnInit {
       const submissionDateStr = firstStep?.event_date || firstStep?.eventDate;
 
       if (submissionDateStr && !submissionDateStr.includes('Awaiting')) {
-        // Find decision step: target Excise Commissioner Grant Approval (Step 5) or Final License Certificate Issued (Step 7)
+        // Find decision step: target Rejection / Auto-Rejection, Excise Commissioner Grant Approval (Step 5), or Final License Certificate Issued (Step 7)
         let decisionStep = steps.find((s: any) => 
-          (s.event_title || '').toLowerCase().includes('excise commissioner') || 
-          (s.event_title || '').toLowerCase().includes('commissioner grant') ||
-          s.step_no === 5 ||
-          s.stepNo === 5
+          (s.event_title || '').toLowerCase().includes('reject') || 
+          (s.status_text || '').toLowerCase().includes('reject') ||
+          s.status_class === 'rejected' ||
+          s.status_class === 'final-rejected'
         );
+
+        if (!decisionStep) {
+          decisionStep = steps.find((s: any) => 
+            (s.event_title || '').toLowerCase().includes('excise commissioner') || 
+            (s.event_title || '').toLowerCase().includes('commissioner grant') ||
+            s.step_no === 5 ||
+            s.stepNo === 5
+          );
+        }
 
         if (!decisionStep) {
           decisionStep = steps.find((s: any) => 
@@ -365,7 +378,7 @@ export class SecretaryTimelineComponent implements OnInit {
         }
 
         if (!decisionStep) {
-          const completedSteps = steps.filter((s: any) => s.status_text === 'Completed' || s.status_text === 'FINAL APPROVED');
+          const completedSteps = steps.filter((s: any) => s.status_text === 'Completed' || s.status_text === 'FINAL APPROVED' || s.status_text === 'AUTO REJECTED' || s.status_text === 'REJECTED');
           decisionStep = completedSteps.length > 0 ? completedSteps[completedSteps.length - 1] : steps[0];
         }
 

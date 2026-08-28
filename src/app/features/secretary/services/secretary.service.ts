@@ -593,8 +593,14 @@ export interface SecretaryTimelineStep {
     remarks?: string;
     raised_by?: string;
     raised_on?: string;
+    deadline_at?: string;
     is_resolved?: boolean;
     resolved_by?: string;
+  };
+  rejection_info?: {
+    reason?: string;
+    rejected_by?: string;
+    rejected_on?: string;
   };
   payment_breakdown?: {
     license_fee?: {
