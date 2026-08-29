@@ -949,6 +949,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     const isBaseDashboardRoute = isDashboardRoute && primarySegments.length === 1;
 
     const querySection = String(urlTree.queryParams?.['section'] ?? '').trim();
+    const queryTab = String(urlTree.queryParams?.['tab'] ?? '').trim();
     const childSegment = isDashboardRoute && primarySegments.length >= 2 ? String(primarySegments[1] || '').trim() : '';
 
     // Map dashboard child routes to sidebar sections (so the correct menu stays highlighted).
@@ -957,7 +958,16 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       sectionFromPath = 'hologram-inventory';
     }
 
-    const section = querySection || sectionFromPath;
+    let section = querySection || sectionFromPath;
+    if (section === 'distributor-permit' && this.isDistributorOic()) {
+      if (queryTab === 'brand-arrival') {
+        section = 'distributor-permit-brand-arrival';
+      } else if (queryTab === 'brand-warehouse') {
+        section = 'brand-warehouse-stock';
+      } else if (queryTab === 'requisition') {
+        section = 'imfl-requisition-cases';
+      }
+    }
 
     return { isDashboardRoute, isBaseDashboardRoute, section };
   }

@@ -137,15 +137,17 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       .subscribe((params) => {
         this.isFormView = String(params?.['mode'] || '').toLowerCase() === 'apply';
         const tabParam = String(params?.['tab'] || '').toLowerCase() as ImflTabType;
-        if (['requisition', 'revalidation', 'cancellation', 'brand-warehouse'].includes(tabParam)) {
+        if (['requisition', 'brand-arrival', 'revalidation', 'cancellation', 'brand-warehouse'].includes(tabParam)) {
           this.activeTab = tabParam;
           if (tabParam === 'brand-warehouse') {
             this.loadBrandWarehouseStock();
           }
         } else {
-          // Also resolve from the 'section' param (e.g. distributor-permit-cancellation)
+          // Also resolve from the 'section' param (e.g. distributor-permit-cancellation, distributor-permit-brand-arrival)
           const sectionParam = String(params?.['section'] || '').toLowerCase();
-          if (sectionParam.includes('brand-warehouse') || sectionParam.includes('brand_warehouse')) {
+          if (sectionParam.includes('brand-arrival') || sectionParam.includes('brand_arrival')) {
+            this.activeTab = 'brand-arrival';
+          } else if (sectionParam.includes('brand-warehouse') || sectionParam.includes('brand_warehouse')) {
             this.activeTab = 'brand-warehouse';
             this.loadBrandWarehouseStock();
           } else if (sectionParam.includes('cancellation')) {
