@@ -137,6 +137,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     { section: 'commissioner-monthly-view-details', label: 'Monthly View Details', icon: 'calendar_month' },
     { section: 'secretary-revenue', label: 'Revenue', icon: 'payments' },
     { section: 'imfl-requisition-cases', label: 'IMFL Requisition Cases', icon: 'assignment_turned_in', showOnlyForOic: true },
+    { section: 'distributor-permit-brand-arrival', label: 'Update Brands Arrival', icon: 'local_shipping', showOnlyForOic: true },
+    { section: 'brand-warehouse-stock', label: 'Brand Warehouse Stock', icon: 'inventory_2', showOnlyForOic: true },
     { section: 'stock-inventory', label: 'Stock Inventory', icon: 'inventory' },
     { section: 'single-window', label: 'User Details', icon: 'manage_search', hideForSiteAdmin: true },
     { section: 'payment-transactions', label: 'Transactions', icon: 'receipt_long', hideForSiteAdmin: true },
@@ -420,7 +422,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   isImflTabActive(tab: string): boolean {
     const url = this.router.url || '';
     if (tab === 'requisition') {
-      return !url.includes('tab=revalidation') && !url.includes('tab=cancellation');
+      return !url.includes('tab=revalidation') && !url.includes('tab=cancellation') && !url.includes('tab=brand-warehouse');
     }
     return url.includes(`tab=${tab}`);
   }
@@ -587,12 +589,21 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return true;
     }
     if (this.isDistributorOic()) {
-      if (item.section === 'imfl-requisition-cases' || item.section === 'officer-activity') {
+      if (
+        item.section === 'imfl-requisition-cases' ||
+        item.section === 'distributor-permit-brand-arrival' ||
+        item.section === 'brand-warehouse-stock' ||
+        item.section === 'officer-activity'
+      ) {
         return true;
       }
       return false;
     } else if (this.isOicUser()) {
-      if (item.section === 'imfl-requisition-cases') {
+      if (
+        item.section === 'imfl-requisition-cases' ||
+        item.section === 'distributor-permit-brand-arrival' ||
+        item.section === 'brand-warehouse-stock'
+      ) {
         return false;
       }
     }
@@ -783,6 +794,18 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       // When there are pending ENA arrival details, open the module focused on pending items.
       this.router.navigate(['/dashboard'], {
         queryParams: { section: section, focus: 'pending' }
+      });
+    } else if (section === 'imfl-requisition-cases') {
+      this.router.navigate(['/dashboard'], {
+        queryParams: { section: 'distributor-permit', tab: 'requisition' }
+      });
+    } else if (section === 'distributor-permit-brand-arrival' || section === 'brand-arrival') {
+      this.router.navigate(['/dashboard'], {
+        queryParams: { section: 'distributor-permit', tab: 'brand-arrival' }
+      });
+    } else if (section === 'brand-warehouse-stock' || section === 'distributor-permit-brand-warehouse' || section === 'brand-warehouse') {
+      this.router.navigate(['/dashboard'], {
+        queryParams: { section: 'distributor-permit', tab: 'brand-warehouse' }
       });
     } else if (section === 'itcell-hologram') {
       // For IT Cell hologram procurement, navigate with tab parameter to show the hologram tab

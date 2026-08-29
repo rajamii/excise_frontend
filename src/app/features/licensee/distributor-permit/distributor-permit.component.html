@@ -3,7 +3,7 @@
     [activeTab]="activeTab"
     [isFormView]="isFormView"
     [isOfficer]="isOfficerUser"
-    [customTitle]="isOicDistributorUser ? 'IMFL Requisition Cases Approval Applications' : ''"
+    [customTitle]="getHeaderTitle()"
     (tabChange)="onTabChange($event)"
     (applyNew)="openApplyForm()"
     (viewArrivals)="openArrivalsRegisterModal()">
@@ -24,7 +24,66 @@
     <!-- Shared Summary Stats Row & Filters (Visible for All Tabs) -->
     <section class="registration-management-container" *ngIf="!isFormView">
       <div class="new-license-register-header">
-        <div class="row g-3 mb-4 stats-row">
+        
+        <!-- Statistics Row for Brand Warehouse Stock Register -->
+        <div class="row g-3 mb-4 stats-row" *ngIf="activeTab === 'brand-warehouse'">
+          
+          <!-- Card 1: Total Brands -->
+          <div class="col-xl-3 col-lg-6 col-md-6">
+            <div class="summary-card" style="border-left: 4px solid #3b82f6;">
+              <div class="card-icon" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
+                <i class="bi bi-grid-3x3-gap-fill"></i>
+              </div>
+              <div class="card-content">
+                <h3 class="card-value text-dark">{{ totalBrandWarehouseBrandsCount | number }}</h3>
+                <p class="card-label">Total Brands Registered</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Total Stock Units -->
+          <div class="col-xl-3 col-lg-6 col-md-6">
+            <div class="summary-card" style="border-left: 4px solid #10b981;">
+              <div class="card-icon" style="background: linear-gradient(135deg, #10b981, #047857); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                <i class="bi bi-boxes"></i>
+              </div>
+              <div class="card-content">
+                <h3 class="card-value text-success">{{ totalBrandWarehouseStockUnits | number }}</h3>
+                <p class="card-label">Total Stock (Units / Bottles)</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Total Cases -->
+          <div class="col-xl-3 col-lg-6 col-md-6">
+            <div class="summary-card" style="border-left: 4px solid #f59e0b;">
+              <div class="card-icon" style="background: linear-gradient(135deg, #f59e0b, #b45309); box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);">
+                <i class="bi bi-box-seam-fill"></i>
+              </div>
+              <div class="card-content">
+                <h3 class="card-value text-warning">{{ totalBrandWarehouseCasesCount | number }}</h3>
+                <p class="card-label">Total Stock (Cases)</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4: Total Utilized -->
+          <div class="col-xl-3 col-lg-6 col-md-6">
+            <div class="summary-card" style="border-left: 4px solid #06b6d4;">
+              <div class="card-icon" style="background: linear-gradient(135deg, #06b6d4, #0891b2); box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);">
+                <i class="bi bi-arrow-up-right-circle-fill"></i>
+              </div>
+              <div class="card-content">
+                <h3 class="card-value text-info">{{ totalBrandWarehouseUtilizedUnits | number }}</h3>
+                <p class="card-label">Total Utilized / Dispatched</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Statistics Row for Application Requests (Requisition, Revalidation, Cancellation, Brand Arrival) -->
+        <div class="row g-3 mb-4 stats-row" *ngIf="activeTab !== 'brand-warehouse'">
           <div class="col-xl col-lg-6 col-md-6">
             <div
               class="summary-card total-application-requests summary-card-clickable"
@@ -136,7 +195,8 @@
         </div>
       </div>
 
-      <div class="compact-filter-section mb-3">
+      <!-- Application Filters (Only for Requisition / Revalidation / Cancellation / Brand Arrival tabs) -->
+      <div class="compact-filter-section mb-3" *ngIf="activeTab !== 'brand-warehouse'">
         <div class="filter-row">
           <span class="filter-label-text">
             <i class="bi bi-funnel me-1"></i>
@@ -310,6 +370,19 @@
                       </button>
 
                       <button
+                        class="btn btn-sm text-white fw-bold me-1 shadow-sm"
+                        type="button"
+                        title="Update Brands & Cases Arrival"
+                        *ngIf="canUpdateBrandsArrival(row)"
+                        (click)="openUpdateBrandsArrivalModal(row)"
+                        (mousedown)="openUpdateBrandsArrivalModal(row)"
+                        style="background: linear-gradient(135deg, #0284c7, #0369a1); font-size: 11px; padding: 4px 8px; border-radius: 6px;"
+                      >
+                        <i class="bi bi-boxes me-1"></i>
+                        <span>Update Brands Arrival</span>
+                      </button>
+
+                      <button
                         class="btn btn-sm btn-soft-info me-1"
                         type="button"
                         title="View Permit Details"
@@ -451,6 +524,18 @@
                           <span>Authority Letter</span>
                         </button>
                         <button
+                          class="btn btn-sm text-white fw-bold shadow-sm"
+                          type="button"
+                          title="Update Brands & Cases Arrival"
+                          *ngIf="canUpdateBrandsArrival(row)"
+                          (click)="openUpdateBrandsArrivalModal(row)"
+                          (mousedown)="openUpdateBrandsArrivalModal(row)"
+                          style="background: linear-gradient(135deg, #0284c7, #0369a1); font-size: 11px; padding: 4px 8px; border-radius: 6px;"
+                        >
+                          <i class="bi bi-boxes me-1"></i>
+                          <span>Update Brands Arrival</span>
+                        </button>
+                        <button
                           class="btn btn-sm btn-danger-solid"
                           type="button"
                           title="Request Cancellation"
@@ -471,6 +556,98 @@
           <div class="dp-empty-state text-center p-4 text-muted" *ngIf="!error && filteredRows.length === 0">
             <i class="bi bi-inbox fs-2 d-block mb-2"></i>
             <p class="m-0">No requisition applications found.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dedicated Tab: Update Brands Arrival Register -->
+      <div class="register-table" *ngIf="activeTab === 'brand-arrival'">
+        <div class="register-container">
+          <div class="register-header-bar d-flex justify-content-between align-items-center" style="background:#0f172a; border-radius:8px 8px 0 0; padding: 12px 18px;">
+            <div class="d-flex align-items-center gap-2">
+              <i class="bi bi-boxes text-white fs-5"></i>
+              <span class="text-white fw-bold fs-6">Update Brands Arrival Register</span>
+              <span class="badge bg-primary text-white ms-2">{{ filteredRows.length }} Application(s)</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <button class="btn btn-sm btn-outline-light d-flex align-items-center gap-1" (click)="loadApplications()" [disabled]="isLoading">
+                <i class="bi bi-arrow-clockwise" [class.spin]="isLoading"></i>
+                <span>Refresh</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Table for Update Brands Arrival -->
+          <div class="table-wrapper" *ngIf="!error && filteredRows.length > 0">
+            <table class="table align-middle dp-entries-table">
+              <thead>
+                <tr>
+                  <th>Sl. No.</th>
+                  <th>Application ID</th>
+                  <th>Submitted Date</th>
+                  <th>Permit Ref No.</th>
+                  <th>Applicant Company</th>
+                  <th>Supplier Distillery</th>
+                  <th>Payment Status</th>
+                  <th>Arrival Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of filteredRows; let i = index; trackBy: trackByRow" (click)="onViewDetails(row)">
+                  <td>{{ (pageIndex * pageSize) + i + 1 }}</td>
+                  <td class="fw-semibold">
+                    <span class="text-primary font-monospace">{{ row.applicationId }}</span>
+                  </td>
+                  <td>{{ row.submittedOn }}</td>
+                  <td>
+                    <span class="badge bg-slate-100 text-slate-800 border font-monospace px-2 py-1">
+                      {{ (row.distributorPermitRef && row.distributorPermitRef !== 'N/A') ? row.distributorPermitRef : ((row.supplierName && row.supplierName !== 'N/A') ? row.supplierName : 'IMFL-PERMIT') }}
+                    </span>
+                  </td>
+                  <td>{{ resolveApplicantName(row) }}</td>
+                  <td>
+                    <span class="text-muted fw-semibold">{{ row.supplierName || 'N/A' }}</span>
+                  </td>
+                  <td>
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">
+                      <i class="bi bi-check-circle-fill me-1"></i>PAID
+                    </span>
+                  </td>
+                  <td class="dp-action-cell" (click)="$event.stopPropagation()">
+                    <div class="d-flex align-items-center gap-2">
+                      <button
+                        class="btn btn-sm text-white fw-bold shadow-sm d-flex align-items-center gap-1 px-3 py-1.5"
+                        type="button"
+                        title="Update Brands & Cases Arrival"
+                        (click)="openUpdateBrandsArrivalModal(row)"
+                        (mousedown)="openUpdateBrandsArrivalModal(row)"
+                        style="background: linear-gradient(135deg, #0284c7, #0369a1); font-size: 12px; border-radius: 6px; border: none;"
+                      >
+                        <i class="bi bi-boxes"></i>
+                        <span>Update Brands Arrival</span>
+                      </button>
+
+                      <button
+                        class="btn btn-sm btn-soft-info"
+                        type="button"
+                        title="View Permit Details"
+                        (click)="openPermitDetailsModal(row, $event)"
+                        (mousedown)="openPermitDetailsModal(row, $event)"
+                      >
+                        <i class="bi bi-card-checklist me-1"></i>
+                        <span>Permit Details</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="dp-empty-state text-center p-5 text-muted" *ngIf="!error && filteredRows.length === 0">
+            <i class="bi bi-boxes fs-1 d-block mb-2 text-secondary"></i>
+            <h6 class="fw-bold text-dark">No Applications Awaiting Arrival</h6>
+            <p class="small text-muted m-0">When IMFL requisition payments are completed, they will appear here ready for arrival entry.</p>
           </div>
         </div>
       </div>
@@ -645,6 +822,182 @@
           <div class="dp-empty-state text-center p-4 text-muted" *ngIf="!error && filteredRows.length === 0">
             <i class="bi bi-x-circle fs-2 d-block mb-2"></i>
             <p class="m-0">No cancellation applications found.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 4: Brand Warehouse Stock Table (Matching Image 2 Design) -->
+      <div class="register-table" *ngIf="activeTab === 'brand-warehouse'">
+        <div class="register-container">
+          <div class="register-header-bar d-flex justify-content-between align-items-center" style="background:#0f172a; border-radius:8px 8px 0 0; padding: 12px 18px;">
+            <div class="d-flex align-items-center gap-2">
+              <i class="bi bi-box-seam text-white fs-5"></i>
+              <span class="text-white fw-bold fs-6">IMFL Brand Warehouse Stock Register</span>
+              <span class="badge bg-primary text-white ms-2">{{ filteredBrandWarehouseStocks.length }} Brands</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <button class="btn btn-sm btn-outline-light d-flex align-items-center gap-1" (click)="loadBrandWarehouseStock()" [disabled]="isLoadingBrandWarehouse">
+                <i class="bi bi-arrow-clockwise" [class.spin]="isLoadingBrandWarehouse"></i>
+                <span>Refresh Stock</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Brand Warehouse Stock Filters -->
+          <div class="p-3 bg-white border-bottom d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 450px;">
+              <div class="input-group input-group-sm">
+                <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                <input
+                  type="text"
+                  class="form-control border-start-0"
+                  placeholder="Search by brand name or distillery..."
+                  [(ngModel)]="brandWarehouseSearchFilter"
+                />
+              </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <label class="small text-muted fw-bold">Liquor Type:</label>
+              <select class="form-select form-select-sm" style="width: 160px;" [(ngModel)]="brandWarehouseTypeFilter">
+                <option value="all">All Categories</option>
+                <option value="whisky">Whisky</option>
+                <option value="vodka">Vodka</option>
+                <option value="rum">Rum</option>
+                <option value="beer">Beer</option>
+                <option value="gin">Gin</option>
+                <option value="brandy">Brandy</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Table matching Image 2 -->
+          <div class="table-responsive" *ngIf="!isLoadingBrandWarehouse && filteredBrandWarehouseStocks.length > 0">
+            <table class="table brand-warehouse-table align-middle mb-0">
+              <thead>
+                <tr style="background: #1e293b; color: #f8fafc; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
+                  <th style="min-width: 280px; padding: 14px 16px;">BRAND DETAILS</th>
+                  <th style="min-width: 220px; padding: 14px 16px;">PACK SIZES & STOCK</th>
+                  <th style="min-width: 260px; padding: 14px 16px;">NUMBER OF CASES</th>
+                  <th class="text-center" style="min-width: 120px; padding: 14px 16px;">TOTAL UTILIZED</th>
+                  <th class="text-center" style="min-width: 140px; padding: 14px 16px;">TOTAL STOCK</th>
+                  <th class="text-center" style="min-width: 140px; padding: 14px 16px;">ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let brand of filteredBrandWarehouseStocks" class="bw-row" style="border-bottom: 1px solid #e2e8f0;">
+                  <!-- Brand Details -->
+                  <td style="padding: 16px; border-left: 4px solid #ef4444;">
+                    <div class="bw-brand-info">
+                      <div class="fw-bold text-dark fs-6" style="color: #1e293b;">
+                        {{ brand.brand_name }} - {{ brand.supplier_name }}
+                      </div>
+                      <div class="d-flex align-items-center gap-2 mt-1">
+                        <small class="text-muted fw-semibold">{{ brand.supplier_name }}</small>
+                        <span class="badge bg-light text-secondary border px-2 py-1" style="font-size: 10px; font-weight: 700;">
+                          {{ (brand.brand_type || 'WHISKY') | uppercase }}
+                        </span>
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- Pack Sizes & Stock -->
+                  <td style="padding: 16px;">
+                    <div class="d-flex flex-wrap gap-2">
+                      <div
+                        *ngFor="let sizeKey of getPackSizeKeys(brand.pack_sizes)"
+                        class="bw-pack-pill"
+                        [ngClass]="brand.pack_sizes[sizeKey].current_stock > 0 ? 'bw-pack-in-stock' : 'bw-pack-out-stock'"
+                      >
+                        <div class="bw-pack-header d-flex justify-content-between align-items-center">
+                          <span class="fw-bold">{{ sizeKey }}ml</span>
+                          <span class="bw-dot" [class.bw-dot-green]="brand.pack_sizes[sizeKey].current_stock > 0"></span>
+                        </div>
+                        <div class="bw-pack-units mt-1">
+                          <span class="fs-5 fw-bold">{{ brand.pack_sizes[sizeKey].current_stock | number }}</span>
+                          <small class="text-muted d-block" style="font-size: 10px;">UNITS</small>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- Number of Cases -->
+                  <td style="padding: 16px;">
+                    <div class="d-flex flex-wrap gap-2">
+                      <div
+                        *ngFor="let sizeKey of getPackSizeKeys(brand.pack_sizes)"
+                        class="bw-case-card"
+                        [ngClass]="brand.pack_sizes[sizeKey].cases > 0 ? 'bw-case-active' : 'bw-case-zero'"
+                      >
+                        <div class="bw-case-header">
+                          <span class="badge" [ngClass]="brand.pack_sizes[sizeKey].cases > 0 ? 'bg-warning text-dark' : 'bg-light text-muted border'">
+                            {{ sizeKey }}ml
+                          </span>
+                        </div>
+                        <div class="bw-case-body mt-1">
+                          <div class="fs-6 fw-bold">
+                            ≈ {{ brand.pack_sizes[sizeKey].cases | number }}
+                          </div>
+                          <small class="text-muted" style="font-size: 10px; text-transform: uppercase;">CASES</small>
+                        </div>
+                        <div class="bw-case-footer mt-1 pt-1 border-top" style="font-size: 10px; color: #64748b;">
+                          <i class="bi bi-box-seam me-1"></i>
+                          1 case = {{ getPiecesInCase(sizeKey, brand.pack_sizes[sizeKey]) }} bottles
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- Total Utilized -->
+                  <td class="text-center" style="padding: 16px;">
+                    <div class="fw-bold fs-5 text-dark">{{ brand.total_utilized | number }}</div>
+                    <small class="text-muted" style="font-size: 10px; text-transform: uppercase;">UNITS UTILIZED</small>
+                  </td>
+
+                  <!-- Total Stock -->
+                  <td class="text-center" style="padding: 16px;">
+                    <div class="fw-bold fs-5 text-dark">{{ brand.total_stock | number }}</div>
+                    <small class="text-muted d-block" style="font-size: 10px; text-transform: uppercase;">TOTAL UNITS</small>
+                    <small class="text-muted" style="font-size: 10px;">of {{ brand.total_capacity || 0 }} capacity</small>
+                  </td>
+
+                  <!-- Actions -->
+                  <td class="text-center" style="padding: 16px;">
+                    <div class="d-flex align-items-center justify-content-center gap-1">
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-primary p-2 rounded"
+                        (click)="viewBrandHistory(brand)"
+                        title="View Arrival History & Entries"
+                      >
+                        <i class="bi bi-eye"></i>
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-warning p-2 rounded"
+                        (click)="viewBrandHistory(brand)"
+                        title="Transit & Vehicle Tracking"
+                      >
+                        <i class="bi bi-truck"></i>
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-info p-2 rounded"
+                        (click)="viewBrandHistory(brand)"
+                        title="Arrival Timeline Logs"
+                      >
+                        <i class="bi bi-clock-history"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="p-5 text-center text-muted" *ngIf="!isLoadingBrandWarehouse && filteredBrandWarehouseStocks.length === 0">
+            <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+            <h6 class="fw-bold text-dark">No Brand Stock Found</h6>
+            <p class="small text-muted">Arrivals recorded by the Officer In-Charge will be displayed here in real time.</p>
           </div>
         </div>
       </div>
@@ -2662,3 +3015,316 @@
     </div>
   </div>
 </div>
+
+<!-- ========================================== -->
+<!-- UPDATE BRANDS ARRIVAL MODAL (OIC WORKFLOW) -->
+<!-- ========================================== -->
+<div class="dp-modal-backdrop" *ngIf="showUpdateArrivalModal" (click)="closeUpdateArrivalModal()">
+  <div class="dp-modal-dialog dp-modal-dialog--xl" (click)="$event.stopPropagation()">
+    <div class="dp-modal-content">
+      
+      <!-- Modal Header -->
+      <div class="dp-modal-header d-flex justify-content-between align-items-center p-3 text-white" style="background: linear-gradient(135deg, #0f172a, #1e293b); border-radius: 8px 8px 0 0;">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-boxes fs-4 text-warning"></i>
+          <div>
+            <h5 class="m-0 fw-bold">Update Brands & Cases Arrival</h5>
+            <small class="text-light opacity-75">
+              Requisition Ref: <span class="fw-bold text-warning">{{ arrivalModalData?.reference_no || arrivalModalData?.referenceNo || arrivalModalData?.id }}</span>
+              • Supplier: <span class="fw-bold">{{ arrivalModalData?.supplier_company_name || arrivalModalData?.supplierCompanyName || 'N/A' }}</span>
+            </small>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeUpdateArrivalModal()" aria-label="Close"></button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="dp-modal-body p-4 bg-light" style="max-height: 70vh; overflow-y: auto;">
+        
+        <!-- Top Metadata Row -->
+        <div class="card p-3 mb-3 border-0 shadow-sm rounded-3 bg-white">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label small fw-bold text-muted">Vehicle Number</label>
+              <div class="input-group input-group-sm">
+                <span class="input-group-text"><i class="bi bi-truck"></i></span>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="e.g. SK-01-AB-1234"
+                  [(ngModel)]="arrivalCommonVehicle"
+                />
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label small fw-bold text-muted">Arrival Date & Time</label>
+              <div class="input-group input-group-sm">
+                <span class="input-group-text"><i class="bi bi-calendar-event"></i></span>
+                <input
+                  type="date"
+                  class="form-control"
+                  [(ngModel)]="arrivalCommonDate"
+                />
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label small fw-bold text-muted">Officer Remarks / Notes</label>
+              <input
+                type="text"
+                class="form-control form-control-sm"
+                placeholder="e.g. Verified physically at warehouse gate"
+                [(ngModel)]="arrivalCommonRemarks"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Brands & Cases Entry Table -->
+        <div class="card border-0 shadow-sm rounded-3 bg-white overflow-hidden">
+          <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+            <h6 class="m-0 fw-bold text-dark">
+              <i class="bi bi-card-checklist text-primary me-2"></i>
+              Permit Brands & Arrived Boxes Entry (Boxes Reached)
+            </h6>
+            <span class="badge bg-primary text-white">{{ arrivalBrandItems.length }} Brand Item(s)</span>
+          </div>
+          
+          <div class="table-responsive">
+            <table class="table table-bordered align-middle mb-0">
+              <thead class="table-light small fw-bold text-uppercase">
+                <tr>
+                  <th style="width: 45px;" class="text-center">#</th>
+                  <th>Permit No.</th>
+                  <th>Brand Name & Size</th>
+                  <th class="text-center" style="width: 120px;">Expected Cases</th>
+                  <th class="text-center" style="width: 150px;">
+                    <span class="text-primary fw-bold">Boxes Reached (Cases)</span>
+                  </th>
+                  <th class="text-center" style="width: 110px;">Bottles / Case</th>
+                  <th class="text-center" style="width: 130px;">Total Bottles</th>
+                  <th style="width: 140px;">Batch No.</th>
+                  <th>Item Remarks</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of arrivalBrandItems; let idx = index">
+                  <td class="text-center fw-bold text-muted">{{ idx + 1 }}</td>
+                  <td>
+                    <span class="badge bg-slate-100 text-dark border font-monospace">{{ item.permit_number }}</span>
+                  </td>
+                  <td>
+                    <div class="fw-bold text-dark">{{ item.brand_name }}</div>
+                    <div class="d-flex align-items-center gap-1 mt-1">
+                      <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25">{{ item.pack_size }}ml</span>
+                      <small class="text-muted">{{ item.brand_type }}</small>
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <span class="badge bg-secondary px-2 py-1">{{ item.expected_cases }} Cases</span>
+                    <small class="d-block text-muted">({{ item.expected_bottles }} btls)</small>
+                  </td>
+                  <td class="text-center bg-blue-50">
+                    <input
+                      type="number"
+                      min="0"
+                      class="form-control form-control-sm text-center fw-bold border-primary"
+                      [(ngModel)]="item.arrived_cases"
+                      (ngModelChange)="onArrivedCasesChange(item)"
+                    />
+                  </td>
+                  <td class="text-center">
+                    <span class="badge bg-light text-dark border">{{ item.pieces_per_case }}</span>
+                  </td>
+                  <td class="text-center">
+                    <input
+                      type="number"
+                      min="0"
+                      class="form-control form-control-sm text-center fw-bold"
+                      [(ngModel)]="item.arrived_bottles"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      class="form-control form-control-sm"
+                      placeholder="Batch #"
+                      [(ngModel)]="item.batch_number"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      class="form-control form-control-sm"
+                      placeholder="Remarks"
+                      [(ngModel)]="item.remarks"
+                    />
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot class="table-light fw-bold">
+                <tr>
+                  <td colspan="3" class="text-end">TOTALS:</td>
+                  <td class="text-center">{{ totalArrivalExpectedCases }} Cases</td>
+                  <td class="text-center text-primary fs-6">{{ totalArrivalArrivedCases }} Cases</td>
+                  <td></td>
+                  <td class="text-center text-success fs-6">{{ totalArrivalArrivedBottles }} Bottles</td>
+                  <td colspan="2"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="dp-modal-footer p-3 bg-white border-top d-flex justify-content-between align-items-center">
+        <div class="small text-muted">
+          <i class="bi bi-info-circle me-1"></i>
+          Saving will store all arrival records into <strong class="text-dark">imfl_brand_warehouse</strong> table and update real-time stock.
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <button type="button" class="btn btn-outline-secondary px-3" (click)="closeUpdateArrivalModal()" [disabled]="isSavingArrival">
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-success px-4 fw-bold shadow-sm d-flex align-items-center gap-2"
+            (click)="saveBrandsArrival()"
+            [disabled]="isSavingArrival"
+            style="background: linear-gradient(135deg, #10b981, #059669); border: none;"
+          >
+            <i class="bi bi-check-circle-fill" *ngIf="!isSavingArrival"></i>
+            <span class="spinner-border spinner-border-sm" *ngIf="isSavingArrival"></span>
+            <span>{{ isSavingArrival ? 'Saving to Warehouse...' : 'Save & Update Warehouse Stock' }}</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- BRAND ARRIVAL HISTORY & DETAILS MODAL -->
+<!-- ========================================== -->
+<div class="dp-modal-backdrop" *ngIf="showBrandHistoryModal" (click)="closeBrandHistoryModal()">
+  <div class="dp-modal-dialog dp-modal-dialog--xl" (click)="$event.stopPropagation()">
+    <div class="dp-modal-content">
+      
+      <!-- Modal Header -->
+      <div class="dp-modal-header d-flex justify-content-between align-items-center p-3 text-white" style="background: linear-gradient(135deg, #1e293b, #334155); border-radius: 8px 8px 0 0;">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-clock-history fs-4 text-info"></i>
+          <div>
+            <h5 class="m-0 fw-bold">{{ selectedBrandForHistory?.brand_name }}</h5>
+            <small class="text-light opacity-75">
+              Manufacturer: <span class="fw-bold">{{ selectedBrandForHistory?.supplier_name }}</span>
+              • Category: <span class="badge bg-light text-dark px-2">{{ selectedBrandForHistory?.brand_type | uppercase }}</span>
+            </small>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeBrandHistoryModal()" aria-label="Close"></button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="dp-modal-body p-4 bg-light" style="max-height: 70vh; overflow-y: auto;">
+        
+        <!-- Summary metrics -->
+        <div class="row g-3 mb-4">
+          <div class="col-md-4">
+            <div class="card p-3 border-0 shadow-sm rounded-3 text-center bg-white">
+              <span class="text-muted small fw-bold">CURRENT STOCK</span>
+              <h3 class="fw-bold text-success my-1">{{ selectedBrandForHistory?.total_stock | number }} <small class="fs-6">Units</small></h3>
+              <small class="text-muted">Available in Warehouse</small>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="card p-3 border-0 shadow-sm rounded-3 text-center bg-white">
+              <span class="text-muted small fw-bold">TOTAL UTILIZED</span>
+              <h3 class="fw-bold text-dark my-1">{{ selectedBrandForHistory?.total_utilized | number }} <small class="fs-6">Units</small></h3>
+              <small class="text-muted">Dispatched via Transit Permits</small>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="card p-3 border-0 shadow-sm rounded-3 text-center bg-white">
+              <span class="text-muted small fw-bold">LAST ARRIVAL DATE</span>
+              <h5 class="fw-bold text-primary my-2">
+                {{ selectedBrandForHistory?.last_arrival_date ? (selectedBrandForHistory.last_arrival_date | date:'dd MMM yyyy, hh:mm a') : 'N/A' }}
+              </h5>
+              <small class="text-muted">Recent Stock Receipt</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Arrival Entries Table -->
+        <div class="card border-0 shadow-sm rounded-3 bg-white overflow-hidden">
+          <div class="card-header bg-white py-3 border-bottom">
+            <h6 class="m-0 fw-bold text-dark">
+              <i class="bi bi-receipt-cutoff text-primary me-2"></i>
+              Arrival Transactions & Log History
+            </h6>
+          </div>
+          
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light small fw-bold text-uppercase">
+                <tr>
+                  <th>Arrival Date & Time</th>
+                  <th>Permit Number</th>
+                  <th>Pack Size</th>
+                  <th>Arrived Cases</th>
+                  <th>Arrived Units</th>
+                  <th>Vehicle Number</th>
+                  <th>Status</th>
+                  <th>Remarks</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let entry of selectedBrandForHistory?.recent_entries">
+                  <td>{{ entry.arrival_date | date:'dd MMM yyyy, hh:mm a' }}</td>
+                  <td>
+                    <span class="badge bg-slate-100 text-dark border font-monospace">{{ entry.permit_number }}</span>
+                  </td>
+                  <td><span class="fw-bold">{{ entry.pack_size }}ml</span></td>
+                  <td>
+                    <span class="badge bg-warning bg-opacity-25 text-dark fw-bold px-2 py-1">{{ entry.arrived_cases }} Cases</span>
+                  </td>
+                  <td>
+                    <span class="fw-bold text-success">{{ entry.arrived_bottles | number }} Units</span>
+                  </td>
+                  <td>{{ entry.vehicle_number || 'N/A' }}</td>
+                  <td>
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">
+                      {{ entry.status }}
+                    </span>
+                  </td>
+                  <td class="text-muted small">{{ entry.remarks || '-' }}</td>
+                </tr>
+                <tr *ngIf="!selectedBrandForHistory?.recent_entries || selectedBrandForHistory?.recent_entries?.length === 0">
+                  <td colspan="8" class="text-center py-4 text-muted">
+                    No recent arrival entries recorded for this brand yet.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="dp-modal-footer p-3 bg-white border-top d-flex justify-content-end">
+        <button type="button" class="btn btn-secondary px-4" (click)="closeBrandHistoryModal()">
+          Close
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+

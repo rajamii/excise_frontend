@@ -137,12 +137,18 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       .subscribe((params) => {
         this.isFormView = String(params?.['mode'] || '').toLowerCase() === 'apply';
         const tabParam = String(params?.['tab'] || '').toLowerCase() as ImflTabType;
-        if (['requisition', 'revalidation', 'cancellation'].includes(tabParam)) {
+        if (['requisition', 'revalidation', 'cancellation', 'brand-warehouse'].includes(tabParam)) {
           this.activeTab = tabParam;
+          if (tabParam === 'brand-warehouse') {
+            this.loadBrandWarehouseStock();
+          }
         } else {
           // Also resolve from the 'section' param (e.g. distributor-permit-cancellation)
           const sectionParam = String(params?.['section'] || '').toLowerCase();
-          if (sectionParam.includes('cancellation')) {
+          if (sectionParam.includes('brand-warehouse') || sectionParam.includes('brand_warehouse')) {
+            this.activeTab = 'brand-warehouse';
+            this.loadBrandWarehouseStock();
+          } else if (sectionParam.includes('cancellation')) {
             this.activeTab = 'cancellation';
           } else if (sectionParam.includes('revalidation')) {
             this.activeTab = 'revalidation';
@@ -182,6 +188,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     if (this.activeTab === tab) return;
     this.activeTab = tab;
     this.pageIndex = 0;
+    if (tab === 'brand-warehouse') {
+      this.loadBrandWarehouseStock();
+    }
     this.autoSelectDefaultStatusFilter();
     this.cdr.markForCheck();
     this.router.navigate([], {
@@ -264,6 +273,17 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           appType !== 'revalidation' &&
           appType !== 'cancellation' &&
           !row.isActivatedSchedule
+        );
+      } else if (this.activeTab === 'brand-arrival') {
+        // Only paid / approved requisition entries ready for brand arrival recording
+        const isPaid = (row as any).is_excise_duty_fee_paid || (row as any).paymentStatus === 'Paid' || row.application?.['is_excise_duty_fee_paid'] || row.application?.['payment_status'] === 'completed' || row.application?.['payment_status'] === 'Paid' || this.isApproved(row);
+        return (
+          !ref.startsWith('IMFLREV') &&
+          !ref.startsWith('IMFLCAN') &&
+          appType !== 'revalidation' &&
+          appType !== 'cancellation' &&
+          !row.isActivatedSchedule &&
+          isPaid
         );
       } else if (this.activeTab === 'revalidation') {
         if (this.isOfficerUser) {
@@ -364,6 +384,303 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   get canViewAuthorityLetter(): boolean {
     return this.isOfficerUser;
+  }
+
+  // --- Brand Warehouse Stock State ---
+  brandWarehouseStocks: any[] = [];
+  brandWarehouseOverview: any = {
+    total_brands: 0,
+    total_stock_units: 0,
+    total_cases: 0
+  };
+  isLoadingBrandWarehouse = false;
+  brandWarehouseSearchFilter = '';
+  brandWarehouseTypeFilter = 'all';
+
+  get totalBrandWarehouseBrandsCount(): number {
+    return this.brandWarehouseOverview?.total_brands || this.brandWarehouseStocks?.length || 0;
+  }
+
+  get totalBrandWarehouseStockUnits(): number {
+    if (this.brandWarehouseOverview?.total_stock_units) {
+      return this.brandWarehouseOverview.total_stock_units;
+    }
+    return (this.brandWarehouseStocks || []).reduce((sum, b) => sum + (Number(b.total_stock) || 0), 0);
+  }
+
+  get totalBrandWarehouseCasesCount(): number {
+    if (this.brandWarehouseOverview?.total_cases) {
+      return this.brandWarehouseOverview.total_cases;
+    }
+    return (this.brandWarehouseStocks || []).reduce((sum, b) => {
+      let cases = 0;
+      if (b.pack_sizes) {
+        Object.values(b.pack_sizes).forEach((p: any) => {
+          cases += Number(p.cases) || 0;
+        });
+      }
+      return sum + cases;
+    }, 0);
+  }
+
+  get totalBrandWarehouseUtilizedUnits(): number {
+    return (this.brandWarehouseStocks || []).reduce((sum, b) => sum + (Number(b.total_utilized) || 0), 0);
+  }
+
+  // --- Update Brands Arrival Modal State ---
+  showUpdateArrivalModal = false;
+  arrivalModalData: any = null;
+  arrivalBrandItems: any[] = [];
+  arrivalCommonVehicle = '';
+  arrivalCommonDate = this.todayIso();
+  arrivalCommonRemarks = '';
+  isSavingArrival = false;
+
+  // --- Brand History Modal State ---
+  showBrandHistoryModal = false;
+  selectedBrandForHistory: any = null;
+
+  canUpdateBrandsArrival(rowOrApp: any): boolean {
+    if (!this.isOicDistributorUser && !this.isOfficerUser) return false;
+    const app = rowOrApp?.application || rowOrApp;
+    if (!app) return false;
+    const isPaid = app?.is_excise_duty_fee_paid || rowOrApp?.paymentStatus === 'Paid' || String(app?.status || '').toLowerCase().includes('approved') || String(app?.status || '').toLowerCase().includes('paid');
+    return isPaid;
+  }
+
+  loadBrandWarehouseStock(): void {
+    this.isLoadingBrandWarehouse = true;
+    this.permitService.getImflBrandWarehouseSummary()
+      .pipe(
+        finalize(() => {
+          this.isLoadingBrandWarehouse = false;
+          this.cdr.markForCheck();
+        }),
+        catchError(() => of({ overview: { total_brands: 0, total_stock_units: 0, total_cases: 0 }, brands: [] }))
+      )
+      .subscribe((res: any) => {
+        if (res) {
+          this.brandWarehouseOverview = res.overview || { total_brands: 0, total_stock_units: 0, total_cases: 0 };
+          this.brandWarehouseStocks = res.brands || [];
+        }
+      });
+  }
+
+  get filteredBrandWarehouseStocks(): any[] {
+    const q = (this.brandWarehouseSearchFilter || '').toLowerCase().trim();
+    const t = (this.brandWarehouseTypeFilter || 'all').toLowerCase().trim();
+    return (this.brandWarehouseStocks || []).filter((b: any) => {
+      const matchQ = !q || (b.brand_name || '').toLowerCase().includes(q) || (b.supplier_name || '').toLowerCase().includes(q);
+      const matchT = t === 'all' || (b.brand_type || '').toLowerCase() === t;
+      return matchQ && matchT;
+    });
+  }
+
+  getPackSizeKeys(packSizes: any): string[] {
+    if (!packSizes) return [];
+    return Object.keys(packSizes);
+  }
+
+  getCasesForUnits(units: number, size: any, piecesPerCase?: number): number {
+    const p = piecesPerCase || this.getPiecesInCase(size);
+    if (!p) return 0;
+    return Math.floor(units / p);
+  }
+
+  getPiecesInCase(size: any, packObj?: any): number {
+    if (packObj && packObj.pieces_per_case) return packObj.pieces_per_case;
+    const s = Number(size);
+    if (s === 750) return 12;
+    if (s === 375) return 24;
+    if (s === 180) return 48;
+    if (s === 500 || s === 650) return 12;
+    return 12;
+  }
+
+  openUpdateBrandsArrivalModal(rowOrApp: any): void {
+    const app = rowOrApp?.application || rowOrApp || {};
+    this.arrivalModalData = app;
+    this.arrivalCommonVehicle = app?.route_details || app?.vehicle_number || app?.vehicleNumber || '';
+    this.arrivalCommonDate = this.todayIso();
+    this.arrivalCommonRemarks = '';
+    
+    // Extract line items or permit details
+    const details = app.permit_wise_details || app.permitWiseDetails || [];
+    const lineItems = app.line_items || app.lineItems || [];
+    
+    const itemsToProcess: any[] = [];
+    if (Array.isArray(details) && details.length > 0) {
+      details.forEach((d: any, idx: number) => {
+        const size = Number(d.size_ml || d.pack_size || 750);
+        const pieces = Number(d.pieces_per_case || d.bottles_per_case || this.getPiecesInCase(size));
+        const expCases = Number(d.cases || d.expected_cases || 0);
+        const expBottles = Number(d.bottles || d.expected_bottles || (expCases * pieces));
+        itemsToProcess.push({
+          permit_number: d.permit_number || `${app.reference_no || app.referenceNo || 'IMFLREQ'}-P${idx + 1}`,
+          brand_name: d.brand_name || d.brandName || app.brand_name || 'IMFL Brand',
+          brand_type: d.brand_type || d.liquor_type || 'WHISKY',
+          supplier_name: d.supplier_name || app.supplier_company_name || app.supplierCompanyName || 'N/A',
+          pack_size: size,
+          pieces_per_case: pieces,
+          expected_cases: expCases,
+          expected_bottles: expBottles,
+          arrived_cases: expCases,
+          arrived_bottles: expBottles,
+          vehicle_number: d.vehicle_number || this.arrivalCommonVehicle,
+          batch_number: '',
+          remarks: ''
+        });
+      });
+    } else if (Array.isArray(lineItems) && lineItems.length > 0) {
+      lineItems.forEach((l: any, idx: number) => {
+        const size = Number(l.size_ml || 750);
+        const pieces = Number(l.pieces_per_case || this.getPiecesInCase(size));
+        const expCases = Number(l.cases || 1);
+        const expBottles = Number(expCases * pieces);
+        itemsToProcess.push({
+          permit_number: l.permit_number || `${app.reference_no || app.referenceNo || 'IMFLREQ'}-P${idx + 1}`,
+          brand_name: l.brand_name || 'IMFL Brand',
+          brand_type: l.brand_type || 'WHISKY',
+          supplier_name: app.supplier_company_name || app.supplierCompanyName || 'N/A',
+          pack_size: size,
+          pieces_per_case: pieces,
+          expected_cases: expCases,
+          expected_bottles: expBottles,
+          arrived_cases: expCases,
+          arrived_bottles: expBottles,
+          vehicle_number: this.arrivalCommonVehicle,
+          batch_number: '',
+          remarks: ''
+        });
+      });
+    } else {
+      // Fallback single item
+      const size = Number(rowOrApp?.sizeMl || 750);
+      const pieces = this.getPiecesInCase(size);
+      const expCases = Number(rowOrApp?.cases || 1);
+      itemsToProcess.push({
+        permit_number: app.reference_no || app.referenceNo || 'IMFLREQ/2026-27/0001-P1',
+        brand_name: rowOrApp?.brandName || app.brand_name || 'IMFL Brand',
+        brand_type: 'WHISKY',
+        supplier_name: app.supplier_company_name || 'N/A',
+        pack_size: size,
+        pieces_per_case: pieces,
+        expected_cases: expCases,
+        expected_bottles: expCases * pieces,
+        arrived_cases: expCases,
+        arrived_bottles: expCases * pieces,
+        vehicle_number: this.arrivalCommonVehicle,
+        batch_number: '',
+        remarks: ''
+      });
+    }
+
+    this.arrivalBrandItems = itemsToProcess;
+    this.showUpdateArrivalModal = true;
+    this.cdr.markForCheck();
+  }
+
+  onArrivedCasesChange(item: any): void {
+    if (item.arrived_cases === null || item.arrived_cases === undefined) {
+      item.arrived_cases = 0;
+    }
+    item.arrived_bottles = Number(item.arrived_cases) * Number(item.pieces_per_case || 12);
+  }
+
+  get totalArrivalExpectedCases(): number {
+    return (this.arrivalBrandItems || []).reduce((sum, it) => sum + (Number(it.expected_cases) || 0), 0);
+  }
+
+  get totalArrivalArrivedCases(): number {
+    return (this.arrivalBrandItems || []).reduce((sum, it) => sum + (Number(it.arrived_cases) || 0), 0);
+  }
+
+  get totalArrivalArrivedBottles(): number {
+    return (this.arrivalBrandItems || []).reduce((sum, it) => sum + (Number(it.arrived_bottles) || 0), 0);
+  }
+
+  closeUpdateArrivalModal(): void {
+    this.showUpdateArrivalModal = false;
+    this.arrivalModalData = null;
+    this.arrivalBrandItems = [];
+    this.cdr.markForCheck();
+  }
+
+  saveBrandsArrival(): void {
+    if (!this.arrivalBrandItems || this.arrivalBrandItems.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Brand Items',
+        text: 'There are no brand items to update.',
+        confirmButtonColor: '#3b82f6'
+      });
+      return;
+    }
+
+    const payload = {
+      distributor_permit: this.arrivalModalData?.reference_no || this.arrivalModalData?.referenceNo || this.arrivalModalData?.id,
+      vehicle_number: this.arrivalCommonVehicle,
+      arrival_date: this.arrivalCommonDate ? new Date(this.arrivalCommonDate).toISOString() : new Date().toISOString(),
+      remarks: this.arrivalCommonRemarks,
+      items: this.arrivalBrandItems.map((it) => ({
+        permit_number: it.permit_number,
+        brand_name: it.brand_name,
+        brand_type: it.brand_type,
+        supplier_name: it.supplier_name,
+        pack_size: it.pack_size,
+        pieces_per_case: it.pieces_per_case,
+        expected_cases: it.expected_cases,
+        expected_bottles: it.expected_bottles,
+        arrived_cases: it.arrived_cases,
+        arrived_bottles: it.arrived_bottles,
+        vehicle_number: it.vehicle_number || this.arrivalCommonVehicle,
+        batch_number: it.batch_number,
+        remarks: it.remarks || this.arrivalCommonRemarks
+      }))
+    };
+
+    this.isSavingArrival = true;
+    this.permitService.updateImflBrandsArrival(payload)
+      .pipe(
+        finalize(() => {
+          this.isSavingArrival = false;
+          this.cdr.markForCheck();
+        })
+      )
+      .subscribe({
+        next: (res: any) => {
+          Swal.fire({
+            icon: 'success',
+            title: 'Arrival Stock Saved!',
+            text: res?.message || 'IMFL brand warehouse stock updated successfully.',
+            confirmButtonColor: '#10b981'
+          });
+          this.closeUpdateArrivalModal();
+          this.loadApplications();
+          this.loadBrandWarehouseStock();
+        },
+        error: (err: any) => {
+          console.error('Error updating brand arrival:', err);
+          Swal.fire({
+            icon: 'error',
+            title: 'Failed to Save Arrival',
+            text: err?.error?.message || 'Could not save brand arrival. Please check the inputs and try again.',
+            confirmButtonColor: '#ef4444'
+          });
+        }
+      });
+  }
+
+  viewBrandHistory(brand: any): void {
+    this.selectedBrandForHistory = brand;
+    this.showBrandHistoryModal = true;
+    this.cdr.markForCheck();
+  }
+
+  closeBrandHistoryModal(): void {
+    this.showBrandHistoryModal = false;
+    this.selectedBrandForHistory = null;
+    this.cdr.markForCheck();
   }
 
   get isDistributorUser(): boolean {
@@ -3840,7 +4157,23 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       });
   }
 
-  private loadApplications(): void {
+  getHeaderTitle(): string {
+    if (this.activeTab === 'brand-warehouse') {
+      return 'IMFL Brand Warehouse Stock Register';
+    }
+    if (this.activeTab === 'brand-arrival') {
+      return 'IMFL / Update Brands Arrival';
+    }
+    if (this.activeTab === 'revalidation') {
+      return 'IMFL / Revalidation Applications';
+    }
+    if (this.activeTab === 'cancellation') {
+      return 'IMFL / Cancellation Applications';
+    }
+    return this.isOicDistributorUser ? 'IMFL Requisition Cases Approval Applications' : 'IMFL Requisition Applications';
+  }
+
+  loadApplications(): void {
     this.sidebarPendingBadgeService.triggerRefresh();
     forkJoin({
       requisitions: this.permitService.listApplications().pipe(catchError(() => of([]))),

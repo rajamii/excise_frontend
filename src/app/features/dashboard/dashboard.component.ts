@@ -3651,7 +3651,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   isDistributorPermitSection(): boolean {
     const s = String(this.selectedSupplyChainSection || '').toLowerCase();
-    return s.includes('distributor-permit') || s.includes('imfl-requisition') || s.includes('imfl-revalidation') || s.includes('imfl-cancellation') || s.includes('imfl-requisition-cases');
+    return s.includes('distributor-permit') || s.includes('imfl-requisition') || s.includes('imfl-revalidation') || s.includes('imfl-cancellation') || s.includes('imfl-requisition-cases') || s.includes('brand-warehouse');
   }
 
   isCommissionerUser(): boolean {

@@ -25,3 +25,28 @@
     margin-right: 6px;
   }
 }
+
+.imfl-tab-btn {
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: 13px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  color: #64748b;
+  background: transparent;
+  transition: all 0.2s ease;
+  cursor: pointer;
+
+  &:hover {
+    color: #1e293b;
+    background: #f1f5f9;
+  }
+
+  &.active {
+    color: #2563eb;
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    font-weight: 700;
+  }
+}
+

@@ -306,6 +306,11 @@
                     <span class="nav-text">IMFL Cancellation</span>
                     <span class="nav-badge" *ngIf="getPendingCount('distributor-permit-cancellation') || getPendingCount('imfl-cancellation') as pending">{{ pending }}</span>
                   </button>
+
+                  <button class="nav-item nav-item--sub imfl-permit-sub-item" (click)="navigateToImflPermitTab('brand-warehouse')" [class.active]="isDashboardSectionActive('distributor-permit') && isImflTabActive('brand-warehouse')">
+                    <mat-icon class="nav-icon">inventory_2</mat-icon>
+                    <span class="nav-text">Brand Warehouse Stock</span>
+                  </button>
                 </ng-container>
               </ng-container>
             </ng-container>

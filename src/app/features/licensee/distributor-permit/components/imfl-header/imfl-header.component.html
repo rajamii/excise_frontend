@@ -1,37 +1,39 @@
-<div class="imfl-header-bar d-flex justify-content-between align-items-center mb-3 p-3 bg-white rounded-3 shadow-sm" *ngIf="!isFormView">
-  <div class="d-flex align-items-center gap-2">
-    <button type="button" class="btn btn-light btn-sm rounded-circle p-2 shadow-sm border" (click)="onBackClick()" title="Go Back">
-      <i class="bi bi-arrow-left"></i>
-    </button>
-    <h4 class="m-0 fw-bold text-dark me-3">
-      <ng-container *ngIf="customTitle; else defaultTitle">
-        {{ customTitle }}
-      </ng-container>
-      <ng-template #defaultTitle>
-        IMFL / <span class="text-capitalize">{{ activeTab }}</span>
-      </ng-template>
-    </h4>
-  </div>
+<div class="imfl-header-wrapper flex-column mb-3" *ngIf="!isFormView">
+  <div class="imfl-header-bar d-flex justify-content-between align-items-center p-3 bg-white rounded-3 shadow-sm w-100">
+    <div class="d-flex align-items-center gap-2">
+      <button type="button" class="btn btn-light btn-sm rounded-circle p-2 shadow-sm border" (click)="onBackClick()" title="Go Back">
+        <i class="bi bi-arrow-left"></i>
+      </button>
+      <h4 class="m-0 fw-bold text-dark me-3">
+        <ng-container *ngIf="customTitle; else defaultTitle">
+          {{ customTitle }}
+        </ng-container>
+        <ng-template #defaultTitle>
+          IMFL / <span class="text-capitalize">{{ activeTab === 'brand-warehouse' ? 'Brand Warehouse Stock' : activeTab === 'brand-arrival' ? 'Update Brands Arrival' : activeTab }}</span>
+        </ng-template>
+      </h4>
+    </div>
 
-  <div class="d-flex align-items-center gap-2" *ngIf="!isOfficer && activeTab === 'requisition'">
-    <button
-      type="button"
-      class="btn btn-outline-info btn-sm fw-bold px-3 py-2 rounded-pill shadow-sm"
-      (click)="onViewArrivalsClick()"
-      title="View Monthly Cases Arrival Register"
-    >
-      <i class="bi bi-clipboard-data-fill me-1"></i>
-      View Cases Arrival
-    </button>
+    <div class="d-flex align-items-center gap-2" *ngIf="!isOfficer && activeTab === 'requisition'">
+      <button
+        type="button"
+        class="btn btn-outline-info btn-sm fw-bold px-3 py-2 rounded-pill shadow-sm"
+        (click)="onViewArrivalsClick()"
+        title="View Monthly Cases Arrival Register"
+      >
+        <i class="bi bi-clipboard-data-fill me-1"></i>
+        View Cases Arrival
+      </button>
 
-    <button
-      type="button"
-      class="btn btn-danger btn-sm fw-bold px-3 py-2 text-white bg-gradient border-0 rounded-pill shadow-sm"
-      (click)="onApplyNewClick()"
-      style="background: linear-gradient(135deg, #ef4444, #dc2626) !important; color: #ffffff !important; opacity: 1 !important; display: inline-flex; align-items: center;"
-    >
-      <i class="bi bi-plus-circle-fill me-1"></i>
-      Apply for Import Permit
-    </button>
+      <button
+        type="button"
+        class="btn btn-danger btn-sm fw-bold px-3 py-2 text-white bg-gradient border-0 rounded-pill shadow-sm"
+        (click)="onApplyNewClick()"
+        style="background: linear-gradient(135deg, #ef4444, #dc2626) !important; color: #ffffff !important; opacity: 1 !important; display: inline-flex; align-items: center;"
+      >
+        <i class="bi bi-plus-circle-fill me-1"></i>
+        Apply for Import Permit
+      </button>
+    </div>
   </div>
 </div>

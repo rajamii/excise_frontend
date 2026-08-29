@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { MaterialModule } from '../../../../../shared/material.module';
 
-export type ImflTabType = 'requisition' | 'revalidation' | 'cancellation';
+export type ImflTabType = 'requisition' | 'brand-arrival' | 'revalidation' | 'cancellation' | 'brand-warehouse';
 
 @Component({
   selector: 'app-imfl-header',
