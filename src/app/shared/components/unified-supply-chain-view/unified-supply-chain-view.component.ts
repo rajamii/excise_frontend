@@ -500,12 +500,13 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         const current = this.roleService.getCurrentUser();
         if (!current) return false;
 
-        if (Number(current.roleId) === 7) return true;
+        const roleId = Number(current.roleId || (current as any)?.role?.id || 0);
+        if (roleId === 7 || roleId === 14) return true;
 
         const roleToken = String(current.role?.name || current.role?.displayName || '')
             .toLowerCase()
             .replace(/[^a-z0-9]/g, '');
-        if (roleToken.includes('officerincharge') || roleToken === 'oic') return true;
+        if (roleToken.includes('officerincharge') || roleToken.includes('oic') || roleToken.includes('distributoroic')) return true;
 
         return false;
     }
@@ -1862,7 +1863,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     getUserContext(): UserContext {
         const source = this.route.snapshot.queryParamMap.get('source');
 
-        // Verify if user is an officer (all non-licensee roles: 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
+        // Verify if user is an officer (all non-licensee roles: 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14)
         const isOfficer = this.roleService.hasRole(1) || 
                           this.roleService.hasRole(3) || 
                           this.roleService.hasRole(4) || 
@@ -1873,10 +1874,16 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                           this.roleService.hasRole(9) ||
                           this.roleService.hasRole(10) ||
                           this.roleService.hasRole(11) ||
-                          this.roleService.hasRole(12);
+                          this.roleService.hasRole(12) ||
+                          this.roleService.hasRole(14) ||
+                          this.isOicUser();
 
         if (!isOfficer) {
             return USER_CONTEXTS.LICENSEE;
+        }
+
+        if (this.isOicUser()) {
+            return USER_CONTEXTS.OFFICER_IN_CHARGE;
         }
 
         const contextMap: { [key: string]: UserContext } = {
@@ -3344,6 +3351,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     getIncludeActionsForDetailView(): string[] | null {
         if (!this.applicationData) {
             return null;
+        }
+
+        if (this.isOicUser()) {
+            return [];
         }
 
         if (this.isFinalOrCompletedStatus()) {
