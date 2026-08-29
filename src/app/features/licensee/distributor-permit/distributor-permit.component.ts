@@ -442,14 +442,6 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   showBrandHistoryModal = false;
   selectedBrandForHistory: any = null;
 
-  canUpdateBrandsArrival(rowOrApp: any): boolean {
-    if (!this.isOicDistributorUser && !this.isOfficerUser) return false;
-    const app = rowOrApp?.application || rowOrApp;
-    if (!app) return false;
-    const isPaid = app?.is_excise_duty_fee_paid || rowOrApp?.paymentStatus === 'Paid' || String(app?.status || '').toLowerCase().includes('approved') || String(app?.status || '').toLowerCase().includes('paid');
-    return isPaid;
-  }
-
   loadBrandWarehouseStock(): void {
     this.isLoadingBrandWarehouse = true;
     this.permitService.getImflBrandWarehouseSummary()
@@ -478,6 +470,18 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     });
   }
 
+  openBrandWarehouseHistory(brand: any): void {
+    this.selectedBrandForHistory = brand;
+    this.showBrandHistoryModal = true;
+    this.cdr.detectChanges();
+  }
+
+  closeBrandWarehouseHistory(): void {
+    this.showBrandHistoryModal = false;
+    this.selectedBrandForHistory = null;
+    this.cdr.detectChanges();
+  }
+
   getPackSizeKeys(packSizes: any): string[] {
     if (!packSizes) return [];
     return Object.keys(packSizes);
@@ -499,10 +503,57 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return 12;
   }
 
+  canUpdateBrandsArrival(rowOrApp: any): boolean {
+    if (!this.isOicDistributorUser && !this.isOfficerUser) return false;
+    const app = rowOrApp?.application || rowOrApp;
+    if (!app) return false;
+    const isPaid = Boolean(
+      app?.is_excise_duty_fee_paid ||
+      app?.isExciseDutyFeePaid ||
+      rowOrApp?.paymentStatus === 'Paid' ||
+      rowOrApp?.payment_status === 'Paid' ||
+      rowOrApp?.payment_status === 'completed' ||
+      String(app?.status || '').toLowerCase().includes('payslip') ||
+      String(app?.status || '').toLowerCase().includes('approved') ||
+      String(app?.status || '').toLowerCase().includes('arrival') ||
+      String(app?.status || '').toLowerCase().includes('paid') ||
+      Number(app?.current_stage_id || app?.current_stage?.id || 0) === 156
+    );
+    return isPaid;
+  }
+
+  getVehicleNumberForRow(row: any): string {
+    const arrivalItem = this.getArrivalItemForRow(row);
+    if (arrivalItem?.vehicle_number) return arrivalItem.vehicle_number;
+    if (arrivalItem?.vehicleNumber) return arrivalItem.vehicleNumber;
+
+    const app = row?.application || row;
+    if (app?.vehicle_number) return app.vehicle_number;
+    if (app?.vehicleNumber) return app.vehicleNumber;
+    if (row?.vehicleNumber) return row.vehicleNumber;
+    if (row?.vehicle_number) return row.vehicle_number;
+
+    const routeStr = String(app?.route_details || app?.routeDetails || row?.route_details || row?.routeDetails || '');
+    if (routeStr) {
+      const match = routeStr.match(/Vehicle:\s*([^|]+)/i);
+      if (match && match[1]?.trim()) {
+        return match[1].trim();
+      }
+    }
+    return '';
+  }
+
   openUpdateBrandsArrivalModal(rowOrApp: any): void {
     const app = rowOrApp?.application || rowOrApp || {};
     this.arrivalModalData = app;
-    this.arrivalCommonVehicle = app?.route_details || app?.vehicle_number || app?.vehicleNumber || '';
+    let veh = app?.vehicle_number || app?.vehicleNumber || rowOrApp?.vehicleNumber || rowOrApp?.vehicle_number || '';
+    if (!veh && (app?.route_details || app?.routeDetails)) {
+      const match = String(app.route_details || app.routeDetails).match(/Vehicle:\s*([^|]+)/i);
+      if (match && match[1]?.trim()) {
+        veh = match[1].trim();
+      }
+    }
+    this.arrivalCommonVehicle = veh;
     this.arrivalCommonDate = this.todayIso();
     this.arrivalCommonRemarks = '';
     
@@ -512,25 +563,29 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     
     const itemsToProcess: any[] = [];
     if (Array.isArray(details) && details.length > 0) {
-      details.forEach((d: any, idx: number) => {
-        const size = Number(d.size_ml || d.pack_size || 750);
-        const pieces = Number(d.pieces_per_case || d.bottles_per_case || this.getPiecesInCase(size));
-        const expCases = Number(d.cases || d.expected_cases || 0);
-        const expBottles = Number(d.bottles || d.expected_bottles || (expCases * pieces));
-        itemsToProcess.push({
-          permit_number: d.permit_number || `${app.reference_no || app.referenceNo || 'IMFLREQ'}-P${idx + 1}`,
-          brand_name: d.brand_name || d.brandName || app.brand_name || 'IMFL Brand',
-          brand_type: d.brand_type || d.liquor_type || 'WHISKY',
-          supplier_name: d.supplier_name || app.supplier_company_name || app.supplierCompanyName || 'N/A',
-          pack_size: size,
-          pieces_per_case: pieces,
-          expected_cases: expCases,
-          expected_bottles: expBottles,
-          arrived_cases: expCases,
-          arrived_bottles: expBottles,
-          vehicle_number: d.vehicle_number || this.arrivalCommonVehicle,
-          batch_number: '',
-          remarks: ''
+      details.forEach((d: any, pIdx: number) => {
+        const permitNo = d.permit_number || `${app.reference_no || app.referenceNo || 'IMFLREQ'}-P${pIdx + 1}`;
+        const subItems = (Array.isArray(d.line_items) && d.line_items.length > 0) ? d.line_items : ((Array.isArray(d.items) && d.items.length > 0) ? d.items : [d]);
+        subItems.forEach((sub: any) => {
+          const size = Number(sub.size_ml || sub.pack_size || d.size_ml || 750);
+          const pieces = Number(sub.pieces_per_case || sub.bottles_per_case || this.getPiecesInCase(size));
+          const expCases = Number(sub.cases || sub.expected_cases || d.cases || d.total_cases || 0);
+          const expBottles = Number(sub.bottles || sub.expected_bottles || (expCases * pieces));
+          itemsToProcess.push({
+            permit_number: sub.permit_number || permitNo,
+            brand_name: sub.brand_name || sub.brandName || d.brand_name || app.brand_name || 'IMFL Brand',
+            brand_type: sub.brand_type || d.brand_type || 'WHISKY',
+            supplier_name: app.supplier_company_name || app.supplierCompanyName || d.supplier_name || 'N/A',
+            pack_size: size,
+            pieces_per_case: pieces,
+            expected_cases: expCases,
+            expected_bottles: expBottles,
+            arrived_cases: expCases,
+            arrived_bottles: expBottles,
+            vehicle_number: this.arrivalCommonVehicle,
+            batch_number: '',
+            remarks: ''
+          });
         });
       });
     } else if (Array.isArray(lineItems) && lineItems.length > 0) {
@@ -579,7 +634,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
     this.arrivalBrandItems = itemsToProcess;
     this.showUpdateArrivalModal = true;
-    this.cdr.markForCheck();
+    this.cdr.detectChanges();
   }
 
   onArrivedCasesChange(item: any): void {
@@ -3689,12 +3744,47 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       });
   }
 
+  executeDirectForcePay(item?: any): void {
+    const app = item || this.selectedApplication;
+    if (!app) return;
+
+    const appId = app.id || app.referenceNo || app.reference_no;
+    this.unifiedActionsService.executeAction(
+      'FORCE_PAY',
+      { referenceNo: appId, id: appId } as any,
+      'requisition',
+      this.detailActionContext
+    ).subscribe({
+      next: (res: any) => {
+        void Swal.fire({
+          title: 'Force Pay Successful',
+          text: res?.message || 'Payment force-completed without wallet deduction. Application moved to next stage.',
+          icon: 'success'
+        });
+        this.loadApplications();
+        this.sidebarPendingBadgeService.triggerRefresh();
+        this.clearSelectedApplication();
+      },
+      error: (err: any) => {
+        void Swal.fire({
+          title: 'Force Pay Failed',
+          text: err?.error?.detail || err?.error?.message || 'Failed to execute force pay.',
+          icon: 'error'
+        });
+      }
+    });
+  }
+
   onModalActionClicked(event: { action: string; item: ActionItem }): void {
     if (!event?.action || !event?.item) {
       return;
     }
 
     if (event.action === 'PAY' || event.action === 'FORCE_PAY') {
+      if (event.action === 'FORCE_PAY') {
+        this.executeDirectForcePay(event.item);
+        return;
+      }
       this.openPaymentConfirmationModal(event.item);
       return;
     }

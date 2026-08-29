@@ -294,8 +294,8 @@
                     <small class="text-muted d-block" *ngIf="row.supplierName">Supplier: {{ row.supplierName }}</small>
                   </td>
                   <td>
-                    <div *ngIf="getArrivalItemForRow(row)?.vehicle_number; else noOfficerVehicle">
-                      <span class="fw-bold text-dark"><i class="bi bi-truck me-1"></i>{{ getArrivalItemForRow(row)?.vehicle_number }}</span>
+                    <div *ngIf="getVehicleNumberForRow(row); else noOfficerVehicle">
+                      <span class="fw-bold text-dark"><i class="bi bi-truck me-1"></i>{{ getVehicleNumberForRow(row) }}</span>
                     </div>
                     <ng-template #noOfficerVehicle>
                       <span class="text-muted small">N/A (Pending Arrival)</span>

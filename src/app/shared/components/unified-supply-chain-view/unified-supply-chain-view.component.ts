@@ -1930,6 +1930,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
         if (action === 'PAY' || action === 'FORCE_PAY') {
             if (this.isImflRequisition()) {
+                if (action === 'FORCE_PAY') {
+                    this.executeDirectForcePay(event.item);
+                    return;
+                }
                 this.openImflPaymentConfirmationModal(event.item);
                 return;
             }
@@ -5084,6 +5088,32 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             error: (err) => {
                 this.isSubmittingPayment = false;
                 this.snackBar.open(err?.error?.detail || err?.error?.message || 'Failed to complete payment for IMFL Requisition', 'Close', { duration: 4000 });
+                this.cdr.detectChanges();
+            }
+        });
+    }
+
+    executeDirectForcePay(item?: any): void {
+        const app = item || this.applicationData;
+        if (!app) return;
+
+        const appId = app.id || app.referenceNo || app.reference_no || this.getWorkflowApplicationId(app);
+        this.snackBar.open('Executing Force Pay (testing mode)...', '', { duration: 1500 });
+
+        this.http.post<any>(
+            `${environment.apiBaseUrl}/transactional/distributor-permit/${encodeURIComponent(appId)}/perform-action/`,
+            { action: 'FORCE_PAY' }
+        ).subscribe({
+            next: (res) => {
+                this.snackBar.open(res.message || 'Force payment successful! Application moved to next stage.', 'Close', { duration: 4000 });
+                this.distributorPermitService.clearCache();
+                this.sidebarPendingBadgeService.triggerRefresh();
+                const currentRef = app.referenceNo || app.reference_no || appId;
+                this.loadApplicationData(currentRef, appId);
+                this.cdr.detectChanges();
+            },
+            error: (err) => {
+                this.snackBar.open(err?.error?.detail || err?.error?.message || 'Failed to force pay for IMFL Requisition', 'Close', { duration: 4000 });
                 this.cdr.detectChanges();
             }
         });
