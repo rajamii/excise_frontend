@@ -546,90 +546,126 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   openUpdateBrandsArrivalModal(rowOrApp: any): void {
     const app = rowOrApp?.application || rowOrApp || {};
     this.arrivalModalData = app;
-    let veh = app?.vehicle_number || app?.vehicleNumber || rowOrApp?.vehicleNumber || rowOrApp?.vehicle_number || '';
-    if (!veh && (app?.route_details || app?.routeDetails)) {
-      const match = String(app.route_details || app.routeDetails).match(/Vehicle:\s*([^|]+)/i);
-      if (match && match[1]?.trim()) {
-        veh = match[1].trim();
-      }
-    }
+    let veh = this.getVehicleNumberForRow(rowOrApp) || app?.vehicle_number || app?.vehicleNumber || '';
     this.arrivalCommonVehicle = veh;
     this.arrivalCommonDate = this.todayIso();
     this.arrivalCommonRemarks = '';
     
-    // Extract line items or permit details
-    const details = app.permit_wise_details || app.permitWiseDetails || [];
-    const lineItems = app.line_items || app.lineItems || [];
+    // Extract permit details or line items
+    let details = app.permit_wise_details || app.permitWiseDetails || rowOrApp?.permit_wise_details || rowOrApp?.permitWiseDetails;
+    if (typeof details === 'string') {
+      try { details = JSON.parse(details); } catch(e) { details = []; }
+    }
+    let lineItems = app.line_items || app.lineItems || rowOrApp?.line_items || rowOrApp?.lineItems;
+    if (typeof lineItems === 'string') {
+      try { lineItems = JSON.parse(lineItems); } catch(e) { lineItems = []; }
+    }
     
     const itemsToProcess: any[] = [];
     if (Array.isArray(details) && details.length > 0) {
       details.forEach((d: any, pIdx: number) => {
         const permitNo = d.permit_number || `${app.reference_no || app.referenceNo || 'IMFLREQ'}-P${pIdx + 1}`;
-        const subItems = (Array.isArray(d.line_items) && d.line_items.length > 0) ? d.line_items : ((Array.isArray(d.items) && d.items.length > 0) ? d.items : [d]);
+        let subItems = d.line_items || d.items;
+        if (typeof subItems === 'string') {
+          try { subItems = JSON.parse(subItems); } catch(e) { subItems = []; }
+        }
+        if (!Array.isArray(subItems) || subItems.length === 0) {
+          subItems = [d];
+        }
         subItems.forEach((sub: any) => {
-          const size = Number(sub.size_ml || sub.pack_size || d.size_ml || 750);
-          const pieces = Number(sub.pieces_per_case || sub.bottles_per_case || this.getPiecesInCase(size));
-          const expCases = Number(sub.cases || sub.expected_cases || d.cases || d.total_cases || 0);
+          const size = Number(sub.size_ml || sub.pack_size || d.size_ml || d.pack_size || rowOrApp?.sizeMl || 750);
+          const pieces = Number(sub.pieces_per_case || sub.bottles_per_case || d.pieces_per_case || this.getPiecesInCase(size));
+          const expCases = Number(sub.cases || sub.expected_cases || d.cases || d.total_cases || rowOrApp?.cases || 0);
           const expBottles = Number(sub.bottles || sub.expected_bottles || (expCases * pieces));
-          itemsToProcess.push({
+          const brandName = sub.brand_name || sub.brandName || d.brand_name || rowOrApp?.brandName || app.brand_name || 'Corona Extra Premium Beer';
+          const brandType = sub.brand_type || d.brand_type || rowOrApp?.liquorType || (brandName.toLowerCase().includes('beer') ? 'BEER' : 'WHISKY');
+          const supplier = app.supplier_company_name || app.supplierCompanyName || rowOrApp?.supplierName || d.supplier_name || 'Corona Maharashtra';
+
+          const itemObj = {
             permit_number: sub.permit_number || permitNo,
-            brand_name: sub.brand_name || sub.brandName || d.brand_name || app.brand_name || 'IMFL Brand',
-            brand_type: sub.brand_type || d.brand_type || 'WHISKY',
-            supplier_name: app.supplier_company_name || app.supplierCompanyName || d.supplier_name || 'N/A',
+            brand_name: brandName,
+            brand_type: brandType,
+            supplier_name: supplier,
             pack_size: size,
             pieces_per_case: pieces,
             expected_cases: expCases,
             expected_bottles: expBottles,
             arrived_cases: expCases,
             arrived_bottles: expBottles,
+            damaged_bottles: 0,
+            damaged_cases: 0,
+            good_bottles: expBottles,
+            good_cases: expCases,
             vehicle_number: this.arrivalCommonVehicle,
             batch_number: '',
             remarks: ''
-          });
+          };
+          this.onArrivalItemCalculationsChange(itemObj);
+          itemsToProcess.push(itemObj);
         });
       });
     } else if (Array.isArray(lineItems) && lineItems.length > 0) {
       lineItems.forEach((l: any, idx: number) => {
-        const size = Number(l.size_ml || 750);
+        const size = Number(l.size_ml || l.pack_size || 750);
         const pieces = Number(l.pieces_per_case || this.getPiecesInCase(size));
-        const expCases = Number(l.cases || 1);
-        const expBottles = Number(expCases * pieces);
-        itemsToProcess.push({
+        const expCases = Number(l.cases || l.expected_cases || 1);
+        const expBottles = Number(l.bottles || expCases * pieces);
+        const brandName = l.brand_name || l.brandName || 'Corona Extra Premium Beer';
+        const brandType = l.brand_type || (brandName.toLowerCase().includes('beer') ? 'BEER' : 'WHISKY');
+        const supplier = app.supplier_company_name || app.supplierCompanyName || rowOrApp?.supplierName || 'Corona Maharashtra';
+
+        const itemObj = {
           permit_number: l.permit_number || `${app.reference_no || app.referenceNo || 'IMFLREQ'}-P${idx + 1}`,
-          brand_name: l.brand_name || 'IMFL Brand',
-          brand_type: l.brand_type || 'WHISKY',
-          supplier_name: app.supplier_company_name || app.supplierCompanyName || 'N/A',
+          brand_name: brandName,
+          brand_type: brandType,
+          supplier_name: supplier,
           pack_size: size,
           pieces_per_case: pieces,
           expected_cases: expCases,
           expected_bottles: expBottles,
           arrived_cases: expCases,
           arrived_bottles: expBottles,
+          damaged_bottles: 0,
+          damaged_cases: 0,
+          good_bottles: expBottles,
+          good_cases: expCases,
           vehicle_number: this.arrivalCommonVehicle,
           batch_number: '',
           remarks: ''
-        });
+        };
+        this.onArrivalItemCalculationsChange(itemObj);
+        itemsToProcess.push(itemObj);
       });
     } else {
       // Fallback single item
       const size = Number(rowOrApp?.sizeMl || 750);
       const pieces = this.getPiecesInCase(size);
       const expCases = Number(rowOrApp?.cases || 1);
-      itemsToProcess.push({
-        permit_number: app.reference_no || app.referenceNo || 'IMFLREQ/2026-27/0001-P1',
-        brand_name: rowOrApp?.brandName || app.brand_name || 'IMFL Brand',
-        brand_type: 'WHISKY',
-        supplier_name: app.supplier_company_name || 'N/A',
+      const brandName = rowOrApp?.brandName || app.brand_name || 'Corona Extra Premium Beer';
+      const brandType = brandName.toLowerCase().includes('beer') ? 'BEER' : 'WHISKY';
+      const supplier = app.supplier_company_name || rowOrApp?.supplierName || 'Corona Maharashtra';
+
+      const itemObj = {
+        permit_number: app.reference_no || app.referenceNo || 'IMFLREQ/2026-27/0003-P1',
+        brand_name: brandName,
+        brand_type: brandType,
+        supplier_name: supplier,
         pack_size: size,
         pieces_per_case: pieces,
         expected_cases: expCases,
         expected_bottles: expCases * pieces,
         arrived_cases: expCases,
         arrived_bottles: expCases * pieces,
+        damaged_bottles: 0,
+        damaged_cases: 0,
+        good_bottles: expCases * pieces,
+        good_cases: expCases,
         vehicle_number: this.arrivalCommonVehicle,
         batch_number: '',
         remarks: ''
-      });
+      };
+      this.onArrivalItemCalculationsChange(itemObj);
+      itemsToProcess.push(itemObj);
     }
 
     this.arrivalBrandItems = itemsToProcess;
@@ -637,15 +673,27 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  onArrivedCasesChange(item: any): void {
-    if (item.arrived_cases === null || item.arrived_cases === undefined) {
-      item.arrived_cases = 0;
-    }
-    item.arrived_bottles = Number(item.arrived_cases) * Number(item.pieces_per_case || 12);
+  onArrivalItemCalculationsChange(item: any): void {
+    const pieces = Number(item.pieces_per_case || 12);
+    const arrCases = Math.max(0, Number(item.arrived_cases || 0));
+    item.arrived_cases = arrCases;
+    item.arrived_bottles = arrCases * pieces;
+
+    const damBottles = Math.max(0, Number(item.damaged_bottles || 0));
+    item.damaged_bottles = damBottles;
+    item.damaged_cases = Math.floor(damBottles / pieces);
+
+    const goodBottles = Math.max(0, item.arrived_bottles - damBottles);
+    item.good_bottles = goodBottles;
+    item.good_cases = Math.floor(goodBottles / pieces);
   }
 
   get totalArrivalExpectedCases(): number {
     return (this.arrivalBrandItems || []).reduce((sum, it) => sum + (Number(it.expected_cases) || 0), 0);
+  }
+
+  get totalArrivalExpectedBottles(): number {
+    return (this.arrivalBrandItems || []).reduce((sum, it) => sum + (Number(it.expected_bottles) || 0), 0);
   }
 
   get totalArrivalArrivedCases(): number {
@@ -654,6 +702,18 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   get totalArrivalArrivedBottles(): number {
     return (this.arrivalBrandItems || []).reduce((sum, it) => sum + (Number(it.arrived_bottles) || 0), 0);
+  }
+
+  get totalArrivalDamagedBottles(): number {
+    return (this.arrivalBrandItems || []).reduce((sum, it) => sum + (Number(it.damaged_bottles) || 0), 0);
+  }
+
+  get totalArrivalGoodBottles(): number {
+    return (this.arrivalBrandItems || []).reduce((sum, it) => sum + (Number(it.good_bottles) || 0), 0);
+  }
+
+  get totalArrivalGoodCases(): number {
+    return (this.arrivalBrandItems || []).reduce((sum, it) => sum + (Number(it.good_cases) || 0), 0);
   }
 
   closeUpdateArrivalModal(): void {
@@ -690,6 +750,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         expected_bottles: it.expected_bottles,
         arrived_cases: it.arrived_cases,
         arrived_bottles: it.arrived_bottles,
+        damaged_bottles: it.damaged_bottles || 0,
+        damaged_cases: it.damaged_cases || 0,
+        good_bottles: it.good_bottles || 0,
+        good_cases: it.good_cases || 0,
         vehicle_number: it.vehicle_number || this.arrivalCommonVehicle,
         batch_number: it.batch_number,
         remarks: it.remarks || this.arrivalCommonRemarks

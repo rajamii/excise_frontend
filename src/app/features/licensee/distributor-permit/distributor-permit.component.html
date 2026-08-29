@@ -3095,17 +3095,22 @@
             <table class="table table-bordered align-middle mb-0">
               <thead class="table-light small fw-bold text-uppercase">
                 <tr>
-                  <th style="width: 45px;" class="text-center">#</th>
-                  <th>Permit No.</th>
-                  <th>Brand Name & Size</th>
+                  <th style="width: 40px;" class="text-center">#</th>
+                  <th style="min-width: 140px;">Permit No.</th>
+                  <th style="min-width: 180px;">Brand Name & Size</th>
                   <th class="text-center" style="width: 120px;">Expected Cases</th>
-                  <th class="text-center" style="width: 150px;">
+                  <th class="text-center" style="width: 130px;">
                     <span class="text-primary fw-bold">Boxes Reached (Cases)</span>
                   </th>
-                  <th class="text-center" style="width: 110px;">Bottles / Case</th>
-                  <th class="text-center" style="width: 130px;">Total Bottles</th>
-                  <th style="width: 140px;">Batch No.</th>
-                  <th>Item Remarks</th>
+                  <th class="text-center" style="width: 80px;">Btls / Case</th>
+                  <th class="text-center" style="width: 120px;">
+                    <span class="text-danger fw-bold">Damaged Bottles</span>
+                  </th>
+                  <th class="text-center" style="width: 140px;">
+                    <span class="text-success fw-bold">Good / Stock Bottles</span>
+                  </th>
+                  <th style="width: 120px;">Batch No.</th>
+                  <th style="min-width: 140px;">Item Remarks</th>
                 </tr>
               </thead>
               <tbody>
@@ -3118,12 +3123,12 @@
                     <div class="fw-bold text-dark">{{ item.brand_name }}</div>
                     <div class="d-flex align-items-center gap-1 mt-1">
                       <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25">{{ item.pack_size }}ml</span>
-                      <small class="text-muted">{{ item.brand_type }}</small>
+                      <span class="badge bg-light text-secondary border">{{ item.brand_type }}</span>
                     </div>
                   </td>
                   <td class="text-center">
                     <span class="badge bg-secondary px-2 py-1">{{ item.expected_cases }} Cases</span>
-                    <small class="d-block text-muted">({{ item.expected_bottles }} btls)</small>
+                    <small class="d-block text-muted mt-1">({{ item.expected_bottles }} btls)</small>
                   </td>
                   <td class="text-center bg-blue-50">
                     <input
@@ -3131,19 +3136,28 @@
                       min="0"
                       class="form-control form-control-sm text-center fw-bold border-primary"
                       [(ngModel)]="item.arrived_cases"
-                      (ngModelChange)="onArrivedCasesChange(item)"
+                      (ngModelChange)="onArrivalItemCalculationsChange(item)"
                     />
                   </td>
                   <td class="text-center">
                     <span class="badge bg-light text-dark border">{{ item.pieces_per_case }}</span>
                   </td>
-                  <td class="text-center">
+                  <td class="text-center" style="background-color: #fff1f2;">
                     <input
                       type="number"
                       min="0"
-                      class="form-control form-control-sm text-center fw-bold"
-                      [(ngModel)]="item.arrived_bottles"
+                      class="form-control form-control-sm text-center fw-bold border-danger text-danger"
+                      [(ngModel)]="item.damaged_bottles"
+                      (ngModelChange)="onArrivalItemCalculationsChange(item)"
+                      placeholder="0"
                     />
+                    <small class="d-block text-danger opacity-75 mt-1" *ngIf="item.damaged_cases > 0">
+                      ({{ item.damaged_cases }} cases eq.)
+                    </small>
+                  </td>
+                  <td class="text-center" style="background-color: #f0fdf4;">
+                    <div class="fw-bold text-success fs-6">{{ item.good_bottles }} btls</div>
+                    <small class="d-block text-muted">({{ item.good_cases }} Cases)</small>
                   </td>
                   <td>
                     <input
@@ -3166,10 +3180,17 @@
               <tfoot class="table-light fw-bold">
                 <tr>
                   <td colspan="3" class="text-end">TOTALS:</td>
-                  <td class="text-center">{{ totalArrivalExpectedCases }} Cases</td>
+                  <td class="text-center">
+                    <div>{{ totalArrivalExpectedCases }} Cases</div>
+                    <small class="text-muted fw-normal">({{ totalArrivalExpectedBottles }} btls)</small>
+                  </td>
                   <td class="text-center text-primary fs-6">{{ totalArrivalArrivedCases }} Cases</td>
                   <td></td>
-                  <td class="text-center text-success fs-6">{{ totalArrivalArrivedBottles }} Bottles</td>
+                  <td class="text-center text-danger fs-6">{{ totalArrivalDamagedBottles }} Btls</td>
+                  <td class="text-center text-success fs-6">
+                    <div>{{ totalArrivalGoodBottles }} Btls</div>
+                    <small class="text-muted fw-normal">({{ totalArrivalGoodCases }} Cases)</small>
+                  </td>
                   <td colspan="2"></td>
                 </tr>
               </tfoot>
