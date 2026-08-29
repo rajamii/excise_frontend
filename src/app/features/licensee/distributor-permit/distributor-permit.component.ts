@@ -278,7 +278,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         );
       } else if (this.activeTab === 'brand-arrival') {
         // Only paid / approved requisition entries ready for brand arrival recording
-        const isPaid = (row as any).is_excise_duty_fee_paid || (row as any).paymentStatus === 'Paid' || row.application?.['is_excise_duty_fee_paid'] || row.application?.['payment_status'] === 'completed' || row.application?.['payment_status'] === 'Paid' || this.isApproved(row);
+        const isPaid = this.canUpdateBrandsArrival(row);
         return (
           !ref.startsWith('IMFLREV') &&
           !ref.startsWith('IMFLCAN') &&
@@ -4381,6 +4381,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.rebuildRows();
     this.autoSelectDefaultStatusFilter();
     this.applyFilters();
+    this.sidebarPendingBadgeService.triggerRefresh();
     const refParam = this.route.snapshot.queryParams['ref'] || this.route.snapshot.queryParams['id'];
     if (refParam) {
       this.openRefWhenApplicationsLoaded(String(refParam));

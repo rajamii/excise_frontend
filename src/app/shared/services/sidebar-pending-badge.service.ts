@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, forkJoin, of, Subject } from 'rxjs';
-import { catchError, map, tap, shareReplay } from 'rxjs/operators';
+import { catchError, map, tap, shareReplay, switchMap } from 'rxjs/operators';
 
 import { EnaRequisitionService } from '../../core/services/ena-requisition.service';
 import { SupplyChainService } from '../../features/licensee/supplyChain/services/supplychain.service';
@@ -200,30 +200,58 @@ export class SidebarPendingBadgeService {
   }
 
   private fetchDistributorPermitDashboardCounts(
-    tab: 'requisition' | 'revalidation' | 'cancellation',
+    tab: 'requisition' | 'revalidation' | 'cancellation' | 'brand-arrival',
     audience: BadgeAudience,
     force = false
   ): Observable<{ total: number; payment: number }> {
     return this.distributorPermitService.getDashboardCounts(tab, force).pipe(
-      map((counts) => {
+      switchMap((counts: any) => {
         const pending = Number(counts?.pending || 0);
-        if (audience !== 'licensee') return { total: pending, payment: 0 };
-
-        const objection = Number(counts?.objection || 0);
-        const awaitingPayment = Number(counts?.awaitingPayment ?? counts?.awaiting_payment ?? 0);
-        return { total: awaitingPayment + objection, payment: awaitingPayment };
+        if (pending > 0) {
+          if (audience !== 'licensee') return of({ total: pending, payment: 0 });
+          const objection = Number(counts?.objection || 0);
+          const awaitingPayment = Number(counts?.awaitingPayment ?? counts?.awaiting_payment ?? 0);
+          return of({ total: awaitingPayment + objection, payment: awaitingPayment });
+        }
+        return this.distributorPermitService.listApplications().pipe(
+          map((apps) => {
+            const list = Array.isArray(apps) ? apps : [];
+            const directPending = list.filter((app: any) => {
+              return Boolean(
+                app?.is_excise_duty_fee_paid ||
+                app?.isExciseDutyFeePaid ||
+                String(app?.paymentStatus || '').toLowerCase() === 'paid' ||
+                String(app?.payment_status || '').toLowerCase() === 'paid' ||
+                String(app?.payment_status || '').toLowerCase() === 'completed' ||
+                String(app?.status || '').toLowerCase().includes('payslip') ||
+                String(app?.status || '').toLowerCase().includes('approved') ||
+                String(app?.status || '').toLowerCase().includes('arrival') ||
+                String(app?.status || '').toLowerCase().includes('paid') ||
+                Number(app?.current_stage_id || app?.current_stage?.id || 0) === 156
+              );
+            }).length;
+            return { total: directPending, payment: 0 };
+          }),
+          catchError(() => of({ total: 0, payment: 0 }))
+        );
       }),
       catchError(() => of({ total: 0, payment: 0 }))
     );
   }
 
-  private mapDistributorPermitBadgeTab(section: string): 'requisition' | 'revalidation' | 'cancellation' | null {
+  private mapDistributorPermitBadgeTab(section: string): 'requisition' | 'revalidation' | 'cancellation' | 'brand-arrival' | null {
     switch (section) {
       case 'distributor-permit':
       case 'imfl-permit':
       case 'distributor-permit-requisition':
       case 'imfl-requisition':
         return 'requisition';
+      case 'imfl-requisition-cases':
+      case 'distributor-permit-brand-arrival':
+      case 'imfl-brand-arrival':
+      case 'brand-arrival':
+      case 'update-brands-arrival':
+        return 'brand-arrival';
       case 'distributor-permit-revalidation':
       case 'imfl-revalidation':
         return 'revalidation';
@@ -273,13 +301,13 @@ export class SidebarPendingBadgeService {
         return this.fetchDistributorPermitDashboardCounts('requisition', audience).pipe(map(d => d.total));
 
       case 'imfl-requisition-cases':
-        return this.distributorPermitService.getCasesProcessed().pipe(
-          map((items: any) => {
-            const list = Array.isArray(items) ? items : (items?.results || []);
-            return list.filter((c: any) => String(c.status).toLowerCase() === 'under_review').length;
-          }),
-          catchError(() => of(0))
-        );
+        return this.fetchDistributorPermitDashboardCounts('brand-arrival', audience).pipe(map(d => d.total));
+
+      case 'distributor-permit-brand-arrival':
+      case 'imfl-brand-arrival':
+      case 'brand-arrival':
+      case 'update-brands-arrival':
+        return this.fetchDistributorPermitDashboardCounts('brand-arrival', audience).pipe(map(d => d.total));
 
       case 'distributor-permit-revalidation':
       case 'imfl-revalidation':

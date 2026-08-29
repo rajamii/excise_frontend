@@ -586,9 +586,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (isOIC) {
       if (this.isDistributorOic()) {
         this.availableChartModules = [
-          { value: 'distributor-permit-requisition', label: 'IMFL Requisition Cases' }
+          { value: 'all', label: 'All Modules' },
+          { value: 'distributor-permit-requisition', label: 'IMFL Requisition Cases' },
+          { value: 'distributor-permit-brand-arrival', label: 'Update Brands Arrival' }
         ];
-        this.selectedChartModule = 'distributor-permit-requisition';
+        this.selectedChartModule = 'all';
         return;
       }
 
@@ -829,13 +831,16 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const distCan$ = shouldLoadDistributorPermitCounts
       ? this.distributorPermitService.getDashboardCounts('cancellation').pipe(catchError(() => of(null)))
       : of(null as any);
+    const distArr$ = shouldLoadDistributorPermitCounts
+      ? this.distributorPermitService.getDashboardCounts('brand-arrival').pipe(catchError(() => of(null)))
+      : of(null as any);
 
-    forkJoin({ req: req$, rev: rev$, can: can$, tra: tra$, hol: hol$, comp: comp$, collab: collab$, bld: bld$, holReq: holReq$, distReq: distReq$, distRev: distRev$, distCan: distCan$ })
+    forkJoin({ req: req$, rev: rev$, can: can$, tra: tra$, hol: hol$, comp: comp$, collab: collab$, bld: bld$, holReq: holReq$, distReq: distReq$, distRev: distRev$, distCan: distCan$, distArr: distArr$ })
       .pipe(
         takeUntil(this.destroy$),
         finalize(() => onComplete?.())
       )
-      .subscribe(({ req, rev, can, tra, hol, comp, collab, bld, holReq, distReq, distRev, distCan }) => {
+      .subscribe(({ req, rev, can, tra, hol, comp, collab, bld, holReq, distReq, distRev, distCan, distArr }) => {
 
         // ── REQUISITIONS ──────────────────────────────────────────────────────
         {
@@ -1110,11 +1115,13 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           const reqStats = toDashboardCount(distReq);
           const revStats = toDashboardCount(distRev);
           const canStats = toDashboardCount(distCan);
+          const arrStats = toDashboardCount(distArr);
 
           this.supplyChainModuleCounts['distributor-permit'] = reqStats;
           this.supplyChainModuleCounts['distributor-permit-requisition'] = reqStats;
           this.supplyChainModuleCounts['distributor-permit-revalidation'] = revStats;
           this.supplyChainModuleCounts['distributor-permit-cancellation'] = canStats;
+          this.supplyChainModuleCounts['distributor-permit-brand-arrival'] = arrStats;
 
           // Set sidebar badge count for IMFL permit modules from cached dashboard counts.
           if (this.isDistributorUser()) {
@@ -1122,11 +1129,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             this.supplyChainPendingCounts['distributor-permit-requisition'] = reqStats.pending;
             this.supplyChainPendingCounts['distributor-permit-revalidation'] = revStats.pending;
             this.supplyChainPendingCounts['distributor-permit-cancellation'] = canStats.pending;
+            this.supplyChainPendingCounts['distributor-permit-brand-arrival'] = arrStats.pending;
           } else {
             this.supplyChainPendingCounts['distributor-permit'] = reqStats.pending + (reqStats.objection ?? 0);
             this.supplyChainPendingCounts['distributor-permit-requisition'] = reqStats.pending + (reqStats.objection ?? 0);
+            this.supplyChainPendingCounts['imfl-requisition-cases'] = reqStats.pending || arrStats.pending;
             this.supplyChainPendingCounts['distributor-permit-revalidation'] = revStats.pending + (revStats.objection ?? 0);
             this.supplyChainPendingCounts['distributor-permit-cancellation'] = canStats.pending + (canStats.objection ?? 0);
+            this.supplyChainPendingCounts['distributor-permit-brand-arrival'] = arrStats.pending;
           }
         }
 
@@ -2723,7 +2733,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const roleId = this.getCurrentRoleId();
     if (roleId === 4 || roleId === 8 || roleId === 9) return 0;
     if (this.isDistributorOic()) {
-      return this.getSupplyChainPendingCount('distributor-permit-requisition');
+      return this.getSupplyChainPendingCount('distributor-permit-requisition') +
+             this.getSupplyChainPendingCount('distributor-permit-brand-arrival');
     }
     if (this.isDistributorUser()) {
       return this.getSupplyChainPendingCount('distributor-permit-requisition') +
@@ -2742,6 +2753,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
            this.getSupplyChainPendingCount('distributor-permit-requisition') +
            this.getSupplyChainPendingCount('distributor-permit-revalidation') +
            this.getSupplyChainPendingCount('distributor-permit-cancellation') +
+           this.getSupplyChainPendingCount('distributor-permit-brand-arrival') +
            (isCommissioner ? 0 : this.getSupplyChainPendingCount('transit'));
   }
 
@@ -2765,6 +2777,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   getSupplyChainAppliedTotal(): number {
     const roleId = this.getCurrentRoleId();
     if (roleId === 4 || roleId === 8 || roleId === 9) return 0;
+    if (this.isDistributorOic()) {
+      return (this.supplyChainModuleCounts['distributor-permit-requisition']?.applied || 0) +
+             (this.supplyChainModuleCounts['distributor-permit-brand-arrival']?.applied || 0);
+    }
     if (this.isDistributorUser()) {
       return (this.supplyChainModuleCounts['distributor-permit-requisition']?.applied || 0) +
              (this.supplyChainModuleCounts['distributor-permit-revalidation']?.applied || 0) +
@@ -2776,7 +2792,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     const isCommissioner = this.isCommissionerUser();
     const modules = ['requisition', 'revalidation', 'cancellation', 'hologram',
-                     'distributor-permit-requisition', 'distributor-permit-revalidation', 'distributor-permit-cancellation'];
+                     'distributor-permit-requisition', 'distributor-permit-revalidation', 'distributor-permit-cancellation', 'distributor-permit-brand-arrival'];
     if (!isCommissioner) {
       modules.push('transit');
     }
@@ -2786,6 +2802,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   getSupplyChainApprovedTotal(): number {
     const roleId = this.getCurrentRoleId();
     if (roleId === 4 || roleId === 8 || roleId === 9) return 0;
+    if (this.isDistributorOic()) {
+      return (this.supplyChainModuleCounts['distributor-permit-requisition']?.approved || 0) +
+             (this.supplyChainModuleCounts['distributor-permit-brand-arrival']?.approved || 0);
+    }
     if (this.isDistributorUser()) {
       return (this.supplyChainModuleCounts['distributor-permit-requisition']?.approved || 0) +
              (this.supplyChainModuleCounts['distributor-permit-revalidation']?.approved || 0) +
@@ -2797,7 +2817,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     const isCommissioner = this.isCommissionerUser();
     const approvedModules = ['requisition', 'revalidation', 'cancellation', 'hologram',
-                             'distributor-permit-requisition', 'distributor-permit-revalidation', 'distributor-permit-cancellation'];
+                             'distributor-permit-requisition', 'distributor-permit-revalidation', 'distributor-permit-cancellation', 'distributor-permit-brand-arrival'];
     if (!isCommissioner) {
       approvedModules.push('transit');
     }
@@ -2807,6 +2827,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   getSupplyChainRejectedTotal(): number {
     const roleId = this.getCurrentRoleId();
     if (roleId === 4 || roleId === 8 || roleId === 9) return 0;
+    if (this.isDistributorOic()) {
+      return (this.supplyChainModuleCounts['distributor-permit-requisition']?.rejected || 0) +
+             (this.supplyChainModuleCounts['distributor-permit-brand-arrival']?.rejected || 0);
+    }
     if (this.isDistributorUser()) {
       return (this.supplyChainModuleCounts['distributor-permit-requisition']?.rejected || 0) +
              (this.supplyChainModuleCounts['distributor-permit-revalidation']?.rejected || 0) +
@@ -2818,7 +2842,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     const isCommissioner = this.isCommissionerUser();
     const rejectedModules = ['requisition', 'revalidation', 'cancellation', 'hologram',
-                             'distributor-permit-requisition', 'distributor-permit-revalidation', 'distributor-permit-cancellation'];
+                             'distributor-permit-requisition', 'distributor-permit-revalidation', 'distributor-permit-cancellation', 'distributor-permit-brand-arrival'];
     if (!isCommissioner) {
       rejectedModules.push('transit');
     }
@@ -2828,6 +2852,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   getSupplyChainObjectionTotal(): number {
     const roleId = this.getCurrentRoleId();
     if (roleId === 4 || roleId === 8 || roleId === 9) return 0;
+    if (this.isDistributorOic()) {
+      return (this.supplyChainModuleCounts['distributor-permit-requisition']?.objection || 0) +
+             (this.supplyChainModuleCounts['distributor-permit-brand-arrival']?.objection || 0);
+    }
     if (this.isDistributorUser()) {
       return (this.supplyChainModuleCounts['distributor-permit-requisition']?.objection || 0) +
              (this.supplyChainModuleCounts['distributor-permit-revalidation']?.objection || 0) +
@@ -2839,7 +2867,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     const isCommissioner = this.isCommissionerUser();
     const objectionModules = ['requisition', 'revalidation', 'cancellation', 'hologram',
-                              'distributor-permit-requisition', 'distributor-permit-revalidation', 'distributor-permit-cancellation'];
+                              'distributor-permit-requisition', 'distributor-permit-revalidation', 'distributor-permit-cancellation', 'distributor-permit-brand-arrival'];
     if (!isCommissioner) {
       objectionModules.push('transit');
     }

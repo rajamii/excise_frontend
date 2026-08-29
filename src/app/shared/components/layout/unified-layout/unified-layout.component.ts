@@ -407,7 +407,26 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
   getPendingCount(section: string): number {
     const key = String(section || '').trim().toLowerCase();
-    return Number(this.pendingBadgeCounts?.[key] || 0);
+    const count = Number(this.pendingBadgeCounts?.[key] || 0);
+    if (count > 0) return count;
+    if (key === 'imfl-requisition-cases') {
+      return Number(
+        this.pendingBadgeCounts?.['distributor-permit-brand-arrival'] ||
+        this.pendingBadgeCounts?.['brand-arrival'] ||
+        this.pendingBadgeCounts?.['distributor-permit-requisition'] ||
+        this.pendingBadgeCounts?.['distributor-permit'] ||
+        0
+      );
+    }
+    if (key === 'distributor-permit-brand-arrival' || key === 'brand-arrival') {
+      return Number(
+        this.pendingBadgeCounts?.['imfl-requisition-cases'] ||
+        this.pendingBadgeCounts?.['distributor-permit-brand-arrival'] ||
+        this.pendingBadgeCounts?.['brand-arrival'] ||
+        0
+      );
+    }
+    return count;
   }
 
   imflPermitExpanded = false;

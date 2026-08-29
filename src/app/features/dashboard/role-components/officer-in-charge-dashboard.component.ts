@@ -318,13 +318,33 @@ export class OfficerInChargeDashboardComponent implements OnInit {
   }
 
   private loadImflCasesPendingCount(): void {
-    this.distributorPermitService.getCasesProcessed().subscribe({
+    this.distributorPermitService.getDashboardCounts('brand-arrival').subscribe({
       next: (res: any) => {
-        const list = Array.isArray(res) ? res : (res?.results || []);
-        this.imflCasesPendingCount = list.filter((c: any) => String(c.status).toLowerCase() === 'under_review').length;
+        this.imflCasesPendingCount = Number(res?.pending || 0);
       },
       error: () => {
-        this.imflCasesPendingCount = 0;
+        this.distributorPermitService.listApplications().subscribe({
+          next: (apps: any[]) => {
+            const list = Array.isArray(apps) ? apps : [];
+            this.imflCasesPendingCount = list.filter((app: any) => {
+              return Boolean(
+                app?.is_excise_duty_fee_paid ||
+                app?.isExciseDutyFeePaid ||
+                String(app?.paymentStatus || '').toLowerCase() === 'paid' ||
+                String(app?.payment_status || '').toLowerCase() === 'paid' ||
+                String(app?.payment_status || '').toLowerCase() === 'completed' ||
+                String(app?.status || '').toLowerCase().includes('payslip') ||
+                String(app?.status || '').toLowerCase().includes('approved') ||
+                String(app?.status || '').toLowerCase().includes('arrival') ||
+                String(app?.status || '').toLowerCase().includes('paid') ||
+                Number(app?.current_stage_id || app?.current_stage?.id || 0) === 156
+              );
+            }).length;
+          },
+          error: () => {
+            this.imflCasesPendingCount = 0;
+          }
+        });
       }
     });
   }
