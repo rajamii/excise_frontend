@@ -3219,7 +3219,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
     const supplier = this.supplierForm.getRawValue();
     const route = this.routeForm.getRawValue();
-    const selectedSupplierId = this.supplierForm.get('supplierId')?.value;
+    const selectedSupplierId = supplier.selectedSupplierId || this.supplierForm.get('selectedSupplierId')?.value;
     const matchedSupplier = this.suppliers.find((s) => String(s.id) === String(selectedSupplierId));
     const selectedSupplierLabel = matchedSupplier
       ? (matchedSupplier.supplier_master_name || matchedSupplier.supplierMasterName || matchedSupplier.supplier_name || matchedSupplier.company_name || '')
@@ -4058,29 +4058,32 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   get applicantSummaryRows(): Array<{ label: string; value: string }> {
+    const raw = this.applicantForm.getRawValue();
     return [
-      { label: 'Applicant Company', value: String(this.applicantForm.value.applicantCompanyName || '-') },
-      { label: 'Authorized Signatory', value: String(this.applicantForm.value.authorizedSignatory || '-') },
-      { label: 'Application Date', value: this.formatDateInput(String(this.applicantForm.value.applicationDate || '')) },
-      { label: 'Addressed To', value: String(this.applicantForm.value.addressedTo || '-') }
+      { label: 'Applicant Company', value: String(raw.applicantCompanyName || '-') },
+      { label: 'Authorized Signatory', value: String(raw.authorizedSignatory || '-') },
+      { label: 'Application Date', value: this.formatDateInput(String(raw.applicationDate || '')) },
+      { label: 'Addressed To', value: String(raw.addressedTo || '-') }
     ];
   }
 
   get supplierSummaryRows(): Array<{ label: string; value: string }> {
+    const raw = this.supplierForm.getRawValue();
     return [
-      { label: 'Supplier Company', value: String(this.supplierForm.value.supplierCompanyName || '-') },
-      { label: 'C/O Logistics Partner', value: String(this.supplierForm.value.logisticsPartner || '-') },
-      { label: 'Source Address', value: String(this.supplierForm.value.sourceAddress || '-') }
+      { label: 'Supplier Company', value: String(raw.supplierCompanyName || '-') },
+      { label: 'C/O Logistics Partner', value: String(raw.logisticsPartner || '-') },
+      { label: 'Source Address', value: String(raw.sourceAddress || '-') }
     ];
   }
 
   get routeSummaryRows(): Array<{ label: string; value: string }> {
+    const raw = this.routeForm.getRawValue();
     return [
-      { label: 'Origin', value: String(this.routeForm.getRawValue().origin || '-') },
-      { label: 'Destination', value: String(this.routeForm.getRawValue().destination || '-') },
-      { label: 'Mode of Transport', value: String(this.routeForm.value.transportMode || '-') },
-      { label: 'Vehicle / Container', value: String(this.routeForm.value.vehicleNumber || '-') },
-      { label: 'Route Details', value: String(this.routeForm.value.routeDetails || '-') }
+      { label: 'Origin', value: String(raw.origin || '-') },
+      { label: 'Destination', value: String(raw.destination || '-') },
+      { label: 'Mode of Transport', value: String(raw.transportMode || '-') },
+      { label: 'Vehicle / Container', value: String(raw.vehicleNumber || '-') },
+      { label: 'Route Details', value: String(raw.routeDetails || '-') }
     ];
   }
 
@@ -4338,6 +4341,16 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       this.routeForm.controls.destination.setValue(destAddress, { emitEvent: false });
       this.routeForm.controls.destination.disable({ emitEvent: false });
 
+      const origin = this.routeForm.getRawValue().origin || '';
+      const currentRoute = this.routeForm.getRawValue().routeDetails || '';
+      if (!currentRoute || currentRoute.startsWith('Via Road')) {
+        if (origin) {
+          this.routeForm.controls.routeDetails.setValue(`Via Road Transport from ${origin} to ${destAddress} via Rangpo/Melli Checkpost`, { emitEvent: false });
+        } else {
+          this.routeForm.controls.routeDetails.setValue(`Via Road Transport to ${destAddress}`, { emitEvent: false });
+        }
+      }
+
       // Disable Step 1 controls to make Step 1 completely uneditable
       this.applicantForm.disable({ emitEvent: false });
     };
@@ -4407,13 +4420,21 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.supplierForm.controls.supplierCompanyName.disable({ emitEvent: false });
     this.supplierForm.controls.sourceAddress.disable({ emitEvent: false });
 
-    const routeText = (supplier as any).route_details || (supplier as any).routeDetails || '';
+    const origin = supplier.address || '';
+    const dest = this.routeForm.getRawValue().destination || 'Excise Warehouse / Bonded Warehouse, Rangpo, East Sikkim';
+    let routeText = (supplier as any).route_details || (supplier as any).routeDetails || (supplier as any).route || '';
+    if (!routeText && origin) {
+      routeText = `Via Road Transport from ${origin} to ${dest} via Rangpo/Melli Checkpost`;
+    } else if (!routeText) {
+      routeText = `Via Road Transport to ${dest}`;
+    }
+
     this.routeForm.patchValue({
-      origin: supplier.address || '',
+      origin: origin,
       routeDetails: routeText
     }, { emitEvent: false });
     this.routeForm.controls.origin.disable({ emitEvent: false });
-    this.routeForm.controls.routeDetails.disable({ emitEvent: false });
+    this.routeForm.controls.routeDetails.enable({ emitEvent: false });
     this.routeForm.controls.transportMode.setValue('Road', { emitEvent: false });
     this.routeForm.controls.transportMode.disable({ emitEvent: false });
 
