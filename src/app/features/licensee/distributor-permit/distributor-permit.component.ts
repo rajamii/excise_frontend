@@ -449,6 +449,49 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   showBrandHistoryModal = false;
   selectedBrandForHistory: any = null;
 
+  // --- Arrival & Utilized Modals State ---
+  showArrivalDetailsModal = false;
+  selectedBrandForArrival: any = null;
+
+  showUtilizedDetailsModal = false;
+  selectedBrandForUtilized: any = null;
+
+  // --- Dispatch to Retailer Modal State ---
+  showDispatchModal = false;
+  isSubmittingDispatch = false;
+  dispatchForm = this.getInitialDispatchForm();
+
+  getInitialDispatchForm() {
+    return {
+      retailerName: '',
+      retailerLicenseNo: '',
+      retailerShopName: '',
+      retailerAddress: '',
+      retailerContact: '',
+      brandName: '',
+      brandType: 'WHISKY',
+      supplierName: '',
+      packSize: 750,
+      piecesPerCase: 12,
+      dispatchedCases: 0,
+      dispatchedLooseBottles: 0,
+      dispatchedBottles: 0,
+      hologramRanges: [
+        { from: '', to: '', count: 0 }
+      ],
+      hologramFrom: '',
+      hologramTo: '',
+      hologramCount: 0,
+      batchNumber: '',
+      vehicleNumber: '',
+      driverName: '',
+      driverPhone: '',
+      challanNo: '',
+      dispatchDate: this.todayIso(),
+      remarks: ''
+    };
+  }
+
   computeHologramTo(fromStr: string, count: number): string {
     if (!fromStr || count <= 0) return '';
     const match = String(fromStr).trim().match(/^(.*?)(\d+)$/);
@@ -1326,6 +1369,55 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       remarks: e.remarks || ''
     }));
 
+    const dispatchHistoryRaw = b.dispatchHistory || b.dispatch_history || [];
+    const dispatchHistory = dispatchHistoryRaw.map((d: any) => ({
+      id: d.id,
+      dispatchReferenceNo: d.dispatchReferenceNo || d.dispatch_reference_no || '',
+      dispatch_reference_no: d.dispatchReferenceNo || d.dispatch_reference_no || '',
+      retailerName: d.retailerName || d.retailer_name || '',
+      retailer_name: d.retailerName || d.retailer_name || '',
+      retailerLicenseNo: d.retailerLicenseNo || d.retailer_license_no || '',
+      retailer_license_no: d.retailerLicenseNo || d.retailer_license_no || '',
+      retailerShopName: d.retailerShopName || d.retailer_shop_name || '',
+      retailer_shop_name: d.retailerShopName || d.retailer_shop_name || '',
+      retailerAddress: d.retailerAddress || d.retailer_address || '',
+      retailer_address: d.retailerAddress || d.retailer_address || '',
+      retailerContact: d.retailerContact || d.retailer_contact || '',
+      retailer_contact: d.retailerContact || d.retailer_contact || '',
+      packSize: Number(d.packSize || d.pack_size || 750),
+      pack_size: Number(d.packSize || d.pack_size || 750),
+      piecesPerCase: Number(d.piecesPerCase || d.pieces_per_case || 12),
+      pieces_per_case: Number(d.piecesPerCase || d.pieces_per_case || 12),
+      dispatchedCases: Number(d.dispatchedCases ?? d.dispatched_cases ?? 0),
+      dispatched_cases: Number(d.dispatchedCases ?? d.dispatched_cases ?? 0),
+      dispatchedLooseBottles: Number(d.dispatchedLooseBottles ?? d.dispatched_loose_bottles ?? 0),
+      dispatched_loose_bottles: Number(d.dispatchedLooseBottles ?? d.dispatched_loose_bottles ?? 0),
+      dispatchedBottles: Number(d.dispatchedBottles ?? d.dispatched_bottles ?? 0),
+      dispatched_bottles: Number(d.dispatchedBottles ?? d.dispatched_bottles ?? 0),
+      hologramFrom: String(d.hologramFrom || d.hologram_from || ''),
+      hologram_from: String(d.hologramFrom || d.hologram_from || ''),
+      hologramTo: String(d.hologramTo || d.hologram_to || ''),
+      hologram_to: String(d.hologramTo || d.hologram_to || ''),
+      hologramCount: Number(d.hologramCount ?? d.hologram_count ?? 0),
+      hologram_count: Number(d.hologramCount ?? d.hologram_count ?? 0),
+      batchNumber: String(d.batchNumber || d.batch_number || ''),
+      batch_number: String(d.batchNumber || d.batch_number || ''),
+      vehicleNumber: String(d.vehicleNumber || d.vehicle_number || ''),
+      vehicle_number: String(d.vehicleNumber || d.vehicle_number || ''),
+      driverName: String(d.driverName || d.driver_name || ''),
+      driver_name: String(d.driverName || d.driver_name || ''),
+      driverPhone: String(d.driverPhone || d.driver_phone || ''),
+      driver_phone: String(d.driverPhone || d.driver_phone || ''),
+      challanNo: String(d.challanNo || d.challan_no || ''),
+      challan_no: String(d.challanNo || d.challan_no || ''),
+      dispatchDate: d.dispatchDate || d.dispatch_date || '',
+      dispatch_date: d.dispatchDate || d.dispatch_date || '',
+      status: d.status || 'DISPATCHED',
+      remarks: d.remarks || ''
+    }));
+
+    const calculatedUtilized = dispatchHistory.reduce((sum: number, d: any) => sum + (Number(d.dispatchedBottles) || 0), 0) || totalUtilized;
+
     return {
       brandName,
       brand_name: brandName,
@@ -1335,8 +1427,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       brand_type: brandType,
       totalStock,
       total_stock: totalStock,
-      totalUtilized,
-      total_utilized: totalUtilized,
+      totalUtilized: calculatedUtilized,
+      total_utilized: calculatedUtilized,
       totalCapacity,
       total_capacity: totalCapacity,
       lastArrivalDate: b.lastArrivalDate || b.last_arrival_date,
@@ -1356,7 +1448,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       packSizes,
       pack_sizes: packSizes,
       recentEntries,
-      recent_entries: recentEntries
+      recent_entries: recentEntries,
+      dispatchHistory,
+      dispatch_history: dispatchHistory
     };
   }
 
@@ -1450,6 +1544,594 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.showBrandHistoryModal = false;
     this.selectedBrandForHistory = null;
     this.cdr.detectChanges();
+  }
+
+  openArrivalDetailsModal(brand: any): void {
+    this.selectedBrandForArrival = brand;
+    this.showArrivalDetailsModal = true;
+    this.cdr.detectChanges();
+  }
+
+  closeArrivalDetailsModal(): void {
+    this.showArrivalDetailsModal = false;
+    this.selectedBrandForArrival = null;
+    this.cdr.detectChanges();
+  }
+
+  openUtilizedDetailsModal(brand: any): void {
+    this.selectedBrandForUtilized = brand;
+    this.showUtilizedDetailsModal = true;
+    this.cdr.detectChanges();
+  }
+
+  closeUtilizedDetailsModal(): void {
+    this.showUtilizedDetailsModal = false;
+    this.selectedBrandForUtilized = null;
+    this.cdr.detectChanges();
+  }
+
+  openDispatchModal(brand?: any, packSizeKey?: any): void {
+    this.dispatchForm = this.getInitialDispatchForm();
+    if (brand) {
+      this.dispatchForm.brandName = brand.brandName || brand.brand_name || '';
+      this.dispatchForm.brandType = brand.brandType || brand.brand_type || 'WHISKY';
+      this.dispatchForm.supplierName = brand.supplierName || brand.supplier_name || '';
+      const pKeys = this.getPackSizeKeys(brand.packSizes || brand.pack_sizes);
+      if (packSizeKey && pKeys.includes(String(packSizeKey))) {
+        this.dispatchForm.packSize = Number(packSizeKey);
+      } else if (pKeys.length > 0) {
+        this.dispatchForm.packSize = Number(pKeys[0]);
+      }
+      this.onDispatchBrandChange();
+    } else if (this.brandWarehouseStocks && this.brandWarehouseStocks.length > 0) {
+      const firstBrand = this.brandWarehouseStocks[0];
+      this.dispatchForm.brandName = firstBrand.brandName || firstBrand.brand_name || '';
+      this.dispatchForm.brandType = firstBrand.brandType || firstBrand.brand_type || 'WHISKY';
+      this.dispatchForm.supplierName = firstBrand.supplierName || firstBrand.supplier_name || '';
+      const pKeys = this.getPackSizeKeys(firstBrand.packSizes || firstBrand.pack_sizes);
+      if (pKeys.length > 0) {
+        this.dispatchForm.packSize = Number(pKeys[0]);
+      }
+      this.onDispatchBrandChange();
+    }
+    this.showDispatchModal = true;
+    this.cdr.detectChanges();
+  }
+
+  closeDispatchModal(): void {
+    this.showDispatchModal = false;
+    this.isSubmittingDispatch = false;
+    this.cdr.detectChanges();
+  }
+
+  onDispatchBrandChange(): void {
+    const selectedBrand = (this.brandWarehouseStocks || []).find((b: any) =>
+      (b.brandName || b.brand_name || '').toLowerCase() === (this.dispatchForm.brandName || '').toLowerCase()
+    );
+    if (selectedBrand) {
+      this.dispatchForm.brandType = selectedBrand.brandType || selectedBrand.brand_type || 'WHISKY';
+      this.dispatchForm.supplierName = selectedBrand.supplierName || selectedBrand.supplier_name || '';
+      const pKeys = this.getPackSizeKeys(selectedBrand.packSizes || selectedBrand.pack_sizes);
+      if (!pKeys.includes(String(this.dispatchForm.packSize)) && pKeys.length > 0) {
+        this.dispatchForm.packSize = Number(pKeys[0]);
+      }
+      this.onDispatchPackSizeChange();
+    }
+  }
+
+  onDispatchPackSizeChange(): void {
+    const avail = this.getAvailableStockForDispatch(this.dispatchForm.brandName, this.dispatchForm.packSize);
+    this.dispatchForm.piecesPerCase = avail.pieces;
+    if (avail.cases > 0) {
+      this.dispatchForm.dispatchedCases = 1;
+      this.dispatchForm.dispatchedLooseBottles = 0;
+    } else {
+      this.dispatchForm.dispatchedCases = 0;
+      this.dispatchForm.dispatchedLooseBottles = Math.min(avail.units, 1);
+    }
+    this.onDispatchQuantityChange();
+  }
+
+  onDispatchQuantityChange(): void {
+    const avail = this.getAvailableStockForDispatch(this.dispatchForm.brandName, this.dispatchForm.packSize);
+    const pieces = Number(this.dispatchForm.piecesPerCase || 12);
+    
+    // Strict capping for dispatched cases
+    let cases = Number(this.dispatchForm.dispatchedCases || 0);
+    if (cases < 0) cases = 0;
+    if (cases > avail.cases) {
+      cases = avail.cases;
+      this.dispatchForm.dispatchedCases = cases;
+    }
+
+    // Strict capping for loose bottles
+    const maxPossibleLoose = Math.max(0, avail.units - (cases * pieces));
+    let loose = Number(this.dispatchForm.dispatchedLooseBottles || 0);
+    if (loose < 0) loose = 0;
+    if (loose > maxPossibleLoose) {
+      loose = maxPossibleLoose;
+      this.dispatchForm.dispatchedLooseBottles = loose;
+    }
+
+    const totalUnits = cases * pieces + loose;
+    this.dispatchForm.dispatchedBottles = totalUnits;
+    this.dispatchForm.hologramCount = totalUnits;
+
+    this.autoDistributeHologramRanges();
+  }
+
+  addHologramRangeRow(): void {
+    if (!this.dispatchForm.hologramRanges) {
+      this.dispatchForm.hologramRanges = [];
+    }
+    this.dispatchForm.hologramRanges.push({ from: '', to: '', count: 0 });
+    this.syncHologramRangesToMainFields();
+    this.cdr.detectChanges();
+  }
+
+  removeHologramRangeRow(index: number): void {
+    if (this.dispatchForm.hologramRanges && this.dispatchForm.hologramRanges.length > 1) {
+      this.dispatchForm.hologramRanges.splice(index, 1);
+      this.syncHologramRangesToMainFields();
+      this.cdr.detectChanges();
+    }
+  }
+
+  onHologramRangeRowChange(row: any): void {
+    const fStr = String(row.from || '').trim();
+    const tStr = String(row.to || '').trim();
+    const startNum = parseInt(fStr.match(/\d+$/)?.[0] || '0', 10);
+    const endNum = parseInt(tStr.match(/\d+$/)?.[0] || '0', 10);
+    
+    if (startNum > 0 && endNum >= startNum) {
+      row.count = endNum - startNum + 1;
+    } else if (startNum > 0 && Number(row.count) > 0) {
+      row.to = this.computeHologramTo(row.from, Number(row.count));
+    }
+    this.syncHologramRangesToMainFields();
+  }
+
+  syncHologramRangesToMainFields(): void {
+    const ranges = this.dispatchForm.hologramRanges || [];
+    const fromParts = ranges.map(r => r.from).filter(f => !!f);
+    const toParts = ranges.map(r => r.to).filter(t => !!t);
+    this.dispatchForm.hologramFrom = fromParts.join(', ');
+    this.dispatchForm.hologramTo = toParts.join(', ');
+    this.dispatchForm.hologramCount = ranges.reduce((sum, r) => sum + (Number(r.count) || 0), 0);
+    this.cdr.detectChanges();
+  }
+
+  autoDistributeHologramRanges(): void {
+    const needed = Number(this.dispatchForm.dispatchedBottles || 0);
+    if (needed <= 0) {
+      this.dispatchForm.hologramRanges = [{ from: '', to: '', count: 0 }];
+      this.syncHologramRangesToMainFields();
+      return;
+    }
+    const hgInfo = this.getHologramValidationInfo();
+    const availableNums = hgInfo.availableNums || [];
+    if (availableNums.length === 0) {
+      this.dispatchForm.hologramRanges = [{ from: '', to: '', count: needed }];
+      this.syncHologramRangesToMainFields();
+      return;
+    }
+
+    const takeNums = availableNums.slice(0, needed);
+    const newRanges: Array<{ from: string; to: string; count: number }> = [];
+    
+    let rangeStart = takeNums[0];
+    let prevNum = takeNums[0];
+    for (let i = 1; i < takeNums.length; i++) {
+      const cur = takeNums[i];
+      if (cur === prevNum + 1) {
+        prevNum = cur;
+      } else {
+        const count = prevNum - rangeStart + 1;
+        newRanges.push({ from: String(rangeStart), to: String(prevNum), count });
+        rangeStart = cur;
+        prevNum = cur;
+      }
+    }
+    const finalCount = prevNum - rangeStart + 1;
+    newRanges.push({ from: String(rangeStart), to: String(prevNum), count: finalCount });
+
+    this.dispatchForm.hologramRanges = newRanges;
+    this.syncHologramRangesToMainFields();
+  }
+
+  isRangeRowValid(row: any): { isValid: boolean; statusClass: string; errorMsg: string } {
+    const fStr = String(row.from || '').trim();
+    const tStr = String(row.to || '').trim();
+    if (!fStr || !tStr) {
+      return { isValid: false, statusClass: '', errorMsg: 'Enter Hologram Range' };
+    }
+    const startNum = parseInt(fStr.match(/\d+$/)?.[0] || '0', 10);
+    const endNum = parseInt(tStr.match(/\d+$/)?.[0] || '0', 10);
+    if (startNum <= 0 || endNum < startNum) {
+      return { isValid: false, statusClass: 'is-invalid border-danger bg-danger bg-opacity-10 text-danger', errorMsg: 'Invalid Hologram Range' };
+    }
+
+    const hgInfo = this.getHologramValidationInfo();
+    const availableSet = new Set(hgInfo.availableNums || []);
+    const damagedSet = new Set(hgInfo.damagedHologramNums || []);
+
+    const damagedInRow: number[] = [];
+    let allAvailable = true;
+
+    for (let i = startNum; i <= endNum; i++) {
+      if (damagedSet.has(i)) {
+        damagedInRow.push(i);
+      }
+      if (!availableSet.has(i)) {
+        allAvailable = false;
+      }
+    }
+
+    if (damagedInRow.length > 0) {
+      return {
+        isValid: false,
+        statusClass: 'is-invalid border-danger bg-danger bg-opacity-10 text-danger',
+        errorMsg: `HG ${damagedInRow.join(', ')} is Damaged`
+      };
+    }
+
+    if (!allAvailable) {
+      return {
+        isValid: false,
+        statusClass: 'is-invalid border-danger bg-danger bg-opacity-10 text-danger',
+        errorMsg: 'Range outside usable stock'
+      };
+    }
+
+    return {
+      isValid: true,
+      statusClass: 'is-valid border-success bg-success bg-opacity-10 text-success',
+      errorMsg: ''
+    };
+  }
+
+  isDispatchFormValid(): boolean {
+    if (!this.dispatchForm.retailerName?.trim()) return false;
+    if (!this.dispatchForm.brandName) return false;
+    const avail = this.getAvailableStockForDispatch(this.dispatchForm.brandName, this.dispatchForm.packSize);
+    const totalUnits = Number(this.dispatchForm.dispatchedBottles || 0);
+    if (totalUnits <= 0 || totalUnits > avail.units) return false;
+    if (Number(this.dispatchForm.dispatchedCases || 0) > avail.cases) return false;
+
+    const ranges = this.dispatchForm.hologramRanges || [];
+    if (ranges.length === 0) return false;
+
+    let totalHg = 0;
+    for (const r of ranges) {
+      const v = this.isRangeRowValid(r);
+      if (!v.isValid) return false;
+      totalHg += Number(r.count || 0);
+    }
+    return totalHg === totalUnits;
+  }
+
+  onDispatchHologramFromChange(): void {
+    if (this.dispatchForm.hologramFrom && this.dispatchForm.dispatchedBottles > 0) {
+      this.dispatchForm.hologramTo = this.computeHologramTo(this.dispatchForm.hologramFrom, this.dispatchForm.dispatchedBottles);
+    }
+  }
+
+  getAvailablePackSizesForSelectedBrand(): Array<{ packSize: number; currentStock: number; cases: number; label: string }> {
+    const selectedBrand = (this.brandWarehouseStocks || []).find((b: any) =>
+      (b.brandName || b.brand_name || '').toLowerCase() === (this.dispatchForm.brandName || '').toLowerCase()
+    );
+    if (!selectedBrand) return [];
+    const packSizes = selectedBrand.packSizes || selectedBrand.pack_sizes || {};
+    return Object.keys(packSizes).map((k) => {
+      const ps = packSizes[k];
+      const sizeNum = Number(ps.packSize ?? ps.pack_size ?? k);
+      const stock = Number(ps.currentStock ?? ps.current_stock ?? 0);
+      const pieces = Number(ps.piecesPerCase ?? ps.pieces_per_case ?? this.getPiecesInCase(sizeNum));
+      const cases = Math.floor(stock / (pieces || 12));
+      return {
+        packSize: sizeNum,
+        currentStock: stock,
+        cases,
+        label: `${sizeNum} ml (${stock} Units / ≈ ${cases} Cases)`
+      };
+    });
+  }
+
+  parseHologramNumbers(inputStr: string): number[] {
+    if (!inputStr) return [];
+    const result: number[] = [];
+    const parts = String(inputStr).split(/[\s,]+/);
+    for (const part of parts) {
+      const clean = part.trim();
+      if (!clean || clean.toLowerCase() === 'none' || clean === '-') continue;
+      if (clean.includes('-') || clean.includes('→') || clean.includes('to')) {
+        const rangeParts = clean.split(/[-→to]+/);
+        if (rangeParts.length === 2) {
+          const startMatch = rangeParts[0].trim().match(/\d+$/);
+          const endMatch = rangeParts[1].trim().match(/\d+$/);
+          if (startMatch && endMatch) {
+            const s = parseInt(startMatch[0], 10);
+            const e = parseInt(endMatch[0], 10);
+            const fromVal = Math.min(s, e);
+            const toVal = Math.max(s, e);
+            for (let i = fromVal; i <= toVal; i++) {
+              result.push(i);
+            }
+            continue;
+          }
+        }
+      }
+      const numMatch = clean.match(/\d+$/);
+      if (numMatch) {
+        result.push(parseInt(numMatch[0], 10));
+      }
+    }
+    return result;
+  }
+
+  getHologramValidationInfo(): {
+    arrivedRanges: Array<{ from: number; to: number; fromStr: string; toStr: string }>;
+    damagedHologramNums: number[];
+    dispatchedRanges: Array<{ from: number; to: number; fromStr: string; toStr: string }>;
+    availableRanges: Array<{ from: number; to: number; fromStr: string; toStr: string; count: number; label: string }>;
+    availableNums: number[];
+    hasDamageConflict: boolean;
+    hasRangeConflict: boolean;
+    hasDispatchedConflict: boolean;
+    conflictMessage: string;
+  } {
+    const selectedBrand = (this.brandWarehouseStocks || []).find((b: any) =>
+      (b.brandName || b.brand_name || '').toLowerCase() === (this.dispatchForm.brandName || '').toLowerCase()
+    );
+
+    const arrivedRanges: Array<{ from: number; to: number; fromStr: string; toStr: string }> = [];
+    const damagedHologramNums: number[] = [];
+    const dispatchedRanges: Array<{ from: number; to: number; fromStr: string; toStr: string }> = [];
+
+    if (selectedBrand) {
+      const entries = selectedBrand.recentEntries || selectedBrand.recent_entries || [];
+      entries.forEach((e: any) => {
+        const hgFrom = String(e.hologramFrom || e.hologram_from || '').trim();
+        const hgTo = String(e.hologramTo || e.hologram_to || '').trim();
+        const startNum = parseInt(hgFrom.match(/\d+$/)?.[0] || '0', 10);
+        const endNum = parseInt(hgTo.match(/\d+$/)?.[0] || '0', 10);
+        if (startNum > 0 && endNum >= startNum) {
+          arrivedRanges.push({ from: startNum, to: endNum, fromStr: hgFrom, toStr: hgTo });
+        }
+        const damHg = String(e.damagedHolograms || e.damaged_holograms || '');
+        const damCasesHg = String(e.damagedCasesHolograms || e.damaged_cases_holograms || '');
+        damagedHologramNums.push(...this.parseHologramNumbers(damHg));
+        damagedHologramNums.push(...this.parseHologramNumbers(damCasesHg));
+      });
+
+      const dispatches = selectedBrand.dispatchHistory || selectedBrand.dispatch_history || [];
+      dispatches.forEach((d: any) => {
+        const dFrom = String(d.hologramFrom || d.hologram_from || '').trim();
+        const dTo = String(d.hologramTo || d.hologram_to || '').trim();
+        const dStart = parseInt(dFrom.match(/\d+$/)?.[0] || '0', 10);
+        const dEnd = parseInt(dTo.match(/\d+$/)?.[0] || '0', 10);
+        if (dStart > 0 && dEnd >= dStart) {
+          dispatchedRanges.push({ from: dStart, to: dEnd, fromStr: dFrom, toStr: dTo });
+        }
+      });
+    }
+
+    const userFromStr = String(this.dispatchForm.hologramFrom || '').trim();
+    const userToStr = String(this.dispatchForm.hologramTo || '').trim();
+    const userStart = parseInt(userFromStr.match(/\d+$/)?.[0] || '0', 10);
+    const userEnd = parseInt(userToStr.match(/\d+$/)?.[0] || '0', 10);
+
+    let hasDamageConflict = false;
+    let hasRangeConflict = false;
+    let hasDispatchedConflict = false;
+    let conflictMessage = '';
+
+    if (userStart > 0 && userEnd >= userStart) {
+      // 1. Check if inside arrived warehouse range
+      const fitsInArrived = arrivedRanges.some(r => userStart >= r.from && userEnd <= r.to);
+      if (arrivedRanges.length > 0 && !fitsInArrived) {
+        hasRangeConflict = true;
+        const validRangesText = arrivedRanges.map(r => `${r.fromStr} → ${r.toStr}`).join(', ');
+        conflictMessage = `Entered hologram range (${userFromStr} → ${userToStr}) is outside arrived warehouse stock range (${validRangesText}).`;
+      }
+
+      // 2. Check if overlaps with damaged holograms
+      const overlappingDamaged: number[] = [];
+      for (let i = userStart; i <= userEnd; i++) {
+        if (damagedHologramNums.includes(i)) {
+          overlappingDamaged.push(i);
+        }
+      }
+      if (overlappingDamaged.length > 0) {
+        hasDamageConflict = true;
+        conflictMessage = `Hologram(s) ${overlappingDamaged.join(', ')} are recorded as DAMAGED and cannot be dispatched to retailer.`;
+      }
+
+      // 3. Check if already dispatched
+      const overlappingDispatched = dispatchedRanges.filter(d => (userStart <= d.to && userEnd >= d.from));
+      if (overlappingDispatched.length > 0) {
+        hasDispatchedConflict = true;
+        const dispText = overlappingDispatched.map(d => `${d.fromStr} → ${d.toStr}`).join(', ');
+        conflictMessage = `Hologram range overlaps with previously dispatched stock (${dispText}).`;
+      }
+    }
+
+    // Compute exact available numbers:
+    const allArrivedNums = new Set<number>();
+    arrivedRanges.forEach(r => {
+      for (let i = r.from; i <= r.to; i++) {
+        allArrivedNums.add(i);
+      }
+    });
+
+    const unavailableNums = new Set<number>();
+    damagedHologramNums.forEach(n => unavailableNums.add(n));
+    dispatchedRanges.forEach(d => {
+      for (let i = d.from; i <= d.to; i++) {
+        unavailableNums.add(i);
+      }
+    });
+
+    const availableNums: number[] = [];
+    allArrivedNums.forEach(n => {
+      if (!unavailableNums.has(n)) {
+        availableNums.push(n);
+      }
+    });
+    availableNums.sort((a, b) => a - b);
+
+    // Group contiguous available numbers into ranges
+    const availableRanges: Array<{ from: number; to: number; fromStr: string; toStr: string; count: number; label: string }> = [];
+    if (availableNums.length > 0) {
+      let rangeStart = availableNums[0];
+      let prevNum = availableNums[0];
+      for (let i = 1; i < availableNums.length; i++) {
+        const cur = availableNums[i];
+        if (cur === prevNum + 1) {
+          prevNum = cur;
+        } else {
+          const count = prevNum - rangeStart + 1;
+          availableRanges.push({
+            from: rangeStart,
+            to: prevNum,
+            fromStr: String(rangeStart),
+            toStr: String(prevNum),
+            count,
+            label: count === 1 ? `${rangeStart} (1 Bottle)` : `${rangeStart} → ${prevNum} (${count} Bottles)`
+          });
+          rangeStart = cur;
+          prevNum = cur;
+        }
+      }
+      const finalCount = prevNum - rangeStart + 1;
+      availableRanges.push({
+        from: rangeStart,
+        to: prevNum,
+        fromStr: String(rangeStart),
+        toStr: String(prevNum),
+        count: finalCount,
+        label: finalCount === 1 ? `${rangeStart} (1 Bottle)` : `${rangeStart} → ${prevNum} (${finalCount} Bottles)`
+      });
+    }
+
+    return {
+      arrivedRanges,
+      damagedHologramNums: Array.from(new Set(damagedHologramNums)),
+      dispatchedRanges,
+      availableRanges,
+      availableNums,
+      hasDamageConflict,
+      hasRangeConflict,
+      hasDispatchedConflict,
+      conflictMessage
+    };
+  }
+
+  selectAvailableHologramRange(range: any): void {
+    if (!range) return;
+    this.dispatchForm.hologramFrom = String(range.from);
+    this.onDispatchHologramFromChange();
+    this.cdr.detectChanges();
+  }
+
+  getAvailableStockForDispatch(brandName?: string, packSize?: number): { units: number; cases: number; pieces: number } {
+    const bName = (brandName || this.dispatchForm.brandName || '').toLowerCase().trim();
+    const pSize = Number(packSize || this.dispatchForm.packSize || 750);
+    const brand = (this.brandWarehouseStocks || []).find((b: any) =>
+      (b.brandName || b.brand_name || '').toLowerCase() === bName
+    );
+    if (!brand) return { units: 0, cases: 0, pieces: 12 };
+    const psObj = (brand.packSizes || brand.pack_sizes)?.[String(pSize)];
+    if (!psObj) return { units: 0, cases: 0, pieces: this.getPiecesInCase(pSize) };
+    const units = Number(psObj.currentStock ?? psObj.current_stock ?? 0);
+    const pieces = Number(psObj.piecesPerCase ?? psObj.pieces_per_case ?? this.getPiecesInCase(pSize));
+    const cases = Math.floor(units / (pieces || 12));
+    return { units, cases, pieces };
+  }
+
+  submitRetailerDispatch(): void {
+    if (!this.dispatchForm.retailerName?.trim()) {
+      alert('Please enter the Retailer Name.');
+      return;
+    }
+    if (!this.dispatchForm.brandName) {
+      alert('Please select a Brand.');
+      return;
+    }
+    const avail = this.getAvailableStockForDispatch(this.dispatchForm.brandName, this.dispatchForm.packSize);
+    const totalUnits = Number(this.dispatchForm.dispatchedBottles || 0);
+    if (totalUnits <= 0) {
+      alert('Dispatched quantity must be greater than 0.');
+      return;
+    }
+    if (totalUnits > avail.units) {
+      alert(`Cannot dispatch ${totalUnits} units. Only ${avail.units} units (${avail.cases} cases) available in warehouse.`);
+      return;
+    }
+
+    // Hologram validation check
+    const hgInfo = this.getHologramValidationInfo();
+    if (hgInfo.hasDamageConflict || hgInfo.hasRangeConflict || hgInfo.hasDispatchedConflict) {
+      if (typeof Swal !== 'undefined') {
+        Swal.fire('Invalid Hologram Range', hgInfo.conflictMessage, 'warning');
+      } else {
+        alert('Invalid Hologram Range: ' + hgInfo.conflictMessage);
+      }
+      return;
+    }
+
+    this.isSubmittingDispatch = true;
+    this.permitService.dispatchStockToRetailer({
+      retailer_name: this.dispatchForm.retailerName.trim(),
+      retailer_license_no: this.dispatchForm.retailerLicenseNo.trim(),
+      retailer_shop_name: this.dispatchForm.retailerShopName.trim(),
+      retailer_address: this.dispatchForm.retailerAddress.trim(),
+      retailer_contact: this.dispatchForm.retailerContact.trim(),
+      brand_name: this.dispatchForm.brandName,
+      brand_type: this.dispatchForm.brandType,
+      supplier_name: this.dispatchForm.supplierName,
+      pack_size: this.dispatchForm.packSize,
+      pieces_per_case: this.dispatchForm.piecesPerCase,
+      dispatched_cases: this.dispatchForm.dispatchedCases,
+      dispatched_loose_bottles: this.dispatchForm.dispatchedLooseBottles,
+      dispatched_bottles: totalUnits,
+      hologram_ranges: (this.dispatchForm.hologramRanges || []).map(r => ({
+        hologram_from: r.from.trim(),
+        hologram_to: r.to.trim(),
+        count: Number(r.count || 0)
+      })),
+      hologram_from: this.dispatchForm.hologramFrom.trim(),
+      hologram_to: this.dispatchForm.hologramTo.trim(),
+      hologram_count: Number(this.dispatchForm.hologramCount || totalUnits),
+      batch_number: this.dispatchForm.batchNumber.trim(),
+      vehicle_number: this.dispatchForm.vehicleNumber.trim(),
+      driver_name: this.dispatchForm.driverName.trim(),
+      driver_phone: this.dispatchForm.driverPhone.trim(),
+      challan_no: this.dispatchForm.challanNo.trim(),
+      dispatch_date: this.dispatchForm.dispatchDate,
+      remarks: this.dispatchForm.remarks.trim()
+    }).subscribe({
+      next: (res: any) => {
+        this.isSubmittingDispatch = false;
+        this.closeDispatchModal();
+        const msg = res?.message || 'Stock dispatched to retailer successfully.';
+        if (typeof Swal !== 'undefined') {
+          Swal.fire('Dispatch Completed', msg, 'success');
+        } else {
+          alert(msg);
+        }
+        this.loadBrandWarehouseStock();
+      },
+      error: (err: any) => {
+        this.isSubmittingDispatch = false;
+        const errMsg = err?.error?.error || err?.error?.message || err?.message || 'Server error';
+        if (typeof Swal !== 'undefined') {
+          Swal.fire('Dispatch Failed', errMsg, 'error');
+        } else {
+          alert('Failed to dispatch stock: ' + errMsg);
+        }
+      }
+    });
   }
 
   getPackSizeKeys(packSizes: any): string[] {

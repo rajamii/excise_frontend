@@ -196,5 +196,23 @@ export class DistributorPermitService {
   getImflBrandWarehouseSummary(): Observable<any> {
     return this.http.get<any>(`${this.baseUrl}/brand-warehouse/summary/?_t=${Date.now()}`);
   }
+
+  dispatchStockToRetailer(payload: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/retailer-stock/`, payload).pipe(
+      tap(() => this.clearCache())
+    );
+  }
+
+  getRetailerStockDispatches(params?: any): Observable<any> {
+    let httpParams = new HttpParams();
+    if (params) {
+      Object.keys(params).forEach((k) => {
+        if (params[k] !== undefined && params[k] !== null && params[k] !== '') {
+          httpParams = httpParams.set(k, params[k]);
+        }
+      });
+    }
+    return this.http.get<any>(`${this.baseUrl}/retailer-stock/`, { params: httpParams });
+  }
 }
 
