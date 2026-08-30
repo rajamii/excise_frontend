@@ -22,7 +22,7 @@
   <ng-container *ngIf="!isLoading">
 
     <!-- Shared Summary Stats Row & Filters (Visible for All Tabs) -->
-    <section class="registration-management-container" *ngIf="!isFormView">
+    <section class="registration-management-container" *ngIf="!isFormView && !isArrivalPageView">
       <div class="new-license-register-header">
         
         <!-- Statistics Row for Brand Warehouse Stock Register -->
@@ -3017,216 +3017,438 @@
 </div>
 
 <!-- ========================================== -->
-<!-- UPDATE BRANDS ARRIVAL MODAL (OIC WORKFLOW) -->
 <!-- ========================================== -->
-<div class="dp-modal-backdrop" *ngIf="showUpdateArrivalModal" (click)="closeUpdateArrivalModal()">
-  <div class="dp-modal-dialog dp-modal-dialog--xl" (click)="$event.stopPropagation()">
-    <div class="dp-modal-content">
-      
-      <!-- Modal Header -->
-      <div class="dp-modal-header d-flex justify-content-between align-items-center p-3 text-white" style="background: linear-gradient(135deg, #0f172a, #1e293b); border-radius: 8px 8px 0 0;">
-        <div class="d-flex align-items-center gap-2">
-          <i class="bi bi-boxes fs-4 text-warning"></i>
-          <div>
-            <h5 class="m-0 fw-bold">Update Brands & Cases Arrival</h5>
-            <small class="text-light opacity-75">
-              Requisition Ref: <span class="fw-bold text-warning">{{ arrivalModalData?.reference_no || arrivalModalData?.referenceNo || arrivalModalData?.id }}</span>
-              • Supplier: <span class="fw-bold">{{ arrivalModalData?.supplier_company_name || arrivalModalData?.supplierCompanyName || 'N/A' }}</span>
-            </small>
-          </div>
+<!-- UPDATE BRANDS ARRIVAL FULL PAGE (OIC WORKFLOW) -->
+<!-- ========================================== -->
+<section class="dp-arrival-page-container mt-3 px-2 pb-5" *ngIf="isArrivalPageView">
+  
+  <!-- Page Header & Action Bar -->
+  <div class="card border-0 shadow-sm rounded-3 mb-4 bg-white overflow-hidden">
+    <div class="p-3 text-white d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #0f172a, #1e293b);">
+      <div class="d-flex align-items-center gap-3">
+        <button type="button" class="btn btn-outline-light btn-sm px-3 d-flex align-items-center gap-1" (click)="closeUpdateArrivalModal()">
+          <i class="bi bi-arrow-left"></i> Back
+        </button>
+        <div>
+          <h4 class="m-0 fw-bold d-flex align-items-center gap-2">
+            <i class="bi bi-boxes text-warning"></i>
+            Update Brands & Cases Arrival Register
+          </h4>
+          <small class="text-light opacity-75">
+            Requisition Ref: <span class="fw-bold text-warning">{{ arrivalModalData?.reference_no || arrivalModalData?.referenceNo || arrivalModalData?.id }}</span>
+            • Supplier: <span class="fw-bold">{{ arrivalModalData?.supplier_company_name || arrivalModalData?.supplierCompanyName || 'Corona Maharashtra' }}</span>
+          </small>
         </div>
-        <button type="button" class="btn-close btn-close-white" (click)="closeUpdateArrivalModal()" aria-label="Close"></button>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 px-3 py-2">
+          <i class="bi bi-shield-check me-1"></i> OIC Verification Stage
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment & Route Verification Details Banner -->
+  <div class="card p-3 mb-3 border-0 shadow-sm rounded-3 bg-white">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-3 border-end">
+        <small class="text-muted text-uppercase fw-bold d-block" style="font-size: 11px;">Payment & Stage Verification</small>
+        <div class="d-flex align-items-center gap-2 mt-1">
+          <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">
+            <i class="bi bi-check-circle-fill me-1"></i> Fee Paid / Slip Verified
+          </span>
+        </div>
+        <small class="text-muted d-block mt-1">
+          Stage: <strong class="text-dark">Forwarded PaySlip Permit Section (156)</strong>
+        </small>
       </div>
 
-      <!-- Modal Body -->
-      <div class="dp-modal-body p-4 bg-light" style="max-height: 70vh; overflow-y: auto;">
-        
-        <!-- Top Metadata Row -->
-        <div class="card p-3 mb-3 border-0 shadow-sm rounded-3 bg-white">
-          <div class="row g-3">
-            <div class="col-md-4">
-              <label class="form-label small fw-bold text-muted">Vehicle Number</label>
-              <div class="input-group input-group-sm">
-                <span class="input-group-text"><i class="bi bi-truck"></i></span>
+      <div class="col-md-4 border-end">
+        <small class="text-muted text-uppercase fw-bold d-block" style="font-size: 11px;">Origin & Supplier Details</small>
+        <strong class="text-dark d-block mt-1">{{ arrivalModalData?.supplier_company_name || arrivalModalData?.supplierCompanyName || 'Corona Maharashtra' }}</strong>
+        <small class="text-muted text-truncate d-block" [title]="arrivalModalData?.source_address || arrivalModalData?.sourceAddress || ''">
+          {{ arrivalModalData?.source_address || arrivalModalData?.sourceAddress || 'Unit-Pals L-5, MIDC, Waluj, Chhatrapati sambhaji Nagar, Maharashtra – 431136.' }}
+        </small>
+      </div>
+
+      <div class="col-md-5">
+        <small class="text-muted text-uppercase fw-bold d-block" style="font-size: 11px;">Transit Route & Destination</small>
+        <div class="d-flex align-items-center gap-2 mt-1">
+          <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25">
+            <i class="bi bi-truck me-1"></i> Vehicle: {{ arrivalCommonVehicle || 'Not Set' }}
+          </span>
+          <span class="badge bg-secondary bg-opacity-10 text-secondary border">Road Transit</span>
+        </div>
+        <small class="text-muted text-truncate d-block mt-1" [title]="arrivalModalData?.route_details || arrivalModalData?.routeDetails || ''">
+          {{ arrivalModalData?.route_details || arrivalModalData?.routeDetails || 'Aurangabad-Nagpur-Deori-Sohela-Jamsola-Chichira-Siliguri,West Benga-NH10A-Gangtok, Sikkim' }}
+        </small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Inputs: Vehicle, Date, Remarks -->
+  <div class="card p-3 mb-3 border-0 shadow-sm rounded-3 bg-white">
+    <div class="row g-3">
+      <div class="col-md-3">
+        <label class="form-label small fw-bold text-muted">Arrival Vehicle Number</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text"><i class="bi bi-truck"></i></span>
+          <input
+            type="text"
+            class="form-control fw-bold"
+            placeholder="e.g. SK-01-AB-1234"
+            [(ngModel)]="arrivalCommonVehicle"
+          />
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label small fw-bold text-muted">
+          Arrival Date
+          <small class="text-primary" title="Cannot select dates prior to payment/permit issuance">(No Back-Dates)</small>
+        </label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text"><i class="bi bi-calendar-event"></i></span>
+          <input
+            type="date"
+            class="form-control fw-bold"
+            [min]="minArrivalDate"
+            [max]="todayIso()"
+            [(ngModel)]="arrivalCommonDate"
+          />
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label small fw-bold text-muted">Officer In-Charge Physical Verification Remarks</label>
+        <input
+          type="text"
+          class="form-control form-control-sm"
+          placeholder="e.g. Verified physically at warehouse gate; seals intact and stock verified."
+          [(ngModel)]="arrivalCommonRemarks"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- Brands, Cases, Holograms & Damage Entry Table (Full Width) -->
+  <div class="card border-0 shadow-sm rounded-3 bg-white overflow-hidden mb-3">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+      <h6 class="m-0 fw-bold text-dark">
+        <i class="bi bi-card-checklist text-primary me-2"></i>
+        Permit Brands, Boxes, Damaged Hologram Ranges & Net Stock Register
+      </h6>
+      <span class="badge bg-primary text-white">{{ arrivalBrandItems.length }} Brand Item(s)</span>
+    </div>
+    
+    <div class="table-responsive">
+      <table class="table table-bordered align-middle mb-0">
+        <thead class="table-light small fw-bold text-uppercase">
+          <tr>
+            <th style="width: 35px;" class="text-center">#</th>
+            <th style="min-width: 140px;">Permit No.</th>
+            <th style="min-width: 170px;">Brand Name & Size</th>
+            <th class="text-center" style="width: 110px;">Expected</th>
+            <th class="text-center" style="width: 130px;">
+              <span class="text-primary fw-bold">Boxes Reached (Cases)</span>
+            </th>
+            <th class="text-center" style="width: 70px;">Btls / Box</th>
+            <th class="text-center" style="min-width: 230px; background-color: #fff1f2;">
+              <span class="text-danger fw-bold">Damaged Cases HG Range (From → To)</span>
+            </th>
+            <th class="text-center" style="width: 95px;">
+              <span class="text-danger fw-bold">Damaged Loose Btls</span>
+            </th>
+            <th class="text-center" style="min-width: 240px; background-color: #fff1f2;">
+              <span class="text-danger fw-bold">Damaged Loose Btls HG Range (From → To)</span>
+            </th>
+            <th class="text-center" style="width: 130px; background-color: #f0fdf4;">
+              <span class="text-success fw-bold">Good / Stock</span>
+            </th>
+            <th style="min-width: 220px;">
+              <span class="text-indigo fw-bold">Arrived HG Range (From → To)</span>
+            </th>
+            <th style="min-width: 120px;">Item Remarks</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of arrivalBrandItems; let idx = index">
+            <td class="text-center fw-bold text-muted">{{ idx + 1 }}</td>
+            <td>
+              <span class="badge bg-slate-100 text-dark border font-monospace">{{ item.permit_number }}</span>
+            </td>
+            <td>
+              <div class="fw-bold text-dark">{{ item.brand_name }}</div>
+              <div class="d-flex align-items-center gap-1 mt-1">
+                <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25">{{ item.pack_size }}ml</span>
+                <span class="badge bg-light text-secondary border">{{ item.brand_type }}</span>
+              </div>
+            </td>
+            <td class="text-center">
+              <span class="badge bg-secondary px-2 py-1">{{ item.expected_cases }} Cases</span>
+              <small class="d-block text-muted mt-1">({{ item.expected_bottles }} btls)</small>
+            </td>
+            <td class="text-center bg-blue-50">
+              <input
+                type="number"
+                min="0"
+                [max]="item.expected_cases"
+                class="form-control form-control-sm text-center fw-bold border-primary"
+                [(ngModel)]="item.arrived_cases"
+                (ngModelChange)="onArrivalItemCalculationsChange(item)"
+              />
+              <small class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 d-block mt-1" *ngIf="item.damaged_cases > 0">
+                {{ item.damaged_cases }} Case(s) Missing/Damaged
+              </small>
+            </td>
+            <td class="text-center">
+              <span class="badge bg-light text-dark border">{{ item.pieces_per_case }}</span>
+            </td>
+            
+            <!-- Damaged Cases Hologram Range: From → To Inputs -->
+            <td style="background-color: #fff1f2;">
+              <div *ngIf="item.damaged_cases > 0">
+                <div class="d-flex align-items-center gap-1">
+                  <input
+                    type="text"
+                    class="form-control form-control-sm font-monospace text-danger border-danger"
+                    placeholder="From"
+                    [(ngModel)]="item.damaged_cases_hg_from"
+                    (ngModelChange)="onDamagedCasesHgFromChange(item)"
+                    style="width: 100px;"
+                  />
+                  <span class="text-danger fw-bold">→</span>
+                  <input
+                    type="text"
+                    class="form-control form-control-sm font-monospace text-danger bg-white border-danger"
+                    placeholder="To"
+                    [(ngModel)]="item.damaged_cases_hg_to"
+                    readonly
+                    style="width: 100px;"
+                  />
+                </div>
+                <small class="text-danger d-block mt-1 fw-bold" style="font-size: 11px;">
+                  <i class="bi bi-exclamation-octagon-fill me-1"></i> {{ item.damaged_cases }} Case(s) ({{ item.damaged_case_bottles }} btls)
+                </small>
+              </div>
+              <div *ngIf="!item.damaged_cases || item.damaged_cases === 0" class="text-center">
+                <span class="badge bg-light text-muted border">No Case Damage</span>
+              </div>
+            </td>
+
+            <!-- Damaged Loose Bottles -->
+            <td class="text-center" style="background-color: #fff1f2;">
+              <input
+                type="number"
+                min="0"
+                class="form-control form-control-sm text-center fw-bold border-danger text-danger"
+                [(ngModel)]="item.damaged_bottles"
+                (ngModelChange)="onArrivalItemCalculationsChange(item)"
+                placeholder="0"
+              />
+            </td>
+
+            <!-- Damaged Loose Bottles Hologram Range: Multiple From → To Inputs for each broken bottle -->
+            <td style="background-color: #fff1f2;">
+              <div *ngIf="item.damaged_bottles > 0" class="d-flex flex-column gap-1">
+                <div *ngFor="let r of item.damaged_bottle_ranges; let bIdx = index" class="d-flex align-items-center gap-1">
+                  <span class="text-danger small fw-bold" style="font-size: 10px; width: 16px;">#{{ bIdx + 1 }}</span>
+                  <input
+                    type="text"
+                    class="form-control form-control-sm font-monospace text-danger border-danger"
+                    placeholder="From"
+                    [(ngModel)]="r.from"
+                    (ngModelChange)="onDamagedBottleRangeFromChange(item, r)"
+                    style="width: 88px;"
+                  />
+                  <span class="text-danger fw-bold">→</span>
+                  <input
+                    type="text"
+                    class="form-control form-control-sm font-monospace text-danger border-danger"
+                    placeholder="To"
+                    [(ngModel)]="r.to"
+                    (ngModelChange)="formatDamagedBottleHolograms(item)"
+                    style="width: 88px;"
+                  />
+                </div>
+                <small class="text-danger d-block mt-1 fw-bold" style="font-size: 11px;">
+                  <i class="bi bi-tag-fill me-1"></i> {{ item.damaged_bottles }} Damaged Bottle(s)
+                </small>
+              </div>
+              <div *ngIf="!item.damaged_bottles || item.damaged_bottles === 0" class="text-center">
+                <span class="badge bg-light text-muted border">No Bottle Damage</span>
+              </div>
+            </td>
+
+            <!-- Good / Usable Stock -->
+            <td class="text-center" style="background-color: #f0fdf4;">
+              <div class="fw-bold text-success fs-6">{{ item.good_bottles }} btls</div>
+              <small class="d-block text-muted">
+                ({{ item.good_cases }} Cases <span *ngIf="item.good_loose_bottles > 0">+ {{ item.good_loose_bottles }} loose</span>)
+              </small>
+            </td>
+
+            <!-- Arrived Hologram Range: From → To Inputs -->
+            <td>
+              <div class="d-flex align-items-center gap-1">
                 <input
                   type="text"
-                  class="form-control"
-                  placeholder="e.g. SK-01-AB-1234"
-                  [(ngModel)]="arrivalCommonVehicle"
+                  class="form-control form-control-sm font-monospace"
+                  placeholder="From"
+                  [(ngModel)]="item.hologram_from"
+                  (ngModelChange)="calculateHologramRange(item)"
+                  style="width: 100px;"
                 />
-              </div>
-            </div>
-
-            <div class="col-md-4">
-              <label class="form-label small fw-bold text-muted">Arrival Date & Time</label>
-              <div class="input-group input-group-sm">
-                <span class="input-group-text"><i class="bi bi-calendar-event"></i></span>
+                <span class="text-muted">→</span>
                 <input
-                  type="date"
-                  class="form-control"
-                  [(ngModel)]="arrivalCommonDate"
+                  type="text"
+                  class="form-control form-control-sm font-monospace bg-light"
+                  placeholder="To"
+                  [(ngModel)]="item.hologram_to"
+                  readonly
+                  style="width: 100px;"
                 />
               </div>
-            </div>
+              <small class="text-muted d-block mt-1">
+                Arrived Count: <strong>{{ item.hologram_count || item.arrived_bottles }}</strong> Holograms
+              </small>
+            </td>
 
-            <div class="col-md-4">
-              <label class="form-label small fw-bold text-muted">Officer Remarks / Notes</label>
+            <!-- Item Remarks -->
+            <td>
               <input
                 type="text"
                 class="form-control form-control-sm"
-                placeholder="e.g. Verified physically at warehouse gate"
-                [(ngModel)]="arrivalCommonRemarks"
+                placeholder="Remarks"
+                [(ngModel)]="item.remarks"
               />
-            </div>
-          </div>
-        </div>
-
-        <!-- Brands & Cases Entry Table -->
-        <div class="card border-0 shadow-sm rounded-3 bg-white overflow-hidden">
-          <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
-            <h6 class="m-0 fw-bold text-dark">
-              <i class="bi bi-card-checklist text-primary me-2"></i>
-              Permit Brands & Arrived Boxes Entry (Boxes Reached)
-            </h6>
-            <span class="badge bg-primary text-white">{{ arrivalBrandItems.length }} Brand Item(s)</span>
-          </div>
-          
-          <div class="table-responsive">
-            <table class="table table-bordered align-middle mb-0">
-              <thead class="table-light small fw-bold text-uppercase">
-                <tr>
-                  <th style="width: 40px;" class="text-center">#</th>
-                  <th style="min-width: 140px;">Permit No.</th>
-                  <th style="min-width: 180px;">Brand Name & Size</th>
-                  <th class="text-center" style="width: 120px;">Expected Cases</th>
-                  <th class="text-center" style="width: 130px;">
-                    <span class="text-primary fw-bold">Boxes Reached (Cases)</span>
-                  </th>
-                  <th class="text-center" style="width: 80px;">Btls / Case</th>
-                  <th class="text-center" style="width: 120px;">
-                    <span class="text-danger fw-bold">Damaged Bottles</span>
-                  </th>
-                  <th class="text-center" style="width: 140px;">
-                    <span class="text-success fw-bold">Good / Stock Bottles</span>
-                  </th>
-                  <th style="width: 120px;">Batch No.</th>
-                  <th style="min-width: 140px;">Item Remarks</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let item of arrivalBrandItems; let idx = index">
-                  <td class="text-center fw-bold text-muted">{{ idx + 1 }}</td>
-                  <td>
-                    <span class="badge bg-slate-100 text-dark border font-monospace">{{ item.permit_number }}</span>
-                  </td>
-                  <td>
-                    <div class="fw-bold text-dark">{{ item.brand_name }}</div>
-                    <div class="d-flex align-items-center gap-1 mt-1">
-                      <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25">{{ item.pack_size }}ml</span>
-                      <span class="badge bg-light text-secondary border">{{ item.brand_type }}</span>
-                    </div>
-                  </td>
-                  <td class="text-center">
-                    <span class="badge bg-secondary px-2 py-1">{{ item.expected_cases }} Cases</span>
-                    <small class="d-block text-muted mt-1">({{ item.expected_bottles }} btls)</small>
-                  </td>
-                  <td class="text-center bg-blue-50">
-                    <input
-                      type="number"
-                      min="0"
-                      class="form-control form-control-sm text-center fw-bold border-primary"
-                      [(ngModel)]="item.arrived_cases"
-                      (ngModelChange)="onArrivalItemCalculationsChange(item)"
-                    />
-                  </td>
-                  <td class="text-center">
-                    <span class="badge bg-light text-dark border">{{ item.pieces_per_case }}</span>
-                  </td>
-                  <td class="text-center" style="background-color: #fff1f2;">
-                    <input
-                      type="number"
-                      min="0"
-                      class="form-control form-control-sm text-center fw-bold border-danger text-danger"
-                      [(ngModel)]="item.damaged_bottles"
-                      (ngModelChange)="onArrivalItemCalculationsChange(item)"
-                      placeholder="0"
-                    />
-                    <small class="d-block text-danger opacity-75 mt-1" *ngIf="item.damaged_cases > 0">
-                      ({{ item.damaged_cases }} cases eq.)
-                    </small>
-                  </td>
-                  <td class="text-center" style="background-color: #f0fdf4;">
-                    <div class="fw-bold text-success fs-6">{{ item.good_bottles }} btls</div>
-                    <small class="d-block text-muted">({{ item.good_cases }} Cases)</small>
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      class="form-control form-control-sm"
-                      placeholder="Batch #"
-                      [(ngModel)]="item.batch_number"
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      class="form-control form-control-sm"
-                      placeholder="Remarks"
-                      [(ngModel)]="item.remarks"
-                    />
-                  </td>
-                </tr>
-              </tbody>
-              <tfoot class="table-light fw-bold">
-                <tr>
-                  <td colspan="3" class="text-end">TOTALS:</td>
-                  <td class="text-center">
-                    <div>{{ totalArrivalExpectedCases }} Cases</div>
-                    <small class="text-muted fw-normal">({{ totalArrivalExpectedBottles }} btls)</small>
-                  </td>
-                  <td class="text-center text-primary fs-6">{{ totalArrivalArrivedCases }} Cases</td>
-                  <td></td>
-                  <td class="text-center text-danger fs-6">{{ totalArrivalDamagedBottles }} Btls</td>
-                  <td class="text-center text-success fs-6">
-                    <div>{{ totalArrivalGoodBottles }} Btls</div>
-                    <small class="text-muted fw-normal">({{ totalArrivalGoodCases }} Cases)</small>
-                  </td>
-                  <td colspan="2"></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Modal Footer -->
-      <div class="dp-modal-footer p-3 bg-white border-top d-flex justify-content-between align-items-center">
-        <div class="small text-muted">
-          <i class="bi bi-info-circle me-1"></i>
-          Saving will store all arrival records into <strong class="text-dark">imfl_brand_warehouse</strong> table and update real-time stock.
-        </div>
-        <div class="d-flex align-items-center gap-2">
-          <button type="button" class="btn btn-outline-secondary px-3" (click)="closeUpdateArrivalModal()" [disabled]="isSavingArrival">
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="btn btn-success px-4 fw-bold shadow-sm d-flex align-items-center gap-2"
-            (click)="saveBrandsArrival()"
-            [disabled]="isSavingArrival"
-            style="background: linear-gradient(135deg, #10b981, #059669); border: none;"
-          >
-            <i class="bi bi-check-circle-fill" *ngIf="!isSavingArrival"></i>
-            <span class="spinner-border spinner-border-sm" *ngIf="isSavingArrival"></span>
-            <span>{{ isSavingArrival ? 'Saving to Warehouse...' : 'Save & Update Warehouse Stock' }}</span>
-          </button>
-        </div>
-      </div>
-
+            </td>
+          </tr>
+        </tbody>
+        <tfoot class="table-light fw-bold">
+          <tr>
+            <td colspan="3" class="text-end">TOTALS:</td>
+            <td class="text-center">
+              <div>{{ totalArrivalExpectedCases }} Cases</div>
+              <small class="text-muted fw-normal">({{ totalArrivalExpectedBottles }} btls)</small>
+            </td>
+            <td class="text-center text-primary fs-6">{{ totalArrivalArrivedCases }} Cases</td>
+            <td></td>
+            <td class="text-center text-danger">
+              <span *ngIf="totalArrivalDamagedCases > 0">{{ totalArrivalDamagedCases }} Damaged Cases</span>
+              <span *ngIf="totalArrivalDamagedCases === 0" class="text-muted fw-normal">0 Cases</span>
+            </td>
+            <td class="text-center text-danger fs-6">{{ totalArrivalDamagedBottles }} Btls</td>
+            <td class="text-center text-danger">
+              <small *ngIf="totalArrivalTotalDamagedBottles > 0">Total {{ totalArrivalTotalDamagedBottles }} Damaged Btls</small>
+            </td>
+            <td class="text-center text-success fs-6">
+              <div>{{ totalArrivalGoodBottles }} Btls</div>
+              <small class="text-muted fw-normal">({{ totalArrivalGoodCases }} Cases)</small>
+            </td>
+            <td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
     </div>
   </div>
-</div>
+
+  <!-- Permit-Wise Arrival Summary Cards -->
+  <div class="card border-0 shadow-sm rounded-3 bg-white p-3 mb-4" *ngIf="permitWiseArrivalSummary.length > 0">
+    <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+      <i class="bi bi-journal-text text-success"></i>
+      Permit-Wise Consolidated Stock, Case Damage & Hologram Breakdown
+    </h6>
+    <div class="row g-3">
+      <div class="col-md-6 col-lg-4" *ngFor="let summary of permitWiseArrivalSummary">
+        <div class="border rounded-3 p-3 bg-light h-100">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <span class="badge bg-primary px-2 py-1 font-monospace">{{ summary.permit_number }}</span>
+            <span class="badge bg-success">{{ summary.good_bottles }} Usable Btls Added</span>
+          </div>
+          <div class="small text-muted mb-2">
+            Supplier: <strong class="text-dark">{{ summary.supplier_name }}</strong>
+          </div>
+          <div class="row g-2 mb-2 text-center small">
+            <div class="col-4">
+              <div class="bg-white p-1 rounded border">
+                <div class="text-muted" style="font-size: 10px;">ARRIVED</div>
+                <strong>{{ summary.arrived_cases }} C ({{ summary.arrived_bottles }} B)</strong>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="bg-white p-1 rounded border border-danger">
+                <div class="text-danger" style="font-size: 10px;">TOTAL DAMAGED</div>
+                <strong class="text-danger">{{ summary.total_damaged_bottles }} Btls</strong>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="bg-white p-1 rounded border border-success">
+                <div class="text-success" style="font-size: 10px;">STOCK ADDED</div>
+                <strong class="text-success">{{ summary.good_bottles }} Btls</strong>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Hologram Ranges in this Permit -->
+          <div class="small mt-2" *ngIf="summary.hologram_ranges?.length > 0">
+            <span class="text-muted fw-bold" style="font-size: 11px;">Arrived Hologram Ranges:</span>
+            <ul class="list-unstyled mb-1 mt-1 ps-2">
+              <li *ngFor="let hr of summary.hologram_ranges" class="font-monospace text-primary" style="font-size: 11px;">
+                <i class="bi bi-tag-fill me-1"></i> {{ hr }}
+              </li>
+            </ul>
+          </div>
+
+          <!-- Damaged Cases Holograms -->
+          <div class="small mt-1" *ngIf="summary.damaged_cases_holograms_list?.length > 0">
+            <span class="text-danger fw-bold" style="font-size: 11px;">Damaged / Missing Cases Holograms:</span>
+            <ul class="list-unstyled mb-1 mt-1 ps-2">
+              <li *ngFor="let dch of summary.damaged_cases_holograms_list" class="font-monospace text-danger" style="font-size: 11px;">
+                <i class="bi bi-box-seam me-1"></i> {{ dch }}
+              </li>
+            </ul>
+          </div>
+
+          <!-- Damaged Loose Bottles Holograms -->
+          <div class="small mt-1" *ngIf="summary.damaged_holograms_list?.length > 0">
+            <span class="text-danger fw-bold" style="font-size: 11px;">Damaged Loose Bottles Holograms:</span>
+            <ul class="list-unstyled mb-0 mt-1 ps-2">
+              <li *ngFor="let dh of summary.damaged_holograms_list" class="font-monospace text-danger" style="font-size: 11px;">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i> {{ dh }}
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page Bottom Actions Bar -->
+  <div class="card p-3 border-0 shadow-sm rounded-3 bg-white d-flex flex-row justify-content-between align-items-center">
+    <div class="small text-muted">
+      <i class="bi bi-info-circle me-1"></i>
+      Saving will store all arrival records, hologram ranges, and damage entries into <strong class="text-dark">imfl_arrival</strong> and update net usable stock in <strong class="text-dark">imfl_brand_warehouse</strong>.
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <button type="button" class="btn btn-outline-secondary px-4" (click)="closeUpdateArrivalModal()" [disabled]="isSavingArrival">
+        Cancel & Return
+      </button>
+      <button
+        type="button"
+        class="btn btn-success px-4 fw-bold shadow-sm d-flex align-items-center gap-2"
+        (click)="saveBrandsArrival()"
+        [disabled]="isSavingArrival"
+        style="background: linear-gradient(135deg, #10b981, #059669); border: none;"
+      >
+        <i class="bi bi-check-circle-fill" *ngIf="!isSavingArrival"></i>
+        <span class="spinner-border spinner-border-sm" *ngIf="isSavingArrival"></span>
+        Save & Update Warehouse Stock
+      </button>
+    </div>
+  </div>
+
+</section>
 
 <!-- ========================================== -->
 <!-- BRAND ARRIVAL HISTORY & DETAILS MODAL -->

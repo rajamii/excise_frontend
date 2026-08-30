@@ -429,7 +429,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return (this.brandWarehouseStocks || []).reduce((sum, b) => sum + (Number(b.total_utilized) || 0), 0);
   }
 
-  // --- Update Brands Arrival Modal State ---
+  // --- Update Brands Arrival Page State ---
+  isArrivalPageView = false;
   showUpdateArrivalModal = false;
   arrivalModalData: any = null;
   arrivalBrandItems: any[] = [];
@@ -441,6 +442,462 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   // --- Brand History Modal State ---
   showBrandHistoryModal = false;
   selectedBrandForHistory: any = null;
+
+  computeHologramTo(fromStr: string, count: number): string {
+    if (!fromStr || count <= 0) return '';
+    const match = String(fromStr).trim().match(/^(.*?)(\d+)$/);
+    if (!match) return fromStr;
+    const prefix = match[1];
+    const numStr = match[2];
+    const startNum = parseInt(numStr, 10);
+    const endNum = startNum + count - 1;
+    return `${prefix}${String(endNum).padStart(numStr.length, '0')}`;
+  }
+
+  computeNextHologram(toStr: string): string {
+    if (!toStr) return '';
+    const match = String(toStr).trim().match(/^(.*?)(\d+)$/);
+    if (!match) return toStr;
+    const prefix = match[1];
+    const numStr = match[2];
+    const nextNum = parseInt(numStr, 10) + 1;
+    return `${prefix}${String(nextNum).padStart(numStr.length, '0')}`;
+  }
+
+  calculateHologramRange(item: any): void {
+    const pieces = Number(item.pieces_per_case || 12);
+    const expCases = Math.max(0, Number(item.expected_cases || 0));
+    const expBottles = Number(item.expected_bottles || (expCases * pieces));
+    const arrCases = Math.max(0, Number(item.arrived_cases ?? expCases));
+    item.arrived_cases = arrCases;
+    const arrBottles = arrCases * pieces;
+    item.arrived_bottles = arrBottles;
+
+    // Case-level damage / missing cases
+    const damCases = Math.max(0, expCases - arrCases);
+    item.damaged_cases = damCases;
+    const damCaseBottles = damCases * pieces;
+    item.damaged_case_bottles = damCaseBottles;
+
+    // Bottle-level damage within arrived cases
+    const damBottles = Math.max(0, Number(item.damaged_bottles || 0));
+    item.damaged_bottles = damBottles;
+
+    // Total damaged bottles
+    item.total_damaged_bottles = damCaseBottles + damBottles;
+
+    // Net Good/Usable Stock
+    const goodBottles = Math.max(0, arrBottles - damBottles);
+    item.good_bottles = goodBottles;
+    item.good_cases = Math.floor(goodBottles / pieces);
+    item.good_loose_bottles = goodBottles % pieces;
+
+    // 1. Arrived Range (From → To)
+    if (item.hologram_from && arrBottles > 0) {
+      item.hologram_to = this.computeHologramTo(item.hologram_from, arrBottles);
+      item.hologram_count = arrBottles;
+    } else if (item.hologram_from && arrBottles === 0) {
+      item.hologram_to = item.hologram_from;
+      item.hologram_count = 0;
+    } else {
+      item.hologram_to = '';
+      item.hologram_count = arrBottles;
+    }
+
+    // 2. Damaged Cases Hologram Range (From → To)
+    if (damCases > 0) {
+      if (item.damaged_cases_hg_from) {
+        item.damaged_cases_hg_to = this.computeHologramTo(item.damaged_cases_hg_from, damCaseBottles);
+        item.damaged_cases_holograms = `${item.damaged_cases_hg_from} - ${item.damaged_cases_hg_to} (${damCases} Cases / ${damCaseBottles} btls)`;
+      } else {
+        item.damaged_cases_hg_to = '';
+        item.damaged_cases_holograms = `${damCases} Cases (${damCaseBottles} btls)`;
+      }
+    } else {
+      item.damaged_cases_hg_from = '';
+      item.damaged_cases_hg_to = '';
+      item.damaged_cases_holograms = 'None';
+    }
+
+    // 3. Damaged Loose Bottles Ranges
+    this.updateDamagedBottleRanges(item);
+  }
+
+  updateDamagedBottleRanges(item: any): void {
+    const count = Math.max(0, Number(item.damaged_bottles || 0));
+    if (!item.damaged_bottle_ranges) {
+      item.damaged_bottle_ranges = [];
+    }
+    while (item.damaged_bottle_ranges.length < count) {
+      item.damaged_bottle_ranges.push({ from: '', to: '' });
+    }
+    if (item.damaged_bottle_ranges.length > count) {
+      item.damaged_bottle_ranges = item.damaged_bottle_ranges.slice(0, count);
+    }
+    this.formatDamagedBottleHolograms(item);
+  }
+
+  onDamagedBottleRangeFromChange(item: any, range: any): void {
+    if (range.from && !range.to) {
+      range.to = range.from;
+    }
+    this.formatDamagedBottleHolograms(item);
+  }
+
+  formatDamagedBottleHolograms(item: any): void {
+    if (!item.damaged_bottle_ranges || item.damaged_bottle_ranges.length === 0) {
+      item.damaged_holograms = 'None';
+      return;
+    }
+    const parts = item.damaged_bottle_ranges
+      .filter((r: any) => r.from || r.to)
+      .map((r: any) => {
+        const f = r.from || '';
+        const t = r.to || f;
+        return f === t ? `${f}` : `${f} - ${t}`;
+      });
+    item.damaged_holograms = parts.length > 0 ? parts.join(', ') : 'None';
+  }
+
+  onDamagedCasesHgFromChange(item: any): void {
+    if (item.damaged_cases > 0 && item.damaged_cases_hg_from) {
+      item.damaged_cases_hg_to = this.computeHologramTo(item.damaged_cases_hg_from, item.damaged_case_bottles);
+      item.damaged_cases_holograms = `${item.damaged_cases_hg_from} - ${item.damaged_cases_hg_to} (${item.damaged_cases} Cases / ${item.damaged_case_bottles} btls)`;
+    }
+  }
+
+  openUpdateBrandsArrivalModal(rowOrApp: any): void {
+    const app = rowOrApp?.application || rowOrApp || {};
+    this.arrivalModalData = app;
+    let veh = this.getVehicleNumberForRow(rowOrApp) || app?.vehicle_number || app?.vehicleNumber || '';
+    this.arrivalCommonVehicle = veh;
+    this.arrivalCommonDate = this.todayIso();
+    this.arrivalCommonRemarks = '';
+    
+    // Extract permit details or line items
+    let details = app.permit_wise_details || app.permitWiseDetails || rowOrApp?.permit_wise_details || rowOrApp?.permitWiseDetails;
+    if (typeof details === 'string') {
+      try { details = JSON.parse(details); } catch(e) { details = []; }
+    }
+    let lineItems = app.line_items || app.lineItems || rowOrApp?.line_items || rowOrApp?.lineItems;
+    if (typeof lineItems === 'string') {
+      try { lineItems = JSON.parse(lineItems); } catch(e) { lineItems = []; }
+    }
+    
+    const itemsToProcess: any[] = [];
+    if (Array.isArray(details) && details.length > 0) {
+      details.forEach((d: any, pIdx: number) => {
+        const permitNo = d.permit_number || `${app.reference_no || app.referenceNo || 'IMFLREQ'}-P${pIdx + 1}`;
+        let subItems = d.line_items || d.items;
+        if (typeof subItems === 'string') {
+          try { subItems = JSON.parse(subItems); } catch(e) { subItems = []; }
+        }
+        if (!Array.isArray(subItems) || subItems.length === 0) {
+          subItems = [d];
+        }
+        subItems.forEach((sub: any) => {
+          const size = Number(sub.size_ml || sub.pack_size || d.size_ml || d.pack_size || rowOrApp?.sizeMl || 750);
+          const pieces = Number(sub.pieces_per_case || sub.bottles_per_case || d.pieces_per_case || this.getPiecesInCase(size));
+          const expCases = Number(sub.cases || sub.expected_cases || d.cases || d.total_cases || rowOrApp?.cases || 0);
+          const expBottles = Number(sub.bottles || sub.expected_bottles || (expCases * pieces));
+          const brandName = sub.brand_name || sub.brandName || d.brand_name || rowOrApp?.brandName || app.brand_name || 'Corona Extra Premium Beer';
+          const brandType = sub.brand_type || d.brand_type || rowOrApp?.liquorType || (brandName.toLowerCase().includes('beer') ? 'BEER' : 'WHISKY');
+          const supplier = app.supplier_company_name || app.supplierCompanyName || rowOrApp?.supplierName || d.supplier_name || 'Corona Maharashtra';
+
+          const itemObj = {
+            permit_number: sub.permit_number || permitNo,
+            brand_name: brandName,
+            brand_type: brandType,
+            supplier_name: supplier,
+            pack_size: size,
+            pieces_per_case: pieces,
+            expected_cases: expCases,
+            expected_bottles: expBottles,
+            arrived_cases: expCases,
+            arrived_bottles: expBottles,
+            damaged_bottles: 0,
+            damaged_cases: 0,
+            damaged_case_bottles: 0,
+            total_damaged_bottles: 0,
+            good_bottles: expBottles,
+            good_cases: expCases,
+            good_loose_bottles: 0,
+            vehicle_number: this.arrivalCommonVehicle,
+            batch_number: '',
+            hologram_from: '',
+            hologram_to: '',
+            hologram_count: expBottles,
+            damaged_cases_hg_from: '',
+            damaged_cases_hg_to: '',
+            damaged_cases_holograms: 'None',
+            damaged_bottle_ranges: [],
+            damaged_holograms: 'None',
+            remarks: ''
+          };
+          this.onArrivalItemCalculationsChange(itemObj);
+          itemsToProcess.push(itemObj);
+        });
+      });
+    } else if (Array.isArray(lineItems) && lineItems.length > 0) {
+      lineItems.forEach((l: any, idx: number) => {
+        const size = Number(l.size_ml || l.pack_size || 750);
+        const pieces = Number(l.pieces_per_case || this.getPiecesInCase(size));
+        const expCases = Number(l.cases || l.expected_cases || 1);
+        const expBottles = Number(l.bottles || expCases * pieces);
+        const brandName = l.brand_name || l.brandName || 'Corona Extra Premium Beer';
+        const brandType = l.brand_type || (brandName.toLowerCase().includes('beer') ? 'BEER' : 'WHISKY');
+        const supplier = app.supplier_company_name || app.supplierCompanyName || rowOrApp?.supplierName || 'Corona Maharashtra';
+
+        const itemObj = {
+          permit_number: l.permit_number || `${app.reference_no || app.referenceNo || 'IMFLREQ'}-P${idx + 1}`,
+          brand_name: brandName,
+          brand_type: brandType,
+          supplier_name: supplier,
+          pack_size: size,
+          pieces_per_case: pieces,
+          expected_cases: expCases,
+          expected_bottles: expBottles,
+          arrived_cases: expCases,
+          arrived_bottles: expBottles,
+          damaged_bottles: 0,
+          damaged_cases: 0,
+          damaged_case_bottles: 0,
+          total_damaged_bottles: 0,
+          good_bottles: expBottles,
+          good_cases: expCases,
+          good_loose_bottles: 0,
+          vehicle_number: this.arrivalCommonVehicle,
+          batch_number: '',
+          hologram_from: '',
+          hologram_to: '',
+          hologram_count: expBottles,
+          damaged_cases_hg_from: '',
+          damaged_cases_hg_to: '',
+          damaged_cases_holograms: 'None',
+          damaged_bottle_ranges: [],
+          damaged_holograms: 'None',
+          remarks: ''
+        };
+        this.onArrivalItemCalculationsChange(itemObj);
+        itemsToProcess.push(itemObj);
+      });
+    } else {
+      // Fallback single item
+      const size = Number(rowOrApp?.sizeMl || 750);
+      const pieces = this.getPiecesInCase(size);
+      const expCases = Number(rowOrApp?.cases || 1);
+      const brandName = rowOrApp?.brandName || app.brand_name || 'Corona Extra Premium Beer';
+      const brandType = brandName.toLowerCase().includes('beer') ? 'BEER' : 'WHISKY';
+      const supplier = app.supplier_company_name || rowOrApp?.supplierName || 'Corona Maharashtra';
+
+      const itemObj = {
+        permit_number: app.reference_no || app.referenceNo || 'IMFLREQ/2026-27/0003-P1',
+        brand_name: brandName,
+        brand_type: brandType,
+        supplier_name: supplier,
+        pack_size: size,
+        pieces_per_case: pieces,
+        expected_cases: expCases,
+        expected_bottles: expCases * pieces,
+        arrived_cases: expCases,
+        arrived_bottles: expCases * pieces,
+        damaged_bottles: 0,
+        damaged_cases: 0,
+        damaged_case_bottles: 0,
+        total_damaged_bottles: 0,
+        good_bottles: expCases * pieces,
+        good_cases: expCases,
+        good_loose_bottles: 0,
+        vehicle_number: this.arrivalCommonVehicle,
+        batch_number: '',
+        hologram_from: '',
+        hologram_to: '',
+        hologram_count: expCases * pieces,
+        damaged_cases_hg_from: '',
+        damaged_cases_hg_to: '',
+        damaged_cases_holograms: 'None',
+        damaged_bottle_ranges: [],
+        damaged_holograms: 'None',
+        remarks: ''
+      };
+      this.onArrivalItemCalculationsChange(itemObj);
+      itemsToProcess.push(itemObj);
+    }
+
+    this.arrivalBrandItems = itemsToProcess;
+    this.isArrivalPageView = true;
+    this.showUpdateArrivalModal = false;
+    this.cdr.detectChanges();
+  }
+
+  onArrivalItemCalculationsChange(item: any): void {
+    this.calculateHologramRange(item);
+  }
+
+  get permitWiseArrivalSummary(): any[] {
+    const summaryMap = new Map<string, any>();
+    (this.arrivalBrandItems || []).forEach((item) => {
+      const pNum = item.permit_number || 'Default Permit';
+      if (!summaryMap.has(pNum)) {
+        summaryMap.set(pNum, {
+          permit_number: pNum,
+          supplier_name: item.supplier_name,
+          expected_cases: 0,
+          expected_bottles: 0,
+          arrived_cases: 0,
+          arrived_bottles: 0,
+          damaged_cases: 0,
+          damaged_case_bottles: 0,
+          damaged_bottles: 0,
+          total_damaged_bottles: 0,
+          good_bottles: 0,
+          good_cases: 0,
+          hologram_ranges: [],
+          damaged_cases_holograms_list: [],
+          damaged_holograms_list: []
+        });
+      }
+      const s = summaryMap.get(pNum);
+      s.expected_cases += Number(item.expected_cases || 0);
+      s.expected_bottles += Number(item.expected_bottles || 0);
+      s.arrived_cases += Number(item.arrived_cases || 0);
+      s.arrived_bottles += Number(item.arrived_bottles || 0);
+      s.damaged_cases += Number(item.damaged_cases || 0);
+      s.damaged_case_bottles += Number(item.damaged_case_bottles || 0);
+      s.damaged_bottles += Number(item.damaged_bottles || 0);
+      s.total_damaged_bottles += Number(item.total_damaged_bottles || 0);
+      s.good_bottles += Number(item.good_bottles || 0);
+      s.good_cases += Number(item.good_cases || 0);
+      if (item.hologram_from && item.hologram_to) {
+        s.hologram_ranges.push(`${item.brand_name}: ${item.hologram_from} → ${item.hologram_to} (${item.arrived_bottles} btls)`);
+      }
+      if (item.damaged_cases > 0 && item.damaged_cases_holograms && item.damaged_cases_holograms !== 'None') {
+        s.damaged_cases_holograms_list.push(`${item.brand_name}: ${item.damaged_cases_holograms}`);
+      }
+      if (item.damaged_bottles > 0 && item.damaged_holograms && item.damaged_holograms !== 'None') {
+        s.damaged_holograms_list.push(`${item.brand_name}: ${item.damaged_holograms}`);
+      }
+    });
+    return Array.from(summaryMap.values());
+  }
+
+  get totalArrivalExpectedCases(): number {
+    return (this.arrivalBrandItems || []).reduce((sum, it) => sum + (Number(it.expected_cases) || 0), 0);
+  }
+
+  get totalArrivalExpectedBottles(): number {
+    return (this.arrivalBrandItems || []).reduce((sum, it) => sum + (Number(it.expected_bottles) || 0), 0);
+  }
+
+  get totalArrivalArrivedCases(): number {
+    return (this.arrivalBrandItems || []).reduce((sum, it) => sum + (Number(it.arrived_cases) || 0), 0);
+  }
+
+  get totalArrivalArrivedBottles(): number {
+    return (this.arrivalBrandItems || []).reduce((sum, it) => sum + (Number(it.arrived_bottles) || 0), 0);
+  }
+
+  get totalArrivalDamagedCases(): number {
+    return (this.arrivalBrandItems || []).reduce((sum, it) => sum + (Number(it.damaged_cases) || 0), 0);
+  }
+
+  get totalArrivalDamagedBottles(): number {
+    return (this.arrivalBrandItems || []).reduce((sum, it) => sum + (Number(it.damaged_bottles) || 0), 0);
+  }
+
+  get totalArrivalTotalDamagedBottles(): number {
+    return (this.arrivalBrandItems || []).reduce((sum, it) => sum + (Number(it.total_damaged_bottles) || Number(it.damaged_bottles) || 0), 0);
+  }
+
+  get totalArrivalGoodBottles(): number {
+    return (this.arrivalBrandItems || []).reduce((sum, it) => sum + (Number(it.good_bottles) || 0), 0);
+  }
+
+  get totalArrivalGoodCases(): number {
+    return (this.arrivalBrandItems || []).reduce((sum, it) => sum + (Number(it.good_cases) || 0), 0);
+  }
+
+  closeUpdateArrivalModal(): void {
+    this.isArrivalPageView = false;
+    this.showUpdateArrivalModal = false;
+    this.arrivalModalData = null;
+    this.arrivalBrandItems = [];
+    this.cdr.markForCheck();
+  }
+
+  saveBrandsArrival(): void {
+    if (!this.arrivalBrandItems || this.arrivalBrandItems.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Brand Items',
+        text: 'There are no brand items to update.',
+        confirmButtonColor: '#3b82f6'
+      });
+      return;
+    }
+
+    const payload = {
+      distributor_permit: this.arrivalModalData?.reference_no || this.arrivalModalData?.referenceNo || this.arrivalModalData?.id,
+      vehicle_number: this.arrivalCommonVehicle,
+      arrival_date: this.arrivalCommonDate ? new Date(this.arrivalCommonDate).toISOString() : new Date().toISOString(),
+      remarks: this.arrivalCommonRemarks,
+      items: this.arrivalBrandItems.map((it) => ({
+        permit_number: it.permit_number,
+        brand_name: it.brand_name,
+        brand_type: it.brand_type,
+        supplier_name: it.supplier_name,
+        pack_size: it.pack_size,
+        pieces_per_case: it.pieces_per_case,
+        expected_cases: it.expected_cases,
+        expected_bottles: it.expected_bottles,
+        arrived_cases: it.arrived_cases,
+        arrived_bottles: it.arrived_bottles,
+        damaged_bottles: it.damaged_bottles || 0,
+        damaged_cases: it.damaged_cases || 0,
+        good_bottles: it.good_bottles || 0,
+        good_cases: it.good_cases || 0,
+        hologram_from: it.hologram_from || '',
+        hologram_to: it.hologram_to || '',
+        hologram_count: it.hologram_count || it.arrived_bottles || 0,
+        damaged_holograms: it.damaged_holograms || '',
+        damaged_cases_holograms: it.damaged_cases_holograms || '',
+        vehicle_number: it.vehicle_number || this.arrivalCommonVehicle,
+        batch_number: it.batch_number,
+        remarks: it.remarks || this.arrivalCommonRemarks
+      }))
+    };
+
+    this.isSavingArrival = true;
+    this.permitService.updateImflBrandsArrival(payload)
+      .pipe(
+        finalize(() => {
+          this.isSavingArrival = false;
+          this.cdr.markForCheck();
+        })
+      )
+      .subscribe({
+        next: (res: any) => {
+          Swal.fire({
+            icon: 'success',
+            title: 'Arrival Stock Saved!',
+            text: res?.message || 'IMFL brand warehouse stock updated successfully.',
+            confirmButtonColor: '#10b981'
+          });
+          this.closeUpdateArrivalModal();
+          this.loadApplications();
+          this.loadBrandWarehouseStock();
+        },
+        error: (err: any) => {
+          console.error('Error updating brand arrival:', err);
+          Swal.fire({
+            icon: 'error',
+            title: 'Save Failed',
+            text: err?.error?.detail || err?.error?.message || 'Failed to save brand arrival stock.',
+            confirmButtonColor: '#ef4444'
+          });
+        }
+      });
+  }
 
   loadBrandWarehouseStock(): void {
     this.isLoadingBrandWarehouse = true;
@@ -543,254 +1000,20 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return '';
   }
 
-  openUpdateBrandsArrivalModal(rowOrApp: any): void {
-    const app = rowOrApp?.application || rowOrApp || {};
-    this.arrivalModalData = app;
-    let veh = this.getVehicleNumberForRow(rowOrApp) || app?.vehicle_number || app?.vehicleNumber || '';
-    this.arrivalCommonVehicle = veh;
-    this.arrivalCommonDate = this.todayIso();
-    this.arrivalCommonRemarks = '';
-    
-    // Extract permit details or line items
-    let details = app.permit_wise_details || app.permitWiseDetails || rowOrApp?.permit_wise_details || rowOrApp?.permitWiseDetails;
-    if (typeof details === 'string') {
-      try { details = JSON.parse(details); } catch(e) { details = []; }
-    }
-    let lineItems = app.line_items || app.lineItems || rowOrApp?.line_items || rowOrApp?.lineItems;
-    if (typeof lineItems === 'string') {
-      try { lineItems = JSON.parse(lineItems); } catch(e) { lineItems = []; }
-    }
-    
-    const itemsToProcess: any[] = [];
-    if (Array.isArray(details) && details.length > 0) {
-      details.forEach((d: any, pIdx: number) => {
-        const permitNo = d.permit_number || `${app.reference_no || app.referenceNo || 'IMFLREQ'}-P${pIdx + 1}`;
-        let subItems = d.line_items || d.items;
-        if (typeof subItems === 'string') {
-          try { subItems = JSON.parse(subItems); } catch(e) { subItems = []; }
+  get minArrivalDate(): string {
+    const raw = this.arrivalModalData?.approval_date || this.arrivalModalData?.approvalDate || this.arrivalModalData?.submitted_at || this.arrivalModalData?.submittedAt || this.arrivalModalData?.created_at || this.arrivalModalData?.createdAt;
+    if (raw) {
+      try {
+        const d = new Date(raw);
+        if (!isNaN(d.getTime())) {
+          return d.toISOString().split('T')[0];
         }
-        if (!Array.isArray(subItems) || subItems.length === 0) {
-          subItems = [d];
-        }
-        subItems.forEach((sub: any) => {
-          const size = Number(sub.size_ml || sub.pack_size || d.size_ml || d.pack_size || rowOrApp?.sizeMl || 750);
-          const pieces = Number(sub.pieces_per_case || sub.bottles_per_case || d.pieces_per_case || this.getPiecesInCase(size));
-          const expCases = Number(sub.cases || sub.expected_cases || d.cases || d.total_cases || rowOrApp?.cases || 0);
-          const expBottles = Number(sub.bottles || sub.expected_bottles || (expCases * pieces));
-          const brandName = sub.brand_name || sub.brandName || d.brand_name || rowOrApp?.brandName || app.brand_name || 'Corona Extra Premium Beer';
-          const brandType = sub.brand_type || d.brand_type || rowOrApp?.liquorType || (brandName.toLowerCase().includes('beer') ? 'BEER' : 'WHISKY');
-          const supplier = app.supplier_company_name || app.supplierCompanyName || rowOrApp?.supplierName || d.supplier_name || 'Corona Maharashtra';
-
-          const itemObj = {
-            permit_number: sub.permit_number || permitNo,
-            brand_name: brandName,
-            brand_type: brandType,
-            supplier_name: supplier,
-            pack_size: size,
-            pieces_per_case: pieces,
-            expected_cases: expCases,
-            expected_bottles: expBottles,
-            arrived_cases: expCases,
-            arrived_bottles: expBottles,
-            damaged_bottles: 0,
-            damaged_cases: 0,
-            good_bottles: expBottles,
-            good_cases: expCases,
-            vehicle_number: this.arrivalCommonVehicle,
-            batch_number: '',
-            remarks: ''
-          };
-          this.onArrivalItemCalculationsChange(itemObj);
-          itemsToProcess.push(itemObj);
-        });
-      });
-    } else if (Array.isArray(lineItems) && lineItems.length > 0) {
-      lineItems.forEach((l: any, idx: number) => {
-        const size = Number(l.size_ml || l.pack_size || 750);
-        const pieces = Number(l.pieces_per_case || this.getPiecesInCase(size));
-        const expCases = Number(l.cases || l.expected_cases || 1);
-        const expBottles = Number(l.bottles || expCases * pieces);
-        const brandName = l.brand_name || l.brandName || 'Corona Extra Premium Beer';
-        const brandType = l.brand_type || (brandName.toLowerCase().includes('beer') ? 'BEER' : 'WHISKY');
-        const supplier = app.supplier_company_name || app.supplierCompanyName || rowOrApp?.supplierName || 'Corona Maharashtra';
-
-        const itemObj = {
-          permit_number: l.permit_number || `${app.reference_no || app.referenceNo || 'IMFLREQ'}-P${idx + 1}`,
-          brand_name: brandName,
-          brand_type: brandType,
-          supplier_name: supplier,
-          pack_size: size,
-          pieces_per_case: pieces,
-          expected_cases: expCases,
-          expected_bottles: expBottles,
-          arrived_cases: expCases,
-          arrived_bottles: expBottles,
-          damaged_bottles: 0,
-          damaged_cases: 0,
-          good_bottles: expBottles,
-          good_cases: expCases,
-          vehicle_number: this.arrivalCommonVehicle,
-          batch_number: '',
-          remarks: ''
-        };
-        this.onArrivalItemCalculationsChange(itemObj);
-        itemsToProcess.push(itemObj);
-      });
-    } else {
-      // Fallback single item
-      const size = Number(rowOrApp?.sizeMl || 750);
-      const pieces = this.getPiecesInCase(size);
-      const expCases = Number(rowOrApp?.cases || 1);
-      const brandName = rowOrApp?.brandName || app.brand_name || 'Corona Extra Premium Beer';
-      const brandType = brandName.toLowerCase().includes('beer') ? 'BEER' : 'WHISKY';
-      const supplier = app.supplier_company_name || rowOrApp?.supplierName || 'Corona Maharashtra';
-
-      const itemObj = {
-        permit_number: app.reference_no || app.referenceNo || 'IMFLREQ/2026-27/0003-P1',
-        brand_name: brandName,
-        brand_type: brandType,
-        supplier_name: supplier,
-        pack_size: size,
-        pieces_per_case: pieces,
-        expected_cases: expCases,
-        expected_bottles: expCases * pieces,
-        arrived_cases: expCases,
-        arrived_bottles: expCases * pieces,
-        damaged_bottles: 0,
-        damaged_cases: 0,
-        good_bottles: expCases * pieces,
-        good_cases: expCases,
-        vehicle_number: this.arrivalCommonVehicle,
-        batch_number: '',
-        remarks: ''
-      };
-      this.onArrivalItemCalculationsChange(itemObj);
-      itemsToProcess.push(itemObj);
+      } catch (e) {}
     }
-
-    this.arrivalBrandItems = itemsToProcess;
-    this.showUpdateArrivalModal = true;
-    this.cdr.detectChanges();
+    return '2026-04-01';
   }
 
-  onArrivalItemCalculationsChange(item: any): void {
-    const pieces = Number(item.pieces_per_case || 12);
-    const arrCases = Math.max(0, Number(item.arrived_cases || 0));
-    item.arrived_cases = arrCases;
-    item.arrived_bottles = arrCases * pieces;
 
-    const damBottles = Math.max(0, Number(item.damaged_bottles || 0));
-    item.damaged_bottles = damBottles;
-    item.damaged_cases = Math.floor(damBottles / pieces);
-
-    const goodBottles = Math.max(0, item.arrived_bottles - damBottles);
-    item.good_bottles = goodBottles;
-    item.good_cases = Math.floor(goodBottles / pieces);
-  }
-
-  get totalArrivalExpectedCases(): number {
-    return (this.arrivalBrandItems || []).reduce((sum, it) => sum + (Number(it.expected_cases) || 0), 0);
-  }
-
-  get totalArrivalExpectedBottles(): number {
-    return (this.arrivalBrandItems || []).reduce((sum, it) => sum + (Number(it.expected_bottles) || 0), 0);
-  }
-
-  get totalArrivalArrivedCases(): number {
-    return (this.arrivalBrandItems || []).reduce((sum, it) => sum + (Number(it.arrived_cases) || 0), 0);
-  }
-
-  get totalArrivalArrivedBottles(): number {
-    return (this.arrivalBrandItems || []).reduce((sum, it) => sum + (Number(it.arrived_bottles) || 0), 0);
-  }
-
-  get totalArrivalDamagedBottles(): number {
-    return (this.arrivalBrandItems || []).reduce((sum, it) => sum + (Number(it.damaged_bottles) || 0), 0);
-  }
-
-  get totalArrivalGoodBottles(): number {
-    return (this.arrivalBrandItems || []).reduce((sum, it) => sum + (Number(it.good_bottles) || 0), 0);
-  }
-
-  get totalArrivalGoodCases(): number {
-    return (this.arrivalBrandItems || []).reduce((sum, it) => sum + (Number(it.good_cases) || 0), 0);
-  }
-
-  closeUpdateArrivalModal(): void {
-    this.showUpdateArrivalModal = false;
-    this.arrivalModalData = null;
-    this.arrivalBrandItems = [];
-    this.cdr.markForCheck();
-  }
-
-  saveBrandsArrival(): void {
-    if (!this.arrivalBrandItems || this.arrivalBrandItems.length === 0) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'No Brand Items',
-        text: 'There are no brand items to update.',
-        confirmButtonColor: '#3b82f6'
-      });
-      return;
-    }
-
-    const payload = {
-      distributor_permit: this.arrivalModalData?.reference_no || this.arrivalModalData?.referenceNo || this.arrivalModalData?.id,
-      vehicle_number: this.arrivalCommonVehicle,
-      arrival_date: this.arrivalCommonDate ? new Date(this.arrivalCommonDate).toISOString() : new Date().toISOString(),
-      remarks: this.arrivalCommonRemarks,
-      items: this.arrivalBrandItems.map((it) => ({
-        permit_number: it.permit_number,
-        brand_name: it.brand_name,
-        brand_type: it.brand_type,
-        supplier_name: it.supplier_name,
-        pack_size: it.pack_size,
-        pieces_per_case: it.pieces_per_case,
-        expected_cases: it.expected_cases,
-        expected_bottles: it.expected_bottles,
-        arrived_cases: it.arrived_cases,
-        arrived_bottles: it.arrived_bottles,
-        damaged_bottles: it.damaged_bottles || 0,
-        damaged_cases: it.damaged_cases || 0,
-        good_bottles: it.good_bottles || 0,
-        good_cases: it.good_cases || 0,
-        vehicle_number: it.vehicle_number || this.arrivalCommonVehicle,
-        batch_number: it.batch_number,
-        remarks: it.remarks || this.arrivalCommonRemarks
-      }))
-    };
-
-    this.isSavingArrival = true;
-    this.permitService.updateImflBrandsArrival(payload)
-      .pipe(
-        finalize(() => {
-          this.isSavingArrival = false;
-          this.cdr.markForCheck();
-        })
-      )
-      .subscribe({
-        next: (res: any) => {
-          Swal.fire({
-            icon: 'success',
-            title: 'Arrival Stock Saved!',
-            text: res?.message || 'IMFL brand warehouse stock updated successfully.',
-            confirmButtonColor: '#10b981'
-          });
-          this.closeUpdateArrivalModal();
-          this.loadApplications();
-          this.loadBrandWarehouseStock();
-        },
-        error: (err: any) => {
-          console.error('Error updating brand arrival:', err);
-          Swal.fire({
-            icon: 'error',
-            title: 'Failed to Save Arrival',
-            text: err?.error?.message || 'Could not save brand arrival. Please check the inputs and try again.',
-            confirmButtonColor: '#ef4444'
-          });
-        }
-      });
-  }
 
   viewBrandHistory(brand: any): void {
     this.selectedBrandForHistory = brand;
@@ -4727,7 +4950,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return parts.join(' | ');
   }
 
-  private todayIso(): string {
+  todayIso(): string {
     return new Date().toISOString().slice(0, 10);
   }
 
