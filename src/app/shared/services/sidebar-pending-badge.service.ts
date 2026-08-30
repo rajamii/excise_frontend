@@ -205,35 +205,14 @@ export class SidebarPendingBadgeService {
     force = false
   ): Observable<{ total: number; payment: number }> {
     return this.distributorPermitService.getDashboardCounts(tab, force).pipe(
-      switchMap((counts: any) => {
+      map((counts: any) => {
         const pending = Number(counts?.pending || 0);
-        if (pending > 0) {
-          if (audience !== 'licensee') return of({ total: pending, payment: 0 });
-          const objection = Number(counts?.objection || 0);
-          const awaitingPayment = Number(counts?.awaitingPayment ?? counts?.awaiting_payment ?? 0);
-          return of({ total: awaitingPayment + objection, payment: awaitingPayment });
+        if (audience !== 'licensee') {
+          return { total: pending, payment: 0 };
         }
-        return this.distributorPermitService.listApplications().pipe(
-          map((apps) => {
-            const list = Array.isArray(apps) ? apps : [];
-            const directPending = list.filter((app: any) => {
-              return Boolean(
-                app?.is_excise_duty_fee_paid ||
-                app?.isExciseDutyFeePaid ||
-                String(app?.paymentStatus || '').toLowerCase() === 'paid' ||
-                String(app?.payment_status || '').toLowerCase() === 'paid' ||
-                String(app?.payment_status || '').toLowerCase() === 'completed' ||
-                String(app?.status || '').toLowerCase().includes('payslip') ||
-                String(app?.status || '').toLowerCase().includes('approved') ||
-                String(app?.status || '').toLowerCase().includes('arrival') ||
-                String(app?.status || '').toLowerCase().includes('paid') ||
-                Number(app?.current_stage_id || app?.current_stage?.id || 0) === 156
-              );
-            }).length;
-            return { total: directPending, payment: 0 };
-          }),
-          catchError(() => of({ total: 0, payment: 0 }))
-        );
+        const objection = Number(counts?.objection || 0);
+        const awaitingPayment = Number(counts?.awaitingPayment ?? counts?.awaiting_payment ?? 0);
+        return { total: awaitingPayment + objection, payment: awaitingPayment };
       }),
       catchError(() => of({ total: 0, payment: 0 }))
     );

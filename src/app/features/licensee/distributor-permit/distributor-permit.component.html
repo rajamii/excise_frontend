@@ -358,18 +358,6 @@
                       </button>
 
                       <button
-                        class="btn btn-sm btn-soft-success me-1"
-                        type="button"
-                        title="View & Print Authority Letter"
-                        *ngIf="isApproved(row) && canViewAuthorityLetter"
-                        (click)="openAuthorityLetter(row, $event)"
-                        (mousedown)="openAuthorityLetter(row, $event)"
-                      >
-                        <i class="bi bi-file-earmark-pdf-fill me-1"></i>
-                        <span>Authority Letter</span>
-                      </button>
-
-                      <button
                         class="btn btn-sm text-white fw-bold me-1 shadow-sm"
                         type="button"
                         title="Update Brands & Cases Arrival"
@@ -889,13 +877,29 @@
                   <td style="padding: 16px; border-left: 4px solid #ef4444;">
                     <div class="bw-brand-info">
                       <div class="fw-bold text-dark fs-6" style="color: #1e293b;">
-                        {{ brand.brand_name }} - {{ brand.supplier_name }}
+                        {{ brand.brand_name || 'IMFL General Brand' }}
                       </div>
                       <div class="d-flex align-items-center gap-2 mt-1">
-                        <small class="text-muted fw-semibold">{{ brand.supplier_name }}</small>
+                        <small class="text-muted fw-semibold">{{ brand.supplier_name || 'N/A' }}</small>
                         <span class="badge bg-light text-secondary border px-2 py-1" style="font-size: 10px; font-weight: 700;">
                           {{ (brand.brand_type || 'WHISKY') | uppercase }}
                         </span>
+                      </div>
+                      <!-- Latest Arrival & Hologram Breakdown -->
+                      <div class="mt-2 pt-2 border-top" style="font-size: 11px;" *ngIf="brand.latest_hologram_from || brand.latest_permit_number">
+                        <div class="text-primary font-monospace" *ngIf="brand.latest_hologram_from">
+                          <i class="bi bi-tag-fill me-1"></i> Arrived HG: <strong>{{ brand.latest_hologram_from }} → {{ brand.latest_hologram_to }}</strong>
+                        </div>
+                        <div class="text-danger font-monospace mt-0.5" *ngIf="brand.latest_damaged_holograms && brand.latest_damaged_holograms !== 'None'">
+                          <i class="bi bi-exclamation-triangle-fill me-1"></i> Damaged Loose: {{ brand.latest_damaged_holograms }}
+                        </div>
+                        <div class="text-danger font-monospace mt-0.5" *ngIf="brand.latest_damaged_cases_holograms && brand.latest_damaged_cases_holograms !== 'None'">
+                          <i class="bi bi-box-seam me-1"></i> Damaged Cases: {{ brand.latest_damaged_cases_holograms }}
+                        </div>
+                        <div class="text-muted small mt-0.5" *ngIf="brand.latest_permit_number">
+                          Permit: <span class="font-monospace text-dark fw-semibold">{{ brand.latest_permit_number }}</span>
+                          <span *ngIf="brand.latest_vehicle_number"> • Truck: {{ brand.latest_vehicle_number }}</span>
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -906,14 +910,14 @@
                       <div
                         *ngFor="let sizeKey of getPackSizeKeys(brand.pack_sizes)"
                         class="bw-pack-pill"
-                        [ngClass]="brand.pack_sizes[sizeKey].current_stock > 0 ? 'bw-pack-in-stock' : 'bw-pack-out-stock'"
+                        [ngClass]="brand.pack_sizes[sizeKey]?.current_stock > 0 ? 'bw-pack-in-stock' : 'bw-pack-out-stock'"
                       >
                         <div class="bw-pack-header d-flex justify-content-between align-items-center">
                           <span class="fw-bold">{{ sizeKey }}ml</span>
-                          <span class="bw-dot" [class.bw-dot-green]="brand.pack_sizes[sizeKey].current_stock > 0"></span>
+                          <span class="bw-dot" [class.bw-dot-green]="brand.pack_sizes[sizeKey]?.current_stock > 0"></span>
                         </div>
                         <div class="bw-pack-units mt-1">
-                          <span class="fs-5 fw-bold">{{ brand.pack_sizes[sizeKey].current_stock | number }}</span>
+                          <span class="fs-5 fw-bold">{{ (brand.pack_sizes[sizeKey]?.current_stock || 0) | number }}</span>
                           <small class="text-muted d-block" style="font-size: 10px;">UNITS</small>
                         </div>
                       </div>
@@ -926,16 +930,16 @@
                       <div
                         *ngFor="let sizeKey of getPackSizeKeys(brand.pack_sizes)"
                         class="bw-case-card"
-                        [ngClass]="brand.pack_sizes[sizeKey].cases > 0 ? 'bw-case-active' : 'bw-case-zero'"
+                        [ngClass]="brand.pack_sizes[sizeKey]?.cases > 0 ? 'bw-case-active' : 'bw-case-zero'"
                       >
                         <div class="bw-case-header">
-                          <span class="badge" [ngClass]="brand.pack_sizes[sizeKey].cases > 0 ? 'bg-warning text-dark' : 'bg-light text-muted border'">
+                          <span class="badge" [ngClass]="brand.pack_sizes[sizeKey]?.cases > 0 ? 'bg-warning text-dark' : 'bg-light text-muted border'">
                             {{ sizeKey }}ml
                           </span>
                         </div>
                         <div class="bw-case-body mt-1">
                           <div class="fs-6 fw-bold">
-                            ≈ {{ brand.pack_sizes[sizeKey].cases | number }}
+                            ≈ {{ (brand.pack_sizes[sizeKey]?.cases || 0) | number }}
                           </div>
                           <small class="text-muted" style="font-size: 10px; text-transform: uppercase;">CASES</small>
                         </div>
@@ -966,7 +970,7 @@
                       <button
                         type="button"
                         class="btn btn-sm btn-outline-primary p-2 rounded"
-                        (click)="viewBrandHistory(brand)"
+                        (click)="openBrandWarehouseHistory(brand)"
                         title="View Arrival History & Entries"
                       >
                         <i class="bi bi-eye"></i>
@@ -974,7 +978,7 @@
                       <button
                         type="button"
                         class="btn btn-sm btn-outline-warning p-2 rounded"
-                        (click)="viewBrandHistory(brand)"
+                        (click)="openBrandWarehouseHistory(brand)"
                         title="Transit & Vehicle Tracking"
                       >
                         <i class="bi bi-truck"></i>
@@ -982,7 +986,7 @@
                       <button
                         type="button"
                         class="btn btn-sm btn-outline-info p-2 rounded"
-                        (click)="viewBrandHistory(brand)"
+                        (click)="openBrandWarehouseHistory(brand)"
                         title="Arrival Timeline Logs"
                       >
                         <i class="bi bi-clock-history"></i>
@@ -3148,6 +3152,9 @@
             <th style="width: 35px;" class="text-center">#</th>
             <th style="min-width: 140px;">Permit No.</th>
             <th style="min-width: 170px;">Brand Name & Size</th>
+            <th style="min-width: 220px; background-color: #f8fafc;">
+              <span class="text-indigo fw-bold">Arrived HG Range (From → To)</span>
+            </th>
             <th class="text-center" style="width: 110px;">Expected</th>
             <th class="text-center" style="width: 130px;">
               <span class="text-primary fw-bold">Boxes Reached (Cases)</span>
@@ -3165,15 +3172,30 @@
             <th class="text-center" style="width: 130px; background-color: #f0fdf4;">
               <span class="text-success fw-bold">Good / Stock</span>
             </th>
-            <th style="min-width: 220px;">
-              <span class="text-indigo fw-bold">Arrived HG Range (From → To)</span>
-            </th>
             <th style="min-width: 120px;">Item Remarks</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let item of arrivalBrandItems; let idx = index">
-            <td class="text-center fw-bold text-muted">{{ idx + 1 }}</td>
+            <td class="text-center" style="width: 75px;">
+              <div class="fw-bold text-muted small mb-1">#{{ idx + 1 }}</div>
+              <span
+                *ngIf="isArrivalItemValid(item)"
+                class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25"
+                title="Entry is complete and verified"
+                style="font-size: 10px;"
+              >
+                <i class="bi bi-check-circle-fill"></i> Ready
+              </span>
+              <span
+                *ngIf="!isArrivalItemValid(item)"
+                class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25"
+                title="Entry incomplete or count mismatched"
+                style="font-size: 10px;"
+              >
+                <i class="bi bi-exclamation-circle"></i> Pending
+              </span>
+            </td>
             <td>
               <span class="badge bg-slate-100 text-dark border font-monospace">{{ item.permit_number }}</span>
             </td>
@@ -3184,6 +3206,61 @@
                 <span class="badge bg-light text-secondary border">{{ item.brand_type }}</span>
               </div>
             </td>
+
+            <!-- Arrived Hologram Range: Multiple From → To Inputs (Placed Before Expected) -->
+            <td style="background-color: #f8fafc;">
+              <div class="d-flex flex-column gap-1">
+                <div *ngFor="let ar of item.arrived_hg_ranges; let aIdx = index" class="d-flex align-items-center gap-1">
+                  <input
+                    type="text"
+                    class="form-control form-control-sm font-monospace border-primary"
+                    [class.border-danger]="!isArrivedHologramCountValid(item)"
+                    placeholder="From"
+                    [(ngModel)]="ar.from"
+                    (ngModelChange)="onArrivedHgRangeFromChange(item, ar, aIdx)"
+                    style="width: 84px;"
+                  />
+                  <span class="text-muted">→</span>
+                  <input
+                    type="text"
+                    class="form-control form-control-sm font-monospace border-primary"
+                    [class.border-danger]="!isArrivedHologramCountValid(item)"
+                    placeholder="To"
+                    [(ngModel)]="ar.to"
+                    (ngModelChange)="onArrivedHgRangeToChange(item, ar)"
+                    style="width: 84px;"
+                  />
+                  <button
+                    type="button"
+                    class="btn btn-outline-danger btn-sm p-0 px-1"
+                    *ngIf="item.arrived_hg_ranges?.length > 1"
+                    (click)="removeArrivedHgRange(item, aIdx)"
+                    title="Remove this range"
+                  >
+                    <i class="bi bi-x"></i>
+                  </button>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-1">
+                  <small style="font-size: 10px;">
+                    Count: <strong [class.text-danger]="!isArrivedHologramCountValid(item)" [class.text-success]="isArrivedHologramCountValid(item) && getArrivedHologramTotalCount(item) > 0">{{ getArrivedHologramTotalCount(item) }}</strong> / {{ item.arrived_bottles }} btls
+                  </small>
+                  <button
+                    type="button"
+                    class="btn btn-outline-primary btn-sm p-0 px-1"
+                    (click)="addArrivedHgRange(item)"
+                    title="Add another arrived hologram range"
+                    style="font-size: 10px;"
+                    [disabled]="getArrivedHologramTotalCount(item) >= item.arrived_bottles"
+                  >
+                    <i class="bi bi-plus"></i> Add
+                  </button>
+                </div>
+                <small class="text-danger d-block fw-bold" *ngIf="!isArrivedHologramCountValid(item)" style="font-size: 9px;">
+                  <i class="bi bi-exclamation-triangle-fill"></i> Mismatch ({{ getArrivedHologramTotalCount(item) }} &ne; {{ item.arrived_bottles }} btls)
+                </small>
+              </div>
+            </td>
+
             <td class="text-center">
               <span class="badge bg-secondary px-2 py-1">{{ item.expected_cases }} Cases</span>
               <small class="d-block text-muted mt-1">({{ item.expected_bottles }} btls)</small>
@@ -3250,28 +3327,39 @@
               />
             </td>
 
-            <!-- Damaged Loose Bottles Hologram Range: Multiple From → To Inputs for each broken bottle -->
+            <!-- Damaged Loose Bottles Hologram Range: Multiple From → To Inputs with range matching validation -->
             <td style="background-color: #fff1f2;">
               <div *ngIf="item.damaged_bottles > 0" class="d-flex flex-column gap-1">
-                <div *ngFor="let r of item.damaged_bottle_ranges; let bIdx = index" class="d-flex align-items-center gap-1">
-                  <span class="text-danger small fw-bold text-nowrap" style="font-size: 10px; min-width: 26px;">#{{ bIdx + 1 }}</span>
-                  <input
-                    type="text"
-                    class="form-control form-control-sm font-monospace text-danger border-danger"
-                    placeholder="From"
-                    [(ngModel)]="r.from"
-                    (ngModelChange)="onDamagedBottleRangeFromChange(item, r)"
-                    style="width: 88px;"
-                  />
-                  <span class="text-danger fw-bold">→</span>
-                  <input
-                    type="text"
-                    class="form-control form-control-sm font-monospace text-danger border-danger"
-                    placeholder="To"
-                    [(ngModel)]="r.to"
-                    (ngModelChange)="formatDamagedBottleHolograms(item)"
-                    style="width: 88px;"
-                  />
+                <div *ngFor="let r of item.damaged_bottle_ranges; let bIdx = index" class="d-flex flex-column gap-0 mb-1">
+                  <div class="d-flex align-items-center gap-1">
+                    <span class="text-danger small fw-bold text-nowrap" style="font-size: 10px; min-width: 24px;">#{{ bIdx + 1 }}</span>
+                    <input
+                      type="text"
+                      class="form-control form-control-sm font-monospace text-danger border-danger"
+                      [class.border-danger]="(r.from || r.to) && !isDamagedBottleRangeValid(r.from, r.to, item).valid"
+                      [class.border-success]="(r.from || r.to) && isDamagedBottleRangeValid(r.from, r.to, item).valid"
+                      placeholder="From"
+                      [(ngModel)]="r.from"
+                      (ngModelChange)="onDamagedBottleRangeFromChange(item, r)"
+                      style="width: 84px;"
+                    />
+                    <span class="text-danger fw-bold">→</span>
+                    <input
+                      type="text"
+                      class="form-control form-control-sm font-monospace text-danger border-danger"
+                      [class.border-danger]="(r.from || r.to) && !isDamagedBottleRangeValid(r.from, r.to, item).valid"
+                      [class.border-success]="(r.from || r.to) && isDamagedBottleRangeValid(r.from, r.to, item).valid"
+                      placeholder="To"
+                      [(ngModel)]="r.to"
+                      (ngModelChange)="onDamagedBottleRangeToChange(item, r)"
+                      style="width: 84px;"
+                    />
+                    <i class="bi bi-check-circle-fill text-success" *ngIf="(r.from || r.to) && isDamagedBottleRangeValid(r.from, r.to, item).valid" title="Valid within arrived range" style="font-size: 12px;"></i>
+                    <i class="bi bi-exclamation-triangle-fill text-danger" *ngIf="(r.from || r.to) && !isDamagedBottleRangeValid(r.from, r.to, item).valid" title="{{ isDamagedBottleRangeValid(r.from, r.to, item).message }}" style="font-size: 12px;"></i>
+                  </div>
+                  <small class="text-danger d-block ps-4 fw-semibold" *ngIf="(r.from || r.to) && !isDamagedBottleRangeValid(r.from, r.to, item).valid" style="font-size: 9px;">
+                    <i class="bi bi-exclamation-circle-fill me-1"></i> {{ isDamagedBottleRangeValid(r.from, r.to, item).message }}
+                  </small>
                 </div>
                 <small class="text-danger d-block mt-1 fw-bold" style="font-size: 11px;">
                   <i class="bi bi-tag-fill me-1"></i> {{ item.damaged_bottles }} Damaged Bottle(s)
@@ -3290,32 +3378,6 @@
               </small>
             </td>
 
-            <!-- Arrived Hologram Range: From → To Inputs -->
-            <td>
-              <div class="d-flex align-items-center gap-1">
-                <input
-                  type="text"
-                  class="form-control form-control-sm font-monospace"
-                  placeholder="From"
-                  [(ngModel)]="item.hologram_from"
-                  (ngModelChange)="calculateHologramRange(item)"
-                  style="width: 100px;"
-                />
-                <span class="text-muted">→</span>
-                <input
-                  type="text"
-                  class="form-control form-control-sm font-monospace bg-light"
-                  placeholder="To"
-                  [(ngModel)]="item.hologram_to"
-                  readonly
-                  style="width: 100px;"
-                />
-              </div>
-              <small class="text-muted d-block mt-1">
-                Arrived Count: <strong>{{ item.hologram_count || item.arrived_bottles }}</strong> Holograms
-              </small>
-            </td>
-
             <!-- Item Remarks -->
             <td>
               <input
@@ -3330,6 +3392,7 @@
         <tfoot class="table-light fw-bold">
           <tr>
             <td colspan="3" class="text-end">TOTALS:</td>
+            <td></td>
             <td class="text-center">
               <div>{{ totalArrivalExpectedCases }} Cases</div>
               <small class="text-muted fw-normal">({{ totalArrivalExpectedBottles }} btls)</small>
@@ -3348,7 +3411,7 @@
               <div>{{ totalArrivalGoodBottles }} Btls</div>
               <small class="text-muted fw-normal">({{ totalArrivalGoodCases }} Cases)</small>
             </td>
-            <td colspan="2"></td>
+            <td></td>
           </tr>
         </tfoot>
       </table>
@@ -3366,7 +3429,15 @@
         <div class="border rounded-3 p-3 bg-light h-100">
           <div class="d-flex justify-content-between align-items-start mb-2">
             <span class="badge bg-primary px-2 py-1 font-monospace">{{ summary.permit_number }}</span>
-            <span class="badge bg-success">{{ summary.good_bottles }} Usable Btls Added</span>
+            <div class="d-flex align-items-center gap-1">
+              <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25" *ngIf="isPermitComplete(summary.permit_number)">
+                <i class="bi bi-check-circle-fill me-1"></i> Completed
+              </span>
+              <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25" *ngIf="!isPermitComplete(summary.permit_number)">
+                <i class="bi bi-hourglass-split me-1"></i> Pending
+              </span>
+              <span class="badge bg-success">{{ summary.good_bottles }} Usable Btls Added</span>
+            </div>
           </div>
           <div class="small text-muted mb-2">
             Supplier: <strong class="text-dark">{{ summary.supplier_name }}</strong>
@@ -3376,6 +3447,11 @@
               <div class="bg-white p-1 rounded border">
                 <div class="text-muted" style="font-size: 10px;">ARRIVED</div>
                 <strong>{{ summary.arrived_cases }} C ({{ summary.arrived_bottles }} B)</strong>
+                <div class="text-primary font-monospace mt-1" style="font-size: 10px;" *ngIf="summary.all_arrived_ranges?.length > 0">
+                  <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 text-wrap" style="font-size: 9px;">
+                    <i class="bi bi-tag-fill me-1"></i>{{ summary.all_arrived_ranges.join(', ') }}
+                  </span>
+                </div>
               </div>
             </div>
             <div class="col-4">
@@ -3433,6 +3509,9 @@
       Saving will store all arrival records, hologram ranges, and damage entries into <strong class="text-dark">imfl_arrival</strong> and update net usable stock in <strong class="text-dark">imfl_brand_warehouse</strong>.
     </div>
     <div class="d-flex align-items-center gap-2">
+      <small class="text-danger fw-bold me-2" *ngIf="!isArrivalFormValid()">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i> Complete all entries to enable save
+      </small>
       <button type="button" class="btn btn-outline-secondary px-4" (click)="closeUpdateArrivalModal()" [disabled]="isSavingArrival">
         Cancel & Return
       </button>
@@ -3440,7 +3519,9 @@
         type="button"
         class="btn btn-success px-4 fw-bold shadow-sm d-flex align-items-center gap-2"
         (click)="saveBrandsArrival()"
-        [disabled]="isSavingArrival"
+        [disabled]="!isArrivalFormValid() || isSavingArrival"
+        [style.opacity]="!isArrivalFormValid() ? '0.5' : '1'"
+        [style.cursor]="!isArrivalFormValid() ? 'not-allowed' : 'pointer'"
         style="background: linear-gradient(135deg, #10b981, #059669); border: none;"
       >
         <i class="bi bi-check-circle-fill" *ngIf="!isSavingArrival"></i>
@@ -3516,16 +3597,17 @@
           </div>
           
           <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
+            <table class="table table-hover align-middle mb-0" style="font-size: 12.5px;">
               <thead class="table-light small fw-bold text-uppercase">
                 <tr>
-                  <th>Arrival Date & Time</th>
-                  <th>Permit Number</th>
+                  <th>Arrival Date</th>
+                  <th>Permit Ref</th>
                   <th>Pack Size</th>
-                  <th>Arrived Cases</th>
-                  <th>Arrived Units</th>
-                  <th>Vehicle Number</th>
-                  <th>Status</th>
+                  <th>Arrived / Cases</th>
+                  <th>Arrived Hologram Range</th>
+                  <th>Damage Records</th>
+                  <th>Net Usable Stock</th>
+                  <th>Vehicle No</th>
                   <th>Remarks</th>
                 </tr>
               </thead>
@@ -3537,21 +3619,37 @@
                   </td>
                   <td><span class="fw-bold">{{ entry.pack_size }}ml</span></td>
                   <td>
-                    <span class="badge bg-warning bg-opacity-25 text-dark fw-bold px-2 py-1">{{ entry.arrived_cases }} Cases</span>
+                    <div class="fw-bold text-dark">{{ entry.arrived_cases }} Cases</div>
+                    <small class="text-muted">({{ entry.arrived_bottles }} Bottles)</small>
                   </td>
                   <td>
-                    <span class="fw-bold text-success">{{ entry.arrived_bottles | number }} Units</span>
-                  </td>
-                  <td>{{ entry.vehicle_number || 'N/A' }}</td>
-                  <td>
-                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">
-                      {{ entry.status }}
+                    <span class="font-monospace text-primary fw-bold" *ngIf="entry.hologram_from">
+                      <i class="bi bi-tag-fill me-1"></i>{{ entry.hologram_from }} → {{ entry.hologram_to }}
                     </span>
+                    <span class="text-muted" *ngIf="!entry.hologram_from">-</span>
+                  </td>
+                  <td>
+                    <div *ngIf="entry.damaged_bottles > 0 || (entry.damaged_holograms && entry.damaged_holograms !== 'None')" class="text-danger font-monospace small">
+                      <i class="bi bi-exclamation-circle-fill me-1"></i>{{ entry.damaged_bottles }} Loose Btl (HG: {{ entry.damaged_holograms }})
+                    </div>
+                    <div *ngIf="entry.damaged_cases > 0 || (entry.damaged_cases_holograms && entry.damaged_cases_holograms !== 'None')" class="text-danger font-monospace small">
+                      <i class="bi bi-box-seam me-1"></i>{{ entry.damaged_cases }} Case (HG: {{ entry.damaged_cases_holograms }})
+                    </div>
+                    <span class="badge bg-light text-success border" *ngIf="!entry.damaged_bottles && !entry.damaged_cases">
+                      No Damage
+                    </span>
+                  </td>
+                  <td>
+                    <span class="fw-bold text-success fs-6">{{ entry.good_bottles | number }} Units</span>
+                    <small class="text-muted d-block">({{ entry.good_cases }} Cases)</small>
+                  </td>
+                  <td>
+                    <span class="badge bg-light text-dark border">{{ entry.vehicle_number || 'N/A' }}</span>
                   </td>
                   <td class="text-muted small">{{ entry.remarks || '-' }}</td>
                 </tr>
                 <tr *ngIf="!selectedBrandForHistory?.recent_entries || selectedBrandForHistory?.recent_entries?.length === 0">
-                  <td colspan="8" class="text-center py-4 text-muted">
+                  <td colspan="9" class="text-center py-4 text-muted">
                     No recent arrival entries recorded for this brand yet.
                   </td>
                 </tr>

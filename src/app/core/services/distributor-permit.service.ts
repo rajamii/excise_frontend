@@ -194,7 +194,7 @@ export class DistributorPermitService {
   }
 
   getImflBrandWarehouseSummary(): Observable<any> {
-    return this.http.get<any>(`${this.baseUrl}/brand-warehouse/summary/`);
+    return this.http.get<any>(`${this.baseUrl}/brand-warehouse/summary/?_t=${Date.now()}`);
   }
 }
 

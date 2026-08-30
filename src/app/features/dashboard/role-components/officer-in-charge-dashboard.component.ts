@@ -279,7 +279,10 @@ export class OfficerInChargeDashboardComponent implements OnInit {
   public hologramProcurementPendingCount = 0;
   public blDetailsPendingCount = 0;
   public dailyEntryPendingCount = 0;
+  public imflCasesAppliedCount = 0;
   public imflCasesPendingCount = 0;
+  public imflCasesApprovedCount = 0;
+  public imflCasesRejectedCount = 0;
 
   // Pagination
   currentPage: number = 1;
@@ -318,31 +321,29 @@ export class OfficerInChargeDashboardComponent implements OnInit {
   }
 
   private loadImflCasesPendingCount(): void {
-    this.distributorPermitService.getDashboardCounts('brand-arrival').subscribe({
+    this.distributorPermitService.getDashboardCounts('requisition', true).subscribe({
       next: (res: any) => {
+        this.imflCasesAppliedCount = Number(res?.applied || res?.total || 0);
         this.imflCasesPendingCount = Number(res?.pending || 0);
+        this.imflCasesApprovedCount = Number(res?.approved || 0);
+        this.imflCasesRejectedCount = Number(res?.rejected || 0);
       },
       error: () => {
         this.distributorPermitService.listApplications().subscribe({
           next: (apps: any[]) => {
             const list = Array.isArray(apps) ? apps : [];
-            this.imflCasesPendingCount = list.filter((app: any) => {
-              return Boolean(
-                app?.is_excise_duty_fee_paid ||
-                app?.isExciseDutyFeePaid ||
-                String(app?.paymentStatus || '').toLowerCase() === 'paid' ||
-                String(app?.payment_status || '').toLowerCase() === 'paid' ||
-                String(app?.payment_status || '').toLowerCase() === 'completed' ||
-                String(app?.status || '').toLowerCase().includes('payslip') ||
-                String(app?.status || '').toLowerCase().includes('approved') ||
-                String(app?.status || '').toLowerCase().includes('arrival') ||
-                String(app?.status || '').toLowerCase().includes('paid') ||
-                Number(app?.current_stage_id || app?.current_stage?.id || 0) === 156
-              );
-            }).length;
+            const pendingList = list.filter((app: any) => {
+              const st = String(app?.status || '').toLowerCase();
+              return !st.includes('completed') && !st.includes('approved') && !st.includes('arrival approved');
+            });
+            this.imflCasesAppliedCount = list.length;
+            this.imflCasesPendingCount = pendingList.length;
+            this.imflCasesApprovedCount = list.length - pendingList.length;
           },
           error: () => {
+            this.imflCasesAppliedCount = 0;
             this.imflCasesPendingCount = 0;
+            this.imflCasesApprovedCount = 0;
           }
         });
       }
@@ -458,10 +459,10 @@ export class OfficerInChargeDashboardComponent implements OnInit {
     const holProcPending = this.hologramProcurementPendingCount || 0;
 
     return {
-      applied: transitApplied + hologramReqApplied + bldApplied + this.imflCasesPendingCount,
+      applied: transitApplied + hologramReqApplied + bldApplied + this.imflCasesAppliedCount,
       pending: transitPending + hologramReqPending + holProcPending + bldPending + this.imflCasesPendingCount,
-      approved: transitApproved + hologramReqApproved + bldApproved,
-      rejected: transitRejected + hologramReqRejected + bldRejected,
+      approved: transitApproved + hologramReqApproved + bldApproved + this.imflCasesApprovedCount,
+      rejected: transitRejected + hologramReqRejected + bldRejected + this.imflCasesRejectedCount,
       dailyEntry: this.dailyEntryPendingCount
     };
   }

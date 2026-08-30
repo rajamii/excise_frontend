@@ -211,9 +211,20 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }
     if (this.counts.pending > 0) {
       this.activeCardFilter = 'pending';
+    } else if (this.counts.approved > 0) {
+      this.activeCardFilter = 'approved';
     } else {
       this.activeCardFilter = 'all';
     }
+  }
+
+  getOfficerStatusGroup(row: DistributorPermitRow | any): DistributorPermitStatusGroup {
+    const arrivalStatus = this.getArrivalStatusForRow(row);
+    if (arrivalStatus === 'approved') return 'approved';
+    if (arrivalStatus === 'under_review') return 'under_process';
+    if (arrivalStatus === 'rejected') return 'rejected';
+    if (arrivalStatus === 'pending_entry') return 'pending';
+    return row.statusGroup || 'pending';
   }
 
   openApplyForm(): void {
@@ -299,14 +310,6 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       }
       return true;
     });
-  }
-
-  getOfficerStatusGroup(row: DistributorPermitRow | any): DistributorPermitStatusGroup {
-    const arrivalStatus = this.getArrivalStatusForRow(row);
-    if (arrivalStatus === 'under_review') return 'pending';
-    if (arrivalStatus === 'approved') return 'approved';
-    if (arrivalStatus === 'rejected') return 'rejected';
-    return row.statusGroup || 'pending';
   }
 
   get counts(): { total: number; approved: number; pending: number; underProcess: number; objection: number; rejected: number } {
@@ -400,24 +403,27 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   brandWarehouseTypeFilter = 'all';
 
   get totalBrandWarehouseBrandsCount(): number {
-    return this.brandWarehouseOverview?.total_brands || this.brandWarehouseStocks?.length || 0;
+    return this.brandWarehouseOverview?.totalBrands || this.brandWarehouseOverview?.total_brands || this.brandWarehouseStocks?.length || 0;
   }
 
   get totalBrandWarehouseStockUnits(): number {
-    if (this.brandWarehouseOverview?.total_stock_units) {
-      return this.brandWarehouseOverview.total_stock_units;
+    const fromOverview = this.brandWarehouseOverview?.totalStockUnits ?? this.brandWarehouseOverview?.total_stock_units;
+    if (fromOverview !== undefined && fromOverview !== null && Number(fromOverview) > 0) {
+      return Number(fromOverview);
     }
-    return (this.brandWarehouseStocks || []).reduce((sum, b) => sum + (Number(b.total_stock) || 0), 0);
+    return (this.brandWarehouseStocks || []).reduce((sum, b) => sum + (Number(b.totalStock ?? b.total_stock) || 0), 0);
   }
 
   get totalBrandWarehouseCasesCount(): number {
-    if (this.brandWarehouseOverview?.total_cases) {
-      return this.brandWarehouseOverview.total_cases;
+    const fromOverview = this.brandWarehouseOverview?.totalCases ?? this.brandWarehouseOverview?.total_cases;
+    if (fromOverview !== undefined && fromOverview !== null && Number(fromOverview) > 0) {
+      return Number(fromOverview);
     }
     return (this.brandWarehouseStocks || []).reduce((sum, b) => {
       let cases = 0;
-      if (b.pack_sizes) {
-        Object.values(b.pack_sizes).forEach((p: any) => {
+      const ps = b.packSizes || b.pack_sizes;
+      if (ps) {
+        Object.values(ps).forEach((p: any) => {
           cases += Number(p.cases) || 0;
         });
       }
@@ -426,7 +432,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   get totalBrandWarehouseUtilizedUnits(): number {
-    return (this.brandWarehouseStocks || []).reduce((sum, b) => sum + (Number(b.total_utilized) || 0), 0);
+    return (this.brandWarehouseStocks || []).reduce((sum, b) => sum + (Number(b.totalUtilized ?? b.total_utilized) || 0), 0);
   }
 
   // --- Update Brands Arrival Page State ---
@@ -499,17 +505,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     item.good_cases = Math.floor(goodBottles / pieces);
     item.good_loose_bottles = goodBottles % pieces;
 
-    // 1. Arrived Range (From → To)
-    if (item.hologram_from && arrBottles > 0) {
-      item.hologram_to = this.computeHologramTo(item.hologram_from, arrBottles);
-      item.hologram_count = arrBottles;
-    } else if (item.hologram_from && arrBottles === 0) {
-      item.hologram_to = item.hologram_from;
-      item.hologram_count = 0;
-    } else {
-      item.hologram_to = '';
-      item.hologram_count = arrBottles;
+    // 1. Arrived Ranges Sync
+    if (!item.arrived_hg_ranges || item.arrived_hg_ranges.length === 0) {
+      item.arrived_hg_ranges = [{ from: '', to: '' }];
     }
+    this.syncArrivedHologramRanges(item);
 
     // 2. Damaged Cases Hologram Range (From → To)
     if (damCases > 0) {
@@ -530,6 +530,182 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.updateDamagedBottleRanges(item);
   }
 
+  addArrivedHgRange(item: any): void {
+    if (!item.arrived_hg_ranges) item.arrived_hg_ranges = [];
+    item.arrived_hg_ranges.push({ from: '', to: '' });
+    this.syncArrivedHologramRanges(item);
+  }
+
+  removeArrivedHgRange(item: any, index: number): void {
+    if (item.arrived_hg_ranges && item.arrived_hg_ranges.length > 1) {
+      item.arrived_hg_ranges.splice(index, 1);
+      this.syncArrivedHologramRanges(item);
+    }
+  }
+
+  getArrivedHologramTotalCount(item: any): number {
+    let total = 0;
+    (item.arrived_hg_ranges || []).forEach((r: any) => {
+      if (r.from && r.to) {
+        total += this.getHologramRangeCount(r.from, r.to);
+      } else if (r.from && !r.to) {
+        total += 1;
+      }
+    });
+    return total;
+  }
+
+  isArrivedHologramCountValid(item: any): boolean {
+    if (!item.arrived_bottles || item.arrived_bottles === 0) return true;
+    const hasAnyFrom = (item.arrived_hg_ranges || []).some((r: any) => r.from);
+    if (!hasAnyFrom) return true; // not entered yet
+    const total = this.getArrivedHologramTotalCount(item);
+    return total === item.arrived_bottles;
+  }
+
+  onArrivedHgRangeFromChange(item: any, range?: any, index?: number): void {
+    if (range && range.from && !range.to && item.arrived_bottles > 0) {
+      let usedBefore = 0;
+      (item.arrived_hg_ranges || []).forEach((r: any, idx: number) => {
+        if (idx !== index && r.from && r.to) {
+          usedBefore += this.getHologramRangeCount(r.from, r.to);
+        }
+      });
+      const remaining = Math.max(1, item.arrived_bottles - usedBefore);
+      range.to = this.computeHologramTo(range.from, remaining);
+    }
+    this.syncArrivedHologramRanges(item);
+  }
+
+  onArrivedHgRangeToChange(item: any, range?: any): void {
+    // User is editing 'To' directly - do NOT auto-overwrite it
+    this.syncArrivedHologramRanges(item);
+  }
+
+  syncArrivedHologramRanges(item: any): void {
+    if (!item.arrived_hg_ranges || item.arrived_hg_ranges.length === 0) {
+      item.arrived_hg_ranges = [{ from: '', to: '' }];
+    }
+    const validRanges = item.arrived_hg_ranges.filter((r: any) => r.from || r.to);
+    if (validRanges.length > 0) {
+      item.hologram_from = validRanges[0].from || '';
+      item.hologram_to = validRanges[validRanges.length - 1].to || validRanges[0].to || '';
+      
+      let totalCount = 0;
+      validRanges.forEach((r: any) => {
+        const c = this.getHologramRangeCount(r.from, r.to);
+        totalCount += c;
+      });
+      item.hologram_count = totalCount > 0 ? totalCount : item.arrived_bottles;
+    } else {
+      item.hologram_from = '';
+      item.hologram_to = '';
+      item.hologram_count = item.arrived_bottles;
+    }
+  }
+
+  getHologramRangeCount(fromStr: string, toStr: string): number {
+    if (!fromStr && !toStr) return 0;
+    if (fromStr && !toStr) return 1;
+    if (!fromStr && toStr) return 0;
+    const matchF = String(fromStr).trim().match(/\d+$/);
+    const matchT = String(toStr).trim().match(/\d+$/);
+    if (matchF && matchT) {
+      const fNum = parseInt(matchF[0], 10);
+      const tNum = parseInt(matchT[0], 10);
+      if (tNum >= fNum) return tNum - fNum + 1;
+      return 1;
+    }
+    return 1;
+  }
+
+  isArrivalItemValid(item: any): boolean {
+    if (!item) return false;
+    const expCases = Number(item.expected_cases || 0);
+    const arrCases = Number(item.arrived_cases);
+    if (isNaN(arrCases) || arrCases < 0 || arrCases > expCases) return false;
+
+    // Check arrived hologram ranges if arrived_bottles > 0
+    if (item.arrived_bottles > 0) {
+      const validArrived = (item.arrived_hg_ranges || []).filter((r: any) => r.from && r.to);
+      if (validArrived.length === 0) return false;
+      const totalHg = this.getArrivedHologramTotalCount(item);
+      if (totalHg !== item.arrived_bottles) return false;
+    }
+
+    // Check damaged cases hologram if damaged_cases > 0
+    if (item.damaged_cases > 0 && !item.damaged_cases_hg_from) {
+      return false;
+    }
+
+    // Check damaged bottles if damaged_bottles > 0
+    if (item.damaged_bottles > 0) {
+      const ranges = item.damaged_bottle_ranges || [];
+      if (ranges.length !== item.damaged_bottles) return false;
+      const allValid = ranges.every((r: any) => this.isDamagedBottleRangeValid(r.from, r.to, item).valid);
+      if (!allValid) return false;
+    }
+
+    return true;
+  }
+
+  isArrivalFormValid(): boolean {
+    if (!this.arrivalBrandItems || this.arrivalBrandItems.length === 0) return false;
+    return this.arrivalBrandItems.every((it) => this.isArrivalItemValid(it));
+  }
+
+  isPermitComplete(permitNo: string): boolean {
+    const items = (this.arrivalBrandItems || []).filter((it: any) => it.permit_number === permitNo);
+    return items.length > 0 && items.every((it: any) => this.isArrivalItemValid(it));
+  }
+
+  isDamagedBottleRangeValid(fromVal: string, toVal: string, item: any): { valid: boolean; message: string } {
+    if (!fromVal && !toVal) {
+      return { valid: false, message: 'Enter hologram number' };
+    }
+    const fStr = String(fromVal || '').trim();
+    const tStr = String(toVal || fromVal || '').trim();
+    if (!fStr) {
+      return { valid: false, message: 'From number is required' };
+    }
+
+    const matchF = fStr.match(/\d+$/);
+    const matchT = tStr.match(/\d+$/);
+    if (!matchF || !matchT) {
+      return { valid: false, message: 'Invalid hologram format' };
+    }
+
+    const fNum = parseInt(matchF[0], 10);
+    const tNum = parseInt(matchT[0], 10);
+
+    if (tNum < fNum) {
+      return { valid: false, message: 'From cannot be greater than To' };
+    }
+
+    const arrivedRanges = (item.arrived_hg_ranges || []).filter((r: any) => r.from && r.to);
+    if (arrivedRanges.length === 0) {
+      return { valid: false, message: 'Set Arrived HG Range first' };
+    }
+
+    const inside = arrivedRanges.some((r: any) => {
+      const arrF = parseInt(String(r.from).trim().match(/\d+$/)?.[0] || '-1', 10);
+      const arrT = parseInt(String(r.to).trim().match(/\d+$/)?.[0] || '-1', 10);
+      if (arrF === -1 || arrT === -1) return false;
+      return (fNum >= arrF && tNum <= arrT);
+    });
+
+    if (!inside) {
+      const rangesSummary = arrivedRanges.map((r: any) => `${r.from}–${r.to}`).join(', ');
+      return { valid: false, message: `Outside arrived range (${rangesSummary})` };
+    }
+
+    return { valid: true, message: 'Valid' };
+  }
+
+  isHologramWithinArrivedRanges(fromVal: string, toVal: string, item: any): boolean {
+    return this.isDamagedBottleRangeValid(fromVal, toVal, item).valid;
+  }
+
   updateDamagedBottleRanges(item: any): void {
     const count = Math.max(0, Number(item.damaged_bottles || 0));
     if (!item.damaged_bottle_ranges) {
@@ -548,6 +724,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     if (range.from && !range.to) {
       range.to = range.from;
     }
+    this.formatDamagedBottleHolograms(item);
+  }
+
+  onDamagedBottleRangeToChange(item: any, range: any): void {
+    // Direct edit of To - do not overwrite
     this.formatDamagedBottleHolograms(item);
   }
 
@@ -633,6 +814,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
             batch_number: '',
             hologram_from: '',
             hologram_to: '',
+            arrived_hg_ranges: [{ from: '', to: '' }],
             hologram_count: expBottles,
             damaged_cases_hg_from: '',
             damaged_cases_hg_to: '',
@@ -677,6 +859,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           batch_number: '',
           hologram_from: '',
           hologram_to: '',
+          arrived_hg_ranges: [{ from: '', to: '' }],
           hologram_count: expBottles,
           damaged_cases_hg_from: '',
           damaged_cases_hg_to: '',
@@ -719,6 +902,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         batch_number: '',
         hologram_from: '',
         hologram_to: '',
+        arrived_hg_ranges: [{ from: '', to: '' }],
         hologram_count: expCases * pieces,
         damaged_cases_hg_from: '',
         damaged_cases_hg_to: '',
@@ -761,7 +945,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           good_cases: 0,
           hologram_ranges: [],
           damaged_cases_holograms_list: [],
-          damaged_holograms_list: []
+          damaged_holograms_list: [],
+          all_arrived_ranges: []
         });
       }
       const s = summaryMap.get(pNum);
@@ -775,9 +960,20 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       s.total_damaged_bottles += Number(item.total_damaged_bottles || 0);
       s.good_bottles += Number(item.good_bottles || 0);
       s.good_cases += Number(item.good_cases || 0);
-      if (item.hologram_from && item.hologram_to) {
+
+      const arrivedRangesFormatted = (item.arrived_hg_ranges || [])
+        .filter((r: any) => r.from && r.to)
+        .map((r: any) => `${r.from} → ${r.to}`)
+        .join(', ');
+
+      if (arrivedRangesFormatted) {
+        s.hologram_ranges.push(`${item.brand_name}: ${arrivedRangesFormatted} (${item.arrived_bottles} btls)`);
+        s.all_arrived_ranges.push(`${arrivedRangesFormatted}`);
+      } else if (item.hologram_from && item.hologram_to) {
         s.hologram_ranges.push(`${item.brand_name}: ${item.hologram_from} → ${item.hologram_to} (${item.arrived_bottles} btls)`);
+        s.all_arrived_ranges.push(`${item.hologram_from} → ${item.hologram_to}`);
       }
+
       if (item.damaged_cases > 0 && item.damaged_cases_holograms && item.damaged_cases_holograms !== 'None') {
         s.damaged_cases_holograms_list.push(`${item.brand_name}: ${item.damaged_cases_holograms}`);
       }
@@ -843,6 +1039,97 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (!this.isArrivalFormValid()) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Incomplete or Invalid Entries',
+        text: 'Please review the arrival entries. Ensure all hologram ranges and damage records are properly filled and verified before saving.',
+        confirmButtonColor: '#3b82f6'
+      });
+      return;
+    }
+
+    // Build brief description summary HTML
+    let brandRowsHtml = this.arrivalBrandItems.map((it, idx) => `
+      <tr style="border-bottom: 1px solid #e2e8f0; font-size: 12px; text-align: left;">
+        <td style="padding: 6px 8px; font-weight: 600;">${idx + 1}. ${it.brand_name} (${it.pack_size}ml)</td>
+        <td style="padding: 6px 8px; text-align: center; color: #2563eb; font-weight: 600;">${it.arrived_cases} C (${it.arrived_bottles} B)</td>
+        <td style="padding: 6px 8px; text-align: center; color: #dc2626; font-weight: 600;">${it.total_damaged_bottles || (it.damaged_cases * it.pieces_per_case + it.damaged_bottles)} B</td>
+        <td style="padding: 6px 8px; text-align: center; color: #16a34a; font-weight: 700;">${it.good_bottles} B</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #f1f5f9; font-size: 11px; color: #64748b; background-color: #f8fafc;">
+        <td colspan="4" style="padding: 4px 8px;">
+          <div><strong>Arrived Holograms:</strong> ${it.hologram_from ? `${it.hologram_from} → ${it.hologram_to} (${it.hologram_count} btls)` : 'None'}</div>
+          ${it.damaged_cases > 0 ? `<div style="color: #dc2626;"><strong>Damaged Cases HG:</strong> ${it.damaged_cases_holograms}</div>` : ''}
+          ${it.damaged_bottles > 0 ? `<div style="color: #dc2626;"><strong>Damaged Loose Btls HG:</strong> ${it.damaged_holograms}</div>` : ''}
+          ${it.remarks ? `<div><strong>Remarks:</strong> ${it.remarks}</div>` : ''}
+        </td>
+      </tr>
+    `).join('');
+
+    const summaryHtml = `
+      <div style="text-align: left; font-family: sans-serif;">
+        <p style="margin-bottom: 12px; font-size: 13px; color: #475569;">
+          Please review the brief summary of brand arrivals before finalizing:
+        </p>
+
+        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+          <div style="flex: 1; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 8px; text-align: center;">
+            <div style="font-size: 10px; color: #1e40af; font-weight: bold;">VEHICLE NO</div>
+            <div style="font-size: 13px; font-weight: 700; color: #1e3a8a;">${this.arrivalCommonVehicle || 'N/A'}</div>
+          </div>
+          <div style="flex: 1; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 8px; text-align: center;">
+            <div style="font-size: 10px; color: #166534; font-weight: bold;">TOTAL GOOD STOCK</div>
+            <div style="font-size: 13px; font-weight: 700; color: #14532d;">${this.totalArrivalGoodBottles} Btls (${this.totalArrivalGoodCases} Cases)</div>
+          </div>
+          <div style="flex: 1; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 8px; text-align: center;">
+            <div style="font-size: 10px; color: #991b1b; font-weight: bold;">TOTAL DAMAGED</div>
+            <div style="font-size: 13px; font-weight: 700; color: #7f1d1d;">${this.totalArrivalTotalDamagedBottles} Btls</div>
+          </div>
+        </div>
+
+        <div style="max-height: 220px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 12px;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead style="background: #f1f5f9; font-size: 11px; font-weight: bold; text-transform: uppercase; color: #334155;">
+              <tr>
+                <th style="padding: 6px 8px; text-align: left;">Brand</th>
+                <th style="padding: 6px 8px; text-align: center;">Arrived</th>
+                <th style="padding: 6px 8px; text-align: center;">Damaged</th>
+                <th style="padding: 6px 8px; text-align: center;">Net Stock</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${brandRowsHtml}
+            </tbody>
+          </table>
+        </div>
+
+        ${this.arrivalCommonRemarks ? `<div style="font-size: 12px; color: #334155; margin-bottom: 8px;"><strong>Officer Remarks:</strong> ${this.arrivalCommonRemarks}</div>` : ''}
+
+        <p style="font-size: 11px; color: #64748b; margin: 0;">
+          <i class="bi bi-info-circle"></i> Once confirmed, records will be saved into <strong>imfl_arrival</strong> and stock will be updated in <strong>imfl_brand_warehouse</strong>.
+        </p>
+      </div>
+    `;
+
+    Swal.fire({
+      title: 'Confirm Brand Stock Arrival',
+      html: summaryHtml,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Confirm & Save Stock',
+      cancelButtonText: 'Review Again',
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#6b7280',
+      width: '620px'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.executeSaveBrandsArrival();
+      }
+    });
+  }
+
+  executeSaveBrandsArrival(): void {
     const payload = {
       distributor_permit: this.arrivalModalData?.reference_no || this.arrivalModalData?.referenceNo || this.arrivalModalData?.id,
       vehicle_number: this.arrivalCommonVehicle,
@@ -886,8 +1173,15 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         next: (res: any) => {
           Swal.fire({
             icon: 'success',
-            title: 'Arrival Stock Saved!',
-            text: res?.message || 'IMFL brand warehouse stock updated successfully.',
+            title: 'Arrival Stock Saved Successfully!',
+            html: `
+              <div style="text-align: left; font-size: 13px;">
+                <p><strong>${res?.count || this.arrivalBrandItems.length}</strong> brand item(s) processed and stored.</p>
+                <p><strong>Net Usable Stock Added:</strong> <span style="color: #16a34a; font-weight: bold;">${this.totalArrivalGoodBottles} Bottles (${this.totalArrivalGoodCases} Cases)</span></p>
+                <p><strong>Total Damaged Recorded:</strong> <span style="color: #dc2626; font-weight: bold;">${this.totalArrivalTotalDamagedBottles} Bottles</span></p>
+                <p style="font-size: 11px; color: #64748b;">Records are persisted in <em>imfl_arrival</em> and <em>imfl_brand_warehouse</em>.</p>
+              </div>
+            `,
             confirmButtonColor: '#10b981'
           });
           this.closeUpdateArrivalModal();
@@ -896,10 +1190,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         },
         error: (err: any) => {
           console.error('Error updating brand arrival:', err);
+          const errorMsg = err?.error?.message || err?.error?.detail || err?.message || 'Failed to update brand arrival.';
           Swal.fire({
             icon: 'error',
             title: 'Save Failed',
-            text: err?.error?.detail || err?.error?.message || 'Failed to save brand arrival stock.',
+            text: errorMsg,
             confirmButtonColor: '#ef4444'
           });
         }
@@ -914,14 +1209,225 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           this.isLoadingBrandWarehouse = false;
           this.cdr.markForCheck();
         }),
-        catchError(() => of({ overview: { total_brands: 0, total_stock_units: 0, total_cases: 0 }, brands: [] }))
+        catchError((err) => {
+          console.error('Error fetching brand warehouse summary:', err);
+          return of({ overview: { totalBrands: 0, totalStockUnits: 0, totalCases: 0 }, brands: [] });
+        })
       )
       .subscribe((res: any) => {
-        if (res) {
-          this.brandWarehouseOverview = res.overview || { total_brands: 0, total_stock_units: 0, total_cases: 0 };
-          this.brandWarehouseStocks = res.brands || [];
+        if (!res) {
+          this.brandWarehouseOverview = { totalBrands: 0, totalStockUnits: 0, totalCases: 0 };
+          this.brandWarehouseStocks = [];
+          this.cdr.markForCheck();
+          return;
         }
+
+        let rawList: any[] = [];
+        let overview: any = null;
+
+        if (Array.isArray(res)) {
+          rawList = this.groupRawWarehouseRecords(res);
+        } else if (res.brands && Array.isArray(res.brands)) {
+          rawList = res.brands;
+          overview = res.overview;
+        } else if (res.data?.brands && Array.isArray(res.data.brands)) {
+          rawList = res.data.brands;
+          overview = res.data.overview;
+        } else if (res.results && Array.isArray(res.results)) {
+          rawList = this.groupRawWarehouseRecords(res.results);
+        }
+
+        const normalizedBrands = (rawList || []).map((b) => this.normalizeBrandWarehouseItem(b));
+        this.brandWarehouseStocks = normalizedBrands;
+
+        const totalStockUnits = normalizedBrands.reduce((sum, b) => sum + (Number(b.totalStock) || 0), 0);
+        const totalCases = normalizedBrands.reduce((sum, b) => {
+          let cases = 0;
+          if (b.packSizes) {
+            Object.values(b.packSizes).forEach((p: any) => {
+              cases += Number(p.cases) || 0;
+            });
+          }
+          return sum + cases;
+        }, 0);
+
+        this.brandWarehouseOverview = {
+          totalBrands: overview?.totalBrands ?? overview?.total_brands ?? normalizedBrands.length,
+          total_brands: overview?.totalBrands ?? overview?.total_brands ?? normalizedBrands.length,
+          totalStockUnits: overview?.totalStockUnits ?? overview?.total_stock_units ?? totalStockUnits,
+          total_stock_units: overview?.totalStockUnits ?? overview?.total_stock_units ?? totalStockUnits,
+          totalCases: overview?.totalCases ?? overview?.total_cases ?? totalCases,
+          total_cases: overview?.totalCases ?? overview?.total_cases ?? totalCases
+        };
+        this.cdr.markForCheck();
       });
+  }
+
+  normalizeBrandWarehouseItem(b: any): any {
+    const brandName = String(b.brandName || b.brand_name || b.brand || '').trim().replace(/^['"]|['"]$/g, '');
+    const supplierName = String(b.supplierName || b.supplier_name || 'Corona Maharashtra').trim().replace(/^['"]|['"]$/g, '');
+    const brandType = String(b.brandType || b.brand_type || 'WHISKY').trim().replace(/^['"]|['"]$/g, '') || 'WHISKY';
+    const totalStock = Number(b.totalStock ?? b.total_stock ?? 0);
+    const totalUtilized = Number(b.totalUtilized ?? b.total_utilized ?? 0);
+    const totalCapacity = Number(b.totalCapacity ?? b.total_capacity ?? 0);
+
+    const packSizesRaw = b.packSizes || b.pack_sizes || {};
+    const packSizes: any = {};
+    Object.keys(packSizesRaw).forEach((k) => {
+      const ps = packSizesRaw[k];
+      packSizes[k] = {
+        packSize: Number(ps.packSize ?? ps.pack_size ?? k),
+        pack_size: Number(ps.packSize ?? ps.pack_size ?? k),
+        currentStock: Number(ps.currentStock ?? ps.current_stock ?? 0),
+        current_stock: Number(ps.currentStock ?? ps.current_stock ?? 0),
+        cases: Number(ps.cases ?? 0),
+        piecesPerCase: Number(ps.piecesPerCase ?? ps.pieces_per_case ?? 12),
+        pieces_per_case: Number(ps.piecesPerCase ?? ps.pieces_per_case ?? 12),
+        status: ps.status || (Number(ps.currentStock ?? ps.current_stock ?? 0) > 0 ? 'IN_STOCK' : 'OUT_OF_STOCK')
+      };
+    });
+
+    const recentEntriesRaw = b.recentEntries || b.recent_entries || [];
+    const recentEntries = recentEntriesRaw.map((e: any) => ({
+      id: e.id,
+      permitNumber: String(e.permitNumber || e.permit_number || '').trim().replace(/^['"]|['"]$/g, ''),
+      permit_number: String(e.permitNumber || e.permit_number || '').trim().replace(/^['"]|['"]$/g, ''),
+      packSize: Number(e.packSize || e.pack_size || 750),
+      pack_size: Number(e.packSize || e.pack_size || 750),
+      expectedCases: Number(e.expectedCases ?? e.expected_cases ?? 0),
+      expected_cases: Number(e.expectedCases ?? e.expected_cases ?? 0),
+      expectedBottles: Number(e.expectedBottles ?? e.expected_bottles ?? 0),
+      expected_bottles: Number(e.expectedBottles ?? e.expected_bottles ?? 0),
+      arrivedCases: Number(e.arrivedCases ?? e.arrived_cases ?? 0),
+      arrived_cases: Number(e.arrivedCases ?? e.arrived_cases ?? 0),
+      arrivedBottles: Number(e.arrivedBottles ?? e.arrived_bottles ?? 0),
+      arrived_bottles: Number(e.arrivedBottles ?? e.arrived_bottles ?? 0),
+      damagedCases: Number(e.damagedCases ?? e.damaged_cases ?? 0),
+      damaged_cases: Number(e.damagedCases ?? e.damaged_cases ?? 0),
+      damagedBottles: Number(e.damagedBottles ?? e.damaged_bottles ?? 0),
+      damaged_bottles: Number(e.damagedBottles ?? e.damaged_bottles ?? 0),
+      goodCases: Number(e.goodCases ?? e.good_cases ?? 0),
+      good_cases: Number(e.goodCases ?? e.good_cases ?? 0),
+      goodBottles: Number(e.goodBottles ?? e.good_bottles ?? totalStock),
+      good_bottles: Number(e.goodBottles ?? e.good_bottles ?? totalStock),
+      hologramFrom: String(e.hologramFrom || e.hologram_from || ''),
+      hologram_from: String(e.hologramFrom || e.hologram_from || ''),
+      hologramTo: String(e.hologramTo || e.hologram_to || ''),
+      hologram_to: String(e.hologramTo || e.hologram_to || ''),
+      damagedHolograms: String(e.damagedHolograms || e.damaged_holograms || ''),
+      damaged_holograms: String(e.damagedHolograms || e.damaged_holograms || ''),
+      damagedCasesHolograms: String(e.damagedCasesHolograms || e.damaged_cases_holograms || ''),
+      damaged_cases_holograms: String(e.damagedCasesHolograms || e.damaged_cases_holograms || ''),
+      arrivalDate: e.arrivalDate || e.arrival_date || '',
+      arrival_date: e.arrivalDate || e.arrival_date || '',
+      vehicleNumber: String(e.vehicleNumber || e.vehicle_number || 'N/A'),
+      vehicle_number: String(e.vehicleNumber || e.vehicle_number || 'N/A'),
+      status: e.status || 'IN_STOCK',
+      remarks: e.remarks || ''
+    }));
+
+    return {
+      brandName,
+      brand_name: brandName,
+      supplierName,
+      supplier_name: supplierName,
+      brandType,
+      brand_type: brandType,
+      totalStock,
+      total_stock: totalStock,
+      totalUtilized,
+      total_utilized: totalUtilized,
+      totalCapacity,
+      total_capacity: totalCapacity,
+      lastArrivalDate: b.lastArrivalDate || b.last_arrival_date,
+      last_arrival_date: b.lastArrivalDate || b.last_arrival_date,
+      latestHologramFrom: b.latestHologramFrom || b.latest_hologram_from || (recentEntries[0]?.hologramFrom || ''),
+      latest_hologram_from: b.latestHologramFrom || b.latest_hologram_from || (recentEntries[0]?.hologramFrom || ''),
+      latestHologramTo: b.latestHologramTo || b.latest_hologram_to || (recentEntries[0]?.hologramTo || ''),
+      latest_hologram_to: b.latestHologramTo || b.latest_hologram_to || (recentEntries[0]?.hologramTo || ''),
+      latestDamagedHolograms: b.latestDamagedHolograms || b.latest_damaged_holograms || (recentEntries[0]?.damagedHolograms || ''),
+      latest_damaged_holograms: b.latestDamagedHolograms || b.latest_damaged_holograms || (recentEntries[0]?.damagedHolograms || ''),
+      latestDamagedCasesHolograms: b.latestDamagedCasesHolograms || b.latest_damaged_cases_holograms || (recentEntries[0]?.damagedCasesHolograms || ''),
+      latest_damaged_cases_holograms: b.latestDamagedCasesHolograms || b.latest_damaged_cases_holograms || (recentEntries[0]?.damagedCasesHolograms || ''),
+      latestVehicleNumber: b.latestVehicleNumber || b.latest_vehicle_number || (recentEntries[0]?.vehicleNumber || ''),
+      latest_vehicle_number: b.latestVehicleNumber || b.latest_vehicle_number || (recentEntries[0]?.vehicleNumber || ''),
+      latestPermitNumber: b.latestPermitNumber || b.latest_permit_number || (recentEntries[0]?.permitNumber || ''),
+      latest_permit_number: b.latestPermitNumber || b.latest_permit_number || (recentEntries[0]?.permitNumber || ''),
+      packSizes,
+      pack_sizes: packSizes,
+      recentEntries,
+      recent_entries: recentEntries
+    };
+  }
+
+  groupRawWarehouseRecords(records: any[]): any[] {
+    const map = new Map<string, any>();
+    (records || []).forEach((r) => {
+      const bName = String(r.brand_name || r.brand || '').trim().replace(/^['"]|['"]$/g, '');
+      if (!bName || bName === '-') return;
+      if (!map.has(bName)) {
+        map.set(bName, {
+          brand_name: bName,
+          brand_type: String(r.brand_type || 'WHISKY').trim().replace(/^['"]|['"]$/g, '') || 'WHISKY',
+          supplier_name: String(r.supplier_name || 'Corona Maharashtra').trim().replace(/^['"]|['"]$/g, ''),
+          pack_sizes: {},
+          total_stock: 0,
+          total_utilized: 0,
+          total_capacity: Number(r.total_capacity || 0),
+          last_arrival_date: r.arrival_date,
+          latest_hologram_from: r.hologram_from || '',
+          latest_hologram_to: r.hologram_to || '',
+          latest_damaged_holograms: r.damaged_holograms || '',
+          latest_damaged_cases_holograms: r.damaged_cases_holograms || '',
+          latest_vehicle_number: r.vehicle_number || '',
+          latest_permit_number: r.permit_number || '',
+          recent_entries: []
+        });
+      }
+      const bObj = map.get(bName);
+      const pSize = String(r.pack_size || 750);
+      const pieces = Number(r.pieces_per_case || 12);
+      const stock = Number(r.current_stock || r.good_bottles || 0);
+      const cases = Number(r.good_cases ?? Math.max(stock > 0 ? 1 : 0, Math.floor(stock / pieces)));
+
+      if (!bObj.pack_sizes[pSize]) {
+        bObj.pack_sizes[pSize] = {
+          pack_size: Number(pSize),
+          current_stock: 0,
+          cases: 0,
+          pieces_per_case: pieces,
+          status: 'IN_STOCK'
+        };
+      }
+      bObj.pack_sizes[pSize].current_stock += stock;
+      bObj.pack_sizes[pSize].cases += cases;
+      bObj.total_stock += stock;
+      bObj.total_utilized += Number(r.total_utilized || 0);
+
+      bObj.recent_entries.push({
+        id: r.id,
+        permit_number: String(r.permit_number || '').trim().replace(/^['"]|['"]$/g, ''),
+        pack_size: Number(pSize),
+        expected_cases: r.expected_cases || 0,
+        expected_bottles: r.expected_bottles || 0,
+        arrived_cases: r.arrived_cases || 0,
+        arrived_bottles: r.arrived_bottles || 0,
+        damaged_cases: r.damaged_cases || 0,
+        damaged_bottles: r.damaged_bottles || 0,
+        good_cases: cases,
+        good_bottles: stock,
+        hologram_from: r.hologram_from || '',
+        hologram_to: r.hologram_to || '',
+        hologram_count: r.hologram_count || r.arrived_bottles || 0,
+        damaged_holograms: r.damaged_holograms || '',
+        damaged_cases_holograms: r.damaged_cases_holograms || '',
+        arrival_date: r.arrival_date,
+        vehicle_number: r.vehicle_number || 'N/A',
+        status: r.status || 'IN_STOCK',
+        remarks: r.remarks || ''
+      });
+    });
+    return Array.from(map.values());
   }
 
   get filteredBrandWarehouseStocks(): any[] {
@@ -971,6 +1477,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     if (!this.isOicDistributorUser && !this.isOfficerUser) return false;
     const app = rowOrApp?.application || rowOrApp;
     if (!app) return false;
+    const arrivalStatus = this.getArrivalStatusForRow(rowOrApp);
+    if (arrivalStatus === 'approved') {
+      return false; // Stock Arrival already completed & approved -> hide update button
+    }
     const isPaid = Boolean(
       app?.is_excise_duty_fee_paid ||
       app?.isExciseDutyFeePaid ||
@@ -2172,7 +2682,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   getArrivalStatusForRow(row: any): string {
     const item = this.getArrivalItemForRow(row);
     if (!item) return 'pending_entry';
-    return String(item.status || '').toLowerCase().trim();
+    const st = String(item.status || '').toLowerCase().trim();
+    if (st.includes('approved') || st === 'arrival approved' || st === 'approved') return 'approved';
+    if (st.includes('review') || st === 'under_review') return 'under_review';
+    if (st.includes('reject')) return 'rejected';
+    return st || 'pending_entry';
   }
 
   getPendingArrivalForItem(row: any): any {
@@ -4535,6 +5049,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
             this.pendingArrivalReviews = this.allCasesProcessedList.filter((c: any) => String(c.status).toLowerCase() === 'under_review');
 
             this.processLoadedApplications(requisitions, revalidations, cancellations);
+            this.loadBrandWarehouseStock();
           } catch (err) {
             console.error('Error processing permit initial data:', err);
           }
@@ -4564,6 +5079,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   loadApplications(): void {
     this.sidebarPendingBadgeService.triggerRefresh();
+    this.loadBrandWarehouseStock();
     forkJoin({
       requisitions: this.permitService.listApplications().pipe(catchError(() => of([]))),
       revalidations: this.permitService.getRevalidations().pipe(catchError(() => of([]))),
