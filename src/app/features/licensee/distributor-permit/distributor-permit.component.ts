@@ -468,8 +468,13 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const pieces = Number(item.pieces_per_case || 12);
     const expCases = Math.max(0, Number(item.expected_cases || 0));
     const expBottles = Number(item.expected_bottles || (expCases * pieces));
-    const arrCases = Math.max(0, Number(item.arrived_cases ?? expCases));
+    
+    // Smart Validation: Arrived cases cannot exceed expected cases or be negative
+    let arrCases = Number(item.arrived_cases ?? expCases);
+    if (isNaN(arrCases) || arrCases < 0) arrCases = 0;
+    if (arrCases > expCases) arrCases = expCases;
     item.arrived_cases = arrCases;
+
     const arrBottles = arrCases * pieces;
     item.arrived_bottles = arrBottles;
 
@@ -479,8 +484,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const damCaseBottles = damCases * pieces;
     item.damaged_case_bottles = damCaseBottles;
 
-    // Bottle-level damage within arrived cases
-    const damBottles = Math.max(0, Number(item.damaged_bottles || 0));
+    // Smart Validation: Damaged loose bottles cannot exceed arrived bottles in reached boxes
+    let damBottles = Number(item.damaged_bottles || 0);
+    if (isNaN(damBottles) || damBottles < 0) damBottles = 0;
+    if (damBottles > arrBottles) damBottles = arrBottles;
     item.damaged_bottles = damBottles;
 
     // Total damaged bottles

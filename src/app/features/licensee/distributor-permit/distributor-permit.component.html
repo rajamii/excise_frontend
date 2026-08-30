@@ -3241,10 +3241,12 @@
               <input
                 type="number"
                 min="0"
+                [max]="item.arrived_bottles || 0"
                 class="form-control form-control-sm text-center fw-bold border-danger text-danger"
                 [(ngModel)]="item.damaged_bottles"
                 (ngModelChange)="onArrivalItemCalculationsChange(item)"
                 placeholder="0"
+                title="Maximum damaged loose bottles cannot exceed reached bottles ({{ item.arrived_bottles || 0 }})"
               />
             </td>
 
@@ -3252,7 +3254,7 @@
             <td style="background-color: #fff1f2;">
               <div *ngIf="item.damaged_bottles > 0" class="d-flex flex-column gap-1">
                 <div *ngFor="let r of item.damaged_bottle_ranges; let bIdx = index" class="d-flex align-items-center gap-1">
-                  <span class="text-danger small fw-bold" style="font-size: 10px; width: 16px;">#{{ bIdx + 1 }}</span>
+                  <span class="text-danger small fw-bold text-nowrap" style="font-size: 10px; min-width: 26px;">#{{ bIdx + 1 }}</span>
                   <input
                     type="text"
                     class="form-control form-control-sm font-monospace text-danger border-danger"
