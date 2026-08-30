@@ -190,9 +190,6 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     if (this.activeTab === tab) return;
     this.activeTab = tab;
     this.pageIndex = 0;
-    if (tab === 'brand-warehouse') {
-      this.loadBrandWarehouseStock();
-    }
     this.autoSelectDefaultStatusFilter();
     this.cdr.markForCheck();
     this.router.navigate([], {
@@ -1229,7 +1226,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           });
           this.closeUpdateArrivalModal();
           this.loadApplications();
-          this.loadBrandWarehouseStock();
+          this.loadBrandWarehouseStock(true);
         },
         error: (err: any) => {
           console.error('Error updating brand arrival:', err);
@@ -1244,9 +1241,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       });
   }
 
-  loadBrandWarehouseStock(): void {
+  loadBrandWarehouseStock(force = false): void {
+    if (this.isLoadingBrandWarehouse && !force) return;
     this.isLoadingBrandWarehouse = true;
-    this.permitService.getImflBrandWarehouseSummary()
+    this.permitService.getImflBrandWarehouseSummary(force)
       .pipe(
         finalize(() => {
           this.isLoadingBrandWarehouse = false;
@@ -2120,7 +2118,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         } else {
           alert(msg);
         }
-        this.loadBrandWarehouseStock();
+        this.loadBrandWarehouseStock(true);
       },
       error: (err: any) => {
         this.isSubmittingDispatch = false;
@@ -5731,7 +5729,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
             this.pendingArrivalReviews = this.allCasesProcessedList.filter((c: any) => String(c.status).toLowerCase() === 'under_review');
 
             this.processLoadedApplications(requisitions, revalidations, cancellations);
-            this.loadBrandWarehouseStock();
+            if (this.activeTab === 'brand-warehouse') {
+              this.loadBrandWarehouseStock();
+            }
           } catch (err) {
             console.error('Error processing permit initial data:', err);
           }

@@ -57,10 +57,14 @@ export class DistributorPermitService {
   }
 
   getDashboardCounts(tab: 'requisition' | 'revalidation' | 'cancellation' | 'brand-arrival' = 'requisition', force = false): Observable<any> {
-    let params = new HttpParams().set('tab', tab);
-    if (force) {
-      params = params.set('_t', Date.now().toString());
+    const cacheKey = `dashboard-counts:${tab}`;
+    if (!force) {
+      return this.getCachedOrFetch(cacheKey, () => {
+        const params = new HttpParams().set('tab', tab);
+        return this.http.get<any>(`${this.baseUrl}/dashboard-counts/`, { params });
+      });
     }
+    const params = new HttpParams().set('tab', tab).set('_t', Date.now().toString());
     return this.http.get<any>(`${this.baseUrl}/dashboard-counts/`, { params });
   }
 
@@ -193,8 +197,17 @@ export class DistributorPermitService {
     );
   }
 
-  getImflBrandWarehouseSummary(): Observable<any> {
-    return this.http.get<any>(`${this.baseUrl}/brand-warehouse/summary/?_t=${Date.now()}`);
+  getImflBrandWarehouseSummary(force = false): Observable<any> {
+    if (!force) {
+      return this.getCachedOrFetch('brand-warehouse-summary', () =>
+        this.http.get<any>(`${this.baseUrl}/brand-warehouse/summary/`)
+      );
+    }
+    return this.http.get<any>(`${this.baseUrl}/brand-warehouse/summary/?_t=${Date.now()}`).pipe(
+      tap((res) => {
+        this.responseCache.set('brand-warehouse-summary', { value: res, fetchedAt: Date.now() });
+      })
+    );
   }
 
   dispatchStockToRetailer(payload: any): Observable<any> {

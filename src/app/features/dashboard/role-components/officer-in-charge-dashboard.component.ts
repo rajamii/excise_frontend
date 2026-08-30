@@ -292,25 +292,41 @@ export class OfficerInChargeDashboardComponent implements OnInit {
 
   private destroyRef = inject(DestroyRef);
 
+  public isDistributorOic(): boolean {
+    const user: any = this.accountService.getCurrentUser() || {};
+    const assignment = user?.oicAssignment || user?.oic_assignment;
+    const assignmentType = String(assignment?.assignmentType || assignment?.assignment_type || '').toLowerCase();
+    if (assignmentType === 'distributor') return true;
+    const username = String(user?.username || '').toLowerCase();
+    const estName = String(assignment?.establishmentName || assignment?.establishment_name || '').toLowerCase();
+    return username.startsWith('do') || estName.includes('distributor') || assignmentType.includes('distributor');
+  }
+
   ngOnInit(): void {
     this.currentScopedLicenseId = this.resolveCurrentScopedLicenseId();
     this.refreshDashboardCounts();
 
-    this.hologramService.requestUpdate$
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.refreshDashboardCounts());
+    if (!this.isDistributorOic()) {
+      this.hologramService.requestUpdate$
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(() => this.refreshDashboardCounts());
 
-    this.hologramService.dailyRegisterUpdate$
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.refreshDashboardCounts());
+      this.hologramService.dailyRegisterUpdate$
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(() => this.refreshDashboardCounts());
 
-    this.sidebarPendingBadgeService.refreshNeeded$
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.refreshDashboardCounts());
+      this.sidebarPendingBadgeService.refreshNeeded$
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(() => this.refreshDashboardCounts());
+    }
   }
 
   private refreshDashboardCounts(): void {
     setTimeout(() => {
+      if (this.isDistributorOic()) {
+        this.loadImflCasesPendingCount();
+        return;
+      }
       this.loadTransitApplications();
       this.loadHologramRequestsCounts();
       this.loadHologramProcurementPendingCount();
@@ -425,8 +441,17 @@ export class OfficerInChargeDashboardComponent implements OnInit {
   @Input() selectedModule: string = 'all';
   @Input() moduleCounts: Record<string, any> = {};
 
-  // Dashboard statistics methods
   getDashboardStatistics() {
+    if (this.isDistributorOic()) {
+      return {
+        applied: this.imflCasesAppliedCount,
+        pending: this.imflCasesPendingCount,
+        approved: this.imflCasesApprovedCount,
+        rejected: this.imflCasesRejectedCount,
+        dailyEntry: 0
+      };
+    }
+
     if (this.selectedModule && this.selectedModule !== 'all' && this.moduleCounts[this.selectedModule]) {
       const counts = this.moduleCounts[this.selectedModule];
       return {

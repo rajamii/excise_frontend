@@ -766,6 +766,42 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const isITCell        = this.currentUser?.roleId === 6;
     const skipTransit     = isCommissioner || isJointComm || isPermitSection;
 
+    // Distributor OIC only processes Distributor Permit Requisition and Brand Arrival
+    if (this.isDistributorOic()) {
+      const distReq$ = this.distributorPermitService.getDashboardCounts('requisition').pipe(catchError(() => of(null)));
+      const distArr$ = this.distributorPermitService.getDashboardCounts('brand-arrival').pipe(catchError(() => of(null)));
+
+      forkJoin({ distReq: distReq$, distArr: distArr$ })
+        .pipe(
+          takeUntil(this.destroy$),
+          finalize(() => onComplete?.())
+        )
+        .subscribe(({ distReq, distArr }) => {
+          if (distReq) {
+            this.supplyChainModuleCounts['distributor-permit-requisition'] = {
+              applied: distReq.total || 0,
+              pending: distReq.pending || 0,
+              approved: distReq.approved || 0,
+              objection: distReq.objection || 0,
+              rejected: distReq.rejected || 0
+            };
+            this.supplyChainPendingCounts['distributor-permit-requisition'] = distReq.pending || 0;
+          }
+          if (distArr) {
+            this.supplyChainModuleCounts['distributor-permit-brand-arrival'] = {
+              applied: distArr.total || 0,
+              pending: distArr.pending || 0,
+              approved: distArr.approved || 0,
+              objection: distArr.objection || 0,
+              rejected: distArr.rejected || 0
+            };
+            this.supplyChainPendingCounts['distributor-permit-brand-arrival'] = distArr.pending || 0;
+          }
+          this.updateSingleWindowChart();
+        });
+      return;
+    }
+
     // For a licensee/distributor user, skip all full-list supply chain fetches on login.
     // Data is only fetched lazily when the user selects a specific chart module.
     // If prefetched data is provided (from lazy load), use it directly.
@@ -3120,7 +3156,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private refreshOicActionPendingCount(force = false): void {
-    if (!this.isOicUser()) {
+    if (!this.isOicUser() || this.isDistributorOic()) {
       this.oicActionPendingCounts = {};
       return;
     }
@@ -3143,6 +3179,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private loadDashboardStatsLight(forceRefresh = false) {
+    if (this.isDistributorOic()) {
+      this.isChartLoading = false;
+      this.isLoading = false;
+      this.applicationsLoaded = true;
+      this.loadSupplyChainModuleStats();
+      return;
+    }
+
     // Keep login fast: fetch only counts. Lists are fetched on-demand when user opens a table.
     this.applicationsLoaded = false;
     this.applicationsLoading = false;
@@ -3451,6 +3495,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   private ensureApplicationsLoaded(forceRefresh = false): void {
     if (this.applicationsLoading) return;
     if (!forceRefresh && this.applicationsLoaded) return;
+
+    if (this.isDistributorOic()) {
+      this.applicationsLoaded = true;
+      this.loadSupplyChainModuleStats();
+      return;
+    }
 
     this.applicationsLoading = true;
 
