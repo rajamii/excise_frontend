@@ -1544,8 +1544,172 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
+  // Utilized Details modal state & pagination
+  utilizedSearchTerm = '';
+  utilizedPackSizeFilter = 'all';
+  utilizedPageIndex = 0;
+  utilizedPageSize = 5;
+
+  get filteredUtilizedDispatches(): any[] {
+    const list = [...(this.selectedBrandForUtilized?.dispatch_history || this.selectedBrandForUtilized?.dispatchHistory || [])];
+    list.sort((a, b) => {
+      const dateA = new Date(a.dispatch_date || a.dispatchDate || a.created_at || 0).getTime();
+      const dateB = new Date(b.dispatch_date || b.dispatchDate || b.created_at || 0).getTime();
+      if (dateB !== dateA) return dateB - dateA;
+      return String(b.dispatch_reference_no || b.id || '').localeCompare(String(a.dispatch_reference_no || a.id || ''));
+    });
+
+    const q = (this.utilizedSearchTerm || '').toLowerCase().trim();
+    const ps = (this.utilizedPackSizeFilter || 'all').toLowerCase().trim();
+
+    return list.filter((item) => {
+      const matchQ = !q ||
+        String(item.retailer_name || item.retailerName || '').toLowerCase().includes(q) ||
+        String(item.retailer_shop_name || item.retailerShopName || '').toLowerCase().includes(q) ||
+        String(item.retailer_license_no || item.retailerLicenseNo || '').toLowerCase().includes(q) ||
+        String(item.dispatch_reference_no || item.dispatchReferenceNo || '').toLowerCase().includes(q) ||
+        String(item.vehicle_number || item.vehicleNumber || '').toLowerCase().includes(q) ||
+        String(item.challan_no || item.challanNo || '').toLowerCase().includes(q) ||
+        String(item.remarks || '').toLowerCase().includes(q) ||
+        String(item.hologram_from || item.hologramFrom || '').toLowerCase().includes(q) ||
+        String(item.hologram_to || item.hologramTo || '').toLowerCase().includes(q);
+
+      const itemPs = String(item.pack_size || item.packSize || '').toLowerCase();
+      const matchPs = ps === 'all' || itemPs === ps || `${itemPs}ml` === ps;
+
+      return matchQ && matchPs;
+    });
+  }
+
+  get pagedUtilizedDispatches(): any[] {
+    const start = this.utilizedPageIndex * this.utilizedPageSize;
+    return this.filteredUtilizedDispatches.slice(start, start + this.utilizedPageSize);
+  }
+
+  get utilizedTotalPages(): number {
+    return Math.ceil(this.filteredUtilizedDispatches.length / this.utilizedPageSize) || 1;
+  }
+
+  getUtilizedPackSizes(): number[] {
+    const list = this.selectedBrandForUtilized?.dispatch_history || this.selectedBrandForUtilized?.dispatchHistory || [];
+    const sizes = new Set<number>();
+    list.forEach((item: any) => {
+      const sz = Number(item.pack_size || item.packSize);
+      if (sz) sizes.add(sz);
+    });
+    return Array.from(sizes).sort((a, b) => a - b);
+  }
+
+  prevUtilizedPage(): void {
+    if (this.utilizedPageIndex > 0) this.utilizedPageIndex--;
+  }
+
+  nextUtilizedPage(): void {
+    if (this.utilizedPageIndex < this.utilizedTotalPages - 1) this.utilizedPageIndex++;
+  }
+
+  // Arrival Details modal state & pagination
+  arrivalSearchTermInModal = '';
+  arrivalPackSizeFilterInModal = 'all';
+  arrivalPageIndexInModal = 0;
+  arrivalPageSizeInModal = 5;
+
+  get filteredArrivalEntries(): any[] {
+    const list = [...(this.selectedBrandForArrival?.recent_entries || this.selectedBrandForArrival?.recentEntries || [])];
+    list.sort((a, b) => {
+      const dateA = new Date(a.arrival_date || a.arrivalDate || a.created_at || 0).getTime();
+      const dateB = new Date(b.arrival_date || b.arrivalDate || b.created_at || 0).getTime();
+      if (dateB !== dateA) return dateB - dateA;
+      return String(b.permit_number || b.id || '').localeCompare(String(a.permit_number || a.id || ''));
+    });
+
+    const q = (this.arrivalSearchTermInModal || '').toLowerCase().trim();
+    const ps = (this.arrivalPackSizeFilterInModal || 'all').toLowerCase().trim();
+
+    return list.filter((item) => {
+      const matchQ = !q ||
+        String(item.permit_number || item.permitNumber || '').toLowerCase().includes(q) ||
+        String(item.vehicle_number || item.vehicleNumber || '').toLowerCase().includes(q) ||
+        String(item.remarks || '').toLowerCase().includes(q) ||
+        String(item.hologram_from || item.hologramFrom || '').toLowerCase().includes(q) ||
+        String(item.hologram_to || item.hologramTo || '').toLowerCase().includes(q) ||
+        String(item.damaged_holograms || '').toLowerCase().includes(q) ||
+        String(item.damaged_cases_holograms || '').toLowerCase().includes(q);
+
+      const itemPs = String(item.pack_size || item.packSize || '').toLowerCase();
+      const matchPs = ps === 'all' || itemPs === ps || `${itemPs}ml` === ps;
+
+      return matchQ && matchPs;
+    });
+  }
+
+  get pagedArrivalEntries(): any[] {
+    const start = this.arrivalPageIndexInModal * this.arrivalPageSizeInModal;
+    return this.filteredArrivalEntries.slice(start, start + this.arrivalPageSizeInModal);
+  }
+
+  get arrivalTotalPagesInModal(): number {
+    return Math.ceil(this.filteredArrivalEntries.length / this.arrivalPageSizeInModal) || 1;
+  }
+
+  getArrivalPackSizes(): number[] {
+    const list = this.selectedBrandForArrival?.recent_entries || this.selectedBrandForArrival?.recentEntries || [];
+    const sizes = new Set<number>();
+    list.forEach((item: any) => {
+      const sz = Number(item.pack_size || item.packSize);
+      if (sz) sizes.add(sz);
+    });
+    return Array.from(sizes).sort((a, b) => a - b);
+  }
+
+  prevArrivalPageInModal(): void {
+    if (this.arrivalPageIndexInModal > 0) this.arrivalPageIndexInModal--;
+  }
+
+  nextArrivalPageInModal(): void {
+    if (this.arrivalPageIndexInModal < this.arrivalTotalPagesInModal - 1) this.arrivalPageIndexInModal++;
+  }
+
+  triggerUpdateArrivalFromDetails(brandOrRow?: any): void {
+    this.closeArrivalDetailsModal();
+    const brandName = brandOrRow?.brand_name || brandOrRow?.brandName || '';
+    
+    // Find approved requisition for this brand if available
+    let targetApp = (this.applications || []).find((a: any) => {
+      const bNames = String(a.brandName || a.brand_name || '').toLowerCase();
+      const st = String(a.status || a.currentStage || '').toLowerCase();
+      const isApp = st.includes('approved') || st.includes('completed') || st.includes('issued');
+      return isApp && (!brandName || bNames.includes(brandName.toLowerCase()));
+    });
+
+    if (!targetApp && this.applications && this.applications.length > 0) {
+      targetApp = this.applications.find((a: any) => this.isApproved(a));
+    }
+
+    if (this.isOicDistributorUser) {
+      if (targetApp) {
+        this.openUpdateBrandsArrivalModal(targetApp);
+      } else {
+        this.onTabChange('brand-arrival');
+      }
+    } else {
+      if (targetApp) {
+        this.openArrivalModal(targetApp);
+      } else {
+        this.onTabChange('requisition');
+      }
+    }
+  }
+
+  getMin(a: number, b: number): number {
+    return Math.min(a, b);
+  }
+
   openArrivalDetailsModal(brand: any): void {
     this.selectedBrandForArrival = brand;
+    this.arrivalSearchTermInModal = '';
+    this.arrivalPackSizeFilterInModal = 'all';
+    this.arrivalPageIndexInModal = 0;
     this.showArrivalDetailsModal = true;
     this.cdr.detectChanges();
   }
@@ -1558,6 +1722,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   openUtilizedDetailsModal(brand: any): void {
     this.selectedBrandForUtilized = brand;
+    this.utilizedSearchTerm = '';
+    this.utilizedPackSizeFilter = 'all';
+    this.utilizedPageIndex = 0;
     this.showUtilizedDetailsModal = true;
     this.cdr.detectChanges();
   }
@@ -1630,32 +1797,85 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.onDispatchQuantityChange();
   }
 
-  onDispatchQuantityChange(): void {
+  getMaxPossibleLooseBottles(): number {
     const avail = this.getAvailableStockForDispatch(this.dispatchForm.brandName, this.dispatchForm.packSize);
     const pieces = Number(this.dispatchForm.piecesPerCase || 12);
-    
-    // Strict capping for dispatched cases
-    let cases = Number(this.dispatchForm.dispatchedCases || 0);
-    if (cases < 0) cases = 0;
-    if (cases > avail.cases) {
-      cases = avail.cases;
-      this.dispatchForm.dispatchedCases = cases;
+    const cases = Number(this.dispatchForm.dispatchedCases || 0);
+    return Math.max(0, avail.units - (cases * pieces));
+  }
+
+  isDispatchedCasesExceeded(): boolean {
+    const avail = this.getAvailableStockForDispatch(this.dispatchForm.brandName, this.dispatchForm.packSize);
+    const cases = Number(this.dispatchForm.dispatchedCases || 0);
+    return cases < 0 || cases > avail.cases;
+  }
+
+  isDispatchedLooseExceeded(): boolean {
+    const loose = Number(this.dispatchForm.dispatchedLooseBottles || 0);
+    const maxLoose = this.getMaxPossibleLooseBottles();
+    return loose < 0 || loose > maxLoose;
+  }
+
+  isDispatchTotalUnitsExceeded(): boolean {
+    const avail = this.getAvailableStockForDispatch(this.dispatchForm.brandName, this.dispatchForm.packSize);
+    const total = Number(this.dispatchForm.dispatchedBottles || 0);
+    return total <= 0 || total > avail.units || this.isDispatchedCasesExceeded() || this.isDispatchedLooseExceeded();
+  }
+
+  getDispatchedCasesInputBg(): string {
+    if (this.isDispatchedCasesExceeded()) return '#fef2f2';
+    const cases = Number(this.dispatchForm.dispatchedCases || 0);
+    if (cases > 0) return '#f0fdf4';
+    return '#ffffff';
+  }
+
+  getDispatchedCasesInputBorder(): string {
+    if (this.isDispatchedCasesExceeded()) return '#ef4444';
+    const cases = Number(this.dispatchForm.dispatchedCases || 0);
+    if (cases > 0) return '#22c55e';
+    return '#cbd5e1';
+  }
+
+  getDispatchedCasesInputColor(): string {
+    if (this.isDispatchedCasesExceeded()) return '#991b1b';
+    const cases = Number(this.dispatchForm.dispatchedCases || 0);
+    if (cases > 0) return '#14532d';
+    return '#0f172a';
+  }
+
+  getDispatchedLooseInputBg(): string {
+    if (this.isDispatchedLooseExceeded()) return '#fef2f2';
+    const loose = Number(this.dispatchForm.dispatchedLooseBottles || 0);
+    if (loose > 0) return '#f0fdf4';
+    return '#ffffff';
+  }
+
+  getDispatchedLooseInputBorder(): string {
+    if (this.isDispatchedLooseExceeded()) return '#ef4444';
+    const loose = Number(this.dispatchForm.dispatchedLooseBottles || 0);
+    if (loose > 0) return '#22c55e';
+    return '#cbd5e1';
+  }
+
+  getDispatchedLooseInputColor(): string {
+    if (this.isDispatchedLooseExceeded()) return '#991b1b';
+    const loose = Number(this.dispatchForm.dispatchedLooseBottles || 0);
+    if (loose > 0) return '#14532d';
+    return '#0f172a';
+  }
+
+  onDispatchQuantityChange(): void {
+    const pieces = Number(this.dispatchForm.piecesPerCase || 12);
+    const cases = Number(this.dispatchForm.dispatchedCases || 0);
+    const loose = Number(this.dispatchForm.dispatchedLooseBottles || 0);
+
+    const totalUnits = (cases * pieces) + loose;
+    this.dispatchForm.dispatchedBottles = Math.max(0, totalUnits);
+    this.dispatchForm.hologramCount = Math.max(0, totalUnits);
+
+    if (!this.isDispatchTotalUnitsExceeded()) {
+      this.autoDistributeHologramRanges();
     }
-
-    // Strict capping for loose bottles
-    const maxPossibleLoose = Math.max(0, avail.units - (cases * pieces));
-    let loose = Number(this.dispatchForm.dispatchedLooseBottles || 0);
-    if (loose < 0) loose = 0;
-    if (loose > maxPossibleLoose) {
-      loose = maxPossibleLoose;
-      this.dispatchForm.dispatchedLooseBottles = loose;
-    }
-
-    const totalUnits = cases * pieces + loose;
-    this.dispatchForm.dispatchedBottles = totalUnits;
-    this.dispatchForm.hologramCount = totalUnits;
-
-    this.autoDistributeHologramRanges();
   }
 
   addHologramRangeRow(): void {
@@ -1791,10 +2011,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   isDispatchFormValid(): boolean {
     if (!this.dispatchForm.retailerName?.trim()) return false;
     if (!this.dispatchForm.brandName) return false;
+    if (this.isDispatchedCasesExceeded() || this.isDispatchedLooseExceeded() || this.isDispatchTotalUnitsExceeded()) return false;
     const avail = this.getAvailableStockForDispatch(this.dispatchForm.brandName, this.dispatchForm.packSize);
     const totalUnits = Number(this.dispatchForm.dispatchedBottles || 0);
     if (totalUnits <= 0 || totalUnits > avail.units) return false;
-    if (Number(this.dispatchForm.dispatchedCases || 0) > avail.cases) return false;
 
     const ranges = this.dispatchForm.hologramRanges || [];
     if (ranges.length === 0) return false;
