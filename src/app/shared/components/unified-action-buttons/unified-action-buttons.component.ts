@@ -1365,59 +1365,176 @@ private getTransitRejectSummary(): {
   }
 
   private handlePaymentAction(): void {
-    const displayAmount = this.item?.brAmount
-      ?? this.item?.['br_amount']
-      ?? this.item?.['license_fee_amount']
-      ?? this.item?.['licenseFeeAmount']
-      ?? this.item?.['yearly_license_fee']
-      ?? this.item?.['yearlyLicenseFee']
-      ?? this.item?.['amount']
-      ?? 'N/A';
+    const rawAmount = Number(
+      this.item?.brAmount ??
+      this.item?.['br_amount'] ??
+      this.item?.['license_fee_amount'] ??
+      this.item?.['licenseFeeAmount'] ??
+      this.item?.['yearly_license_fee'] ??
+      this.item?.['yearlyLicenseFee'] ??
+      this.item?.['total_amount'] ??
+      this.item?.['totalAmount'] ??
+      this.item?.['amount'] ??
+      50000
+    );
+
+    const deductionAmount = rawAmount > 0 ? rawAmount : 50000;
+    const appRef = this.item?.referenceNo
+      || (this.item as any)?.application_id
+      || (this.item as any)?.applicationId
+      || this.item?.id
+      || 'N/A';
+
+    const formattedType = String(this.itemType || 'application')
+      .replace(/-/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+
+    const itemTypeStr = String(this.itemType || '').toLowerCase();
+    const isExciseWalletType =
+      itemTypeStr === 'distributor-permit' ||
+      itemTypeStr === 'distributor-permit-requisition' ||
+      itemTypeStr.startsWith('imfl-') ||
+      itemTypeStr === 'transit';
+
+    const walletTypeCode = isExciseWalletType ? 'excise' : 'license_fee';
+    const walletName = isExciseWalletType ? 'Excise Duty Wallet' : 'License Fee Wallet';
+
+    const licenseeId = String(
+      (this.item as any)?.licensee_id ||
+      (this.item as any)?.applicant ||
+      (this.item as any)?.applicant_id ||
+      this.accountService.getUserProfileSync()?.username ||
+      localStorage.getItem('username') ||
+      ''
+    ).trim();
+
     Swal.fire({
-      title: 'Confirm Payment',
-      html: `
-        <div class="payment-details">
-          <p><strong>Application:</strong> ${this.item.referenceNo}</p>
-          <p><strong>Amount:</strong> Rs ${displayAmount}</p>
-          <p><strong>Type:</strong> ${this.itemType}</p>
-        </div>
-      `,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Proceed to Payment',
-      cancelButtonText: 'Cancel',
-      confirmButtonColor: '#28a745',
-      cancelButtonColor: '#6c757d'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        this.unifiedActionsService.executeAction('PAY', this.item, this.itemType, this.context).subscribe({
-          next: (response) => {
-            if (response?.success === false) {
+      title: 'Checking Wallet Balance...',
+      text: 'Fetching live balance from wallet services',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    const loadWalletPromise = licenseeId
+      ? firstValueFrom(this.paymentIntegrationService.getWalletBalance(licenseeId, true)).catch(() => null)
+      : Promise.resolve(null);
+
+    loadWalletPromise.then((wbRes: any) => {
+      const wallets = wbRes?.results || [];
+      const targetWallet = wallets.find((w: any) => String(w.wallet_type).toLowerCase() === walletTypeCode);
+      const currentBalance = targetWallet ? Number(targetWallet.current_balance || 0) : 0;
+      const balanceAfter = currentBalance - deductionAmount;
+      const isSufficient = balanceAfter >= 0;
+
+      const fmt = (num: number) => Math.abs(num).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+      Swal.fire({
+        title: `<div style="font-size: 20px; font-weight: 700; color: #0f172a; margin-top: 4px;">Confirm Payment</div>`,
+        html: `
+          <div style="font-family: inherit; margin-top: 8px;">
+            
+            <!-- Payment Summary Card -->
+            <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px; text-align: left; box-shadow: inset 0 1px 2px rgba(255,255,255,0.8);">
+              
+              <!-- Application ID -->
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span style="color: #64748b; font-size: 12.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Application Ref</span>
+                <span style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 20px;">${appRef}</span>
+              </div>
+
+              <!-- Module Type -->
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span style="color: #64748b; font-size: 12.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Module Type</span>
+                <span style="color: #334155; font-size: 13px; font-weight: 600;">${formattedType}</span>
+              </div>
+
+              <!-- Payment Wallet -->
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                <span style="color: #64748b; font-size: 12.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Payment Wallet</span>
+                <span style="background: #f1f5f9; color: #1e293b; border: 1px solid #cbd5e1; font-size: 12.5px; font-weight: 700; padding: 3px 10px; border-radius: 6px;">${walletName}</span>
+              </div>
+
+              <!-- Dashed Divider -->
+              <div style="border-top: 1px dashed #cbd5e1; margin: 12px 0;"></div>
+
+              <!-- Current Balance (Before) -->
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="color: #475569; font-size: 13px; font-weight: 600;">Current Wallet Balance</span>
+                <span style="color: #0f172a; font-size: 14px; font-weight: 700;">₹ ${fmt(currentBalance)}</span>
+              </div>
+
+              <!-- Deduction Amount -->
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="color: #475569; font-size: 13px; font-weight: 600;">Deduction Amount</span>
+                <span style="color: #dc2626; font-size: 14px; font-weight: 700;">- ₹ ${fmt(deductionAmount)}</span>
+              </div>
+
+              <!-- Balance After Deduction -->
+              <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 8px; border-top: 1px solid #e2e8f0; margin-top: 4px;">
+                <span style="color: #0f172a; font-size: 13.5px; font-weight: 700;">Balance After Deduction</span>
+                <span style="color: ${isSufficient ? '#059669' : '#dc2626'}; font-size: 16px; font-weight: 800;">₹ ${balanceAfter < 0 ? '-' : ''} ${fmt(balanceAfter)}</span>
+              </div>
+
+            </div>
+
+            <!-- Insufficient Balance Alert -->
+            ${!isSufficient ? `
+              <div style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 10px 14px; border-radius: 10px; font-size: 12.5px; margin-top: 12px; text-align: left; display: flex; align-items: center; gap: 8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <div><strong>Insufficient Wallet Balance:</strong> Short by ₹ ${fmt(balanceAfter)}. Recharge ${walletName} to proceed.</div>
+              </div>
+            ` : ''}
+
+            <!-- Trust Badge Footer -->
+            <div style="margin-top: 14px; font-size: 12px; color: #64748b; display: flex; align-items: center; justify-content: center; gap: 6px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+              <span>Secured via Sikkim Excise Wallet Services</span>
+            </div>
+
+          </div>
+        `,
+        icon: isSufficient ? 'question' : 'warning',
+        iconColor: isSufficient ? '#2563eb' : '#dc2626',
+        showConfirmButton: isSufficient,
+        showCancelButton: true,
+        confirmButtonText: 'Proceed to Payment',
+        cancelButtonText: isSufficient ? 'Cancel' : 'Close',
+        confirmButtonColor: '#059669',
+        cancelButtonColor: '#64748b',
+        customClass: {
+          popup: 'rounded-4 shadow-lg border-0',
+          confirmButton: 'px-4 py-2 fw-bold fs-6 rounded-3 shadow-sm',
+          cancelButton: 'px-4 py-2 fw-semibold fs-6 rounded-3'
+        }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.unifiedActionsService.executeAction('PAY', this.item, this.itemType, this.context).subscribe({
+            next: (response) => {
+              if (response?.success === false) {
+                Swal.fire({
+                  title: 'Payment Redirection Failed',
+                  text: response?.message || 'Unable to open wallet payment page.',
+                  icon: 'error',
+                  confirmButtonText: 'OK'
+                });
+              }
+            },
+            error: (error) => {
+              const message =
+                error?.error?.detail ||
+                error?.error?.message ||
+                error?.message ||
+                'Unable to open wallet payment page.';
               Swal.fire({
                 title: 'Payment Redirection Failed',
-                text: response?.message || 'Unable to open wallet payment page.',
+                text: message,
                 icon: 'error',
                 confirmButtonText: 'OK'
               });
             }
-            // Success path intentionally shows no extra modal:
-            // user is redirected to wallet section by UnifiedActionsService.
-          },
-          error: (error) => {
-            const message =
-              error?.error?.detail ||
-              error?.error?.message ||
-              error?.message ||
-              'Unable to open wallet payment page.';
-            Swal.fire({
-              title: 'Payment Redirection Failed',
-              text: message,
-              icon: 'error',
-              confirmButtonText: 'OK'
-            });
-          }
-        });
-      }
+          });
+        }
+      });
     });
   }
 
