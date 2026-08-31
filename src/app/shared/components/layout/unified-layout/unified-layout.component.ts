@@ -134,14 +134,14 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     { section: 'company-collaboration', label: 'Company Collaboration', icon: 'groups', hideForSiteAdmin: true },
     { section: 'special-permit', label: 'Dry Day Permit', icon: 'assignment_turned_in', hideForSiteAdmin: true, hideForPermitSection: true, hideForItCell: true, hideForOic: true },
     { section: 'secretary-timeline', label: 'License Timeline Tracker', icon: 'timeline' },
-    { section: 'commissioner-monthly-view-details', label: 'Monthly View Details', icon: 'calendar_month' },
+    { section: 'commissioner-monthly-view-details', label: 'Monthly View Details', icon: 'calendar_month', hideForOic: true },
     { section: 'secretary-revenue', label: 'Revenue', icon: 'payments' },
     { section: 'imfl-requisition-cases', label: 'IMFL Requisition Cases', icon: 'assignment_turned_in', showOnlyForOic: true },
     { section: 'distributor-permit-brand-arrival', label: 'Update Brands Arrival', icon: 'local_shipping', showOnlyForOic: true },
     { section: 'brand-warehouse-stock', label: 'Brand Warehouse Stock', icon: 'inventory_2', showOnlyForOic: true },
     { section: 'stock-inventory', label: 'Stock Inventory', icon: 'inventory' },
-    { section: 'single-window', label: 'User Details', icon: 'manage_search', hideForSiteAdmin: true },
-    { section: 'payment-transactions', label: 'Transactions', icon: 'receipt_long', hideForSiteAdmin: true },
+    { section: 'single-window', label: 'User Details', icon: 'manage_search', hideForSiteAdmin: true, hideForOic: true },
+    { section: 'payment-transactions', label: 'Transactions', icon: 'receipt_long', hideForSiteAdmin: true, hideForOic: true },
     { section: 'officer-activity', label: 'Officer Activity', icon: 'assignment', hideForSiteAdmin: true }
   ];
 
@@ -636,6 +636,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return false;
     } else if (this.isOicUser()) {
       if (
+        item.section === 'commissioner-monthly-view-details' ||
+        item.section === 'single-window' ||
+        item.section === 'payment-transactions' ||
         item.section === 'imfl-requisition-cases' ||
         item.section === 'distributor-permit-brand-arrival' ||
         item.section === 'brand-warehouse-stock'
@@ -1898,7 +1901,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     }
 
     if (section === 'single-window' || section === 'single-window-detail' || section === 'payment-transactions') {
-      if (this.isJointCommissionerUser() || this.isDistrictUser() || this.isSiteEnquiryOfficer() || this.isPermitSectionUser() || this.isItCellUser()) {
+      if (this.isJointCommissionerUser() || this.isDistrictUser() || this.isSiteEnquiryOfficer() || this.isPermitSectionUser() || this.isItCellUser() || this.isOicUser()) {
         return false;
       }
       return !this.isLicenseeUser();
@@ -1952,7 +1955,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     }
 
     if (section === 'single-window' || section === 'single-window-detail' || section === 'payment-transactions') {
-      if (this.isJointCommissionerUser() || this.isDistrictUser() || this.isSiteEnquiryOfficer() || this.isPermitSectionUser() || this.isItCellUser()) {
+      if (this.isJointCommissionerUser() || this.isDistrictUser() || this.isSiteEnquiryOfficer() || this.isPermitSectionUser() || this.isItCellUser() || this.isOicUser()) {
         return false;
       }
       return !this.isLicenseeUser();
