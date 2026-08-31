@@ -258,6 +258,9 @@ export class SubmitApplicationComponent implements OnInit, DoCheck {
     for (const [k, file] of Object.entries(docs)) {
       if (file instanceof File) {
         formData.append(k, file);
+        if (k === 'exciseLicense') formData.append('excise_license', file);
+        if (k === 'deedOfPartnership') formData.append('deed_of_partnership', file);
+        if (k === 'memorandumOfAssociation') formData.append('memorandum_of_association', file);
       }
     }
 

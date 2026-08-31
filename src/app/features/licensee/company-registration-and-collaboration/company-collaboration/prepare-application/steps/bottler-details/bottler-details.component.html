@@ -11,7 +11,7 @@
         <div style="display: none;">
           <!-- License Dropdown -->
           <mat-form-field appearance="outline">
-            <mat-label>Select License *</mat-label>
+            <mat-label>Select License</mat-label>
             <mat-select formControlName="license">
               @if (isLoadingLicenses) {
                 <mat-option disabled>Loading...</mat-option>
@@ -35,7 +35,7 @@
 
         <!-- Company Name -->
         <mat-form-field appearance="outline">
-          <mat-label>Company Name *</mat-label>
+          <mat-label>Company Name</mat-label>
           <input matInput placeholder="Enter Company Name" type="text" formControlName="brandOwnerName"/>
           @if (bottlerDetailsForm.controls['brandOwnerName'].invalid && bottlerDetailsForm.controls['brandOwnerName'].touched) {
             <mat-error>Please enter a valid company name</mat-error>
@@ -44,7 +44,7 @@
 
         <!-- PAN No -->
         <mat-form-field appearance="outline">
-          <mat-label>PAN No *</mat-label>
+          <mat-label>PAN No</mat-label>
           <input matInput placeholder="Enter PAN No" type="text" formControlName="brandOwnerPan"/>
           @if (bottlerDetailsForm.controls['brandOwnerPan'].invalid && bottlerDetailsForm.controls['brandOwnerPan'].touched) {
             <mat-error>Please enter a valid PAN number</mat-error>
@@ -53,7 +53,7 @@
 
         <!-- Registered Office Address -->
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Registered Office Address *</mat-label>
+          <mat-label>Registered Office Address</mat-label>
           <textarea matInput placeholder="Enter Registered Office Address"
             formControlName="brandOwnerOfficeAddress"
             cdkTextareaAutosize
@@ -72,7 +72,7 @@
         <div class="form-field-container">
           <!-- Country Dropdown -->
           <mat-form-field appearance="outline">
-            <mat-label>Country *</mat-label>
+            <mat-label>Country</mat-label>
             <mat-select formControlName="country">
               @for (country of countries; track country) {
                 <mat-option [value]="country">{{ country }}</mat-option>
@@ -85,7 +85,7 @@
 
           <!-- State Dropdown -->
           <mat-form-field appearance="outline">
-            <mat-label>State *</mat-label>
+            <mat-label>State</mat-label>
             <mat-select formControlName="state">
               @for (state of states; track state) {
                 <mat-option [value]="state">{{ state }}</mat-option>
@@ -98,7 +98,7 @@
 
           <!-- Factory Address -->
           <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Factory Address *</mat-label>
+            <mat-label>Factory Address</mat-label>
             <textarea matInput placeholder="Enter Factory Address"
               formControlName="brandOwnerFactoryAddress"
               cdkTextareaAutosize
@@ -112,7 +112,7 @@
 
           <!-- Pin Code -->
           <mat-form-field appearance="outline">
-            <mat-label>Pin Code *</mat-label>
+            <mat-label>Pin Code</mat-label>
             <input matInput placeholder="Enter Pin Code" type="text" formControlName="pinCode"/>
             @if (bottlerDetailsForm.controls['pinCode'].invalid && bottlerDetailsForm.controls['pinCode'].touched) {
               <mat-error>Please enter a valid pin code</mat-error>
@@ -127,7 +127,7 @@
         <div class="form-field-container">
           <!-- Mobile Number -->
           <mat-form-field appearance="outline">
-            <mat-label>Company Mobile Number *</mat-label>
+            <mat-label>Company Mobile Number</mat-label>
             <input matInput placeholder="Enter Mobile Number" type="text" formControlName="brandOwnerMobile"/>
             @if (bottlerDetailsForm.controls['brandOwnerMobile'].invalid && bottlerDetailsForm.controls['brandOwnerMobile'].touched) {
               <mat-error>Please enter a valid mobile number</mat-error>
@@ -136,7 +136,7 @@
 
           <!-- Email ID -->
           <mat-form-field appearance="outline">
-            <mat-label>Company Email Id *</mat-label>
+            <mat-label>Company Email Id</mat-label>
             <input matInput placeholder="Enter Email Address" type="email" formControlName="brandOwnerEmail"/>
             @if (bottlerDetailsForm.controls['brandOwnerEmail'].invalid && bottlerDetailsForm.controls['brandOwnerEmail'].touched) {
               <mat-error>Please enter a valid email address</mat-error>

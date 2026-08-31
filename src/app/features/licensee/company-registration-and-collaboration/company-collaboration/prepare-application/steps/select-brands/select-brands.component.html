@@ -16,7 +16,7 @@
         <div class="filter-row">
 
           <mat-form-field appearance="outline" class="filter-field">
-            <mat-label>Liquor Category *</mat-label>
+            <mat-label>Liquor Category</mat-label>
             <mat-select [(ngModel)]="selectedCatCode" (selectionChange)="onCategoryChange()">
               @for (cat of categories; track cat.liquorCatCode) {
                 <mat-option [value]="cat.liquorCatCode">{{ cat.liquorCatDesc }}</mat-option>
@@ -25,7 +25,7 @@
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="filter-field">
-            <mat-label>Liquor Kind *</mat-label>
+            <mat-label>Liquor Kind</mat-label>
             <mat-select [(ngModel)]="selectedKindId" (selectionChange)="onKindChange()">
               @for (kind of kinds; track kind.id) {
                 <mat-option [value]="kind.id">{{ kind.liquorKindDesc }}</mat-option>
@@ -34,7 +34,7 @@
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="filter-field">
-            <mat-label>Liquor Type *</mat-label>
+            <mat-label>Liquor Type</mat-label>
             <mat-select [(ngModel)]="selectedTypeId" (selectionChange)="onTypeChange()">
               @for (type of types; track type.id) {
                 <mat-option [value]="type.id">{{ type.liquorTypeDesc }}</mat-option>

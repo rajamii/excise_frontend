@@ -12,7 +12,7 @@
 
         <!-- Row 1: Application Year | Application ID | Application Date -->
         <mat-form-field appearance="outline">
-          <mat-label>Select Application Year *</mat-label>
+          <mat-label>Select Application Year</mat-label>
           <input matInput formControlName="financialYear" readonly
             aria-label="Application year"
             title="Application year">
@@ -29,7 +29,7 @@
 
         <!-- Row 2: Select Company Registration ID -->
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Select Company Registration ID *</mat-label>
+          <mat-label>Select Company Registration ID</mat-label>
           <mat-select formControlName="bottlerId" required>
             <mat-option value="">-- Select Company Registration ID --</mat-option>
             @if (isLoadingBottlers) {
