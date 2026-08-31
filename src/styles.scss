@@ -2033,3 +2033,20 @@ app-unified-action-buttons button[mat-icon-button][color="accent"]:hover,
     color: #18181b !important;
   }
 }
+
+/* Hardware accelerated smooth tab, panel, and drawer transitions */
+.mat-mdc-tab-body,
+.mat-mdc-tab-body-wrapper,
+.mat-drawer,
+.mat-drawer-content,
+.mat-expansion-panel-body,
+.mat-expansion-panel {
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.mat-mdc-tab-body-content {
+  will-change: transform, opacity;
+}
+

@@ -86,7 +86,6 @@ export class SidebarPendingBadgeService {
       }
     } else {
       this.countsCache.delete(key);
-      ReadApiCacheInterceptor.clearCache();
     }
 
     const tasks: Record<string, Observable<number>> = {};

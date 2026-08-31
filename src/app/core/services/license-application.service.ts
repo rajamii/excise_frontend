@@ -1054,19 +1054,19 @@ export class LicenseApplicationService {
   }
 
   getNewLicenseDashboardCounts(): Observable<any> {
-    return this.http.get(`${this.newLicenseUrl}/dashboard-counts/?_t=${Date.now()}`);
+    return this.http.get(`${this.newLicenseUrl}/dashboard-counts/`);
   }
 
   getNewLicenseApplicationsByStatus(): Observable<any> {
-    return this.http.get(`${this.newLicenseUrl}/list-by-status/?_t=${Date.now()}`);
+    return this.http.get(`${this.newLicenseUrl}/list-by-status/`);
   }
 
   getLicenseRenewalDashboardCounts(): Observable<any> {
-    return this.http.get(`${this.renewalLicenseUrl}/dashboard-counts/?_t=${Date.now()}`);
+    return this.http.get(`${this.renewalLicenseUrl}/dashboard-counts/`);
   }
 
   getLicenseRenewalApplicationsByStatus(): Observable<any> {
-    return this.http.get(`${this.renewalLicenseUrl}/list-by-status/?_t=${Date.now()}`);
+    return this.http.get(`${this.renewalLicenseUrl}/list-by-status/`);
   }
 
   getNewLicenseSiteDetails(applicationId: string): Observable<any> {
