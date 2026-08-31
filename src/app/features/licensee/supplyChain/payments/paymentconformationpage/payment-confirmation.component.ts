@@ -2331,6 +2331,11 @@ private initializeWalletContextAndLoadData(): void {
       && this.isLicenseFeeWorkflowPaymentType(this.pendingWalletPaymentContext.itemType)
       && this.pendingWalletPaymentContext.tab === tab
       && this.activeTab === tab) {
+      const itemType = String(this.pendingWalletPaymentContext.itemType || '').toLowerCase();
+      const refNo = String(this.pendingWalletPaymentContext.referenceNo || '').toUpperCase();
+      if (itemType === 'company-collaboration' || itemType === 'company_collaboration' || refNo.startsWith('CCOL/')) {
+        return false;
+      }
       return true;
     }
 

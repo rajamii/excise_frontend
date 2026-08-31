@@ -780,27 +780,14 @@ export class UnifiedActionsService {
         if (!applicationId) {
           return of({ success: false, message: 'Application ID is required for payment' });
         }
-        const isLicenseFeePaid = item?.is_license_fee_paid || item?.isLicenseFeePaid || item?.is_fee_paid || item?.isFeePaid;
-        const targetTab = isLicenseFeePaid ? 'security_deposit' : 'license_fee';
-        const feeStructure = item?.fee_structure ?? item?.feeStructure ?? {};
-        const collabFee = isLicenseFeePaid
-          ? Number(feeStructure?.securityDeposit ?? feeStructure?.security_deposit ?? item?.security_amount ?? 25000)
-          : Number(feeStructure?.collaborationFee ?? feeStructure?.collaboration_fee ?? item?.amount ?? 25000);
-
-        this.router.navigate(['/dashboard'], {
-          queryParams: {
-            section: 'wallet',
-            tab: targetTab,
-            id: applicationId,
-            type: 'company-collaboration',
-            ref: applicationId,
-            referenceNo: applicationId,
-            amount: Number.isFinite(collabFee) && collabFee > 0 ? collabFee : 25000,
-            action: 'pay',
-            source: 'company-collaboration'
-          }
-        });
-        return of({ success: true, message: 'Redirected to wallet for payment' });
+        return this.toActionResult(
+          this.http.post<any>(
+            `${environment.apiBaseUrl}/transactional/company-collaboration/pay-fee/${encodeURIComponent(applicationId)}/`,
+            {}
+          ),
+          'Company Collaboration fee payment completed successfully.',
+          'Failed to complete payment for Company Collaboration'
+        );
       }
 
       default:

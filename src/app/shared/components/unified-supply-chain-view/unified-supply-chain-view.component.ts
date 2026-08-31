@@ -1929,6 +1929,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         const action = (event.action || '').toUpperCase();
 
         if (action === 'PAY' || action === 'FORCE_PAY') {
+            if (this.isCompanyCollaboration() || this.applicationType === 'company-collaboration') {
+                this.openCompanyCollabPaymentConfirmationModal(event.item);
+                return;
+            }
             if (this.isImflRequisition()) {
                 if (action === 'FORCE_PAY') {
                     this.executeDirectForcePay(event.item);
@@ -5119,4 +5123,171 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         });
     }
 
+    // ── Company Collaboration Payment Confirmation Modal ───────────────────────
+    showCompanyCollabPaymentConfirmationModal = false;
+    collabPaymentApplicationToProcess: any = null;
+    isCollabPaymentAgreed = false;
+    isSubmittingCollabPayment = false;
+    collabLicenseFeeCurrentBalance = 0;
+    collabFeeAmount = 25000;
+    regFeeAmount = 25000;
+
+    get totalCollabPayableAmount(): number {
+        return (this.collabFeeAmount || 25000) + (this.regFeeAmount || 25000);
+    }
+
+    get isCollabPaymentBalanceInsufficient(): boolean {
+        return (this.collabLicenseFeeCurrentBalance || 0) < this.totalCollabPayableAmount;
+    }
+
+    openCompanyCollabPaymentConfirmationModal(item?: any): void {
+        const app = item || this.applicationData;
+        if (!app) return;
+        this.collabPaymentApplicationToProcess = app;
+        this.isCollabPaymentAgreed = false;
+        this.isSubmittingCollabPayment = false;
+
+        const overviewSummary = app.overview_summary ?? app.overviewSummary ?? (this.applicationData as any)?.overview_summary ?? (this.applicationData as any)?.overviewSummary ?? {};
+        const feeStructure = app.fee_structure ?? app.feeStructure ?? (this.applicationData as any)?.fee_structure ?? (this.applicationData as any)?.feeStructure ?? {};
+
+        const collabFee = Number(feeStructure.collaborationFee ?? feeStructure.collaboration_fee ?? 25000);
+        const regFee = Number(feeStructure.companyRegistrationFee ?? feeStructure.securityDeposit ?? feeStructure.security_deposit ?? 25000);
+
+        this.collabFeeAmount = collabFee > 0 ? collabFee : 25000;
+        this.regFeeAmount = regFee > 0 ? regFee : 25000;
+
+        this.loadLiveLicenseFeeWalletBalance((lfBal) => {
+            this.collabLicenseFeeCurrentBalance = lfBal;
+            this.showCompanyCollabPaymentConfirmationModal = true;
+            this.cdr.detectChanges();
+        });
+    }
+
+    private loadLiveLicenseFeeWalletBalance(callback: (balance: number) => void): void {
+        const user = this.roleService.getCurrentUser();
+        const licenseeId = String(
+            (this.applicationData as any)?.licensee_id ||
+            (this.applicationData as any)?.applicant ||
+            (this.applicationData as any)?.applicant_id ||
+            (user as any)?.licensee_id ||
+            (user as any)?.username ||
+            localStorage.getItem('username') ||
+            localStorage.getItem('licensee_id') ||
+            ''
+        ).trim();
+
+        if (!licenseeId) {
+            callback(0);
+            return;
+        }
+
+        // Try getWalletSummary first (same API used by Payment & Wallet page)
+        this.paymentIntegrationService.getWalletSummary(licenseeId, undefined, true).subscribe({
+            next: (summaryRes: any) => {
+                const rows = summaryRes?.results || (Array.isArray(summaryRes) ? summaryRes : []);
+                const lfRow = rows.find((r: any) => {
+                    const wt = String(r.wallet_type || r.walletType || r.wallet_type_code || '').toLowerCase();
+                    const hoa = String(r.head_of_account || r.headOfAccount || '');
+                    return wt === 'license_fee' || wt === 'licensefee' || wt.includes('license') || hoa.includes('105');
+                });
+                const lfBal = lfRow ? Number(lfRow.current_balance ?? lfRow.currentBalance ?? lfRow.walletAmount ?? 0) : 0;
+                if (lfBal > 0 || (rows && rows.length > 0)) {
+                    callback(lfBal);
+                    return;
+                }
+                this.fetchWalletBalanceFallback(licenseeId, callback);
+            },
+            error: () => {
+                this.fetchWalletBalanceFallback(licenseeId, callback);
+            }
+        });
+    }
+
+    private fetchWalletBalanceFallback(licenseeId: string, callback: (balance: number) => void): void {
+        this.paymentIntegrationService.getWalletBalance(licenseeId, true).subscribe({
+            next: (wbRes: any) => {
+                const wallets = wbRes?.results || (Array.isArray(wbRes) ? wbRes : []);
+                const lfW = wallets.find((w: any) => {
+                    const wt = String(w.wallet_type || w.walletType || w.wallet_type_code || '').toLowerCase();
+                    return wt === 'license_fee' || wt === 'licensefee' || wt.includes('license');
+                });
+                const lfBal = lfW ? Number(lfW.current_balance ?? lfW.currentBalance ?? lfW.walletAmount ?? 0) : 0;
+                callback(lfBal);
+            },
+            error: () => callback(0)
+        });
+    }
+
+    closeCompanyCollabPaymentConfirmationModal(): void {
+        this.showCompanyCollabPaymentConfirmationModal = false;
+        this.collabPaymentApplicationToProcess = null;
+        this.isCollabPaymentAgreed = false;
+        this.isSubmittingCollabPayment = false;
+        this.cdr.detectChanges();
+    }
+
+    confirmExecuteCompanyCollabPayment(): void {
+        const app = this.collabPaymentApplicationToProcess || this.applicationData;
+        if (!app || this.isCollabPaymentBalanceInsufficient || this.isSubmittingCollabPayment) {
+            return;
+        }
+
+        this.isSubmittingCollabPayment = true;
+        const appId = app.application_id || app.applicationId || app.id || app.referenceNo || app.reference_no || this.getWorkflowApplicationId(app);
+
+        this.http.post<any>(
+            `${environment.apiBaseUrl}/transactional/company-collaboration/pay-fee/${encodeURIComponent(appId)}/`,
+            {}
+        ).subscribe({
+            next: (res) => {
+                this.isSubmittingCollabPayment = false;
+                this.showCompanyCollabPaymentConfirmationModal = false;
+                this.snackBar.open(res.message || res.detail || 'Company Collaboration fee payment completed successfully.', 'Close', { duration: 4000 });
+                this.sidebarPendingBadgeService.triggerRefresh();
+                const currentRef = app.referenceNo || app.reference_no || appId;
+                this.loadApplicationData(currentRef, appId);
+                this.cdr.detectChanges();
+            },
+            error: (err) => {
+                this.isSubmittingCollabPayment = false;
+                this.snackBar.open(err?.error?.detail || err?.error?.message || 'Failed to complete payment for Company Collaboration', 'Close', { duration: 4000 });
+                this.cdr.detectChanges();
+            }
+        });
+    }
+
+    getCollabModalAppId(): string {
+        const app = this.collabPaymentApplicationToProcess || this.applicationData;
+        return app?.application_id || app?.applicationId || app?.referenceNo || app?.reference_no || app?.id || 'CCOL/2026-27/0001';
+    }
+
+    getCollabModalFinYear(): string {
+        const app = this.collabPaymentApplicationToProcess || this.applicationData;
+        return app?.financial_year || app?.financialYear || app?.application_year || '2026-27';
+    }
+
+    getCollabModalBrandOwner(): string {
+        const app = this.collabPaymentApplicationToProcess || this.applicationData;
+        return app?.brand_owner_name || app?.brandOwnerName || app?.brand_owner || app?.brandOwner || 'Not specified';
+    }
+
+    getCollabModalBrandOwnerPan(): string {
+        const app = this.collabPaymentApplicationToProcess || this.applicationData;
+        return app?.brand_owner_pan || app?.brandOwnerPan || 'N/A';
+    }
+
+    getCollabModalLicenseeName(): string {
+        const app = this.collabPaymentApplicationToProcess || this.applicationData;
+        return app?.licensee_name || app?.licenseeName || 'Not specified';
+    }
+
+    getCollabModalLicenseNumber(): string {
+        const app = this.collabPaymentApplicationToProcess || this.applicationData;
+        return app?.license_number || app?.licenseNumber || app?.license || 'N/A';
+    }
+
+    getCollabModalBrands(): any[] {
+        const app = this.collabPaymentApplicationToProcess || this.applicationData;
+        return app?.selected_brands || app?.selectedBrands || [];
+    }
 }
