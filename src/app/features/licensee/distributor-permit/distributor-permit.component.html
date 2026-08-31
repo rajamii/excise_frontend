@@ -2617,9 +2617,6 @@
                 <span class="badge bg-danger text-white fs-7" *ngIf="!item.cancellationStatus && item.arrivalStatus === 'rejected'">
                   <i class="bi bi-x-octagon-fill me-1"></i> Stock Arrival Rejected (Re-entry / Cancellation Allowed)
                 </span>
-                <span class="badge bg-warning bg-opacity-10 text-dark border border-warning fs-7" *ngIf="!item.cancellationStatus && !item.revalidationStatus && item.arrivalStatus === 'pending'">
-                  <i class="bi bi-exclamation-circle me-1"></i> Action Required (Arrival Pending)
-                </span>
               </div>
             </div>
             <div class="card-body p-3">
