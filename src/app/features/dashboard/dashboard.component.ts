@@ -668,6 +668,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   public getFilteredCount(status: string): number {
     if (this.isOicUser()) {
+      if (this.isDistributorOic()) {
+        if (this.selectedChartModule === 'all') {
+          const distOicModules = ['distributor-permit-requisition', 'distributor-permit-brand-arrival'];
+          return distOicModules.reduce((sum, m) => sum + ((this.supplyChainModuleCounts[m] as any)?.[status] || 0), 0);
+        }
+        const sourceCounts = this.supplyChainModuleCounts[this.selectedChartModule] || { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
+        return (sourceCounts as any)[status] || 0;
+      }
       if (this.selectedChartModule === 'all') {
         const oicModules = ['transit', 'bldetails', 'hologram', 'hologramRequests'];
         return oicModules.reduce((sum, m) => sum + ((this.supplyChainModuleCounts[m] as any)?.[status] || 0), 0);

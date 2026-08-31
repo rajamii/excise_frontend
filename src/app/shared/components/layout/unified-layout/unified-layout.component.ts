@@ -543,6 +543,23 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   private getVisibleOfficerSections(): string[] {
     if (this.isLicenseeUser()) return [];
 
+    if (this.isDistributorOic()) {
+      const sections: string[] = [
+        'distributor-permit-requisition',
+        'imfl-requisition',
+        'imfl-requisition-cases',
+        'distributor-permit-brand-arrival',
+        'imfl-brand-arrival',
+        'brand-arrival',
+        'update-brands-arrival'
+      ];
+      for (const item of this.officerSectionItems) {
+        if (!this.shouldShowOfficerSectionItem(item)) continue;
+        sections.push(item.section);
+      }
+      return sections;
+    }
+
     const sections: string[] = [
       'distributor-permit',
       'imfl-permit',
