@@ -137,7 +137,7 @@ export class BlocksWardsComponent implements OnInit {
   onDeleteBlock(block: Block): void {
     if (block?.id === undefined) return;
     Swal.fire({
-      title: 'Delete Block?',
+      title: 'Delete GPU?',
       text: `"${block.blockName}" will be removed permanently.`,
       icon: 'warning',
       showCancelButton: true,
@@ -146,8 +146,8 @@ export class BlocksWardsComponent implements OnInit {
     }).then(r => {
       if (!r.isConfirmed) return;
       this.adminService.deleteBlock(block.id!).subscribe({
-        next: () => { Swal.fire('Deleted!', 'Block removed.', 'success'); this.loadBlocks(); },
-        error: () => Swal.fire('Error', 'Failed to delete block.', 'error')
+        next: () => { Swal.fire('Deleted!', 'GPU removed.', 'success'); this.loadBlocks(); },
+        error: () => Swal.fire('Error', 'Failed to delete GPU.', 'error')
       });
     });
   }

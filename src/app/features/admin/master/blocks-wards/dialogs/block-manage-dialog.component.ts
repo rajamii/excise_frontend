@@ -16,13 +16,13 @@ import { CommonModule } from '@angular/common';
     <div class="dialog-container">
       <h2 mat-dialog-title class="dialog-title">
         <mat-icon>{{ isEditMode ? 'edit' : 'add_circle' }}</mat-icon>
-        {{ isEditMode ? 'Edit' : 'Add' }} Block
+        {{ isEditMode ? 'Edit' : 'Add' }} GPU
       </h2>
 
       <mat-dialog-content>
         <mat-form-field appearance="outline" class="w-100">
-          <mat-label>Block Name</mat-label>
-          <input matInput [(ngModel)]="block.blockName" placeholder="Enter block name" required />
+          <mat-label>GPU Name</mat-label>
+          <input matInput [(ngModel)]="block.blockName" placeholder="Enter GPU name" required />
           <mat-icon matPrefix>business</mat-icon>
         </mat-form-field>
 
@@ -123,11 +123,11 @@ export class BlockManageDialogComponent implements OnInit {
       : this.adminService.addBlock(payload);
     req.subscribe({
       next: () => {
-        Swal.fire('Success', `Block ${this.isEditMode ? 'updated' : 'added'}!`, 'success');
+        Swal.fire('Success', `GPU ${this.isEditMode ? 'updated' : 'added'}!`, 'success');
         this.dialogRef.close(true);
       },
       error: (err: any) => {
-        const errorMsg = err?.error?.gpuName?.[0] || err?.error?.gpu_name?.[0] || err?.error?.blockName?.[0] || err?.error?.block_name?.[0] || err?.error?.detail || 'Failed to save block.';
+        const errorMsg = err?.error?.gpuName?.[0] || err?.error?.gpu_name?.[0] || err?.error?.blockName?.[0] || err?.error?.block_name?.[0] || err?.error?.detail || 'Failed to save GPU.';
         Swal.fire('Error', errorMsg, 'error');
       }
     });

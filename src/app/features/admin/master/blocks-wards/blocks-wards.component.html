@@ -3,20 +3,20 @@
   <mat-tab-group class="outer-tabs" animationDuration="200ms">
 
     <!-- ══════════════════════════════════════════
-         TAB 1 — BLOCKS
+         TAB 1 — GPU
     ══════════════════════════════════════════ -->
     <mat-tab>
       <ng-template mat-tab-label>
         <mat-icon class="tab-icon">location_city</mat-icon>
-        <span class="tab-label-text">Blocks</span>
+        <span class="tab-label-text">GPU</span>
         <span class="count-badge">{{ filteredBlocks.length }}</span>
       </ng-template>
 
       <div class="tab-body">
         <div class="tab-toolbar">
-          <span class="toolbar-title">Block Management</span>
+          <span class="toolbar-title">GPU Management</span>
           <button mat-flat-button color="primary" (click)="onAddBlock()" class="add-btn">
-            <mat-icon>add</mat-icon> Add Block
+            <mat-icon>add</mat-icon> Add GPU
           </button>
         </div>
 
@@ -26,7 +26,7 @@
             <mat-icon class="search-icon">search</mat-icon>
             <input type="text"
                    [(ngModel)]="blockSearchText"
-                   placeholder="Search Block Name / GPU..."
+                   placeholder="Search GPU Name..."
                    class="search-input" />
             <button *ngIf="blockSearchText" class="clear-btn" (click)="blockSearchText = ''" title="Clear">
               <mat-icon>close</mat-icon>
@@ -50,7 +50,7 @@
           </button>
 
           <div class="filter-count-badge">
-            Showing {{ filteredBlocks.length }} of {{ blocks.length }} blocks
+            Showing {{ filteredBlocks.length }} of {{ blocks.length }} GPUs
           </div>
         </div>
 
@@ -63,7 +63,7 @@
             </ng-container>
 
             <ng-container matColumnDef="blockName">
-              <mat-header-cell *matHeaderCellDef>Block Name</mat-header-cell>
+              <mat-header-cell *matHeaderCellDef>GPU Name</mat-header-cell>
               <mat-cell *matCellDef="let row">{{ row.blockName || row.gpuName }}</mat-cell>
             </ng-container>
 
@@ -91,7 +91,7 @@
           @if (filteredBlocks.length === 0) {
             <div class="empty-state">
               <mat-icon>inbox</mat-icon>
-              <p>{{ (blockSearchText || blockSubcategorySearchText) ? 'No blocks matching filter criteria.' : 'No blocks found.' }}</p>
+              <p>{{ (blockSearchText || blockSubcategorySearchText) ? 'No GPUs matching filter criteria.' : 'No GPUs found.' }}</p>
             </div>
           }
         </div>

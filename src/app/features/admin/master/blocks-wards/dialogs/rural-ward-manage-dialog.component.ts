@@ -33,21 +33,21 @@ import { CommonModule } from '@angular/common';
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="w-100">
-          <mat-label>Block</mat-label>
+          <mat-label>GPU</mat-label>
           <mat-select [(ngModel)]="ward.block" required>
             <mat-option *ngIf="loadingBlocks" disabled>
               <mat-spinner diameter="20" style="display:inline-block;margin-right:8px;"></mat-spinner>
-              Loading blocks...
+              Loading GPUs...
             </mat-option>
             <mat-option *ngFor="let blk of blocks" [value]="blk.id">
               {{ blk.blockName }}
             </mat-option>
             <mat-option *ngIf="!loadingBlocks && blocks.length === 0" disabled>
-              No blocks available
+              No GPUs available
             </mat-option>
           </mat-select>
           <mat-icon matPrefix>location_city</mat-icon>
-          <mat-hint *ngIf="blocks.length > 0">{{ blocks.length }} blocks available</mat-hint>
+          <mat-hint *ngIf="blocks.length > 0">{{ blocks.length }} GPUs available</mat-hint>
         </mat-form-field>
 
         <mat-checkbox [(ngModel)]="ward.isActive" color="primary">Active</mat-checkbox>
