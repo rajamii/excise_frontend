@@ -1267,15 +1267,18 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           const isDistrictUser = roleId === 4;
           const isScopedOfficer = roleId === 8 || roleId === 9;
           if (this.isDistributorUser()) {
-            res.newLicense = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
-            res.renewal = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
-            res.specialPermit = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
-            
-            const allowed = [res.company, res.companyCollaboration, res.salesman, res.labelRegistration];
+            const allowed = [
+              res.newLicense,
+              res.renewal,
+              res.company,
+              res.companyCollaboration,
+              res.salesman,
+              res.labelRegistration
+            ];
             const getAppCount = (item: any) => {
               if (!item) return 0;
               if (item.applied != null && item.applied > 0) return item.applied;
-              return (item.pending || 0) + (item.approved || 0) + (item.objection || 0) + (item.rejected || 0);
+              return (item.pending || 0) + (item.approved || 0) + (item.objection || 0) + (item.rejected || 0) + (item.awaitingPayment || (item as any)?.awaiting_payment || 0);
             };
 
             res.total = {
@@ -3178,15 +3181,18 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           const isDistrictUser = roleId === 4;
           const isScopedOfficer = roleId === 8 || roleId === 9;
           if (this.isDistributorUser()) {
-            res.newLicense = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
-            res.renewal = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
-            res.specialPermit = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 } as any;
-            
-            const allowed = [res.company, res.companyCollaboration, res.salesman, res.labelRegistration];
+            const allowed = [
+              res.newLicense,
+              res.renewal,
+              res.company,
+              res.companyCollaboration,
+              res.salesman,
+              res.labelRegistration
+            ];
             const getAppCount = (item: any) => {
               if (!item) return 0;
               if (item.applied != null && item.applied > 0) return item.applied;
-              return (item.pending || 0) + (item.approved || 0) + (item.objection || 0) + (item.rejected || 0);
+              return (item.pending || 0) + (item.approved || 0) + (item.objection || 0) + (item.rejected || 0) + (item.awaitingPayment || (item as any)?.awaiting_payment || 0);
             };
 
             res.total = {
