@@ -395,50 +395,72 @@ export class NewLicenseDashboardComponent implements OnInit {
   }
 
   private startBilldeskInitiation(applicationId: string): void {
-  void Swal.fire({
-    title: 'Redirecting to BillDesk',
-    text: 'Preparing application fee payment...',
-    allowOutsideClick: false,
-    didOpen: () => Swal.showLoading(),
-  });
-
-  this.paymentIntegrationService
-    .initiateNewLicenseFee(String(applicationId).trim(), 500)
-    .pipe(timeout(30000))
-    .subscribe({
-      next: (initRes: any) => {
-        Swal.close();
-        this.paymentIntegrationService.clearRetryState(applicationId);
-
-        // Check for SDK parameters (handles both casing styles)[cite: 2]
-        const hasSDK = (initRes?.bdOrderId || initRes?.bd_order_id) && 
-                       (initRes?.authToken || initRes?.auth_token);
-
-        if (hasSDK) {
-          try {
-            // Use the single shared method from your service
-            this.paymentIntegrationService.launchBillDeskSDK(initRes, (txn) => {
-              if (txn.status === 'success' || txn.status === '0300') {
-                // Success: Refresh data to reflect the new payment status[cite: 2]
-                this.loadData();
-                Swal.fire('Success', 'Payment processed successfully.', 'success');
-              } else {
-                Swal.fire('Payment Incomplete', 'Payment was cancelled or declined.', 'info');
-              }
-            });
-          } catch (err) {
-            void Swal.fire('Error', 'Payment SDK failed to load. Please refresh.', 'error');
-          }
-        } else {
-          this.paymentIntegrationService.recordBilldeskFailure(applicationId);
-          void Swal.fire('Error', 'Missing SDK gateway parameters.', 'error');
-        }
-      },
-      error: (err: any) => {
-        this.paymentIntegrationService.handleInitiationError(err, applicationId);
-      },
+    void Swal.fire({
+      title: 'Redirecting to BillDesk',
+      text: 'Preparing application fee payment...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
     });
-}
+
+    this.paymentIntegrationService
+      .initiateNewLicenseFee(String(applicationId).trim(), 500)
+      .pipe(timeout(30000))
+      .subscribe({
+        next: (initRes: any) => {
+          Swal.close();
+          this.paymentIntegrationService.clearRetryState(applicationId);
+
+          const hasSDK = (initRes?.bdOrderId || initRes?.bd_order_id || initRes?.bdorderid) && 
+                         (initRes?.authToken || initRes?.auth_token || initRes?.rdata);
+
+          if (hasSDK) {
+            try {
+              this.paymentIntegrationService.launchBillDeskSDK(initRes, (txn) => {
+                if (txn.status === 'success' || txn.status === '0300') {
+                  
+                  Swal.fire({
+                    title: 'Verifying Payment',
+                    text: 'Securely recording your transaction. Please wait...',
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading()
+                  });
+
+                  // FIXED: Manually trigger Webhook to prevent race conditions with table reload
+                  const formData = new FormData();
+                  const txResponse = txn.transaction_response || txn.auth_token || '';
+                  formData.append('transaction_response', txResponse);
+
+                  this.http.post(`${environment.apiBaseUrl}/transactional/payment-gateway/billdesk/webhook/`, formData, { responseType: 'text' })
+                    .subscribe({
+                      next: () => {
+                        this.loadData();
+                        Swal.fire('Success', 'Application fee paid and submitted successfully!', 'success');
+                      },
+                      error: () => {
+                        // Fallback refresh
+                        setTimeout(() => {
+                          this.loadData();
+                          Swal.fire('Success', 'Application fee paid and submitted successfully!', 'success');
+                        }, 2000);
+                      }
+                    });
+                } else {
+                  Swal.fire('Payment Incomplete', 'Payment was cancelled or declined.', 'info');
+                }
+              });
+            } catch (err) {
+              void Swal.fire('Error', 'Payment SDK failed to load. Please refresh.', 'error');
+            }
+          } else {
+            this.paymentIntegrationService.recordBilldeskFailure(applicationId);
+            void Swal.fire('Error', 'Missing SDK gateway parameters.', 'error');
+          }
+        },
+        error: (err: any) => {
+          this.paymentIntegrationService.handleInitiationError(err, applicationId);
+        },
+      });
+  }
 
   private submitToBillDesk(url: string, requestMsg: string): void {
     try {

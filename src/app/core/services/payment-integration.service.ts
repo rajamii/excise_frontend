@@ -271,23 +271,39 @@ export class PaymentIntegrationService {
   }
 
   launchBillDeskSDK(apiData: any, callback: (txn: any) => void): void {
+    // Safely extract values regardless of backend casing
+    const bdOrderId = apiData?.bdOrderId || apiData?.bdorderid || apiData?.bd_order_id;
+    const authToken = apiData?.authToken || apiData?.authorization || apiData?.auth_token;
+    const merchantId = apiData?.merchantId || apiData?.merchant_id || 'SEDUATV2SJ';
+
+    if (!bdOrderId || !authToken) {
+      console.error('Missing required BillDesk SDK parameters:', apiData);
+      callback({ status: 'failed', error: 'Missing gateway parameters' });
+      return;
+    }
+
     const config = {
+      merchantLogo: "https://sems.sikkim.gov.in/assets/images/fav-icon.png",
       flowType: "payments",
       flowConfig: {
-        merchantId: apiData.merchantId || apiData.merchant_id,
-        bdOrderId: apiData.bdOrderId || apiData.bd_order_id,
-        authToken: apiData.authToken || apiData.auth_token,
+        merchantId: merchantId,
+        bdOrderId: bdOrderId,
+        authToken: authToken,
         childWindow: true,
-        returnUrl: environment.payment.callbackUrl, // Single point of truth
+        returnUrl: environment.payment.callbackUrl || "https://sems.sikkim.gov.in/transactional/payment-gateway/billdesk/response/",
         retryCount: 3
       },
-      responseHandler: callback
+      responseHandler: (txnResponse: any) => {
+        console.log('BillDesk WebSDK Response:', txnResponse);
+        callback(txnResponse);
+      }
     };
 
-    if (typeof window !== 'undefined' && window.loadBillDeskSdk) {
-      window.loadBillDeskSdk(config);
+    if (typeof window !== 'undefined' && (window as any).loadBillDeskSdk) {
+      (window as any).loadBillDeskSdk(config);
     } else {
-      throw new Error('BillDesk SDK not loaded');
+      console.error('BillDesk SDK not loaded.');
+      callback({ status: 'failed', error: 'Payment SDK failed to load' });
     }
   }
 
