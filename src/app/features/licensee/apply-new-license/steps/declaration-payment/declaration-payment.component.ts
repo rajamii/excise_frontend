@@ -1267,7 +1267,6 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
 
   this.isProcessing = true;
    
-    // Prefer backend-resolved amount from DB; send amount only if we have a valid fee value.
     const amountToSend = this.feeAmount && this.feeAmount > 0 ? this.feeAmount : undefined;
 
     this.paymentService.initiateNewLicenseFee(this.draftApplicationId, amountToSend).subscribe({
@@ -1297,7 +1296,6 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
         return;
       }
 
-      // FALLBACK: Traditional Redirect (for mock/old testing)[cite: 1]
       const billdeskUrl = String(response?.billdesk_url || response?.billdeskUrl || '').trim();
       const requestMsg = String(response?.request_msg || response?.requestMsg || '').trim();
 
@@ -1308,49 +1306,17 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       }
     },
     error: (err) => {
-      this.handlePaymentCallback(err); // Centralize error popups if possible
+      this.handlePaymentCallback(err);
     }
   });
 }
 
-  // private launchBillDesk(apiData: any) {
-  //   // 1. Prepare the flow config object required by the SDK
-  //   const flow_config = {
-  //     merchantId: apiData.merchantId,
-  //     bdOrderId: apiData.bdOrderId,
-  //     authToken: apiData.authToken,
-  //     childWindow: true,
-  //     returnUrl: environment.payment.callbackUrl, // MUST match the backend 'ru' EXACTLY
-  //     retryCount: 3
-  //   };
-
-  //   // 2. Prepare the main config object[cite: 1]
-  //   const config = {
-  //     flowType: "payments",
-  //     flowConfig: flow_config,
-  //     responseHandler: (txn: any) => this.handlePaymentCallback(txn) // Captures popup closure
-  //   };
-
-  //   // 3. Invoke the globally scoped SDK method
-  //   if (typeof window !== 'undefined' && window.loadBillDeskSdk) {
-  //     window.loadBillDeskSdk(config);
-  //   } else {
-  //     console.error('BillDesk SDK is not loaded in the window object.');
-  //     Swal.fire('Error', 'Payment SDK failed to load. Please ensure SDK scripts are in index.html.', 'error');
-  //   }
-  // }
-
   private handlePaymentCallback(txn: any) {
     console.log("BillDesk Callback received. Status:", txn.status);
-
-    // Billdesk auth_status for a successful transaction is '0300'[cite: 1]
     if (txn.status === 'success' || txn.status === '0300') {
-      // The backend has already received the webhook and verified the JWS.
-      // Transition the user to the success screen:
       this.submittedApplicationId = this.draftApplicationId;
       this.cdr.detectChanges();
     } else {
-      // Handles cancellations, 3DS failures, or declined cards
       Swal.fire('Payment Incomplete', 'Your payment was cancelled or declined. Please try again.', 'error');
     }
   }
