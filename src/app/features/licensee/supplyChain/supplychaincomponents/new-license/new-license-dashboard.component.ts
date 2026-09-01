@@ -531,7 +531,7 @@ export class NewLicenseDashboardComponent implements OnInit {
         ).trim();
         const paymentStatus = this.normalizePaymentStatus(rawPayment);
         const feePaid = Boolean(item?.is_application_fee_paid ?? item?.isApplicationFeePaid);
-        const canView = paymentStatus === 'Successful' && feePaid;
+        const canView = paymentStatus === 'Successful' || feePaid;
         const canPayNow = this.isLicenseeUser() && !feePaid && paymentStatus !== 'Successful';
         const paymentDateRaw = item?.application_fee_payment_date || item?.applicationFeePaymentDate;
         const submittedOn = paymentStatus === 'Successful'
