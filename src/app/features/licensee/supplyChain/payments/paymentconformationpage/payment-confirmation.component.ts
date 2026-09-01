@@ -124,7 +124,7 @@ interface MyLicenseRow {
   stageName?: string;
 }
 
-type WalletModuleType = 'distillery' | 'brewery' | 'other' | '';
+type WalletModuleType = 'distillery' | 'brewery' | 'distributor' | 'other' | '';
 type PaymentModuleTab = 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram';
 type OtherModuleTab = 'security_deposit' | 'license_fee';
 type WalletTableTab = PaymentModuleTab | OtherModuleTab | 'recharge' | 'history';
@@ -651,7 +651,7 @@ private initializeWalletContextAndLoadData(): void {
   private pickPreferredWalletLicense(rows: MyLicenseRow[]): MyLicenseRow | null {
     const moduleTypePriority = (row: MyLicenseRow): number => {
       const moduleType = this.resolveModuleTypeFromLicense(row);
-      if (moduleType === 'distillery' || moduleType === 'brewery') return 0;
+      if (moduleType === 'distillery' || moduleType === 'brewery' || moduleType === 'distributor') return 0;
       if (moduleType === 'other') return 1;
       return 2;
     };
@@ -741,6 +741,9 @@ private initializeWalletContextAndLoadData(): void {
     if (subCategoryId === 1) {
       return 'brewery';
     }
+    if (subCategoryId === 31) {
+      return 'distributor';
+    }
 
     const subCategoryName = String(
       row.license_sub_category ??
@@ -754,8 +757,16 @@ private initializeWalletContextAndLoadData(): void {
     if (subCategoryName.includes('brew')) {
       return 'brewery';
     }
+    if (subCategoryName.includes('distribut')) {
+      return 'distributor';
+    }
 
-    // Issued licenses that are not brewery/distillery (FLR shop, bar, etc.): backend module_type "other".
+    const catName = this.extractLicenseCategoryTextFromRow(row);
+    if (catName.includes('distribut')) {
+      return 'distributor';
+    }
+
+    // Issued licenses that are not brewery/distillery/distributor (FLR shop, bar, etc.): backend module_type "other".
     const licenseId = String(row.license_id ?? row.licenseId ?? '').trim();
     if (licenseId) {
       return 'other';
@@ -839,13 +850,15 @@ private initializeWalletContextAndLoadData(): void {
         ? 'Brewery'
         : moduleType === 'distillery'
           ? 'Distillery'
-          : moduleType === 'other'
-            ? 'License'
-            : 'Distillery';
+          : moduleType === 'distributor'
+            ? 'Distributor'
+            : moduleType === 'other'
+              ? 'License'
+              : 'Distillery';
 
-    // Brewery/distillery use the full "Wallets" tabs; other manufacturing uses the same wallet page in "Others" mode.
-    const isManufacturing = moduleType === 'brewery' || moduleType === 'distillery';
-    if (!isManufacturing && this.walletViewMode !== 'others') {
+    // Brewery/distillery/distributor use the full "Wallets" tabs; other manufacturing uses the same wallet page in "Others" mode.
+    const isFullWalletModule = moduleType === 'brewery' || moduleType === 'distillery' || moduleType === 'distributor';
+    if (!isFullWalletModule && this.walletViewMode !== 'others') {
       this.walletViewMode = 'others';
       const currentView = String(this.route.snapshot?.queryParams?.['walletView'] || '').trim().toLowerCase();
       if (currentView !== 'others') {
@@ -1026,11 +1039,13 @@ private initializeWalletContextAndLoadData(): void {
         ? 'Brewery'
         : this.resolvedLicenseModuleType === 'distillery'
           ? 'Distillery'
-          : this.resolvedLicenseModuleType === 'other'
-            ? 'License'
-            : this.isBreweryUser
-              ? 'Brewery'
-              : 'Distillery';
+          : this.resolvedLicenseModuleType === 'distributor'
+            ? 'Distributor'
+            : this.resolvedLicenseModuleType === 'other'
+              ? 'License'
+              : this.isBreweryUser
+                ? 'Brewery'
+                : 'Distillery';
     this.ensureActiveTabAllowed();
   }
 
