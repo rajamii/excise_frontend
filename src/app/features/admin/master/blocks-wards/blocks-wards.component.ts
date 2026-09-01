@@ -24,6 +24,13 @@ import { RuralWardManageDialogComponent } from './dialogs/rural-ward-manage-dial
 })
 export class BlocksWardsComponent implements OnInit {
 
+  // ── Pagination ───────────────────────────────────────────────────────────
+  pageSize = 10;
+  pageSizeOptions = [5, 10, 20, 50];
+  blockPageIndex = 0;
+  urbanPageIndex = 0;
+  ruralPageIndex = 0;
+
   // ── Blocks ──────────────────────────────────────────────────────────────
   blockColumns: string[] = ['sno', 'blockName', 'subcategory', 'actions'];
   blocks: Block[] = [];
@@ -122,6 +129,35 @@ export class BlocksWardsComponent implements OnInit {
   clearBlockFilters(): void {
     this.blockSearchText = '';
     this.blockSubcategorySearchText = '';
+    this.blockPageIndex = 0;
+  }
+
+  // ── Pagination helpers ───────────────────────────────────────────────────
+  get pagedBlocks(): Block[] {
+    const start = this.blockPageIndex * this.pageSize;
+    return this.filteredBlocks.slice(start, start + this.pageSize);
+  }
+  get blockTotalPages(): number { return Math.max(1, Math.ceil(this.filteredBlocks.length / this.pageSize)); }
+  blockPageEnd(): number { return Math.min((this.blockPageIndex + 1) * this.pageSize, this.filteredBlocks.length); }
+
+  get pagedUrbanWards(): Ward[] {
+    const start = this.urbanPageIndex * this.pageSize;
+    return this.filteredUrbanWards.slice(start, start + this.pageSize);
+  }
+  get urbanTotalPages(): number { return Math.max(1, Math.ceil(this.filteredUrbanWards.length / this.pageSize)); }
+  urbanPageEnd(): number { return Math.min((this.urbanPageIndex + 1) * this.pageSize, this.filteredUrbanWards.length); }
+
+  get pagedRuralWards(): RuralWard[] {
+    const start = this.ruralPageIndex * this.pageSize;
+    return this.filteredRuralWards.slice(start, start + this.pageSize);
+  }
+  get ruralTotalPages(): number { return Math.max(1, Math.ceil(this.filteredRuralWards.length / this.pageSize)); }
+  ruralPageEnd(): number { return Math.min((this.ruralPageIndex + 1) * this.pageSize, this.filteredRuralWards.length); }
+
+  onPageSizeChange(): void {
+    this.blockPageIndex = 0;
+    this.urbanPageIndex = 0;
+    this.ruralPageIndex = 0;
   }
 
   onAddBlock(): void {
@@ -180,6 +216,7 @@ export class BlocksWardsComponent implements OnInit {
   clearUrbanWardFilters(): void {
     this.urbanSearchText = '';
     this.urbanSubcategorySearchText = '';
+    this.urbanPageIndex = 0;
   }
 
   onAddUrbanWard(): void {
@@ -238,6 +275,7 @@ export class BlocksWardsComponent implements OnInit {
   clearRuralWardFilters(): void {
     this.ruralSearchText = '';
     this.ruralBlockSearchText = '';
+    this.ruralPageIndex = 0;
   }
 
   onAddRuralWard(): void {

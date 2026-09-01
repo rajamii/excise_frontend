@@ -31,6 +31,31 @@ export class ListComponent implements OnInit {
   subcategoryColumns: string[] = ['subcategoryName', 'categoryName', 'description', 'status', 'actions'];
   locationSubcategories: LocationSubcategory[] = [];
 
+  // ── Pagination ────────────────────────────────────────────────────────────
+  pageSize = 10;
+  pageSizeOptions = [5, 10, 20, 50];
+  categoryPageIndex = 0;
+  subcategoryPageIndex = 0;
+
+  get pagedCategories(): LocationCategory[] {
+    const start = this.categoryPageIndex * this.pageSize;
+    return this.locationCategories.slice(start, start + this.pageSize);
+  }
+  get categoryTotalPages(): number { return Math.max(1, Math.ceil(this.locationCategories.length / this.pageSize)); }
+  categoryPageEnd(): number { return Math.min((this.categoryPageIndex + 1) * this.pageSize, this.locationCategories.length); }
+
+  get pagedSubcategories(): LocationSubcategory[] {
+    const start = this.subcategoryPageIndex * this.pageSize;
+    return this.locationSubcategories.slice(start, start + this.pageSize);
+  }
+  get subcategoryTotalPages(): number { return Math.max(1, Math.ceil(this.locationSubcategories.length / this.pageSize)); }
+  subcategoryPageEnd(): number { return Math.min((this.subcategoryPageIndex + 1) * this.pageSize, this.locationSubcategories.length); }
+
+  onPageSizeChange(): void {
+    this.categoryPageIndex = 0;
+    this.subcategoryPageIndex = 0;
+  }
+
   constructor(
     private masterService: MasterService,
     private dialog: MatDialog

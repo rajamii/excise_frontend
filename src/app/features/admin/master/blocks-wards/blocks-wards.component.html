@@ -55,11 +55,11 @@
         </div>
 
         <div class="table-wrapper">
-          <mat-table [dataSource]="filteredBlocks" class="data-table">
+          <mat-table [dataSource]="pagedBlocks" class="data-table">
 
             <ng-container matColumnDef="sno">
               <mat-header-cell *matHeaderCellDef class="sno-col">#</mat-header-cell>
-              <mat-cell *matCellDef="let row; let i = index" class="sno-col">{{ i + 1 }}</mat-cell>
+              <mat-cell *matCellDef="let row; let i = index" class="sno-col">{{ blockPageIndex * pageSize + i + 1 }}</mat-cell>
             </ng-container>
 
             <ng-container matColumnDef="blockName">
@@ -94,6 +94,26 @@
               <p>{{ (blockSearchText || blockSubcategorySearchText) ? 'No GPUs matching filter criteria.' : 'No GPUs found.' }}</p>
             </div>
           }
+        </div>
+
+        <!-- Pagination Bar -->
+        <div class="pagination-bar" *ngIf="filteredBlocks.length > 0">
+          <div class="pagination-info">
+            Showing {{ blockPageIndex * pageSize + 1 }}–{{ blockPageEnd() }} of {{ filteredBlocks.length }} GPUs
+          </div>
+          <div class="pagination-controls">
+            <span class="page-size-label">Rows per page:</span>
+            <select class="page-size-select" [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
+              <option *ngFor="let s of pageSizeOptions" [value]="s">{{ s }}</option>
+            </select>
+            <button class="page-btn" (click)="blockPageIndex = blockPageIndex - 1" [disabled]="blockPageIndex === 0">
+              <mat-icon>chevron_left</mat-icon>
+            </button>
+            <span class="page-indicator">{{ blockPageIndex + 1 }} / {{ blockTotalPages }}</span>
+            <button class="page-btn" (click)="blockPageIndex = blockPageIndex + 1" [disabled]="blockPageIndex >= blockTotalPages - 1">
+              <mat-icon>chevron_right</mat-icon>
+            </button>
+          </div>
         </div>
       </div>
     </mat-tab>
@@ -164,11 +184,11 @@
               </div>
 
               <div class="table-wrapper">
-                <mat-table [dataSource]="filteredUrbanWards" class="data-table">
+                <mat-table [dataSource]="pagedUrbanWards" class="data-table">
 
                   <ng-container matColumnDef="sno">
                     <mat-header-cell *matHeaderCellDef class="sno-col">#</mat-header-cell>
-                    <mat-cell *matCellDef="let row; let i = index" class="sno-col">{{ i + 1 }}</mat-cell>
+                    <mat-cell *matCellDef="let row; let i = index" class="sno-col">{{ urbanPageIndex * pageSize + i + 1 }}</mat-cell>
                   </ng-container>
 
                   <ng-container matColumnDef="wardName">
@@ -210,6 +230,26 @@
                     <p>{{ (urbanSearchText || urbanSubcategorySearchText) ? 'No urban wards matching filter criteria.' : 'No urban wards found.' }}</p>
                   </div>
                 }
+              </div>
+
+              <!-- Pagination Bar -->
+              <div class="pagination-bar" *ngIf="filteredUrbanWards.length > 0">
+                <div class="pagination-info">
+                  Showing {{ urbanPageIndex * pageSize + 1 }}–{{ urbanPageEnd() }} of {{ filteredUrbanWards.length }} urban wards
+                </div>
+                <div class="pagination-controls">
+                  <span class="page-size-label">Rows per page:</span>
+                  <select class="page-size-select" [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
+                    <option *ngFor="let s of pageSizeOptions" [value]="s">{{ s }}</option>
+                  </select>
+                  <button class="page-btn" (click)="urbanPageIndex = urbanPageIndex - 1" [disabled]="urbanPageIndex === 0">
+                    <mat-icon>chevron_left</mat-icon>
+                  </button>
+                  <span class="page-indicator">{{ urbanPageIndex + 1 }} / {{ urbanTotalPages }}</span>
+                  <button class="page-btn" (click)="urbanPageIndex = urbanPageIndex + 1" [disabled]="urbanPageIndex >= urbanTotalPages - 1">
+                    <mat-icon>chevron_right</mat-icon>
+                  </button>
+                </div>
               </div>
             </div>
           </mat-tab>
@@ -265,11 +305,11 @@
               </div>
 
               <div class="table-wrapper">
-                <mat-table [dataSource]="filteredRuralWards" class="data-table">
+                <mat-table [dataSource]="pagedRuralWards" class="data-table">
 
                   <ng-container matColumnDef="sno">
                     <mat-header-cell *matHeaderCellDef class="sno-col">#</mat-header-cell>
-                    <mat-cell *matCellDef="let row; let i = index" class="sno-col">{{ i + 1 }}</mat-cell>
+                    <mat-cell *matCellDef="let row; let i = index" class="sno-col">{{ ruralPageIndex * pageSize + i + 1 }}</mat-cell>
                   </ng-container>
 
                   <ng-container matColumnDef="wardName">
@@ -311,6 +351,26 @@
                     <p>{{ (ruralSearchText || ruralBlockSearchText) ? 'No rural wards matching filter criteria.' : 'No rural wards found.' }}</p>
                   </div>
                 }
+              </div>
+
+              <!-- Pagination Bar -->
+              <div class="pagination-bar" *ngIf="filteredRuralWards.length > 0">
+                <div class="pagination-info">
+                  Showing {{ ruralPageIndex * pageSize + 1 }}–{{ ruralPageEnd() }} of {{ filteredRuralWards.length }} rural wards
+                </div>
+                <div class="pagination-controls">
+                  <span class="page-size-label">Rows per page:</span>
+                  <select class="page-size-select" [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
+                    <option *ngFor="let s of pageSizeOptions" [value]="s">{{ s }}</option>
+                  </select>
+                  <button class="page-btn" (click)="ruralPageIndex = ruralPageIndex - 1" [disabled]="ruralPageIndex === 0">
+                    <mat-icon>chevron_left</mat-icon>
+                  </button>
+                  <span class="page-indicator">{{ ruralPageIndex + 1 }} / {{ ruralTotalPages }}</span>
+                  <button class="page-btn" (click)="ruralPageIndex = ruralPageIndex + 1" [disabled]="ruralPageIndex >= ruralTotalPages - 1">
+                    <mat-icon>chevron_right</mat-icon>
+                  </button>
+                </div>
               </div>
             </div>
           </mat-tab>

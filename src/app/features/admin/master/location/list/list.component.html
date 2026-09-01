@@ -12,7 +12,7 @@
 
         <mat-card-content>
           <div class="table-container">
-            <mat-table [dataSource]="locationCategories">
+            <mat-table [dataSource]="pagedCategories">
 
               <!-- Category Name -->
               <ng-container matColumnDef="categoryName">
@@ -63,11 +63,31 @@
               <mat-row *matRowDef="let row; columns: categoryColumns;"></mat-row>
             </mat-table>
           </div>
+
+          <!-- Pagination Bar -->
+          <div class="pagination-bar" *ngIf="locationCategories.length > 0">
+            <div class="pagination-info">
+              Showing {{ categoryPageIndex * pageSize + 1 }}–{{ categoryPageEnd() }} of {{ locationCategories.length }} categories
+            </div>
+            <div class="pagination-controls">
+              <span class="page-size-label">Rows per page:</span>
+              <select class="page-size-select" [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
+                <option *ngFor="let s of pageSizeOptions" [value]="s">{{ s }}</option>
+              </select>
+              <button class="page-btn" (click)="categoryPageIndex = categoryPageIndex - 1" [disabled]="categoryPageIndex === 0">
+                <mat-icon>chevron_left</mat-icon>
+              </button>
+              <span class="page-indicator">{{ categoryPageIndex + 1 }} / {{ categoryTotalPages }}</span>
+              <button class="page-btn" (click)="categoryPageIndex = categoryPageIndex + 1" [disabled]="categoryPageIndex >= categoryTotalPages - 1">
+                <mat-icon>chevron_right</mat-icon>
+              </button>
+            </div>
+          </div>
         </mat-card-content>
       </mat-card>
     </mat-tab>
 
-    <!-- Tab 3: Location Subcategories / Blocks -->
+    <!-- Tab 2: Location Subcategories / Blocks -->
     <mat-tab label="Location Subcategories / Blocks">
       <mat-card class="mt-3">
         <mat-card-header>
@@ -79,7 +99,7 @@
 
         <mat-card-content>
           <div class="table-container">
-            <mat-table [dataSource]="locationSubcategories">
+            <mat-table [dataSource]="pagedSubcategories">
 
               <!-- Subcategory Name -->
               <ng-container matColumnDef="subcategoryName">
@@ -125,6 +145,26 @@
               <mat-header-row *matHeaderRowDef="subcategoryColumns"></mat-header-row>
               <mat-row *matRowDef="let row; columns: subcategoryColumns;"></mat-row>
             </mat-table>
+          </div>
+
+          <!-- Pagination Bar -->
+          <div class="pagination-bar" *ngIf="locationSubcategories.length > 0">
+            <div class="pagination-info">
+              Showing {{ subcategoryPageIndex * pageSize + 1 }}–{{ subcategoryPageEnd() }} of {{ locationSubcategories.length }} subcategories
+            </div>
+            <div class="pagination-controls">
+              <span class="page-size-label">Rows per page:</span>
+              <select class="page-size-select" [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
+                <option *ngFor="let s of pageSizeOptions" [value]="s">{{ s }}</option>
+              </select>
+              <button class="page-btn" (click)="subcategoryPageIndex = subcategoryPageIndex - 1" [disabled]="subcategoryPageIndex === 0">
+                <mat-icon>chevron_left</mat-icon>
+              </button>
+              <span class="page-indicator">{{ subcategoryPageIndex + 1 }} / {{ subcategoryTotalPages }}</span>
+              <button class="page-btn" (click)="subcategoryPageIndex = subcategoryPageIndex + 1" [disabled]="subcategoryPageIndex >= subcategoryTotalPages - 1">
+                <mat-icon>chevron_right</mat-icon>
+              </button>
+            </div>
           </div>
         </mat-card-content>
       </mat-card>
