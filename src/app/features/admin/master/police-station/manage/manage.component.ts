@@ -3,7 +3,7 @@ import { MaterialModule } from '../../../../../shared/material.module';
 import Swal from 'sweetalert2';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { PoliceStation } from '../../../../../core/models/policestation.model';
-import { Subdivision } from '../../../../../core/models/subdivision.model';
+import { District } from '../../../../../core/models/district.model';
 import { AdminService } from '../../../admin.service';
 import { MasterService } from '../../../../../core/services/master.service';
 
@@ -18,13 +18,13 @@ export class ManageComponent implements OnInit {
   policeStation: PoliceStation = {
     policeStation: '',
     policeStationCode: 0,
-    subdivision: '',
-    subdivisionCode: 0,
+    district: '',
+    districtCode: 0,
     isActive: true,
   };
 
   isEditMode = false;
-  subdivisions: Subdivision[] = [];
+  districts: District[] = [];
 
   constructor(
     private adminService: AdminService,
@@ -34,18 +34,21 @@ export class ManageComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.loadSubdivisions(); // Fetch list of subdivisions for dropdown
+    this.loadDistricts(); // Fetch list of districts for dropdown
 
     if (this.data) {
-      this.policeStation = { ...this.data }; // Pre-fill form with existing data
+      this.policeStation = { 
+        ...this.data,
+        districtCode: this.data.districtCode ?? (this.data as any).district_code ?? 0
+      }; // Pre-fill form with existing data
       this.isEditMode = true;
     }
   }
 
-  loadSubdivisions(): void {
-    this.masterService.getSubdivision().subscribe({
-      next: (data) => (this.subdivisions = data),
-      error: () => Swal.fire('Error', 'Failed to load subdivisions.', 'error'),
+  loadDistricts(): void {
+    this.masterService.getDistrict().subscribe({
+      next: (data) => (this.districts = data),
+      error: () => Swal.fire('Error', 'Failed to load districts.', 'error'),
     });
   }
 
@@ -58,9 +61,10 @@ export class ManageComponent implements OnInit {
     }).then((result) => {
       if (!result.isConfirmed) return;
 
-      const payload: PoliceStation = {
+      const payload: any = {
         ...this.policeStation,
-        subdivisionCode: +this.policeStation.subdivisionCode, // Ensure numeric code for backend
+        district_code: +this.policeStation.districtCode, // Ensure numeric code for backend
+        districtCode: +this.policeStation.districtCode,
       };
 
       const request = this.isEditMode

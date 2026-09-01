@@ -40,17 +40,17 @@
         </mat-error>
       </mat-form-field>
 
-      <!-- Subdivision dropdown selector populated from loaded list -->
+      <!-- District dropdown selector populated from loaded list -->
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label>Subdivision</mat-label>
+        <mat-label>District</mat-label>
         <mat-select
-          [(ngModel)]="policeStation.subdivisionCode"
-          name="subdivisionCode"
+          [(ngModel)]="policeStation.districtCode"
+          name="districtCode"
           required
-          #subdivisionModel="ngModel"
+          #districtModel="ngModel"
         >
-          <mat-option *ngFor="let sub of subdivisions" [value]="sub.subdivisionCode">
-            {{ sub.subdivision }}
+          <mat-option *ngFor="let dist of districts" [value]="dist.districtCode">
+            {{ dist.district }}
           </mat-option>
         </mat-select>
       </mat-form-field>

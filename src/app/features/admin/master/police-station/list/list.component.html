@@ -11,13 +11,13 @@
     <mat-card-content>
       <div class="filter-container">
         <mat-form-field appearance="outline">
-          <mat-label>Select Subdivision</mat-label>
-          <!-- Dropdown to filter police stations by subdivision -->
-          <mat-select [(ngModel)]="selectedSubdivisionCode" (selectionChange)="onSubdivisionSelect()">
-            <mat-option [value]="null">All Subdivisions</mat-option>
-            @for (sub of subdivisions; track sub) {
-              <mat-option [value]="sub.subdivisionCode">
-                {{ sub.subdivision }}
+          <mat-label>Select District</mat-label>
+          <!-- Dropdown to filter police stations by district -->
+          <mat-select [(ngModel)]="selectedDistrictCode" (selectionChange)="onDistrictSelect()">
+            <mat-option [value]="null">All Districts</mat-option>
+            @for (dist of districts; track dist) {
+              <mat-option [value]="dist.districtCode">
+                {{ dist.district }}
               </mat-option>
             }
           </mat-select>
@@ -25,8 +25,8 @@
       </div>
 
       <div class="table-container">
-        <!-- Material table bound to policeStations array -->
-        <mat-table [dataSource]="policeStations">
+        <!-- Material table bound to pagedPoliceStations array -->
+        <mat-table [dataSource]="pagedPoliceStations">
 
           <!-- Table column: Police Station Name -->
           <ng-container matColumnDef="policeStation">
@@ -40,10 +40,10 @@
             <mat-cell *matCellDef="let row"> {{ row.policeStationCode }} </mat-cell>
           </ng-container>
 
-          <!-- Table column: Subdivision Name -->
-          <ng-container matColumnDef="subdivision">
-            <mat-header-cell *matHeaderCellDef> Subdivision </mat-header-cell>
-            <mat-cell *matCellDef="let row"> {{ row.subdivision }} </mat-cell>
+          <!-- Table column: District Name -->
+          <ng-container matColumnDef="district">
+            <mat-header-cell *matHeaderCellDef> District </mat-header-cell>
+            <mat-cell *matCellDef="let row"> {{ row.district || row.subdivision || 'N/A' }} </mat-cell>
           </ng-container>
 
           <!-- Table column: Action buttons -->
@@ -63,6 +63,26 @@
           <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
           <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
         </mat-table>
+      </div>
+
+      <!-- Pagination Bar -->
+      <div class="pagination-bar" *ngIf="policeStations.length > 0">
+        <div class="pagination-info">
+          Showing {{ pageIndex * pageSize + 1 }}–{{ pageEnd() }} of {{ policeStations.length }} police stations
+        </div>
+        <div class="pagination-controls">
+          <span class="page-size-label">Rows per page:</span>
+          <select class="page-size-select" [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
+            <option *ngFor="let s of pageSizeOptions" [value]="s">{{ s }}</option>
+          </select>
+          <button class="page-btn" (click)="pageIndex = pageIndex - 1" [disabled]="pageIndex === 0">
+            <mat-icon>chevron_left</mat-icon>
+          </button>
+          <span class="page-indicator">{{ pageIndex + 1 }} / {{ totalPages }}</span>
+          <button class="page-btn" (click)="pageIndex = pageIndex + 1" [disabled]="pageIndex >= totalPages - 1">
+            <mat-icon>chevron_right</mat-icon>
+          </button>
+        </div>
       </div>
     </mat-card-content>
   </mat-card>

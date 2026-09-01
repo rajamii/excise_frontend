@@ -6,7 +6,7 @@ import { MatDialog } from '@angular/material/dialog';
 import Swal from 'sweetalert2';
 
 import { PoliceStation } from '../../../../../core/models/policestation.model';
-import { Subdivision } from '../../../../../core/models/subdivision.model';
+import { District } from '../../../../../core/models/district.model';
 import { ManageComponent } from '../manage/manage.component';
 
 @Component({
@@ -17,26 +17,42 @@ import { ManageComponent } from '../manage/manage.component';
   styleUrl: './list.component.scss'
 })
 export class ListComponent extends BaseComponent implements OnInit {
-  displayedColumns: string[] = ['policeStation', 'policeStationCode', 'subdivision', 'actions']; // Table columns
+  displayedColumns: string[] = ['policeStation', 'policeStationCode', 'district', 'actions']; // Table columns
 
   policeStations: PoliceStation[] = [];
   allPoliceStations: PoliceStation[] = []; 
-  subdivisions: Subdivision[] = []; 
-  selectedSubdivisionCode: number | null = null; 
+  districts: District[] = []; 
+  selectedDistrictCode: number | null = null; 
+
+  // Pagination
+  pageSize = 10;
+  pageSizeOptions = [5, 10, 20, 50];
+  pageIndex = 0;
+
+  get pagedPoliceStations(): PoliceStation[] {
+    const start = this.pageIndex * this.pageSize;
+    return this.policeStations.slice(start, start + this.pageSize);
+  }
+  get totalPages(): number { return Math.max(1, Math.ceil(this.policeStations.length / this.pageSize)); }
+  pageEnd(): number { return Math.min((this.pageIndex + 1) * this.pageSize, this.policeStations.length); }
+
+  onPageSizeChange(): void {
+    this.pageIndex = 0;
+  }
 
   constructor(deps: BaseDependency, private dialog: MatDialog) {
     super(deps);
   }
 
   ngOnInit(): void {
-    this.loadSubdivisions(); 
+    this.loadDistricts(); 
     this.loadPoliceStations();
   }
 
-  loadSubdivisions(): void {
-    this.masterService.getSubdivision().subscribe({
-      next: (data) => this.subdivisions = data, // Populate dropdown
-      error: () => Swal.fire('Error', 'Failed to load subdivisions.', 'error') // Show error on fail
+  loadDistricts(): void {
+    this.masterService.getDistrict().subscribe({
+      next: (data) => this.districts = data, // Populate dropdown
+      error: () => Swal.fire('Error', 'Failed to load districts.', 'error') // Show error on fail
     });
   }
 
@@ -44,23 +60,24 @@ export class ListComponent extends BaseComponent implements OnInit {
     this.masterService.getPoliceStations().subscribe({
       next: (data) => {
         this.allPoliceStations = data; // Store unfiltered data
-        this.applyFilter(); // Filter based on selected subdivision
+        this.applyFilter(); // Filter based on selected district
       },
       error: () => Swal.fire('Error', 'Failed to load police stations.', 'error') // Show load error
     });
   }
 
-  onSubdivisionSelect(): void {
-    this.applyFilter(); // Re-filter when user changes subdivision
+  onDistrictSelect(): void {
+    this.pageIndex = 0;
+    this.applyFilter(); // Re-filter when user changes district
   }
 
-  // Apply subdivision filter to policeStations
+  // Apply district filter to policeStations
   applyFilter(): void {
-    if (this.selectedSubdivisionCode === null) {
+    if (this.selectedDistrictCode === null) {
       this.policeStations = this.allPoliceStations; // No filter, show all
     } else {
       this.policeStations = this.allPoliceStations.filter(
-        ps => ps.subdivisionCode === this.selectedSubdivisionCode // Filter match
+        ps => (ps.districtCode ?? (ps as any).district_code) === this.selectedDistrictCode // Filter match
       );
     }
   }
