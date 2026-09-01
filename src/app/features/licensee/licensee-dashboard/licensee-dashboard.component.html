@@ -39,33 +39,31 @@
     </mat-card>
 
     <!-- Awaiting Payment Stat Card -->
-    @if (dashboardCounts.awaitingPayment && dashboardCounts.awaitingPayment > 0) {
-      <mat-card class="stat-card awaiting-payment">
-        <span class="action-badge">⚡ ACTION REQUIRED</span>
-        <div class="circle-icon orange-bg">
-          <mat-icon style="color: white; font-size: 24px; display: flex; align-items: center; justify-content: center;">payment</mat-icon>
-        </div>
-        <div class="value">{{ dashboardCounts.awaitingPayment }}</div>
-        <div class="label">Awaiting Payment</div>
-        <div class="sub-label">
-          <span class="payment-count" *ngIf="awaitingPaymentBreakdown.newLicense > 0">
-            New License ({{ awaitingPaymentBreakdown.newLicense }})
-          </span>
-          <span class="payment-count" *ngIf="awaitingPaymentBreakdown.licenseRenewal > 0">
-            Renewal ({{ awaitingPaymentBreakdown.licenseRenewal }})
-          </span>
-          <span class="payment-count" *ngIf="awaitingPaymentBreakdown.salesmanBarman > 0">
-            Salesman/Barman ({{ awaitingPaymentBreakdown.salesmanBarman }})
-          </span>
-          <span class="payment-count" *ngIf="awaitingPaymentBreakdown.companyRegistration > 0">
-            Company Registration ({{ awaitingPaymentBreakdown.companyRegistration }})
-          </span>
-          <span class="payment-count" *ngIf="awaitingPaymentBreakdown.specialPermit > 0">
-            Dry Day Permit ({{ awaitingPaymentBreakdown.specialPermit }})
-          </span>
-        </div>
-      </mat-card>
-    }
+    <mat-card class="stat-card awaiting-payment">
+      <span class="action-badge" *ngIf="dashboardCounts.awaitingPayment && dashboardCounts.awaitingPayment > 0">⚡ ACTION REQUIRED</span>
+      <div class="circle-icon orange-bg">
+        <mat-icon style="color: white; font-size: 24px; display: flex; align-items: center; justify-content: center;">payment</mat-icon>
+      </div>
+      <div class="value">{{ dashboardCounts.awaitingPayment || 0 }}</div>
+      <div class="label">Awaiting Payment</div>
+      <div class="sub-label">
+        <span class="payment-count" *ngIf="awaitingPaymentBreakdown.newLicense > 0">
+          New License ({{ awaitingPaymentBreakdown.newLicense }})
+        </span>
+        <span class="payment-count" *ngIf="awaitingPaymentBreakdown.licenseRenewal > 0">
+          Renewal ({{ awaitingPaymentBreakdown.licenseRenewal }})
+        </span>
+        <span class="payment-count" *ngIf="awaitingPaymentBreakdown.salesmanBarman > 0">
+          Salesman/Barman ({{ awaitingPaymentBreakdown.salesmanBarman }})
+        </span>
+        <span class="payment-count" *ngIf="awaitingPaymentBreakdown.companyRegistration > 0">
+          Company Registration ({{ awaitingPaymentBreakdown.companyRegistration }})
+        </span>
+        <span class="payment-count" *ngIf="awaitingPaymentBreakdown.specialPermit > 0">
+          Dry Day Permit ({{ awaitingPaymentBreakdown.specialPermit }})
+        </span>
+      </div>
+    </mat-card>
 
     <!-- Approved Stat Card (display only) -->
     <mat-card class="stat-card approved" (click)="openMyLicensesForRenewal()" style="cursor: pointer;">
