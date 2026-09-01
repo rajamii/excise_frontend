@@ -1564,17 +1564,12 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return isSpecFromRow || specialPermitCategorySet.has(catVal) || specialPermitCategorySet.has(catIdVal);
     });
 
-    const userCat = (this.user as any)?.licenseCategory || (this.currentUser as any)?.licenseCategory;
-    const userCatIsDistributor = !!(userCat && typeof userCat === 'object' && (userCat.isDistributorUser || userCat.is_distributor_user));
-
-    this.showDistributorPermitMenu = [4, 10, 15].includes(userRoleId) || userCatIsDistributor || rows.some((row) => {
-      const isDistFromRow = row?.isDistributorUser === true || row?.is_distributor_user === true;
-      const catObj = row?.license_category ?? row?.licenseCategory;
-      const isDistFromCatObj = catObj && typeof catObj === 'object' && (catObj.isDistributorUser === true || catObj.is_distributor_user === true);
-      const catVal = String(catObj || '').trim().toLowerCase();
-      const catIdVal = String(row?.license_category_id || row?.licenseCategoryId || (catObj && typeof catObj === 'object' ? catObj.id : '') || '').trim();
-      return isDistFromRow || isDistFromCatObj || distributorCategorySet.has(catVal) || distributorCategorySet.has(catIdVal);
-    });
+    const isOfficerOrAdmin = [4, 5, 10, 15].includes(userRoleId);
+    if (isOfficerOrAdmin) {
+      this.showDistributorPermitMenu = true;
+    } else {
+      this.showDistributorPermitMenu = this.hasActiveValidDistributorLicense(rows, distributorCategorySet);
+    }
 
     console.log('Resolved menu flags:', {
       hasDistillery,
@@ -1596,6 +1591,67 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     }
 
     this.triggerUiRefresh();
+  }
+
+  private hasActiveValidDistributorLicense(rows: any[], distributorCategorySet: Set<string>): boolean {
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return false;
+    }
+
+    return rows.some((row) => {
+      // 1. Must be an issued license with license_id (not an unissued application)
+      const licId = String(row?.license_id ?? row?.licenseId ?? '').trim();
+      if (!licId) {
+        return false;
+      }
+
+      // 2. License must be active & valid
+      const isActive = row?.is_active ?? row?.isActive;
+      if (isActive === false) {
+        return false;
+      }
+
+      const isValidNow = row?.is_valid_now ?? row?.isValidNow;
+      if (isValidNow === false) {
+        return false;
+      }
+
+      const canAccess = row?.can_access_supply_chain ?? row?.canAccessSupplyChain;
+      if (canAccess === false) {
+        return false;
+      }
+
+      // 3. License fee & security deposit must be paid
+      const isLicenseFeePaid = row?.is_license_fee_paid ?? row?.isLicenseFeePaid;
+      if (isLicenseFeePaid === false) {
+        return false;
+      }
+
+      const isSecurityFeePaid = row?.is_security_fee_paid ?? row?.isSecurityFeePaid;
+      if (isSecurityFeePaid === false) {
+        return false;
+      }
+
+      // 4. Must be a Distributor category license
+      const isDistFromRow = row?.isDistributorUser === true || row?.is_distributor_user === true;
+      const catObj = row?.license_category ?? row?.licenseCategory;
+      const isDistFromCatObj = catObj && typeof catObj === 'object' && (catObj.isDistributorUser === true || catObj.is_distributor_user === true);
+      const catVal = String(catObj || (typeof catObj === 'string' ? catObj : '')).trim().toLowerCase();
+      const catIdVal = String(row?.license_category_id || row?.licenseCategoryId || (catObj && typeof catObj === 'object' ? catObj.id : '') || '').trim();
+
+      const subcatObj = row?.license_sub_category ?? row?.licenseSubCategory;
+      const subcatVal = String(subcatObj || (subcatObj && typeof subcatObj === 'object' ? subcatObj.description || subcatObj.name : '') || '').trim().toLowerCase();
+      const isDistFromSubcat = subcatVal.includes('distribut');
+
+      return (
+        isDistFromRow ||
+        isDistFromCatObj ||
+        isDistFromSubcat ||
+        distributorCategorySet.has(catVal) ||
+        distributorCategorySet.has(catIdVal) ||
+        catVal.includes('distribut')
+      );
+    });
   }
 
   private computeWalletNavVisible(rows: any[]): boolean {
@@ -1897,7 +1953,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     }
 
     if (section === 'distributor-permit') {
-      return this.isDistributorUser();
+      return this.showDistributorPermitMenu;
     }
 
     if (section === 'single-window' || section === 'single-window-detail' || section === 'payment-transactions') {
