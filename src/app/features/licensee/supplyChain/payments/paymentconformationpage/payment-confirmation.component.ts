@@ -359,8 +359,20 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
     this.route.queryParams.subscribe(params => {
       const requestedTab = String(params['tab'] || '').trim().toLowerCase();
       const source = String(params['source'] || '').trim().toLowerCase();
+      const type = String(params['type'] || '').trim().toLowerCase();
+      const action = String(params['action'] || '').trim().toLowerCase();
       const viewParam = String(params['walletView'] || '').trim().toLowerCase();
-      if (viewParam === 'others') {
+
+      const isLicenseFeeAction =
+        requestedTab === 'license_fee' ||
+        requestedTab === 'security_deposit' ||
+        source === 'new-license' ||
+        source === 'license-renewal' ||
+        type === 'new-license' ||
+        type === 'license-renewal' ||
+        action === 'pay';
+
+      if (viewParam === 'others' || isLicenseFeeAction) {
         this.walletViewMode = 'others';
       } else if (viewParam === 'wallets') {
         // Keep wallets mode as-is; internal view will adjust based on license type
@@ -858,7 +870,24 @@ private initializeWalletContextAndLoadData(): void {
 
     // Brewery/distillery/distributor use the full "Wallets" tabs; other manufacturing uses the same wallet page in "Others" mode.
     const isFullWalletModule = moduleType === 'brewery' || moduleType === 'distillery' || moduleType === 'distributor';
-    if (!isFullWalletModule && this.walletViewMode !== 'others') {
+    const qParams = this.route.snapshot?.queryParams || {};
+    const requestedTab = String(qParams['tab'] || '').trim().toLowerCase();
+    const requestedSource = String(qParams['source'] || '').trim().toLowerCase();
+    const requestedType = String(qParams['type'] || '').trim().toLowerCase();
+    const requestedAction = String(qParams['action'] || '').trim().toLowerCase();
+    const requestedView = String(qParams['walletView'] || '').trim().toLowerCase();
+
+    const isLicenseFeeAction =
+      requestedTab === 'license_fee' ||
+      requestedTab === 'security_deposit' ||
+      requestedSource === 'new-license' ||
+      requestedSource === 'license-renewal' ||
+      requestedType === 'new-license' ||
+      requestedType === 'license-renewal' ||
+      requestedAction === 'pay' ||
+      requestedView === 'others';
+
+    if ((!isFullWalletModule || isLicenseFeeAction) && this.walletViewMode !== 'others' && requestedView !== 'wallets') {
       this.walletViewMode = 'others';
       const currentView = String(this.route.snapshot?.queryParams?.['walletView'] || '').trim().toLowerCase();
       if (currentView !== 'others') {

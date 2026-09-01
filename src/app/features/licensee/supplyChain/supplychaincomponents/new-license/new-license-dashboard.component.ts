@@ -483,6 +483,7 @@ export class NewLicenseDashboardComponent implements OnInit {
           section: 'wallet',
           action: 'pay',
           tab: 'license_fee',
+          walletView: 'others',
           id: applicationId,
           type: 'new-license',
           ref: applicationId,

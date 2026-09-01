@@ -1174,6 +1174,7 @@ private getTransitRejectSummary(): {
             section: 'wallet',
             action: 'pay',
             tab: 'license_fee',
+            walletView: 'others',
             id: applicationId,
             type: isRenewal ? 'license-renewal' : 'new-license',
             ref: applicationId,
