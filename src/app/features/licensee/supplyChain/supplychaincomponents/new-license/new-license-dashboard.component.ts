@@ -181,17 +181,14 @@ export class NewLicenseDashboardComponent implements OnInit {
 
         // Calculate actual counts from rows
         const actualObjectionCount = this.allRows.filter(r => r.statusGroup === 'objection').length;
-        const actualAwaitingPaymentCount = this.allRows.filter(r => r.statusGroup === 'awaiting-payment').length;
-        const actualPendingCount = this.allRows.filter(r => r.statusGroup === 'pending').length;
+        const actualPendingTotal = this.allRows.filter(r => r.statusGroup === 'pending' || r.statusGroup === 'awaiting-payment').length;
 
-        // Default to Objection if any exist, then Awaiting Payment, then Pending, else Total Applications ('')
+        // Default to Pending if any pending/awaiting-payment items exist, else Objection, else Total Applications ('')
         if (this.activeSummaryFilter === '') {
-          if (actualObjectionCount > 0) {
-            this.activeSummaryFilter = 'objection';
-          } else if (actualAwaitingPaymentCount > 0) {
-            this.activeSummaryFilter = 'awaiting-payment';
-          } else if (actualPendingCount > 0) {
+          if (actualPendingTotal > 0) {
             this.activeSummaryFilter = 'pending';
+          } else if (actualObjectionCount > 0) {
+            this.activeSummaryFilter = 'objection';
           } else {
             this.activeSummaryFilter = '';
           }
@@ -253,7 +250,11 @@ export class NewLicenseDashboardComponent implements OnInit {
 
       // Summary card status filter
       if (this.activeSummaryFilter) {
-        if (row.statusGroup !== this.activeSummaryFilter) return false;
+        if (this.activeSummaryFilter === 'pending') {
+          if (row.statusGroup !== 'pending' && row.statusGroup !== 'awaiting-payment') return false;
+        } else if (row.statusGroup !== this.activeSummaryFilter) {
+          return false;
+        }
       }
 
       return true;
@@ -855,11 +856,10 @@ export class NewLicenseDashboardComponent implements OnInit {
     const next: NewLicenseCounts = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 };
     for (const row of rows || []) {
       if (row?.statusGroup === 'applied') next.applied += 1;
-      else if (row?.statusGroup === 'pending') next.pending += 1;
+      else if (row?.statusGroup === 'pending' || row?.statusGroup === 'awaiting-payment') next.pending += 1;
       else if (row?.statusGroup === 'objection') next.objection += 1;
       else if (row?.statusGroup === 'approved') next.approved += 1;
       else if (row?.statusGroup === 'rejected') next.rejected += 1;
-      else if (row?.statusGroup === 'awaiting-payment') next.awaitingPayment = (next.awaitingPayment || 0) + 1;
     }
     return next;
   }

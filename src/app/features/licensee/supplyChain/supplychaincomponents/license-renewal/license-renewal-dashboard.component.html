@@ -24,15 +24,6 @@
         <p class="card-label">Pending</p>
       </div>
     </div>
-    <div class="summary-card awaiting-payment-requests summary-card-clickable" role="button" tabindex="0"
-      *ngIf="counts.awaitingPayment && counts.awaitingPayment > 0"
-      (click)="onSummaryCardClick('awaiting-payment')" [class.active]="activeSummaryFilter === 'awaiting-payment'">
-      <div class="card-icon"><i class="bi bi-credit-card"></i></div>
-      <div class="card-content">
-        <h3 class="card-value">{{ counts.awaitingPayment || 0 }}</h3>
-        <p class="card-label">Awaiting Payment</p>
-      </div>
-    </div>
     <div class="summary-card objection-requests summary-card-clickable" role="button" tabindex="0"
       (click)="onSummaryCardClick('objection')" [class.active]="activeSummaryFilter === 'objection'">
       <div class="card-icon"><i class="bi bi-exclamation-circle"></i></div>

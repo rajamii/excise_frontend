@@ -102,7 +102,7 @@ export class LicenseRenewalDashboardComponent implements OnInit {
 
         this.counts = {
           applied: this.allRows.filter(r => r.statusGroup === 'applied').length,
-          pending: pendingCount,
+          pending: pendingCount + awaitingPaymentCount,
           objection: objectionCount,
           approved: approvedCount,
           rejected: rejectedCount,
@@ -110,9 +110,8 @@ export class LicenseRenewalDashboardComponent implements OnInit {
         };
 
         if (this.activeSummaryFilter === '') {
-          if (objectionCount > 0) this.activeSummaryFilter = 'objection';
-          else if (awaitingPaymentCount > 0) this.activeSummaryFilter = 'awaiting-payment';
-          else if (pendingCount > 0) this.activeSummaryFilter = 'pending';
+          if (pendingCount + awaitingPaymentCount > 0) this.activeSummaryFilter = 'pending';
+          else if (objectionCount > 0) this.activeSummaryFilter = 'objection';
         }
         this.applyFilters();
         this.isLoading = false;
@@ -144,9 +143,7 @@ export class LicenseRenewalDashboardComponent implements OnInit {
 
   applyFilters(): void {
     if (this.activeSummaryFilter) {
-      const activeCount = this.activeSummaryFilter === 'awaiting-payment'
-        ? this.counts.awaitingPayment
-        : (this.counts[this.activeSummaryFilter as keyof RenewalCounts] ?? 0);
+      const activeCount = this.counts[this.activeSummaryFilter as keyof RenewalCounts] ?? 0;
       if (activeCount === 0) {
         this.activeSummaryFilter = '';
       }
@@ -159,7 +156,10 @@ export class LicenseRenewalDashboardComponent implements OnInit {
         row.applicantName.toLowerCase().includes(q) ||
         row.oldLicenseId.toLowerCase().includes(q) ||
         row.currentStage.toLowerCase().includes(q);
-      const matchesGroup = !this.activeSummaryFilter || row.statusGroup === this.activeSummaryFilter;
+      const matchesGroup = !this.activeSummaryFilter ||
+        (this.activeSummaryFilter === 'pending'
+          ? (row.statusGroup === 'pending' || row.statusGroup === 'awaiting-payment')
+          : row.statusGroup === this.activeSummaryFilter);
       return matchesSearch && matchesGroup;
     });
     this.filteredRows = rows;
