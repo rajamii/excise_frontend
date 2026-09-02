@@ -85,10 +85,12 @@ interface FilterOptions {
   dateTo: string;
 }
 
+import { TeleportToBodyDirective } from '../../../../../shared/directives/teleport-to-body.directive';
+
 @Component({
   selector: 'app-brandwarehouse',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TeleportToBodyDirective],
   templateUrl: './brandwarehouse.component.html',
   styleUrls: ['./brandwarehouse.component.scss']
 })

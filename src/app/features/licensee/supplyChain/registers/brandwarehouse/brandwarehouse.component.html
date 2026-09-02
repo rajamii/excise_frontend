@@ -351,7 +351,7 @@
 </div>
 
 <!-- Newly Updated Brands Timeline Modal -->
-<div class="modal-overlay" *ngIf="showNewUpdatesModal" (click)="showNewUpdatesModal = false">
+<div class="modal-overlay" *ngIf="showNewUpdatesModal" appTeleportToBody (click)="showNewUpdatesModal = false">
   <div class="modal-content new-updates-modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
       <h2>
@@ -424,7 +424,7 @@
 </div>
 
 <!-- Brand Details Modal -->
-<div class="modal-overlay" *ngIf="showDetailsModal" (click)="showDetailsModal = false">
+<div class="modal-overlay" *ngIf="showDetailsModal" appTeleportToBody (click)="showDetailsModal = false">
   <div class="modal-content brand-details-modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
       <h2>
@@ -524,7 +524,7 @@
 </div>
 
 <!-- Stock Adjustment Modal -->
-<div class="modal-overlay" *ngIf="showAdjustmentModal" (click)="showAdjustmentModal = false">
+<div class="modal-overlay" *ngIf="showAdjustmentModal" appTeleportToBody (click)="showAdjustmentModal = false">
   <div class="modal-content adjustment-modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
       <h2>
@@ -605,7 +605,7 @@
   </div>
 </div>
 <!-- Transit Permits Modal -->
-<div class="modal-overlay" *ngIf="showTransitPermitsModal" (click)="showTransitPermitsModal = false">
+<div class="modal-overlay" *ngIf="showTransitPermitsModal" appTeleportToBody (click)="showTransitPermitsModal = false">
   <div class="modal-content transit-permits-modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
       <h2>
@@ -728,7 +728,7 @@
 </div>
 
 <!-- Last Entries Modal -->
-<div class="modal-overlay" *ngIf="showLastEntriesModal" (click)="showLastEntriesModal = false">
+<div class="modal-overlay" *ngIf="showLastEntriesModal" appTeleportToBody (click)="showLastEntriesModal = false">
   <div class="modal-content last-entries-modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
       <h2>
@@ -862,7 +862,7 @@
 </div>
 
 <!-- Production Modal -->
-<div class="modal-overlay" *ngIf="showProductionModal" (click)="showProductionModal = false">
+<div class="modal-overlay" *ngIf="showProductionModal" appTeleportToBody (click)="showProductionModal = false">
   <div class="modal-content production-modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
       <h2>

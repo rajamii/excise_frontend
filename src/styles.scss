@@ -826,6 +826,69 @@ app-unified-action-buttons button[mat-icon-button][color="accent"]:hover,
 .docs-modal  { position: fixed !important; inset: 0 !important; z-index: 9001 !important; }
 .doc-viewer  { position: fixed !important; inset: 0 !important; z-index: 9101 !important; }
 
+/* ── Global Bulletproof Modal & Popup Centering System ── */
+.modal-overlay,
+.custom-modal-overlay,
+.app-modal-overlay,
+.brand-warehouse-modal-overlay,
+.dialog-overlay,
+.portal-modal-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 99999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 24px !important;
+  box-sizing: border-box !important;
+  background: rgba(15, 23, 42, 0.65) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+  margin: 0 !important;
+  transform: none !important;
+
+  > .modal-content,
+  > .custom-modal,
+  > .brand-details-modal,
+  > .adjustment-modal,
+  > .transit-permits-modal,
+  > .last-entries-modal,
+  > .production-modal,
+  > .new-updates-modal {
+    position: relative !important;
+    margin: 0 !important;
+    max-height: 88vh !important;
+    max-width: min(1050px, 95vw) !important;
+    width: 95% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background: #ffffff !important;
+    border-radius: 20px !important;
+    overflow: hidden !important;
+    z-index: 100000 !important;
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.15) !important;
+
+    .modal-header {
+      flex-shrink: 0 !important;
+    }
+
+    .modal-body {
+      overflow-y: auto !important;
+      flex: 1 1 auto !important;
+      max-height: calc(88vh - 130px) !important;
+    }
+
+    .modal-footer {
+      flex-shrink: 0 !important;
+    }
+  }
+}
+
 // ── Proceed to Pay modal ────────────────────────────────────────────────────
 .swal2-popup.swal-proceed-popup {
   border-radius: 16px !important;
