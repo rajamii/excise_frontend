@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, AfterViewInit, Inject, Optional } from '@angular/core';
+import { Component, OnInit, ViewChild, AfterViewInit, Inject, Optional, Output, EventEmitter } from '@angular/core';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule } from '@angular/forms';
@@ -158,6 +158,8 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
     });
   }
 
+  @Output() statsChange = new EventEmitter<{ pending: number; approved: number; rejected: number; total: number }>();
+
   updateStatistics(): void {
     this.transitPermitService.getOICStatistics().subscribe({
       next: (stats) => {
@@ -165,6 +167,7 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
         this.approvedApplications = stats.approved;
         this.rejectedApplications = stats.rejected;
         this.totalApplications = stats.total;
+        this.statsChange.emit(stats);
       },
       error: (error) => {
         console.error('Error loading statistics:', error);

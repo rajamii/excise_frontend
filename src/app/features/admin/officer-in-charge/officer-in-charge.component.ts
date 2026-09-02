@@ -8,6 +8,7 @@ import { HologramMonthlyReportComponent } from '../../licensee/supplyChain/regis
 import { BrandwarehouseComponent } from '../../licensee/supplyChain/registers/brandwarehouse/brandwarehouse.component';
 import { OicdailyhologramregisterComponent } from '../../licensee/supplyChain/registers/oicdailyhologramregister/oicdailyhologramregister.component';
 import { OicTransitPermitComponent } from '../../licensee/supplyChain/supplychaincomponents/oic-transit-permit/oic-transit-permit.component';
+import { OicTransitPermitService } from '../../licensee/supplyChain/services/oic-transit-permit.service';
 import { OicBlDetailsComponent } from './oic-bl-details/oic-bl-details.component';
 
 interface TransitPermitRecord {
@@ -318,9 +319,16 @@ export class OfficerInChargeComponent implements OnInit {
 
   // Hologram data - removed, will be added later
 
-  constructor(private route: ActivatedRoute) {}
+  pendingTransitCount = 0;
+
+  constructor(
+    private route: ActivatedRoute,
+    private oicTransitPermitService: OicTransitPermitService
+  ) {}
 
   ngOnInit() {
+    this.loadPendingTransitCount();
+
     // Check for tab and view query parameters
     const tab = this.route.snapshot.queryParamMap.get('tab');
     const view = this.route.snapshot.queryParamMap.get('view');
@@ -335,6 +343,17 @@ export class OfficerInChargeComponent implements OnInit {
     this.filteredData = [...this.allData];
     this.updatePagination();
     this.applyBrandFilters();
+  }
+
+  loadPendingTransitCount(): void {
+    this.oicTransitPermitService.getOICStatistics().subscribe({
+      next: (stats) => {
+        this.pendingTransitCount = stats?.pending || 0;
+      },
+      error: () => {
+        this.pendingTransitCount = 0;
+      }
+    });
   }
 
   currentDateTime: string = new Date().toLocaleString();

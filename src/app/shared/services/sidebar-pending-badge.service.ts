@@ -332,26 +332,20 @@ export class SidebarPendingBadgeService {
         );
 
       case 'transit':
-        if (mode === 'light') return of(0);
+      case 'transit-applications':
         if (audience === 'licensee') {
           return this.supplyChainService.getTransitPermits().pipe(
             map((items) => this.toArray(items)),
             map((items) => this.uniqueByBillNo(items)),
-            map((items) => this.countLicenseePendingItems(items))
+            map((items) => this.countLicenseePendingItems(items)),
+            catchError(() => of(0))
           );
         }
         return this.supplyChainService.getTransitPermits().pipe(
           map((items) => this.toArray(items)),
           map((items) => this.uniqueByBillNo(items)),
-          map((items) => this.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'TERMINATE', 'CANCEL']))
-        );
-
-      case 'transit-applications':
-        if (mode === 'light') return of(0);
-        return this.supplyChainService.getTransitPermits().pipe(
-          map((items) => this.toArray(items)),
-          map((items) => this.uniqueByBillNo(items)),
-          map((items) => this.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'TERMINATE', 'CANCEL']))
+          map((items) => this.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'TERMINATE', 'CANCEL'])),
+          catchError(() => of(0))
         );
 
       // Hologram procurement workflow (used by IT cell / commissioner depending on role config)
