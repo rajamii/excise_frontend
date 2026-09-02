@@ -1900,7 +1900,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             return USER_CONTEXTS.LICENSEE;
         }
 
-        if (this.isOicUser()) {
+        if (this.isOicUser() || source === 'officer-in-charge' || source === 'oic') {
             return USER_CONTEXTS.OFFICER_IN_CHARGE;
         }
 
@@ -1934,6 +1934,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         const currentUrl = this.router.url;
         if (currentUrl.includes('commissioner')) return USER_CONTEXTS.COMMISSIONER;
         if (currentUrl.includes('permit-section')) return USER_CONTEXTS.PERMIT_SECTION;
+        if (currentUrl.includes('officer-in-charge') || currentUrl.includes('oic')) return USER_CONTEXTS.OFFICER_IN_CHARGE;
 
         return USER_CONTEXTS.COMMISSIONER;
     }
@@ -1961,7 +1962,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             }
         }
 
-        if (action === 'APPROVE') {
+        if (action === 'APPROVE' && (this.applicationType === 'new-license' || this.applicationType === 'company-registration' || this.applicationType === 'company-collaboration' || this.applicationType === 'salesman-barman-registration' || this.applicationType === 'label-registration')) {
             this.handleApproveWithDynamicPrechecks(event.item, context);
             return;
         }
@@ -1996,7 +1997,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                         this.distributorPermitService.clearCache();
                         this.sidebarPendingBadgeService.triggerRefresh();
                         const currentId = this.applicationData?.id?.toString() || '';
-                        const currentRef = this.applicationData?.referenceNo || '';
+                        const currentRef = this.applicationData?.referenceNo || (this.applicationData as any)?.['bill_no'] || '';
                         this.loadApplicationData(currentRef, currentId);
                     }
                 } else {
@@ -3377,10 +3378,6 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     getIncludeActionsForDetailView(): string[] | null {
         if (!this.applicationData) {
             return null;
-        }
-
-        if (this.isOicUser()) {
-            return [];
         }
 
         if (this.isFinalOrCompletedStatus()) {
