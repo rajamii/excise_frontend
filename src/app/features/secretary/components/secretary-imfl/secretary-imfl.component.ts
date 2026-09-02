@@ -97,152 +97,15 @@ export class SecretaryImflComponent implements OnInit {
 
   overview: SecretaryImflOverview = {
     summary_kpis: {
-      requisitions_count: 2,
-      revalidations_count: 3,
-      cancellations_count: 3,
-      total_imfl_records: 8
+      requisitions_count: 0,
+      revalidations_count: 0,
+      cancellations_count: 0,
+      total_imfl_records: 0
     },
-    requisitions: [
-      {
-        reference_no: 'REQ/01/EXCISE',
-        referenceNo: 'REQ/01/EXCISE',
-        distillery_name: 'M/s Boudh Distillery Pvt Ltd',
-        distilleryName: 'M/s Boudh Distillery Pvt Ltd',
-        lifted_from: 'M/s Boudh Distillery Spirit Storage Facility',
-        liftedFrom: 'M/s Boudh Distillery Spirit Storage Facility',
-        purpose_name: 'Bottling & Packaging Plant',
-        purposeName: 'Bottling & Packaging Plant',
-        route: 'Rambhikata-Angul-Bhadrak-Balasore-Siliguri to Rangpo, East Sikkim',
-        spirit_type: 'Fermented Grape Juice (ENA)',
-        spiritType: 'Fermented Grape Juice (ENA)',
-        strength: '12.5% V/V or 21.9 OP',
-        total_bl: 5000.0,
-        totalBl: 5000.0,
-        permits_count: 5,
-        permitsCount: 5,
-        status: 'Approved',
-        submitted_at: '2026-08-19 04:27',
-        submittedAt: '2026-08-19 04:27',
-        valid_up_to: '2026-09-15',
-        validUpTo: '2026-09-15'
-      },
-      {
-        reference_no: 'IMFLREQ/2026-27/0001',
-        referenceNo: 'IMFLREQ/2026-27/0001',
-        distillery_name: 'Sikkim Himalayan Bottlers Pvt Ltd',
-        distilleryName: 'Sikkim Himalayan Bottlers Pvt Ltd',
-        supplier_name: 'Sikkim Himalayan Bottlers Pvt Ltd',
-        supplierName: 'Sikkim Himalayan Bottlers Pvt Ltd',
-        lifted_from: 'Gangtok Central Spirits Depot',
-        liftedFrom: 'Gangtok Central Spirits Depot',
-        purpose_name: 'MG Marg Wholesale Depot',
-        purposeName: 'MG Marg Wholesale Depot',
-        route: 'Mode: Road Transport | Vehicle: SK-01-D-8821',
-        spirit_type: 'IMFL Premium Cases',
-        spiritType: 'IMFL Premium Cases',
-        strength: '42.8% V/V',
-        total_bl: 18500.0,
-        totalBl: 18500.0,
-        permits_count: 3,
-        permitsCount: 3,
-        status: 'Approved',
-        submitted_at: '2026-08-22 09:52',
-        submittedAt: '2026-08-22 09:52',
-        valid_up_to: '2026-09-30',
-        validUpTo: '2026-09-30'
-      }
-    ],
-    revalidations: [
-      {
-        reference_no: 'REV-ENA-2026-001',
-        referenceNo: 'REV-ENA-2026-001',
-        distillery_name: 'Sikkim Distillery Limited (Rangpo Unit)',
-        distilleryName: 'Sikkim Distillery Limited (Rangpo Unit)',
-        spirit_type: 'Extra Neutral Alcohol (ENA)',
-        spiritType: 'Extra Neutral Alcohol (ENA)',
-        total_bl: 15000.0,
-        totalBl: 15000.0,
-        revalidation_date: '2026-09-15',
-        revalidationDate: '2026-09-15',
-        revalidation_fee: 2500.0,
-        revalidationFee: 2500.0,
-        branch_name: 'East Sikkim Excise Depot',
-        branchName: 'East Sikkim Excise Depot',
-        status: 'Approved',
-        reason: 'Permit validity extension requested due to transit delay at checkpost',
-        submitted_at: '2026-08-12 14:00',
-        submittedAt: '2026-08-12 14:00'
-      },
-      {
-        reference_no: 'IMFLREV/2026-27/0001',
-        referenceNo: 'IMFLREV/2026-27/0001',
-        distillery_name: 'Yuksom Breweries Limited',
-        distilleryName: 'Yuksom Breweries Limited',
-        establishment_name: 'Yuksom Breweries Limited',
-        establishmentName: 'Yuksom Breweries Limited',
-        spirit_type: 'IMFL Premium Cases',
-        spiritType: 'IMFL Premium Cases',
-        total_bl: 12000.0,
-        totalBl: 12000.0,
-        revalidation_date: '2026-09-20',
-        revalidationDate: '2026-09-20',
-        revalidation_fee: 3500.0,
-        revalidationFee: 3500.0,
-        branch_name: 'Central Excise Warehouse',
-        branchName: 'Central Excise Warehouse',
-        status: 'Approved By Commissioner',
-        reason: 'Trans-shipment delay revalidation request during interstate transit',
-        submitted_at: '2026-08-13 11:00',
-        submittedAt: '2026-08-13 11:00'
-      }
-    ],
-    cancellations: [
-      {
-        reference_no: 'CAN/02/EXCISE',
-        referenceNo: 'CAN/02/EXCISE',
-        requisition_ref: 'REQ/01/EXCISE',
-        requisitionRef: 'REQ/01/EXCISE',
-        distillery_name: 'M/s Boudh Distillery Pvt Ltd',
-        distilleryName: 'M/s Boudh Distillery Pvt Ltd',
-        spirit_type: 'Fermented Grape Juice (ENA)',
-        spiritType: 'Fermented Grape Juice (ENA)',
-        cancelled_bl: 5000.0,
-        cancelledBl: 5000.0,
-        cancellation_fee: 10000.0,
-        cancellationFee: 10000.0,
-        cancelled_permit_no: 'PERMIT/2026/02',
-        cancelledPermitNo: 'PERMIT/2026/02',
-        status: 'Approved By Commissioner',
-        reason: 'Order quantity revised by licensee prior to dispatch',
-        submitted_at: '2026-08-19 04:51',
-        submittedAt: '2026-08-19 04:51'
-      },
-      {
-        reference_no: 'IMFLCAN/2026-27/0001',
-        referenceNo: 'IMFLCAN/2026-27/0001',
-        requisition_ref: 'IMFLREQ/2026-27/0001',
-        requisitionRef: 'IMFLREQ/2026-27/0001',
-        distillery_name: 'Sikkim Himalayan Bottlers Pvt Ltd',
-        distilleryName: 'Sikkim Himalayan Bottlers Pvt Ltd',
-        establishment_name: 'Sikkim Himalayan Bottlers Pvt Ltd',
-        establishmentName: 'Sikkim Himalayan Bottlers Pvt Ltd',
-        spirit_type: 'IMFL Premium Cases',
-        spiritType: 'IMFL Premium Cases',
-        cancelled_bl: 6500.0,
-        cancelledBl: 6500.0,
-        cancellation_fee: 2000.0,
-        cancellationFee: 2000.0,
-        cancelled_permit_no: 'IMFLREQ/2026-27/0001-P2',
-        cancelledPermitNo: 'IMFLREQ/2026-27/0001-P2',
-        status: 'Forwarded To Commissioner',
-        reason: 'Commercial cancellation requested before transit vehicle departure',
-        submitted_at: '2026-08-22 09:53',
-        submittedAt: '2026-08-22 09:53'
-      }
-    ]
+    requisitions: [],
+    revalidations: [],
+    cancellations: []
   };
-
-
 
   constructor(
     private secretaryService: SecretaryService,
@@ -262,7 +125,7 @@ export class SecretaryImflComponent implements OnInit {
     this.isLoading = true;
     this.secretaryService.getImflOverview().subscribe({
       next: (res) => {
-        if (res && res.requisitions && res.requisitions.length > 0) {
+        if (res) {
           this.overview = res;
         }
         this.isLoading = false;
