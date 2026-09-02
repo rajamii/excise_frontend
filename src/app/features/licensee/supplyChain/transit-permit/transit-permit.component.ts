@@ -28,6 +28,7 @@ interface Product {
   educationCess: number;
   exciseDuty: number;
   additionalExcise: number;
+  bottlingFee?: number;
   // New fields
   brandOwner?: string;
   liquorType?: string;
@@ -444,6 +445,11 @@ export class TransitPermitComponent implements OnInit {
     return Number.isFinite(value) ? value : 0;
   }
 
+  private getWarehouseBottlingFee(entry: any): number {
+    const value = Number(entry?.bottlingFee ?? entry?.bottling_fee ?? 0);
+    return Number.isFinite(value) ? value : 0;
+  }
+
   private getWarehouseExFactoryPrice(entry: any): number {
     const value = Number(entry?.exFactoryPriceRsPerCase ?? entry?.ex_factory_price_rs_per_case ?? 0);
     return Number.isFinite(value) ? value : 0;
@@ -461,6 +467,7 @@ export class TransitPermitComponent implements OnInit {
     educationCess: number;
     exciseDuty: number;
     additionalExcise: number;
+    bottlingFee: number;
     exFactoryPrice: number;
     manufacturingUnitName: string;
     liquorType: string;
@@ -480,6 +487,7 @@ export class TransitPermitComponent implements OnInit {
       educationCess: this.getWarehouseEducationCess(entry),
       exciseDuty: this.getWarehouseExciseDuty(entry),
       additionalExcise: this.getWarehouseAdditionalExcise(entry),
+      bottlingFee: this.getWarehouseBottlingFee(entry),
       exFactoryPrice: this.getWarehouseExFactoryPrice(entry),
       manufacturingUnitName: this.getWarehouseDistilleryName(entry),
       liquorType: this.getWarehouseLiquorTypeName(entry),
@@ -803,6 +811,7 @@ export class TransitPermitComponent implements OnInit {
         educationCess: warehouseRates.educationCess,
         exciseDuty: warehouseRates.exciseDuty,
         additionalExcise: warehouseRates.additionalExcise,
+        bottlingFee: warehouseRates.bottlingFee,
         brandOwner: '',
         liquorType: warehouseRates.liquorType,
         exFactoryPrice: warehouseRates.exFactoryPrice,
@@ -840,6 +849,7 @@ export class TransitPermitComponent implements OnInit {
           educationCess: rates.educationCess,
           exciseDuty: rates.exciseDuty,
           additionalExcise: rates.additionalExcise,
+          bottlingFee: (rates as any).bottlingFee || (rates as any).bottling_fee || 0,
           brandOwner: (rates as any).brandOwner || (rates as any).brand_owner || '',
           liquorType: (rates as any).liquorType || (rates as any).liquor_type || '',
           exFactoryPrice: rates.exFactoryPrice,
@@ -944,6 +954,11 @@ export class TransitPermitComponent implements OnInit {
   getTotalAdditionalExcise(): number {
     return this.products.reduce((total, product) =>
       total + (product.additionalExcise * product.cases), 0);
+  }
+
+  getTotalBottlingFee(): number {
+    return this.products.reduce((total, product) =>
+      total + ((product.bottlingFee || 0) * product.cases), 0);
   }
 
   validateApplication(): boolean {
@@ -1156,6 +1171,7 @@ export class TransitPermitComponent implements OnInit {
 
     const exciseDutyDeduction = this.getTotalExciseDuty();
     const additionalExciseDeduction = this.getTotalAdditionalExcise();
+    const bottlingFeeDeduction = this.getTotalBottlingFee();
     const educationDeduction = this.getTotalEducationCess();
 
     this.paymentIntegrationService.getWalletSummary(licenseId).subscribe({
@@ -1169,31 +1185,37 @@ export class TransitPermitComponent implements OnInit {
         const educationBefore = Number(educationRow?.currentBalance ?? educationRow?.current_balance ?? 0);
 
         const previews: WalletDeductionPreview[] = [];
+        let currentExciseRunning = exciseBefore;
+
+        previews.push({
+          walletType: 'excise',
+          label: 'Excise Duty (Excise Wallet)',
+          before: currentExciseRunning,
+          deduction: exciseDutyDeduction,
+          after: currentExciseRunning - exciseDutyDeduction
+        });
+        currentExciseRunning -= exciseDutyDeduction;
 
         if (additionalExciseDeduction > 0) {
           previews.push({
-            walletType: 'excise',
-            label: 'Excise Duty (Excise Wallet)',
-            before: exciseBefore,
-            deduction: exciseDutyDeduction,
-            after: exciseBefore - exciseDutyDeduction
-          });
-          previews.push({
             walletType: 'additional_excise',
             label: 'Additional Excise Duty (Excise Wallet)',
-            before: exciseBefore - exciseDutyDeduction,
+            before: currentExciseRunning,
             deduction: additionalExciseDeduction,
-            after: exciseBefore - exciseDutyDeduction - additionalExciseDeduction
+            after: currentExciseRunning - additionalExciseDeduction
           });
-        } else {
-          previews.push({
-            walletType: 'excise',
-            label: 'Excise Duty (Excise Wallet)',
-            before: exciseBefore,
-            deduction: exciseDutyDeduction,
-            after: exciseBefore - exciseDutyDeduction
-          });
+          currentExciseRunning -= additionalExciseDeduction;
         }
+
+        // Bottling fee preview row - always present (even if ₹0.00 as requested: "even if it is zero just mention it... but if it is amount then we have to create a separate row")
+        previews.push({
+          walletType: 'transit_permit_bottling_fee',
+          label: 'Bottling Fee (Excise Wallet)',
+          before: currentExciseRunning,
+          deduction: bottlingFeeDeduction,
+          after: currentExciseRunning - bottlingFeeDeduction
+        });
+        currentExciseRunning -= bottlingFeeDeduction;
 
         previews.push({
           walletType: 'education_cess',
@@ -1331,13 +1353,14 @@ export class TransitPermitComponent implements OnInit {
         ...this.formData,
         submissionDate: new Date().toISOString(),
         status: 'TRANSIT PERMIT ISSUED',
-        totalAmount: this.getTotalEducationCess() + this.getTotalExciseDuty() + this.getTotalAdditionalExcise(),
+        totalAmount: this.getTotalEducationCess() + this.getTotalExciseDuty() + this.getTotalAdditionalExcise() + this.getTotalBottlingFee(),
         products: this.products.map(p => ({
           ...p,
           exfactory_price_rs_per_case: p.exFactoryPrice, // Map mostly for consistency if used elsewhere
           excise_duty_rs_per_case: p.exciseDuty,
           education_cess_rs_per_case: p.educationCess,
           additional_excise_duty_rs_per_case: p.additionalExcise,
+          bottling_fee_rs_per_case: p.bottlingFee,
           brand_owner: p.brandOwner,
           liquor_type: p.liquorType,
           manufacturing_unit_name: p.manufacturingUnitName
@@ -1360,7 +1383,7 @@ export class TransitPermitComponent implements OnInit {
         depotAddress: this.formData.depotAddress,
         vehicleNumber: this.formData.vehicleNumber,
         products: this.products,
-        totalAmount: this.getTotalEducationCess() + this.getTotalExciseDuty() + this.getTotalAdditionalExcise()
+        totalAmount: this.getTotalEducationCess() + this.getTotalExciseDuty() + this.getTotalAdditionalExcise() + this.getTotalBottlingFee()
       };
       const supplyChainIdx = supplyChainList.findIndex(r => r.refNo === this.formData.billNo);
       if (supplyChainIdx >= 0) supplyChainList[supplyChainIdx] = supplyChainEntry; else supplyChainList.unshift(supplyChainEntry);
@@ -1402,7 +1425,7 @@ export class TransitPermitComponent implements OnInit {
       queryParams: {
         tab: 'transit',
         billNo: this.formData.billNo,
-        totalAmount: this.getTotalEducationCess() + this.getTotalExciseDuty() + this.getTotalAdditionalExcise()
+        totalAmount: this.getTotalEducationCess() + this.getTotalExciseDuty() + this.getTotalAdditionalExcise() + this.getTotalBottlingFee()
       }
     });
   }

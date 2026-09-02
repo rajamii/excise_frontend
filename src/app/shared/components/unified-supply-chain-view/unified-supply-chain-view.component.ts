@@ -259,6 +259,7 @@ export interface UnifiedApplicationData {
     educationCess?: number;
     exciseDuty?: number;
     additionalExcise?: number;
+    bottlingFee?: number;
 
     // Hologram specific fields
     hologramSeriesStart?: string;
@@ -335,6 +336,7 @@ interface FieldMapping {
     educationCess?: string[];
     exciseDuty?: string[];
     additionalExcise?: string[];
+    bottlingFee?: string[];
     // Add more as needed dynamically
 }
 
@@ -1495,10 +1497,20 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                                 ]),
                                 this.parseNumericValue(mappedData['additionalExcise'])
                             );
+                            const bottlingFeePerCase = this.parseNumericValue(
+                                this.extractFieldValue(p, [
+                                    'bottlingFee',
+                                    'bottling_fee',
+                                    'bottling_fee_per_case',
+                                    'bottlingFeePerCase',
+                                    'bottling_fee_rs_per_case',
+                                ]),
+                                this.parseNumericValue(mappedData['bottlingFee'])
+                            );
 
                             const totalAmount = this.parseNumericValue(
                                 this.extractFieldValue(p, ['totalAmount', 'total_amount', 'amount', 'brAmount', 'br_amount']),
-                                (educationCessPerCase + exciseDutyPerCase + additionalExcisePerCase) * (cases || 0)
+                                (educationCessPerCase + exciseDutyPerCase + additionalExcisePerCase + bottlingFeePerCase) * (cases || 0)
                             );
 
                             return {
@@ -1515,6 +1527,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                                 educationCess: educationCessPerCase,
                                 exciseDuty: exciseDutyPerCase,
                                 additionalExcise: additionalExcisePerCase,
+                                bottlingFee: bottlingFeePerCase,
                                 totalAmount,
                             };
                         })
@@ -1536,6 +1549,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                         (sum: number, p: any) => sum + (Number(p?.additionalExcise || 0) || 0) * (Number(p?.cases || 0) || 0),
                         0
                     );
+                    mappedData['bottlingFee'] = normalizedProducts.reduce(
+                        (sum: number, p: any) => sum + (Number(p?.bottlingFee || 0) || 0) * (Number(p?.cases || 0) || 0),
+                        0
+                    );
                     mappedData['brAmount'] = normalizedProducts.reduce((sum: number, p: any) => sum + (Number(p?.totalAmount || 0) || 0), 0);
                 } else {
                     const transitProduct = {
@@ -1550,6 +1567,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                         educationCess: mappedData['educationCess'],
                         exciseDuty: mappedData['exciseDuty'],
                         additionalExcise: mappedData['additionalExcise'],
+                        bottlingFee: mappedData['bottlingFee'] || 0,
                         totalAmount: mappedData['brAmount']
                     };
                     mappedData['transitProducts'] = [transitProduct];

@@ -246,6 +246,7 @@
                 <th>Education Cess<br><small>(₹ per case)</small></th>
                 <th>Excise Duty<br><small>(₹ per case)</small></th>
                 <th>Additional Excise<br><small>(₹ per case)</small></th>
+                <th>Bottling Fee<br><small>(₹ per case)</small></th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -257,6 +258,7 @@
                 <td>{{ product.educationCess | currency:'₹':'symbol':'1.2-2' }}</td>
                 <td>{{ product.exciseDuty | currency:'₹':'symbol':'1.2-2' }}</td>
                 <td>{{ product.additionalExcise | currency:'₹':'symbol':'1.2-2' }}</td>
+                <td>{{ (product.bottlingFee || 0) | currency:'₹':'symbol':'1.2-2' }}</td>
                 <td>
                   <button class="btn btn-danger btn-sm" (click)="deleteProduct(i)" title="Delete Product">
                     🗑️
@@ -267,15 +269,19 @@
             <tfoot class="table-secondary">
               <tr>
                 <td class="fw-bold">Education Cess Total:</td>
-                <td colspan="6" class="fw-bold">{{ getTotalEducationCess() | currency:'₹':'symbol':'1.2-2' }}</td>
+                <td colspan="7" class="fw-bold">{{ getTotalEducationCess() | currency:'₹':'symbol':'1.2-2' }}</td>
               </tr>
               <tr>
                 <td class="fw-bold">Excise Duty Total:</td>
-                <td colspan="6" class="fw-bold">{{ getTotalExciseDuty() | currency:'₹':'symbol':'1.2-2' }}</td>
+                <td colspan="7" class="fw-bold">{{ getTotalExciseDuty() | currency:'₹':'symbol':'1.2-2' }}</td>
               </tr>
               <tr>
                 <td class="fw-bold">Additional Excise Total:</td>
-                <td colspan="6" class="fw-bold">{{ getTotalAdditionalExcise() | currency:'₹':'symbol':'1.2-2' }}</td>
+                <td colspan="7" class="fw-bold">{{ getTotalAdditionalExcise() | currency:'₹':'symbol':'1.2-2' }}</td>
+              </tr>
+              <tr>
+                <td class="fw-bold">Bottling Fee Total:</td>
+                <td colspan="7" class="fw-bold">{{ getTotalBottlingFee() | currency:'₹':'symbol':'1.2-2' }}</td>
               </tr>
             </tfoot>
           </table>
@@ -399,6 +405,7 @@
               <th>Education Cess<br><small>(₹ per case)</small></th>
               <th>Excise Duty<br><small>(₹ per case)</small></th>
               <th>Additional Excise<br><small>(₹ per case)</small></th>
+              <th>Bottling Fee<br><small>(₹ per case)</small></th>
             </tr>
           </thead>
           <tbody>
@@ -409,20 +416,25 @@
               <td>{{ product.educationCess | currency:'₹':'symbol':'1.2-2' }}</td>
               <td>{{ product.exciseDuty | currency:'₹':'symbol':'1.2-2' }}</td>
               <td>{{ product.additionalExcise | currency:'₹':'symbol':'1.2-2' }}</td>
+              <td>{{ (product.bottlingFee || 0) | currency:'₹':'symbol':'1.2-2' }}</td>
             </tr>
           </tbody>
           <tfoot class="table-secondary">
             <tr>
               <td class="fw-bold">Education Cess Total:</td>
-              <td colspan="5" class="fw-bold">{{ getTotalEducationCess() | currency:'₹':'symbol':'1.2-2' }}</td>
+              <td colspan="6" class="fw-bold">{{ getTotalEducationCess() | currency:'₹':'symbol':'1.2-2' }}</td>
             </tr>
             <tr>
               <td class="fw-bold">Excise Duty Total:</td>
-              <td colspan="5" class="fw-bold">{{ getTotalExciseDuty() | currency:'₹':'symbol':'1.2-2' }}</td>
+              <td colspan="6" class="fw-bold">{{ getTotalExciseDuty() | currency:'₹':'symbol':'1.2-2' }}</td>
             </tr>
             <tr>
               <td class="fw-bold">Additional Excise Total:</td>
-              <td colspan="5" class="fw-bold">{{ getTotalAdditionalExcise() | currency:'₹':'symbol':'1.2-2' }}</td>
+              <td colspan="6" class="fw-bold">{{ getTotalAdditionalExcise() | currency:'₹':'symbol':'1.2-2' }}</td>
+            </tr>
+            <tr>
+              <td class="fw-bold">Bottling Fee Total:</td>
+              <td colspan="6" class="fw-bold">{{ getTotalBottlingFee() | currency:'₹':'symbol':'1.2-2' }}</td>
             </tr>
           </tfoot>
         </table>
@@ -446,7 +458,7 @@
               <div class="d-flex justify-content-between align-items-center mb-3">
                 <span class="fw-bold">Total Amount:</span>
                 <span class="h4 text-success mb-0">{{ (getTotalEducationCess() + getTotalExciseDuty() +
-                  getTotalAdditionalExcise()) | currency:'₹':'symbol':'1.2-2' }}</span>
+                  getTotalAdditionalExcise() + getTotalBottlingFee()) | currency:'₹':'symbol':'1.2-2' }}</span>
               </div>
               <div class="d-flex justify-content-between align-items-center mb-3">
                 <span class="fw-bold">Number of Items:</span>

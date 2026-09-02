@@ -668,6 +668,7 @@
                                     <th>Education Cess (₹ per case)</th>
                                     <th>Excise Duty (₹ per case)</th>
                                     <th>Additional Excise (₹ per case)</th>
+                                    <th>Bottling Fee (₹ per case)</th>
                                     <th>Total Amount (₹)</th>
                                 </tr>
                             </thead>
@@ -685,6 +686,7 @@
                                     <td>₹{{ product.educationCess }}</td>
                                     <td>₹{{ product.exciseDuty }}</td>
                                     <td>₹{{ product.additionalExcise }}</td>
+                                    <td>₹{{ product.bottlingFee || 0 }}</td>
                                     <td class="fw-bold">₹{{ product.totalAmount }}</td>
                                 </tr>
                                 }
@@ -701,6 +703,7 @@
                                     <td>₹{{ applicationData.educationCess }}</td>
                                     <td>₹{{ applicationData.exciseDuty }}</td>
                                     <td>₹{{ applicationData.additionalExcise }}</td>
+                                    <td>₹{{ applicationData['bottlingFee'] || 0 }}</td>
                                     <td class="fw-bold">₹{{ applicationData.brAmount }}</td>
                                 </tr>
                                 }
@@ -710,11 +713,11 @@
 
                     <!-- Summary Totals -->
                     <div class="row mt-3">
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <p><strong>Total Cases:</strong> <span class="text-info">{{ applicationData.quantity
                                     }}</span></p>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <p><strong>Education Cess Total:</strong> <span class="text-info">₹{{
                                     applicationData.educationCess }}</span></p>
                         </div>
@@ -725,6 +728,10 @@
                         <div class="col-md-3">
                             <p><strong>Additional Excise Total:</strong> <span class="text-danger">₹{{
                                     applicationData.additionalExcise }}</span></p>
+                        </div>
+                        <div class="col-md-2">
+                            <p><strong>Bottling Fee Total:</strong> <span class="text-secondary">₹{{
+                                    applicationData['bottlingFee'] || 0 }}</span></p>
                         </div>
                     </div>
 
