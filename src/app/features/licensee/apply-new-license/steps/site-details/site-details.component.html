@@ -50,11 +50,11 @@
         <mat-form-field appearance="outline">
           <mat-label>Police Station</mat-label>
           <mat-select formControlName="policeStation" required>
-            @if (sitePoliceStations.length === 0 && siteDetailsForm.get('siteSubdivision')?.value) {
+            @if (sitePoliceStations.length === 0 && siteDetailsForm.get('siteDistrict')?.value) {
               <mat-option disabled>No police stations available</mat-option>
             }
-            @if (sitePoliceStations.length === 0 && !siteDetailsForm.get('siteSubdivision')?.value) {
-              <mat-option disabled>Please select subdivision first</mat-option>
+            @if (sitePoliceStations.length === 0 && !siteDetailsForm.get('siteDistrict')?.value) {
+              <mat-option disabled>Please select district first</mat-option>
             }
             @for (policeStation of sitePoliceStations; track policeStation.id) {
               <mat-option [value]="policeStation.id">

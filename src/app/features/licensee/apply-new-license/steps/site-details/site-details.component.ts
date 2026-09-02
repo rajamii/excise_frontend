@@ -203,7 +203,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     this.siteDetailsForm = this.fb.group({
       siteDistrict: new FormControl(storedValues.district ?? null, [Validators.required]),
       siteSubdivision: new FormControl({value: storedValues.subdivision ?? null, disabled: !hasDistrict}, [Validators.required]),
-      policeStation: new FormControl({value: storedValues.police_station ?? null, disabled: !hasSubdivision}, [Validators.required]),
+      policeStation: new FormControl({value: storedValues.police_station ?? null, disabled: !hasDistrict}, [Validators.required]),
       
       // Form controls for location structure
       locationCategory: new FormControl({value: storedValues.location_category ?? null, disabled: !hasSubdivision}, [Validators.required]),
@@ -251,12 +251,16 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
         this.onDistrictChange(districtId);
         
         const siteSubdivisionCtrl = this.siteDetailsForm.get('siteSubdivision');
+        const policeStationCtrl = this.siteDetailsForm.get('policeStation');
         const roadNameCtrl = this.siteDetailsForm.get('roadName');
         
         if (districtId) {
           siteSubdivisionCtrl?.enable();
+          policeStationCtrl?.enable();
+          this.filterPoliceStations(districtId);
         } else {
           siteSubdivisionCtrl?.disable();
+          policeStationCtrl?.disable();
           roadNameCtrl?.disable();
         }
       });
@@ -265,7 +269,6 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     this.siteDetailsForm.get('siteSubdivision')?.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(subdivisionId => {
-        const policeStationCtrl = this.siteDetailsForm.get('policeStation');
         const roadNameCtrl = this.siteDetailsForm.get('roadName');
         const locationCategoryCtrl = this.siteDetailsForm.get('locationCategory');
         const locationSubcategoryCtrl = this.siteDetailsForm.get('locationSubcategory');
@@ -273,9 +276,6 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
         const wardCtrl = this.siteDetailsForm.get('ward');
 
         if (subdivisionId) {
-          policeStationCtrl?.enable();
-          this.filterPoliceStations(subdivisionId);
-
           roadNameCtrl?.enable();
           this.filterRoadsBySubdivision(subdivisionId);
 
@@ -296,10 +296,6 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
           wardCtrl?.disable();
 
         } else {
-          policeStationCtrl?.disable();
-          this.sitePoliceStations = [];
-          this.siteDetailsForm.patchValue({ policeStation: null }, { emitEvent: false });
-
           roadNameCtrl?.disable();
           this.roadNames = [];
           this.siteDetailsForm.patchValue({ roadName: null }, { emitEvent: false });
@@ -809,22 +805,22 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
 
     console.log('🔄 All master data ready — running full session restore cascade');
 
-    // Step 1: District → filter subdivisions only
+    // Step 1: District → filter subdivisions and police stations
     const districtId = stored.district;
     if (districtId && this.districts.some(d => d.id === districtId)) {
       this.siteDetailsForm.get('siteDistrict')?.setValue(districtId, { emitEvent: false });
       this.filterSubdivisions(districtId);
+      this.filterPoliceStations(districtId);
       this.siteDetailsForm.get('siteSubdivision')?.enable();
+      this.siteDetailsForm.get('policeStation')?.enable();
     }
 
-    // Step 2: Subdivision → filter police stations, roads
+    // Step 2: Subdivision → filter roads
     const subdivisionId = stored.subdivision;
     if (subdivisionId && this.siteSubdivisions.some(s => s.id === subdivisionId)) {
       this.siteDetailsForm.get('siteSubdivision')?.setValue(subdivisionId, { emitEvent: false });
-      this.filterPoliceStations(subdivisionId);
       this.filterRoadsBySubdivision(subdivisionId);
       
-      this.siteDetailsForm.get('policeStation')?.enable();
       this.siteDetailsForm.get('roadName')?.enable();
     }
 
@@ -902,8 +898,9 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     if (!districtId) return;
     
     this.filterSubdivisions(districtId);
+    this.filterPoliceStations(districtId);
     
-    // Reset subdivision-dependent dropdowns
+    // Reset district-dependent dropdowns
     this.siteDetailsForm.patchValue({ 
       siteSubdivision: null, 
       policeStation: null,
@@ -914,8 +911,10 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       ward: null
     }, { emitEvent: false });
 
-    // Disable until subdivision is selected
-    this.siteDetailsForm.get('policeStation')?.disable();
+    // Enable police station immediately
+    this.siteDetailsForm.get('policeStation')?.enable();
+
+    // Disable subdivision-dependent controls until subdivision is selected
     this.siteDetailsForm.get('roadName')?.disable();
     this.siteDetailsForm.get('locationCategory')?.disable();
     this.siteDetailsForm.get('locationSubcategory')?.disable();
@@ -1021,19 +1020,32 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     this.cdr.detectChanges();
   }
 
-  private filterPoliceStations(subdivisionId: number): void {
-    const subdivision = this.allSubdivisions.find(s => s.id === subdivisionId);
-    if (!subdivision) {
+  private filterPoliceStations(districtId: number): void {
+    if (!districtId) {
       this.sitePoliceStations = [];
       return;
     }
-    this.sitePoliceStations = this.allPoliceStations.filter(ps =>
-      ps.subdivisionCode === subdivision.subdivisionCode
-    );
+    const district = this.districts.find(d => d.id === districtId);
+    if (!district) {
+      this.sitePoliceStations = [];
+      return;
+    }
+    this.sitePoliceStations = this.allPoliceStations.filter(ps => {
+      const psDistrictCode = ps.districtCode ?? (ps as any).district_code;
+      if (psDistrictCode !== undefined && psDistrictCode !== null && psDistrictCode !== 0) {
+        return psDistrictCode === district.districtCode;
+      }
+      if (ps.district && district.district) {
+        return ps.district.toLowerCase().trim() === district.district.toLowerCase().trim();
+      }
+      return false;
+    });
+
     const current = this.siteDetailsForm.get('policeStation')?.value;
     if (current && !this.sitePoliceStations.some(p => p.id === current)) {
       this.siteDetailsForm.patchValue({ policeStation: null }, { emitEvent: false });
     }
+    console.log(`✅ Filtered ${this.sitePoliceStations.length} police stations for district: ${district.district}`);
     this.cdr.detectChanges();
   }
 

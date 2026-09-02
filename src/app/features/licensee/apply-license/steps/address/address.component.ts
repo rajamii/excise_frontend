@@ -209,7 +209,7 @@ export class AddressComponent implements OnInit, OnDestroy, DoCheck {
     console.log('🔍 Filtering police stations for subdivision code:', subdivision.subdivisionCode);
     
     this.sitePoliceStations = this.policeStations.filter(
-      ps => ps.subdivisionCode === subdivision.subdivisionCode
+      ps => (ps.districtCode ?? (ps as any).district_code) === (subdivision as any).districtCode || ps.subdivisionCode === subdivision.subdivisionCode
     );
     
     console.log('✅ Filtered police stations:', this.sitePoliceStations.length);
