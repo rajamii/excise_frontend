@@ -385,7 +385,8 @@ export interface SecretaryImflOverview {
   providedIn: 'root'
 })
 export class SecretaryService {
-  private baseUrl = `${environment.apiBaseUrl}/api/secretary/bulk-spirit`;
+  private readonly secretaryApiBase = `${environment.apiBaseUrl}/transactional/secretary`;
+  private baseUrl = `${this.secretaryApiBase}/bulk-spirit`;
   private readonly cacheTtlMs = 5 * 60_000;
   private responseCache = new Map<string, { value: unknown; fetchedAt: number }>();
   private inflightRequests = new Map<string, Observable<unknown>>();
@@ -455,12 +456,12 @@ export class SecretaryService {
   }
 
   getLicensesOverview(): Observable<SecretaryLicensesOverview> {
-    return this.http.get<SecretaryLicensesOverview>(`${environment.apiBaseUrl}/api/secretary/licenses/?_t=${Date.now()}`);
+    return this.http.get<SecretaryLicensesOverview>(`${this.secretaryApiBase}/licenses/?_t=${Date.now()}`);
   }
 
   getImflOverview(): Observable<SecretaryImflOverview> {
     return this.getCachedOrFetch('secretary:imfl-overview', () =>
-      this.http.get<SecretaryImflOverview>(`${environment.apiBaseUrl}/api/secretary/imfl/`)
+      this.http.get<SecretaryImflOverview>(`${this.secretaryApiBase}/imfl/`)
     );
   }
 
@@ -480,13 +481,13 @@ export class SecretaryService {
     }
     const queryString = queryParts.join('&');
     return this.http.get<SecretaryRevenueOverview>(
-      `${environment.apiBaseUrl}/api/secretary/revenue/?${queryString}`
+      `${this.secretaryApiBase}/revenue/?${queryString}`
     ).pipe(timeout(15000));
   }
 
   getTimelineOverview(): Observable<SecretaryTimelineOverview> {
     return this.getCachedOrFetch('secretary:timeline-overview', () =>
-      this.http.get<SecretaryTimelineOverview>(`${environment.apiBaseUrl}/api/secretary/timeline/`)
+      this.http.get<SecretaryTimelineOverview>(`${this.secretaryApiBase}/timeline/`)
     );
   }
 }
