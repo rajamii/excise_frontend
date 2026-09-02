@@ -432,14 +432,39 @@ export class SupplyChainService {
     );
   }
 
-  getTransitPermits(billNo?: string): Observable<any[]> {
-    const cacheKey = `transit-permits:${String(billNo || '').trim() || 'all'}`;
+  getTransitPermits(billNo?: string, forceRefresh = false): Observable<any[]> {
+    const rawBill = String(billNo || '').trim();
     let url = `${environment.apiBaseUrl}/transactional/supply_chain/transit-permits/`;
-    if (billNo) {
-      url += `?bill_no=${encodeURIComponent(billNo)}`;
+    if (rawBill) {
+      url += `?bill_no=${encodeURIComponent(rawBill)}&_t=${Date.now()}`;
+      return this.http.get<any[]>(url).pipe(
+        map((response: any) => {
+          if (Array.isArray(response)) return response;
+          if (response?.results) return response.results;
+          return [];
+        }),
+        catchError((error) => {
+          console.error('getTransitPermits error, trying public endpoint fallback', error);
+          const publicUrl = `${environment.apiBaseUrl}/transactional/supply_chain/transit-permits/public/?bill_no=${encodeURIComponent(rawBill)}&_t=${Date.now()}`;
+          return this.http.get<any[]>(publicUrl).pipe(
+            map((resp: any) => {
+              if (Array.isArray(resp)) return resp;
+              if (resp?.results) return resp.results;
+              return [];
+            }),
+            catchError(() => of([]))
+          );
+        })
+      );
     }
+
+    if (forceRefresh) {
+      this.invalidateCache('transit-permits:all');
+    }
+
+    const cacheKey = 'transit-permits:all';
     return this.getCachedOrFetch(cacheKey, () =>
-      this.http.get<any[]>(url).pipe(
+      this.http.get<any[]>(`${url}?_t=${Date.now()}`).pipe(
         map((response: any) => {
           if (Array.isArray(response)) return response;
           if (response?.results) return response.results;

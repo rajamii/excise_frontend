@@ -25,6 +25,8 @@ interface TransitPermitRow {
   total_excise_duty: number;
   total_education_cess: number;
   total_additional_excise: number;
+  total_bottling_fee?: number;
+  bottling_fee_rs_per_case?: number;
   total_amount: number;
 }
 
@@ -212,6 +214,8 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
           total_excise_duty: Number(row.total_excise_duty || row.totalExciseDuty || 0),
           total_education_cess: Number(row.total_education_cess || row.totalEducationCess || 0),
           total_additional_excise: Number(row.total_additional_excise || row.totalAdditionalExcise || 0),
+          total_bottling_fee: Number(row.total_bottling_fee || row.totalBottlingFee || 0),
+          bottling_fee_rs_per_case: Number(row.bottling_fee_rs_per_case || row.bottlingFeeRsPerCase || row.bottling_fee || row.bottlingFee || 0),
           total_amount: Number(row.total_amount || row.totalAmount || 0),
         }));
 
@@ -605,15 +609,15 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   get transitSummary() {
     if (this.moduleType === 'requisition') {
       const amount = Number(this.requisitionRow?.amount || 0);
-      return { total: amount, excise: amount, cess: 0, addl: 0 };
+      return { total: amount, excise: amount, cess: 0, addl: 0, bottlingFee: 0 };
     }
     if (this.moduleType === 'revalidation') {
       const amount = Number(this.revalidationRow?.revalidation_fee || 1000);
-      return { total: amount, excise: amount, cess: 0, addl: 0 };
+      return { total: amount, excise: amount, cess: 0, addl: 0, bottlingFee: 0 };
     }
     if (this.moduleType === 'cancellation') {
       const amount = Number(this.cancellationRow?.refund_amount || 0);
-      return { total: amount, excise: amount, cess: 0, addl: 0 };
+      return { total: amount, excise: amount, cess: 0, addl: 0, bottlingFee: 0 };
     }
     if (this.moduleType === 'hologram') {
       const amount = Number(
@@ -622,14 +626,15 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
         this.hologramRow?.amount ??
         0
       );
-      return { total: amount, excise: amount, cess: 0, addl: 0 };
+      return { total: amount, excise: amount, cess: 0, addl: 0, bottlingFee: 0 };
     }
 
     const total = this.transitRows.reduce((sum, row) => sum + Number(row.total_amount || 0), 0);
     const excise = this.transitRows.reduce((sum, row) => sum + Number(row.total_excise_duty || 0), 0);
     const cess = this.transitRows.reduce((sum, row) => sum + Number(row.total_education_cess || 0), 0);
     const addl = this.transitRows.reduce((sum, row) => sum + Number(row.total_additional_excise || 0), 0);
-    return { total, excise, cess, addl };
+    const bottlingFee = this.transitRows.reduce((sum, row) => sum + Number(row.total_bottling_fee || 0), 0);
+    return { total, excise, cess, addl, bottlingFee };
   }
 
   get totalCases(): number | string {

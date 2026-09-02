@@ -161,6 +161,10 @@
             <span class="info-label">Additional Excise</span>
             <span class="info-value amount">₹{{ transitSummary.addl | number:'1.2-2' }}</span>
           </div>
+          <div class="info-item" *ngIf="moduleType !== 'requisition' && moduleType !== 'revalidation' && moduleType !== 'cancellation' && moduleType !== 'hologram'">
+            <span class="info-label">Bottling Fee</span>
+            <span class="info-value amount">₹{{ transitSummary.bottlingFee | number:'1.2-2' }}</span>
+          </div>
         </div>
       </section>
     </div>
@@ -315,6 +319,7 @@
               <th>Brand</th>
               <th>Size</th>
               <th>Cases</th>
+              <th>Bottling Fee</th>
               <th>Vehicle</th>
               <th>Depot</th>
               <th>Amount</th>
@@ -329,6 +334,7 @@
               <td>{{ row.brand }}</td>
               <td>{{ row.size_ml }}ml</td>
               <td>{{ row.cases }}</td>
+              <td>₹{{ (row.total_bottling_fee || 0) | number:'1.2-2' }}</td>
               <td>{{ row.vehicle_number }}</td>
               <td>{{ row.depot_address }}</td>
               <td class="amount-cell">₹{{ row.total_amount | number:'1.2-2' }}</td>

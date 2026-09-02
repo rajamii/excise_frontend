@@ -948,6 +948,42 @@ small.text-muted {
   }
 }
 
+// Declaration Modal Custom Positioning & Viewport bounds
+#declarationModal {
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+
+  .modal-dialog {
+    margin: 0 auto !important;
+    max-width: 1050px !important;
+    width: 95% !important;
+    max-height: calc(100vh - 3rem) !important;
+  }
+
+  .modal-content {
+    max-height: calc(100vh - 3rem) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  .modal-header {
+    flex-shrink: 0 !important;
+  }
+
+  .modal-body {
+    overflow-y: auto !important;
+    flex: 1 1 auto !important;
+    max-height: calc(100vh - 12rem) !important;
+  }
+
+  .modal-footer {
+    flex-shrink: 0 !important;
+  }
+}
+
 // Success Message Styling
 .alert.position-fixed {
   animation: slideInRight 0.5s ease-out;

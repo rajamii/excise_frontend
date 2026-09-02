@@ -119,6 +119,7 @@ export class TransitPermitComponent implements OnInit {
   paymentAgreed: boolean = false; // For payment confirmation modal
   walletPreviews: WalletDeductionPreview[] = [];
   stockPreviews: StockDeductionPreview[] = [];
+  showDeclarationModal = false;
   paymentConfirmAgreed = false;
   loadingPaymentPreview = false;
   paymentPreviewError = '';
@@ -996,9 +997,7 @@ export class TransitPermitComponent implements OnInit {
     }
 
     if (this.validateApplication()) {
-      // Trigger modal if valid
-      const btn = document.getElementById('openModalBtn');
-      if (btn) btn.click();
+      this.showDeclarationModal = true;
     }
   }
 
@@ -1157,7 +1156,7 @@ export class TransitPermitComponent implements OnInit {
   }
 
   cancelDeclaration(): void {
-    console.log('Declaration cancelled');
+    this.showDeclarationModal = false;
   }
 
   private loadWalletDeductionPreviewAndOpenModal(): void {
@@ -1245,11 +1244,7 @@ export class TransitPermitComponent implements OnInit {
   }
 
   private openPaymentModalAfterDeclarationClose(): void {
-    // Close declaration popup and show a simple, non-animated custom popup.
-    const closeBtn = document.getElementById('closeModalBtn');
-    if (closeBtn) {
-      closeBtn.click();
-    }
+    this.showDeclarationModal = false;
     this.paymentDeductionPopupVisible = true;
   }
 

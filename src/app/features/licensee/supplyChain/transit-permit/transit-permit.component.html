@@ -594,210 +594,196 @@
   </div>
 </div>
 
-<!-- Declaration Modal (Moved to end of file for stacking context safety) -->
-<!-- 
-     FIX: 
-     1. data-bs-backdrop="false" -> Disables Bootstrap's body-level backdrop which was covering the modal.
-     2. style="background: rgba(0,0,0,0.6); z-index: 10000;" -> Manually creates the backdrop effect on the modal container itself and forces it to top.
-     3. pointer-events: auto -> Ensures clicks are captured.
--->
-<div class="modal fade" id="declarationModal" tabindex="-1" aria-labelledby="declarationModalLabel" aria-hidden="true"
-  data-bs-backdrop="false" data-bs-keyboard="false" style="background-color: rgba(0, 0, 0, 0.6); z-index: 10000;">
-  <!-- pointer-events: auto ensures clicks work even if container has issues -->
-  <div class="modal-dialog modal-xl modal-dialog-centered" style="pointer-events: auto;">
-    <div class="modal-content border-0 shadow-lg bg-white">
+<!-- Declaration Modal (Pure Angular reactive overlay) -->
+<div class="custom-modal-overlay" *ngIf="showDeclarationModal"
+  style="display: flex; z-index: 10500; animation: none; padding: 20px 0; overflow-y: auto;">
+  <div class="custom-modal" style="max-width: 1050px; width: 95%; max-height: 90vh; display: flex; flex-direction: column; animation: none; margin: auto;">
 
-      <!-- Header -->
-      <!-- <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title fw-bold" id="declarationModalLabel">
-          <i class="fas fa-clipboard-check me-2"></i>CONFIRM SUBMISSION
-        </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" (click)="cancelDeclaration()"></button>
-      </div> -->
+    <!-- Header -->
+    <div class="modal-header bg-primary text-white py-3 px-4" style="flex-shrink: 0;">
+      <h5 class="modal-title fw-bold mb-0">
+        <i class="bi bi-clipboard-check me-2"></i>CONFIRM SUBMISSION — {{ formData.billNo }}
+      </h5>
+      <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="cancelDeclaration()"></button>
+    </div>
 
-      <!-- Body -->
-      <div class="modal-body p-4 p-md-5" style="background-color: #f8f9fa;">
+    <!-- Body -->
+    <div class="modal-body p-4" style="background-color: #f8f9fa; overflow-y: auto; flex: 1 1 auto;">
 
-        <!-- Top Section Row -->
-        <div class="row g-4 mb-4">
-          <!-- Bill Summary Card -->
-          <div class="col-lg-7">
-            <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; overflow: hidden;">
-              <div class="card-header border-0 text-white p-3"
-                style="background: linear-gradient(135deg, #6f42c1 0%, #59359a 100%);">
-                <div class="d-flex align-items-center">
-                  <i class="bi bi-receipt fs-5 me-2"></i>
-                  <h6 class="mb-0 fw-bold text-uppercase tracking-wide" style="letter-spacing: 0.5px;">Bill Summary</h6>
-                </div>
-              </div>
-              <div class="card-body bg-white p-4">
-                <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom border-light">
-                  <span class="text-secondary fw-semibold small text-uppercase">Bill Number</span>
-                  <span class="badge bg-primary px-3 py-2 rounded-pill shadow-sm"
-                    style="font-size: 0.95rem; font-weight: 600;">
-                    {{ formData.billNo }}
-                  </span>
-                </div>
-                <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom border-light">
-                  <span class="text-secondary fw-semibold small text-uppercase">Total Products</span>
-                  <span class="fw-bold text-dark">{{ products.length }} <span
-                      class="text-muted fw-normal">items</span></span>
-                </div>
-                <div class="d-flex justify-content-between align-items-center">
-                  <span class="text-secondary fw-semibold small text-uppercase">Distributor</span>
-                  <span class="fw-bold text-dark text-end" style="max-width: 60%;">{{ formData.soleDistributor }}</span>
-                </div>
+      <!-- Top Section Row -->
+      <div class="row g-4 mb-4">
+        <!-- Bill Summary Card -->
+        <div class="col-lg-7">
+          <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; overflow: hidden;">
+            <div class="card-header border-0 text-white p-3"
+              style="background: linear-gradient(135deg, #6f42c1 0%, #59359a 100%);">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-receipt fs-5 me-2"></i>
+                <h6 class="mb-0 fw-bold text-uppercase tracking-wide" style="letter-spacing: 0.5px;">Bill Summary</h6>
               </div>
             </div>
-          </div>
-
-          <!-- Important Notice Card -->
-          <div class="col-lg-5">
-            <div class="card border-0 shadow-sm h-100"
-              style="background-color: #fff3cd; border: 1px solid #ffeeba; border-radius: 12px;">
-              <div class="card-body p-4 d-flex flex-column justify-content-center">
-                <h6 class="fw-bold mb-3" style="color: #856404;">
-                  <i class="bi bi-exclamation-triangle-fill me-2"></i>Important Notice
-                </h6>
-                <p class="mb-0 small" style="color: #856404; line-height: 1.6;">
-                  Once you proceed, this bill will be <strong class="text-dark">permanently locked</strong> and cannot
-                  be modified. Please review all information carefully before submission.
-                </p>
+            <div class="card-body bg-white p-4">
+              <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom border-light">
+                <span class="text-secondary fw-semibold small text-uppercase">Bill Number</span>
+                <span class="badge bg-primary px-3 py-2 rounded-pill shadow-sm"
+                  style="font-size: 0.95rem; font-weight: 600;">
+                  {{ formData.billNo }}
+                </span>
+              </div>
+              <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom border-light">
+                <span class="text-secondary fw-semibold small text-uppercase">Total Products</span>
+                <span class="fw-bold text-dark">{{ products.length }} <span
+                    class="text-muted fw-normal">items</span></span>
+              </div>
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="text-secondary fw-semibold small text-uppercase">Distributor</span>
+                <span class="fw-bold text-dark text-end" style="max-width: 60%;">{{ formData.soleDistributor }}</span>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Official Declaration Form -->
-        <div class="card border-0 shadow-sm mb-4 overflow-hidden" style="border-radius: 12px;">
-          <div class="card-body p-0">
-            <div class="d-flex">
-              <!-- Blue Stripe -->
-              <div style="width: 6px; background-color: #0d6efd;"></div>
-              <!-- Content -->
-              <div class="p-4 w-100 bg-white">
-                <h6 class="text-primary fw-bold mb-3 text-uppercase">
-                  <i class="bi bi-pen-fill me-2"></i>Official Declaration
-                </h6>
-                <p class="small text-secondary fw-bold mb-4">
-                  I, as an authorized representative, hereby declare and acknowledge that:
-                </p>
-
-                <div class="row g-4">
-                  <!-- Left Col -->
-                  <div class="col-md-6">
-                    <ul class="list-unstyled mb-0">
-                      <li class="d-flex mb-3">
-                        <i class="bi bi-check-circle-fill text-success mt-1 me-3 flex-shrink-0"></i>
-                        <span class="small text-secondary">I have thoroughly reviewed all data entered for Bill No:
-                          <strong class="text-dark">{{ formData.billNo }}</strong></span>
-                      </li>
-                      <li class="d-flex mb-3">
-                        <i class="bi bi-check-circle-fill text-success mt-1 me-3 flex-shrink-0"></i>
-                        <span class="small text-secondary">All product information, quantities, and details are accurate
-                          and complete</span>
-                      </li>
-                      <li class="d-flex mb-3">
-                        <i class="bi bi-check-circle-fill text-success mt-1 me-3 flex-shrink-0"></i>
-                        <span class="small text-secondary">The distributor information is correct and verified</span>
-                      </li>
-                      <li class="d-flex">
-                        <i class="bi bi-check-circle-fill text-success mt-1 me-3 flex-shrink-0"></i>
-                        <span class="small text-secondary">I am authorized to submit this bill on behalf of the
-                          organization</span>
-                      </li>
-                      <li class="d-flex mt-3 p-2 bg-light border rounded">
-                        <i class="bi bi-info-circle-fill text-primary mt-1 me-3 flex-shrink-0"></i>
-                        <span class="small text-dark fw-bold">
-                          Inventory Update: Wallet deduction will happen on final submit confirmation.
-                          Stock deduction preview is shown in the next step and actual stock is deducted as per transit
-                          permit processing flow.
-                        </span>
-                      </li>
-                    </ul>
-                  </div>
-                  <!-- Right Col -->
-                  <div class="col-md-6">
-                    <ul class="list-unstyled mb-0">
-                      <li class="d-flex mb-3">
-                        <i class="bi bi-lock-fill text-warning mt-1 me-3 flex-shrink-0"></i>
-                        <span class="small text-secondary">Once locked, <strong class="text-dark">NO FURTHER
-                            MODIFICATIONS</strong> will be allowed</span>
-                      </li>
-                      <li class="d-flex mb-3">
-                        <i class="bi bi-lock-fill text-warning mt-1 me-3 flex-shrink-0"></i>
-                        <span class="small text-secondary">This action is <strong
-                            class="text-dark">IRREVERSIBLE</strong> and will affect payment processing</span>
-                      </li>
-                      <li class="d-flex mb-3">
-                        <i class="bi bi-lock-fill text-warning mt-1 me-3 flex-shrink-0"></i>
-                        <span class="small text-secondary">The bill will be <strong class="text-dark">permanently
-                            locked</strong> and cannot be unlocked</span>
-                      </li>
-                      <li class="d-flex">
-                        <i class="bi bi-lock-fill text-warning mt-1 me-3 flex-shrink-0"></i>
-                        <span class="small text-secondary">This serves as final confirmation of all entered data</span>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
+        <!-- Important Notice Card -->
+        <div class="col-lg-5">
+          <div class="card border-0 shadow-sm h-100"
+            style="background-color: #fff3cd; border: 1px solid #ffeeba; border-radius: 12px;">
+            <div class="card-body p-4 d-flex flex-column justify-content-center">
+              <h6 class="fw-bold mb-3" style="color: #856404;">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>Important Notice
+              </h6>
+              <p class="mb-0 small" style="color: #856404; line-height: 1.6;">
+                Once you proceed, this bill will be <strong class="text-dark">permanently locked</strong> and cannot
+                be modified. Please review all information carefully before submission.
+              </p>
             </div>
           </div>
         </div>
-
-        <!-- Critical Warning -->
-        <div class="alert fade show border-0 shadow-sm d-flex align-items-center p-3" role="alert"
-          style="background-color: #f8d7da; border-radius: 12px; border-left: 6px solid #dc3545;">
-          <div class="me-4 text-center" style="min-width: 50px;">
-            <i class="bi bi-exclamation-triangle-fill text-danger fs-2"></i>
-          </div>
-          <div>
-            <h6 class="alert-heading fw-bold text-danger mb-1">CRITICAL WARNING</h6>
-            <p class="mb-0 small text-danger" style="opacity: 0.9;">
-              This action cannot be undone. Please ensure all data is correct before proceeding.
-              Once confirmed, the bill will be locked and ready for payment processing.
-            </p>
-          </div>
-        </div>
-
       </div>
 
-      <!-- Footer -->
-      <div class="modal-footer bg-light border-top-0 p-4 rounded-bottom">
-        <div class="w-100 mb-2" *ngIf="paymentPreviewError">
-          <div class="alert alert-danger mb-2 py-2">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ paymentPreviewError }}
+      <!-- Official Declaration Form -->
+      <div class="card border-0 shadow-sm mb-4 overflow-hidden" style="border-radius: 12px;">
+        <div class="card-body p-0">
+          <div class="d-flex">
+            <!-- Blue Stripe -->
+            <div style="width: 6px; background-color: #0d6efd;"></div>
+            <!-- Content -->
+            <div class="p-4 w-100 bg-white">
+              <h6 class="text-primary fw-bold mb-3 text-uppercase">
+                <i class="bi bi-pen-fill me-2"></i>Official Declaration
+              </h6>
+              <p class="small text-secondary fw-bold mb-4">
+                I, as an authorized representative, hereby declare and acknowledge that:
+              </p>
+
+              <div class="row g-4">
+                <!-- Left Col -->
+                <div class="col-md-6">
+                  <ul class="list-unstyled mb-0">
+                    <li class="d-flex mb-3">
+                      <i class="bi bi-check-circle-fill text-success mt-1 me-3 flex-shrink-0"></i>
+                      <span class="small text-secondary">I have thoroughly reviewed all data entered for Bill No:
+                        <strong class="text-dark">{{ formData.billNo }}</strong></span>
+                    </li>
+                    <li class="d-flex mb-3">
+                      <i class="bi bi-check-circle-fill text-success mt-1 me-3 flex-shrink-0"></i>
+                      <span class="small text-secondary">All product information, quantities, and details are accurate
+                        and complete</span>
+                    </li>
+                    <li class="d-flex mb-3">
+                      <i class="bi bi-check-circle-fill text-success mt-1 me-3 flex-shrink-0"></i>
+                      <span class="small text-secondary">The distributor information is correct and verified</span>
+                    </li>
+                    <li class="d-flex">
+                      <i class="bi bi-check-circle-fill text-success mt-1 me-3 flex-shrink-0"></i>
+                      <span class="small text-secondary">I am authorized to submit this bill on behalf of the
+                        organization</span>
+                    </li>
+                    <li class="d-flex mt-3 p-2 bg-light border rounded">
+                      <i class="bi bi-info-circle-fill text-primary mt-1 me-3 flex-shrink-0"></i>
+                      <span class="small text-dark fw-bold">
+                        Inventory Update: Wallet deduction will happen on final submit confirmation.
+                        Stock deduction preview is shown in the next step and actual stock is deducted as per transit
+                        permit processing flow.
+                      </span>
+                    </li>
+                  </ul>
+                </div>
+                <!-- Right Col -->
+                <div class="col-md-6">
+                  <ul class="list-unstyled mb-0">
+                    <li class="d-flex mb-3">
+                      <i class="bi bi-lock-fill text-warning mt-1 me-3 flex-shrink-0"></i>
+                      <span class="small text-secondary">Once locked, <strong class="text-dark">NO FURTHER
+                          MODIFICATIONS</strong> will be allowed</span>
+                    </li>
+                    <li class="d-flex mb-3">
+                      <i class="bi bi-lock-fill text-warning mt-1 me-3 flex-shrink-0"></i>
+                      <span class="small text-secondary">This action is <strong
+                          class="text-dark">IRREVERSIBLE</strong> and will affect payment processing</span>
+                    </li>
+                    <li class="d-flex mb-3">
+                      <i class="bi bi-lock-fill text-warning mt-1 me-3 flex-shrink-0"></i>
+                      <span class="small text-secondary">The bill will be <strong class="text-dark">permanently
+                          locked</strong> and cannot be unlocked</span>
+                    </li>
+                    <li class="d-flex">
+                      <i class="bi bi-lock-fill text-warning mt-1 me-3 flex-shrink-0"></i>
+                      <span class="small text-secondary">This serves as final confirmation of all entered data</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="d-flex justify-content-between w-100">
-          <button type="button" class="btn btn-outline-secondary btn-lg px-4" data-bs-dismiss="modal"
-            (click)="cancelDeclaration()">
-            <i class="bi bi-x-lg me-2"></i>Cancel & Continue Editing
-          </button>
-
-          <button type="button" class="btn btn-success btn-lg px-5 fw-bold" style="background-color: #198754;"
-            [disabled]="loadingPaymentPreview" (click)="acceptDeclaration()">
-            <span *ngIf="!loadingPaymentPreview">I ACCEPT</span>
-            <span *ngIf="loadingPaymentPreview">Preparing...</span>
-          </button>
-        </div>
-
-        <!-- Hidden button to close modal programmatically -->
-        <button id="closeModalBtn" class="d-none" data-bs-dismiss="modal"></button>
       </div>
 
-
+      <!-- Critical Warning -->
+      <div class="alert fade show border-0 shadow-sm d-flex align-items-center p-3" role="alert"
+        style="background-color: #f8d7da; border-radius: 12px; border-left: 6px solid #dc3545;">
+        <div class="me-4 text-center" style="min-width: 50px;">
+          <i class="bi bi-exclamation-triangle-fill text-danger fs-2"></i>
+        </div>
+        <div>
+          <h6 class="alert-heading fw-bold text-danger mb-1">CRITICAL WARNING</h6>
+          <p class="mb-0 small text-danger" style="opacity: 0.9;">
+            This action cannot be undone. Please ensure all data is correct before proceeding.
+            Once confirmed, the bill will be locked and ready for payment processing.
+          </p>
+        </div>
+      </div>
 
     </div>
+
+    <!-- Footer -->
+    <div class="modal-footer bg-light border-top p-3 rounded-bottom" style="flex-shrink: 0;">
+      <div class="w-100 mb-2" *ngIf="paymentPreviewError">
+        <div class="alert alert-danger mb-2 py-2">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ paymentPreviewError }}
+        </div>
+      </div>
+      <div class="d-flex justify-content-between w-100">
+        <button type="button" class="btn btn-outline-secondary btn-lg px-4"
+          (click)="cancelDeclaration()">
+          <i class="bi bi-x-lg me-2"></i>Cancel &amp; Continue Editing
+        </button>
+
+        <button type="button" class="btn btn-success btn-lg px-5 fw-bold" style="background-color: #198754;"
+          [disabled]="loadingPaymentPreview" (click)="acceptDeclaration()">
+          <span *ngIf="!loadingPaymentPreview">I ACCEPT</span>
+          <span *ngIf="loadingPaymentPreview">Preparing...</span>
+        </button>
+      </div>
+    </div>
+
   </div>
 </div>
 
 <!-- Payment Deduction Confirmation Modal -->
 <div class="custom-modal-overlay" *ngIf="paymentDeductionPopupVisible"
-  style="display: flex; z-index: 11000; animation: none;">
-  <div class="custom-modal" style="max-width: 1100px; width: 95%; animation: none;">
-    <div class="modal-header bg-success text-white">
+  style="display: flex; z-index: 11000; animation: none; padding: 20px 0; overflow-y: auto;">
+  <div class="custom-modal" style="max-width: 1100px; width: 95%; max-height: 90vh; display: flex; flex-direction: column; animation: none; margin: auto;">
+    <div class="modal-header bg-success text-white py-3 px-4" style="flex-shrink: 0;">
       <h5 class="modal-title fw-bold mb-0">
         <i class="bi bi-wallet2 me-2"></i>Payment Deduction Confirmation
       </h5>
@@ -805,7 +791,7 @@
         (click)="closePaymentDeductionPopup()"></button>
     </div>
 
-    <div class="modal-body p-4 bg-light">
+    <div class="modal-body p-4 bg-light" style="overflow-y: auto; flex: 1 1 auto;">
         <div class="alert alert-info mb-4" *ngIf="!paymentPreviewError">
           <i class="bi bi-info-circle-fill me-2"></i>
           Excise Duty &amp; Additional Excise Duty are deducted from the <strong>Excise Wallet</strong>.
@@ -879,7 +865,7 @@
         </div>
     </div>
 
-    <div class="modal-footer bg-white">
+    <div class="modal-footer bg-white p-3 border-top" style="flex-shrink: 0;">
         <button type="button" class="btn btn-outline-secondary" (click)="closePaymentDeductionPopup()">Back</button>
         <button type="button" class="btn btn-success fw-bold" (click)="proceedWithWalletAndStockDeduction()"
           [disabled]="!canProceedWithDeduction()">

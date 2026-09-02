@@ -122,12 +122,15 @@ export class TransitComponent implements OnInit {
   }
 
   loadTransitData(): void {
-    this.supplyChainService.getTransitPermits().subscribe({
+    this.supplyChainService.getTransitPermits(undefined, true).subscribe({
       next: (data) => {
         // Store raw data for brand details
-        this.rawTransitData = data;
+        this.rawTransitData = data || [];
 
         if (!data || data.length === 0) {
+          this.transitData = [];
+          this.filteredTransitData = [];
+          this.summaryTransitData = [];
           this.applyTransitFilters();
           return;
         }

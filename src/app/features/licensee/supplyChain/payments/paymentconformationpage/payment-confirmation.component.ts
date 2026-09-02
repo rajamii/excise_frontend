@@ -1126,7 +1126,7 @@ private initializeWalletContextAndLoadData(): void {
     });
 
     this.exciseWalletTransactions = mappedModalHistory.filter(item =>
-      item.walletType === 'excise' || item.walletType === 'additional_excise' || item.walletType === 'additional_ed' || item.walletType === 'brewery' || item.walletType === ''
+      item.walletType === 'excise' || item.walletType === 'additional_excise' || item.walletType === 'additional_ed' || item.walletType === 'transit_permit_bottling_fee' || item.walletType === 'bottling_fee' || item.walletType === 'brewery' || item.walletType === ''
     );
     this.educationWalletTransactions = mappedModalHistory.filter(item => item.walletType === 'education_cess');
     this.hologramWalletTransactions = mappedModalHistory.filter(item => item.walletType === 'hologram');
@@ -1269,10 +1269,23 @@ private initializeWalletContextAndLoadData(): void {
       return 'IMFL Revalidation Fee';
     }
     if (sourceModule.includes('transit') || txnId.startsWith('TRP-') || reference.startsWith('TRP/')) {
-      if (txnId.includes('ADDITIONAL_EXCISE') || sourceModule.includes('additional')) return 'Transit - Additional Excise Duty';
-      if (txnId.includes('EXCISE_DUTY') || sourceModule.includes('excise')) return 'Transit - Excise Duty';
-      if (walletType === 'education_cess' || sourceModule.includes('cess')) return 'Transit - Education Duty';
-      return 'Transit Permit Fee';
+      const entryType = String(this.pickAny(row, ['entry_type', 'entryType'], '')).toLowerCase();
+      const pStatus = String(this.pickAny(row, ['payment_status', 'paymentStatus'], '')).toLowerCase();
+      const isRefund = entryType === 'cr' || entryType === 'credit' || pStatus === 'refunded' || remarks.includes('refund');
+
+      if (txnId.includes('BOTTLING_FEE') || txnId.includes('BOTTLING') || walletType.includes('bottling') || remarks.includes('bottling')) {
+        return isRefund ? 'Transit - Bottling Fee Refund' : 'Transit - Bottling Fee';
+      }
+      if (txnId.includes('ADDITIONAL_EXCISE') || sourceModule.includes('additional') || walletType === 'additional_excise' || remarks.includes('additional')) {
+        return isRefund ? 'Transit - Additional Excise Duty Refund' : 'Transit - Additional Excise Duty';
+      }
+      if (txnId.includes('EXCISE_DUTY') || (sourceModule.includes('excise') && walletType === 'excise') || remarks.includes('excise duty')) {
+        return isRefund ? 'Transit - Excise Duty Refund' : 'Transit - Excise Duty';
+      }
+      if (walletType === 'education_cess' || sourceModule.includes('cess') || remarks.includes('education')) {
+        return isRefund ? 'Transit - Education Duty Refund' : 'Transit - Education Duty';
+      }
+      return isRefund ? 'Transit Permit Refund' : 'Transit Permit Fee';
     }
     if (sourceModule.includes('requisition') || txnId.includes('REQ') || reference.includes('REQ') || reference.startsWith('NHP/')) {
       if (txnId.includes('EXCISE-ADD') || sourceModule.includes('additional') || remarks.includes('add. ed') || remarks.includes('additional excise') || walletType === 'additional_excise') {
