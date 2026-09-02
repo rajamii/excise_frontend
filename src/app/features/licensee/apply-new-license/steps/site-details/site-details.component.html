@@ -173,24 +173,6 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Road Name</mat-label>
-          <mat-select formControlName="roadName" required>
-            @if (roadNames.length === 0 && siteDetailsForm.get('siteDistrict')?.value) {
-              <mat-option disabled>No roads available</mat-option>
-            }
-            @if (roadNames.length === 0 && !siteDetailsForm.get('siteDistrict')?.value) {
-              <mat-option disabled>Please select district first</mat-option>
-            }
-            @for (road of roadNames; track road.id) {
-              <mat-option [value]="road.id">{{ road.roadName }}</mat-option>
-            }
-          </mat-select>
-          @if (siteDetailsForm.controls['roadName'].invalid && siteDetailsForm.controls['roadName'].touched) {
-            <mat-error>{{ getErrorMessage('roadName') }}</mat-error>
-          }
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
           <mat-label>PIN Code</mat-label>
           <input matInput placeholder="Enter PIN" type="number" formControlName="pinCode" required />
           @if (siteDetailsForm.controls['pinCode'].invalid && siteDetailsForm.controls['pinCode'].touched) {

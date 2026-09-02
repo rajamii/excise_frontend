@@ -212,7 +212,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       ward: new FormControl({value: storedValues.ward ?? null, disabled: !hasSubcategory && !hasBlock}, [Validators.required]),
       
       businessAddress: new FormControl(storedValues.address ?? null, [Validators.required, Validators.maxLength(500)]),
-      roadName: new FormControl({value: storedValues.road ?? null, disabled: !hasSubdivision}, [Validators.required]),
+      roadName: new FormControl(storedValues.road ?? null),
       pinCode: new FormControl(storedValues.pin_code, [
         Validators.required,
         Validators.pattern(PatternConstants.PINCODE)

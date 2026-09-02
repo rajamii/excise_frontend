@@ -845,13 +845,6 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       console.log('Police Station OK:', siteData.police_station);
     }
 
-    if (!siteData?.road) {
-      console.error('Missing: Road Name');
-      missingFields.push('Road Name');
-    } else {
-      console.log('Road OK:', siteData.road);
-    }
-
     if (!siteData?.location_subcategory) {
       console.error('Missing: Location Subcategory');
       missingFields.push('Location Subcategory');
