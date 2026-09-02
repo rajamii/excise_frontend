@@ -159,6 +159,11 @@
                 <mat-cell *matCellDef="let item">{{ item.additional_excise_duty_12_5_percent_rs_per_case || 0 }}</mat-cell>
               </ng-container>
 
+              <ng-container matColumnDef="bottlingFee">
+                <mat-header-cell *matHeaderCellDef>Bottling Fee/Case</mat-header-cell>
+                <mat-cell *matCellDef="let item">{{ item.bottling_fee || 0 }}</mat-cell>
+              </ng-container>
+
               <ng-container matColumnDef="mrp">
                 <mat-header-cell *matHeaderCellDef>MRP/Bottle</mat-header-cell>
                 <mat-cell *matCellDef="let item">{{ item.mrp_rs_per_bottle || 0 }}</mat-cell>

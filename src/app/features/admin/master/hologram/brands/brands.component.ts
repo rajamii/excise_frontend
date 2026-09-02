@@ -23,7 +23,7 @@ export class BrandsComponent implements OnInit {
   stockColumns: string[] = ['licenseId', 'brandName', 'liquorType', 'sizeMl', 'currentStock', 'actions'];
   priceColumns: string[] = [
     'licenseId', 'brandName', 'liquorType', 'sizeMl',
-    'exFactory', 'exciseDuty', 'eduCess', 'addlDuty', 'addl125', 'mrp', 'actions',
+    'exFactory', 'exciseDuty', 'eduCess', 'addlDuty', 'addl125', 'bottlingFee', 'mrp', 'actions',
   ];
 
   allRows: BrandWarehouse[] = [];

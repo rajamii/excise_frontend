@@ -40,6 +40,7 @@ export class PriceManageComponent implements OnInit {
         education_cess_rs_per_case: Number(this.row.education_cess_rs_per_case ?? 0),
         additional_excise_duty_rs_per_case: Number(this.row.additional_excise_duty_rs_per_case ?? 0),
         additional_excise_duty_12_5_percent_rs_per_case: Number(this.row.additional_excise_duty_12_5_percent_rs_per_case ?? 0),
+        bottling_fee: Number(this.row.bottling_fee ?? 0),
         mrp_rs_per_bottle: Number(this.row.mrp_rs_per_bottle ?? 0),
       };
 

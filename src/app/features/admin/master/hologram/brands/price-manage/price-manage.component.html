@@ -38,6 +38,11 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Bottling Fee (Rs/Case)</mat-label>
+        <input matInput type="number" name="bottlingFee" [(ngModel)]="row.bottling_fee" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>MRP (Rs/Bottle)</mat-label>
         <input matInput type="number" name="mrp" [(ngModel)]="row.mrp_rs_per_bottle" />
       </mat-form-field>
