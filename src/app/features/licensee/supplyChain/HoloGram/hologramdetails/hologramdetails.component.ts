@@ -150,7 +150,7 @@ export class HologramdetailsComponent implements OnInit {
   }
 
   loadHologramRecords() {
-    this.hologramService.getProcurements().subscribe({
+    this.hologramService.getProcurements(true).subscribe({
       next: (procurements) => {
         // Backend now provides role/workflow-filtered records.
         // Keep all returned procurements to avoid frontend stage hardcoding.

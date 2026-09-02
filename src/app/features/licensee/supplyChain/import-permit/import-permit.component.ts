@@ -733,7 +733,7 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
             confirmButtonText: 'OK',
           }).then((result) => {
             if (result.isConfirmed) {
-              this.router.navigate(['/dashboard']);
+              this.router.navigate(['/dashboard'], { queryParams: { section: 'requisition' } });
             }
           });
         },
