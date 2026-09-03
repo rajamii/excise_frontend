@@ -1374,7 +1374,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     import('../../../../features/licensee/my-licenses/my-licenses.component')
       .then(({ MyLicensesComponent }) => {
         this.dialog.open(MyLicensesComponent, {
-          width: '900px',
+          width: '1150px',
+          maxWidth: '95vw',
           maxHeight: '90vh'
         });
       })

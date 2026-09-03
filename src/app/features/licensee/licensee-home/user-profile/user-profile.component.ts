@@ -427,7 +427,8 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
   openMyLicenses(): void {
     this.dialogRef.close();
     this.dialog.open(MyLicensesComponent, {
-      width: '900px',
+      width: '1150px',
+      maxWidth: '95vw',
       maxHeight: '90vh'
     });
   }

@@ -57,8 +57,8 @@
 
           <!-- Type Column -->
           <ng-container matColumnDef="type">
-            <mat-header-cell *matHeaderCellDef>Type</mat-header-cell>
-            <mat-cell *matCellDef="let element">
+            <mat-header-cell *matHeaderCellDef class="type-col">Type</mat-header-cell>
+            <mat-cell *matCellDef="let element" class="type-col">
               <mat-chip class="type-chip">
                 {{ getTypeLabel(element) }}
               </mat-chip>
@@ -67,16 +67,16 @@
 
           <!-- Establishment/Name Column -->
           <ng-container matColumnDef="establishmentName">
-            <mat-header-cell *matHeaderCellDef>Name</mat-header-cell>
-            <mat-cell *matCellDef="let element">
-              {{ getDisplayName(element) }}
+            <mat-header-cell *matHeaderCellDef class="name-col">Name</mat-header-cell>
+            <mat-cell *matCellDef="let element" class="name-col">
+              <span class="name-text">{{ getDisplayName(element) }}</span>
             </mat-cell>
           </ng-container>
 
           <!-- Approval Date Column -->
           <ng-container matColumnDef="approvalDate">
-            <mat-header-cell *matHeaderCellDef>Approved On</mat-header-cell>
-            <mat-cell *matCellDef="let element">
+            <mat-header-cell *matHeaderCellDef class="date-col">Approved On</mat-header-cell>
+            <mat-cell *matCellDef="let element" class="date-col">
               <div class="date-cell">
                 <mat-icon class="date-icon">event</mat-icon>
                 {{ formatApprovalDate(element) }}

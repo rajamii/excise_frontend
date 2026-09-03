@@ -42,6 +42,8 @@ import {
   filterRowsForSupplyChainSidebarMenus,
   isLicenseeWalletNavEligible
 } from '../../shared/utils/wallet-nav-eligibility.util';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MyLicensesComponent } from '../licensee/my-licenses/my-licenses.component';
 import { SecretaryBulkSpiritComponent } from '../secretary/components/secretary-bulk-spirit/secretary-bulk-spirit.component';
 import { SecretaryLicensesComponent } from '../secretary/components/secretary-licenses/secretary-licenses.component';
 import { SecretaryImflComponent } from '../secretary/components/secretary-imfl/secretary-imfl.component';
@@ -1493,7 +1495,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     private cdr: ChangeDetectorRef,
     private timerConfigService: TimerConfigService,
     private renewalConfigService: RenewalConfigService,
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    private dialog: MatDialog
   ) { }
 
   ngOnInit() {
@@ -1759,8 +1762,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   openMyLicensesForRenewal(): void {
-    this.selectedSupplyChainSection = 'license-renewal';
-    this.router.navigate(['/dashboard'], { queryParams: { section: 'license-renewal' } });
+    this.dialog.open(MyLicensesComponent, {
+      width: '1150px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+      data: {}
+    });
   }
 
   ngAfterViewInit() {
@@ -2739,11 +2746,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Keep initial load fast for all roles by fetching only lightweight counts.
     // Full lists are fetched on-demand when user clicks a table card.
-    if (this.isLicenseeUser()) {
-      this.loadDashboardStats(forceRefresh);
-    } else {
-      this.loadDashboardStatsLight(forceRefresh);
-    }
+    this.loadDashboardStatsLight(forceRefresh);
   }
 
   getSupplyChainPendingCount(section: string): number {
@@ -3901,6 +3904,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.enforceSectionAccess();
           this.ensureWalletViewParamAllowed(this.route.snapshot.queryParams);
           this.updateAvailableChartModules();
+          this.checkRenewalEligibility(licenseRows, []);
           this.dashboardInitLoadHandled = true;
           this.loadDashboardData();
         },

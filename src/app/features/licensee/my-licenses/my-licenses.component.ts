@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { MaterialModule } from '../../../shared/material.module';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatDialogRef } from '@angular/material/dialog';
@@ -18,13 +18,15 @@ import { TimerConfig, TimerConfigService } from '../../../core/services/timer-co
 import { RenewalConfigService } from '../../../core/services/renewal-config.service';
 import { forkJoin } from 'rxjs';
 import { MasterService } from '../../../core/services/master.service';
+import { AdminService } from '../../admin/admin.service';
 
 @Component({
   selector: 'app-my-licenses',
   standalone: true,
   imports: [MaterialModule, CommonModule],
   templateUrl: './my-licenses.component.html',
-  styleUrl: './my-licenses.component.scss'
+  styleUrl: './my-licenses.component.scss',
+  encapsulation: ViewEncapsulation.None
 })
 export class MyLicensesComponent implements OnInit, OnDestroy {
   dataSource = new MatTableDataSource<UnifiedApplication>();
@@ -43,6 +45,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     private timerConfigService: TimerConfigService,
     private masterService: MasterService,
     private renewalConfigService: RenewalConfigService,
+    private adminService: AdminService,
     private dialog: MatDialog,
     private router: Router
   ) { }
@@ -75,15 +78,26 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
     app$
       .pipe(
         take(1),
-        switchMap((app) =>
-          forkJoin({
+        switchMap((app) => {
+          const raw = (app as any)?.raw ? { ...(app as any).raw, ...app } : (app || {});
+          let catId = 0;
+          if (raw.license_category_id) catId = Number(raw.license_category_id);
+          else if (raw.licenseCategoryId) catId = Number(raw.licenseCategoryId);
+          else if (raw.license_category) catId = Number(typeof raw.license_category === 'object' ? (raw.license_category.id ?? raw.license_category.pk ?? 0) : raw.license_category);
+          else if (raw.licenseCategory) catId = Number(typeof raw.licenseCategory === 'object' ? (raw.licenseCategory.id ?? raw.licenseCategory.pk ?? 0) : raw.licenseCategory);
+
+          return forkJoin({
             app: of(app),
             timer: this.timerConfigService.getTimerConfig(this.renewalReminderTimerCode, fallbackSeconds).pipe(take(1)),
-            renewalConfig: this.renewalConfigService.getConfig().pipe(take(1))
-          })
-        )
+            renewalConfig: this.renewalConfigService.getConfig().pipe(take(1)),
+            additionalChargeConfigs: this.adminService.getAdditionalChargeConfigs(catId > 0 ? catId : undefined).pipe(
+              take(1),
+              catchError(() => of([]))
+            )
+          });
+        })
       )
-      .subscribe(({ app, timer, renewalConfig }) => {
+      .subscribe(({ app, timer, renewalConfig, additionalChargeConfigs }) => {
         const raw = (app as any)?.raw ? { ...(app as any).raw, ...app } : (app || {});
         let validUpTo = this.extractValidUpToDate(raw) || summaryValidUpTo;
 
@@ -408,16 +422,33 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
               return `<option value="${mode}" ${selected}>${label}</option>`;
             }).join('');
 
-            const hasAdditionalCharges = [10, 12, 14].includes(catId) || 
-                                         catName.includes('pachwai') || 
-                                         catName.includes('draught beer') || 
-                                         catName.includes('draught_beer') || 
-                                         catName.includes('retail shop');
-
             const pachwaiChecked = !!(raw.pachwai ?? raw.pachwai_flag ?? raw.pachwai_selected);
             const draughtBeerChecked = !!(raw.draught_beer ?? raw.draught_beer_flag ?? raw.draught_beer_selected ?? raw.draughtBeer);
             const miniBarChecked = !!(raw.mini_bar ?? raw.miniBar ?? raw.minibar);
             const miniBarQty = Number(raw.mini_bar_quantity ?? raw.miniBarQuantity ?? raw.minibarquantity ?? 0);
+
+            const chargeConfigs = Array.isArray(additionalChargeConfigs) ? additionalChargeConfigs : [];
+            let hasConfigPachwai = false;
+            let hasConfigDraughtBeer = false;
+            let hasConfigMiniBar = false;
+
+            chargeConfigs.forEach((c: any) => {
+              const configCatId = Number(c.category?.id || c.category_id || c.category || 0);
+              const type = String(c.chargeType || c.charge_type || '').toLowerCase();
+              const active = c.isActive ?? c.is_active ?? true;
+              
+              if (!active) return;
+              if (catId > 0 && configCatId > 0 && configCatId !== catId) return;
+
+              if (type === 'pachwai') hasConfigPachwai = true;
+              if (type === 'draught_beer' || type === 'draughtbeer') hasConfigDraughtBeer = true;
+              if (type === 'mini_bar' || type === 'minibar') hasConfigMiniBar = true;
+            });
+
+            const showPachwai = hasConfigPachwai || pachwaiChecked;
+            const showDraughtBeer = hasConfigDraughtBeer || draughtBeerChecked;
+            const showMiniBar = hasConfigMiniBar || miniBarChecked || [4, 5, 7, 8, 13].includes(catId) || catName.includes('hotel') || catName.includes('lodge') || catName.includes('resort');
+            const hasAdditionalCharges = showPachwai || showDraughtBeer || showMiniBar;
 
             // ── Fee & location data ───────────────────────────────────────────
             const selectedFee = raw.license_fee_selection ?? raw.licenseFeeSelection ?? {};
@@ -663,7 +694,8 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                           Additional Charges
                         </label>
                         <div class="rl-checks-grid">
-                          <label class="rl-check-card" id="rl-pachwai-card">
+                          ${showPachwai ? `
+                          <label class="rl-check-card ${pachwaiChecked ? 'is-checked' : ''}" id="rl-pachwai-card">
                             <input type="checkbox" id="swal-pachwai" class="rl-check-input" ${pachwaiChecked ? 'checked' : ''}>
                             <span class="rl-check-box">
                               <svg class="rl-check-tick" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -672,9 +704,10 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                               <span class="rl-check-name">Pachwai</span>
                               <span class="rl-check-fee">+₹3,000</span>
                             </div>
-                          </label>
+                          </label>` : ''}
 
-                          <label class="rl-check-card" id="rl-draught-card">
+                          ${showDraughtBeer ? `
+                          <label class="rl-check-card ${draughtBeerChecked ? 'is-checked' : ''}" id="rl-draught-card">
                             <input type="checkbox" id="swal-draught-beer" class="rl-check-input" ${draughtBeerChecked ? 'checked' : ''}>
                             <span class="rl-check-box">
                               <svg class="rl-check-tick" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -683,7 +716,42 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                               <span class="rl-check-name">Draught Beer</span>
                               <span class="rl-check-fee">+₹5,000</span>
                             </div>
-                          </label>
+                          </label>` : ''}
+
+                          ${showMiniBar ? `
+                          <div class="rl-minibar-card-wrap" id="rl-minibar-wrap" style="border: 1.5px solid ${miniBarChecked ? '#7c3aed' : '#e8e0ff'}; background: ${miniBarChecked ? 'linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%)' : '#faf8ff'}; border-radius: 14px; padding: 14px 16px; transition: all 0.2s ease;">
+                            <label class="rl-check-card ${miniBarChecked ? 'is-checked' : ''}" id="rl-minibar-card" style="display: flex; align-items: center; justify-content: space-between; border: none; background: transparent; padding: 0; box-shadow: none; cursor: pointer; margin: 0;">
+                              <div style="display: flex; align-items: center; gap: 12px;">
+                                <input type="checkbox" id="swal-mini-bar" class="rl-check-input" ${miniBarChecked ? 'checked' : ''}>
+                                <span class="rl-check-box" id="rl-minibar-checkbox" style="width: 22px; height: 22px; border: 2px solid ${miniBarChecked ? '#5b21b6' : '#cbd5e1'}; border-radius: 6px; background: ${miniBarChecked ? 'linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%)' : '#fff'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s;">
+                                  <svg class="rl-check-tick" id="rl-minibar-tick" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" style="color:#fff; opacity: ${miniBarChecked ? '1' : '0'};"><polyline points="20 6 9 17 4 12"/></svg>
+                                </span>
+                                <div>
+                                  <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span class="rl-check-name" style="font-size: 14.5px; font-weight: 700; color: #1e1b4b;">Mini Bar Facility</span>
+                                    <span style="font-size: 11px; font-weight: 700; color: #6d28d9; background: #ede9fe; padding: 2px 7px; border-radius: 20px;">Rooms / Suites</span>
+                                  </div>
+                                  <div style="font-size: 12px; color: #64748b; margin-top: 2px;">In-room beverage &amp; liquor service</div>
+                                </div>
+                              </div>
+                              <span class="rl-check-fee" id="rl-minibar-fee-label" style="font-size: 13.5px; font-weight: 800; color: #5b21b6; background: #ede9fe; border: 1px solid #ddd6fe; padding: 4px 12px; border-radius: 100px;">+₹${((miniBarQty > 0 ? miniBarQty : 1) * 1000).toLocaleString('en-IN')}</span>
+                            </label>
+
+                            <div class="rl-minibar-qty-container" id="rl-minibar-qty-box" style="${miniBarChecked ? 'display:flex;' : 'display:none;'} align-items: center; justify-content: space-between; flex-wrap: nowrap; gap: 12px; padding: 12px 16px; background: #ffffff; border: 1px solid #ddd6fe; border-radius: 10px; margin-top: 10px; box-shadow: 0 1px 4px rgba(109,40,217,0.06);">
+                              <div style="display: flex; align-items: center; gap: 8px; white-space: nowrap;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M15 9h.01"/><path d="M15 15h.01"/></svg>
+                                <span style="font-size: 13.5px; font-weight: 600; color: #334155;">Quantity (Rooms / Units):</span>
+                              </div>
+                              <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0; white-space: nowrap;">
+                                <div class="rl-minibar-stepper" style="display: inline-flex; align-items: center; gap: 4px; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 3px 4px; flex-shrink: 0;">
+                                  <button type="button" class="rl-qty-btn" id="rl-minibar-minus" style="width: 28px; height: 28px; border: none; background: #ede9fe; color: #5b21b6; font-size: 16px; font-weight: 800; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;">−</button>
+                                  <input type="number" id="swal-mini-bar-qty" class="rl-qty-input" min="1" max="999" value="${miniBarQty > 0 ? miniBarQty : 1}" style="width: 44px; height: 28px; text-align: center; font-size: 14px; font-weight: 800; color: #1e293b; border: none; outline: none; background: transparent;">
+                                  <button type="button" class="rl-qty-btn" id="rl-minibar-plus" style="width: 28px; height: 28px; border: none; background: #ede9fe; color: #5b21b6; font-size: 16px; font-weight: 800; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;">+</button>
+                                </div>
+                                <span class="rl-minibar-rate-note" style="font-size: 12px; font-weight: 700; color: #6d28d9; background: #f3e8ff; padding: 4px 10px; border-radius: 6px; white-space: nowrap; flex-shrink: 0;">@ ₹1,000 / unit</span>
+                              </div>
+                            </div>
+                          </div>` : ''}
                         </div>
                       </div>
                     ` : ''}
@@ -742,11 +810,25 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
 
                 // ── Live fee total ────────────────────────────────────────────
                 const updateFeeTotal = () => {
-                  const pachwaiEl = document.getElementById('swal-pachwai') as HTMLInputElement;
-                  const draughtEl = document.getElementById('swal-draught-beer') as HTMLInputElement;
-                  const totalEl   = document.getElementById('rl-fee-total');
+                  const pachwaiEl = document.getElementById('swal-pachwai') as HTMLInputElement | null;
+                  const draughtEl = document.getElementById('swal-draught-beer') as HTMLInputElement | null;
+                  const miniBarEl = document.getElementById('swal-mini-bar') as HTMLInputElement | null;
+                  const miniBarQtyEl = document.getElementById('swal-mini-bar-qty') as HTMLInputElement | null;
+
+                  const miniBarQtyVal = miniBarEl?.checked ? Math.max(1, Number(miniBarQtyEl?.value || 1)) : 0;
+                  const miniBarFeeLabel = document.getElementById('rl-minibar-fee-label');
+                  if (miniBarFeeLabel) {
+                    const currentQty = Math.max(1, Number(miniBarQtyEl?.value || 1));
+                    miniBarFeeLabel.textContent = `+₹${(currentQty * 1000).toLocaleString('en-IN')}`;
+                  }
+
+                  const selectedAdditional = 
+                    (pachwaiEl?.checked ? 3000 : 0) + 
+                    (draughtEl?.checked ? 5000 : 0) + 
+                    (miniBarEl?.checked ? miniBarQtyVal * 1000 : 0);
+
+                  const totalEl = document.getElementById('rl-fee-total');
                   if (totalEl) {
-                    const selectedAdditional = (pachwaiEl?.checked ? 3000 : 0) + (draughtEl?.checked ? 5000 : 0);
                     totalEl.textContent = (getFixedBase() + selectedAdditional).toLocaleString('en-IN');
                   }
                 };
@@ -889,6 +971,68 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                   input.addEventListener('change', update);
                 });
 
+                const miniBarWrap = document.getElementById('rl-minibar-wrap');
+                const miniBarCard = document.getElementById('rl-minibar-card');
+                const miniBarCheckbox = document.getElementById('rl-minibar-checkbox');
+                const miniBarTick = document.getElementById('rl-minibar-tick');
+                const miniBarInput = document.getElementById('swal-mini-bar') as HTMLInputElement | null;
+                const miniBarQtyBox = document.getElementById('rl-minibar-qty-box');
+                const miniBarQtyInput = document.getElementById('swal-mini-bar-qty') as HTMLInputElement | null;
+                const miniBarMinus = document.getElementById('rl-minibar-minus');
+                const miniBarPlus = document.getElementById('rl-minibar-plus');
+
+                if (miniBarCard && miniBarInput) {
+                  const updateMiniBar = () => {
+                    const isChecked = miniBarInput.checked;
+                    miniBarCard.classList.toggle('is-checked', isChecked);
+                    if (miniBarWrap) {
+                      miniBarWrap.style.borderColor = isChecked ? '#7c3aed' : '#e8e0ff';
+                      miniBarWrap.style.background = isChecked ? 'linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%)' : '#faf8ff';
+                    }
+                    if (miniBarCheckbox) {
+                      miniBarCheckbox.style.borderColor = isChecked ? '#5b21b6' : '#cbd5e1';
+                      miniBarCheckbox.style.background = isChecked ? 'linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%)' : '#fff';
+                    }
+                    if (miniBarTick) {
+                      miniBarTick.style.opacity = isChecked ? '1' : '0';
+                    }
+                    if (miniBarQtyBox) {
+                      miniBarQtyBox.style.display = isChecked ? 'flex' : 'none';
+                    }
+                    updateFeeTotal();
+                  };
+                  miniBarInput.addEventListener('change', updateMiniBar);
+
+                  if (miniBarMinus && miniBarQtyInput) {
+                    miniBarMinus.addEventListener('click', (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const cur = Math.max(1, Number(miniBarQtyInput.value || 1));
+                      if (cur > 1) {
+                        miniBarQtyInput.value = String(cur - 1);
+                        updateFeeTotal();
+                      }
+                    });
+                  }
+
+                  if (miniBarPlus && miniBarQtyInput) {
+                    miniBarPlus.addEventListener('click', (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const cur = Math.max(1, Number(miniBarQtyInput.value || 1));
+                      miniBarQtyInput.value = String(cur + 1);
+                      updateFeeTotal();
+                    });
+                  }
+
+                  if (miniBarQtyInput) {
+                    miniBarQtyInput.addEventListener('input', () => {
+                      if (Number(miniBarQtyInput.value) < 1) miniBarQtyInput.value = '1';
+                      updateFeeTotal();
+                    });
+                  }
+                }
+
                 // ── Mode of operation radio cards ────────────────────────────
                 const selectEl  = document.getElementById('swal-mode-of-operation') as HTMLSelectElement;
                 const warningEl = document.getElementById('swal-sbm-warning') as HTMLDivElement;
@@ -949,6 +1093,8 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                     const mode = selectEl?.value || 'Self';
                     const pachwai = (document.getElementById('swal-pachwai') as HTMLInputElement)?.checked || false;
                     const draughtBeer = (document.getElementById('swal-draught-beer') as HTMLInputElement)?.checked || false;
+                    const miniBar = (document.getElementById('swal-mini-bar') as HTMLInputElement)?.checked || false;
+                    const miniBarQuantity = miniBar ? Math.max(1, Number((document.getElementById('swal-mini-bar-qty') as HTMLInputElement)?.value || 1)) : 0;
 
                     if (mode === 'Salesman' && !hasSalesmanSbm) {
                       showError('Please register/fill the salesman application first to opt for Salesman.');
@@ -963,7 +1109,9 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
                     this.processRenewal(renewalId!, 'new-license', {
                       mode_of_operation: mode,
                       pachwai: pachwai,
-                      draught_beer: draughtBeer
+                      draught_beer: draughtBeer,
+                      mini_bar: miniBar,
+                      mini_bar_quantity: miniBarQuantity
                     });
                   });
                 }
