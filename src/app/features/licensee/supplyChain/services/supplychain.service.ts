@@ -244,21 +244,19 @@ export class SupplyChainService {
   }
 
   getRevalidationData(): Observable<any[]> {
-    return this.getCachedOrFetch('revalidations:list', () =>
-      this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/`).pipe(
-        map((response: any) => {
-          if (Array.isArray(response)) {
-            return response;
-          } else if (response?.results && Array.isArray(response.results)) {
-            return response.results;
-          }
-          return [];
-        }),
-        catchError((error) => {
-          console.error('getRevalidationData error', error);
-          return of([]);
-        })
-      )
+    return this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/`).pipe(
+      map((response: any) => {
+        if (Array.isArray(response)) {
+          return response;
+        } else if (response?.results && Array.isArray(response.results)) {
+          return response.results;
+        }
+        return [];
+      }),
+      catchError((error) => {
+        console.error('getRevalidationData error', error);
+        return of([]);
+      })
     );
   }
 
@@ -342,18 +340,16 @@ export class SupplyChainService {
   }
 
   getCancellations(): Observable<any[]> {
-    return this.getCachedOrFetch('cancellations:list', () =>
-      this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/`).pipe(
-        map((response: any) => {
-          if (Array.isArray(response)) return response;
-          if (response?.results) return response.results;
-          return [];
-        }),
-        catchError((error) => {
-          console.error('getCancellations error', error);
-          return of([]);
-        })
-      )
+    return this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/`).pipe(
+      map((response: any) => {
+        if (Array.isArray(response)) return response;
+        if (response?.results) return response.results;
+        return [];
+      }),
+      catchError((error) => {
+        console.error('getCancellations error', error);
+        return of([]);
+      })
     );
   }
 
@@ -458,23 +454,16 @@ export class SupplyChainService {
       );
     }
 
-    if (forceRefresh) {
-      this.invalidateCache('transit-permits:all');
-    }
-
-    const cacheKey = 'transit-permits:all';
-    return this.getCachedOrFetch(cacheKey, () =>
-      this.http.get<any[]>(`${url}?_t=${Date.now()}`).pipe(
-        map((response: any) => {
-          if (Array.isArray(response)) return response;
-          if (response?.results) return response.results;
-          return [];
-        }),
-        catchError((error) => {
-          console.error('getTransitPermits error', error);
-          return of([]);
-        })
-      )
+    return this.http.get<any[]>(`${url}?_t=${Date.now()}`).pipe(
+      map((response: any) => {
+        if (Array.isArray(response)) return response;
+        if (response?.results) return response.results;
+        return [];
+      }),
+      catchError((error) => {
+        console.error('getTransitPermits error', error);
+        return of([]);
+      })
     );
   }
 

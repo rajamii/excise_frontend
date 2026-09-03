@@ -146,13 +146,11 @@ export class CompanyCollaborationService {
   // ── Application lifecycle ──────────────────────────────────────────────────
 
   applyCompanyCollaboration(data: FormData): Observable<any> {
-    return this.http.post(`${this.baseUrl}/apply/`, data).pipe(
-      tap(() => this.invalidateCache('collab:list', 'collab:dashboard-counts', 'collab:list-by-status'))
-    );
+    return this.http.post(`${this.baseUrl}/apply/`, data);
   }
 
   listCompanyCollaborations(): Observable<any> {
-    return this.getCachedOrFetch('collab:list', () => this.http.get(`${this.baseUrl}/list/`));
+    return this.http.get(`${this.baseUrl}/list/`);
   }
 
   getCompanyCollaborationDetail(applicationId: string): Observable<any> {
@@ -160,11 +158,11 @@ export class CompanyCollaborationService {
   }
 
   getDashboardCounts(): Observable<any> {
-    return this.getCachedOrFetch('collab:dashboard-counts', () => this.http.get(`${this.baseUrl}/dashboard-counts/`));
+    return this.http.get(`${this.baseUrl}/dashboard-counts/`);
   }
 
   getApplicationsByStatus(): Observable<any> {
-    return this.getCachedOrFetch('collab:list-by-status', () => this.http.get(`${this.baseUrl}/list-by-status/`));
+    return this.http.get(`${this.baseUrl}/list-by-status/`);
   }
 
   // ── Master data ────────────────────────────────────────────────────────────

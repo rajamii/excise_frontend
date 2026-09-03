@@ -20,22 +20,12 @@ export class ReadApiCacheInterceptor implements HttpInterceptor {
     }
   }
 
-  private readonly cacheablePatterns = [
-    /\/masters\/license\/me\/?/,
-    /\/transactional\/[^?]+\/dashboard-counts\/?/,
-    /\/transactional\/[^?]+\/list-by-status\/?/,
-    /\/transactional\/company-registration\/list\/?/,
-    /\/transactional\/company-collaboration\/list\/?/,
-    /\/transactional\/special-permit\/list\/?/,
-    /\/transactional\/label-registration\/list\/?/,
-    /\/transactional\/payment\/wallet\/[^/]+\/(?:summary|recharge|history)\/?/,
-    /\/transactional\/supply_chain\/hologram\/procurement\/?/,
-    /\/transactional\/supply_chain\/hologram\/requests\/?/,
-    /\/transactional\/supply_chain\/ena-requisitions\/?/,
-    /\/transactional\/supply_chain\/revalidation\/?/,
-    /\/transactional\/supply_chain\/cancellation\/?/,
-    /\/transactional\/supply_chain\/transit-permits\/?/,
-    /\/transactional\/distributor-permit\/(?:dashboard-counts|revalidation|cancellation|revalidation-schedules)\/?/,
+  private readonly cacheablePatterns: RegExp[] = [
+    // Static / master catalog references only
+    /\/masters\/supply_chain\/liquor-rates\/?/,
+    /\/masters\/supply_chain\/purpose\/?/,
+    /\/masters\/supply_chain\/distilleries\/?/,
+    /\/masters\/supply_chain\/checkposts\/?/,
   ];
 
   intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {

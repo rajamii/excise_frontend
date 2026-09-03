@@ -283,18 +283,11 @@ export class HologramDataService {
   // --- Procurement APIs ---
 
   getProcurements(force = false): Observable<HologramProcurement[]> {
-    if (force) {
-      this.invalidateCache('procurements:list');
-    }
-    return this.getCachedOrFetch('procurements:list', () =>
-      this.http.get<HologramProcurement[]>(`${this.apiUrl}/procurement/`)
-    );
+    return this.http.get<HologramProcurement[]>(`${this.apiUrl}/procurement/`);
   }
 
   createProcurement(data: HologramProcurement): Observable<HologramProcurement> {
-    return this.http.post<HologramProcurement>(`${this.apiUrl}/procurement/`, data).pipe(
-      tap(() => this.invalidateCache('procurements:list'))
-    );
+    return this.http.post<HologramProcurement>(`${this.apiUrl}/procurement/`, data);
   }
 
   getProcurement(id: number): Observable<HologramProcurement> {
@@ -305,9 +298,7 @@ export class HologramDataService {
     return this.http.post(`${this.apiUrl}/procurement/${id}/forward_request/`, {
       target_stage: targetStage,
       remarks: remarks
-    }).pipe(
-      tap(() => this.invalidateCache('procurements:list'))
-    );
+    });
   }
 
   // --- Supplier Master APIs ---
@@ -327,9 +318,7 @@ export class HologramDataService {
   }
 
   setProcurementSupplier(procurementId: number, supplierId: number): Observable<any> {
-    return this.http.post(`${this.procurementApiUrl}/${procurementId}/set-supplier/`, { supplier_id: supplierId }).pipe(
-      tap(() => this.invalidateCache('procurements:list'))
-    );
+    return this.http.post(`${this.procurementApiUrl}/${procurementId}/set-supplier/`, { supplier_id: supplierId });
   }
 
   downloadSupplyOrderLetter(procurementId: number, supplierId: number): Observable<Blob> {
@@ -340,18 +329,11 @@ export class HologramDataService {
   // --- Request APIs ---
 
   getRequests(force = false): Observable<HologramRequest[]> {
-    if (force) {
-      this.invalidateCache('requests:list');
-    }
-    return this.getCachedOrFetch('requests:list', () =>
-      this.http.get<HologramRequest[]>(`${this.apiUrl}/request/`)
-    );
+    return this.http.get<HologramRequest[]>(`${this.apiUrl}/request/`);
   }
 
   createRequest(data: HologramRequest): Observable<HologramRequest> {
-    return this.http.post<HologramRequest>(`${this.requestApiUrl}/`, data).pipe(
-      tap(() => this.invalidateCache('requests:list'))
-    );
+    return this.http.post<HologramRequest>(`${this.requestApiUrl}/`, data);
   }
 
   getRequest(id: number): Observable<HologramRequest> {

@@ -7,6 +7,7 @@ import { Observable, ReplaySubject, of, shareReplay, catchError, tap } from 'rxj
 import { TokenUtil } from '../../shared/utils/token.util';
 import { Router } from '@angular/router';
 import { RoleService } from './role.service';
+import { ReadApiCacheInterceptor } from '../interceptors/read-api-cache.interceptor';
 
 @Injectable({
   providedIn: 'root',
@@ -258,6 +259,7 @@ export class AccountService {
     }
 
     this.roleService.clearCurrentUser();
+    ReadApiCacheInterceptor.clearCache();
 
     if (isPlatformBrowser(this.platformId)) {
       // Preserve certain keys across logout
