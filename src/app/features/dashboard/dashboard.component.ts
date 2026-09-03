@@ -4730,10 +4730,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       if (isAdministrativeUser) {
         return false;
       }
+      return this.getFilteredCount('awaitingPayment') > 0;
     }
 
     // All roles can see basic stats
-    if (['applied', 'pending', 'objection', 'approved', 'rejected', 'awaitingPayment'].includes(type)) {
+    if (['applied', 'pending', 'objection', 'approved', 'rejected'].includes(type)) {
       return true;
     }
     
