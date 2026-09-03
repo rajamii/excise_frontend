@@ -84,7 +84,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
         )
       )
       .subscribe(({ app, timer, renewalConfig }) => {
-        const raw = app.raw || {};
+        const raw = (app as any)?.raw ? { ...(app as any).raw, ...app } : (app || {});
         let validUpTo = this.extractValidUpToDate(raw) || summaryValidUpTo;
 
         // SOP: Block Salesman/Barman renewal if New/Main license renewal is active/required but not initiated
@@ -1358,7 +1358,9 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
    * - License IDs look like: SB/101/2025-26/0001 (for salesman-barman)
    * - These are DIFFERENT from application IDs which have LIC/, NLI/, SBM/ prefixes
    */
-  private extractLicenseId(raw: any, application: UnifiedApplication): string | null {
+  private extractLicenseId(raw: any, application?: UnifiedApplication): string | null {
+    const appObj = application || {};
+    const appRaw = (appObj as any).raw || {};
     const candidates = [
       raw?.issued_license_id,
       raw?.issuedLicenseId,
@@ -1370,7 +1372,20 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
       raw?.renewal_of_license_id,
       raw?.renewalOfLicenseId,
       raw?.renewal_of,
-      raw?.renewalOf
+      raw?.renewalOf,
+      appRaw?.issued_license_id,
+      appRaw?.issuedLicenseId,
+      appRaw?.license_id,
+      appRaw?.licenseId,
+      appRaw?.license_number,
+      appRaw?.licenseNumber,
+      appRaw?.license,
+      (appObj as any)?.issued_license_id,
+      (appObj as any)?.issuedLicenseId,
+      (appObj as any)?.license_id,
+      (appObj as any)?.licenseId,
+      (appObj as any)?.licenseNumber,
+      (appObj as any)?.license
     ];
 
     for (const c of candidates) {
@@ -1383,6 +1398,19 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
       if (strVal.startsWith('NA/') || strVal.startsWith('LA/') || strVal.startsWith('SB/') || strVal.startsWith('CR/') || strVal.startsWith('CC/')) {
         return strVal;
       }
+    }
+
+    const appId = String(raw?.application_id || raw?.applicationId || appObj?.applicationId || '').trim();
+    if (appId.startsWith('NLI/')) {
+      return 'NA/' + appId.substring(4);
+    } else if (appId.startsWith('LIC/')) {
+      return 'LA/' + appId.substring(4);
+    } else if (appId.startsWith('SBM/')) {
+      return 'SB/' + appId.substring(4);
+    } else if (appId.startsWith('COMP/')) {
+      return 'CR/' + appId.substring(5);
+    } else if (appId.startsWith('CCOL/')) {
+      return 'CC/' + appId.substring(5);
     }
 
     return null;

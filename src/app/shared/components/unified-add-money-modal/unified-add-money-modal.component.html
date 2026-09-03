@@ -66,7 +66,15 @@
         </div>
       </div>
 
-      <div class="modal-footer justify-content-center">
+      <div class="modal-footer justify-content-center gap-2">
+        <button
+          type="button"
+          class="btn btn-warning px-3 fw-bold shadow-sm"
+          *ngIf="context?.walletType === 'security_deposit'"
+          (click)="onForcePayClick()"
+          title="Simulate successful payment in localhost testing">
+          <i class="bi bi-lightning-charge-fill me-1"></i>Force Pay Security (Test)
+        </button>
         <button type="button" class="btn btn-success px-4" (click)="onProceedClick()">
           Proceed To Payment
         </button>

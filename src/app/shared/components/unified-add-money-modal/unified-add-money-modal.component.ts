@@ -33,6 +33,7 @@ export class UnifiedAddMoneyModalComponent implements OnInit, OnDestroy {
 
   @Output() amountChange = new EventEmitter<number>();
   @Output() proceed = new EventEmitter<number>();
+  @Output() forcePay = new EventEmitter<void>();
   @Output() close = new EventEmitter<void>();
 
   constructor(private el: ElementRef) {}
@@ -55,6 +56,10 @@ export class UnifiedAddMoneyModalComponent implements OnInit, OnDestroy {
 
   onProceedClick(): void {
     this.proceed.emit(this.amount);
+  }
+
+  onForcePayClick(): void {
+    this.forcePay.emit();
   }
 
   onCloseClick(): void {

@@ -1033,6 +1033,7 @@
   [amount]="addMoneyAmount"
   (amountChange)="addMoneyAmount = $event"
   (proceed)="proceedUnifiedAddMoney()"
+  (forcePay)="forcePaySecurityDeposit()"
   (close)="closeUnifiedAddMoneyView()">
 </app-unified-add-money-modal>
 <!-- Payment Confirmation Modal -->
@@ -1309,6 +1310,7 @@
   [amount]="paymentAmount"
   (amountChange)="paymentAmount = $event"
   (proceed)="onProceedPayment($event)"
+  (forcePay)="forcePaySecurityDeposit()"
   (close)="closeAddMoneyModal()">
 </app-unified-add-money-modal>
 

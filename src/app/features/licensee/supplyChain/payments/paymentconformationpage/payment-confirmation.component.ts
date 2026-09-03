@@ -2351,7 +2351,12 @@ private initializeWalletContextAndLoadData(): void {
         app?.security_fee_amount ?? app?.securityFeeAmount ?? app?.security_deposit_amount ?? app?.securityDepositAmount ?? app?.security_fee ?? app?.securityFee ?? app?.security_deposit ?? app?.securityDeposit ?? app?.security_amount ?? app?.securityAmount ?? licenseFee
       );
       if (licenseFee > 0) this.pendingNewLicenseLicenseFeeAmount = licenseFee;
-      if (securityFee > 0) this.pendingNewLicenseSecurityFeeAmount = securityFee;
+      if (securityFee > 0) {
+        this.pendingNewLicenseSecurityFeeAmount = securityFee;
+        if (this.isBrowser) {
+          sessionStorage.setItem('pendingNewLicenseSecurityFeeAmount', String(securityFee));
+        }
+      }
       this.pendingNewLicenseIsLicenseFeePaid = Boolean(
         app?.is_license_fee_paid ?? app?.isLicenseFeePaid ?? app?.is_license_paid ?? app?.isLicensePaid ?? false
       );
@@ -2365,7 +2370,7 @@ private initializeWalletContextAndLoadData(): void {
       if (!this.isLicenseFeeWorkflowPaymentType(ctx.itemType)) return;
 
       const resolvedAmount = ctx.tab === 'security_deposit'
-        ? (this.pendingNewLicenseSecurityFeeAmount || licenseFee)
+        ? (this.pendingNewLicenseSecurityFeeAmount || licenseFee || 5000)
         : this.pendingNewLicenseLicenseFeeAmount;
       if (resolvedAmount > 0 && (ctx.amount <= 0 || ctx.tab === 'security_deposit')) {
         this.pendingWalletPaymentContext = { ...ctx, amount: resolvedAmount };
@@ -3713,6 +3718,87 @@ private initializeWalletContextAndLoadData(): void {
       const modal = (window as any).bootstrap.Modal.getInstance(modalEl);
       modal?.hide();
     }
+  }
+
+  forcePaySecurityDeposit(): void {
+    const appId = String(
+      this.pendingNewLicenseApplicationId ||
+      this.pendingNewLicenseRef ||
+      this.pendingWalletPaymentContext?.id ||
+      this.pendingWalletPaymentContext?.referenceNo ||
+      (this.isBrowser ? sessionStorage.getItem('pendingNewLicenseApplicationId') || sessionStorage.getItem('pendingNewLicenseReferenceNo') || '' : '') ||
+      ''
+    ).trim();
+
+    const targetLabel = appId ? `application ${appId}` : 'your pending new license application';
+
+    Swal.fire({
+      title: 'Force Pay Security Deposit?',
+      html: `<div class="text-start">` +
+        `<p class="mb-2">This will simulate a <strong>successful security deposit payment</strong> for <strong>${targetLabel}</strong> in localhost test mode.</p>` +
+        `<ul class="text-muted small mb-0 ps-3">` +
+        `<li>Marks <code>is_security_fee_paid = true</code></li>` +
+        `<li>Credits and records security deposit wallet transaction</li>` +
+        `<li>Advances workflow / synchronizes license activation</li>` +
+        `</ul>` +
+        `</div>`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Force Pay Now',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#d97706'
+    }).then((result) => {
+      if (!result.isConfirmed) return;
+
+      Swal.fire({
+        title: 'Processing Test Payment',
+        text: 'Force paying security fee...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      const amount = this.addMoneyAmount || this.paymentAmount || this.getRequiredSecurityDepositAmount() || 5000;
+
+      this.licenseApplicationService.forcePayNewLicenseSecurityFee(appId, amount).subscribe({
+        next: (res: any) => {
+          Swal.close();
+          this.closeUnifiedAddMoneyView();
+          this.closeAddMoneyModal();
+          this.pendingNewLicenseIsSecurityFeePaid = true;
+
+          const isLicensePaid = this.isLicenseFeeCompleteForPendingNewLicenseAlert();
+          if (isLicensePaid) {
+            Swal.fire({
+              icon: 'success',
+              title: 'Security Deposit Paid!',
+              text: 'Security deposit and License Fee are both complete. Application is approved and activated.',
+              confirmButtonText: 'OK'
+            }).then(() => {
+              this.refreshWalletData();
+              this.sidebarBadgeService.triggerRefresh();
+              this.unifiedDashboardService.clearUnifiedAppsCache();
+            });
+          } else {
+            Swal.fire({
+              icon: 'success',
+              title: 'Security Deposit Paid!',
+              text: 'Security deposit has been marked as paid. Please complete License Fee payment if pending.',
+              confirmButtonText: 'OK'
+            }).then(() => {
+              this.refreshWalletData();
+              this.sidebarBadgeService.triggerRefresh();
+              this.unifiedDashboardService.clearUnifiedAppsCache();
+            });
+          }
+        },
+        error: (err: any) => {
+          Swal.close();
+          console.error('Force pay security error:', err);
+          const msg = err?.error?.detail || err?.error?.message || err?.message || 'Failed to force pay security fee.';
+          Swal.fire('Error', String(msg), 'error');
+        }
+      });
+    });
   }
 
   proceedUnifiedAddMoney(): void {

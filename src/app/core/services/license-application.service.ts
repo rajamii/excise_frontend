@@ -1034,6 +1034,16 @@ export class LicenseApplicationService {
     );
   }
 
+  forcePayNewLicenseSecurityFee(applicationId?: string, amount?: number): Observable<any> {
+    const encodedId = applicationId ? encodeURIComponent(String(applicationId).trim()) : '';
+    const url = encodedId
+      ? `${this.newLicenseUrl}/force-pay-security-fee/${encodedId}/`
+      : `${this.newLicenseUrl}/force-pay-security-fee/`;
+    return this.http.post(url, { amount }).pipe(
+      tap(() => this.invalidateNewLicenseDashboardCache())
+    );
+  }
+
   getLicenseRenewalApplicationById(applicationId: string): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.get(`${this.renewalLicenseUrl}/detail/${encodedId}/`);
