@@ -80,6 +80,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
   myLicenses: any[] = [];
   selectedLicenseGroupKey = '';
+  private latestApplicationRows: any[] = [];
   // Wallet menu visibility is derived from current license + application rows (multi-application safe).
   pendingBadgeCounts: Record<string, number> = {};
   private lastMenuAccessUserKey: string | null = null;
@@ -1209,18 +1210,32 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
     forkJoin({
       licenses: this.licenseMeService.getMyLicenses().pipe(catchError(() => of([]))),
-      categories: this.http.get<any>(`${environment.apiBaseUrl}/masters/core/license-categories/`).pipe(catchError(() => of([])))
+      categories: this.http.get<any>(`${environment.apiBaseUrl}/masters/core/license-categories/`).pipe(catchError(() => of([]))),
+      newLicensesGrouped: this.http.get<any>(`${environment.apiBaseUrl}/transactional/new_license_application/list-by-status/`).pipe(catchError(() => of({})))
     }).subscribe({
-      next: ({ licenses, categories }) => {
+      next: ({ licenses, categories, newLicensesGrouped }) => {
         const licenseRows = Array.isArray(licenses) ? licenses : [];
         const categoryRows = Array.isArray(categories) ? categories : (Array.isArray((categories as any)?.results) ? (categories as any).results : []);
+        
+        const newLicenseApps: any[] = [];
+        if (newLicensesGrouped && typeof newLicensesGrouped === 'object') {
+          Object.values(newLicensesGrouped).forEach((val) => {
+            if (Array.isArray(val)) {
+              newLicenseApps.push(...val);
+            }
+          });
+        }
+        this.latestApplicationRows = newLicenseApps;
+
         this.myLicenses = licenseRows;
         this.ensureSelectedLicenseGroup();
 
-        this.applySubtypeMenuRules(licenseRows, categoryRows);
+        const combinedRows = [...licenseRows, ...newLicenseApps];
+        this.applySubtypeMenuRules(combinedRows, categoryRows);
       },
       error: () => {
         this.myLicenses = [];
+        this.latestApplicationRows = [];
         this.selectedLicenseGroupKey = '';
         this.applySubtypeMenuRules([], []);
       }
@@ -1266,7 +1281,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         const licenseRows = Array.isArray(licenses) ? licenses : [];
         this.myLicenses = licenseRows;
         this.ensureSelectedLicenseGroup();
-        this.applySubtypeMenuRules(licenseRows);
+        this.applySubtypeMenuRules([...licenseRows, ...this.latestApplicationRows]);
 
         const groups = this.getLicenseGroups();
         if (groups.length === 0) {
