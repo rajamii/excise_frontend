@@ -954,7 +954,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           }).length;
           this.supplyChainModuleCounts['requisition'] = {
             applied: (isCommissioner || isPermitSection) ? (pending + approved + rejected) : items.length,
-            pending: pending + awaitingPayment,
+            pending: pending,
             approved,
             objection: 0,
             rejected,
@@ -1073,7 +1073,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           const rejected = items.filter(x => { const s = String(x.status||'').toLowerCase(); return s.includes('rejected') || s.includes('cancelled'); }).length;
           this.supplyChainModuleCounts['hologram'] = {
             applied: (isCommissioner || isITCell) ? (pending + approved + rejected) : items.length,
-            pending: pending + awaitingPayment,
+            pending: pending,
             approved,
             objection: 0,
             rejected,
@@ -2759,14 +2759,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return modules.reduce((sum, m) => sum + this.getSupplyChainPendingCount(m), 0);
     }
     if (this.isCommissionerUser()) return 0;
+    if (this.isLicenseeUser()) {
+      const licModules = ['requisition', 'revalidation', 'cancellation', 'transit', 'hologram'];
+      return licModules.reduce((sum, m) => sum + this.getSupplyChainPendingCount(m), 0);
+    }
     return this.getSupplyChainPendingCount('requisition') +
            this.getSupplyChainPendingCount('revalidation') +
            this.getSupplyChainPendingCount('cancellation') +
            this.getSupplyChainPendingCount('hologram') +
-           this.getSupplyChainPendingCount('distributor-permit-requisition') +
-           this.getSupplyChainPendingCount('distributor-permit-revalidation') +
-           this.getSupplyChainPendingCount('distributor-permit-cancellation') +
-           this.getSupplyChainPendingCount('distributor-permit-brand-arrival') +
            this.getSupplyChainPendingCount('transit');
   }
 
@@ -2780,10 +2780,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
              (this.supplyChainModuleCounts['distributor-permit-revalidation']?.awaitingPayment || 0) +
              (this.supplyChainModuleCounts['distributor-permit-cancellation']?.awaitingPayment || 0);
     }
+    if (this.isLicenseeUser()) {
+      const licModules = ['requisition', 'revalidation', 'cancellation', 'transit', 'hologram'];
+      return licModules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.awaitingPayment || 0), 0);
+    }
     return (this.supplyChainModuleCounts['requisition']?.awaitingPayment || 0) +
-           (this.supplyChainModuleCounts['distributor-permit-requisition']?.awaitingPayment || 0) +
-           (this.supplyChainModuleCounts['distributor-permit-revalidation']?.awaitingPayment || 0) +
-           (this.supplyChainModuleCounts['distributor-permit-cancellation']?.awaitingPayment || 0) +
            (this.supplyChainModuleCounts['hologram']?.awaitingPayment || 0);
   }
 
@@ -2802,6 +2803,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (roleId === 5) {
       const modules = ['requisition', 'distributor-permit-requisition', 'company', 'company-collaboration'];
       return modules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.applied || 0), 0);
+    }
+    if (this.isLicenseeUser()) {
+      const licModules = ['requisition', 'revalidation', 'cancellation', 'transit', 'hologram'];
+      return licModules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.applied || 0), 0);
     }
     const isCommissioner = this.isCommissionerUser();
     const modules = ['requisition', 'revalidation', 'cancellation', 'hologram',
@@ -2828,6 +2833,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       const modules = ['requisition', 'distributor-permit-requisition', 'company', 'company-collaboration'];
       return modules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.approved || 0), 0);
     }
+    if (this.isLicenseeUser()) {
+      const licModules = ['requisition', 'revalidation', 'cancellation', 'transit', 'hologram'];
+      return licModules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.approved || 0), 0);
+    }
     const isCommissioner = this.isCommissionerUser();
     const approvedModules = ['requisition', 'revalidation', 'cancellation', 'hologram',
                              'distributor-permit-requisition', 'distributor-permit-revalidation', 'distributor-permit-cancellation', 'distributor-permit-brand-arrival'];
@@ -2853,6 +2862,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       const modules = ['requisition', 'distributor-permit-requisition', 'company', 'company-collaboration'];
       return modules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.rejected || 0), 0);
     }
+    if (this.isLicenseeUser()) {
+      const licModules = ['requisition', 'revalidation', 'cancellation', 'transit', 'hologram'];
+      return licModules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.rejected || 0), 0);
+    }
     const isCommissioner = this.isCommissionerUser();
     const rejectedModules = ['requisition', 'revalidation', 'cancellation', 'hologram',
                              'distributor-permit-requisition', 'distributor-permit-revalidation', 'distributor-permit-cancellation', 'distributor-permit-brand-arrival'];
@@ -2877,6 +2890,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (roleId === 5) {
       const modules = ['requisition', 'distributor-permit-requisition', 'company', 'company-collaboration'];
       return modules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.objection || 0), 0);
+    }
+    if (this.isLicenseeUser()) {
+      const licModules = ['requisition', 'revalidation', 'cancellation', 'transit', 'hologram'];
+      return licModules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.objection || 0), 0);
     }
     const isCommissioner = this.isCommissionerUser();
     const objectionModules = ['requisition', 'revalidation', 'cancellation', 'hologram',
@@ -3435,25 +3452,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             specialPermit: filteredApplications.awaitingPayment.filter(app => app.type === 'special-permit').length
           };
 
-          // Licensee & OIC UX: include hologram procurement workflow in Pending/Approved totals.
-          if (this.isLicenseeUser()) {
-            const hologramCounts = this.countLicenseeHologramProcurements(result.hologramProcurements || []);
-            this.dashboardCounts = {
-              ...this.dashboardCounts,
-              pending: (this.dashboardCounts.pending || 0) + hologramCounts.pending,
-              approved: (this.dashboardCounts.approved || 0) + hologramCounts.approved,
-              rejected: (this.dashboardCounts.rejected || 0) + hologramCounts.rejected
-            };
-          } else if (this.isOicUser()) {
-            const oicHologramCounts = this.countOicHologramProcurementStatus(result.hologramProcurements || []);
-            this.dashboardCounts = {
-              ...this.dashboardCounts,
-              applied: (this.dashboardCounts.applied || 0) + oicHologramCounts.applied,
-              pending: (this.dashboardCounts.pending || 0) + oicHologramCounts.pending,
-              approved: (this.dashboardCounts.approved || 0) + oicHologramCounts.approved,
-              rejected: (this.dashboardCounts.rejected || 0) + oicHologramCounts.rejected
-            };
-          }
+
 
           // Show submitted + pending + awaiting payment together in Pending table.
           this.checkRenewalEligibility(approvedWithoutRenewal, approvedWithRenewal);
@@ -3561,15 +3560,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             specialPermit: filteredApplications.awaitingPayment.filter(app => app.type === 'special-permit').length
           };
 
-          if (this.isLicenseeUser()) {
-            const hologramCounts = this.countLicenseeHologramProcurements(result.hologramProcurements || []);
-            this.dashboardCounts = {
-              ...this.dashboardCounts,
-              pending: (this.dashboardCounts.pending || 0) + hologramCounts.pending,
-              approved: (this.dashboardCounts.approved || 0) + hologramCounts.approved,
-              rejected: (this.dashboardCounts.rejected || 0) + hologramCounts.rejected
-            };
-          }
+
 
           this.checkRenewalEligibility(approvedWithoutRenewal, approvedWithRenewal);
           this.updateDataSources({
