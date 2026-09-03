@@ -1457,14 +1457,12 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     const byKey = new Map<string, { key: string; label: string; items: any[] }>();
 
     for (const row of rows) {
-      // Exclude inactive salesman/barman licenses
-      const sbRole = toText(row?.salesman_barman_role || row?.salesmanBarmanRole);
-      const isSb = Boolean(sbRole || String(row?.application_type || row?.applicationType || '').toLowerCase().includes('salesman') || String(row?.application_type || row?.applicationType || '').toLowerCase().includes('barman'));
       const isActive = row?.is_active ?? row?.isActive;
-      if (isSb && isActive === false) {
+      if (isActive === false) {
         continue;
       }
 
+      const sbRole = toText(row?.salesman_barman_role || row?.salesmanBarmanRole);
       const category = toText(row?.license_category || row?.licenseCategory);
       const subCategory = toText(row?.license_sub_category || row?.licenseSubCategory);
       const appType = toText(row?.application_type || row?.applicationType);
