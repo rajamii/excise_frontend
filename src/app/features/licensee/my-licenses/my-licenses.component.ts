@@ -1359,191 +1359,42 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
    * - These are DIFFERENT from application IDs which have LIC/, NLI/, SBM/ prefixes
    */
   private extractLicenseId(raw: any, application: UnifiedApplication): string | null {
-    console.log('🔍 extractLicenseId called with:', { raw, application });
-    
-    const appId = String(application.applicationId || raw.application_id || raw.applicationId || '').trim().toUpperCase();
-    const expectedPrefix = appId.startsWith('RSBM/') ? 'SB/' : this.getExpectedLicensePrefix(application.type);
-    console.log('  Expected license prefix:', expectedPrefix);
-    
-    // CRITICAL: For approved applications, check renewalOf field first
-    // This is where the ACTUAL license that was issued is stored
-    if (raw.renewalOf || raw.renewal_of || raw.renewalOfLicenseId || raw.renewal_of_license_id) {
-      const renewalValue = raw.renewalOf || raw.renewal_of || raw.renewalOfLicenseId || raw.renewal_of_license_id;
-      console.log('  Found renewalOf field:', renewalValue);
-      
-      if (typeof renewalValue === 'string' && renewalValue.startsWith(expectedPrefix)) {
-        console.log('  ✅ Using renewalOf as license ID:', renewalValue);
-        return renewalValue;
+    const candidates = [
+      raw?.issued_license_id,
+      raw?.issuedLicenseId,
+      raw?.license_id,
+      raw?.licenseId,
+      raw?.license_number,
+      raw?.licenseNumber,
+      raw?.license,
+      raw?.renewal_of_license_id,
+      raw?.renewalOfLicenseId,
+      raw?.renewal_of,
+      raw?.renewalOf
+    ];
+
+    for (const c of candidates) {
+      if (!c) continue;
+      const strVal = String(typeof c === 'object' ? (c.license_id || c.id || '') : c).trim();
+      if (!strVal) continue;
+      if (strVal.startsWith('NLI/') || strVal.startsWith('LIC/') || strVal.startsWith('SBM/') || strVal.startsWith('COMP/') || strVal.startsWith('CCOL/')) {
+        continue;
       }
-      
-      // If renewalOf is an object with license_id
-      if (typeof renewalValue === 'object' && renewalValue !== null) {
-        if (renewalValue.license_id) {
-          const licenseId = String(renewalValue.license_id);
-          if (licenseId.startsWith(expectedPrefix)) {
-            console.log('  ✅ Found license_id in renewalOf object:', licenseId);
-            return licenseId;
-          }
-        }
-        if (renewalValue.id) {
-          const licenseId = String(renewalValue.id);
-          if (licenseId.startsWith(expectedPrefix)) {
-            console.log('  ✅ Found id in renewalOf object:', licenseId);
-            return licenseId;
-          }
-        }
+      if (strVal.startsWith('NA/') || strVal.startsWith('LA/') || strVal.startsWith('SB/') || strVal.startsWith('CR/') || strVal.startsWith('CC/')) {
+        return strVal;
       }
     }
 
-    // STRATEGY 0: Check for any field containing 'CR/' or 'COMP/' directly for company registration
-    if (application.type === 'company-registration') {
-      for (const key of ['license_id', 'licenseId', 'license', 'renewalOf', 'renewal_of', 'renewalOfLicenseId', 'renewal_of_license_id']) {
-        if (raw[key]) {
-          const val = String(typeof raw[key] === 'object' ? (raw[key].license_id || raw[key].id || '') : raw[key]).trim();
-          if (val.startsWith('CR/') || val.startsWith('COMP/')) {
-            console.log(`  ✅ Found company registration license ID in key "${key}":`, val);
-            return val;
-          }
-        }
-      }
-    }
-
-    // STRATEGY 0.1: Check for any field containing 'CC/' or 'CCOL/' directly for company collaboration
-    if (application.type === 'company-collaboration') {
-      for (const key of ['license_id', 'licenseId', 'license', 'renewalOf', 'renewal_of', 'renewalOfLicenseId', 'renewal_of_license_id']) {
-        if (raw[key]) {
-          const val = String(typeof raw[key] === 'object' ? (raw[key].license_id || raw[key].id || '') : raw[key]).trim();
-          if (val.startsWith('CC/') || val.startsWith('CCOL/')) {
-            console.log(`  ✅ Found company collaboration license ID in key "${key}":`, val);
-            return val;
-          }
-        }
-      }
-    }
-
-    // STRATEGY 1: Check for 'license' field (most common)
-    if (raw.license) {
-      const licenseValue = raw.license;
-      
-      // If it's a direct string
-      if (typeof licenseValue === 'string') {
-        const licenseId = licenseValue.trim();
-        if (licenseId.startsWith(expectedPrefix)) {
-          console.log('  ✅ Found license as string:', licenseId);
-          return licenseId;
-        }
-      }
-      
-      // If it's an object with nested license_id
-      if (typeof licenseValue === 'object' && licenseValue !== null) {
-        if (licenseValue.license_id) {
-          const licenseId = String(licenseValue.license_id);
-          if (licenseId.startsWith(expectedPrefix)) {
-            console.log('  ✅ Found license_id in object:', licenseId);
-            return licenseId;
-          }
-        }
-        if (licenseValue.id) {
-          const licenseId = String(licenseValue.id);
-          if (licenseId.startsWith(expectedPrefix)) {
-            console.log('  ✅ Found id in object:', licenseId);
-            return licenseId;
-          }
-        }
-      }
-    }
-
-    // STRATEGY 2: Check for license_id field directly
-    if (raw.license_id) {
-      const licenseId = String(raw.license_id).trim();
-      if (licenseId.startsWith(expectedPrefix)) {
-        console.log('  ✅ Found raw.license_id:', licenseId);
-        return licenseId;
-      }
-    }
-
-    // STRATEGY 3: Check for licenseId (camelCase)
-    if (raw.licenseId) {
-      const licenseId = String(raw.licenseId).trim();
-      if (licenseId.startsWith(expectedPrefix)) {
-        console.log('  ✅ Found raw.licenseId:', licenseId);
-        return licenseId;
-      }
-    }
-
-    // STRATEGY 4: Check if there's a license object with an ID
-    if (raw.license_object && typeof raw.license_object === 'object') {
-      if (raw.license_object.license_id) {
-        const licenseId = String(raw.license_object.license_id);
-        if (licenseId.startsWith(expectedPrefix)) {
-          console.log('  ✅ Found license_object.license_id:', licenseId);
-          return licenseId;
-        }
-      }
-    }
-
-    // STRATEGY 5: For approved applications, the license should exist
-    // Try to construct it from the application ID pattern
-    // LIC/101/2025-26/0001 -> LA/101/2025-26/0001
-    // NLI/101/2025-26/0001 -> NA/101/2025-26/0001
-    // SBM/101/2025-26/0001 -> SB/101/2025-26/0001
-    if (appId) {
-      console.log('  Attempting to derive license ID from application ID:', appId);
-      let derivedLicenseId = null;
-      
-      if (appId.startsWith('LIC/')) {
-        derivedLicenseId = appId.replace('LIC/', 'LA/');
-      } else if (appId.startsWith('NLI/')) {
-        derivedLicenseId = appId.replace('NLI/', 'NA/');
-      } else if (appId.startsWith('SBM/')) {
-        derivedLicenseId = appId.replace('SBM/', 'SB/');
-      } else if (appId.startsWith('COMP/')) {
-        // District code for CR in database is 1101
-        derivedLicenseId = appId.replace('COMP/', 'CR/1101/');
-      } else if (appId.startsWith('CCOL/')) {
-        // District code for CC in database is 1101
-        derivedLicenseId = appId.replace('CCOL/', 'CC/1101/');
-      }
-      
-      if (derivedLicenseId) {
-        console.log('  ⚠️ Derived license ID (fallback):', derivedLicenseId);
-        console.log('  ⚠️ WARNING: This is a fallback mechanism. The license ID should be in raw data.');
-        return derivedLicenseId;
-      }
-    }
-
-    console.log('  ❌ No valid license ID found');
     return null;
   }
 
   getDisplayLicenseId(application: UnifiedApplication): string {
-    const extracted = this.extractLicenseId(application.raw || {}, application);
+    const raw = application.raw || {};
+    const extracted = this.extractLicenseId(raw, application);
     if (extracted) {
-      if (extracted.startsWith('NLI/')) return extracted.replace('NLI/', 'NA/');
-      if (extracted.startsWith('NLA/')) return extracted.replace('NLA/', 'NA/');
       return extracted;
     }
-
-    const appId = String(application.applicationId || '').trim();
-    if (appId.startsWith('NLI/')) {
-      return appId.replace('NLI/', 'NA/');
-    }
-    if (appId.startsWith('NLA/')) {
-      return appId.replace('NLA/', 'NA/');
-    }
-    if (appId.startsWith('LIC/')) {
-      return appId.replace('LIC/', 'LA/');
-    }
-    if (appId.startsWith('SBM/')) {
-      return appId.replace('SBM/', 'SB/');
-    }
-    if (appId.startsWith('COMP/')) {
-      return appId.replace('COMP/', 'CR/1101/');
-    }
-    if (appId.startsWith('CCOL/')) {
-      return appId.replace('CCOL/', 'CC/1101/');
-    }
-    return appId;
+    return String(application.applicationId || '').trim();
   }
 
   /**

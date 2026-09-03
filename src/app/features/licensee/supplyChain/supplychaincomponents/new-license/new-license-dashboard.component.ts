@@ -1040,12 +1040,24 @@ export class NewLicenseDashboardComponent implements OnInit {
   }
 
   private deriveNewLicenseNaNumber(applicationId: string, item: any): string {
-    const direct = String(item?.license_id || item?.licenseId || item?.license_number || item?.licenseNumber || '').trim();
-    if (direct) return direct;
+    const candidates = [
+      item?.issued_license_id,
+      item?.issuedLicenseId,
+      item?.license_id,
+      item?.licenseId,
+      item?.license_number,
+      item?.licenseNumber,
+      item?.license
+    ];
+
+    for (const c of candidates) {
+      if (!c) continue;
+      const val = String(typeof c === 'object' ? (c.license_id || c.id || '') : c).trim();
+      if (val.startsWith('NA/')) return val;
+    }
 
     const id = String(applicationId || '').trim();
     if (id.startsWith('NA/')) return id;
-    if (id.startsWith('NLI/')) return `NA/${id.slice(4)}`;
     return '';
   }
 
