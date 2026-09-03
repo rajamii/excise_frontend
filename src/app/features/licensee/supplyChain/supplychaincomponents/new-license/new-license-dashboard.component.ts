@@ -405,94 +405,156 @@ export class NewLicenseDashboardComponent implements OnInit {
     const applicationId = String(row.applicationId || '').trim();
     if (!applicationId) return;
 
-    const licenseFee = row.licenseFeeAmount || 5000;
-    const securityFee = row.securityFeeAmount || 5000;
-    const total = licenseFee + securityFee;
+    const openModalWithData = (data: any) => {
+      const licenseFee = Number(data?.license_fee_amount ?? data?.licenseFeeAmount ?? row.licenseFeeAmount ?? 5000);
+      const securityFee = Number(data?.security_fee_amount ?? data?.securityFeeAmount ?? row.securityFeeAmount ?? 5000);
+      const total = licenseFee + securityFee;
 
-    const feeRow = (label: string, amount: number, accent = false) => `
-      <div style="display:flex; justify-content:space-between; align-items:center;
-                  padding:10px 14px; border-radius:8px; margin-bottom:6px;
-                  background:${accent ? '#f0fdf8' : '#f9fafb'};
-                  border:1px solid ${accent ? '#6ee7c7' : '#e5e7eb'};">
-        <span style="color:#374151; font-size:14px;">${label}</span>
-        <span style="font-weight:700; color:${accent ? '#0d6e56' : '#111827'}; font-size:14px;">&#8377;${amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-      </div>`;
+      const baseLicenseFee = Number(data?.base_license_fee ?? data?.baseLicenseFee ?? 0);
+      const additionalBreakdown = Array.isArray(data?.additional_charges_breakdown) ? data.additional_charges_breakdown : (data?.additionalChargesBreakdown || []);
 
-    void Swal.fire({
-      title: '',
-      html: `
-        <div style="font-family:'Segoe UI',sans-serif; text-align:left;">
-          <!-- Header -->
-          <div style="text-align:center; margin-bottom:20px;">
-            <div style="display:inline-flex; align-items:center; justify-content:center;
-                        width:52px; height:52px; border-radius:50%;
-                        background:linear-gradient(135deg,#065f46,#10b981); margin-bottom:10px;">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="white"/>
-              </svg>
-            </div>
-            <div style="font-size:22px; font-weight:700; color:#065f46; line-height:1.2;">Proceed to Pay License Fee</div>
-            <div style="font-size:13px; color:#6b7280; margin-top:4px;">Application: <b>${this.escapeHtml(applicationId)}</b></div>
-          </div>
+      const pachwai = Boolean(data?.pachwai);
+      const draughtBeer = Boolean(data?.draught_beer ?? data?.draughtBeer);
+      const miniBar = Boolean(data?.mini_bar ?? data?.miniBar);
+      const miniBarQty = Number(data?.mini_bar_quantity ?? data?.miniBarQuantity ?? 1);
 
-          <!-- Fee Summary -->
-          <div style="border-radius:10px; border:1px solid #d1fae5; overflow:hidden; margin-bottom:12px;">
-            <div style="background:#ecfdf5; padding:10px 16px; font-size:12px; font-weight:600;
-                        color:#065f46; letter-spacing:0.6px; text-transform:uppercase;">
-              Payment Summary
+      // Build breakdown rows
+      const breakdownItems: { label: string; amount: number }[] = [];
+      if (additionalBreakdown.length > 0) {
+        additionalBreakdown.forEach((item: any) => {
+          breakdownItems.push({
+            label: item.label || item.code || 'Additional Charge',
+            amount: Number(item.amount || 0)
+          });
+        });
+      } else {
+        if (pachwai) breakdownItems.push({ label: 'Pachwai (Additional)', amount: 3000 });
+        if (draughtBeer) breakdownItems.push({ label: 'Draught Beer (Additional)', amount: 5000 });
+        if (miniBar) breakdownItems.push({ label: `Mini Bar (Additional x${miniBarQty || 1})`, amount: 1000 * (miniBarQty || 1) });
+      }
+
+      const additionalTotal = breakdownItems.reduce((sum, item) => sum + item.amount, 0);
+      const resolvedBaseFee = baseLicenseFee > 0 ? baseLicenseFee : Math.max(0, licenseFee - additionalTotal);
+      const hasAdditional = breakdownItems.length > 0;
+
+      const feeRow = (label: string, amount: number, accent = false) => `
+        <div style="display:flex; justify-content:space-between; align-items:center;
+                    padding:10px 14px; border-radius:8px; margin-bottom:6px;
+                    background:${accent ? '#f0fdf8' : '#f9fafb'};
+                    border:1px solid ${accent ? '#6ee7c7' : '#e5e7eb'};">
+          <span style="color:#374151; font-size:14px;">${label}</span>
+          <span style="font-weight:700; color:${accent ? '#0d6e56' : '#111827'}; font-size:14px;">&#8377;${amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+        </div>`;
+
+      const breakdownHtml = hasAdditional
+        ? `
+          <div style="margin-top:14px; border-radius:10px; border:1px solid #d1fae5; overflow:hidden;">
+            <div style="background:linear-gradient(135deg,#065f46,#059669); color:#fff; padding:10px 16px; font-size:13px; font-weight:600; letter-spacing:0.5px; display:flex; justify-content:space-between; align-items:center;">
+              <span>&#9783; Itemized Fee Breakdown</span>
+              <span style="font-size:12px; font-weight:400; opacity:0.95;">Total License Fee: &#8377;${licenseFee.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
             </div>
             <div style="padding:12px 12px 4px; background:#ffffff;">
-              ${feeRow('License Fee', licenseFee, true)}
-              ${feeRow('Security Deposit', securityFee, true)}
-            </div>
-            <!-- Total -->
-            <div style="display:flex; justify-content:space-between; align-items:center;
-                        padding:14px 16px; background:linear-gradient(135deg,#065f46,#10b981);
-                        border-top:1px solid #6ee7c7;">
-              <span style="color:#d1fae5; font-size:15px; font-weight:600;">Total Payable</span>
-              <span style="color:#ffffff; font-size:20px; font-weight:800;">&#8377;${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-            </div>
-          </div>
+              ${feeRow('Base License Fee', resolvedBaseFee)}
+              ${breakdownItems.map(item => feeRow(item.label, item.amount)).join('')}
 
-          <!-- Info note -->
-          <div style="margin-top:14px; padding:14px 16px; background:#f0f9ff; border:1px solid #bae6fd;
-                      border-radius:8px; font-size:13px; color:#0369a1; text-align: left; display:flex; flex-direction:column; gap:8px;">
-            <div style="font-weight: 700; display:flex; gap:8px; align-items:center;">
-              <span style="font-size:16px;">&#8505;</span>
-              <span>Important Payment Instructions:</span>
+              <div style="display:flex; justify-content:space-between; align-items:center;
+                          padding:10px 14px; border-radius:8px; margin-top:8px; margin-bottom:6px;
+                          background:#ecfdf5; border:1.5px solid #10b981;">
+                <span style="color:#065f46; font-size:14px; font-weight:700;">Total License Fee</span>
+                <span style="font-weight:800; color:#065f46; font-size:15px;">&#8377;${licenseFee.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+              </div>
             </div>
-            <ul style="margin: 0; padding-left: 20px; line-height: 1.5; color:#334155;">
-              <li><b>License Fee:</b> Pay by navigating to the <b>License Fee Wallet</b> tab and clicking <b>Pay Now</b>.</li>
-              <li style="background: #fffbeb; padding: 8px 12px; border-radius: 6px; border: 1px solid #fde68a; margin-top: 8px; color: #b45309; list-style-type: none; margin-left: -20px;">
-                &#9888; &nbsp;<b>Security Deposit:</b> Simply <b>recharge/add money</b> to the <b>Security Deposit Wallet</b>. Recharging is sufficient to mark it as paid.
-              </li>
-            </ul>
+            <div style="padding:10px 16px; font-size:12px; color:#047857; background:#f0fdf4; border-top:1px dashed #a7f3d0; line-height:1.5;">
+              &#9432; <b>Breakdown Summary:</b> Base Fee (&#8377;${resolvedBaseFee.toLocaleString('en-IN', { minimumFractionDigits: 2 })}) + Additional Category Charges (&#8377;${additionalTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}) = <b>&#8377;${licenseFee.toLocaleString('en-IN', { minimumFractionDigits: 2 })} Total License Fee</b>.
+            </div>
           </div>
-        </div>
-      `,
-      showCancelButton: true,
-      confirmButtonText: '&#10003; &nbsp;Proceed to Wallet',
-      cancelButtonText: 'Cancel',
-      confirmButtonColor: '#065f46',
-      cancelButtonColor: '#6b7280',
-      width: '700px'
-    }).then((res) => {
-      if (!res.isConfirmed) return;
-      this.router.navigate(['/dashboard'], {
-        queryParams: {
-          section: 'wallet',
-          action: 'pay',
-          tab: 'license_fee',
-          walletView: 'others',
-          id: applicationId,
-          type: 'new-license',
-          ref: applicationId,
-          referenceNo: applicationId,
-          amount: licenseFee,
-          securityAmount: securityFee,
-          source: 'new-license'
-        }
+        `
+        : '';
+
+      void Swal.fire({
+        title: '',
+        html: `
+          <div style="font-family:'Segoe UI',sans-serif; text-align:left;">
+            <!-- Header -->
+            <div style="text-align:center; margin-bottom:18px;">
+              <div style="display:inline-flex; align-items:center; justify-content:center;
+                          width:50px; height:50px; border-radius:50%;
+                          background:linear-gradient(135deg,#065f46,#10b981); margin-bottom:8px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="white"/>
+                </svg>
+              </div>
+              <div style="font-size:21px; font-weight:700; color:#065f46; line-height:1.2;">Proceed to Pay License Fee</div>
+              <div style="font-size:13px; color:#6b7280; margin-top:4px;">Application: <b>${this.escapeHtml(applicationId)}</b></div>
+            </div>
+
+            <!-- Fee Summary -->
+            <div style="border-radius:10px; border:1px solid #d1fae5; overflow:hidden; margin-bottom:12px;">
+              <div style="background:#ecfdf5; padding:10px 16px; font-size:12px; font-weight:600;
+                          color:#065f46; letter-spacing:0.6px; text-transform:uppercase;">
+                Payment Summary
+              </div>
+              <div style="padding:12px 12px 4px; background:#ffffff;">
+                ${feeRow('License Fee', licenseFee, true)}
+                ${feeRow('Security Deposit', securityFee, true)}
+              </div>
+              <!-- Total -->
+              <div style="display:flex; justify-content:space-between; align-items:center;
+                          padding:14px 16px; background:linear-gradient(135deg,#065f46,#10b981);
+                          border-top:1px solid #6ee7c7;">
+                <span style="color:#d1fae5; font-size:15px; font-weight:600;">Total Payable</span>
+                <span style="color:#ffffff; font-size:20px; font-weight:800;">&#8377;${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+              </div>
+            </div>
+
+            ${breakdownHtml}
+
+            <!-- Info note -->
+            <div style="margin-top:14px; padding:14px 16px; background:#f0f9ff; border:1px solid #bae6fd;
+                        border-radius:8px; font-size:13px; color:#0369a1; text-align: left; display:flex; flex-direction:column; gap:8px;">
+              <div style="font-weight: 700; display:flex; gap:8px; align-items:center;">
+                <span style="font-size:16px;">&#8505;</span>
+                <span>Important Payment Instructions:</span>
+              </div>
+              <ul style="margin: 0; padding-left: 20px; line-height: 1.5; color:#334155;">
+                <li><b>License Fee:</b> Pay by navigating to the <b>License Fee Wallet</b> tab and clicking <b>Pay Now</b>.</li>
+                <li style="background: #fffbeb; padding: 8px 12px; border-radius: 6px; border: 1px solid #fde68a; margin-top: 8px; color: #b45309; list-style-type: none; margin-left: -20px;">
+                  &#9888; &nbsp;<b>Security Deposit:</b> Simply <b>recharge/add money</b> to the <b>Security Deposit Wallet</b>. Recharging is sufficient to mark it as paid.
+                </li>
+              </ul>
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '&#10003; &nbsp;Proceed to Wallet',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#065f46',
+        cancelButtonColor: '#6b7280',
+        width: '700px'
+      }).then((res) => {
+        if (!res.isConfirmed) return;
+        this.router.navigate(['/dashboard'], {
+          queryParams: {
+            section: 'wallet',
+            action: 'pay',
+            tab: 'license_fee',
+            walletView: 'others',
+            id: applicationId,
+            type: 'new-license',
+            ref: applicationId,
+            referenceNo: applicationId,
+            amount: licenseFee,
+            securityAmount: securityFee,
+            source: 'new-license'
+          }
+        });
       });
+    };
+
+    const encoded = encodeURIComponent(applicationId);
+    this.http.get<any>(`${this.apiBase}/detail/${encoded}/`).subscribe({
+      next: (detail) => openModalWithData(detail || row),
+      error: () => openModalWithData(row)
     });
   }
 

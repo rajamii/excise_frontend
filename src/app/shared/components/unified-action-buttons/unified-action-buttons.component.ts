@@ -1050,10 +1050,28 @@ private getTransitRejectSummary(): {
         miniBarFee = (miniBarPrice || 0) * (miniBarQty || 1);
       }
 
-      const additionalTotal = (pachwaiFee || 0) + (draughtFee || 0) + (miniBarFee || 0);
-      const hasAdditional = additionalTotal > 0;
-      const baseLicenseFee = Math.max(0, licenseFee - additionalTotal);
-      const baseSecurityFee = Math.max(0, securityFee - additionalTotal);
+      const rawBreakdown = Array.isArray(amountSource?.additional_charges_breakdown)
+        ? amountSource.additional_charges_breakdown
+        : (amountSource?.additionalChargesBreakdown || []);
+
+      const dynamicBreakdownRows: { label: string; amount: number }[] = [];
+      if (rawBreakdown.length > 0) {
+        rawBreakdown.forEach((item: any) => {
+          dynamicBreakdownRows.push({
+            label: item.label || item.code || 'Additional Charge',
+            amount: this.toNumber(item.amount || 0)
+          });
+        });
+      } else {
+        if (pachwaiSelected) dynamicBreakdownRows.push({ label: 'Pachwai (Additional)', amount: pachwaiFee });
+        if (draughtSelected) dynamicBreakdownRows.push({ label: 'Draught Beer (Additional)', amount: draughtFee });
+        if (miniBarSelected) dynamicBreakdownRows.push({ label: `Mini Bar (Additional x${miniBarQty || 1})`, amount: miniBarFee });
+      }
+
+      const additionalTotal = dynamicBreakdownRows.reduce((sum, item) => sum + item.amount, 0);
+      const hasAdditional = dynamicBreakdownRows.length > 0;
+      const baseLicenseFee = this.toNumber(amountSource?.base_license_fee ?? amountSource?.baseLicenseFee ?? Math.max(0, licenseFee - additionalTotal));
+      const baseSecurityFee = this.toNumber(amountSource?.base_security_fee ?? amountSource?.baseSecurityFee ?? Math.max(0, securityFee - additionalTotal));
 
       const feeRow = (label: string, amount: number, accent = false) => `
         <div style="display:flex; justify-content:space-between; align-items:center;
@@ -1073,9 +1091,7 @@ private getTransitRejectSummary(): {
             </div>
             <div style="padding:12px 12px 4px; background:#ffffff;">
               ${feeRow('Base License Fee', baseLicenseFee)}
-              ${pachwaiSelected ? feeRow('Pachwai (Additional)', pachwaiFee) : ''}
-              ${draughtSelected ? feeRow('Draught Beer (Additional)', draughtFee) : ''}
-              ${miniBarSelected ? feeRow(`Mini Bar (Additional x${miniBarQty || 1})`, miniBarFee) : ''}
+              ${dynamicBreakdownRows.map(r => feeRow(r.label, r.amount)).join('')}
 
               <!-- Total Row inside Fee Breakup -->
               <div style="display:flex; justify-content:space-between; align-items:center;
