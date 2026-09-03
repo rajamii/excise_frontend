@@ -715,10 +715,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return this.getModuleTotal(this.selectedChartModule);
     }
     if (status === 'pending') {
-      if (this.isCommissionerUser()) {
-        return 0;
-      }
-      const awaiting = !this.shouldShowStatCard('awaitingPayment')
+      const awaiting = (this.isLicenseeUser() || this.isDistributorUser()) && !this.shouldShowStatCard('awaitingPayment')
         ? (this.selectedChartModule === 'all'
             ? ((this.dashboardCounts.awaitingPayment || 0) + this.getSupplyChainAwaitingPaymentTotal())
             : (sourceCounts.awaitingPayment || (sourceCounts as any)?.awaiting_payment || 0))
@@ -3358,11 +3355,19 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             }
           }
 
-          // Product requirement: newly submitted applications should appear under Pending.
-          const pendingBucket = [
-            ...filteredApplications.pending,
-            ...filteredApplications.applied
-          ];
+          // Product requirement: newly submitted applications should appear under Pending, deduplicated by application ID.
+          const pendingBucketMap = new Map<string, UnifiedApplication>();
+          [...filteredApplications.pending, ...filteredApplications.applied].forEach((app: any) => {
+            const key = String(app?.applicationId || app?.id || app?.application_id || '').trim();
+            if (key) {
+              if (!pendingBucketMap.has(key)) {
+                pendingBucketMap.set(key, app);
+              }
+            } else {
+              pendingBucketMap.set(Math.random().toString(), app);
+            }
+          });
+          const pendingBucket = Array.from(pendingBucketMap.values());
 
           const renewedLicenseIds = this.getRenewedLicenseIds(
             filteredApplications.applied,

@@ -44,6 +44,11 @@ export class SpecialPermitService {
     }
   }
 
+  clearCache(): void {
+    this.responseCache.clear();
+    this.inflightRequests.clear();
+  }
+
   getEligibleLicenses(): Observable<any[]> {
     return this.getCachedOrFetch('special:eligible-licenses', () =>
       this.http.get<any[]>(`${this.baseUrl}/eligible-licenses/`)
@@ -52,20 +57,20 @@ export class SpecialPermitService {
 
   applySpecialPermit(data: any): Observable<any> {
     return this.http.post(`${this.baseUrl}/apply/`, data).pipe(
-      tap(() => this.invalidateCache('special:list', 'special:dashboard-counts', 'special:list-by-status'))
+      tap(() => this.clearCache())
     );
   }
 
   listSpecialPermits(): Observable<any[]> {
-    return this.getCachedOrFetch('special:list', () => this.http.get<any[]>(`${this.baseUrl}/list/`));
+    return this.http.get<any[]>(`${this.baseUrl}/list/`);
   }
 
   getDashboardCounts(): Observable<any> {
-    return this.getCachedOrFetch('special:dashboard-counts', () => this.http.get(`${this.baseUrl}/dashboard-counts/`));
+    return this.http.get(`${this.baseUrl}/dashboard-counts/`);
   }
 
   getApplicationsByStatus(): Observable<any> {
-    return this.getCachedOrFetch('special:list-by-status', () => this.http.get(`${this.baseUrl}/list-by-status/`));
+    return this.http.get(`${this.baseUrl}/list-by-status/`);
   }
 
   getSpecialPermitDetail(applicationId: string): Observable<any> {
