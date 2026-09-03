@@ -1531,6 +1531,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
 
   private extractValidUpToDate(raw: any): Date | null {
+    if (!raw) return null;
     const strVal = raw.valid_up_to || raw.validUpTo || (raw.license && raw.license.valid_up_to) || raw.valid_till || raw.validTill;
     if (!strVal) return null;
     const str = String(strVal).trim();
@@ -1540,20 +1541,23 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       const dt = new Date(Number(dmY[3]), Number(dmY[2]) - 1, Number(dmY[1]), 23, 59, 59);
       return Number.isFinite(dt.getTime()) ? dt : null;
     }
-    const dt = new Date(str);
+    const isoStr = str.includes(' ') && !str.includes('T') ? str.replace(' ', 'T') : str;
+    const dt = new Date(isoStr);
     return Number.isFinite(dt.getTime()) ? dt : null;
   }
 
   private extractLicenseId(app: any): string | null {
+    if (!app) return null;
     const raw = app.raw || {};
     const possibleFields = [
-      raw.license_id, raw.licenseId, raw.license?.id, raw.license?.license_id, raw.issued_license_id, raw.issuedLicenseId
+      raw.license_id, raw.licenseId, raw.license?.id, raw.license?.license_id, raw.issued_license_id, raw.issuedLicenseId,
+      app.license_id, app.licenseId, app.issued_license_id, app.issuedLicenseId
     ];
     for (const field of possibleFields) {
       if (field && typeof field === 'string' && this.isValidLicenseIdForWarning(field)) return field;
       if (field && typeof field === 'object' && field.id && this.isValidLicenseIdForWarning(field.id)) return field.id;
     }
-    const appId = app.applicationId || app.raw?.application_id || '';
+    const appId = String(app.applicationId || app.raw?.application_id || app.application_id || '').trim();
     if (appId.startsWith('LIC/')) return appId.replace('LIC/', 'LA/');
     if (appId.startsWith('NLI/')) return appId.replace('NLI/', 'NA/');
     if (appId.startsWith('SBM/')) return appId.replace('SBM/', 'SB/');
@@ -1667,13 +1671,23 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const fallbackSeconds = 90 * 24 * 60 * 60;
     
     forkJoin({
-      timer: this.timerConfigService.getTimerConfig('LICENSE_RENEWAL_REMINDER_TIMER', fallbackSeconds).pipe(take(1)),
-      renewalConfig: this.renewalConfigService.getConfig().pipe(take(1))
+      timer: this.timerConfigService.getTimerConfig('LICENSE_RENEWAL_REMINDER_TIMER', fallbackSeconds).pipe(
+        take(1),
+        catchError(() => of({ delay_seconds: fallbackSeconds, delay_ms: fallbackSeconds * 1000 }))
+      ),
+      renewalConfig: this.renewalConfigService.getConfig().pipe(
+        take(1),
+        catchError(() => of(null))
+      )
     }).subscribe(({ timer, renewalConfig }) => {
       let newWarnings: any[] = [];
-      const windowMs = Math.max(0, Number((timer as any)?.delay_ms ?? 0) || 0);
+      let windowMs = Math.max(0, Number((timer as any)?.delay_ms ?? 0) || 0);
+      if (!windowMs && (timer as any)?.delay_seconds) {
+        windowMs = Number((timer as any).delay_seconds) * 1000;
+      }
       if (!windowMs) {
-        return;
+        const validityDays = (timer as any)?.validity_period_days ?? 90;
+        windowMs = Number(validityDays) * 24 * 60 * 60 * 1000;
       }
 
       const appMap = new Map<string, {
@@ -1687,12 +1701,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           return;
         }
         const raw = app.raw || {};
-        let validUpTo = this.extractValidUpToDate(raw);
+        let validUpTo = this.extractValidUpToDate(raw) || this.extractValidUpToDate(app);
         if (!validUpTo && renewalConfig) {
           const month = renewalConfig.renewal_month || renewalConfig.renewalMonth || 3;
           const day = renewalConfig.renewal_day || renewalConfig.renewalDay || 31;
           const time = renewalConfig.renewal_time || renewalConfig.renewalTime || '23:59:59';
-          const timeParts = time.split(':');
+          const timeParts = String(time).split(':');
           const now = new Date();
           let year = now.getFullYear();
           if (now.getMonth() + 1 > month || (now.getMonth() + 1 === month && now.getDate() > day)) year++;
@@ -1745,7 +1759,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   openMyLicensesForRenewal(): void {
-    this.router.navigate(['/licensee/supply-chain'], { queryParams: { section: 'license-renewal' } });
+    this.selectedSupplyChainSection = 'license-renewal';
+    this.router.navigate(['/dashboard'], { queryParams: { section: 'license-renewal' } });
   }
 
   ngAfterViewInit() {
@@ -2724,7 +2739,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Keep initial load fast for all roles by fetching only lightweight counts.
     // Full lists are fetched on-demand when user clicks a table card.
-    this.loadDashboardStatsLight(forceRefresh);
+    if (this.isLicenseeUser()) {
+      this.loadDashboardStats(forceRefresh);
+    } else {
+      this.loadDashboardStatsLight(forceRefresh);
+    }
   }
 
   getSupplyChainPendingCount(section: string): number {

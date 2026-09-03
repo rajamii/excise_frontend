@@ -1359,8 +1359,8 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
    * - These are DIFFERENT from application IDs which have LIC/, NLI/, SBM/ prefixes
    */
   private extractLicenseId(raw: any, application?: UnifiedApplication): string | null {
-    const appObj = application || {};
-    const appRaw = (appObj as any).raw || {};
+    const appObj: any = application || {};
+    const appRaw: any = appObj.raw || {};
     const candidates = [
       raw?.issued_license_id,
       raw?.issuedLicenseId,
