@@ -979,6 +979,21 @@ export class CommissionerDashboardComponent implements OnInit {
           if (status === 'SUBMITTED' || status === 'DRAFT' || stage === 'permit_section') {
             return;
           }
+
+          const isApproved = status.includes('APPROV');
+          const isRejected = status.includes('REJECT') || status.includes('CANCEL');
+          const isPendingCommissioner = this.requiresCommissionerReview(item.status) || this.requiresCommissionerReview(item.current_stage);
+
+          const actionsFromBackend = Array.isArray(item.allowedActions || item.allowed_actions)
+            ? (item.allowedActions || item.allowed_actions)
+            : [];
+
+          const allowedActions = actionsFromBackend.length > 0
+            ? actionsFromBackend
+            : ((isPendingCommissioner && !isApproved && !isRejected)
+                ? ['VIEW', 'FORWARD', 'APPROVE', 'REJECT', 'RAISE_OBJECTION']
+                : ['VIEW']);
+
           const ref = String(item.reference_no || item.referenceNo || '').toUpperCase();
           const mapped: CommissionerData = {
             id: item.id || item.reference_no || item.referenceNo,
@@ -988,7 +1003,7 @@ export class CommissionerDashboardComponent implements OnInit {
             status: item.status || 'PENDING',
             amount: String(item.total_import_value || item.totalImportValue || '0.00'),
             type: ref.startsWith('IMFLREV') ? 'revalidation' : (ref.startsWith('IMFLCAN') ? 'cancellation' : 'requisition'),
-            allowedActions: ['VIEW', 'FORWARD', 'APPROVE', 'REJECT', 'RAISE_OBJECTION'],
+            allowedActions: allowedActions,
             allowedActionConfigs: []
           };
 
@@ -1082,9 +1097,10 @@ export class CommissionerDashboardComponent implements OnInit {
   private getDefaultActionsFromStatus(status: any): string[] {
     const value = String(status || '').toLowerCase();
     if (!value) return [];
-    if (value.includes('reject')) return [];
-    if (value.includes('approve')) return [];
-    if (value.includes('pending') || value.includes('forward') || value.includes('submit')) return ['APPROVE', 'REJECT'];
+    if (value.includes('reject') || value.includes('approve') || value.includes('cancel')) return [];
+    if (value.includes('commissioner') || (value.includes('forward') && value.includes('commissioner'))) {
+      return ['APPROVE', 'REJECT'];
+    }
     return [];
   }
 
@@ -1183,14 +1199,13 @@ export class CommissionerDashboardComponent implements OnInit {
           ? response
           : (response?.results || response?.data || []);
 
-        // Compute pending count directly from raw data — same logic as sidebar badge
+        // Compute pending count directly from raw data — Commissioner ONLY handles APPROVE / REJECT
         this.hologramPendingCount = rows.filter(item => {
           const actions: string[] = Array.isArray(item?.allowedActions || item?.allowed_actions)
             ? (item?.allowedActions || item?.allowed_actions)
             : [];
           const upper = actions.map((a: any) => String(a || '').toUpperCase());
-          if (upper.includes('APPROVE') || upper.includes('REJECT') ||
-              upper.includes('VERIFY') || upper.includes('ASSIGN_CARTONS')) {
+          if (upper.includes('APPROVE') || upper.includes('REJECT')) {
             return true;
           }
           // Status-based fallback
@@ -1199,8 +1214,7 @@ export class CommissionerDashboardComponent implements OnInit {
                            t.includes('cartoonassigned') || t.includes('cartonassigned') ||
                            t.includes('rejected') || t.includes('cancelled');
           const hasReachedCommissioner = t.includes('forwardedtocommissioner') ||
-                                          (t.includes('forwarded') && t.includes('commissioner')) ||
-                                          t.includes('paymentcompleted');
+                                          (t.includes('forwarded') && t.includes('commissioner'));
           return hasReachedCommissioner && !isFinal;
         }).length;
 
@@ -1250,13 +1264,10 @@ export class CommissionerDashboardComponent implements OnInit {
 
   private requiresCommissionerReview(status: string): boolean {
     const statusLower = status?.toLowerCase() || '';
-    return statusLower.includes('forwarded') || 
-           statusLower.includes('commissioner') || 
+    return statusLower.includes('commissioner') || 
            statusLower.includes('pending_commissioner') ||
            statusLower.includes('under_commissioner_review') ||
-           statusLower.includes('pending') ||
-           statusLower.includes('submitted') ||
-           statusLower.includes('approved_by');
+           (statusLower.includes('forwarded') && statusLower.includes('commissioner'));
   }
 
   private updateApplications(type: string, newApplications: CommissionerData[]): void {
@@ -1294,26 +1305,21 @@ export class CommissionerDashboardComponent implements OnInit {
 
     const countedIds = new Set(countedByActions.map(app => app.id));
 
-    // Also count items with no allowedActions that are at the commissioner's stage:
-    // plain PENDING (just submitted) or forwarded to commissioner (e.g. "FORWARDED COMMISSIONER").
+    // Also count items with no allowedActions that are specifically at the commissioner's stage
     const countedByStatus = this.allApplications
       .filter(app => app.type !== 'hologram')
       .filter(app => {
         if (countedIds.has(app.id)) return false;
         const st = String(app?.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
         if (st.includes('approv') || st.includes('reject') || st.includes('cancel')) return false;
-        if (st === 'pending') return true;
-        // Forwarded to commissioner for review
-        if (st.includes('commissioner') && st.includes('forward')) return true;
+        // Forwarded to commissioner or pending specifically at commissioner level
+        if (st.includes('commissioner') || st.includes('comm')) return true;
         return false;
       });
 
     const otherPending = countedByActions.length + countedByStatus.length;
-
-    // Use the maximum of our computed count vs the parent-supplied count
-    // (parent uses sidebar badge service which is most accurate)
-    const effectiveHologramPending = Math.max(this.hologramPendingCount, this.supplyChainHologramPending);
-    const totalPending = effectiveHologramPending + otherPending + (this.unifiedCounts?.pending || 0);
+    const effectiveHologramPending = this.hologramPendingCount;
+    const totalPending = effectiveHologramPending + otherPending;
 
     return {
       applied: this.getStatusCount('APPLIED') + this.getStatusCount('SUBMITTED') + (this.unifiedCounts?.applied || 0),
@@ -1339,8 +1345,7 @@ export class CommissionerDashboardComponent implements OnInit {
       if (countedIds.has(application.id)) return false;
       const st = String(application?.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
       if (st.includes('approv') || st.includes('reject') || st.includes('cancel')) return false;
-      if (st === 'pending') return true;
-      if (st.includes('commissioner') && st.includes('forward')) return true;
+      if (st.includes('commissioner') || st.includes('comm')) return true;
       return false;
     });
 

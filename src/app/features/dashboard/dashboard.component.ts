@@ -715,6 +715,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return this.getModuleTotal(this.selectedChartModule);
     }
     if (status === 'pending') {
+      if (this.isCommissionerUser()) {
+        return 0;
+      }
       const awaiting = !this.shouldShowStatCard('awaitingPayment')
         ? (this.selectedChartModule === 'all'
             ? ((this.dashboardCounts.awaitingPayment || 0) + this.getSupplyChainAwaitingPaymentTotal())
@@ -2758,7 +2761,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       const modules = ['requisition', 'distributor-permit-requisition', 'company', 'company-collaboration'];
       return modules.reduce((sum, m) => sum + this.getSupplyChainPendingCount(m), 0);
     }
-    const isCommissioner = this.isCommissionerUser();
+    if (this.isCommissionerUser()) return 0;
     return this.getSupplyChainPendingCount('requisition') +
            this.getSupplyChainPendingCount('revalidation') +
            this.getSupplyChainPendingCount('cancellation') +
@@ -2767,7 +2770,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
            this.getSupplyChainPendingCount('distributor-permit-revalidation') +
            this.getSupplyChainPendingCount('distributor-permit-cancellation') +
            this.getSupplyChainPendingCount('distributor-permit-brand-arrival') +
-           (isCommissioner ? 0 : this.getSupplyChainPendingCount('transit'));
+           this.getSupplyChainPendingCount('transit');
   }
 
   getSupplyChainAwaitingPaymentTotal(): number {
