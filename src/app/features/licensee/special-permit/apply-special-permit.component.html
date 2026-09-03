@@ -63,12 +63,12 @@
               <mat-icon matPrefix>calendar_today</mat-icon>
             </mat-form-field>
 
-            @if (isPerDayCategory) {
+            @if (isPerDayCategory || allowedDryDayDates.length) {
               <div class="field-wide dry-day-section">
                 <div class="dry-day-section__header">
                   <mat-icon class="dry-day-section__icon">event</mat-icon>
                   <span class="dry-day-section__title">Select Dry Day Dates</span>
-                  <span class="dry-day-section__required">*</span>
+                  <span class="dry-day-section__required" *ngIf="isPerDayCategory">*</span>
                   @if (!isLoadingAllowedDates && allowedDryDayDates.length) {
                     <span class="dry-day-section__hint">Click on highlighted dates to select them</span>
                   }
@@ -177,7 +177,7 @@
                 <span>Location (from application):</span>
                 <strong style="color: #0f172a; text-transform: uppercase;">{{ selectedLicense.isRural !== undefined ? (selectedLicense.isRural ? 'Rural' : 'Urban') : (selectedLicense.is_rural ? 'Rural' : 'Urban') }}</strong>
               </div>
-              <div style="display: flex; justify-content: space-between;" *ngIf="isPerDayCategory">
+              <div style="display: flex; justify-content: space-between;" *ngIf="isPerDayCategory || form.controls.selectedDates.value?.length">
                 <span>Selected Dates Count:</span>
                 <strong style="color: #0f172a;">{{ form.controls.selectedDates.value?.length || 0 }} day(s)</strong>
               </div>
@@ -208,7 +208,7 @@
           <div class="action-row">
             <button mat-flat-button color="primary" type="button"
                     (click)="saveAndProceedToPayment()"
-                    [disabled]="isSubmitting || form.invalid || feeNotConfigured">
+                    [disabled]="isSubmitting || form.invalid || feeNotConfigured || (allowedDryDayDates.length > 0 && !form.controls.selectedDates.value?.length)">
               <mat-icon>send</mat-icon> Save &amp; Submit for Approval
             </button>
           </div>

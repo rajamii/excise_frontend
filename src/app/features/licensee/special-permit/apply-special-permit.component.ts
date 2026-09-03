@@ -104,7 +104,7 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
       license_id: this.getLicenseId(this.selectedLicense),
       financial_year: this.currentYear,
       permission_duration: this.permissionDuration,
-      selected_dates: this.isPerDayCategory ? raw.selectedDates : null
+      selected_dates: raw.selectedDates && raw.selectedDates.length > 0 ? raw.selectedDates : null
     };
 
     this.specialPermitService
@@ -252,11 +252,13 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
         this.allowedDryDayDates = res?.allowedDates || res?.allowed_dates || [];
         this.isLoadingAllowedDates = false;
         this.buildActiveMonths();
+        this.syncDateValidator();
       },
       error: () => {
         this.allowedDryDayDates = [];
         this.isLoadingAllowedDates = false;
         this.buildActiveMonths();
+        this.syncDateValidator();
       }
     });
   }
@@ -377,11 +379,10 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
   private syncDateValidator(): void {
     const datesControl = this.form.controls.selectedDates;
 
-    if (this.isPerDayCategory) {
-      datesControl.addValidators(Validators.required);
+    if (this.isPerDayCategory || this.allowedDryDayDates.length > 0) {
+      datesControl.setValidators([Validators.required]);
     } else {
       datesControl.clearValidators();
-      datesControl.setValue([], { emitEvent: false });
     }
     datesControl.updateValueAndValidity({ emitEvent: false });
   }
