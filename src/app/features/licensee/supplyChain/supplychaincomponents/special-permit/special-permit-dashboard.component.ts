@@ -90,7 +90,13 @@ export class SpecialPermitDashboardComponent implements OnInit {
           rejected: counts?.rejected || 0,
           awaitingPayment: counts?.awaiting_payment || counts?.awaitingPayment || 0
         };
-        if (this.activeSummaryFilter === 'awaiting-payment' && this.counts.awaitingPayment === 0) {
+        if (!this.isLicenseeUser) {
+          if (this.counts.pending > 0) {
+            this.activeSummaryFilter = 'pending';
+          } else {
+            this.activeSummaryFilter = '';
+          }
+        } else if (this.activeSummaryFilter === 'awaiting-payment' && this.counts.awaitingPayment === 0) {
           this.activeSummaryFilter = '';
         }
         this.allRows = this.flattenGroupedData(grouped || {});
