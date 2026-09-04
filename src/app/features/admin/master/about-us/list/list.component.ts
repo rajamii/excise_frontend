@@ -9,26 +9,34 @@ import { MaterialModule } from '../../../../../shared/material.module';
 import {
   ExciseSecretary,
   HeadOfOrganisation,
-  AboutUs
+  AboutUs,
+  Department,
+  ProductsServices,
+  RefundCancellationPolicy
 } from '../../../../../core/models/about-us.model';
 import { ManageComponent } from '../manage/manage.component';
 
 type AboutUsCategoryKey =
   | 'headsOfOrganisations'
   | 'exciseSecretaries'
-  | 'aboutUsText';
+  | 'aboutUsText'
+  | 'productsAndServices'
+  | 'refundCancellationPolicy';
 
 type AboutUsRecord =
   | HeadOfOrganisation
   | ExciseSecretary
-  | AboutUs;
+  | AboutUs
+  | Department
+  | ProductsServices
+  | RefundCancellationPolicy;
 
 interface AboutUsFieldConfig {
   key: string;
   apiKey?: string;
   label: string;
   required?: boolean;
-  type?: 'text' | 'email' | 'file' | 'textarea' | 'date';
+  type?: 'text' | 'email' | 'file' | 'textarea' | 'date' | 'color';
 }
 
 interface AboutUsCategoryConfig {
@@ -78,7 +86,7 @@ export class ListComponent implements OnInit {
 
   onAdd(category: AboutUsCategoryConfig): void {
     const dialogRef = this.dialog.open(ManageComponent, {
-      width: '600px',
+      width: '650px',
       data: { category, record: null }
     });
 
@@ -89,7 +97,7 @@ export class ListComponent implements OnInit {
 
   onEdit(category: AboutUsCategoryConfig, record: AboutUsRecord): void {
     const dialogRef = this.dialog.open(ManageComponent, {
-      width: '600px',
+      width: '650px',
       data: { category, record }
     });
 
@@ -109,10 +117,10 @@ export class ListComponent implements OnInit {
       if (result.isConfirmed && record.id !== undefined) {
         category.delete(record.id).subscribe({
           next: () => {
-            Swal.fire('Deleted!', 'About Us record deleted successfully.', 'success');
+            Swal.fire('Deleted!', 'Record deleted successfully.', 'success');
             this.loadCategory(category);
           },
-          error: () => Swal.fire('Error', 'Failed to delete About Us record.', 'error')
+          error: () => Swal.fire('Error', 'Failed to delete record.', 'error')
         });
       }
     });
@@ -127,7 +135,11 @@ export class ListComponent implements OnInit {
       toDate: 'To Date',
       title: 'Title',
       image: 'Image',
-      content: 'Content',
+      content: 'Content Preview',
+      headerColor: 'Header Color',
+      headerTextColor: 'Text Color',
+      cardBgColor: 'Card Bg',
+      accentColor: 'Accent Color',
       actions: 'Actions'
     };
 
@@ -147,6 +159,10 @@ export class ListComponent implements OnInit {
     return this.activeCategory.fields.some(field => field.key === column && field.type === 'file');
   }
 
+  isColorColumn(column: string): boolean {
+    return this.activeCategory.fields.some(field => field.key === column && field.type === 'color');
+  }
+
   canViewFile(record: AboutUsRecord, column: string): boolean {
     return this.getFileUrl(record, column) !== '';
   }
@@ -164,6 +180,60 @@ export class ListComponent implements OnInit {
 
   private buildCategories(): AboutUsCategoryConfig[] {
     return [
+      {
+        key: 'aboutUsText',
+        label: 'Department Content',
+        singularLabel: 'Department Content',
+        displayedColumns: ['title', 'headerColor', 'cardBgColor', 'content', 'actions'],
+        fields: [
+          { key: 'title', label: 'Page Title', required: true },
+          { key: 'headerColor', apiKey: 'header_color', label: 'Header Background Color', type: 'color' as const },
+          { key: 'headerTextColor', apiKey: 'header_text_color', label: 'Header Text Color', type: 'color' as const },
+          { key: 'cardBgColor', apiKey: 'card_bg_color', label: 'Card Background Color', type: 'color' as const },
+          { key: 'accentColor', apiKey: 'accent_color', label: 'Accent / Border Color', type: 'color' as const },
+          { key: 'content', label: 'Content (Markdown)', required: true, type: 'textarea' as const }
+        ],
+        load: () => this.infoPagesService.getDepartment(),
+        create: (data) => this.infoPagesService.createDepartment(data),
+        update: (id, data) => this.infoPagesService.updateDepartment(id, data),
+        delete: (id) => this.infoPagesService.deleteDepartment(id)
+      },
+      {
+        key: 'productsAndServices',
+        label: 'Products & Services',
+        singularLabel: 'Products & Services Content',
+        displayedColumns: ['title', 'headerColor', 'cardBgColor', 'content', 'actions'],
+        fields: [
+          { key: 'title', label: 'Page Title', required: true },
+          { key: 'headerColor', apiKey: 'header_color', label: 'Header Background Color', type: 'color' as const },
+          { key: 'headerTextColor', apiKey: 'header_text_color', label: 'Header Text Color', type: 'color' as const },
+          { key: 'cardBgColor', apiKey: 'card_bg_color', label: 'Card Background Color', type: 'color' as const },
+          { key: 'accentColor', apiKey: 'accent_color', label: 'Accent / Border Color', type: 'color' as const },
+          { key: 'content', label: 'Content (Markdown)', required: true, type: 'textarea' as const }
+        ],
+        load: () => this.infoPagesService.getProductsServices(),
+        create: (data) => this.infoPagesService.createProductsServices(data),
+        update: (id, data) => this.infoPagesService.updateProductsServices(id, data),
+        delete: (id) => this.infoPagesService.deleteProductsServices(id)
+      },
+      {
+        key: 'refundCancellationPolicy',
+        label: 'Refund / Cancellation Policy',
+        singularLabel: 'Refund / Cancellation Policy Content',
+        displayedColumns: ['title', 'headerColor', 'cardBgColor', 'content', 'actions'],
+        fields: [
+          { key: 'title', label: 'Page Title', required: true },
+          { key: 'headerColor', apiKey: 'header_color', label: 'Header Background Color', type: 'color' as const },
+          { key: 'headerTextColor', apiKey: 'header_text_color', label: 'Header Text Color', type: 'color' as const },
+          { key: 'cardBgColor', apiKey: 'card_bg_color', label: 'Card Background Color', type: 'color' as const },
+          { key: 'accentColor', apiKey: 'accent_color', label: 'Accent / Border Color', type: 'color' as const },
+          { key: 'content', label: 'Content (Markdown)', required: true, type: 'textarea' as const }
+        ],
+        load: () => this.infoPagesService.getRefundCancellationPolicy(),
+        create: (data) => this.infoPagesService.createRefundCancellationPolicy(data),
+        update: (id, data) => this.infoPagesService.updateRefundCancellationPolicy(id, data),
+        delete: (id) => this.infoPagesService.deleteRefundCancellationPolicy(id)
+      },
       {
         key: 'headsOfOrganisations',
         label: 'Heads of Organisations',
@@ -195,20 +265,6 @@ export class ListComponent implements OnInit {
         create: (data) => this.infoPagesService.createExciseSecretary(data),
         update: (id, data) => this.infoPagesService.updateExciseSecretary(id, data),
         delete: (id) => this.infoPagesService.deleteExciseSecretary(id)
-      },
-      {
-        key: 'aboutUsText',
-        label: 'Department Content',
-        singularLabel: 'Department Content',
-        displayedColumns: ['title', 'content', 'actions'],
-        fields: [
-          { key: 'title', label: 'Title', required: true },
-          { key: 'content', label: 'Content', required: true, type: 'textarea' as const }
-        ],
-        load: () => this.infoPagesService.getAboutUs(),
-        create: (data) => this.infoPagesService.createAboutUs(data),
-        update: (id, data) => this.infoPagesService.updateAboutUs(id, data),
-        delete: (id) => this.infoPagesService.deleteAboutUs(id)
       }
     ];
   }

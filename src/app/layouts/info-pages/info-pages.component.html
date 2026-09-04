@@ -7,9 +7,9 @@
   </div>
   <!--ABOUT US: Department-->
   @if (page === 'department') {
-    <mat-card class = "department grid-card">
-      <mat-card-header>About Us</mat-card-header>
-      <mat-card-content class = "card-container">
+    <mat-card class="department grid-card" [style.backgroundColor]="cardBgColor || null" [style.borderColor]="accentColor || null">
+      <mat-card-header [style.backgroundColor]="headerColor || null" [style.color]="headerTextColor || null">{{ pageTitle || 'About Us' }}</mat-card-header>
+      <mat-card-content class="card-container">
         <markdown [data]="markdownContent"></markdown>
       </mat-card-content>
     </mat-card>
@@ -17,19 +17,19 @@
 
   <!--ABOUT US: Organisational Structure-->
   @if (page === 'organisational-structure') {
-    <mat-card class = "organisational-structure grid-card">
-      <mat-card-header>Organisational Structure</mat-card-header>
-      <mat-card-content class = "card-container">
-        <img src = "assets/images/info-page/Org_Struct.jpg">
+    <mat-card class="organisational-structure grid-card" [style.backgroundColor]="cardBgColor || null" [style.borderColor]="accentColor || null">
+      <mat-card-header [style.backgroundColor]="headerColor || null" [style.color]="headerTextColor || null">{{ pageTitle || 'Organisational Structure' }}</mat-card-header>
+      <mat-card-content class="card-container">
+        <img src="assets/images/info-page/Org_Struct.jpg">
       </mat-card-content>
     </mat-card>
   }
 
   <!--ABOUT US: Objectives-->
   @if (page === 'objectives') {
-    <mat-card class = "objectives grid-card">
-      <mat-card-header>Objectives</mat-card-header>
-      <mat-card-content class = "card-container">
+    <mat-card class="objectives grid-card" [style.backgroundColor]="cardBgColor || null" [style.borderColor]="accentColor || null">
+      <mat-card-header [style.backgroundColor]="headerColor || null" [style.color]="headerTextColor || null">{{ pageTitle || 'Objectives' }}</mat-card-header>
+      <mat-card-content class="card-container">
         <markdown [data]="markdownContent"></markdown>
       </mat-card-content>
     </mat-card>
@@ -37,7 +37,7 @@
 
   <!--ABOUT US: Heads of Organisations-->
   @if (page === 'hods') {
-    <mat-card class = "hods grid-card">
+    <mat-card class="hods grid-card">
       <mat-card-header>Heads of Organisations</mat-card-header>
       <mat-card-content class="card-container">
         @for (hod of hods; track hod) {
@@ -57,9 +57,9 @@
 
   <!--Excise Secretaries / Principal Secretaries-->
   @if (page === 'secretaries') {
-    <mat-card class = "secretaries grid-card">
+    <mat-card class="secretaries grid-card">
       <mat-card-header>Excise Secretaries / Principal Secretaries</mat-card-header>
-      <mat-card-content class = "card-container">
+      <mat-card-content class="card-container">
         <mat-table [dataSource]="commissionerData">
           <ng-container matColumnDef="name">
             <mat-header-cell *matHeaderCellDef> Name </mat-header-cell>
@@ -90,9 +90,9 @@
 
   <!--TERMS OF USE-->
   @if (page === 'terms-of-use') {
-    <mat-card class = "terms-of-use grid-card">
-      <mat-card-header>Terms of Use</mat-card-header>
-      <mat-card-content class = "card-container">
+    <mat-card class="terms-of-use grid-card" [style.backgroundColor]="cardBgColor || null" [style.borderColor]="accentColor || null">
+      <mat-card-header [style.backgroundColor]="headerColor || null" [style.color]="headerTextColor || null">{{ pageTitle || 'Terms of Use' }}</mat-card-header>
+      <mat-card-content class="card-container">
         <markdown [data]="markdownContent"></markdown>
       </mat-card-content>
     </mat-card>
@@ -100,9 +100,9 @@
 
   <!--LINKING POLICY-->
   @if (page === 'linking-policy') {
-    <mat-card class = "linking-policy grid-card">
-      <mat-card-header>Linking Policy</mat-card-header>
-      <mat-card-content class = "card-container">
+    <mat-card class="linking-policy grid-card" [style.backgroundColor]="cardBgColor || null" [style.borderColor]="accentColor || null">
+      <mat-card-header [style.backgroundColor]="headerColor || null" [style.color]="headerTextColor || null">{{ pageTitle || 'Linking Policy' }}</mat-card-header>
+      <mat-card-content class="card-container">
         <markdown [data]="markdownContent"></markdown>
       </mat-card-content>
     </mat-card>
@@ -110,9 +110,9 @@
 
   <!--COPYRIGHT POLICY-->
   @if (page === 'copyright-policy') {
-    <mat-card class = "copyright-policy grid-card">
-      <mat-card-header>Copyright Policy</mat-card-header>
-      <mat-card-content class = "card-container">
+    <mat-card class="copyright-policy grid-card" [style.backgroundColor]="cardBgColor || null" [style.borderColor]="accentColor || null">
+      <mat-card-header [style.backgroundColor]="headerColor || null" [style.color]="headerTextColor || null">{{ pageTitle || 'Copyright Policy' }}</mat-card-header>
+      <mat-card-content class="card-container">
         <markdown [data]="markdownContent"></markdown>
       </mat-card-content>
     </mat-card>
@@ -120,9 +120,9 @@
 
   <!--PRIVACY POLICY-->
   @if (page === 'privacy-policy') {
-    <mat-card class = "privacy-policy grid-card">
-      <mat-card-header>Privacy Policy</mat-card-header>
-      <mat-card-content class = "card-container">
+    <mat-card class="privacy-policy grid-card" [style.backgroundColor]="cardBgColor || null" [style.borderColor]="accentColor || null">
+      <mat-card-header [style.backgroundColor]="headerColor || null" [style.color]="headerTextColor || null">{{ pageTitle || 'Privacy Policy' }}</mat-card-header>
+      <mat-card-content class="card-container">
         <markdown [data]="markdownContent"></markdown>
       </mat-card-content>
     </mat-card>
@@ -130,9 +130,29 @@
 
   <!--LEGAL DISCLAIMER-->
   @if (page === 'legal-disclaimer') {
-    <mat-card class = "legal-disclaimer grid-card">
-      <mat-card-header>Legal Disclaimer</mat-card-header>
-      <mat-card-content class = "card-container">
+    <mat-card class="legal-disclaimer grid-card" [style.backgroundColor]="cardBgColor || null" [style.borderColor]="accentColor || null">
+      <mat-card-header [style.backgroundColor]="headerColor || null" [style.color]="headerTextColor || null">{{ pageTitle || 'Legal Disclaimer' }}</mat-card-header>
+      <mat-card-content class="card-container">
+        <markdown [data]="markdownContent"></markdown>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!--PRODUCTS & SERVICES-->
+  @if (page === 'products-and-services') {
+    <mat-card class="products-and-services grid-card" [style.backgroundColor]="cardBgColor || null" [style.borderColor]="accentColor || null">
+      <mat-card-header [style.backgroundColor]="headerColor || null" [style.color]="headerTextColor || null">{{ pageTitle || 'Products & Services' }}</mat-card-header>
+      <mat-card-content class="card-container">
+        <markdown [data]="markdownContent"></markdown>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!--REFUND / CANCELLATION POLICY-->
+  @if (page === 'refund-and-cancellation-policy' || page === 'refund-policy') {
+    <mat-card class="refund-and-cancellation-policy grid-card" [style.backgroundColor]="cardBgColor || null" [style.borderColor]="accentColor || null">
+      <mat-card-header [style.backgroundColor]="headerColor || null" [style.color]="headerTextColor || null">{{ pageTitle || 'Refund / Cancellation Policy' }}</mat-card-header>
+      <mat-card-content class="card-container">
         <markdown [data]="markdownContent"></markdown>
       </mat-card-content>
     </mat-card>
@@ -144,34 +164,103 @@
       <mat-card-header>
         Contact Us
       </mat-card-header>
-      <mat-tab-group [(selectedIndex)]="contactsTab">
-        <mat-tab label="Website Nodal Officer"></mat-tab>
-        <mat-tab label="Public Information Officers"></mat-tab>
-        <mat-tab label="Directorate & District Officials"></mat-tab>
-        <mat-tab label="Grievance Redressal Officer"></mat-tab>
-      </mat-tab-group>
-      <mat-card-content>
-        @if (contactsTab === 0 && nodalOfficer.length > 0) {
-          <div class="web-nodal-officer">
-            <div class="heading">
-              <!-- {{ nodalOfficer[0].cell }},<br> -->
-              {{ nodalOfficer[0].department }}
+      <mat-card-content class="card-container">
+        <!-- Official Department Head Office & Postal Address Card -->
+        <div class="official-address-card">
+          <div class="address-header">
+            <mat-icon class="address-icon">account_balance</mat-icon>
+            <div class="address-title-group">
+              <h5 class="dept-main-title">Excise Department</h5>
+              <span class="dept-sub-title">Government of Sikkim</span>
             </div>
-            <div class="contact">
-              <div class="phone">
-                <mat-icon>call</mat-icon>
-                <div class="text">{{ nodalOfficer[0].phoneNumber }}</div>
+          </div>
+          
+          <div class="address-grid">
+            <div class="address-item">
+              <div class="item-label">
+                <mat-icon>location_on</mat-icon>
+                <span>Official Postal Address</span>
               </div>
-              <div class="email">
+              <div class="item-value">
+                <strong>[OFFICIAL POSTAL ADDRESS]</strong><br>
+                Excise Department, Government of Sikkim,<br>
+                Mahatma Gandhi Marg (MG Marg), Gangtok, East Sikkim,<br>
+                Sikkim – 737101, India
+              </div>
+            </div>
+
+            <div class="address-item">
+              <div class="item-label">
+                <mat-icon>badge</mat-icon>
+                <span>Legal Entity / Merchant Name</span>
+              </div>
+              <div class="item-value">
+                <strong>[LEGAL MERCHANT NAME AS PER PAN/GST]</strong><br>
+                Excise Department, Government of Sikkim
+              </div>
+            </div>
+
+            <div class="address-item">
+              <div class="item-label">
+                <mat-icon>call</mat-icon>
+                <span>Helpline / Telephone</span>
+              </div>
+              <div class="item-value">
+                03592-203963
+              </div>
+            </div>
+
+            <div class="address-item">
+              <div class="item-label">
                 <mat-icon>email</mat-icon>
-                <div class="text">{{ nodalOfficer[0].email }}</div>
+                <span>Official Support Email</span>
+              </div>
+              <div class="item-value">
+                excise.dept&#64;sikkim.gov.in
+              </div>
+            </div>
+
+            <div class="address-item">
+              <div class="item-label">
+                <mat-icon>schedule</mat-icon>
+                <span>Office Working Hours</span>
+              </div>
+              <div class="item-value">
+                Monday – Friday: 10:00 AM – 05:00 PM<br>
+                <small>(Closed on Saturdays, Sundays and Gazetted Holidays)</small>
               </div>
             </div>
           </div>
-        }
-        @if (contactsTab === 1) {
-          <div class="public-info-officers">
-            <mat-card-content>
+        </div>
+
+        <h6 class="section-divider-title">Key Officials &amp; Directory</h6>
+        <mat-tab-group [(selectedIndex)]="contactsTab">
+          <mat-tab label="Website Nodal Officer"></mat-tab>
+          <mat-tab label="Public Information Officers"></mat-tab>
+          <mat-tab label="Directorate & District Officials"></mat-tab>
+          <mat-tab label="Grievance Redressal Officer"></mat-tab>
+        </mat-tab-group>
+        <div class="tabs-inner-content">
+          @if (contactsTab === 0 && nodalOfficer.length > 0) {
+            <div class="web-nodal-officer">
+              <div class="heading">
+                <!-- {{ nodalOfficer[0].cell }},<br> -->
+                {{ nodalOfficer[0].department }}
+              </div>
+              <div class="contact">
+                <div class="phone">
+                  <mat-icon>call</mat-icon>
+                  <div class="text">{{ nodalOfficer[0].phoneNumber }}</div>
+                </div>
+                <div class="email">
+                  <mat-icon>email</mat-icon>
+                  <div class="text">{{ nodalOfficer[0].email }}</div>
+                </div>
+              </div>
+            </div>
+          }
+          @if (contactsTab === 1) {
+            <div class="public-info-officers">
               <mat-radio-group [(ngModel)]="pioTab" class="contacts-radio-group mb-3">
                 <mat-radio-button [value]="0">Headquarter</mat-radio-button>
                 <mat-radio-button [value]="1">District</mat-radio-button>
@@ -230,102 +319,94 @@
                   <mat-row *matRowDef="let row; columns: districtColumns;"></mat-row>
                 </mat-table>
               }
-            </mat-card-content>
-          </div>
-        }
-        @if (contactsTab === 2) {
-          <div class="directorate-officials">
-            <mat-card-content>
-            <mat-table [dataSource]="directorateAndDistrictOfficialsData">
-              <ng-container matColumnDef="slno">
-                <mat-header-cell *matHeaderCellDef> Sl. No. </mat-header-cell>
-                <mat-cell *matCellDef="let row; let i = index"> {{ i + 1 }} </mat-cell>
-              </ng-container>
-              <ng-container matColumnDef="name">
-                <mat-header-cell *matHeaderCellDef> Name </mat-header-cell>
-                <mat-cell *matCellDef="let ddo"> {{ddo.name}} </mat-cell>
-              </ng-container>
-              <ng-container matColumnDef="designation">
-                <mat-header-cell *matHeaderCellDef> Designation </mat-header-cell>
-                <mat-cell *matCellDef="let ddo"> {{ddo.designation}} </mat-cell>
-              </ng-container>
-              <ng-container matColumnDef="phoneNumber">
-                <mat-header-cell *matHeaderCellDef> Phone Number </mat-header-cell>
-                <mat-cell *matCellDef="let ddo"> {{ddo.phoneNumber}} </mat-cell>
-              </ng-container>
-              <ng-container matColumnDef="email">
-                <mat-header-cell *matHeaderCellDef> Email Id </mat-header-cell>
-                <mat-cell *matCellDef="let ddo"> {{ddo.email}} </mat-cell>
-              </ng-container>
-              <mat-header-row *matHeaderRowDef="directorateAndDistrictOfficialsColumns"></mat-header-row>
-              <mat-row *matRowDef="let row; columns: directorateAndDistrictOfficialsColumns;"></mat-row>
-            </mat-table>
-          </mat-card-content>
-        </div>
-      }
-      @if (contactsTab === 3) {
-        <div class="grievance-redressal-officer">
-          <mat-card-content>
-            <div class="filters">
-              <mat-form-field appearance="outline">
-                <mat-label>Office Level</mat-label>
-                <mat-select [(value)]="selectedOfficeLevel" (selectionChange)="applyFilters()">
-                  <mat-option value="">All</mat-option>
-                  <mat-option value="Excise Head Office">Excise Head Office</mat-option>
-                  <mat-option value="District">District</mat-option>
-                  <mat-option value="Subdivision">Subdivision</mat-option>
-                </mat-select>
-              </mat-form-field>
-              <mat-form-field appearance="outline">
-                <mat-label>Office Sub Level</mat-label>
-                <mat-select [(value)]="selectedOfficeSubLevel" (selectionChange)="applyFilters()">
-                  <mat-option value="">All</mat-option>
-                  <mat-option value="Head Quarter">Head Quarter</mat-option>
-                  <mat-option value="Permit Section">Permit Section</mat-option>
-                  <mat-option value="Administration Section">Administration Section</mat-option>
-                  <mat-option value="Accounts Section">Accounts Section</mat-option>
-                  <mat-option value="IT Cell">IT Cell</mat-option>
-                </mat-select>
-              </mat-form-field>
             </div>
-            <mat-table [dataSource]="grievanceRedressalOfficerData">
-              <!-- <ng-container matColumnDef="id">
-              <mat-header-cell *matHeaderCellDef> Id </mat-header-cell>
-              <mat-cell *matCellDef="let gro"> {{gro.id}} </mat-cell>
-            </ng-container> -->
-            <ng-container matColumnDef="officeLevel">
-              <mat-header-cell *matHeaderCellDef> Office Level </mat-header-cell>
-              <mat-cell *matCellDef="let gro"> {{gro.officeLevel}} </mat-cell>
-            </ng-container>
-            <ng-container matColumnDef="officeSubLevel">
-              <mat-header-cell *matHeaderCellDef> Office Sub Level </mat-header-cell>
-              <mat-cell *matCellDef="let gro"> {{gro.officeSubLevel}} </mat-cell>
-            </ng-container>
-            <ng-container matColumnDef="name">
-              <mat-header-cell *matHeaderCellDef> Name </mat-header-cell>
-              <mat-cell *matCellDef="let gro"> {{gro.name}} </mat-cell>
-            </ng-container>
-            <ng-container matColumnDef="designation">
-              <mat-header-cell *matHeaderCellDef> Designation </mat-header-cell>
-              <mat-cell *matCellDef="let gro"> {{gro.designation}} </mat-cell>
-            </ng-container>
-            <ng-container matColumnDef="phoneNumber">
-              <mat-header-cell *matHeaderCellDef> Phone Number </mat-header-cell>
-              <mat-cell *matCellDef="let gro"> {{gro.phoneNumber}} </mat-cell>
-            </ng-container>
-            <ng-container matColumnDef="email">
-              <mat-header-cell *matHeaderCellDef> Email </mat-header-cell>
-              <mat-cell *matCellDef="let gro"> {{gro.email}} </mat-cell>
-            </ng-container>
-            <mat-header-row *matHeaderRowDef="grievanceRedressalOfficerColumns"></mat-header-row>
-            <mat-row *matRowDef="let row; columns: grievanceRedressalOfficerColumns;"></mat-row>
-          </mat-table>
-        </mat-card-content>
-      </div>
-    }
-  </mat-card-content>
-</mat-card>
-}
+          }
+          @if (contactsTab === 2) {
+            <div class="directorate-officials">
+              <mat-table [dataSource]="directorateAndDistrictOfficialsData">
+                <ng-container matColumnDef="slno">
+                  <mat-header-cell *matHeaderCellDef> Sl. No. </mat-header-cell>
+                  <mat-cell *matCellDef="let row; let i = index"> {{ i + 1 }} </mat-cell>
+                </ng-container>
+                <ng-container matColumnDef="name">
+                  <mat-header-cell *matHeaderCellDef> Name </mat-header-cell>
+                  <mat-cell *matCellDef="let ddo"> {{ddo.name}} </mat-cell>
+                </ng-container>
+                <ng-container matColumnDef="designation">
+                  <mat-header-cell *matHeaderCellDef> Designation </mat-header-cell>
+                  <mat-cell *matCellDef="let ddo"> {{ddo.designation}} </mat-cell>
+                </ng-container>
+                <ng-container matColumnDef="phoneNumber">
+                  <mat-header-cell *matHeaderCellDef> Phone Number </mat-header-cell>
+                  <mat-cell *matCellDef="let ddo"> {{ddo.phoneNumber}} </mat-cell>
+                </ng-container>
+                <ng-container matColumnDef="email">
+                  <mat-header-cell *matHeaderCellDef> Email Id </mat-header-cell>
+                  <mat-cell *matCellDef="let ddo"> {{ddo.email}} </mat-cell>
+                </ng-container>
+                <mat-header-row *matHeaderRowDef="directorateAndDistrictOfficialsColumns"></mat-header-row>
+                <mat-row *matRowDef="let row; columns: directorateAndDistrictOfficialsColumns;"></mat-row>
+              </mat-table>
+            </div>
+          }
+          @if (contactsTab === 3) {
+            <div class="grievance-redressal-officer">
+              <div class="filters">
+                <mat-form-field appearance="outline">
+                  <mat-label>Office Level</mat-label>
+                  <mat-select [(value)]="selectedOfficeLevel" (selectionChange)="applyFilters()">
+                    <mat-option value="">All</mat-option>
+                    <mat-option value="Excise Head Office">Excise Head Office</mat-option>
+                    <mat-option value="District">District</mat-option>
+                    <mat-option value="Subdivision">Subdivision</mat-option>
+                  </mat-select>
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Office Sub Level</mat-label>
+                  <mat-select [(value)]="selectedOfficeSubLevel" (selectionChange)="applyFilters()">
+                    <mat-option value="">All</mat-option>
+                    <mat-option value="Head Quarter">Head Quarter</mat-option>
+                    <mat-option value="Permit Section">Permit Section</mat-option>
+                    <mat-option value="Administration Section">Administration Section</mat-option>
+                    <mat-option value="Accounts Section">Accounts Section</mat-option>
+                    <mat-option value="IT Cell">IT Cell</mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
+              <mat-table [dataSource]="grievanceRedressalOfficerData">
+                <ng-container matColumnDef="officeLevel">
+                  <mat-header-cell *matHeaderCellDef> Office Level </mat-header-cell>
+                  <mat-cell *matCellDef="let gro"> {{gro.officeLevel}} </mat-cell>
+                </ng-container>
+                <ng-container matColumnDef="officeSubLevel">
+                  <mat-header-cell *matHeaderCellDef> Office Sub Level </mat-header-cell>
+                  <mat-cell *matCellDef="let gro"> {{gro.officeSubLevel}} </mat-cell>
+                </ng-container>
+                <ng-container matColumnDef="name">
+                  <mat-header-cell *matHeaderCellDef> Name </mat-header-cell>
+                  <mat-cell *matCellDef="let gro"> {{gro.name}} </mat-cell>
+                </ng-container>
+                <ng-container matColumnDef="designation">
+                  <mat-header-cell *matHeaderCellDef> Designation </mat-header-cell>
+                  <mat-cell *matCellDef="let gro"> {{gro.designation}} </mat-cell>
+                </ng-container>
+                <ng-container matColumnDef="phoneNumber">
+                  <mat-header-cell *matHeaderCellDef> Phone Number </mat-header-cell>
+                  <mat-cell *matCellDef="let gro"> {{gro.phoneNumber}} </mat-cell>
+                </ng-container>
+                <ng-container matColumnDef="email">
+                  <mat-header-cell *matHeaderCellDef> Email </mat-header-cell>
+                  <mat-cell *matCellDef="let gro"> {{gro.email}} </mat-cell>
+                </ng-container>
+                <mat-header-row *matHeaderRowDef="grievanceRedressalOfficerColumns"></mat-header-row>
+                <mat-row *matRowDef="let row; columns: grievanceRedressalOfficerColumns;"></mat-row>
+              </mat-table>
+            </div>
+          }
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
 
 <!--RIGHT TO INFORMATION-->
 @if (page === 'right-to-information') {

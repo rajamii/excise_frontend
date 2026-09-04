@@ -48,6 +48,12 @@ export class InfoPagesComponent implements OnInit {
   
   markdownContent: string = '';
 
+  pageTitle: string = '';
+  headerColor: string = '';
+  headerTextColor: string = '';
+  cardBgColor: string = '';
+  accentColor: string = '';
+
   commissionerColumns: string[] = ['name', 'designation', 'email', 'fromDate', 'toDate'];
   commissionerData: any[] = COMMISSIONER_DATA;
 
@@ -180,33 +186,81 @@ export class InfoPagesComponent implements OnInit {
     }
 
     loadMarkdown(page: string): void {
-      if (page === 'department' || page === 'objectives') {
-        this.infoPagesService.getAboutUs().subscribe({
+      this.pageTitle = '';
+      this.headerColor = '';
+      this.headerTextColor = '';
+      this.cardBgColor = '';
+      this.accentColor = '';
+
+      if (page === 'department') {
+        this.infoPagesService.getDepartment().subscribe({
           next: (records) => {
-            const titleToFind = page === 'department' ? 'Department' : 'Objectives';
-            let record = records.find(r => r.title?.toLowerCase() === titleToFind.toLowerCase() || r.title?.toLowerCase() === page.toLowerCase());
-            
+            if (records && records.length > 0) {
+              const record = records[0];
+              this.applyPageRecord(record, 'About Us');
+            } else {
+              this.loadFallbackMarkdown(page);
+            }
+          },
+          error: () => this.loadFallbackMarkdown(page)
+        });
+      } else if (page === 'products-and-services') {
+        this.infoPagesService.getProductsServices().subscribe({
+          next: (records) => {
+            if (records && records.length > 0) {
+              const record = records[0];
+              this.applyPageRecord(record, 'Products & Services');
+            } else {
+              this.loadFallbackMarkdown(page);
+            }
+          },
+          error: () => this.loadFallbackMarkdown(page)
+        });
+      } else if (page === 'refund-and-cancellation-policy' || page === 'refund-policy') {
+        this.infoPagesService.getRefundCancellationPolicy().subscribe({
+          next: (records) => {
+            if (records && records.length > 0) {
+              const record = records[0];
+              this.applyPageRecord(record, 'Refund / Cancellation Policy');
+            } else {
+              this.loadFallbackMarkdown(page);
+            }
+          },
+          error: () => this.loadFallbackMarkdown(page)
+        });
+      } else {
+        const queryKey = page;
+        this.infoPagesService.getAboutUs(queryKey).subscribe({
+          next: (records) => {
+            let record = records?.find(r => 
+              (r.pageKey && (r.pageKey.toLowerCase() === queryKey.toLowerCase() || r.pageKey.toLowerCase() === page.toLowerCase())) ||
+              (r.title && r.title.toLowerCase() === queryKey.toLowerCase())
+            );
+
             if (!record && records && records.length > 0) {
-              if (page === 'department') {
-                record = records[0];
-              } else if (page === 'objectives' && records.length > 1) {
-                record = records[1];
-              }
+              record = records[0];
             }
 
             if (record && record.content) {
-              this.markdownContent = record.content;
+              this.applyPageRecord(record, record.title || '');
             } else {
-              this.markdownContent = '*Content not available.*';
+              this.loadFallbackMarkdown(page);
             }
           },
           error: () => {
-            this.markdownContent = '*Content not available.*';
+            this.loadFallbackMarkdown(page);
           }
         });
-      } else {
-        this.loadFallbackMarkdown(page);
       }
+    }
+
+    private applyPageRecord(record: any, defaultTitle: string): void {
+      this.markdownContent = record.content || '';
+      this.pageTitle = record.title || defaultTitle;
+      this.headerColor = record.headerColor || record.header_color || '';
+      this.headerTextColor = record.headerTextColor || record.header_text_color || '';
+      this.cardBgColor = record.cardBgColor || record.card_bg_color || '';
+      this.accentColor = record.accentColor || record.accent_color || '';
     }
 
     loadFallbackMarkdown(page: string): void {

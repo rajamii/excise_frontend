@@ -38,6 +38,32 @@ mat-cell {
   padding: 0 12px;
 }
 
+.table-color-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #f1f5f9;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+
+  .color-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  .color-hex {
+    font-family: monospace;
+    font-weight: 600;
+    font-size: 11px;
+    color: #1e293b;
+  }
+}
+
 /* ── Table header — top-level ::ng-deep ── */
 ::ng-deep {
   .table-container mat-header-row {

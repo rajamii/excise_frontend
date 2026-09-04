@@ -523,6 +523,18 @@
                 <mat-icon class="nav-chevron">{{ adminAboutUsExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
               </button>
               <ng-container *ngIf="adminAboutUsExpanded">
+                <a routerLink="/dashboard/admin/about-us/department-content" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">domain</mat-icon>
+                  <span class="nav-text">Department</span>
+                </a>
+                <a routerLink="/dashboard/admin/about-us/products-and-services" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">inventory_2</mat-icon>
+                  <span class="nav-text">Products &amp; Services</span>
+                </a>
+                <a routerLink="/dashboard/admin/about-us/refund-and-cancellation-policy" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">policy</mat-icon>
+                  <span class="nav-text">Refund &amp; Cancellation Policy</span>
+                </a>
                 <a routerLink="/dashboard/admin/about-us/heads-of-organisations" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
                   <mat-icon class="nav-icon">account_balance</mat-icon>
                   <span class="nav-text">Heads of Organisations</span>
@@ -530,10 +542,6 @@
                 <a routerLink="/dashboard/admin/about-us/excise-secretaries" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
                   <mat-icon class="nav-icon">supervisor_account</mat-icon>
                   <span class="nav-text">Excise Secretaries</span>
-                </a>
-                <a routerLink="/dashboard/admin/about-us/department-content" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
-                  <mat-icon class="nav-icon">description</mat-icon>
-                  <span class="nav-text">About Us</span>
                 </a>
                 <a routerLink="/dashboard/admin/preventive-raids" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
                   <mat-icon class="nav-icon">security</mat-icon>

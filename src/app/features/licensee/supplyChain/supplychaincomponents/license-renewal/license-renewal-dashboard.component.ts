@@ -224,8 +224,10 @@ export class LicenseRenewalDashboardComponent implements OnInit {
         const categoryName = String(
           raw?.license_category_name ||
           raw?.licenseCategoryName ||
+          raw?.license_category?.license_category ||
+          raw?.license_category?.category_name ||
           raw?.license_category?.name ||
-          raw?.license_category ||
+          (typeof raw?.license_category === 'string' && isNaN(Number(raw.license_category)) ? raw.license_category : '') ||
           raw?.license_type_name ||
           raw?.licenseTypeName ||
           '-'
@@ -234,8 +236,10 @@ export class LicenseRenewalDashboardComponent implements OnInit {
         const subCategoryName = String(
           raw?.license_sub_category_name ||
           raw?.licenseSubCategoryName ||
+          raw?.license_sub_category?.description ||
+          raw?.license_sub_category?.license_subcategory ||
           raw?.license_sub_category?.name ||
-          raw?.license_sub_category ||
+          (typeof raw?.license_sub_category === 'string' && isNaN(Number(raw.license_sub_category)) ? raw.license_sub_category : '') ||
           ''
         ).trim();
 

@@ -11,7 +11,10 @@ import {
 import {
   ExciseSecretary,
   HeadOfOrganisation,
-  AboutUs
+  AboutUs,
+  Department,
+  ProductsServices,
+  RefundCancellationPolicy
 } from '../../core/models/about-us.model';
 
 @Injectable({
@@ -126,9 +129,63 @@ export class InfoPagesService {
     return this.http.delete(`${this.aboutUsBaseUrl}/excisesecretaries/delete/${id}/`);
   }
 
-  // About Us Content
-  getAboutUs(): Observable<AboutUs[]> {
-    return this.http.get<AboutUs[]>(`${this.aboutUsBaseUrl}/content/list/`);
+  // Department
+  getDepartment(): Observable<Department[]> {
+    return this.http.get<Department[]>(`${this.aboutUsBaseUrl}/department/list/`);
+  }
+
+  createDepartment(data: Partial<Department>): Observable<Department> {
+    return this.http.post<Department>(`${this.aboutUsBaseUrl}/department/create/`, this.toInfoPageFormData(data));
+  }
+
+  updateDepartment(id: number, data: Partial<Department>): Observable<Department> {
+    return this.http.put<Department>(`${this.aboutUsBaseUrl}/department/update/${id}/`, this.toInfoPageFormData(data));
+  }
+
+  deleteDepartment(id: number): Observable<any> {
+    return this.http.delete(`${this.aboutUsBaseUrl}/department/delete/${id}/`);
+  }
+
+  // Products & Services
+  getProductsServices(): Observable<ProductsServices[]> {
+    return this.http.get<ProductsServices[]>(`${this.aboutUsBaseUrl}/products-services/list/`);
+  }
+
+  createProductsServices(data: Partial<ProductsServices>): Observable<ProductsServices> {
+    return this.http.post<ProductsServices>(`${this.aboutUsBaseUrl}/products-services/create/`, this.toInfoPageFormData(data));
+  }
+
+  updateProductsServices(id: number, data: Partial<ProductsServices>): Observable<ProductsServices> {
+    return this.http.put<ProductsServices>(`${this.aboutUsBaseUrl}/products-services/update/${id}/`, this.toInfoPageFormData(data));
+  }
+
+  deleteProductsServices(id: number): Observable<any> {
+    return this.http.delete(`${this.aboutUsBaseUrl}/products-services/delete/${id}/`);
+  }
+
+  // Refund & Cancellation Policy
+  getRefundCancellationPolicy(): Observable<RefundCancellationPolicy[]> {
+    return this.http.get<RefundCancellationPolicy[]>(`${this.aboutUsBaseUrl}/refund-cancellation-policy/list/`);
+  }
+
+  createRefundCancellationPolicy(data: Partial<RefundCancellationPolicy>): Observable<RefundCancellationPolicy> {
+    return this.http.post<RefundCancellationPolicy>(`${this.aboutUsBaseUrl}/refund-cancellation-policy/create/`, this.toInfoPageFormData(data));
+  }
+
+  updateRefundCancellationPolicy(id: number, data: Partial<RefundCancellationPolicy>): Observable<RefundCancellationPolicy> {
+    return this.http.put<RefundCancellationPolicy>(`${this.aboutUsBaseUrl}/refund-cancellation-policy/update/${id}/`, this.toInfoPageFormData(data));
+  }
+
+  deleteRefundCancellationPolicy(id: number): Observable<any> {
+    return this.http.delete(`${this.aboutUsBaseUrl}/refund-cancellation-policy/delete/${id}/`);
+  }
+
+  // About Us Content (General)
+  getAboutUs(pageKey?: string): Observable<AboutUs[]> {
+    const url = pageKey
+      ? `${this.aboutUsBaseUrl}/content/list/?page_key=${encodeURIComponent(pageKey)}`
+      : `${this.aboutUsBaseUrl}/content/list/`;
+    return this.http.get<AboutUs[]>(url);
   }
 
   createAboutUs(data: Partial<AboutUs>): Observable<AboutUs> {

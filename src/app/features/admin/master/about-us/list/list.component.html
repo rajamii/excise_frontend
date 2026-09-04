@@ -1,7 +1,7 @@
 <div class="container-fluid">
   <mat-card>
     <mat-card-header>
-      <div class="page-title">About Us - {{ activeCategory.label }}</div>
+      <div class="page-title">{{ activeCategory.label }}</div>
       <button matButton="filled" (click)="onAdd(activeCategory)">
         <mat-icon>add</mat-icon> Add {{ activeCategory.singularLabel }}
       </button>
@@ -15,7 +15,7 @@
 
             <mat-cell *matCellDef="let row">
               <ng-container *ngIf="column !== 'actions'; else actionsTemplate">
-                <ng-container *ngIf="isFileColumn(column); else textValueTemplate">
+                <ng-container *ngIf="isFileColumn(column); else nonFileTemplate">
                   <button
                     matIconButton
                     color="primary"
@@ -26,6 +26,15 @@
                     <mat-icon>visibility</mat-icon>
                   </button>
                 </ng-container>
+
+                <ng-template #nonFileTemplate>
+                  <ng-container *ngIf="isColorColumn(column); else textValueTemplate">
+                    <div class="table-color-cell">
+                      <span class="color-dot" [style.backgroundColor]="getColumnValue(row, column)"></span>
+                      <span class="color-hex">{{ getColumnValue(row, column) }}</span>
+                    </div>
+                  </ng-container>
+                </ng-template>
 
                 <ng-template #textValueTemplate>
                   {{ getColumnValue(row, column) }}

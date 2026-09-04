@@ -115,6 +115,90 @@ table{
     background-color: #F4F3F6;
 }
 
+.official-address-card {
+    background: linear-gradient(135deg, rgba(28, 43, 120, 0.04) 0%, rgba(28, 43, 120, 0.01) 100%);
+    border: 1px solid rgba(28, 43, 120, 0.15);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 24px;
+
+    .address-header {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid rgba(28, 43, 120, 0.12);
+
+        .address-icon {
+            font-size: 32px;
+            width: 32px;
+            height: 32px;
+            color: #1C2B78;
+        }
+
+        .address-title-group {
+            .dept-main-title {
+                margin: 0;
+                font-size: 18px;
+                font-weight: 700;
+                color: #1C2B78;
+            }
+            .dept-sub-title {
+                font-size: 13px;
+                color: #555;
+            }
+        }
+    }
+
+    .address-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+
+        .address-item {
+            background: #ffffff;
+            border-radius: 6px;
+            padding: 12px 16px;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+
+            .item-label {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 12px;
+                font-weight: 600;
+                color: #1C2B78;
+                margin-bottom: 6px;
+
+                mat-icon {
+                    font-size: 16px;
+                    width: 16px;
+                    height: 16px;
+                }
+            }
+
+            .item-value {
+                font-size: 13px;
+                color: #333;
+                line-height: 1.5;
+            }
+        }
+    }
+}
+
+.section-divider-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1C2B78;
+    margin: 20px 0 12px 0;
+}
+
+.tabs-inner-content {
+    margin-top: 16px;
+}
+
 @media(max-width: 785px){
     .public-info-officers, .directorate-officials, .grievance-redressal-officer{
         mat-card-content{
@@ -122,3 +206,4 @@ table{
         }
     }
 }
+

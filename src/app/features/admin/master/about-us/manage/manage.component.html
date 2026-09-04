@@ -32,36 +32,75 @@
           </ng-container>
 
           <ng-template #textInput>
-            <ng-container *ngIf="field.type === 'textarea'; else basicInput">
-              <div class="formatting-toolbar">
-                <button type="button" mat-icon-button (click)="makeBold(field.key)" title="Bold Text">
-                  <mat-icon>format_bold</mat-icon>
-                </button>
+            <ng-container *ngIf="field.type === 'color'; else nonColorInput">
+              <div class="color-field-container">
+                <div class="color-picker-row">
+                  <input
+                    type="color"
+                    class="color-native-picker"
+                    [(ngModel)]="$any(record)[field.key]"
+                    [name]="field.key + 'Picker'"
+                    [title]="field.label"
+                  />
+                  <input
+                    matInput
+                    type="text"
+                    [(ngModel)]="$any(record)[field.key]"
+                    [name]="field.key"
+                    [required]="!!field.required"
+                    placeholder="#1C2B78"
+                    maxlength="20"
+                    class="color-hex-input"
+                  />
+                </div>
+                <div class="color-presets-row">
+                  <span class="presets-label">Presets:</span>
+                  <div class="presets-swatches">
+                    <button
+                      *ngFor="let preset of colorPresets"
+                      type="button"
+                      class="color-swatch-btn"
+                      [style.backgroundColor]="preset.hex"
+                      [title]="preset.name + ' (' + preset.hex + ')'"
+                      (click)="selectPresetColor(field.key, preset.hex)"
+                    ></button>
+                  </div>
+                </div>
               </div>
-              <textarea
-                matInput
-                rows="10"
-                [(ngModel)]="$any(record)[field.key]"
-                [name]="field.key"
-                [required]="!!field.required"
-                [attr.aria-label]="field.label"
-                title="{{ field.label }}"
-                placeholder="{{ field.label }}"
-                id="textarea-{{ field.key }}"
-              ></textarea>
             </ng-container>
-            <ng-template #basicInput>
-              <input
-                matInput
-                [type]="field.type || 'text'"
-                [(ngModel)]="$any(record)[field.key]"
-                [name]="field.key"
-                [required]="!!field.required"
-                [attr.aria-label]="field.label"
-                title="{{ field.label }}"
-                placeholder="{{ field.label }}"
-                [email]="field.type === 'email'"
-              />
+
+            <ng-template #nonColorInput>
+              <ng-container *ngIf="field.type === 'textarea'; else basicInput">
+                <div class="formatting-toolbar">
+                  <button type="button" mat-icon-button (click)="makeBold(field.key)" title="Bold Text">
+                    <mat-icon>format_bold</mat-icon>
+                  </button>
+                </div>
+                <textarea
+                  matInput
+                  rows="10"
+                  [(ngModel)]="$any(record)[field.key]"
+                  [name]="field.key"
+                  [required]="!!field.required"
+                  [attr.aria-label]="field.label"
+                  title="{{ field.label }}"
+                  placeholder="{{ field.label }}"
+                  id="textarea-{{ field.key }}"
+                ></textarea>
+              </ng-container>
+              <ng-template #basicInput>
+                <input
+                  matInput
+                  [type]="field.type || 'text'"
+                  [(ngModel)]="$any(record)[field.key]"
+                  [name]="field.key"
+                  [required]="!!field.required"
+                  [attr.aria-label]="field.label"
+                  title="{{ field.label }}"
+                  placeholder="{{ field.label }}"
+                  [email]="field.type === 'email'"
+                />
+              </ng-template>
             </ng-template>
           </ng-template>
 
@@ -73,6 +112,22 @@
           </mat-error>
         </mat-form-field>
       </ng-container>
+
+      <!-- Live Design & Color Preview -->
+      <div *ngIf="hasColorFields()" class="design-preview-container">
+        <div class="preview-header-label">
+          <mat-icon>palette</mat-icon>
+          <span>Live Frontend Design Preview</span>
+        </div>
+        <div class="design-preview-card" [style.borderColor]="getPreviewAccentColor()" [style.backgroundColor]="getPreviewCardBgColor()">
+          <div class="preview-card-header" [style.backgroundColor]="getPreviewHeaderColor()" [style.color]="getPreviewHeaderTextColor()">
+            <span class="preview-card-title">{{ getPreviewTitle() }}</span>
+          </div>
+          <div class="preview-card-body">
+            <p>This is a live preview of how the card header and colors will be displayed to users on the frontend.</p>
+          </div>
+        </div>
+      </div>
     </mat-dialog-content>
 
     <mat-dialog-actions align="center">

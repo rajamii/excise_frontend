@@ -306,13 +306,26 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
           this.aboutUsIndex = 0;
           this.markdownContent = this.aboutUsRecords[0].content;
         } else {
-          this.markdownContent = '*Content not available.*';
+          this.loadFallbackMarkdown();
         }
       },
       error: () => {
-        this.markdownContent = '*Content not available.*';
+        this.loadFallbackMarkdown();
       }
     });
+  }
+
+  loadFallbackMarkdown(): void {
+    this.http.get('assets/content/department.md', { responseType: 'text' })
+      .subscribe({
+        next: (data) => {
+          this.markdownContent = data;
+          this.aboutUsRecords = [{ title: 'About Us', content: data }];
+        },
+        error: () => {
+          this.markdownContent = '*Content not available.*';
+        }
+      });
   }
 
   prevAboutUs(): void {

@@ -7,20 +7,26 @@ import { validateUploadedFile } from '../../../../../shared/utils/file-upload-va
 import {
   ExciseSecretary,
   HeadOfOrganisation,
-  AboutUs
+  AboutUs,
+  Department,
+  ProductsServices,
+  RefundCancellationPolicy
 } from '../../../../../core/models/about-us.model';
 
 type AboutUsRecord =
   | HeadOfOrganisation
   | ExciseSecretary
-  | AboutUs;
+  | AboutUs
+  | Department
+  | ProductsServices
+  | RefundCancellationPolicy;
 
 interface AboutUsFieldConfig {
   key: string;
   apiKey?: string;
   label: string;
   required?: boolean;
-  type?: 'text' | 'email' | 'file' | 'textarea' | 'date';
+  type?: 'text' | 'email' | 'file' | 'textarea' | 'date' | 'color';
 }
 
 interface AboutUsCategoryConfig {
@@ -52,6 +58,20 @@ export class ManageComponent implements OnInit {
   isEditMode = false;
   selectedFileNames: Record<string, string> = {};
 
+  readonly colorPresets = [
+    { name: 'Sikkim Navy', hex: '#1C2B78' },
+    { name: 'Deep Royal', hex: '#0d47a1' },
+    { name: 'Sky Blue', hex: '#0284c7' },
+    { name: 'Emerald', hex: '#059669' },
+    { name: 'Forest', hex: '#166534' },
+    { name: 'Amber', hex: '#b45309' },
+    { name: 'Crimson', hex: '#b91c1c' },
+    { name: 'Royal Purple', hex: '#581c87' },
+    { name: 'Slate Dark', hex: '#1e293b' },
+    { name: 'White', hex: '#ffffff' },
+    { name: 'Off White', hex: '#f8fafc' },
+  ];
+
   constructor(
     public dialogRef: MatDialogRef<ManageComponent>,
     @Inject(MAT_DIALOG_DATA) public data: AboutUsDialogData
@@ -60,6 +80,47 @@ export class ManageComponent implements OnInit {
   ngOnInit(): void {
     this.record = this.data.record ? this.toFormRecord(this.data.record) : {};
     this.isEditMode = !!this.data.record;
+
+    // Apply default color values for color fields if not set
+    for (const field of this.data.category.fields) {
+      if (field.type === 'color' && !(this.record as any)[field.key]) {
+        if (field.key === 'headerColor' || field.key === 'accentColor') {
+          (this.record as any)[field.key] = '#1C2B78';
+        } else if (field.key === 'headerTextColor' || field.key === 'cardBgColor') {
+          (this.record as any)[field.key] = '#ffffff';
+        } else {
+          (this.record as any)[field.key] = '#1C2B78';
+        }
+      }
+    }
+  }
+
+  selectPresetColor(fieldKey: string, hex: string): void {
+    (this.record as any)[fieldKey] = hex;
+  }
+
+  hasColorFields(): boolean {
+    return this.data.category.fields.some(f => f.type === 'color');
+  }
+
+  getPreviewTitle(): string {
+    return (this.record as any)['title'] || this.data.category.singularLabel;
+  }
+
+  getPreviewHeaderColor(): string {
+    return (this.record as any)['headerColor'] || '#1C2B78';
+  }
+
+  getPreviewHeaderTextColor(): string {
+    return (this.record as any)['headerTextColor'] || '#ffffff';
+  }
+
+  getPreviewCardBgColor(): string {
+    return (this.record as any)['cardBgColor'] || '#ffffff';
+  }
+
+  getPreviewAccentColor(): string {
+    return (this.record as any)['accentColor'] || '#1C2B78';
   }
 
   onSave(): void {
