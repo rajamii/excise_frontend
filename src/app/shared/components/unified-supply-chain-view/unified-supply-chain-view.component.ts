@@ -3389,9 +3389,9 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 const statusStr = String(this.applicationData?.['status'] || '').toUpperCase();
                 const isPaid = Boolean(this.applicationData?.['is_excise_duty_fee_paid'] || this.applicationData?.['isExciseDutyFeePaid']);
                 if (!isPaid && (stageId === 154 || statusStr === 'AWAITING PAYMENT' || statusStr === 'AWAITING_PAYMENT')) {
-                    if (!actions.includes('FORCE_PAY')) actions.push('FORCE_PAY');
                     if (!actions.includes('PAY')) actions.push('PAY');
                 }
+                actions = actions.filter(a => a !== 'FORCE_PAY');
             }
 
             if (!this.isLicenseeContext()) {
@@ -3489,7 +3489,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             }
         }
 
-        const normalizedActions = actions
+        let normalizedActions = actions
             .map(action => String(action || '').toUpperCase().trim())
             .filter(action => !!action && action !== 'VIEW');
 
@@ -3497,9 +3497,9 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             const statusStr = String(this.applicationData?.['status'] || '').toUpperCase();
             const isPaid = Boolean(this.applicationData?.['is_excise_duty_fee_paid'] || this.applicationData?.['isExciseDutyFeePaid']);
             if (!isPaid && (stageId === 154 || statusStr === 'AWAITING PAYMENT' || statusStr === 'AWAITING_PAYMENT')) {
-                if (!normalizedActions.includes('FORCE_PAY')) normalizedActions.push('FORCE_PAY');
                 if (!normalizedActions.includes('PAY')) normalizedActions.push('PAY');
             }
+            normalizedActions = normalizedActions.filter(a => a !== 'FORCE_PAY');
         }
 
         let finalActions = Array.from(new Set(normalizedActions));
