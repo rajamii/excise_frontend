@@ -751,6 +751,7 @@
                   <th>Applicant Company</th>
                   <th>Supplier Distillery</th>
                   <th>Payment Status</th>
+                  <th>Arrival & Hologram Status</th>
                   <th>Arrival Action</th>
                 </tr>
               </thead>
@@ -775,6 +776,20 @@
                       <i class="bi bi-check-circle-fill me-1"></i>PAID
                     </span>
                   </td>
+                  <td>
+                    <span *ngIf="getArrivalStatusForRow(row) === 'approved'" class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">
+                      <i class="bi bi-check2-all me-1"></i>Arrival Verified
+                    </span>
+                    <span *ngIf="getArrivalStatusForRow(row) === 'under_review'" class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2 py-1">
+                      <i class="bi bi-hourglass-split me-1"></i>Under Review
+                    </span>
+                    <span *ngIf="getArrivalStatusForRow(row) === 'pending_entry'" class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1">
+                      <i class="bi bi-clock me-1"></i>Pending Entry
+                    </span>
+                    <span *ngIf="getArrivalStatusForRow(row) === 'rejected'" class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2 py-1">
+                      <i class="bi bi-x-circle me-1"></i>Rejected
+                    </span>
+                  </td>
                   <td class="dp-action-cell" (click)="$event.stopPropagation()">
                     <div class="d-flex align-items-center gap-2">
                       <button
@@ -786,7 +801,7 @@
                         style="background: linear-gradient(135deg, #0284c7, #0369a1); font-size: 12px; border-radius: 6px; border: none;"
                       >
                         <i class="bi bi-boxes"></i>
-                        <span>Update Brands Arrival</span>
+                        <span>{{ getArrivalStatusForRow(row) === 'approved' ? 'Update / View Arrival' : 'Update Brands Arrival' }}</span>
                       </button>
 
                       <button

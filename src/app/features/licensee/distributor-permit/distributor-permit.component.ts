@@ -257,6 +257,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       this.activeCardFilter = statusParam as DistributorPermitStatusFilter;
       return;
     }
+    if (this.activeTab === 'brand-arrival') {
+      this.activeCardFilter = 'all';
+      return;
+    }
     if (this.counts.pending > 0) {
       this.activeCardFilter = 'pending';
     } else if (this.counts.approved > 0) {
@@ -898,20 +902,50 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       try { rawRanges = JSON.parse(rawRanges); } catch(e) { rawRanges = []; }
     }
 
+    if ((!Array.isArray(rawRanges) || rawRanges.length === 0) && fullApp) {
+      const pWise = fullApp.permit_wise_details || fullApp.permitWiseDetails || [];
+      if (Array.isArray(pWise)) {
+        pWise.forEach((p: any) => {
+          const pRanges = p.assigned_hologram_ranges || p.assignedHologramRanges || p.hologram_ranges || p.hologramRanges;
+          if (Array.isArray(pRanges) && pRanges.length > 0) {
+            rawRanges = [...(rawRanges || []), ...pRanges];
+          }
+        });
+      }
+    }
+
     // Fallback search in usage details or overview if not directly attached
     if ((!Array.isArray(rawRanges) || rawRanges.length === 0) && refNo) {
       const matchingUsage = (this.usageDetailsList || []).filter((u: any) => {
         const uRef = String(u.requisition_ref_no || u.requisitionRef || u.permit_number || u.permitNumber || '').toLowerCase().trim();
-        return uRef && (uRef === refNo.toLowerCase() || uRef.includes(refNo.toLowerCase()));
+        return uRef && (uRef === refNo.toLowerCase() || uRef.includes(refNo.toLowerCase()) || refNo.toLowerCase().includes(uRef));
       });
       if (matchingUsage.length > 0) {
         rawRanges = matchingUsage.map((u: any) => ({
           ref_no: u.ref_no || u.imfl_hologram_ref_no || '',
-          from: String(u.from || ''),
-          to: String(u.to || ''),
-          count: Number(u.count || 0),
+          from: String(u.from || u.serial_range?.split('→')?.[0]?.trim() || ''),
+          to: String(u.to || u.serial_range?.split('→')?.[1]?.trim() || ''),
+          count: Number(u.count || u.quantity || 0),
           status: 'RESERVED'
         }));
+      }
+    }
+
+    if ((!Array.isArray(rawRanges) || rawRanges.length === 0) && refNo) {
+      const batches = this.hologramOverviewData?.batches || [];
+      for (const b of batches) {
+        for (const u of (b.used_hologram_ranges || b.usedHologramRanges || [])) {
+          const reqRef = String(u.requisition_ref_no || u.requisitionRefNo || u.permit_application_ref || u.permitApplicationRef || '').toLowerCase().trim();
+          if (reqRef && (reqRef === refNo.toLowerCase() || reqRef.includes(refNo.toLowerCase()) || refNo.toLowerCase().includes(reqRef))) {
+            rawRanges.push({
+              ref_no: b.imfl_hologram_ref_no || b.imflHologramRefNo || u.ref_no || '',
+              from: String(u.from || ''),
+              to: String(u.to || ''),
+              count: Number(u.count || 0),
+              status: 'RESERVED'
+            });
+          }
+        }
       }
     }
 
@@ -953,6 +987,31 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           const brandType = sub.brand_type || d.brand_type || rowOrApp?.liquorType || (brandName.toLowerCase().includes('beer') ? 'BEER' : 'WHISKY');
           const supplier = app.supplier_company_name || app.supplierCompanyName || rowOrApp?.supplierName || d.supplier_name || 'Corona Maharashtra';
 
+          const matchingArrival = (this.allArrivalsList || []).find((a: any) => {
+            const aPNo = String(a.permit_number || a.permitNumber || '').toLowerCase().trim();
+            const aAppRef = String(a.distributor_permit?.reference_no || a.distributor_permit || a.application_ref || '').toLowerCase().trim();
+            const curPNo = (sub.permit_number || permitNo).toLowerCase().trim();
+            return (aPNo && (aPNo === curPNo || aPNo.includes(curPNo))) || (aAppRef && aAppRef === refNo.toLowerCase());
+          }) || (this.allCasesProcessedList || []).find((c: any) => {
+            const cPNo = String(c.permit_number || c.permitNumber || '').toLowerCase().trim();
+            const cAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase().trim();
+            const curPNo = (sub.permit_number || permitNo).toLowerCase().trim();
+            return (cPNo && (cPNo === curPNo || cPNo.includes(curPNo))) || (cAppRef && cAppRef === refNo.toLowerCase());
+          });
+
+          const arrCases = matchingArrival ? Number(matchingArrival.arrived_cases ?? matchingArrival.arrivedCases ?? expCases) : expCases;
+          const vehNo = matchingArrival?.vehicle_number || matchingArrival?.vehicleNumber || this.arrivalCommonVehicle;
+          if (vehNo && !this.arrivalCommonVehicle) {
+            this.arrivalCommonVehicle = vehNo;
+          }
+
+          const hgFrom = matchingArrival?.hologram_from || matchingArrival?.hologramFrom || '';
+          const hgTo = matchingArrival?.hologram_to || matchingArrival?.hologramTo || '';
+          let hgRanges = matchingArrival?.arrived_hg_ranges || matchingArrival?.hologram_ranges || matchingArrival?.hologramRanges;
+          if (!Array.isArray(hgRanges) || hgRanges.length === 0) {
+            hgRanges = (hgFrom && hgTo) ? [{ from: hgFrom, to: hgTo }] : [{ from: '', to: '' }];
+          }
+
           const itemObj = {
             permit_number: sub.permit_number || permitNo,
             brand_name: brandName,
@@ -962,21 +1021,21 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
             pieces_per_case: pieces,
             expected_cases: expCases,
             expected_bottles: expBottles,
-            arrived_cases: expCases,
-            arrived_bottles: expBottles,
-            damaged_bottles: 0,
-            damaged_cases: 0,
-            damaged_case_bottles: 0,
-            total_damaged_bottles: 0,
-            good_bottles: expBottles,
-            good_cases: expCases,
+            arrived_cases: arrCases,
+            arrived_bottles: arrCases * pieces,
+            damaged_bottles: Number(matchingArrival?.damaged_bottles || matchingArrival?.damagedBottles || 0),
+            damaged_cases: Number(matchingArrival?.damaged_cases || matchingArrival?.damagedCases || Math.max(0, expCases - arrCases)),
+            damaged_case_bottles: Math.max(0, expCases - arrCases) * pieces,
+            total_damaged_bottles: Number(matchingArrival?.total_damaged_bottles || 0),
+            good_bottles: arrCases * pieces,
+            good_cases: arrCases,
             good_loose_bottles: 0,
-            vehicle_number: this.arrivalCommonVehicle,
-            batch_number: '',
-            hologram_from: '',
-            hologram_to: '',
-            arrived_hg_ranges: [{ from: '', to: '' }],
-            hologram_count: expBottles,
+            vehicle_number: vehNo || this.arrivalCommonVehicle,
+            batch_number: matchingArrival?.batch_number || '',
+            hologram_from: hgFrom,
+            hologram_to: hgTo,
+            arrived_hg_ranges: hgRanges,
+            hologram_count: arrCases * pieces,
             assigned_hologram_ranges: [],
             assigned_hg_label: '',
             damaged_cases_hg_from: '',
@@ -984,7 +1043,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
             damaged_cases_holograms: 'None',
             damaged_bottle_ranges: [],
             damaged_holograms: 'None',
-            remarks: ''
+            remarks: matchingArrival?.remarks || matchingArrival?.officer_remarks || ''
           };
           this.onArrivalItemCalculationsChange(itemObj);
           itemsToProcess.push(itemObj);
@@ -1000,6 +1059,31 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         const brandType = l.brand_type || (brandName.toLowerCase().includes('beer') ? 'BEER' : 'WHISKY');
         const supplier = app.supplier_company_name || app.supplierCompanyName || rowOrApp?.supplierName || 'Corona Maharashtra';
 
+        const matchingArrival = (this.allArrivalsList || []).find((a: any) => {
+          const aPNo = String(a.permit_number || a.permitNumber || '').toLowerCase().trim();
+          const aAppRef = String(a.distributor_permit?.reference_no || a.distributor_permit || a.application_ref || '').toLowerCase().trim();
+          const curPNo = (l.permit_number || `${app.reference_no || app.referenceNo || 'IMFLREQ'}-P${idx + 1}`).toLowerCase().trim();
+          return (aPNo && (aPNo === curPNo || aPNo.includes(curPNo))) || (aAppRef && aAppRef === refNo.toLowerCase());
+        }) || (this.allCasesProcessedList || []).find((c: any) => {
+          const cPNo = String(c.permit_number || c.permitNumber || '').toLowerCase().trim();
+          const cAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase().trim();
+          const curPNo = (l.permit_number || `${app.reference_no || app.referenceNo || 'IMFLREQ'}-P${idx + 1}`).toLowerCase().trim();
+          return (cPNo && (cPNo === curPNo || cPNo.includes(curPNo))) || (cAppRef && cAppRef === refNo.toLowerCase());
+        });
+
+        const arrCases = matchingArrival ? Number(matchingArrival.arrived_cases ?? matchingArrival.arrivedCases ?? expCases) : expCases;
+        const vehNo = matchingArrival?.vehicle_number || matchingArrival?.vehicleNumber || this.arrivalCommonVehicle;
+        if (vehNo && !this.arrivalCommonVehicle) {
+          this.arrivalCommonVehicle = vehNo;
+        }
+
+        const hgFrom = matchingArrival?.hologram_from || matchingArrival?.hologramFrom || '';
+        const hgTo = matchingArrival?.hologram_to || matchingArrival?.hologramTo || '';
+        let hgRanges = matchingArrival?.arrived_hg_ranges || matchingArrival?.hologram_ranges || matchingArrival?.hologramRanges;
+        if (!Array.isArray(hgRanges) || hgRanges.length === 0) {
+          hgRanges = (hgFrom && hgTo) ? [{ from: hgFrom, to: hgTo }] : [{ from: '', to: '' }];
+        }
+
         const itemObj = {
           permit_number: l.permit_number || `${app.reference_no || app.referenceNo || 'IMFLREQ'}-P${idx + 1}`,
           brand_name: brandName,
@@ -1009,21 +1093,21 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           pieces_per_case: pieces,
           expected_cases: expCases,
           expected_bottles: expBottles,
-          arrived_cases: expCases,
-          arrived_bottles: expBottles,
-          damaged_bottles: 0,
-          damaged_cases: 0,
-          damaged_case_bottles: 0,
-          total_damaged_bottles: 0,
-          good_bottles: expBottles,
-          good_cases: expCases,
+          arrived_cases: arrCases,
+          arrived_bottles: arrCases * pieces,
+          damaged_bottles: Number(matchingArrival?.damaged_bottles || matchingArrival?.damagedBottles || 0),
+          damaged_cases: Number(matchingArrival?.damaged_cases || matchingArrival?.damagedCases || Math.max(0, expCases - arrCases)),
+          damaged_case_bottles: Math.max(0, expCases - arrCases) * pieces,
+          total_damaged_bottles: Number(matchingArrival?.total_damaged_bottles || 0),
+          good_bottles: arrCases * pieces,
+          good_cases: arrCases,
           good_loose_bottles: 0,
-          vehicle_number: this.arrivalCommonVehicle,
-          batch_number: '',
-          hologram_from: '',
-          hologram_to: '',
-          arrived_hg_ranges: [{ from: '', to: '' }],
-          hologram_count: expBottles,
+          vehicle_number: vehNo || this.arrivalCommonVehicle,
+          batch_number: matchingArrival?.batch_number || '',
+          hologram_from: hgFrom,
+          hologram_to: hgTo,
+          arrived_hg_ranges: hgRanges,
+          hologram_count: arrCases * pieces,
           assigned_hologram_ranges: [],
           assigned_hg_label: '',
           damaged_cases_hg_from: '',
@@ -1031,7 +1115,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           damaged_cases_holograms: 'None',
           damaged_bottle_ranges: [],
           damaged_holograms: 'None',
-          remarks: ''
+          remarks: matchingArrival?.remarks || matchingArrival?.officer_remarks || ''
         };
         this.onArrivalItemCalculationsChange(itemObj);
         itemsToProcess.push(itemObj);
@@ -1045,6 +1129,27 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       const brandType = brandName.toLowerCase().includes('beer') ? 'BEER' : 'WHISKY';
       const supplier = app.supplier_company_name || rowOrApp?.supplierName || 'Corona Maharashtra';
 
+      const matchingArrival = (this.allArrivalsList || []).find((a: any) => {
+        const aAppRef = String(a.distributor_permit?.reference_no || a.distributor_permit || a.application_ref || '').toLowerCase().trim();
+        return aAppRef && aAppRef === refNo.toLowerCase();
+      }) || (this.allCasesProcessedList || []).find((c: any) => {
+        const cAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase().trim();
+        return cAppRef && cAppRef === refNo.toLowerCase();
+      });
+
+      const arrCases = matchingArrival ? Number(matchingArrival.arrived_cases ?? matchingArrival.arrivedCases ?? expCases) : expCases;
+      const vehNo = matchingArrival?.vehicle_number || matchingArrival?.vehicleNumber || this.arrivalCommonVehicle;
+      if (vehNo && !this.arrivalCommonVehicle) {
+        this.arrivalCommonVehicle = vehNo;
+      }
+
+      const hgFrom = matchingArrival?.hologram_from || matchingArrival?.hologramFrom || '';
+      const hgTo = matchingArrival?.hologram_to || matchingArrival?.hologramTo || '';
+      let hgRanges = matchingArrival?.arrived_hg_ranges || matchingArrival?.hologram_ranges || matchingArrival?.hologramRanges;
+      if (!Array.isArray(hgRanges) || hgRanges.length === 0) {
+        hgRanges = (hgFrom && hgTo) ? [{ from: hgFrom, to: hgTo }] : [{ from: '', to: '' }];
+      }
+
       const itemObj = {
         permit_number: app.reference_no || app.referenceNo || 'IMFLREQ/2026-27/0003-P1',
         brand_name: brandName,
@@ -1054,21 +1159,21 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         pieces_per_case: pieces,
         expected_cases: expCases,
         expected_bottles: expCases * pieces,
-        arrived_cases: expCases,
-        arrived_bottles: expCases * pieces,
-        damaged_bottles: 0,
-        damaged_cases: 0,
-        damaged_case_bottles: 0,
-        total_damaged_bottles: 0,
-        good_bottles: expCases * pieces,
+        arrived_cases: arrCases,
+        arrived_bottles: arrCases * pieces,
+        damaged_bottles: Number(matchingArrival?.damaged_bottles || matchingArrival?.damagedBottles || 0),
+        damaged_cases: Number(matchingArrival?.damaged_cases || matchingArrival?.damagedCases || Math.max(0, expCases - arrCases)),
+        damaged_case_bottles: Math.max(0, expCases - arrCases) * pieces,
+        total_damaged_bottles: Number(matchingArrival?.total_damaged_bottles || 0),
+        good_bottles: arrCases * pieces,
         good_cases: expCases,
         good_loose_bottles: 0,
-        vehicle_number: this.arrivalCommonVehicle,
-        batch_number: '',
-        hologram_from: '',
-        hologram_to: '',
-        arrived_hg_ranges: [{ from: '', to: '' }],
-        hologram_count: expCases * pieces,
+        vehicle_number: vehNo || this.arrivalCommonVehicle,
+        batch_number: matchingArrival?.batch_number || '',
+        hologram_from: hgFrom,
+        hologram_to: hgTo,
+        arrived_hg_ranges: hgRanges,
+        hologram_count: arrCases * pieces,
         assigned_hologram_ranges: [],
         assigned_hg_label: '',
         damaged_cases_hg_from: '',
@@ -1076,7 +1181,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         damaged_cases_holograms: 'None',
         damaged_bottle_ranges: [],
         damaged_holograms: 'None',
-        remarks: ''
+        remarks: matchingArrival?.remarks || matchingArrival?.officer_remarks || ''
       };
       this.onArrivalItemCalculationsChange(itemObj);
       itemsToProcess.push(itemObj);
@@ -2813,12 +2918,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   canUpdateBrandsArrival(rowOrApp: any): boolean {
-    if (!this.isOicDistributorUser) return false;
     const app = rowOrApp?.application || rowOrApp;
     if (!app) return false;
-    const arrivalStatus = this.getArrivalStatusForRow(rowOrApp);
-    if (arrivalStatus === 'approved') {
-      return false; // Stock Arrival already completed & approved -> hide update button
+    const ref = String(app.reference_no || app.referenceNo || app.id || rowOrApp?.applicationId || '').toUpperCase();
+    if (ref.startsWith('IMFLREV') || ref.startsWith('IMFLCAN')) {
+      return false;
     }
     const isPaid = Boolean(
       app?.is_excise_duty_fee_paid ||
@@ -2830,7 +2934,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       String(app?.status || '').toLowerCase().includes('approved') ||
       String(app?.status || '').toLowerCase().includes('arrival') ||
       String(app?.status || '').toLowerCase().includes('paid') ||
-      Number(app?.current_stage_id || app?.current_stage?.id || 0) === 156
+      String(rowOrApp?.currentStage || '').toLowerCase().includes('payslip') ||
+      String(rowOrApp?.currentStage || '').toLowerCase().includes('approved') ||
+      String(rowOrApp?.currentStage || '').toLowerCase().includes('arrival') ||
+      String(rowOrApp?.currentStage || '').toLowerCase().includes('paid') ||
+      Number(app?.current_stage_id || app?.current_stage?.id || 0) >= 151
     );
     return isPaid;
   }
