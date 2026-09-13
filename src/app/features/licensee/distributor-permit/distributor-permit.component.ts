@@ -1514,6 +1514,38 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return parts.length > 0 ? parts.join(' | ') : `${totalDamaged} btls damaged`;
   }
 
+  getEntryGoodHologramsChunks(entry: any): Array<{ from: string; to: string; count: number; label: string }> {
+    if (!entry) return [];
+    const hgFrom = String(entry.hologram_from || entry.hologramFrom || '').trim();
+    const hgTo = String(entry.hologram_to || entry.hologramTo || hgFrom).trim();
+    if (!hgFrom) return [];
+
+    const itemLike = {
+      arrived_hg_ranges: [{ from: hgFrom, to: hgTo }],
+      good_bottles: entry.good_bottles ?? entry.goodBottles ?? 0,
+      damaged_cases: entry.damaged_cases ?? entry.damagedCases ?? 0,
+      damaged_cases_hg_from: entry.damaged_cases_hg_from || '',
+      damaged_cases_hg_to: entry.damaged_cases_hg_to || '',
+      damaged_cases_holograms: entry.damaged_cases_holograms || entry.damagedCasesHolograms || '',
+      damaged_bottles: entry.damaged_bottles ?? entry.damagedBottles ?? 0,
+      damaged_holograms: entry.damaged_holograms || entry.damagedHolograms || ''
+    };
+
+    return this.getBrandGoodHologramsChunks(itemLike);
+  }
+
+  getEntryGoodHologramsLabel(entry: any): string {
+    const chunks = this.getEntryGoodHologramsChunks(entry);
+    if (chunks.length === 0) {
+      const hgFrom = String(entry.hologram_from || entry.hologramFrom || '').trim();
+      const hgTo = String(entry.hologram_to || entry.hologramTo || '').trim();
+      if (hgFrom && hgTo) return `${hgFrom} → ${hgTo}`;
+      return '';
+    }
+    const chunkStrs = chunks.map(c => c.from === c.to ? c.from : `${c.from} → ${c.to}`);
+    return chunkStrs.join(', ');
+  }
+
   onArrivalItemCalculationsChange(item: any): void {
     this.calculateHologramRange(item);
   }
