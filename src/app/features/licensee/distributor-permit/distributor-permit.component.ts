@@ -3779,7 +3779,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
         if (existingForPermitRev) {
           const st = String(existingForPermitRev['status'] || existingForPermitRev['currentStage'] || (existingForPermitRev['current_stage'] as any)?.name || '').toUpperCase();
-          if (!st.includes('REJECTED')) {
+          if (!st.includes('APPROVED') && !st.includes('REJECTED')) {
             isRevalidatedWaiting = true;
           }
         }
@@ -3867,7 +3867,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
       if (existingForPermitRev) {
         const st = String(existingForPermitRev['status'] || existingForPermitRev['currentStage'] || (existingForPermitRev['current_stage'] as any)?.name || '').toUpperCase();
-        if (!st.includes('REJECTED')) {
+        if (!st.includes('APPROVED') && !st.includes('REJECTED')) {
           isRevalidatedWaiting = true;
         }
       }
@@ -4948,8 +4948,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         }
 
         if (existingForPermitRev) {
-          const st = String(existingForPermitRev['status'] || existingForPermitRev['currentStage'] || '').toUpperCase();
-          if (!st.includes('REJECTED')) {
+          const st = String(existingForPermitRev['status'] || existingForPermitRev['currentStage'] || (existingForPermitRev['current_stage'] as any)?.name || '').toUpperCase();
+          if (!st.includes('APPROVED') && !st.includes('REJECTED')) {
             isUnderProcess = true;
             underProcessReason = 'Revalidation Under Process';
           }
