@@ -790,6 +790,7 @@
                   <td class="dp-action-cell" (click)="$event.stopPropagation()">
                     <div class="d-flex align-items-center gap-2">
                       <button
+                        *ngIf="getBrandArrivalStatusForRow(row) === 'pending'"
                         class="btn btn-sm text-white fw-bold shadow-sm d-flex align-items-center gap-1 px-3 py-1.5"
                         type="button"
                         title="Update Brands & Cases Arrival"
@@ -798,8 +799,16 @@
                         style="background: linear-gradient(135deg, #0284c7, #0369a1); font-size: 12px; border-radius: 6px; border: none;"
                       >
                         <i class="bi bi-boxes"></i>
-                        <span>{{ getBrandArrivalStatusForRow(row) === 'approved' ? 'Update / View Arrival' : 'Update Brands Arrival' }}</span>
+                        <span>Update Brands Arrival</span>
                       </button>
+
+                      <span
+                        *ngIf="getBrandArrivalStatusForRow(row) === 'approved'"
+                        class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1.5 fw-semibold font-monospace d-inline-flex align-items-center gap-1"
+                        style="font-size: 11.5px;"
+                      >
+                        <i class="bi bi-check2-circle"></i> Stock Added
+                      </span>
 
                       <button
                         class="btn btn-sm btn-soft-info"
@@ -5081,9 +5090,23 @@
               </span>
             </td>
             <td>
-              <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 font-monospace" *ngIf="item.good_bottles > 0">
-                <i class="bi bi-check-circle-fill me-1"></i>{{ getBrandGoodHologramsLabel(item) }}
-              </span>
+              <div class="d-flex flex-wrap gap-1 align-items-center" *ngIf="item.good_bottles > 0">
+                <ng-container *ngIf="getBrandGoodHologramsChunks(item).length > 0; else fallbackGoodHg">
+                  <span
+                    *ngFor="let chunk of getBrandGoodHologramsChunks(item)"
+                    class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 font-monospace px-2 py-1"
+                    title="{{ chunk.count }} usable bottle(s)"
+                  >
+                    <i class="bi bi-check-circle-fill me-1"></i>{{ chunk.from === chunk.to ? chunk.from : (chunk.from + ' → ' + chunk.to) }}
+                    <span class="text-muted ms-1" style="font-size: 10.5px;">({{ chunk.count }} btls)</span>
+                  </span>
+                </ng-container>
+                <ng-template #fallbackGoodHg>
+                  <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 font-monospace px-2 py-1">
+                    <i class="bi bi-check-circle-fill me-1"></i>{{ getBrandGoodHologramsLabel(item) }}
+                  </span>
+                </ng-template>
+              </div>
               <span class="text-muted small" *ngIf="item.good_bottles <= 0">None (0 btls)</span>
             </td>
             <td class="text-center">

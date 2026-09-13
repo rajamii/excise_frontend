@@ -274,17 +274,38 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const appId = String(row?.applicationId || row?.referenceNo || row?.reference_no || row?.id || '').toLowerCase().trim();
     if (!appId) return false;
 
+    // 1. Check in brandWarehouseStocks
     if (this.brandWarehouseStocks && this.brandWarehouseStocks.length > 0) {
       const foundInWarehouse = this.brandWarehouseStocks.some((b: any) => {
         const recent = b.recent_entries || b.recentEntries || [];
         const hasRecent = recent.some((e: any) => {
           const pNo = String(e.permit_number || e.permitNumber || '').toLowerCase().trim();
-          return pNo === appId || pNo.startsWith(appId) || pNo.includes(appId) || appId.includes(pNo);
+          return pNo === appId || pNo.startsWith(appId) || pNo.includes(appId) || appId.startsWith(pNo) || appId.includes(pNo);
         });
         const latestP = String(b.latest_permit_number || b.latestPermitNumber || '').toLowerCase().trim();
-        return hasRecent || (latestP && (latestP === appId || latestP.includes(appId) || appId.includes(latestP)));
+        return hasRecent || (latestP && (latestP === appId || latestP.startsWith(appId) || latestP.includes(appId) || appId.startsWith(latestP) || appId.includes(latestP)));
       });
       if (foundInWarehouse) return true;
+    }
+
+    // 2. Check in allArrivalsList
+    if (this.allArrivalsList && this.allArrivalsList.length > 0) {
+      const foundInArrivals = this.allArrivalsList.some((a: any) => {
+        const pNo = String(a.permit_number || a.permitNumber || '').toLowerCase().trim();
+        const distPermit = String(a.distributor_permit?.reference_no || a.distributor_permit || '').toLowerCase().trim();
+        return (
+          pNo === appId || pNo.startsWith(appId) || pNo.includes(appId) || appId.startsWith(pNo) ||
+          distPermit === appId || distPermit.startsWith(appId) || distPermit.includes(appId) || appId.startsWith(distPermit)
+        );
+      });
+      if (foundInArrivals) return true;
+    }
+
+    // 3. Check application status
+    const app = row?.application || row;
+    const stage = String(app?.status || row?.currentStage || '').toLowerCase();
+    if (stage.includes('arrival approved') || stage.includes('stock arrival approved') || stage.includes('stock completed')) {
+      return true;
     }
 
     return false;
@@ -1320,28 +1341,164 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }
   }
 
+  getBrandGoodHologramsChunks(item: any): Array<{ from: string; to: string; count: number; label: string }> {
+    const arrivedRanges: Array<{ from: string; to: string }> = [];
+    (item.arrived_hg_ranges || []).forEach((r: any) => {
+      if (r.from && r.to) arrivedRanges.push({ from: String(r.from).trim(), to: String(r.to).trim() });
+    });
+    if (arrivedRanges.length === 0 && item.hologram_from && item.hologram_to) {
+      arrivedRanges.push({ from: String(item.hologram_from).trim(), to: String(item.hologram_to).trim() });
+    }
+    if (arrivedRanges.length === 0 && item.assigned_hologram_ranges?.length > 0) {
+      item.assigned_hologram_ranges.forEach((r: any) => {
+        if (r.from && r.to) arrivedRanges.push({ from: String(r.from).trim(), to: String(r.to).trim() });
+      });
+    }
+
+    if (arrivedRanges.length === 0) return [];
+
+    const goodBottles = Number(item.good_bottles ?? 0);
+    if (goodBottles <= 0) return [];
+
+    // Collect all damaged intervals
+    const damagedIntervals: Array<{ prefix: string; start: number; end: number; padLen: number }> = [];
+
+    // 1. Damaged cases
+    if (item.damaged_cases > 0 && item.damaged_cases_hg_from) {
+      const fStr = String(item.damaged_cases_hg_from).trim();
+      const tStr = String(item.damaged_cases_hg_to || this.computeHologramTo(fStr, item.damaged_case_bottles)).trim();
+      const mF = fStr.match(/^(.*?)(\d+)$/);
+      const mT = tStr.match(/^(.*?)(\d+)$/);
+      if (mF && mT && mF[1] === mT[1]) {
+        const s = parseInt(mF[2], 10);
+        const e = parseInt(mT[2], 10);
+        damagedIntervals.push({ prefix: mF[1], start: Math.min(s, e), end: Math.max(s, e), padLen: mF[2].length });
+      }
+    }
+
+    // 2. Damaged loose bottles
+    if (item.damaged_bottle_ranges && item.damaged_bottle_ranges.length > 0) {
+      item.damaged_bottle_ranges.forEach((r: any) => {
+        if (r.from) {
+          const fStr = String(r.from).trim();
+          const tStr = String(r.to || r.from).trim();
+          const mF = fStr.match(/^(.*?)(\d+)$/);
+          const mT = tStr.match(/^(.*?)(\d+)$/);
+          if (mF && mT && mF[1] === mT[1]) {
+            const s = parseInt(mF[2], 10);
+            const e = parseInt(mT[2], 10);
+            damagedIntervals.push({ prefix: mF[1], start: Math.min(s, e), end: Math.max(s, e), padLen: mF[2].length });
+          }
+        }
+      });
+    } else if (item.damaged_holograms && item.damaged_holograms !== 'None') {
+      const parts = String(item.damaged_holograms).split(/[,|]/);
+      parts.forEach((p) => {
+        const seg = p.replace(/^Loose:\s*/i, '').replace(/^Cases:\s*/i, '').trim();
+        if (!seg) return;
+        const rangeSplit = seg.split(/[-→]/).map(s => s.trim());
+        const fStr = rangeSplit[0];
+        const tStr = rangeSplit[1] || rangeSplit[0];
+        const mF = fStr.match(/^(.*?)(\d+)$/);
+        const mT = tStr.match(/^(.*?)(\d+)$/);
+        if (mF && mT && mF[1] === mT[1]) {
+          const s = parseInt(mF[2], 10);
+          const e = parseInt(mT[2], 10);
+          damagedIntervals.push({ prefix: mF[1], start: Math.min(s, e), end: Math.max(s, e), padLen: mF[2].length });
+        }
+      });
+    }
+
+    const usableChunks: Array<{ from: string; to: string; count: number; label: string }> = [];
+
+    arrivedRanges.forEach((arrRng: any) => {
+      const fStr = String(arrRng.from).trim();
+      const tStr = String(arrRng.to).trim();
+      const mF = fStr.match(/^(.*?)(\d+)$/);
+      const mT = tStr.match(/^(.*?)(\d+)$/);
+      if (!mF || !mT || mF[1] !== mT[1]) {
+        usableChunks.push({ from: fStr, to: tStr, count: this.getHologramRangeCount(fStr, tStr), label: `${fStr} → ${tStr}` });
+        return;
+      }
+
+      const prefix = mF[1];
+      const padLen = mF[2].length;
+      const arrStart = parseInt(mF[2], 10);
+      const arrEnd = parseInt(mT[2], 10);
+
+      // Filter damaged intervals matching this prefix and range
+      const matchingDamaged = damagedIntervals
+        .filter(d => d.prefix === prefix && d.end >= arrStart && d.start <= arrEnd)
+        .map(d => ({ start: Math.max(arrStart, d.start), end: Math.min(arrEnd, d.end) }));
+
+      if (matchingDamaged.length === 0) {
+        const count = arrEnd - arrStart + 1;
+        usableChunks.push({ from: fStr, to: tStr, count, label: `${fStr} → ${tStr} (${count} btls)` });
+        return;
+      }
+
+      // Sort and merge damaged intervals
+      matchingDamaged.sort((a, b) => a.start - b.start);
+      const mergedDamaged: Array<{ start: number; end: number }> = [];
+      matchingDamaged.forEach((cur) => {
+        if (mergedDamaged.length === 0) {
+          mergedDamaged.push({ ...cur });
+        } else {
+          const last = mergedDamaged[mergedDamaged.length - 1];
+          if (cur.start <= last.end + 1) {
+            last.end = Math.max(last.end, cur.end);
+          } else {
+            mergedDamaged.push({ ...cur });
+          }
+        }
+      });
+
+      // Subtract damaged intervals to find available usable chunks
+      let cur = arrStart;
+      mergedDamaged.forEach((dam) => {
+        if (cur < dam.start) {
+          const chunkStart = cur;
+          const chunkEnd = dam.start - 1;
+          const count = chunkEnd - chunkStart + 1;
+          const fromLabel = padLen > 0 ? prefix + String(chunkStart).padStart(padLen, '0') : prefix + String(chunkStart);
+          const toLabel = padLen > 0 ? prefix + String(chunkEnd).padStart(padLen, '0') : prefix + String(chunkEnd);
+          usableChunks.push({
+            from: fromLabel,
+            to: toLabel,
+            count,
+            label: fromLabel === toLabel ? fromLabel : `${fromLabel} → ${toLabel}`
+          });
+        }
+        cur = Math.max(cur, dam.end + 1);
+      });
+
+      if (cur <= arrEnd) {
+        const chunkStart = cur;
+        const chunkEnd = arrEnd;
+        const count = chunkEnd - chunkStart + 1;
+        const fromLabel = padLen > 0 ? prefix + String(chunkStart).padStart(padLen, '0') : prefix + String(chunkStart);
+        const toLabel = padLen > 0 ? prefix + String(chunkEnd).padStart(padLen, '0') : prefix + String(chunkEnd);
+        usableChunks.push({
+          from: fromLabel,
+          to: toLabel,
+          count,
+          label: fromLabel === toLabel ? fromLabel : `${fromLabel} → ${toLabel}`
+        });
+      }
+    });
+
+    return usableChunks;
+  }
+
   getBrandGoodHologramsLabel(item: any): string {
-    const arrivedRanges = (item.arrived_hg_ranges || []).filter((r: any) => r.from && r.to);
-    if (arrivedRanges.length === 0) return 'Pending Arrived Range';
+    const chunks = this.getBrandGoodHologramsChunks(item);
+    if (chunks.length === 0) {
+      const goodBottles = Number(item.good_bottles || 0);
+      return goodBottles > 0 ? `Usable: ${goodBottles} btls` : 'None (0 btls)';
+    }
     const goodBottles = Number(item.good_bottles || 0);
-    if (goodBottles <= 0) return 'None (0 btls)';
-
-    const totalDamaged = Number(item.total_damaged_bottles) || Number(item.damaged_bottles) || 0;
-    if (totalDamaged === 0) {
-      return arrivedRanges.map((r: any) => `${r.from} → ${r.to}`).join(', ') + ` (${goodBottles} btls)`;
-    }
-
-    const first = arrivedRanges[0];
-    const matchF = String(first.from).trim().match(/^(.*?)(\d+)$/);
-    if (matchF) {
-      const prefix = matchF[1];
-      const startNum = parseInt(matchF[2], 10);
-      const endNum = startNum + goodBottles - 1;
-      const padLen = matchF[2].length;
-      const toStr = padLen > 0 ? prefix + String(endNum).padStart(padLen, '0') : prefix + String(endNum);
-      return `${first.from} → ${toStr} (${goodBottles} btls)`;
-    }
-    return `Usable: ${goodBottles} btls`;
+    const chunkStrs = chunks.map(c => c.from === c.to ? c.from : `${c.from} → ${c.to}`);
+    return `${chunkStrs.join(', ')} (${goodBottles} btls)`;
   }
 
   getBrandDamagedHologramsLabel(item: any): string {
