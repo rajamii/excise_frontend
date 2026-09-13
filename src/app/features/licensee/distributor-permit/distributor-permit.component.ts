@@ -2704,6 +2704,33 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       return { isValid: false, statusClass: 'is-invalid border-danger bg-danger bg-opacity-10 text-danger', errorMsg: 'Invalid Hologram Serial' };
     }
 
+    // 1. Duplicate check: check if any OTHER row in dispatchForm.hologramRanges uses the same number(s)
+    const ranges = this.dispatchForm.hologramRanges || [];
+    const duplicateNums: number[] = [];
+    ranges.forEach((otherRow) => {
+      if (otherRow === row) return;
+      const oF = String(otherRow.from || '').trim();
+      const oT = String(otherRow.to || '').trim() || oF;
+      const oStart = parseInt(oF.match(/\d+$/)?.[0] || '0', 10);
+      const oEnd = parseInt(oT.match(/\d+$/)?.[0] || '0', 10);
+      if (oStart > 0 && oEnd >= oStart) {
+        for (let i = startNum; i <= endNum; i++) {
+          if (i >= oStart && i <= oEnd) {
+            duplicateNums.push(i);
+          }
+        }
+      }
+    });
+
+    if (duplicateNums.length > 0) {
+      const dupStr = Array.from(new Set(duplicateNums)).join(', ');
+      return {
+        isValid: false,
+        statusClass: 'is-invalid border-danger bg-danger bg-opacity-10 text-danger',
+        errorMsg: `HG #${dupStr} already allocated to another bottle`
+      };
+    }
+
     const hgInfo = this.getHologramValidationInfo();
     const availableSet = new Set(hgInfo.availableNums || []);
     const damagedSet = new Set(hgInfo.damagedHologramNums || []);
@@ -2771,9 +2798,20 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     if (ranges.length === 0) return false;
 
     let totalHg = 0;
+    const seenSerials = new Set<number>();
+
     for (const r of ranges) {
       const v = this.isRangeRowValid(r);
       if (!v.isValid) return false;
+
+      const f = parseInt(String(r.from).match(/\d+$/)?.[0] || '0', 10);
+      const t = parseInt(String(r.to || r.from).match(/\d+$/)?.[0] || '0', 10);
+      if (f > 0 && t >= f) {
+        for (let i = f; i <= t; i++) {
+          if (seenSerials.has(i)) return false; // Duplicate check
+          seenSerials.add(i);
+        }
+      }
       totalHg += Number(r.count || 0);
     }
     return totalHg === totalUnits;
@@ -3065,6 +3103,15 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         Swal.fire('Invalid Hologram Range', hgInfo.conflictMessage, 'warning');
       } else {
         alert('Invalid Hologram Range: ' + hgInfo.conflictMessage);
+      }
+      return;
+    }
+
+    if (!this.isDispatchFormValid()) {
+      if (typeof Swal !== 'undefined') {
+        Swal.fire('Invalid Serial Numbers', 'Please ensure all bottle serial numbers are valid, unique, and not duplicated.', 'warning');
+      } else {
+        alert('Invalid Serial Numbers: Please ensure all bottle serial numbers are valid, unique, and not duplicated.');
       }
       return;
     }
