@@ -8414,6 +8414,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
         // 2. If the requisition was later cancelled/rejected, record the Reversion event
         if (isReverted) {
+          let revNotes = u.reversion_reason || u.notes || 'Requisition cancelled / rejected';
+          if (!revNotes.toLowerCase().includes('restored') && !revNotes.toLowerCase().includes('reverted')) {
+            revNotes = `Allocated holograms (${u.from} → ${u.to}) restored to stock: ${revNotes}`;
+          }
           usageItems.push({
             activity_type: 'REVERTED',
             activity_label: 'Reverted to Stock (Cancelled/Rejected)',
@@ -8424,7 +8428,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
             recorded_by_name: u.reverted_by || u.revertedByName || 'Permit Section / Excise Authority',
             activity_date: u.reverted_at || u.revertedAt || u.assigned_at || u.assignedAt || b.arrival_date || b.arrivalDate,
             status: 'REVERTED',
-            notes: u.notes || u.reversion_reason ? `Allocated holograms (${u.from} → ${u.to}) restored to stock: ${u.reversion_reason || u.notes}` : `Allocated holograms (${u.from} → ${u.to}) restored to stock (Requisition: ${reqRef})`
+            notes: revNotes
           });
         }
       }
@@ -8481,6 +8485,19 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         });
       }
     }
+
+    // Sort usage events in reverse chronological order (latest activity on top)
+    usageItems.sort((a, b) => {
+      const timeA = new Date(a.activity_date || 0).getTime();
+      const timeB = new Date(b.activity_date || 0).getTime();
+      if (timeB !== timeA) {
+        return timeB - timeA;
+      }
+      // If same timestamp, prioritize REVERTED over ALLOCATED
+      if (a.status === 'REVERTED' && b.status !== 'REVERTED') return -1;
+      if (b.status === 'REVERTED' && a.status !== 'REVERTED') return 1;
+      return 0;
+    });
 
     return usageItems;
   }

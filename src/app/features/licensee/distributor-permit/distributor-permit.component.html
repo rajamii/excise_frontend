@@ -1915,11 +1915,44 @@
                   </td>
                   <td class="pe-4">
                     <span
-                      class="badge px-3 py-1.5 rounded-pill fw-bold"
-                      [ngClass]="seg.status === 'AVAILABLE' ? 'bg-success text-white' : seg.status === 'AVAILABLE (REVERTED)' || seg.status === 'REVERTED' ? 'bg-warning text-dark' : seg.status === 'UTILIZED' ? 'bg-primary text-white' : seg.status === 'DAMAGED' ? 'bg-danger text-white' : 'bg-info text-white'"
+                      *ngIf="seg.status === 'AVAILABLE'"
+                      class="badge px-3 py-1.5 rounded-pill fw-bold shadow-xs"
+                      style="background-color: #ecfdf5 !important; color: #047857 !important; border: 1px solid #a7f3d0 !important; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;"
                     >
-                      <i class="bi me-1" [ngClass]="seg.status === 'AVAILABLE' ? 'bi-check-circle-fill' : seg.status === 'AVAILABLE (REVERTED)' || seg.status === 'REVERTED' ? 'bi-arrow-counterclockwise' : 'bi-shield'"></i>
-                      {{ seg.status || 'AVAILABLE' }}
+                      <i class="bi bi-check-circle-fill" style="color: #047857;"></i>
+                      AVAILABLE
+                    </span>
+                    <span
+                      *ngIf="seg.status === 'AVAILABLE (REVERTED)' || seg.status === 'REVERTED'"
+                      class="badge px-3 py-1.5 rounded-pill fw-bold shadow-xs"
+                      style="background-color: #fef3c7 !important; color: #92400e !important; border: 1px solid #fde68a !important; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;"
+                    >
+                      <i class="bi bi-arrow-counterclockwise"></i>
+                      AVAILABLE (REVERTED)
+                    </span>
+                    <span
+                      *ngIf="seg.status === 'ALLOCATED'"
+                      class="badge px-3 py-1.5 rounded-pill fw-bold shadow-xs"
+                      style="background-color: #e0f2fe !important; color: #0369a1 !important; border: 1px solid #bae6fd !important; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;"
+                    >
+                      <i class="bi bi-boxes"></i>
+                      ALLOCATED
+                    </span>
+                    <span
+                      *ngIf="seg.status === 'UTILIZED'"
+                      class="badge px-3 py-1.5 rounded-pill fw-bold shadow-xs"
+                      style="background-color: #ede9fe !important; color: #6d28d9 !important; border: 1px solid #ddd6fe !important; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;"
+                    >
+                      <i class="bi bi-shield-check"></i>
+                      UTILIZED
+                    </span>
+                    <span
+                      *ngIf="seg.status === 'DAMAGED'"
+                      class="badge px-3 py-1.5 rounded-pill fw-bold shadow-xs"
+                      style="background-color: #fee2e2 !important; color: #b91c1c !important; border: 1px solid #fecaca !important; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;"
+                    >
+                      <i class="bi bi-exclamation-triangle-fill"></i>
+                      DAMAGED
                     </span>
                   </td>
                 </tr>
@@ -1970,9 +2003,21 @@
                     <span class="small text-muted">{{ seg.arrival_date | date:'dd MMM yyyy, hh:mm a' }}</span>
                   </td>
                   <td class="pe-4 text-center">
-                    <span class="badge px-3 py-1.5 rounded-pill fw-bold" [ngClass]="seg.status === 'AVAILABLE (REVERTED)' || seg.status === 'REVERTED' ? 'bg-warning bg-opacity-15 text-dark border border-warning border-opacity-25' : 'bg-success bg-opacity-15 text-success border border-success border-opacity-25'">
-                      <i class="bi me-1" [ngClass]="seg.status === 'AVAILABLE (REVERTED)' || seg.status === 'REVERTED' ? 'bi-arrow-counterclockwise' : 'bi-shield-check'"></i>
-                      {{ seg.status === 'AVAILABLE (REVERTED)' || seg.status === 'REVERTED' ? 'AVAILABLE (REVERTED)' : 'AVAILABLE / READY' }}
+                    <span
+                      *ngIf="seg.status === 'AVAILABLE (REVERTED)' || seg.status === 'REVERTED'"
+                      class="badge px-3 py-1.5 rounded-pill fw-bold shadow-xs"
+                      style="background-color: #fef3c7 !important; color: #92400e !important; border: 1px solid #fde68a !important; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;"
+                    >
+                      <i class="bi bi-arrow-counterclockwise"></i>
+                      AVAILABLE (REVERTED)
+                    </span>
+                    <span
+                      *ngIf="seg.status !== 'AVAILABLE (REVERTED)' && seg.status !== 'REVERTED'"
+                      class="badge px-3 py-1.5 rounded-pill fw-bold shadow-xs"
+                      style="background-color: #ecfdf5 !important; color: #047857 !important; border: 1px solid #a7f3d0 !important; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;"
+                    >
+                      <i class="bi bi-shield-check" style="color: #047857;"></i>
+                      AVAILABLE / READY
                     </span>
                   </td>
                 </tr>
