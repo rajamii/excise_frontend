@@ -267,6 +267,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   getOfficerStatusGroup(row: DistributorPermitRow | any): DistributorPermitStatusGroup {
+    const stage = String(row?.currentStage || row?.status || row?.application?.status || '').toLowerCase();
+    const stageId = Number(row?.application?.current_stage_id || row?.application?.currentStageId || row?.current_stage_id || 0);
+    if (stage.includes('reject') || stage.includes('cancel') || stageId === 152 || stageId === 166 || row?.statusGroup === 'rejected') {
+      return 'rejected';
+    }
     const arrivalStatus = this.getArrivalStatusForRow(row);
     if (arrivalStatus === 'approved') return 'approved';
     if (arrivalStatus === 'under_review') return 'pending';
@@ -431,9 +436,23 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     if (!row) return false;
     const stage = String(row?.currentStage || row?.status || row?.application?.status || (row as any)?.statusGroup || '').toLowerCase();
     const stageId = Number(row?.application?.current_stage_id || row?.application?.currentStageId || row?.current_stage_id || row?.currentStageId || row?.application?.current_stage?.id || 0);
-    const isFinal = Boolean(row?.application?.current_stage_is_final || row?.application?.currentStageIsFinal || row?.application?.current_stage?.is_final);
     const statusGroup = String(row?.statusGroup || '').toLowerCase();
-    return statusGroup === 'approved' || stageId === 151 || stageId === 165 || isFinal || stage.includes('approved') || stage.includes('completed');
+
+    // If rejected or cancelled, it is NEVER approved
+    if (stage.includes('reject') || stage.includes('cancel') || statusGroup === 'rejected' || stageId === 152 || stageId === 166) {
+      return false;
+    }
+
+    if (stage.includes('objection') || statusGroup === 'objection') {
+      return false;
+    }
+
+    if (statusGroup === 'approved' || stageId === 151 || stageId === 165 || stage.includes('approved') || stage.includes('completed') || stage.includes('arrival approved')) {
+      return true;
+    }
+
+    const isFinal = Boolean(row?.application?.current_stage_is_final || row?.application?.currentStageIsFinal || row?.application?.current_stage?.is_final);
+    return isFinal;
   }
 
   get canViewAuthorityLetter(): boolean {
@@ -6058,16 +6077,25 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   getStatusGroup(statusStr: string | undefined, rawApp?: any): DistributorPermitStatusGroup {
     const value = String(statusStr || rawApp?.status || '').toLowerCase();
     const stageId = Number(rawApp?.current_stage_id || rawApp?.currentStageId || rawApp?.current_stage?.id || 0);
-    const isFinal = Boolean(rawApp?.current_stage_is_final || rawApp?.currentStageIsFinal || rawApp?.current_stage?.is_final);
 
-    if (isFinal || stageId === 151 || stageId === 165 || value.includes('approved by commissioner')) {
-      return 'approved';
-    }
-    if (stageId === 152 || value.includes('reject')) {
+    // 1. Check REJECTED first before isFinal!
+    if (stageId === 152 || stageId === 166 || value.includes('reject') || value.includes('cancel')) {
       return 'rejected';
     }
+
+    // 2. Check OBJECTION
     if (value.includes('object')) {
       return 'objection';
+    }
+
+    // 3. Check APPROVED
+    if (stageId === 151 || stageId === 165 || value.includes('approved by commissioner') || value.includes('permit issued') || value.includes('arrival approved') || value.includes('stock completed')) {
+      return 'approved';
+    }
+
+    const isFinal = Boolean(rawApp?.current_stage_is_final || rawApp?.currentStageIsFinal || rawApp?.current_stage?.is_final);
+    if (isFinal) {
+      return 'approved';
     }
 
     if (stageId === 144 || value.includes('awaiting payment') || value.includes('awaiting_payment') || (value.includes('awaiting') && value.includes('pay')) || value.includes('awaiting')) {

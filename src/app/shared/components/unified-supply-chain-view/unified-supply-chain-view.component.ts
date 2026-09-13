@@ -3570,9 +3570,15 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
     isApprovedApplication(): boolean {
         const stage = String(this.applicationData?.['status'] || '').toLowerCase();
-        const stageId = this.applicationData?.['current_stage_id'] || this.applicationData?.['currentStageId'];
+        const stageId = Number(this.applicationData?.['current_stage_id'] || this.applicationData?.['currentStageId'] || 0);
+        if (stage.includes('reject') || stage.includes('cancel') || stageId === 152 || stageId === 166) {
+            return false;
+        }
+        if (stageId === 151 || stageId === 165 || stage.includes('approved')) {
+            return true;
+        }
         const isFinal = Boolean(this.applicationData?.['current_stage_is_final'] || this.applicationData?.['currentStageIsFinal']);
-        return stageId === 151 || isFinal || stage.includes('approved');
+        return isFinal;
     }
 
     get canViewAuthorityLetter(): boolean {
