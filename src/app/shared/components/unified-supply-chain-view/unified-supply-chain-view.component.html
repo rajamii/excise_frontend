@@ -2160,11 +2160,11 @@
                             <i class="bi bi-file-earmark-pdf-fill me-2"></i>Authority Letter (Import Pass)
                         </button>
 
-                        <button class="btn btn-warning btn-lg application-footer-actions__print" type="button" *ngIf="isImflRevalidation()" (click)="openRevalidationLetterModal()">
+                        <button class="btn btn-warning btn-lg application-footer-actions__print" type="button" *ngIf="isImflRevalidation() && isApprovedApplication()" (click)="openRevalidationLetterModal()">
                             <i class="bi bi-file-earmark-pdf-fill me-2"></i>Print Revalidation Letter
                         </button>
 
-                        <button class="btn btn-danger btn-lg application-footer-actions__print" type="button" *ngIf="isImflCancellation()" (click)="openCancellationLetterModal()">
+                        <button class="btn btn-danger btn-lg application-footer-actions__print" type="button" *ngIf="isImflCancellation() && isApprovedApplication()" (click)="openCancellationLetterModal()">
                             <i class="bi bi-file-earmark-pdf-fill me-2"></i>Print Cancellation Letter
                         </button>
                     </div>
