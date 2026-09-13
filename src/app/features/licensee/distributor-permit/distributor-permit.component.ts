@@ -8354,7 +8354,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   get availableHologramsList(): any[] {
     const allRanges: any[] = this.hologramOverviewData?.all_ranges || this.hologramOverviewData?.allRanges || [];
-    return allRanges.filter((r: any) => String(r.status || 'AVAILABLE').toUpperCase() === 'AVAILABLE');
+    return allRanges.filter((r: any) => {
+      const st = String(r.status || 'AVAILABLE').toUpperCase();
+      return st === 'AVAILABLE' || st.includes('AVAILABLE') || st === 'REVERTED';
+    });
   }
 
   get filteredAvailableHolograms(): any[] {
