@@ -238,7 +238,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       this.loadHologramArrivals();
     } else if (tab === 'hologram-overview') {
       this.loadHologramOverview();
-    } else if (tab === 'brand-warehouse') {
+    } else if (tab === 'brand-warehouse' || tab === 'brand-arrival') {
       this.loadBrandWarehouseStock();
     }
     this.autoSelectDefaultStatusFilter();
@@ -270,12 +270,51 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }
   }
 
+  hasOicSavedBrandArrival(row: any): boolean {
+    const appId = String(row?.applicationId || row?.referenceNo || row?.reference_no || row?.id || '').toLowerCase().trim();
+    if (!appId) return false;
+
+    if (this.brandWarehouseStocks && this.brandWarehouseStocks.length > 0) {
+      const foundInWarehouse = this.brandWarehouseStocks.some((b: any) => {
+        const recent = b.recent_entries || b.recentEntries || [];
+        const hasRecent = recent.some((e: any) => {
+          const pNo = String(e.permit_number || e.permitNumber || '').toLowerCase().trim();
+          return pNo === appId || pNo.startsWith(appId) || pNo.includes(appId) || appId.includes(pNo);
+        });
+        const latestP = String(b.latest_permit_number || b.latestPermitNumber || '').toLowerCase().trim();
+        return hasRecent || (latestP && (latestP === appId || latestP.includes(appId) || appId.includes(latestP)));
+      });
+      if (foundInWarehouse) return true;
+    }
+
+    return false;
+  }
+
+  getBrandArrivalStatusForRow(row: any): DistributorPermitStatusGroup {
+    const stage = String(row?.currentStage || row?.status || row?.application?.status || '').toLowerCase();
+    const stageId = Number(row?.application?.current_stage_id || row?.application?.currentStageId || row?.current_stage_id || 0);
+    if (stage.includes('reject') || stage.includes('cancel') || stageId === 152 || stageId === 166 || row?.statusGroup === 'rejected') {
+      return 'rejected';
+    }
+
+    if (this.hasOicSavedBrandArrival(row)) {
+      return 'approved';
+    }
+
+    return 'pending';
+  }
+
   getOfficerStatusGroup(row: DistributorPermitRow | any): DistributorPermitStatusGroup {
     const stage = String(row?.currentStage || row?.status || row?.application?.status || '').toLowerCase();
     const stageId = Number(row?.application?.current_stage_id || row?.application?.currentStageId || row?.current_stage_id || 0);
     if (stage.includes('reject') || stage.includes('cancel') || stageId === 152 || stageId === 166 || row?.statusGroup === 'rejected') {
       return 'rejected';
     }
+
+    if (this.activeTab === 'brand-arrival') {
+      return this.getBrandArrivalStatusForRow(row);
+    }
+
     const arrivalStatus = this.getArrivalStatusForRow(row);
     if (arrivalStatus === 'approved') return 'approved';
     if (arrivalStatus === 'under_review') return 'pending';
