@@ -3944,6 +3944,16 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.arrivalRemarks = '';
   }
 
+  onArrivedCasesChange(): void {
+    if (this.arrivalArrivedCases === null || this.arrivalArrivedCases === undefined) return;
+    const expCases = Number(this.arrivalExpectedCases || 0);
+    if (this.arrivalArrivedCases < 0) {
+      this.arrivalArrivedCases = 0;
+    } else if (expCases > 0 && this.arrivalArrivedCases > expCases) {
+      this.arrivalArrivedCases = expCases;
+    }
+  }
+
   confirmArrivalSubmit(): void {
     if (!this.arrivalTargetRow) return;
     if (!this.selectedPermitNumberForArrival) {
@@ -3961,8 +3971,16 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       alert('Please enter Car / Vehicle Number.');
       return;
     }
+
+    const expCases = Number(this.arrivalExpectedCases || 0);
     if (this.arrivalArrivedCases === null || this.arrivalArrivedCases === undefined || this.arrivalArrivedCases < 0) {
       alert('Please enter a valid number of arrived cases.');
+      return;
+    }
+
+    if (expCases > 0 && this.arrivalArrivedCases > expCases) {
+      alert(`Arrived cases cannot exceed expected cases (${expCases} Cases). Please enter a value less than or equal to ${expCases}.`);
+      this.arrivalArrivedCases = expCases;
       return;
     }
 
@@ -4460,42 +4478,6 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const month = (this.arrivalMonthFilter || '').trim();
 
     let list = this.arrivalRecords || [];
-
-    // Fallback: If arrivalRecords is empty, convert approved permit applications into arrival rows
-    if (list.length === 0 && this.applications.length > 0) {
-      const approvedApps = this.applications.filter((a: any) => {
-        const st = String(a.currentStage || a.status || '').toUpperCase();
-        return st.includes('APPROVED') || a.approval_status === 'APPROVED';
-      });
-
-      list = approvedApps.map((app: any) => {
-        const pDetails = app.permitWiseDetails || app.permit_wise_details || [];
-        const firstPermit = pDetails[0] || {};
-        const firstLine = app.line_items?.[0] || app.lineItems?.[0] || {};
-
-        return {
-          id: app.applicationId || app.referenceNo,
-          distributor_permit_ref: app.applicationId || app.referenceNo || 'N/A',
-          distributorPermitRef: app.applicationId || app.referenceNo || 'N/A',
-          permit_number: firstPermit.permit_number || firstPermit.permitNumber || app.distributorPermitRef || 'IMP-2026-0001',
-          permitNumber: firstPermit.permit_number || firstPermit.permitNumber || app.distributorPermitRef || 'IMP-2026-0001',
-          vehicle_number: app.vehicleNumber || app.vehicle_number || 'SK-01-AB-1234',
-          vehicleNumber: app.vehicleNumber || app.vehicle_number || 'SK-01-AB-1234',
-          brand_name: app.brandName || firstLine.selectedBrandName || firstLine.brand_name || 'IMFL General Brand',
-          brandName: app.brandName || firstLine.selectedBrandName || firstLine.brand_name || 'IMFL General Brand',
-          size_ml: app.sizeMl || firstLine.size_ml || 750,
-          sizeMl: app.sizeMl || firstLine.size_ml || 750,
-          expected_cases: firstPermit.total_cases || firstPermit.totalCases || app.cases || 700,
-          expectedCases: firstPermit.total_cases || firstPermit.totalCases || app.cases || 700,
-          arrived_cases: firstPermit.total_cases || firstPermit.totalCases || app.cases || 700,
-          arrivedCases: firstPermit.total_cases || firstPermit.totalCases || app.cases || 700,
-          arrived_at: app.submittedDate || app.submittedOn || new Date().toISOString(),
-          arrivedAt: app.submittedDate || app.submittedOn || new Date().toISOString(),
-          status: 'Approved',
-          remarks: 'Stock Verified'
-        };
-      });
-    }
 
     return list.filter(item => {
       const dpRef = String(item.distributor_permit_ref || item.distributorPermitRef || item.distributor_permit?.reference_no || item.distributor_permit || item.application_ref || item.applicationId || '').toLowerCase();
