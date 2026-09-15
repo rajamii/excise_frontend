@@ -14,13 +14,25 @@
 
       <div class="tab-body">
         <div class="tab-toolbar">
-          <span class="toolbar-title">Location Management</span>
+          <div class="search-box">
+            <mat-icon class="search-icon">search</mat-icon>
+            <input
+              type="text"
+              [(ngModel)]="locationSearch"
+              (input)="onLocationSearch()"
+              placeholder="Search by code, description, district, status..."
+            />
+            <button *ngIf="locationSearch" type="button" class="clear-btn" (click)="clearLocationSearch()">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+
           <button mat-flat-button color="primary" (click)="onAddLocation()" class="add-btn">
             <mat-icon>add</mat-icon> Add Location
           </button>
         </div>
         <div class="table-wrapper">
-          <mat-table [dataSource]="locations" class="data-table">
+          <mat-table [dataSource]="locationsDS" class="data-table">
 
             <ng-container matColumnDef="locationCode">
               <mat-header-cell *matHeaderCellDef>Location Code</mat-header-cell>
@@ -61,6 +73,17 @@
           @if (locations.length === 0) {
             <div class="empty-state"><mat-icon>inbox</mat-icon><p>No locations found.</p></div>
           }
+
+          @if (locations.length > 0 && locationsDS.filteredData.length === 0) {
+            <div class="empty-state"><mat-icon>search_off</mat-icon><p>No matching locations found for "{{ locationSearch }}".</p></div>
+          }
+
+          <mat-paginator
+            #locationPaginator
+            [pageSizeOptions]="[10, 20, 50]"
+            [pageSize]="10"
+            showFirstLastButtons
+          ></mat-paginator>
         </div>
       </div>
     </mat-tab>
@@ -77,13 +100,25 @@
 
       <div class="tab-body">
         <div class="tab-toolbar">
-          <span class="toolbar-title">License Location Fee Configuration</span>
+          <div class="search-box">
+            <mat-icon class="search-icon">search</mat-icon>
+            <input
+              type="text"
+              [(ngModel)]="feeSearch"
+              (input)="onFeeSearch()"
+              placeholder="Search by category, subcategory, location, fee, status..."
+            />
+            <button *ngIf="feeSearch" type="button" class="clear-btn" (click)="clearFeeSearch()">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+
           <button mat-flat-button color="primary" (click)="onAddLicenseFee()" class="add-btn">
             <mat-icon>add</mat-icon> Add License Fee
           </button>
         </div>
         <div class="table-wrapper">
-          <mat-table [dataSource]="licenseFees" class="data-table">
+          <mat-table [dataSource]="licenseFeesDS" class="data-table">
 
             <ng-container matColumnDef="category">
               <mat-header-cell *matHeaderCellDef>License Category</mat-header-cell>
@@ -97,7 +132,7 @@
 
             <ng-container matColumnDef="location">
               <mat-header-cell *matHeaderCellDef>Location</mat-header-cell>
-              <mat-cell *matCellDef="let item">{{ item.locationDescription || 'All Locations' }}</mat-cell>
+              <mat-cell *matCellDef="let item">{{ getLocationDisplay(item) }}</mat-cell>
             </ng-container>
 
             <ng-container matColumnDef="fee">
@@ -144,6 +179,17 @@
           @if (licenseFees.length === 0) {
             <div class="empty-state"><mat-icon>inbox</mat-icon><p>No license fees configured.</p></div>
           }
+
+          @if (licenseFees.length > 0 && licenseFeesDS.filteredData.length === 0) {
+            <div class="empty-state"><mat-icon>search_off</mat-icon><p>No matching license fees found for "{{ feeSearch }}".</p></div>
+          }
+
+          <mat-paginator
+            #feePaginator
+            [pageSizeOptions]="[10, 20, 50]"
+            [pageSize]="10"
+            showFirstLastButtons
+          ></mat-paginator>
         </div>
       </div>
     </mat-tab>

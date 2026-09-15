@@ -1,5 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, AfterViewInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
+import { MatPaginator } from '@angular/material/paginator';
+import { MatTableDataSource } from '@angular/material/table';
 import Swal from 'sweetalert2';
 import { MaterialModule } from '../../../../../../shared/material.module';
 import { TransitPermitDistributorData } from '../../../../../../core/models/transit-permit-distributor-data.model';
@@ -11,13 +15,17 @@ import { ManageComponent } from '../manage/manage.component';
 @Component({
   selector: 'app-transit-permit-distributor-data-list',
   standalone: true,
-  imports: [MaterialModule],
+  imports: [CommonModule, FormsModule, MaterialModule],
   templateUrl: './list.component.html',
   styleUrl: './list.component.scss',
 })
-export class ListComponent implements OnInit {
+export class ListComponent implements OnInit, AfterViewInit {
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
+
   displayedColumns: string[] = ['licenseId', 'distributorName', 'depoAddress', 'actions'];
+  dataSource = new MatTableDataSource<TransitPermitDistributorData>([]);
   rows: TransitPermitDistributorData[] = [];
+  searchTerm = '';
 
   /** license_id → establishmentName */
   private licenseNameMap = new Map<string, string>();
@@ -29,8 +37,44 @@ export class ListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.setupFilter();
     this.loadLicenseNames();
     this.load();
+  }
+
+  ngAfterViewInit(): void {
+    this.dataSource.paginator = this.paginator;
+  }
+
+  private setupFilter(): void {
+    this.dataSource.filterPredicate = (item: TransitPermitDistributorData, filter: string) => {
+      const term = filter.trim().toLowerCase();
+      const licId = (item.licenseId || '').toLowerCase();
+      const estName = (this.getLicenseName(item.licenseId) || '').toLowerCase();
+      const distName = (item.distributorName || '').toLowerCase();
+      const depo = (item.depoAddress || '').toLowerCase();
+      const mfg = (item.manufacturingUnit || '').toLowerCase();
+
+      return (
+        licId.includes(term) ||
+        estName.includes(term) ||
+        distName.includes(term) ||
+        depo.includes(term) ||
+        mfg.includes(term)
+      );
+    };
+  }
+
+  onSearchChange(): void {
+    this.dataSource.filter = this.searchTerm.trim().toLowerCase();
+    if (this.dataSource.paginator) {
+      this.dataSource.paginator.firstPage();
+    }
+  }
+
+  clearSearch(): void {
+    this.searchTerm = '';
+    this.onSearchChange();
   }
 
   private loadLicenseNames(): void {
@@ -64,6 +108,10 @@ export class ListComponent implements OnInit {
           depoAddress: item.depoAddress ?? item.depo_address ?? '',
           manufacturingUnit: item.manufacturingUnit ?? item.manufacturing_unit ?? ''
         }));
+        this.dataSource.data = this.rows;
+        if (this.paginator) {
+          this.dataSource.paginator = this.paginator;
+        }
       },
       error: () => Swal.fire('Error', 'Failed to load distributor data.', 'error'),
     });

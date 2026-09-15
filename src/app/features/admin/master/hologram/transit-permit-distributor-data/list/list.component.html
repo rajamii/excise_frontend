@@ -9,8 +9,24 @@
     </mat-card-header>
 
     <mat-card-content>
+      <!-- Action & Search Toolbar -->
+      <div class="action-toolbar">
+        <div class="search-box">
+          <mat-icon class="search-icon">search</mat-icon>
+          <input
+            type="text"
+            [(ngModel)]="searchTerm"
+            (input)="onSearchChange()"
+            placeholder="Search by license, distributor name, depot address, manufacturing unit..."
+          />
+          <button *ngIf="searchTerm" type="button" class="clear-btn" (click)="clearSearch()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+      </div>
+
       <div class="table-container">
-        <mat-table [dataSource]="rows">
+        <mat-table [dataSource]="dataSource">
           <ng-container matColumnDef="licenseId">
             <mat-header-cell *matHeaderCellDef>License</mat-header-cell>
             <mat-cell *matCellDef="let item" [matTooltip]="item.licenseId || ''" matTooltipPosition="above">
@@ -44,9 +60,19 @@
           <mat-row *matRowDef="let row; columns: displayedColumns"></mat-row>
         </mat-table>
 
-        @if (rows.length === 0) {
+        @if (dataSource.data.length === 0) {
           <div class="no-data">No distributor data found.</div>
         }
+
+        @if (dataSource.data.length > 0 && dataSource.filteredData.length === 0) {
+          <div class="no-data">No matching distributor data found for "{{ searchTerm }}".</div>
+        }
+
+        <mat-paginator
+          [pageSizeOptions]="[10, 20, 50, 100]"
+          [pageSize]="10"
+          showFirstLastButtons
+        ></mat-paginator>
       </div>
     </mat-card-content>
   </mat-card>
