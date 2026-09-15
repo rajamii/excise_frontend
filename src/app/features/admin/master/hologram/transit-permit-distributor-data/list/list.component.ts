@@ -56,7 +56,14 @@ export class ListComponent implements OnInit {
   load(): void {
     this.masterService.getTransitPermitDistributorData().subscribe({
       next: (data: any) => {
-        this.rows = Array.isArray(data) ? data : [];
+        const list = Array.isArray(data) ? data : (data?.results || []);
+        this.rows = list.map((item: any) => ({
+          ...item,
+          licenseId: item.licenseId ?? item.license_id ?? null,
+          distributorName: item.distributorName ?? item.distributor_name ?? '',
+          depoAddress: item.depoAddress ?? item.depo_address ?? '',
+          manufacturingUnit: item.manufacturingUnit ?? item.manufacturing_unit ?? ''
+        }));
       },
       error: () => Swal.fire('Error', 'Failed to load distributor data.', 'error'),
     });

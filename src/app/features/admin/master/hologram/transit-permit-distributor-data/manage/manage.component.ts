@@ -32,7 +32,13 @@ export class ManageComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.data) {
-      this.row = { ...this.data };
+      this.row = {
+        id: this.data.id,
+        licenseId: this.data.licenseId ?? (this.data as any).license_id ?? null,
+        manufacturingUnit: this.data.manufacturingUnit ?? (this.data as any).manufacturing_unit ?? '',
+        distributorName: this.data.distributorName ?? (this.data as any).distributor_name ?? '',
+        depoAddress: this.data.depoAddress ?? (this.data as any).depo_address ?? '',
+      };
       this.isEditMode = true;
     }
 
@@ -52,11 +58,15 @@ export class ManageComponent implements OnInit {
     }).then((result) => {
       if (!result.isConfirmed) return;
 
-      const payload: TransitPermitDistributorData = {
+      const payload: any = {
         licenseId: this.row.licenseId ?? null,
+        license_id: this.row.licenseId ?? null,
         manufacturingUnit: this.row.manufacturingUnit || '',
+        manufacturing_unit: this.row.manufacturingUnit || '',
         distributorName: this.row.distributorName || '',
+        distributor_name: this.row.distributorName || '',
         depoAddress: this.row.depoAddress || '',
+        depo_address: this.row.depoAddress || '',
       };
 
       const request = this.isEditMode
