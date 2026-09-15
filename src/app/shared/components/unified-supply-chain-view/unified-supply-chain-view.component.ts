@@ -1674,9 +1674,13 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     }
 
     isImflDistributorPermitSource(): boolean {
+        const type = String(this.applicationType || this.route.snapshot.queryParamMap.get('type') || '').trim().toLowerCase();
+        if (type === 'special-permit') return false;
         const source = String(this.route.snapshot.queryParamMap.get('source') || '').trim().toLowerCase();
+        if (source === 'special-permit') return false;
         const ref = String(this.route.snapshot.queryParamMap.get('ref') || '').trim().toUpperCase();
-        return source === 'distributor-permit' || source === 'imfl-requisition' || ref.startsWith('IMFL') || ref.startsWith('IMP/') || ref.startsWith('DP/');
+        if (ref.startsWith('DP/') || ref.startsWith('SP/')) return false;
+        return source === 'distributor-permit' || source === 'imfl-requisition' || ref.startsWith('IMFL') || ref.startsWith('IMP/');
     }
 
     isImflRequisition(): boolean {

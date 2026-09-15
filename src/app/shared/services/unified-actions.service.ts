@@ -308,11 +308,33 @@ export class UnifiedActionsService {
   private isImflRequisitionItem(item: any, itemType?: string): boolean {
     const typeStr = String(itemType || '').toLowerCase();
     if (
+      typeStr === 'special-permit' ||
+      typeStr === 'new-license' ||
+      typeStr === 'license-renewal' ||
+      typeStr === 'company-registration' ||
+      typeStr === 'company-collaboration' ||
+      typeStr === 'label-registration' ||
+      typeStr === 'salesman-barman-registration'
+    ) {
+      return false;
+    }
+
+    if (
       typeStr === 'imfl-requisition' ||
       typeStr === 'distributor-permit' ||
       typeStr === 'distributor-permit-requisition'
     ) {
       return true;
+    }
+
+    if (
+      item?.application_type === 'special_permit' ||
+      item?.type === 'special-permit' ||
+      item?.source === 'special-permit' ||
+      item?.permission_duration ||
+      item?.selected_dates
+    ) {
+      return false;
     }
 
     const ref = String(
@@ -325,7 +347,11 @@ export class UnifiedActionsService {
       ''
     ).toUpperCase();
 
-    if (ref.startsWith('IMFL') || ref.startsWith('IMP/') || ref.startsWith('DP/') || ref.startsWith('DIST/')) {
+    if (ref.startsWith('DP/') || ref.startsWith('SP/')) {
+      return false;
+    }
+
+    if (ref.startsWith('IMFL') || ref.startsWith('IMP/') || ref.startsWith('DIST/')) {
       return true;
     }
 
