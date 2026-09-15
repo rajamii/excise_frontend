@@ -2425,7 +2425,7 @@
                           <tr *ngFor="let item of permit.items; let idx = index">
                             <td>{{ idx + 1 }}</td>
                             <td class="fw-medium">{{ item.brand }}</td>
-                            <td>{{ item.size }} ({{ getPiecesInCase(item.size) }} pcs/case)</td>
+                            <td>{{ item.size }} ({{ item.piecesPerCase || item.pieces_per_case || getPiecesInCase(item.size) }} pcs/case)</td>
                             <td class="text-center fw-bold">{{ item.cases }}</td>
                             <td class="text-end fw-bold">{{ item.bl | number:'1.2-2' }} BL</td>
                             <td class="text-end text-success fw-semibold">{{ item.totalImport | currency:'INR':'symbol':'1.2-2' }}</td>
@@ -2570,7 +2570,7 @@
                           <tbody>
                             <tr *ngFor="let item of permit.items">
                               <td>{{ item.brand }}</td>
-                              <td>{{ item.size }} ({{ getPiecesInCase(item.size) }} pcs/case)</td>
+                              <td>{{ item.size }} ({{ item.piecesPerCase || item.pieces_per_case || getPiecesInCase(item.size) }} pcs/case)</td>
                               <td>{{ item.cases }}</td>
                               <td><strong>{{ item.bl | number:'1.2-2' }} BL</strong></td>
                               <td>{{ item.edp | currency:'INR':'symbol':'1.2-2' }}</td>
@@ -3880,7 +3880,7 @@
                   <div class="border-end pe-3 h-100">
                     <h6 class="text-muted fs-7 text-uppercase fw-bold mb-2"><i class="bi bi-box me-1"></i> Allocation Details</h6>
                     <p class="mb-1"><strong>Brand Name:</strong> <span class="text-primary fw-semibold d-block text-truncate" [title]="item.brandName">{{ item.brandName }}</span></p>
-                    <p class="mb-1"><strong>Size (ml):</strong> {{ item.sizeMl }} ml ({{ getPiecesInCase(item.sizeMl) }} pcs/case)</p>
+                    <p class="mb-1"><strong>Size (ml):</strong> {{ item.sizeMl }} ml ({{ item.piecesPerCase || item.pieces_per_case || getPiecesInCase(item.sizeMl) }} pcs/case)</p>
                     <p class="mb-0"><strong>Allocated Cases:</strong> <span class="badge bg-primary fs-7">{{ item.totalCases }} Cases</span></p>
                   </div>
                 </div>

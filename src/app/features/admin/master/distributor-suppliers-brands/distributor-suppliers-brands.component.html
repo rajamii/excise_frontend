@@ -1,0 +1,600 @@
+<div class="container-fluid page-container">
+  <mat-card class="main-card">
+    <!-- Card Header -->
+    <mat-card-header class="page-card-header">
+      <div class="header-left">
+        <div class="header-icon-wrap">
+          <mat-icon>inventory_2</mat-icon>
+        </div>
+        <div>
+          <h2 class="page-title">Distributor Suppliers & Brands Master</h2>
+          <p class="page-subtitle">Configure IMFL distributor suppliers and manage associated brand profiles, sizing, EDP & duties in one unified master.</p>
+        </div>
+      </div>
+      <div class="header-stats">
+        <div class="stat-badge">
+          <mat-icon>business</mat-icon>
+          <div class="stat-info">
+            <span class="stat-value">{{ stats.totalSuppliers }}</span>
+            <span class="stat-label">Suppliers</span>
+          </div>
+        </div>
+        <div class="stat-badge">
+          <mat-icon>local_bar</mat-icon>
+          <div class="stat-info">
+            <span class="stat-value">{{ stats.totalBrands }}</span>
+            <span class="stat-label">Brands</span>
+          </div>
+        </div>
+      </div>
+    </mat-card-header>
+
+    <mat-card-content class="page-card-content">
+      <mat-tab-group [(selectedIndex)]="activeTabIndex" animationDuration="200ms">
+        
+        <!-- ========================================== -->
+        <!-- TAB 1: SUPPLIERS & ASSOCIATED BRANDS       -->
+        <!-- ========================================== -->
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="tab-icon">domain</mat-icon>
+            <span>Suppliers & Associated Brands</span>
+            <span class="badge-pill ml-2">{{ suppliersList.length }}</span>
+          </ng-template>
+
+          <div class="tab-body-wrapper">
+            <!-- Search & Action Toolbar -->
+            <div class="action-toolbar">
+              <div class="search-box">
+                <mat-icon>search</mat-icon>
+                <input type="text" [(ngModel)]="supplierSearch" (input)="onSupplierSearch()" placeholder="Search by supplier name, master name, address..." />
+                <button *ngIf="supplierSearch" mat-icon-button (click)="supplierSearch=''; onSupplierSearch()">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+
+              <div class="toolbar-actions">
+                <button mat-raised-button class="btn-primary" (click)="openAddSupplierModal()">
+                  <mat-icon>add_circle</mat-icon>
+                  <span>Add Supplier & Brands</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Suppliers Table -->
+            <div class="table-container mat-elevation-z1">
+              <table mat-table [dataSource]="suppliersDS" multiTemplateDataRows class="custom-table suppliers-table">
+                
+                <!-- Index Column -->
+                <ng-container matColumnDef="index">
+                  <th mat-header-cell *matHeaderCellDef class="th-index"> # </th>
+                  <td mat-cell *matCellDef="let s; let i = dataIndex" class="td-index">
+                    {{ (supplierPaginator?.pageIndex || 0) * (supplierPaginator?.pageSize || 10) + i + 1 }}
+                  </td>
+                </ng-container>
+
+                <!-- Supplier Master Name Column -->
+                <ng-container matColumnDef="supplier_master_name">
+                  <th mat-header-cell *matHeaderCellDef> Master Name </th>
+                  <td mat-cell *matCellDef="let s" class="font-semibold text-primary">
+                    <div class="cell-flex">
+                      <mat-icon class="sub-icon">verified</mat-icon>
+                      <span>{{ s.supplier_master_name || s.supplierMasterName }}</span>
+                    </div>
+                  </td>
+                </ng-container>
+
+                <!-- Supplier Trade Name Column -->
+                <ng-container matColumnDef="supplier_name">
+                  <th mat-header-cell *matHeaderCellDef> Supplier Trade Name </th>
+                  <td mat-cell *matCellDef="let s" class="font-medium">
+                    {{ s.supplier_name || s.supplierName }}
+                  </td>
+                </ng-container>
+
+                <!-- Address Column -->
+                <ng-container matColumnDef="address">
+                  <th mat-header-cell *matHeaderCellDef> Address / Premises </th>
+                  <td mat-cell *matCellDef="let s" class="text-muted text-sm">
+                    <span [title]="s.address">{{ s.address || '—' }}</span>
+                  </td>
+                </ng-container>
+
+                <!-- Route Details Column -->
+                <ng-container matColumnDef="route_details">
+                  <th mat-header-cell *matHeaderCellDef> Route Details </th>
+                  <td mat-cell *matCellDef="let s" class="text-muted text-sm">
+                    <span class="route-tag" *ngIf="s.route_details || s.routeDetails">
+                      <mat-icon>alt_route</mat-icon>
+                      {{ s.route_details || s.routeDetails }}
+                    </span>
+                    <span *ngIf="!s.route_details && !s.routeDetails">—</span>
+                  </td>
+                </ng-container>
+
+                <!-- Associated Brands Count Badge -->
+                <ng-container matColumnDef="brands_count">
+                  <th mat-header-cell *matHeaderCellDef class="text-center"> Brands Linked </th>
+                  <td mat-cell *matCellDef="let s" class="text-center">
+                    <button type="button" class="brand-count-chip" (click)="toggleSupplierExpand(s.id)" [class.expanded]="isSupplierExpanded(s.id)">
+                      <mat-icon class="chip-icon">local_bar</mat-icon>
+                      <span>{{ (s.brands?.length ?? s.brands_count ?? s.brandsCount ?? 0) }} Brand(s)</span>
+                      <mat-icon class="expand-indicator">{{ isSupplierExpanded(s.id) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                    </button>
+                  </td>
+                </ng-container>
+
+                <!-- Actions Column -->
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef class="text-center"> Actions </th>
+                  <td mat-cell *matCellDef="let s" class="text-center actions-cell">
+                    <button mat-icon-button class="action-btn view-btn" [title]="isSupplierExpanded(s.id) ? 'Collapse Brands' : 'View Brands'" (click)="toggleSupplierExpand(s.id)">
+                      <mat-icon>{{ isSupplierExpanded(s.id) ? 'unfold_less' : 'unfold_more' }}</mat-icon>
+                    </button>
+                    <button mat-icon-button class="action-btn edit-btn" title="Edit Supplier & Brands" (click)="openEditSupplierModal(s)">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button class="action-btn delete-btn" title="Delete Supplier" (click)="deleteSupplier(s)">
+                      <mat-icon>delete_outline</mat-icon>
+                    </button>
+                  </td>
+                </ng-container>
+
+                <!-- Expanded Detail Column -->
+                <ng-container matColumnDef="expandedDetail">
+                  <td mat-cell *matCellDef="let s" [attr.colspan]="supplierColumns.length" class="detail-cell" [style.display]="isSupplierExpanded(s.id) ? 'table-cell' : 'none'">
+                    <div class="nested-brand-container" *ngIf="isSupplierExpanded(s.id)">
+                      <div class="nested-brand-header">
+                        <div class="nested-title">
+                          <mat-icon>view_list</mat-icon>
+                          <span>Associated Brands for <strong>{{ s.supplier_name || s.supplierName }}</strong></span>
+                        </div>
+                        <button type="button" mat-button class="btn-nested-add" (click)="openAddBrandModal(s.id)">
+                          <mat-icon>add</mat-icon> Add Brand to this Supplier
+                        </button>
+                      </div>
+
+                      <div *ngIf="!s.brands || s.brands.length === 0" class="empty-nested-brands">
+                        <mat-icon>info</mat-icon>
+                        <span>No brands linked to this supplier yet. Click "Add Brand" or "Edit Supplier & Brands" to add items.</span>
+                      </div>
+
+                      <table *ngIf="s.brands && s.brands.length > 0" class="nested-brands-table">
+                        <thead>
+                          <tr>
+                            <th>#</th>
+                            <th>Brand Name</th>
+                            <th>Size (ml)</th>
+                            <th>Pcs / Case</th>
+                            <th>EDP / Case</th>
+                            <th>Import Pass Fee</th>
+                            <th>MRP / Bottle</th>
+                            <th>Addl. ED</th>
+                            <th>Edu. Cess</th>
+                            <th class="text-center">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr *ngFor="let b of s.brands; let bi = index">
+                            <td>{{ bi + 1 }}</td>
+                            <td class="font-semibold text-primary">{{ b.brand_name || b.brandName }}</td>
+                            <td><span class="badge-size">{{ b.size_ml || b.sizeMl }} ml</span></td>
+                            <td>{{ b.pieces_per_case || b.piecesPerCase }}</td>
+                            <td>₹{{ (b.edp_per_case || b.edpPerCase || 0) | number:'1.2-2' }}</td>
+                            <td>₹{{ (b.import_pass_fee_per_case || b.importPassFeePerCase || 0) | number:'1.2-2' }}</td>
+                            <td class="font-semibold text-success">₹{{ (b.mrp_per_bottle || b.mrpPerBottle || 0) | number:'1.2-2' }}</td>
+                            <td>₹{{ (b.additional_ed_per_case || b.additionalEdPerCase || 0) | number:'1.2-2' }}</td>
+                            <td>₹{{ (b.education_cess_per_case || b.educationCessPerCase || 0) | number:'1.2-2' }}</td>
+                            <td class="text-center">
+                              <button mat-icon-button class="action-btn-sm edit-btn" (click)="openEditBrandModal(b)" title="Edit Brand">
+                                <mat-icon>edit</mat-icon>
+                              </button>
+                              <button mat-icon-button class="action-btn-sm delete-btn" (click)="deleteBrand(b)" title="Delete Brand">
+                                <mat-icon>delete</mat-icon>
+                              </button>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </td>
+                </ng-container>
+
+                <!-- Row Definitions -->
+                <tr mat-header-row *matHeaderRowDef="supplierColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: supplierColumns;" class="supplier-row" [class.expanded-row]="isSupplierExpanded(row.id)"></tr>
+                <tr mat-row *matRowDef="let row; columns: ['expandedDetail']" class="detail-row" [style.display]="isSupplierExpanded(row.id) ? '' : 'none'"></tr>
+
+              </table>
+
+              <div *ngIf="suppliersList.length === 0 && !isLoading" class="no-records-card">
+                <mat-icon>folder_open</mat-icon>
+                <p>No distributor suppliers found. Click "Add Supplier & Brands" to create one.</p>
+              </div>
+
+              <mat-paginator #supplierPaginator [pageSizeOptions]="pageSizeOptions" [pageSize]="10" showFirstLastButtons class="custom-paginator"></mat-paginator>
+            </div>
+          </div>
+        </mat-tab>
+
+        <!-- ========================================== -->
+        <!-- TAB 2: ALL BRANDS REGISTRY (FLAT VIEW)     -->
+        <!-- ========================================== -->
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="tab-icon">local_bar</mat-icon>
+            <span>All IMFL Brands Master</span>
+            <span class="badge-pill ml-2">{{ brandsList.length }}</span>
+          </ng-template>
+
+          <div class="tab-body-wrapper">
+            <!-- Search & Filter Toolbar -->
+            <div class="action-toolbar">
+              <div class="search-box">
+                <mat-icon>search</mat-icon>
+                <input type="text" [(ngModel)]="brandSearch" (input)="onBrandSearch()" placeholder="Search brands by name or supplier..." />
+                <button *ngIf="brandSearch" mat-icon-button (click)="brandSearch=''; onBrandSearch()">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+
+              <div class="filter-dropdown">
+                <mat-form-field appearance="outline" class="select-field">
+                  <mat-label>Filter by Supplier</mat-label>
+                  <mat-select [(ngModel)]="selectedSupplierFilter" (selectionChange)="onBrandSearch()">
+                    <mat-option [value]="null">All Suppliers</mat-option>
+                    <mat-option *ngFor="let s of suppliersList" [value]="s.id">
+                      {{ s.supplier_name || s.supplierName }}
+                    </mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
+
+              <div class="toolbar-actions">
+                <button mat-raised-button class="btn-primary" (click)="openAddBrandModal()">
+                  <mat-icon>add</mat-icon>
+                  <span>Add Single Brand</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- All Brands Table -->
+            <div class="table-container mat-elevation-z1">
+              <table mat-table [dataSource]="brandsDS" class="custom-table">
+                
+                <!-- Index -->
+                <ng-container matColumnDef="index">
+                  <th mat-header-cell *matHeaderCellDef class="th-index"> # </th>
+                  <td mat-cell *matCellDef="let b; let i = dataIndex" class="td-index">
+                    {{ (brandPaginator?.pageIndex || 0) * (brandPaginator?.pageSize || 10) + i + 1 }}
+                  </td>
+                </ng-container>
+
+                <!-- Brand Name -->
+                <ng-container matColumnDef="brand_name">
+                  <th mat-header-cell *matHeaderCellDef> Brand Name </th>
+                  <td mat-cell *matCellDef="let b" class="font-semibold text-primary">
+                    {{ b.brand_name || b.brandName }}
+                  </td>
+                </ng-container>
+
+                <!-- Supplier Name -->
+                <ng-container matColumnDef="supplier_name">
+                  <th mat-header-cell *matHeaderCellDef> Supplier </th>
+                  <td mat-cell *matCellDef="let b" class="font-medium">
+                    <span class="supplier-pill">{{ b.supplier_name || b.supplierName || '—' }}</span>
+                  </td>
+                </ng-container>
+
+                <!-- Size (ml) -->
+                <ng-container matColumnDef="size_ml">
+                  <th mat-header-cell *matHeaderCellDef> Size </th>
+                  <td mat-cell *matCellDef="let b">
+                    <span class="badge-size">{{ b.size_ml || b.sizeMl }} ml</span>
+                  </td>
+                </ng-container>
+
+                <!-- Pieces / Case -->
+                <ng-container matColumnDef="pieces_per_case">
+                  <th mat-header-cell *matHeaderCellDef> Pcs / Case </th>
+                  <td mat-cell *matCellDef="let b">
+                    {{ b.pieces_per_case || b.piecesPerCase }}
+                  </td>
+                </ng-container>
+
+                <!-- EDP / Case -->
+                <ng-container matColumnDef="edp_per_case">
+                  <th mat-header-cell *matHeaderCellDef> EDP / Case </th>
+                  <td mat-cell *matCellDef="let b">
+                    ₹{{ (b.edp_per_case || b.edpPerCase || 0) | number:'1.2-2' }}
+                  </td>
+                </ng-container>
+
+                <!-- Import Pass Fee -->
+                <ng-container matColumnDef="import_pass_fee_per_case">
+                  <th mat-header-cell *matHeaderCellDef> Import Pass Fee </th>
+                  <td mat-cell *matCellDef="let b">
+                    ₹{{ (b.import_pass_fee_per_case || b.importPassFeePerCase || 0) | number:'1.2-2' }}
+                  </td>
+                </ng-container>
+
+                <!-- MRP / Bottle -->
+                <ng-container matColumnDef="mrp_per_bottle">
+                  <th mat-header-cell *matHeaderCellDef> MRP / Bottle </th>
+                  <td mat-cell *matCellDef="let b" class="font-semibold text-success">
+                    ₹{{ (b.mrp_per_bottle || b.mrpPerBottle || 0) | number:'1.2-2' }}
+                  </td>
+                </ng-container>
+
+                <!-- Additional ED -->
+                <ng-container matColumnDef="additional_ed_per_case">
+                  <th mat-header-cell *matHeaderCellDef> Addl. ED </th>
+                  <td mat-cell *matCellDef="let b">
+                    ₹{{ (b.additional_ed_per_case || b.additionalEdPerCase || 0) | number:'1.2-2' }}
+                  </td>
+                </ng-container>
+
+                <!-- Education Cess -->
+                <ng-container matColumnDef="education_cess_per_case">
+                  <th mat-header-cell *matHeaderCellDef> Edu Cess </th>
+                  <td mat-cell *matCellDef="let b">
+                    ₹{{ (b.education_cess_per_case || b.educationCessPerCase || 0) | number:'1.2-2' }}
+                  </td>
+                </ng-container>
+
+                <!-- Actions -->
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef class="text-center"> Actions </th>
+                  <td mat-cell *matCellDef="let b" class="text-center actions-cell">
+                    <button mat-icon-button class="action-btn edit-btn" (click)="openEditBrandModal(b)" title="Edit Brand">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button class="action-btn delete-btn" (click)="deleteBrand(b)" title="Delete Brand">
+                      <mat-icon>delete_outline</mat-icon>
+                    </button>
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="brandColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: brandColumns;"></tr>
+              </table>
+
+              <div *ngIf="brandsList.length === 0" class="no-records-card">
+                <mat-icon>folder_open</mat-icon>
+                <p>No brands found matching criteria.</p>
+              </div>
+
+              <mat-paginator #brandPaginator [pageSizeOptions]="pageSizeOptions" [pageSize]="10" showFirstLastButtons class="custom-paginator"></mat-paginator>
+            </div>
+          </div>
+        </mat-tab>
+
+      </mat-tab-group>
+    </mat-card-content>
+  </mat-card>
+</div>
+
+<!-- ========================================================================= -->
+<!-- UNIFIED MODAL: SUPPLIER & ASSOCIATED BRANDS AT ONCE                       -->
+<!-- ========================================================================= -->
+<div class="modal-backdrop" *ngIf="showSupplierModal">
+  <div class="modal-dialog-custom modal-xl">
+    <div class="modal-content-card">
+      <!-- Modal Header -->
+      <div class="modal-header-custom">
+        <div class="modal-title-wrap">
+          <mat-icon>{{ isEditSupplierMode ? 'edit_note' : 'add_business' }}</mat-icon>
+          <h3>{{ isEditSupplierMode ? 'Update Supplier & Associated Brands' : 'Create New Supplier & Associated Brands' }}</h3>
+        </div>
+        <button mat-icon-button class="close-btn" (click)="closeSupplierModal()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="modal-body-custom">
+        <!-- Section 1: Supplier Profile -->
+        <div class="form-section-card">
+          <div class="section-title">
+            <mat-icon>business</mat-icon>
+            <h4>1. Supplier Profile Details</h4>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>Supplier Master Name <span class="required">*</span></label>
+              <input type="text" class="custom-input" [(ngModel)]="supplierFormData.supplier_master_name" placeholder="e.g. Budweiser West Bengal" />
+              <span class="field-hint">Canonical master name of the manufacturer/supplier</span>
+            </div>
+
+            <div class="form-group">
+              <label>Supplier Trade / Display Name <span class="required">*</span></label>
+              <input type="text" class="custom-input" [(ngModel)]="supplierFormData.supplier_name" placeholder="e.g. Budweiser West Bengal Brewery Unit" />
+              <span class="field-hint">Name displayed on permits and dispatches</span>
+            </div>
+          </div>
+
+          <div class="form-grid-2 mt-3">
+            <div class="form-group">
+              <label>Supplier Address / Premises</label>
+              <textarea class="custom-textarea" rows="2" [(ngModel)]="supplierFormData.address" placeholder="Full address of factory / distillery / brewery..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>Designated Route Details</label>
+              <textarea class="custom-textarea" rows="2" [(ngModel)]="supplierFormData.route_details" placeholder="e.g. Via National Highway 12, Checkpost Entry Gate #2..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Associated Brands Repeater -->
+        <div class="form-section-card mt-4">
+          <div class="section-title-between">
+            <div class="section-title">
+              <mat-icon>local_bar</mat-icon>
+              <h4>2. Associated Brands & Tariff Line-Items ({{ supplierFormData.brands.length }})</h4>
+            </div>
+            <button type="button" class="btn-add-item" (click)="addBrandRow()">
+              <mat-icon>add_circle</mat-icon>
+              <span>+ Add Brand Row</span>
+            </button>
+          </div>
+          <p class="section-desc">You can specify all brand sizes, EDP, Import Pass Fees, MRP and excise duties directly here. All rows will be saved simultaneously with the supplier.</p>
+
+          <div class="brand-repeater-container">
+            <div class="brand-repeater-row" *ngFor="let b of supplierFormData.brands; let i = index">
+              <div class="row-badge">#{{ i + 1 }}</div>
+
+              <div class="repeater-grid">
+                <!-- Brand Name -->
+                <div class="form-group col-brand-name">
+                  <label>Brand Name <span class="required">*</span></label>
+                  <input type="text" class="custom-input-sm" [(ngModel)]="b.brand_name" placeholder="e.g. Budweiser Premium King of Beers" />
+                </div>
+
+                <!-- Size (ml) -->
+                <div class="form-group col-sm">
+                  <label>Size (ml)</label>
+                  <input type="number" class="custom-input-sm" [(ngModel)]="b.size_ml" placeholder="750" />
+                </div>
+
+                <!-- Pieces / Case -->
+                <div class="form-group col-sm">
+                  <label>Pcs / Case</label>
+                  <input type="number" class="custom-input-sm" [(ngModel)]="b.pieces_per_case" placeholder="12" />
+                </div>
+
+                <!-- EDP / Case -->
+                <div class="form-group col-md">
+                  <label>EDP / Case (₹)</label>
+                  <input type="number" step="0.01" class="custom-input-sm" [(ngModel)]="b.edp_per_case" placeholder="0.00" />
+                </div>
+
+                <!-- Import Pass Fee -->
+                <div class="form-group col-md">
+                  <label>Import Pass Fee (₹)</label>
+                  <input type="number" step="0.01" class="custom-input-sm" [(ngModel)]="b.import_pass_fee_per_case" placeholder="0.00" />
+                </div>
+
+                <!-- MRP / Bottle -->
+                <div class="form-group col-md">
+                  <label>MRP / Bottle (₹)</label>
+                  <input type="number" step="0.01" class="custom-input-sm text-success font-semibold" [(ngModel)]="b.mrp_per_bottle" placeholder="0.00" />
+                </div>
+
+                <!-- Addl ED -->
+                <div class="form-group col-md">
+                  <label>Addl. ED (₹)</label>
+                  <input type="number" step="0.01" class="custom-input-sm" [(ngModel)]="b.additional_ed_per_case" placeholder="0.00" />
+                </div>
+
+                <!-- Education Cess -->
+                <div class="form-group col-md">
+                  <label>Edu. Cess (₹)</label>
+                  <input type="number" step="0.01" class="custom-input-sm" [(ngModel)]="b.education_cess_per_case" placeholder="0.00" />
+                </div>
+
+                <!-- Delete button -->
+                <div class="form-group col-action">
+                  <label>&nbsp;</label>
+                  <button type="button" class="btn-remove-row" (click)="removeBrandRow(i)" title="Remove Brand Row">
+                    <mat-icon>delete_forever</mat-icon>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer-custom">
+        <button mat-button class="btn-cancel" (click)="closeSupplierModal()">Cancel</button>
+        <button mat-raised-button class="btn-save" (click)="saveSupplierWithBrands()">
+          <mat-icon>check_circle</mat-icon>
+          <span>{{ isEditSupplierMode ? 'Update Supplier & Brands' : 'Save Supplier & Brands' }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- SINGLE BRAND MODAL: QUICK ADD / EDIT                                     -->
+<!-- ========================================================================= -->
+<div class="modal-backdrop" *ngIf="showBrandModal">
+  <div class="modal-dialog-custom modal-md">
+    <div class="modal-content-card">
+      <div class="modal-header-custom">
+        <div class="modal-title-wrap">
+          <mat-icon>{{ isEditBrandMode ? 'edit' : 'local_bar' }}</mat-icon>
+          <h3>{{ isEditBrandMode ? 'Edit Brand Profile' : 'Add Brand to Master' }}</h3>
+        </div>
+        <button mat-icon-button class="close-btn" (click)="closeBrandModal()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <div class="modal-body-custom">
+        <div class="form-group">
+          <label>Distributor Supplier <span class="required">*</span></label>
+          <select class="custom-select" [(ngModel)]="brandFormData.supplier" [disabled]="isEditBrandMode">
+            <option *ngFor="let s of suppliersList" [value]="s.id">
+              {{ s.supplier_name || s.supplierName }} ({{ s.supplier_master_name || s.supplierMasterName }})
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group mt-3">
+          <label>Brand Name <span class="required">*</span></label>
+          <input type="text" class="custom-input" [(ngModel)]="brandFormData.brand_name" placeholder="e.g. Budweiser Magnum" />
+        </div>
+
+        <div class="form-grid-2 mt-3">
+          <div class="form-group">
+            <label>Bottle Size (ml)</label>
+            <input type="number" class="custom-input" [(ngModel)]="brandFormData.size_ml" />
+          </div>
+          <div class="form-group">
+            <label>Pieces Per Case</label>
+            <input type="number" class="custom-input" [(ngModel)]="brandFormData.pieces_per_case" />
+          </div>
+        </div>
+
+        <div class="form-grid-2 mt-3">
+          <div class="form-group">
+            <label>EDP / Case (₹)</label>
+            <input type="number" step="0.01" class="custom-input" [(ngModel)]="brandFormData.edp_per_case" />
+          </div>
+          <div class="form-group">
+            <label>Import Pass Fee / Case (₹)</label>
+            <input type="number" step="0.01" class="custom-input" [(ngModel)]="brandFormData.import_pass_fee_per_case" />
+          </div>
+        </div>
+
+        <div class="form-grid-3 mt-3">
+          <div class="form-group">
+            <label>MRP / Bottle (₹)</label>
+            <input type="number" step="0.01" class="custom-input text-success font-semibold" [(ngModel)]="brandFormData.mrp_per_bottle" />
+          </div>
+          <div class="form-group">
+            <label>Additional ED (₹)</label>
+            <input type="number" step="0.01" class="custom-input" [(ngModel)]="brandFormData.additional_ed_per_case" />
+          </div>
+          <div class="form-group">
+            <label>Education Cess (₹)</label>
+            <input type="number" step="0.01" class="custom-input" [(ngModel)]="brandFormData.education_cess_per_case" />
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer-custom">
+        <button mat-button class="btn-cancel" (click)="closeBrandModal()">Cancel</button>
+        <button mat-raised-button class="btn-save" (click)="saveSingleBrand()">
+          <mat-icon>check_circle</mat-icon>
+          <span>{{ isEditBrandMode ? 'Update Brand' : 'Save Brand' }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -202,6 +202,15 @@ const routes: Routes = [
         data: { authorities: ['site_admin'] }
       },
       {
+        path: 'admin/distributor-suppliers-brands',
+        loadComponent: () =>
+          import('../admin/master/distributor-suppliers-brands/distributor-suppliers-brands.component').then(
+            (m) => m.DistributorSuppliersBrandsComponent
+          ),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin'] }
+      },
+      {
         path: 'admin/brand-owners',
         loadComponent: () =>
           import('../admin/master/brand-owner/list/list.component').then((m) => m.ListComponent),

@@ -3665,18 +3665,38 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       const pNum = String(p.permit_number || p.permitNumber || appId);
       const pNumLower = pNum.toLowerCase().trim();
 
+      const lineItems = p.line_items || p.lineItems || rawApp?.line_items || rawApp?.lineItems || [];
+      const firstLineItem = (Array.isArray(lineItems) && lineItems.length > 0) ? lineItems[0] : null;
+
       // Resolve Brand Name
       let brandName = p.brand_name || p.brandName;
       if (!brandName || brandName === 'N/A') {
-        const lineItems = p.line_items || p.lineItems || rawApp?.line_items || rawApp?.lineItems || [];
-        if (Array.isArray(lineItems) && lineItems.length > 0) {
-          const first = lineItems[0];
-          brandName = first.brand_name || first.brandName || first.selectedBrandName || first.brand_details?.brand_name || first.brand_details?.name;
+        if (firstLineItem) {
+          brandName = firstLineItem.brand_name || firstLineItem.brandName || firstLineItem.selectedBrandName || firstLineItem.brand_details?.brand_name || firstLineItem.brand_details?.name;
         }
       }
       if (!brandName || brandName === 'N/A') {
         brandName = rawApp?.brand_name || rawApp?.brandName || 'N/A';
       }
+
+      // Resolve Size (ml)
+      let sizeMlVal = p.size_ml ?? p.sizeMl ?? firstLineItem?.size_ml ?? firstLineItem?.sizeMl ?? rawApp?.size_ml ?? rawApp?.sizeMl;
+      if (!sizeMlVal && (rawApp?.size || p.size || firstLineItem?.size)) {
+        const rawSizeStr = String(rawApp?.size || p.size || firstLineItem?.size);
+        const match = rawSizeStr.match(/\d+/);
+        if (match) sizeMlVal = parseInt(match[0], 10);
+      }
+      if (!sizeMlVal) {
+        sizeMlVal = 750;
+      }
+      sizeMlVal = Number(sizeMlVal);
+
+      // Resolve Pieces Per Case
+      let piecesPerCaseVal = p.pieces_per_case ?? p.piecesPerCase ?? firstLineItem?.pieces_per_case ?? firstLineItem?.piecesPerCase ?? firstLineItem?.bottles_per_case ?? firstLineItem?.bottlesPerCase ?? rawApp?.pieces_per_case ?? rawApp?.piecesPerCase;
+      if (!piecesPerCaseVal) {
+        piecesPerCaseVal = this.getPiecesInCase(sizeMlVal);
+      }
+      piecesPerCaseVal = Number(piecesPerCaseVal);
 
       // 1. Stock Arrival Record
       const caseProcList = (this.allCasesProcessedList || []).filter((c: any) => {
@@ -3770,7 +3790,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         permitNumber: pNum,
         totalCases: Number(p.total_cases || p.totalCases || row.cases || rawApp?.cases || 0),
         brandName: brandName || 'N/A',
-        sizeMl: Number(p.size_ml || p.sizeMl || (p.line_items?.[0]?.size_ml) || rawApp?.size_ml || 750),
+        sizeMl: sizeMlVal,
+        piecesPerCase: piecesPerCaseVal,
         arrivalRecord: arrivalObj,
         vehicleNumber: vehicleNo || '',
         arrivedCases: arrivedCasesVal,
@@ -6691,6 +6712,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     bl: number;
     addEdPerCase: number;
     totalAddEd: number;
+    piecesPerCase?: number;
+    pieces_per_case?: number;
   }> {
     return this.lineItems.controls
       .map((control, index) => {
@@ -6709,7 +6732,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           mrp: this.getLineMrp(index),
           bl: this.getLineBulkLitres(index),
           addEdPerCase: this.getLineAdditionalEdPerCase(index),
-          totalAddEd: this.getLineTotalAddEd(index)
+          totalAddEd: this.getLineTotalAddEd(index),
+          piecesPerCase: master.piecesPerCase,
+          pieces_per_case: master.piecesPerCase
         };
       })
       .filter(Boolean) as Array<{
@@ -6724,6 +6749,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       bl: number;
       addEdPerCase: number;
       totalAddEd: number;
+      piecesPerCase?: number;
+      pieces_per_case?: number;
     }>;
   }
 
@@ -6747,6 +6774,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       bl: number;
       addEdPerCase: number;
       totalAddEd: number;
+      piecesPerCase?: number;
+      pieces_per_case?: number;
     }>;
   }> {
     const rawRows = this.getBrandReviewRows();

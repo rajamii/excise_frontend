@@ -497,13 +497,17 @@
 
                <!-- Brand Master Details II group -->
               <button class="nav-item bulk-spirit-nav-item" (click)="adminBrandMasterDetailsIIExpanded = !adminBrandMasterDetailsIIExpanded"
-                [class.active]="adminBrandMasterDetailsIIExpanded || isAdminRouteActive('/dashboard/admin/brand-owners') || isAdminRouteActive('/dashboard/admin/company-details') || isAdminRouteActive('/dashboard/admin/kinds-brands')"
+                [class.active]="adminBrandMasterDetailsIIExpanded || isAdminRouteActive('/dashboard/admin/distributor-suppliers-brands') || isAdminRouteActive('/dashboard/admin/brand-owners') || isAdminRouteActive('/dashboard/admin/company-details') || isAdminRouteActive('/dashboard/admin/kinds-brands')"
                 [class.group-expanded]="adminBrandMasterDetailsIIExpanded">
                 <mat-icon class="nav-icon">dns</mat-icon>
                 <span class="nav-text">Brand Master Data II</span>
                 <mat-icon class="nav-chevron">{{ adminBrandMasterDetailsIIExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
               </button>
               <ng-container *ngIf="adminBrandMasterDetailsIIExpanded">
+                <a routerLink="/dashboard/admin/distributor-suppliers-brands" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">inventory_2</mat-icon>
+                  <span class="nav-text">Distributor Suppliers & Brands</span>
+                </a>
                 <a routerLink="/dashboard/admin/brand-owners" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
                   <mat-icon class="nav-icon">admin_panel_settings</mat-icon>
                   <span class="nav-text">Master Brand Owner</span>
