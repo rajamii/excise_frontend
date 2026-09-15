@@ -3376,10 +3376,34 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             return [];
         }
 
+        // For workflow-backed modules, allow the workflow transitions returned from backend /next-stages/ to govern the action buttons.
+        // Returning null allows unified-action-buttons to display all valid transitions for the current user's role.
+        const workflowModules = [
+            'new-license',
+            'license-renewal',
+            'company-registration',
+            'company-collaboration',
+            'label-registration',
+            'salesman-barman-registration',
+            'special-permit'
+        ];
+        if (workflowModules.includes(String(this.applicationType || '').toLowerCase())) {
+            const rawAllowedActions = this.applicationData.allowedActions ?? this.applicationData['allowed_actions'];
+            if (Array.isArray(rawAllowedActions) && rawAllowedActions.length > 0) {
+                const actions = (rawAllowedActions as string[])
+                    .map(a => String(a || '').toUpperCase().trim())
+                    .filter(a => !!a && a !== 'VIEW');
+                if (actions.length > 0) {
+                    return Array.from(new Set(actions));
+                }
+            }
+            return null;
+        }
+
         const context = this.getUserContext();
 
         const rawAllowedActions = this.applicationData.allowedActions ?? this.applicationData['allowed_actions'];
-        if (Array.isArray(rawAllowedActions)) {
+        if (Array.isArray(rawAllowedActions) && rawAllowedActions.length > 0) {
             let actions = (rawAllowedActions as string[])
                 .map(a => String(a || '').toUpperCase().trim())
                 .filter(a => !!a && a !== 'VIEW');
@@ -3411,7 +3435,9 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 actions = actions.filter(a => a !== 'VERIFY');
             }
 
-            return Array.from(new Set(actions));
+            if (actions.length > 0) {
+                return Array.from(new Set(actions));
+            }
         }
 
         if (this.applicationType === 'cancellation' && !this.isLicenseeContext()) {
@@ -3507,7 +3533,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             finalActions = finalActions.filter(a => a !== 'PAY' && a !== 'FORCE_PAY');
         }
 
-        return finalActions;
+        return finalActions.length > 0 ? finalActions : null;
     }
 
     canViewSiteEnquiryReport(): boolean {
