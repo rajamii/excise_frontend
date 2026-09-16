@@ -682,6 +682,17 @@
                           <i class="bi bi-truck me-1"></i>
                           <span>Update Arrival</span>
                         </button>
+                        <button
+                          class="btn btn-sm btn-success-solid"
+                          type="button"
+                          *ngIf="isOfficerUser && !isApproved(row) && row.statusGroup !== 'rejected'"
+                          title="Permit-Wise Commissioner Approval & Hologram Range Allocation"
+                          (click)="openCommissionerPermitApprovalModal(row, $event)"
+                          (mousedown)="openCommissionerPermitApprovalModal(row, $event)"
+                        >
+                          <i class="bi bi-check2-circle me-1"></i>
+                          <span>Approve Permits</span>
+                        </button>
                       </div>
 
                       <!-- Row 2 Action Buttons -->
@@ -2225,240 +2236,283 @@
         <mat-step>
           <ng-template matStepLabel>Brand Details</ng-template>
 
-          <!-- Top 1-Row Brand Selection Bar matching Image -->
-          <div class="brand-entry-card mb-3">
-            <div class="row g-2 align-items-end">
-              <div class="col-md-5">
-                <label class="form-label fw-semibold text-secondary small mb-1">Select Brand <span class="text-danger">*</span></label>
-                <select class="form-select" style="font-size: 13.5px;" [ngModel]="selectedNewBrandName" (ngModelChange)="onTopBrandSelect($event)">
-                  <option value="">Select Brand</option>
-                  <option *ngFor="let brandName of getUniqueBrandNames()" [value]="brandName">
-                    {{ brandName }}
-                  </option>
-                </select>
-              </div>
-
-              <div class="col-md-3">
-                <label class="form-label fw-semibold text-secondary small mb-1">Select Size <span class="text-danger">*</span></label>
-                <select class="form-select" style="font-size: 13.5px;" [ngModel]="selectedNewBrandKey" (ngModelChange)="onTopSizeSelect($event)" [disabled]="!selectedNewBrandName">
-                  <option value="">Select Size</option>
-                  <option *ngFor="let sizeOpt of getAvailableSizesForBrand(selectedNewBrandName)" [value]="getBrandKey(sizeOpt)">
-                    {{ getSizeLabel(sizeOpt) }}
-                  </option>
-                </select>
-              </div>
-
-              <div class="col-md-2" style="max-width: 120px;">
-                <label class="form-label fw-semibold text-secondary small mb-1">Cases <span class="text-danger">*</span></label>
-                <input type="number" min="1" class="form-control text-center fw-bold" style="font-size: 13.5px;" [(ngModel)]="newBrandCases" />
-              </div>
-
-              <div class="col-md-2 d-flex gap-2">
-                <button type="button" class="btn btn-add-brand text-nowrap d-flex align-items-center gap-1 shadow-sm" (click)="addBrandFromTopRow()" [disabled]="!selectedNewBrandName || !selectedNewBrandKey || newBrandCases < 1">
-                  <i class="bi bi-plus-lg"></i> Add Brand
-                </button>
-
-                <button type="button" class="btn btn-break-permit text-nowrap d-flex align-items-center gap-1 shadow-sm" (click)="startNewPermitGroup()" title="Break into a new separate permit batch">
-                  <i class="bi bi-diagram-3"></i> Break Permit
-                  <span class="badge bg-primary text-white ms-1" *ngIf="currentActivePermitIndex > 1">#{{ currentActivePermitIndex }}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Brand Items Table with Deep Blue Header & Crisp Segregation -->
-          <div class="brand-table-card">
-            <div class="table-responsive">
-              <table class="table custom-brand-table align-middle mb-0">
-                <thead style="background-color: #0b4ea2 !important;">
-                  <tr style="background-color: #0b4ea2 !important;">
-                    <th style="width: 45px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-center py-2 px-3">#</th>
-                    <th style="min-width: 220px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-start py-2">Brand Name</th>
-                    <th style="min-width: 150px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-start py-2">Size / Package</th>
-                    <th style="width: 70px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-center py-2">Cases</th>
-                    <th style="width: 120px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-center py-2">Bulk Litres (BL)</th>
-                    <th style="width: 110px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-end py-2">Excise Duty</th>
-                    <th style="width: 140px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-end py-2">Additional Excise Duty</th>
-                    <th style="width: 120px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-end py-2">Import Pass Fee</th>
-                    <th style="width: 110px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-end py-2">Education Cess</th>
-                    <th style="width: 45px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-center py-2"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let row of lineItemControls.controls; let i = index; trackBy: trackByIndex" style="border-bottom: 1px solid #e2e8f0; background-color: #ffffff;">
-                    <td class="text-center fw-semibold text-muted py-3 px-3" style="border-bottom: 1px solid #e2e8f0;">{{ i + 1 }}</td>
-                    <td class="fw-semibold text-dark text-start py-3" style="border-bottom: 1px solid #e2e8f0;">
-                      {{ getLineBrandName(i) }}
-                      <span class="badge ms-2" [ngClass]="getLinePermitIndex(i) > 1 ? 'bg-primary text-white shadow-sm' : 'bg-light text-primary border'">
-                        Permit #{{ getLinePermitIndex(i) }}
-                      </span>
-                    </td>
-                    <td class="text-secondary text-start py-3" style="border-bottom: 1px solid #e2e8f0;">{{ getLineSizeLabel(i) }}</td>
-                    <td class="text-center fw-bold text-dark py-3" style="border-bottom: 1px solid #e2e8f0;">{{ getLineCases(i) }}</td>
-                    <td class="text-center fw-bold py-3" style="color: #0b4ea2; border-bottom: 1px solid #e2e8f0;">{{ getLineBulkLitres(i) | number:'1.2-2' }} BL</td>
-                    <td class="text-end fw-medium text-dark py-3" style="border-bottom: 1px solid #e2e8f0;">{{ (getLineEdp(i) * getLineCases(i)) | currency:'INR':'symbol':'1.2-2' }}</td>
-                    <td class="text-end fw-medium text-dark py-3" style="border-bottom: 1px solid #e2e8f0;">{{ getLineAdditionalEd(i) | currency:'INR':'symbol':'1.2-2' }}</td>
-                    <td class="text-end fw-medium text-dark py-3" style="border-bottom: 1px solid #e2e8f0;">{{ getLineImport(i) | currency:'INR':'symbol':'1.2-2' }}</td>
-                    <td class="text-end fw-medium text-dark py-3" style="border-bottom: 1px solid #e2e8f0;">{{ getLineCess(i) | currency:'INR':'symbol':'1.2-2' }}</td>
-                    <td class="text-center py-3" style="border-bottom: 1px solid #e2e8f0; white-space: nowrap;">
-                      <button type="button" class="btn btn-sm btn-outline-primary border-0 p-1 me-1" (click)="splitLineItemToNewPermit(i)" title="Split cases to a new permit">
-                        <i class="bi bi-diagram-3 fs-6"></i>
-                      </button>
-                      <button type="button" class="trash-btn" (click)="removeLineItem(i)" title="Remove item">
-                        <i class="bi bi-trash fs-5"></i>
-                      </button>
-                    </td>
-                  </tr>
-                  <tr *ngIf="lineItemControls.length === 0">
-                    <td colspan="10" class="text-center text-muted py-4">
-                      <i class="bi bi-info-circle me-1"></i> No brands added yet. Select brand and size above, then click <strong>+ Add Brand</strong>.
-                    </td>
-                  </tr>
-                </tbody>
-                <tfoot *ngIf="lineItemControls.length > 0">
-                  <tr style="background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important;">
-                    <td style="background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;"></td>
-                    <td class="text-start fw-bold py-3" style="color: #0b4ea2 !important; font-size: 14.5px !important; background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;">Grand Total</td>
-                    <td style="background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;"></td>
-                    <td class="text-center fw-bold py-3" style="color: #0b4ea2 !important; font-size: 14.5px !important; background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;">{{ totalCases }}</td>
-                    <td class="text-center fw-bold py-3" style="color: #0b4ea2 !important; font-size: 14.5px !important; background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;">{{ totalBulkLitres | number:'1.2-2' }} BL</td>
-                    <td class="text-end fw-bold py-3" style="color: #0b4ea2 !important; font-size: 14.5px !important; background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;">{{ totalExciseDuty | currency:'INR':'symbol':'1.2-2' }}</td>
-                    <td class="text-end fw-bold py-3" style="color: #0b4ea2 !important; font-size: 14.5px !important; background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;">{{ totalAdditionalEd | currency:'INR':'symbol':'1.2-2' }}</td>
-                    <td class="text-end fw-bold py-3" style="color: #0b4ea2 !important; font-size: 14.5px !important; background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;">{{ totalImport | currency:'INR':'symbol':'1.2-2' }}</td>
-                    <td class="text-end fw-bold py-3" style="color: #0b4ea2 !important; font-size: 14.5px !important; background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;">{{ totalCess | currency:'INR':'symbol':'1.2-2' }}</td>
-                    <td style="background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;"></td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </div>
-
-          <!-- IMFL Hologram Warehouse Stock & Allocation Card -->
-          <div class="dp-hologram-stock-card my-4 p-3 border rounded shadow-sm" [ngClass]="isHologramStockSufficient ? 'bg-white border-primary border-opacity-50' : 'bg-danger bg-opacity-10 border-danger'">
-            <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
-              <div class="d-flex align-items-center gap-2">
-                <mat-icon [color]="isHologramStockSufficient ? 'primary' : 'warn'">qr_code_scanner</mat-icon>
-                <span class="fw-bold fs-6" [ngClass]="isHologramStockSufficient ? 'text-primary' : 'text-danger'">
-                  IMFL Hologram Warehouse Stock &amp; Serial Number Allocation
-                </span>
-                <span class="spinner-border spinner-border-sm text-primary ms-2" *ngIf="isCheckingHologramStock"></span>
-              </div>
-              <div>
-                <span class="badge" [ngClass]="isHologramStockSufficient ? 'bg-success fs-7 px-3 py-2' : 'bg-danger fs-7 px-3 py-2'">
-                  <i class="bi" [ngClass]="isHologramStockSufficient ? 'bi-check-circle-fill me-1' : 'bi-exclamation-triangle-fill me-1'"></i>
-                  {{ isHologramStockSufficient ? 'Stock Sufficient' : 'Insufficient Stock' }}
-                </span>
-              </div>
-            </div>
-
-            <!-- Stats Bar -->
-            <div class="row g-3 text-center mb-2">
-              <div class="col-md-4">
-                <div class="p-2 rounded bg-light border">
-                  <small class="text-muted d-block fw-semibold text-uppercase" style="font-size: 11px;">Required Holograms (Pieces)</small>
-                  <strong class="fs-5 text-primary">{{ totalRequiredHolograms | number }} pcs</strong>
-                  <div class="text-muted" style="font-size: 11px;">{{ totalCases }} cases &times; bottles/case</div>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="p-2 rounded bg-light border">
-                  <small class="text-muted d-block fw-semibold text-uppercase" style="font-size: 11px;">Available Warehouse Stock</small>
-                  <strong class="fs-5 text-success">{{ availableHologramStock | number }} pcs</strong>
-                  <div class="text-muted" style="font-size: 11px;">from received consignments</div>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="p-2 rounded bg-light border">
-                  <small class="text-muted d-block fw-semibold text-uppercase" style="font-size: 11px;">Balance After Allocation</small>
-                  <strong class="fs-5" [ngClass]="hologramStockRemaining >= 0 ? 'text-dark' : 'text-danger'">
-                    {{ hologramStockRemaining | number }} pcs
-                  </strong>
-                  <div class="text-muted" style="font-size: 11px;">remaining balance</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Red Alert Banner if Insufficient -->
-            <div class="alert alert-danger d-flex align-items-center gap-2 mt-3 mb-1 py-2 px-3 rounded shadow-xs" *ngIf="!isHologramStockSufficient && totalRequiredHolograms > 0">
-              <mat-icon class="text-danger">error</mat-icon>
-              <div style="font-size: 13px;">
-                <strong>Insufficient Hologram Stock!</strong> You require <strong>{{ totalRequiredHolograms | number }}</strong> holograms, but only <strong>{{ availableHologramStock | number }}</strong> are available in your warehouse. Please reduce cases or procure additional IMFL holograms to proceed.
-              </div>
-            </div>
-
-            <!-- Auto-Assigned Sequential Serial Ranges Preview -->
-            <div class="mt-3 p-3 bg-light rounded border" *ngIf="isHologramStockSufficient && totalRequiredHolograms > 0 && assignedHologramRangesPreview.length > 0">
-              <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
-                <span class="fw-semibold text-secondary" style="font-size: 12px;">
-                  <mat-icon class="align-middle me-1" style="font-size: 16px; height: 16px; width: 16px;">tag</mat-icon>
-                  Auto-Assigned Hologram Serial Ranges Preview:
-                </span>
-                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary fs-7">
-                  {{ assignedHologramRangesPreview.length }} Batch Allocation(s)
-                </span>
-              </div>
-              <div class="d-flex flex-wrap gap-2 pt-1">
-                <div class="badge bg-white text-dark border p-2 d-flex align-items-center gap-2 shadow-xs" *ngFor="let rng of assignedHologramRangesPreview">
-                  <i class="bi bi-upc-scan text-primary"></i>
-                  <span><strong>{{ rng.ref_no || rng.procurement_ref_no }}</strong>:</span>
-                  <span class="text-primary fw-bold">{{ rng.from }} &rarr; {{ rng.to }}</span>
-                  <span class="badge bg-primary text-white ms-1">{{ rng.count }} pcs</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Permit Allocation Summary (Max 700 Cases per Permit) -->
-          <div class="dp-permit-breakdown-card my-4 p-3 border rounded bg-white shadow-sm" *ngIf="getPermitBreakdown().length > 0">
-            <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
-              <span class="fw-bold text-primary fs-6"><mat-icon class="align-middle me-1">layers</mat-icon> Permit Allocation Summary (Max 700 Cases / Permit)</span>
-              <span class="badge bg-primary fs-6 px-3 py-2">{{ getPermitBreakdown().length }} Permit(s) Required</span>
-            </div>
-
-            <div class="row g-3">
-              <div class="col-12" *ngFor="let permit of getPermitBreakdown()">
-                <div class="card border-primary border-opacity-50 shadow-sm rounded">
-                  <div class="card-header bg-light d-flex justify-content-between align-items-center py-2 px-3">
-                    <span class="fw-bold text-primary fs-6"><mat-icon class="align-middle me-1">description</mat-icon> {{ permit.permitName }}</span>
-                    <span class="badge bg-primary text-white fs-7 px-3 py-1">{{ permit.totalCases }} Cases</span>
+          <div class="dp-brand-step-wrapper">
+            <!-- Box 1: Brand Selection Bar -->
+            <div class="brand-entry-card shadow-sm">
+              <div class="brand-entry-header d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                  <div class="brand-icon-bubble">
+                    <i class="bi bi-box-seam-fill"></i>
                   </div>
-                  <div class="card-body p-3">
-                    <div class="table-responsive mb-3">
-                      <table class="table table-bordered align-middle mb-0" style="font-size: 13px;">
-                        <thead class="bg-light text-secondary">
-                          <tr>
-                            <th style="width: 50px;">#</th>
-                            <th>Brand Name</th>
-                            <th>Size / Package</th>
-                            <th class="text-center">Cases</th>
-                            <th class="text-end">Bulk Litres (BL)</th>
-                            <th class="text-end">Total Import</th>
-                            <th class="text-end">Total Add. ED</th>
-                            <th class="text-end">Total Edu. Cess</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr *ngFor="let item of permit.items; let idx = index">
-                            <td>{{ idx + 1 }}</td>
-                            <td class="fw-medium">{{ item.brand }}</td>
-                            <td>{{ item.size }} ({{ item.piecesPerCase || item.pieces_per_case || getPiecesInCase(item.size) }} pcs/case)</td>
-                            <td class="text-center fw-bold">{{ item.cases }}</td>
-                            <td class="text-end fw-bold">{{ item.bl | number:'1.2-2' }} BL</td>
-                            <td class="text-end text-success fw-semibold">{{ item.totalImport | currency:'INR':'symbol':'1.2-2' }}</td>
-                            <td class="text-end">{{ item.totalAddEd | currency:'INR':'symbol':'1.2-2' }}</td>
-                            <td class="text-end">{{ item.cess | currency:'INR':'symbol':'1.2-2' }}</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
+                  <span class="fw-bold text-dark fs-6">Select Brand, Package Size &amp; Quantity</span>
+                </div>
+                <span class="badge bg-light text-primary border font-monospace px-2.5 py-1">
+                  <i class="bi bi-info-circle me-1"></i> Step 3 of 5
+                </span>
+              </div>
+              <div class="row g-3 align-items-end">
+                <div class="col-md-5">
+                  <label class="form-label fw-bold text-secondary small mb-1">
+                    <i class="bi bi-patch-check-fill text-primary me-1"></i>Select Brand <span class="text-danger">*</span>
+                  </label>
+                  <select class="form-select custom-brand-select" style="font-size: 13.5px;" [ngModel]="selectedNewBrandName" (ngModelChange)="onTopBrandSelect($event)">
+                    <option value="">-- Choose Brand Name --</option>
+                    <option *ngFor="let brandName of getUniqueBrandNames()" [value]="brandName">
+                      {{ brandName }}
+                    </option>
+                  </select>
+                </div>
 
-                    <!-- Subtotal Summary Bar for this Permit -->
-                    <div class="p-2 bg-light rounded border d-flex flex-wrap gap-3 justify-content-around text-center">
-                      <div><small class="text-muted d-block">Cases</small><strong>{{ permit.totalCases }}</strong></div>
-                      <div><small class="text-muted d-block">Bulk Litres</small><strong>{{ permit.totalBulkLitres | number:'1.2-2' }} BL</strong></div>
-                      <div><small class="text-muted d-block">Total Import</small><strong class="text-success">{{ permit.totalImport | currency:'INR':'symbol':'1.2-2' }}</strong></div>
-                      <div><small class="text-muted d-block">Total Add. ED</small><strong>{{ permit.totalAddEd | currency:'INR':'symbol':'1.2-2' }}</strong></div>
-                      <div><small class="text-muted d-block">Total Edu. Cess</small><strong>{{ permit.totalCess | currency:'INR':'symbol':'1.2-2' }}</strong></div>
+                <div class="col-md-3">
+                  <label class="form-label fw-bold text-secondary small mb-1">
+                    <i class="bi bi-aspect-ratio-fill text-primary me-1"></i>Select Size <span class="text-danger">*</span>
+                  </label>
+                  <select class="form-select custom-brand-select" style="font-size: 13.5px;" [ngModel]="selectedNewBrandKey" (ngModelChange)="onTopSizeSelect($event)" [disabled]="!selectedNewBrandName">
+                    <option value="">-- Choose Size / Pack --</option>
+                    <option *ngFor="let sizeOpt of getAvailableSizesForBrand(selectedNewBrandName)" [value]="getBrandKey(sizeOpt)">
+                      {{ getSizeLabel(sizeOpt) }}
+                    </option>
+                  </select>
+                </div>
+
+                <div class="col-md-2" style="max-width: 120px;">
+                  <label class="form-label fw-bold text-secondary small mb-1">
+                    <i class="bi bi-boxes text-primary me-1"></i>Cases <span class="text-danger">*</span>
+                  </label>
+                  <input type="number" min="1" class="form-control text-center fw-bold custom-cases-input" style="font-size: 13.5px;" [(ngModel)]="newBrandCases" />
+                </div>
+
+                <div class="col-md-2 d-flex gap-2">
+                  <button type="button" class="btn btn-add-brand text-nowrap d-flex align-items-center gap-1 shadow-sm" (click)="addBrandFromTopRow()" [disabled]="!selectedNewBrandName || !selectedNewBrandKey || newBrandCases < 1">
+                    <i class="bi bi-plus-circle-fill"></i> Add Brand
+                  </button>
+
+                  <button type="button" class="btn btn-break-permit text-nowrap d-flex align-items-center gap-1 shadow-sm" (click)="startNewPermitGroup()" title="Break into a new separate permit batch">
+                    <i class="bi bi-diagram-3-fill"></i> Break Permit
+                    <span class="badge bg-indigo text-white ms-1" *ngIf="currentActivePermitIndex > 1">#{{ currentActivePermitIndex }}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Box 2: Brand Items Table with Deep Blue Header & Crisp Segregation -->
+            <div class="brand-table-card shadow-sm">
+              <div class="table-responsive">
+                <table class="table custom-brand-table align-middle mb-0">
+                  <thead style="background-color: #0b4ea2 !important;">
+                    <tr style="background-color: #0b4ea2 !important;">
+                      <th style="width: 45px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-center py-2 px-3">#</th>
+                      <th style="min-width: 220px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-start py-2">Brand Name</th>
+                      <th style="min-width: 150px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-start py-2">Size / Package</th>
+                      <th style="width: 70px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-center py-2">Cases</th>
+                      <th style="width: 120px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-center py-2">Bulk Litres (BL)</th>
+                      <th style="width: 110px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-end py-2">Excise Duty</th>
+                      <th style="width: 140px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-end py-2">Additional Excise Duty</th>
+                      <th style="width: 120px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-end py-2">Import Pass Fee</th>
+                      <th style="width: 110px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-end py-2">Education Cess</th>
+                      <th style="width: 45px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-center py-2"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let row of lineItemControls.controls; let i = index; trackBy: trackByIndex" style="border-bottom: 1px solid #e2e8f0; background-color: #ffffff;">
+                      <td class="text-center fw-semibold text-muted py-3 px-3" style="border-bottom: 1px solid #e2e8f0;">{{ i + 1 }}</td>
+                      <td class="fw-semibold text-dark text-start py-3" style="border-bottom: 1px solid #e2e8f0;">
+                        {{ getLineBrandName(i) }}
+                        <span class="badge ms-2" [ngClass]="getLinePermitIndex(i) > 1 ? 'bg-primary text-white shadow-sm' : 'bg-light text-primary border'">
+                          Permit #{{ getLinePermitIndex(i) }}
+                        </span>
+                      </td>
+                      <td class="text-secondary text-start py-3" style="border-bottom: 1px solid #e2e8f0;">{{ getLineSizeLabel(i) }}</td>
+                      <td class="text-center fw-bold text-dark py-3" style="border-bottom: 1px solid #e2e8f0;">{{ getLineCases(i) }}</td>
+                      <td class="text-center fw-bold py-3" style="color: #0b4ea2; border-bottom: 1px solid #e2e8f0;">{{ getLineBulkLitres(i) | number:'1.2-2' }} BL</td>
+                      <td class="text-end fw-medium text-dark py-3" style="border-bottom: 1px solid #e2e8f0;">{{ (getLineEdp(i) * getLineCases(i)) | currency:'INR':'symbol':'1.2-2' }}</td>
+                      <td class="text-end fw-medium text-dark py-3" style="border-bottom: 1px solid #e2e8f0;">{{ getLineAdditionalEd(i) | currency:'INR':'symbol':'1.2-2' }}</td>
+                      <td class="text-end fw-medium text-dark py-3" style="border-bottom: 1px solid #e2e8f0;">{{ getLineImport(i) | currency:'INR':'symbol':'1.2-2' }}</td>
+                      <td class="text-end fw-medium text-dark py-3" style="border-bottom: 1px solid #e2e8f0;">{{ getLineCess(i) | currency:'INR':'symbol':'1.2-2' }}</td>
+                      <td class="text-center py-3" style="border-bottom: 1px solid #e2e8f0; white-space: nowrap;">
+                        <button type="button" class="btn btn-sm btn-outline-primary border-0 p-1 me-1" (click)="splitLineItemToNewPermit(i)" title="Split cases to a new permit">
+                          <i class="bi bi-diagram-3 fs-6"></i>
+                        </button>
+                        <button type="button" class="trash-btn" (click)="removeLineItem(i)" title="Remove item">
+                          <i class="bi bi-trash fs-5"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr *ngIf="lineItemControls.length === 0">
+                      <td colspan="10" class="text-center text-muted py-4">
+                        <i class="bi bi-info-circle me-1"></i> No brands added yet. Select brand and size above, then click <strong>+ Add Brand</strong>.
+                      </td>
+                    </tr>
+                  </tbody>
+                  <tfoot *ngIf="lineItemControls.length > 0">
+                    <tr style="background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important;">
+                      <td style="background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;"></td>
+                      <td class="text-start fw-bold py-3" style="color: #0b4ea2 !important; font-size: 14.5px !important; background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;">Grand Total</td>
+                      <td style="background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;"></td>
+                      <td class="text-center fw-bold py-3" style="color: #0b4ea2 !important; font-size: 14.5px !important; background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;">{{ totalCases }}</td>
+                      <td class="text-center fw-bold py-3" style="color: #0b4ea2 !important; font-size: 14.5px !important; background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;">{{ totalBulkLitres | number:'1.2-2' }} BL</td>
+                      <td class="text-end fw-bold py-3" style="color: #0b4ea2 !important; font-size: 14.5px !important; background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;">{{ totalExciseDuty | currency:'INR':'symbol':'1.2-2' }}</td>
+                      <td class="text-end fw-bold py-3" style="color: #0b4ea2 !important; font-size: 14.5px !important; background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;">{{ totalAdditionalEd | currency:'INR':'symbol':'1.2-2' }}</td>
+                      <td class="text-end fw-bold py-3" style="color: #0b4ea2 !important; font-size: 14.5px !important; background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;">{{ totalImport | currency:'INR':'symbol':'1.2-2' }}</td>
+                      <td class="text-end fw-bold py-3" style="color: #0b4ea2 !important; font-size: 14.5px !important; background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;">{{ totalCess | currency:'INR':'symbol':'1.2-2' }}</td>
+                      <td style="background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;"></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+
+            <!-- Box 3: IMFL Hologram Warehouse Stock & Allocation Card (Mint/Emerald Glass Theme) -->
+            <div class="dp-hologram-stock-card p-3.5 border rounded-3 shadow-sm" [ngClass]="isHologramStockSufficient ? 'dp-holo-card--sufficient' : 'dp-holo-card--insufficient'">
+              <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                  <div class="holo-icon-badge" [ngClass]="isHologramStockSufficient ? 'holo-icon-badge--emerald' : 'holo-icon-badge--warn'">
+                    <i class="bi bi-upc-scan"></i>
+                  </div>
+                  <div>
+                    <span class="fw-bold fs-6 holo-card-title">
+                      IMFL Hologram Warehouse Stock &amp; Serial Number Allocation
+                    </span>
+                    <span class="spinner-border spinner-border-sm text-success ms-2" *ngIf="isCheckingHologramStock"></span>
+                  </div>
+                </div>
+                <div>
+                  <span class="badge holo-status-pill" [ngClass]="isHologramStockSufficient ? 'bg-success text-white' : 'bg-danger text-white'">
+                    <i class="bi" [ngClass]="isHologramStockSufficient ? 'bi-check-circle-fill me-1' : 'bi-exclamation-triangle-fill me-1'"></i>
+                    {{ isHologramStockSufficient ? 'Stock Sufficient' : 'Insufficient Stock' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Stats Bar with Pure White Elevation Chips -->
+              <div class="row g-3 text-center mb-2">
+                <div class="col-md-4">
+                  <div class="p-3 rounded-3 bg-white border holo-stat-chip holo-stat-chip--required shadow-xs h-100">
+                    <small class="text-muted d-block fw-bold text-uppercase" style="font-size: 11px; letter-spacing: 0.5px;">Required Holograms (Pieces)</small>
+                    <strong class="fs-4 text-primary font-monospace my-1 d-block">{{ totalRequiredHolograms | number }} pcs</strong>
+                    <div class="text-muted" style="font-size: 11.5px;">{{ totalCases }} cases &times; bottles/case</div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="p-3 rounded-3 bg-white border holo-stat-chip holo-stat-chip--available shadow-xs h-100">
+                    <small class="text-muted d-block fw-bold text-uppercase" style="font-size: 11px; letter-spacing: 0.5px;">Available Warehouse Stock</small>
+                    <strong class="fs-4 text-success font-monospace my-1 d-block">{{ availableHologramStock | number }} pcs</strong>
+                    <div class="text-muted" style="font-size: 11.5px;">from received consignments</div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="p-3 rounded-3 bg-white border holo-stat-chip holo-stat-chip--balance shadow-xs h-100">
+                    <small class="text-muted d-block fw-bold text-uppercase" style="font-size: 11px; letter-spacing: 0.5px;">Balance After Allocation</small>
+                    <strong class="fs-4 font-monospace my-1 d-block" [ngClass]="hologramStockRemaining >= 0 ? 'text-dark' : 'text-danger'">
+                      {{ hologramStockRemaining | number }} pcs
+                    </strong>
+                    <div class="text-muted" style="font-size: 11.5px;">remaining balance</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Red Alert Banner if Insufficient -->
+              <div class="alert alert-danger d-flex align-items-center gap-2 mt-3 mb-1 py-2.5 px-3 rounded shadow-xs" *ngIf="!isHologramStockSufficient && totalRequiredHolograms > 0">
+                <mat-icon class="text-danger">error</mat-icon>
+                <div style="font-size: 13px;">
+                  <strong>Insufficient Hologram Stock!</strong> You require <strong>{{ totalRequiredHolograms | number }}</strong> holograms, but only <strong>{{ availableHologramStock | number }}</strong> are available in your warehouse. Please reduce cases or procure additional IMFL holograms to proceed.
+                </div>
+              </div>
+
+              <!-- Notice: Hologram Range Allocation Upon Commissioner Approval -->
+              <div class="mt-3 p-3 bg-white rounded-3 border border-emerald-subtle d-flex align-items-center gap-3 shadow-xs" *ngIf="isHologramStockSufficient && totalRequiredHolograms > 0">
+                <div class="p-2 bg-emerald-50 text-emerald-700 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0; background-color: #ecfdf5; color: #059669;">
+                  <i class="bi bi-shield-lock-fill fs-5"></i>
+                </div>
+                <div style="font-size: 13px;">
+                  <strong class="text-dark">{{ totalRequiredHolograms | number }} Holograms Required</strong> &bull; Warehouse stock availability verified (<span class="text-success fw-bold">{{ availableHologramStock | number }} pcs</span> available).
+                  <div class="text-muted small mt-0.5">Sequential hologram serial ranges will be officially allocated and issued from available warehouse stock upon <strong>Commissioner Approval</strong>.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Box 4: Permit Allocation Summary (Max 700 Cases per Permit) (Royal Blue/Azure Light Theme) -->
+            <div class="dp-permit-breakdown-card p-3.5 border rounded-3 shadow-sm" *ngIf="getPermitBreakdown().length > 0">
+              <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+                <div class="d-flex align-items-center gap-2">
+                  <div class="permit-icon-badge">
+                    <i class="bi bi-stack"></i>
+                  </div>
+                  <div>
+                    <span class="fw-bold text-primary fs-6">Permit Allocation Summary (Max 700 Cases / Permit)</span>
+                    <div class="text-muted small">Automatic grouping &amp; custom broken permit batches</div>
+                  </div>
+                </div>
+                <span class="badge bg-primary text-white fs-6 px-3 py-2 shadow-xs rounded-pill">
+                  <i class="bi bi-layers-fill me-1"></i> {{ getPermitBreakdown().length }} Permit(s) Required
+                </span>
+              </div>
+
+              <div class="row g-3">
+                <div class="col-12" *ngFor="let permit of getPermitBreakdown()">
+                  <div class="card permit-child-card border rounded-3 shadow-xs overflow-hidden">
+                    <div class="permit-child-header d-flex justify-content-between align-items-center py-2.5 px-3">
+                      <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-file-earmark-text-fill text-white fs-6"></i>
+                        <span class="fw-bold text-white fs-6">{{ permit.permitName }}</span>
+                      </div>
+                      <span class="badge bg-white text-primary fw-bold font-monospace fs-7 px-3 py-1.5 rounded-pill shadow-xs">
+                        {{ permit.totalCases }} Cases
+                      </span>
+                    </div>
+                    <div class="card-body p-3 bg-white">
+                      <div class="table-responsive mb-3">
+                        <table class="table permit-inner-table align-middle mb-0" style="font-size: 13px;">
+                          <thead class="permit-inner-thead">
+                            <tr>
+                              <th style="width: 50px;">#</th>
+                              <th>Brand Name</th>
+                              <th>Size / Package</th>
+                              <th class="text-center">Cases</th>
+                              <th class="text-end">Bulk Litres (BL)</th>
+                              <th class="text-end">Total Import</th>
+                              <th class="text-end">Total Add. ED</th>
+                              <th class="text-end">Total Edu. Cess</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr *ngFor="let item of permit.items; let idx = index">
+                              <td class="text-muted fw-semibold">{{ idx + 1 }}</td>
+                              <td class="fw-semibold text-dark">{{ item.brand }}</td>
+                              <td class="text-secondary">{{ item.size }} ({{ item.piecesPerCase || item.pieces_per_case || getPiecesInCase(item.size) }} pcs/case)</td>
+                              <td class="text-center fw-bold text-dark">{{ item.cases }}</td>
+                              <td class="text-end fw-bold text-primary">{{ item.bl | number:'1.2-2' }} BL</td>
+                              <td class="text-end text-success fw-bold">{{ item.totalImport | currency:'INR':'symbol':'1.2-2' }}</td>
+                              <td class="text-end fw-semibold text-dark">{{ item.totalAddEd | currency:'INR':'symbol':'1.2-2' }}</td>
+                              <td class="text-end fw-semibold text-dark">{{ item.cess | currency:'INR':'symbol':'1.2-2' }}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <!-- Subtotal Summary Bar for this Permit -->
+                      <div class="permit-subtotal-bar p-2.5 rounded-3 border d-flex flex-wrap gap-2 justify-content-around text-center">
+                        <div class="permit-stat-chip">
+                          <small class="text-muted d-block text-uppercase" style="font-size: 10.5px;">Cases</small>
+                          <strong class="text-dark fs-6 font-monospace">{{ permit.totalCases }}</strong>
+                        </div>
+                        <div class="permit-stat-chip">
+                          <small class="text-muted d-block text-uppercase" style="font-size: 10.5px;">Bulk Litres</small>
+                          <strong class="text-primary fs-6 font-monospace">{{ permit.totalBulkLitres | number:'1.2-2' }} BL</strong>
+                        </div>
+                        <div class="permit-stat-chip">
+                          <small class="text-muted d-block text-uppercase" style="font-size: 10.5px;">Total Import</small>
+                          <strong class="text-success fs-6 font-monospace">{{ permit.totalImport | currency:'INR':'symbol':'1.2-2' }}</strong>
+                        </div>
+                        <div class="permit-stat-chip">
+                          <small class="text-muted d-block text-uppercase" style="font-size: 10.5px;">Total Add. ED</small>
+                          <strong class="text-dark fs-6 font-monospace">{{ permit.totalAddEd | currency:'INR':'symbol':'1.2-2' }}</strong>
+                        </div>
+                        <div class="permit-stat-chip">
+                          <small class="text-muted d-block text-uppercase" style="font-size: 10.5px;">Total Edu. Cess</small>
+                          <strong class="text-dark fs-6 font-monospace">{{ permit.totalCess | currency:'INR':'symbol':'1.2-2' }}</strong>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -3992,14 +4046,26 @@
             </div>
           </div>
           <div class="col-md-6">
-            <div class="p-3 bg-primary bg-opacity-10 rounded border border-primary border-opacity-25 h-100 d-flex flex-column justify-content-between">
+            <div class="p-3 rounded border h-100 d-flex flex-column justify-content-between" [ngClass]="isApproved(selectedPermitHologramDetailsRow) ? 'bg-primary bg-opacity-10 border-primary border-opacity-25' : 'bg-warning bg-opacity-10 border-warning border-opacity-25'">
               <div>
-                <small class="text-primary d-block fw-bold text-uppercase" style="font-size: 11px;">Total Holograms Assigned &amp; Reserved</small>
-                <strong class="fs-3 text-primary font-monospace">{{ getHologramsAssignedCount(selectedPermitHologramDetailsRow) | number }} Pieces</strong>
+                <small class="d-block fw-bold text-uppercase" [ngClass]="isApproved(selectedPermitHologramDetailsRow) ? 'text-primary' : 'text-dark'" style="font-size: 11px;">
+                  {{ isApproved(selectedPermitHologramDetailsRow) ? 'Total Holograms Assigned & Reserved' : 'Total Holograms Required' }}
+                </small>
+                <strong class="fs-3 font-monospace" [ngClass]="isApproved(selectedPermitHologramDetailsRow) ? 'text-primary' : 'text-dark'">
+                  {{ (isApproved(selectedPermitHologramDetailsRow) ? getHologramsAssignedCount(selectedPermitHologramDetailsRow) : getHologramsRequiredCount(selectedPermitHologramDetailsRow)) | number }} Pieces
+                </strong>
               </div>
               <div class="mt-2 d-flex align-items-center justify-content-between">
-                <span class="badge bg-success py-1.5 px-2.5 shadow-xs"><i class="bi bi-check-circle-fill me-1"></i> Allocated &amp; Reserved</span>
-                <span class="small text-muted font-monospace">{{ getHologramRanges(selectedPermitHologramDetailsRow).length }} Serial Range(s)</span>
+                <span class="badge py-1.5 px-2.5 shadow-xs" [ngClass]="isApproved(selectedPermitHologramDetailsRow) ? 'bg-success text-white' : 'bg-warning text-dark'">
+                  <i class="bi" [ngClass]="isApproved(selectedPermitHologramDetailsRow) ? 'bi-check-circle-fill me-1' : 'bi-clock-history me-1'"></i>
+                  {{ isApproved(selectedPermitHologramDetailsRow) ? 'Allocated & Reserved' : 'Pending Commissioner Approval' }}
+                </span>
+                <span class="small text-muted font-monospace" *ngIf="isApproved(selectedPermitHologramDetailsRow)">
+                  {{ getHologramRanges(selectedPermitHologramDetailsRow).length }} Serial Range(s)
+                </span>
+                <span class="small text-muted font-monospace" *ngIf="!isApproved(selectedPermitHologramDetailsRow)">
+                  Range Pending Approval
+                </span>
               </div>
             </div>
           </div>
@@ -4009,14 +4075,17 @@
         <div class="card border shadow-sm rounded overflow-hidden">
           <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center">
             <span class="fw-bold text-primary fs-7"><i class="bi bi-list-ol me-1"></i> Sequential Serial Numbers Assigned</span>
-            <span class="badge bg-primary fs-7">{{ getHologramRanges(selectedPermitHologramDetailsRow).length }} Batch Allocation(s)</span>
+            <span class="badge" [ngClass]="isApproved(selectedPermitHologramDetailsRow) ? 'bg-primary text-white' : 'bg-warning text-dark'">
+              {{ isApproved(selectedPermitHologramDetailsRow) ? (getHologramRanges(selectedPermitHologramDetailsRow).length + ' Batch Allocation(s)') : 'Pending Approval' }}
+            </span>
           </div>
-          <div class="table-responsive" *ngIf="getHologramRanges(selectedPermitHologramDetailsRow).length > 0; else noRangesBlock">
+          <div class="table-responsive" *ngIf="isApproved(selectedPermitHologramDetailsRow) && getHologramRanges(selectedPermitHologramDetailsRow).length > 0">
             <table class="table table-hover align-middle mb-0" style="font-size: 13px;">
               <thead class="table-light text-secondary">
                 <tr>
                   <th class="ps-3" style="width: 50px;">#</th>
                   <th>Consignment Batch Ref</th>
+                  <th>Permit Details</th>
                   <th>Starting Serial (From)</th>
                   <th>Ending Serial (To)</th>
                   <th class="text-center">Quantity (Pieces)</th>
@@ -4028,6 +4097,9 @@
                   <td class="ps-3 fw-semibold text-muted">{{ idx + 1 }}</td>
                   <td>
                     <span class="font-monospace fw-bold text-primary">{{ rng.ref_no || 'IMFL_HOLO_PRO' }}</span>
+                  </td>
+                  <td>
+                    <span class="badge bg-light text-primary border font-monospace">{{ rng.permit_number || ('Permit #' + (idx + 1)) }}</span>
                   </td>
                   <td>
                     <span class="badge bg-light text-dark border font-monospace fs-6 px-2.5 py-1">{{ rng.from }}</span>
@@ -4049,16 +4121,156 @@
               </tbody>
             </table>
           </div>
-          <ng-template #noRangesBlock>
-            <div class="p-4 text-center text-muted">
-              <i class="bi bi-info-circle fs-3 d-block mb-2 text-secondary"></i>
-              <p class="mb-0">No specific serial ranges recorded for this application.</p>
+          
+          <!-- When Application is Pending Commissioner Approval -->
+          <div class="p-4" *ngIf="!isApproved(selectedPermitHologramDetailsRow)">
+            <div class="alert alert-warning d-flex align-items-center gap-3 mb-0 py-3 px-3 rounded shadow-xs">
+              <i class="bi bi-clock-history fs-3 text-warning"></i>
+              <div>
+                <strong class="d-block fs-6">Hologram Serial Range Allocation Pending</strong>
+                <span class="small text-dark">
+                  This requisition requires <strong>{{ getHologramsRequiredCount(selectedPermitHologramDetailsRow) | number }} pieces</strong> of holograms. Sequential serial ranges from warehouse stock will be allocated and assigned permit-wise upon <strong>Commissioner Approval</strong>.
+                </span>
+              </div>
             </div>
-          </ng-template>
+          </div>
         </div>
       </div>
       <div class="modal-footer bg-light py-2 px-4">
         <button type="button" class="btn btn-secondary px-4 btn-sm" (click)="closePermitHologramDetailsModal()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Commissioner Permit-Wise Approval Modal -->
+<div class="modal fade show d-block" tabindex="-1" style="background: rgba(0, 0, 0, 0.65); z-index: 1062;" *ngIf="showCommissionerPermitApprovalModal">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header py-3 px-4" style="background-color: #0b4ea2; color: #ffffff;">
+        <h5 class="modal-title fw-bold">
+          <i class="bi bi-shield-check me-2"></i>
+          Commissioner Permit-Wise Requisition Approval &mdash; {{ selectedCommissionerApprovalRow?.applicationId || selectedCommissionerApprovalRow?.referenceNo }}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeCommissionerPermitApprovalModal()"></button>
+      </div>
+      <div class="modal-body p-4" style="max-height: 78vh; overflow-y: auto;">
+        <!-- Header Information -->
+        <div class="p-3 bg-light rounded border mb-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
+          <div>
+            <span class="text-muted small d-block">Applicant (Distributor):</span>
+            <strong class="fs-6 text-dark">{{ resolveApplicantName(selectedCommissionerApprovalRow) }}</strong>
+          </div>
+          <div>
+            <span class="text-muted small d-block">Supplier:</span>
+            <strong class="fs-6 text-dark">{{ selectedCommissionerApprovalRow?.supplierName || selectedCommissionerApprovalRow?.supplier_company_name || 'IMFL Supplier' }}</strong>
+          </div>
+          <div>
+            <span class="text-muted small d-block">Available Warehouse Stock:</span>
+            <strong class="fs-6 text-success">{{ commissionerAvailableStockTotal | number }} Holograms</strong>
+          </div>
+          <div>
+            <span class="badge bg-primary fs-6 px-3 py-1.5">{{ commissionerApprovalPermits.length }} Permit(s) in Requisition</span>
+          </div>
+        </div>
+
+        <p class="small text-muted mb-3">
+          <i class="bi bi-info-circle me-1 text-primary"></i>
+          Review each individual permit below. You can choose to <strong>Approve</strong> or <strong>Keep on Hold</strong> any specific permit. Sequential warehouse hologram serial ranges will be allocated for approved permits.
+        </p>
+
+        <!-- Permit Cards List -->
+        <div class="d-flex flex-column gap-3">
+          <div class="card border shadow-sm rounded" *ngFor="let permit of commissionerApprovalPermits; let pIdx = index" [ngClass]="permit.isApproved ? 'border-primary' : 'border-warning bg-warning bg-opacity-10'">
+            <div class="card-header d-flex flex-wrap justify-content-between align-items-center py-2 px-3" [ngClass]="permit.isApproved ? 'bg-primary bg-opacity-10' : 'bg-warning bg-opacity-25'">
+              <div class="d-flex align-items-center gap-2">
+                <i class="bi" [ngClass]="permit.isApproved ? 'bi-file-earmark-check-fill text-primary fs-5' : 'bi-pause-circle-fill text-warning fs-5'"></i>
+                <span class="fw-bold fs-6" [ngClass]="permit.isApproved ? 'text-primary' : 'text-dark'">
+                  {{ permit.permitName }} &bull; <span class="font-monospace text-muted small">{{ permit.permit_number }}</span>
+                </span>
+                <span class="badge ms-2" [ngClass]="permit.isApproved ? 'bg-success text-white' : 'bg-warning text-dark'">
+                  {{ permit.isApproved ? 'READY FOR APPROVAL' : 'ON HOLD' }}
+                </span>
+              </div>
+
+              <!-- Permit Decision Actions -->
+              <div class="btn-group btn-group-sm" role="group">
+                <button type="button" class="btn" [ngClass]="permit.isApproved ? 'btn-success text-white fw-bold' : 'btn-outline-success'" (click)="setPermitApprovalStatus(permit.permitIndex, true)">
+                  <i class="bi bi-check-lg me-1"></i> Approve Permit
+                </button>
+                <button type="button" class="btn" [ngClass]="!permit.isApproved ? 'btn-warning text-dark fw-bold' : 'btn-outline-warning text-dark'" (click)="setPermitApprovalStatus(permit.permitIndex, false)">
+                  <i class="bi bi-pause-fill me-1"></i> Keep on Hold
+                </button>
+              </div>
+            </div>
+
+            <div class="card-body p-3">
+              <!-- Summary Numbers -->
+              <div class="row g-2 mb-3 text-center" style="font-size: 13px;">
+                <div class="col-md-3">
+                  <div class="p-2 bg-white rounded border">
+                    <small class="text-muted d-block">Cases</small>
+                    <strong class="fs-6 text-dark">{{ permit.totalCases }}</strong>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="p-2 bg-white rounded border">
+                    <small class="text-muted d-block">Holograms Required</small>
+                    <strong class="fs-6 text-primary">{{ permit.totalHolograms }} pcs</strong>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="p-2 rounded border" [ngClass]="permit.isApproved ? 'bg-success bg-opacity-10 border-success' : 'bg-light text-muted'">
+                    <small class="d-block fw-semibold" [ngClass]="permit.isApproved ? 'text-success' : 'text-muted'">Allocated Hologram Serial Range</small>
+                    <div *ngIf="permit.isApproved && permit.assignedRanges && permit.assignedRanges.length > 0">
+                      <span class="badge bg-success font-monospace fs-6 px-3 py-1">
+                        {{ permit.assignedRanges[0].from }} &rarr; {{ permit.assignedRanges[0].to }} ({{ permit.assignedRanges[0].count }} pcs)
+                      </span>
+                    </div>
+                    <div *ngIf="!permit.isApproved">
+                      <span class="badge bg-secondary">Allocation On Hold</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Brand Items Table inside permit -->
+              <div class="table-responsive" *ngIf="permit.items && permit.items.length > 0">
+                <table class="table table-sm table-bordered align-middle mb-0" style="font-size: 12.5px;">
+                  <thead class="table-light text-secondary">
+                    <tr>
+                      <th style="width: 40px;">#</th>
+                      <th>Brand Name</th>
+                      <th>Size / Package</th>
+                      <th class="text-center">Cases</th>
+                      <th class="text-center">Holograms Required</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let it of permit.items; let iIdx = index">
+                      <td>{{ iIdx + 1 }}</td>
+                      <td class="fw-semibold text-dark">{{ it.brand }}</td>
+                      <td class="text-secondary">{{ it.size }} ({{ it.piecesPerCase || 12 }} pcs/case)</td>
+                      <td class="text-center fw-bold">{{ it.cases }}</td>
+                      <td class="text-center fw-bold text-primary">{{ it.hologramsRequired || (it.cases * (it.piecesPerCase || 12)) }} pcs</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer bg-light py-2 px-4 d-flex justify-content-between">
+        <button type="button" class="btn btn-outline-secondary px-4 btn-sm" (click)="closeCommissionerPermitApprovalModal()" [disabled]="isSubmittingCommissionerApproval">
+          Cancel
+        </button>
+
+        <button type="button" class="btn btn-primary px-4 btn-sm fw-bold d-flex align-items-center gap-1 shadow-sm" style="background-color: #0b4ea2; border-color: #0b4ea2;" (click)="confirmCommissionerPermitApproval()" [disabled]="isSubmittingCommissionerApproval">
+          <span class="spinner-border spinner-border-sm me-1" *ngIf="isSubmittingCommissionerApproval"></span>
+          <i class="bi bi-check2-all me-1" *ngIf="!isSubmittingCommissionerApproval"></i>
+          <span>Confirm &amp; Approve Selected Permits</span>
+        </button>
       </div>
     </div>
   </div>

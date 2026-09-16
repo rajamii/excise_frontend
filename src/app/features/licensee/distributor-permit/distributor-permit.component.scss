@@ -1556,22 +1556,72 @@
 }
 
 /* Stepper 3 Brand Selection Bar & Styled Data Table */
+.dp-brand-step-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 12px 2px 28px;
+}
+
 .brand-entry-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 16px 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  position: relative;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%);
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 20px 24px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #0b4ea2 0%, #3b82f6 50%, #6366f1 100%);
+  }
+
+  .brand-icon-bubble {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: #e0f2fe;
+    color: #0284c7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+  }
+
+  .custom-brand-select,
+  .custom-cases-input {
+    background-color: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: #1e293b;
+    font-weight: 500;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+    &:focus {
+      border-color: #0b4ea2;
+      box-shadow: 0 0 0 3px rgba(11, 78, 162, 0.12);
+      outline: none;
+    }
+  }
+
+  .custom-cases-input {
+    font-family: var(--bs-font-monospace, monospace);
+  }
 }
 
 .brand-table-card {
   background: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  margin-top: 16px;
-  margin-bottom: 24px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
 }
 
 .custom-brand-table {
@@ -1603,11 +1653,11 @@
         vertical-align: middle;
 
         &:first-child {
-          border-top-left-radius: 7px;
+          border-top-left-radius: 10px;
         }
 
         &:last-child {
-          border-top-right-radius: 7px;
+          border-top-right-radius: 10px;
         }
       }
     }
@@ -1661,38 +1711,42 @@
 }
 
 .btn-add-brand {
-  background-color: #0b4ea2 !important;
+  background: linear-gradient(135deg, #0b4ea2 0%, #1d4ed8 100%) !important;
   border-color: #0b4ea2 !important;
   color: #ffffff !important;
   font-weight: 600;
-  padding: 6px 18px;
-  border-radius: 6px;
+  padding: 7px 18px;
+  border-radius: 8px;
   transition: all 0.2s ease;
 
   &:hover:not(:disabled) {
-    background-color: #083b7c !important;
-    border-color: #083b7c !important;
-    box-shadow: 0 2px 8px rgba(11, 78, 162, 0.35);
+    background: linear-gradient(135deg, #083b7c 0%, #1e40af 100%) !important;
+    box-shadow: 0 4px 12px rgba(11, 78, 162, 0.35);
+    transform: translateY(-1px);
   }
 
   &:disabled {
     opacity: 0.55;
     cursor: not-allowed;
+    transform: none;
   }
 }
 
 .btn-break-permit {
-  background-color: #f0f7ff !important;
-  border: 1px solid #0b4ea2 !important;
-  color: #0b4ea2 !important;
+  background-color: #eef2ff !important;
+  border: 1.5px solid #6366f1 !important;
+  color: #4338ca !important;
   font-weight: 600;
-  padding: 6px 16px;
-  border-radius: 6px;
+  padding: 7px 16px;
+  border-radius: 8px;
   transition: all 0.2s ease;
 
   &:hover {
-    background-color: #e0effe !important;
-    color: #083b7c !important;
+    background-color: #e0e7ff !important;
+    border-color: #4f46e5 !important;
+    color: #3730a3 !important;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+    transform: translateY(-1px);
   }
 }
 
@@ -1709,3 +1763,157 @@
     background: #fee2e2;
   }
 }
+
+/* =========================================================
+   IMFL Hologram Warehouse Stock Card (Mint / Emerald Theme)
+   ========================================================= */
+.dp-hologram-stock-card {
+  position: relative;
+  border-radius: 12px;
+  padding: 22px 24px !important;
+  overflow: hidden;
+  transition: all 0.2s ease;
+
+  &.dp-holo-card--sufficient {
+    background: linear-gradient(135deg, #f0fdf9 0%, #ecfdf5 50%, #f6fdfa 100%) !important;
+    border: 2px solid #86efac !important;
+    border-left: 6px solid #059669 !important;
+    box-shadow: 0 6px 20px rgba(5, 150, 105, 0.08) !important;
+  }
+
+  &.dp-holo-card--insufficient {
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%) !important;
+    border: 2px solid #fca5a5 !important;
+    border-left: 6px solid #dc2626 !important;
+    box-shadow: 0 6px 20px rgba(220, 38, 38, 0.08) !important;
+  }
+
+  .holo-icon-badge {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+
+    &--emerald {
+      background: #d1fae5;
+      color: #047857;
+    }
+
+    &--warn {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+  }
+
+  .holo-card-title {
+    color: #065f46;
+    letter-spacing: 0.2px;
+    font-size: 15px !important;
+  }
+
+  .holo-status-pill {
+    font-size: 12px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    letter-spacing: 0.3px;
+    font-weight: 600;
+  }
+
+  .holo-stat-chip {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-radius: 10px !important;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.07) !important;
+    }
+
+    &--required {
+      border-top: 3.5px solid #0b4ea2 !important;
+    }
+
+    &--available {
+      border-top: 3.5px solid #10b981 !important;
+    }
+
+    &--balance {
+      border-top: 3.5px solid #6366f1 !important;
+    }
+  }
+}
+
+/* =========================================================
+   Permit Allocation Summary Card (Royal Blue / Azure Theme)
+   ========================================================= */
+.dp-permit-breakdown-card {
+  background: linear-gradient(135deg, #f0f7ff 0%, #e8f2fe 50%, #f4f8fe 100%) !important;
+  border: 2px solid #93c5fd !important;
+  border-left: 6px solid #0b4ea2 !important;
+  border-radius: 12px;
+  padding: 22px 24px !important;
+  box-shadow: 0 6px 20px rgba(11, 78, 162, 0.08) !important;
+
+  .permit-icon-badge {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: #dbeafe;
+    color: #1d4ed8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+
+  .permit-child-card {
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 3px 12px rgba(11, 78, 162, 0.06);
+
+    .permit-child-header {
+      background: linear-gradient(135deg, #0b4ea2 0%, #1e40af 100%) !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .permit-inner-thead {
+      background-color: #f1f5f9;
+      color: #475569;
+
+      th {
+        font-weight: 600;
+        font-size: 12.5px;
+        padding: 9px 12px;
+        border-bottom: 2px solid #cbd5e1;
+        background-color: #f1f5f9;
+      }
+    }
+
+    .permit-inner-table {
+      td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 13px;
+      }
+    }
+
+    .permit-subtotal-bar {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0 !important;
+      border-radius: 8px !important;
+
+      .permit-stat-chip {
+        padding: 6px 14px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 7px;
+        min-width: 110px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+      }
+    }
+  }
+}
+
+
