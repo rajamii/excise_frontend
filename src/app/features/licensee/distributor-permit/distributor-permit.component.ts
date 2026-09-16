@@ -5860,13 +5860,123 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   startNewPermitGroup(): void {
     this.currentActivePermitIndex++;
-    void Swal.fire({
-      icon: 'info',
-      title: `Started Permit #${this.currentActivePermitIndex}`,
-      text: `Next brands added will be assigned to Permit #${this.currentActivePermitIndex}.`,
-      timer: 1800,
-      showConfirmButton: false
+    if (this.selectedNewBrandName && this.selectedNewBrandKey && this.newBrandCases >= 1) {
+      // Directly add brand to the new permit group
+      const master = this.getBrandMasterByKey(this.selectedNewBrandKey);
+      if (master) {
+        this.lineItems.push(this.fb.group({
+          selectedBrandName: [master.brandName, Validators.required],
+          brandKey: [this.selectedNewBrandKey, Validators.required],
+          cases: [Number(this.newBrandCases || 1), [Validators.required, Validators.min(1)]],
+          permitIndex: [this.currentActivePermitIndex]
+        }) as FormGroup);
+        this.checkHologramStockAllocation();
+        this.syncBrandStepValidity();
+      }
+      void Swal.fire({
+        icon: 'success',
+        title: `Added to Permit #${this.currentActivePermitIndex}`,
+        html: `<b>${this.newBrandCases} Cases</b> of <b>${this.selectedNewBrandName}</b> added to <b>Permit #${this.currentActivePermitIndex}</b>.`,
+        timer: 2000,
+        showConfirmButton: false
+      });
+      this.newBrandCases = 1;
+    } else {
+      void Swal.fire({
+        icon: 'info',
+        title: `Active Permit: #${this.currentActivePermitIndex}`,
+        text: `Any brands added will now be assigned to Permit #${this.currentActivePermitIndex}.`,
+        timer: 2000,
+        showConfirmButton: false
+      });
+    }
+    this.cdr.detectChanges();
+  }
+
+  async splitLineItemToNewPermit(index: number): Promise<void> {
+    const ctrl = this.lineItems.at(index);
+    if (!ctrl) return;
+    const currentCases = this.getLineCases(index);
+    const brandName = this.getLineBrandName(index);
+    const brandKey = ctrl.value?.brandKey;
+    const currentPermit = this.getLinePermitIndex(index);
+
+    if (currentCases <= 1) {
+      this.currentActivePermitIndex = Math.max(this.currentActivePermitIndex + 1, currentPermit + 1);
+      ctrl.patchValue({ permitIndex: this.currentActivePermitIndex });
+      this.checkHologramStockAllocation();
+      this.syncBrandStepValidity();
+      this.cdr.detectChanges();
+      void Swal.fire({
+        icon: 'success',
+        title: `Moved to Permit #${this.currentActivePermitIndex}`,
+        timer: 1500,
+        showConfirmButton: false
+      });
+      return;
+    }
+
+    const { value: splitCases } = await Swal.fire({
+      title: `Split Permit for ${brandName}`,
+      html: `Current: <b>${currentCases} Cases</b> in <b>Permit #${currentPermit}</b>.<br><br>Enter cases to move into <b>New Permit #${currentPermit + 1}</b>:`,
+      input: 'number',
+      inputValue: Math.floor(currentCases / 2),
+      inputAttributes: {
+        min: '1',
+        max: String(currentCases - 1),
+        step: '1'
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Split to New Permit',
+      confirmButtonColor: '#0b4ea2',
+      cancelButtonText: 'Cancel',
+      inputValidator: (value) => {
+        const num = Number(value);
+        if (!num || num < 1 || num >= currentCases) {
+          return `Please enter cases between 1 and ${currentCases - 1}`;
+        }
+        return null;
+      }
     });
+
+    if (splitCases) {
+      const moveCount = Number(splitCases);
+      const remainCount = currentCases - moveCount;
+      const targetPermit = Math.max(this.currentActivePermitIndex + 1, currentPermit + 1);
+      this.currentActivePermitIndex = Math.max(this.currentActivePermitIndex, targetPermit);
+
+      // Update current line cases
+      ctrl.patchValue({ cases: remainCount });
+
+      // Add split line into new permit
+      this.lineItems.push(this.fb.group({
+        selectedBrandName: [brandName, Validators.required],
+        brandKey: [brandKey, Validators.required],
+        cases: [moveCount, [Validators.required, Validators.min(1)]],
+        permitIndex: [targetPermit]
+      }) as FormGroup);
+
+      this.checkHologramStockAllocation();
+      this.syncBrandStepValidity();
+      this.cdr.detectChanges();
+
+      void Swal.fire({
+        icon: 'success',
+        title: 'Permit Split Successful',
+        html: `Permit #${currentPermit}: <b>${remainCount} cases</b><br>Permit #${targetPermit}: <b>${moveCount} cases</b>`,
+        timer: 2500,
+        showConfirmButton: false
+      });
+    }
+  }
+
+  setLinePermitIndex(index: number, newPermitIdx: number): void {
+    const ctrl = this.lineItems.at(index);
+    if (!ctrl) return;
+    ctrl.patchValue({ permitIndex: Number(newPermitIdx) });
+    this.currentActivePermitIndex = Math.max(this.currentActivePermitIndex, Number(newPermitIdx));
+    this.checkHologramStockAllocation();
+    this.syncBrandStepValidity();
     this.cdr.detectChanges();
   }
 
@@ -6924,7 +7034,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const totalBulkLitres = items.reduce((sum, item) => sum + item.bl, 0);
     return {
       permitIndex,
-      permitName: `Permit #${permitIndex} (Max 700 Cases)`,
+      permitName: `Permit #${permitIndex} (${totalCases} Cases / Max 700)`,
       totalCases,
       totalImport,
       totalAddEd,

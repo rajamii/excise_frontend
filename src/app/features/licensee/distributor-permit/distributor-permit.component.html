@@ -2289,7 +2289,7 @@
                     <td class="text-center fw-semibold text-muted py-3 px-3" style="border-bottom: 1px solid #e2e8f0;">{{ i + 1 }}</td>
                     <td class="fw-semibold text-dark text-start py-3" style="border-bottom: 1px solid #e2e8f0;">
                       {{ getLineBrandName(i) }}
-                      <span class="badge bg-light text-primary border ms-2" *ngIf="getLinePermitIndex(i) > 1">
+                      <span class="badge ms-2" [ngClass]="getLinePermitIndex(i) > 1 ? 'bg-primary text-white shadow-sm' : 'bg-light text-primary border'">
                         Permit #{{ getLinePermitIndex(i) }}
                       </span>
                     </td>
@@ -2300,7 +2300,10 @@
                     <td class="text-end fw-medium text-dark py-3" style="border-bottom: 1px solid #e2e8f0;">{{ getLineAdditionalEd(i) | currency:'INR':'symbol':'1.2-2' }}</td>
                     <td class="text-end fw-medium text-dark py-3" style="border-bottom: 1px solid #e2e8f0;">{{ getLineImport(i) | currency:'INR':'symbol':'1.2-2' }}</td>
                     <td class="text-end fw-medium text-dark py-3" style="border-bottom: 1px solid #e2e8f0;">{{ getLineCess(i) | currency:'INR':'symbol':'1.2-2' }}</td>
-                    <td class="text-center py-3" style="border-bottom: 1px solid #e2e8f0;">
+                    <td class="text-center py-3" style="border-bottom: 1px solid #e2e8f0; white-space: nowrap;">
+                      <button type="button" class="btn btn-sm btn-outline-primary border-0 p-1 me-1" (click)="splitLineItemToNewPermit(i)" title="Split cases to a new permit">
+                        <i class="bi bi-diagram-3 fs-6"></i>
+                      </button>
                       <button type="button" class="trash-btn" (click)="removeLineItem(i)" title="Remove item">
                         <i class="bi bi-trash fs-5"></i>
                       </button>
@@ -2417,7 +2420,7 @@
                 <div class="card border-primary border-opacity-50 shadow-sm rounded">
                   <div class="card-header bg-light d-flex justify-content-between align-items-center py-2 px-3">
                     <span class="fw-bold text-primary fs-6"><mat-icon class="align-middle me-1">description</mat-icon> {{ permit.permitName }}</span>
-                    <span class="badge bg-dark fs-7 px-3 py-1">{{ permit.totalCases }} Cases</span>
+                    <span class="badge bg-primary text-white fs-7 px-3 py-1">{{ permit.totalCases }} Cases</span>
                   </div>
                   <div class="card-body p-3">
                     <div class="table-responsive mb-3">
