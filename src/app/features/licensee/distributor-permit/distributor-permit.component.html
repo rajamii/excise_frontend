@@ -2153,7 +2153,7 @@
         </button>
       </div>
 
-      <mat-stepper orientation="horizontal" class="dp-stepper" #stepper>
+      <mat-stepper orientation="horizontal" class="dp-stepper" #stepper [selectedIndex]="stepperSelectedIndex">
         <mat-step>
           <ng-template matStepLabel>Applicant Details</ng-template>
           <form [formGroup]="applicantForm" class="dp-form-grid dp-form-grid--card">
@@ -2203,14 +2203,9 @@
               </mat-select>
             </mat-form-field>
 
-            <mat-form-field appearance="outline">
+            <mat-form-field appearance="outline" class="dp-col-span">
               <mat-label>Supplier Company Name</mat-label>
               <input matInput formControlName="supplierCompanyName" readonly aria-label="Supplier Company Name" title="Auto-populated from supplier selection">
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>C/O Logistics Partner</mat-label>
-              <input matInput formControlName="logisticsPartner" placeholder="Enter logistics partner name" aria-label="C/O Logistics Partner" title="C/O Logistics Partner">
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="dp-col-span">
@@ -2230,91 +2225,109 @@
         <mat-step>
           <ng-template matStepLabel>Brand Details</ng-template>
 
-          <div class="dp-section-note">
-            Select a brand and size for each row. Rates and duty columns are read-only and pulled from the master tables.
+          <!-- Top 1-Row Brand Selection Bar matching Image -->
+          <div class="brand-entry-card mb-3">
+            <div class="row g-2 align-items-end">
+              <div class="col-md-5">
+                <label class="form-label fw-semibold text-secondary small mb-1">Select Brand <span class="text-danger">*</span></label>
+                <select class="form-select" style="font-size: 13.5px;" [ngModel]="selectedNewBrandName" (ngModelChange)="onTopBrandSelect($event)">
+                  <option value="">Select Brand</option>
+                  <option *ngFor="let brandName of getUniqueBrandNames()" [value]="brandName">
+                    {{ brandName }}
+                  </option>
+                </select>
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label fw-semibold text-secondary small mb-1">Select Size <span class="text-danger">*</span></label>
+                <select class="form-select" style="font-size: 13.5px;" [ngModel]="selectedNewBrandKey" (ngModelChange)="onTopSizeSelect($event)" [disabled]="!selectedNewBrandName">
+                  <option value="">Select Size</option>
+                  <option *ngFor="let sizeOpt of getAvailableSizesForBrand(selectedNewBrandName)" [value]="getBrandKey(sizeOpt)">
+                    {{ getSizeLabel(sizeOpt) }}
+                  </option>
+                </select>
+              </div>
+
+              <div class="col-md-2" style="max-width: 120px;">
+                <label class="form-label fw-semibold text-secondary small mb-1">Cases <span class="text-danger">*</span></label>
+                <input type="number" min="1" class="form-control text-center fw-bold" style="font-size: 13.5px;" [(ngModel)]="newBrandCases" />
+              </div>
+
+              <div class="col-md-2 d-flex gap-2">
+                <button type="button" class="btn btn-add-brand text-nowrap d-flex align-items-center gap-1 shadow-sm" (click)="addBrandFromTopRow()" [disabled]="!selectedNewBrandName || !selectedNewBrandKey || newBrandCases < 1">
+                  <i class="bi bi-plus-lg"></i> Add Brand
+                </button>
+
+                <button type="button" class="btn btn-break-permit text-nowrap d-flex align-items-center gap-1 shadow-sm" (click)="startNewPermitGroup()" title="Break into a new separate permit batch">
+                  <i class="bi bi-diagram-3"></i> Break Permit
+                  <span class="badge bg-primary text-white ms-1" *ngIf="currentActivePermitIndex > 1">#{{ currentActivePermitIndex }}</span>
+                </button>
+              </div>
+            </div>
           </div>
 
-          <div class="dp-table-wrap">
-            <table class="dp-table dp-table--brands">
-              <thead>
-                <tr>
-                  <th>Brand Name</th>
-                  <th>Size / Package</th>
-                  <th>Cases</th>
-                  <th>Bulk Litres (BL)</th>
-                  <th>EDP</th>
-                  <th>Import Pass Fee</th>
-                  <th>Total Import</th>
-                  <th>MRP</th>
-                  <th>Add. ED / Case</th>
-                  <th>Total Add. ED</th>
-                  <th>Edu. Cess / Case</th>
-                  <th>Total Edu. Cess</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let row of lineItemControls.controls; let i = index; trackBy: trackByIndex" [formGroup]="$any(row)">
-                  <td>
-                    <mat-form-field appearance="outline" class="dp-brand-name-field">
-                      <mat-label>Select Brand</mat-label>
-                      <mat-select formControlName="selectedBrandName" (selectionChange)="onBrandNameChange(i)">
-                        <mat-option value="">Select Brand</mat-option>
-                        <mat-option *ngFor="let brandName of getUniqueBrandNames()" [value]="brandName">
-                          {{ brandName }}
-                        </mat-option>
-                      </mat-select>
-                    </mat-form-field>
-                  </td>
-                  <td>
-                    <mat-form-field appearance="outline" class="dp-size-field">
-                      <mat-label>Select Size</mat-label>
-                      <mat-select formControlName="brandKey" (selectionChange)="onSizeChange(i)">
-                        <mat-option value="">Select Size</mat-option>
-                        <mat-option *ngFor="let sizeOpt of getAvailableSizesForBrand(row.value.selectedBrandName)" [value]="getBrandKey(sizeOpt)">
-                          {{ getSizeLabel(sizeOpt) }}
-                        </mat-option>
-                      </mat-select>
-                    </mat-form-field>
-                  </td>
-                  <td>
-                    <mat-form-field appearance="outline" class="dp-cases-field">
-                      <mat-label>Cases</mat-label>
-                      <input matInput type="number" min="1" formControlName="cases" (input)="onCasesChange()" (change)="onCasesChange()" aria-label="Cases" title="Cases">
-                    </mat-form-field>
-                  </td>
-                  <td><strong>{{ getLineBulkLitres(i) | number:'1.2-2' }} BL</strong></td>
-                  <td>{{ getLineEdp(i) | currency:'INR':'symbol':'1.2-2' }}</td>
-                  <td>{{ getLineImportFee(i) | currency:'INR':'symbol':'1.2-2' }}</td>
-                  <td>{{ getLineImport(i) | currency:'INR':'symbol':'1.2-2' }}</td>
-                  <td>{{ getLineMrp(i) | currency:'INR':'symbol':'1.2-2' }}</td>
-                  <td>{{ getLineAdditionalEdPerCase(i) | currency:'INR':'symbol':'1.2-2' }}</td>
-                  <td>{{ getLineTotalAddEd(i) | currency:'INR':'symbol':'1.2-2' }}</td>
-                  <td>{{ getLineEduCessPerCase(i) | currency:'INR':'symbol':'1.2-2' }}</td>
-                  <td>{{ getLineTotalEduCess(i) | currency:'INR':'symbol':'1.2-2' }}</td>
-                  <td>
-                    <button mat-icon-button type="button" (click)="removeLineItem(i)" [disabled]="lineItems.length === 1" title="Remove row">
-                      <mat-icon>delete</mat-icon>
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="dp-row-actions">
-            <button mat-stroked-button type="button" (click)="addLineItem()">
-              <mat-icon>add</mat-icon>
-              Add Brand
-            </button>
-          </div>
-
-          <div class="dp-summary">
-            <span>Total Cases <strong>{{ totalCases }}</strong></span>
-            <span>Total Bulk Litres (BL) <strong>{{ totalBulkLitres | number:'1.2-2' }} BL</strong></span>
-            <span>Total Import <strong>{{ totalImport | currency:'INR':'symbol':'1.2-2' }}</strong></span>
-            <span>Total Add. ED <strong>{{ totalAdditionalEd | currency:'INR':'symbol':'1.2-2' }}</strong></span>
-            <span>Total Edu. Cess <strong>{{ totalCess | currency:'INR':'symbol':'1.2-2' }}</strong></span>
+          <!-- Brand Items Table with Deep Blue Header & Crisp Segregation -->
+          <div class="brand-table-card">
+            <div class="table-responsive">
+              <table class="table custom-brand-table align-middle mb-0">
+                <thead style="background-color: #0b4ea2 !important;">
+                  <tr style="background-color: #0b4ea2 !important;">
+                    <th style="width: 45px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-center py-2 px-3">#</th>
+                    <th style="min-width: 220px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-start py-2">Brand Name</th>
+                    <th style="min-width: 150px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-start py-2">Size / Package</th>
+                    <th style="width: 70px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-center py-2">Cases</th>
+                    <th style="width: 120px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-center py-2">Bulk Litres (BL)</th>
+                    <th style="width: 110px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-end py-2">Excise Duty</th>
+                    <th style="width: 140px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-end py-2">Additional Excise Duty</th>
+                    <th style="width: 120px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-end py-2">Import Pass Fee</th>
+                    <th style="width: 110px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-end py-2">Education Cess</th>
+                    <th style="width: 45px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-center py-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of lineItemControls.controls; let i = index; trackBy: trackByIndex" style="border-bottom: 1px solid #e2e8f0; background-color: #ffffff;">
+                    <td class="text-center fw-semibold text-muted py-3 px-3" style="border-bottom: 1px solid #e2e8f0;">{{ i + 1 }}</td>
+                    <td class="fw-semibold text-dark text-start py-3" style="border-bottom: 1px solid #e2e8f0;">
+                      {{ getLineBrandName(i) }}
+                      <span class="badge bg-light text-primary border ms-2" *ngIf="getLinePermitIndex(i) > 1">
+                        Permit #{{ getLinePermitIndex(i) }}
+                      </span>
+                    </td>
+                    <td class="text-secondary text-start py-3" style="border-bottom: 1px solid #e2e8f0;">{{ getLineSizeLabel(i) }}</td>
+                    <td class="text-center fw-bold text-dark py-3" style="border-bottom: 1px solid #e2e8f0;">{{ getLineCases(i) }}</td>
+                    <td class="text-center fw-bold py-3" style="color: #0b4ea2; border-bottom: 1px solid #e2e8f0;">{{ getLineBulkLitres(i) | number:'1.2-2' }} BL</td>
+                    <td class="text-end fw-medium text-dark py-3" style="border-bottom: 1px solid #e2e8f0;">{{ (getLineEdp(i) * getLineCases(i)) | currency:'INR':'symbol':'1.2-2' }}</td>
+                    <td class="text-end fw-medium text-dark py-3" style="border-bottom: 1px solid #e2e8f0;">{{ getLineAdditionalEd(i) | currency:'INR':'symbol':'1.2-2' }}</td>
+                    <td class="text-end fw-medium text-dark py-3" style="border-bottom: 1px solid #e2e8f0;">{{ getLineImport(i) | currency:'INR':'symbol':'1.2-2' }}</td>
+                    <td class="text-end fw-medium text-dark py-3" style="border-bottom: 1px solid #e2e8f0;">{{ getLineCess(i) | currency:'INR':'symbol':'1.2-2' }}</td>
+                    <td class="text-center py-3" style="border-bottom: 1px solid #e2e8f0;">
+                      <button type="button" class="trash-btn" (click)="removeLineItem(i)" title="Remove item">
+                        <i class="bi bi-trash fs-5"></i>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="lineItemControls.length === 0">
+                    <td colspan="10" class="text-center text-muted py-4">
+                      <i class="bi bi-info-circle me-1"></i> No brands added yet. Select brand and size above, then click <strong>+ Add Brand</strong>.
+                    </td>
+                  </tr>
+                </tbody>
+                <tfoot *ngIf="lineItemControls.length > 0">
+                  <tr style="background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important;">
+                    <td style="background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;"></td>
+                    <td class="text-start fw-bold py-3" style="color: #0b4ea2 !important; font-size: 14.5px !important; background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;">Grand Total</td>
+                    <td style="background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;"></td>
+                    <td class="text-center fw-bold py-3" style="color: #0b4ea2 !important; font-size: 14.5px !important; background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;">{{ totalCases }}</td>
+                    <td class="text-center fw-bold py-3" style="color: #0b4ea2 !important; font-size: 14.5px !important; background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;">{{ totalBulkLitres | number:'1.2-2' }} BL</td>
+                    <td class="text-end fw-bold py-3" style="color: #0b4ea2 !important; font-size: 14.5px !important; background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;">{{ totalExciseDuty | currency:'INR':'symbol':'1.2-2' }}</td>
+                    <td class="text-end fw-bold py-3" style="color: #0b4ea2 !important; font-size: 14.5px !important; background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;">{{ totalAdditionalEd | currency:'INR':'symbol':'1.2-2' }}</td>
+                    <td class="text-end fw-bold py-3" style="color: #0b4ea2 !important; font-size: 14.5px !important; background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;">{{ totalImport | currency:'INR':'symbol':'1.2-2' }}</td>
+                    <td class="text-end fw-bold py-3" style="color: #0b4ea2 !important; font-size: 14.5px !important; background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;">{{ totalCess | currency:'INR':'symbol':'1.2-2' }}</td>
+                    <td style="background-color: #f8fafc !important; border-top: 2px solid #cbd5e1 !important; border-bottom: none !important;"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
           </div>
 
           <!-- IMFL Hologram Warehouse Stock & Allocation Card -->

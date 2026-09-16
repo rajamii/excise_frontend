@@ -84,7 +84,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   readonly supplierForm = this.fb.group({
     selectedSupplierId: [''],
     supplierCompanyName: [{ value: '', disabled: true }, Validators.required],
-    logisticsPartner: ['', Validators.required],
+    logisticsPartner: [''],
     sourceAddress: [{ value: '', disabled: true }, Validators.required]
   });
 
@@ -114,6 +114,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   loadError = '';
   error: string | null = null;
   isFormView = false;
+  stepperSelectedIndex = 1;
+  selectedNewBrandName = '';
+  selectedNewBrandKey = '';
+  newBrandCases = 1;
+  currentActivePermitIndex = 1;
   readonly useInlineDetails = true;
 
   activeTab: ImflTabType = 'requisition';
@@ -148,6 +153,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe((params) => {
         this.isFormView = String(params?.['mode'] || '').toLowerCase() === 'apply';
+        if (this.isFormView) {
+          this.stepperSelectedIndex = 1;
+        }
         const tabParam = String(params?.['tab'] || '').toLowerCase() as ImflTabType;
         if (['requisition', 'brand-arrival', 'revalidation', 'cancellation', 'brand-warehouse', 'hologram-procurement', 'hologram-arrival', 'hologram-overview'].includes(tabParam)) {
           this.activeTab = tabParam;
@@ -346,6 +354,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   openApplyForm(): void {
     this.isFormView = true;
+    this.stepperSelectedIndex = 1;
     this.checkHologramStockAllocation();
     this.router.navigate([], {
       relativeTo: this.route,
@@ -5705,6 +5714,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     win.document.close();
   }
 
+
+  get totalExciseDuty(): number {
+    return this.lineItems.controls.reduce((sum, _, index) => sum + (this.getLineEdp(index) * this.getLineCases(index)), 0);
+  }
+
   get totalImport(): number {
     return this.lineItems.controls.reduce((sum, _, index) => sum + this.getLineImport(index), 0);
   }
@@ -5785,19 +5799,89 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.lineItems.push(this.fb.group({
       selectedBrandName: ['', Validators.required],
       brandKey: ['', Validators.required],
-      cases: [1, [Validators.required, Validators.min(1)]]
+      cases: [1, [Validators.required, Validators.min(1)]],
+      permitIndex: [this.currentActivePermitIndex]
     }) as FormGroup);
     this.checkHologramStockAllocation();
     this.syncBrandStepValidity();
   }
 
   removeLineItem(index: number): void {
-    if (this.lineItems.length === 1) {
-      return;
-    }
     this.lineItems.removeAt(index);
     this.checkHologramStockAllocation();
     this.syncBrandStepValidity();
+    this.cdr.detectChanges();
+  }
+
+  onTopBrandSelect(brandName: string): void {
+    this.selectedNewBrandName = brandName;
+    const sizes = this.getAvailableSizesForBrand(brandName);
+    this.selectedNewBrandKey = sizes.length > 0 ? this.getBrandKey(sizes[0]) : '';
+  }
+
+  onTopSizeSelect(brandKey: string): void {
+    this.selectedNewBrandKey = brandKey;
+  }
+
+  addBrandFromTopRow(): void {
+    if (!this.selectedNewBrandName || !this.selectedNewBrandKey || this.newBrandCases < 1) {
+      return;
+    }
+    const master = this.getBrandMasterByKey(this.selectedNewBrandKey);
+    if (!master) return;
+
+    // Check if there is an unconfigured empty row in lineItems
+    const emptyIdx = this.lineItems.controls.findIndex((ctrl) => {
+      const v = ctrl.value;
+      return !v.selectedBrandName || !v.brandKey;
+    });
+
+    if (emptyIdx >= 0) {
+      this.lineItems.at(emptyIdx).patchValue({
+        selectedBrandName: master.brandName,
+        brandKey: this.selectedNewBrandKey,
+        cases: Number(this.newBrandCases || 1),
+        permitIndex: this.currentActivePermitIndex
+      });
+    } else {
+      this.lineItems.push(this.fb.group({
+        selectedBrandName: [master.brandName, Validators.required],
+        brandKey: [this.selectedNewBrandKey, Validators.required],
+        cases: [Number(this.newBrandCases || 1), [Validators.required, Validators.min(1)]],
+        permitIndex: [this.currentActivePermitIndex]
+      }) as FormGroup);
+    }
+
+    this.newBrandCases = 1;
+    this.checkHologramStockAllocation();
+    this.syncBrandStepValidity();
+    this.cdr.detectChanges();
+  }
+
+  startNewPermitGroup(): void {
+    this.currentActivePermitIndex++;
+    void Swal.fire({
+      icon: 'info',
+      title: `Started Permit #${this.currentActivePermitIndex}`,
+      text: `Next brands added will be assigned to Permit #${this.currentActivePermitIndex}.`,
+      timer: 1800,
+      showConfirmButton: false
+    });
+    this.cdr.detectChanges();
+  }
+
+  getLineBrandName(index: number): string {
+    return this.getLineSummary(index)?.brandName || (this.lineItems.at(index)?.value as any)?.selectedBrandName || 'N/A';
+  }
+
+  getLineSizeLabel(index: number): string {
+    const master = this.getLineSummary(index);
+    if (!master) return 'N/A';
+    return `${master.sizeMl} ml (${master.piecesPerCase || 12} pc per case)`;
+  }
+
+  getLinePermitIndex(index: number): number {
+    return Number((this.lineItems.at(index)?.value as any)?.permitIndex || 1);
   }
 
   onBrandNameChange(index: number): void {
@@ -6714,6 +6798,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     totalAddEd: number;
     piecesPerCase?: number;
     pieces_per_case?: number;
+    permitIndex?: number;
   }> {
     return this.lineItems.controls
       .map((control, index) => {
@@ -6721,6 +6806,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         if (!master) {
           return null;
         }
+        const val = control.value as any;
         return {
           brand: master.brandName,
           size: `${master.sizeMl} ml`,
@@ -6734,24 +6820,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           addEdPerCase: this.getLineAdditionalEdPerCase(index),
           totalAddEd: this.getLineTotalAddEd(index),
           piecesPerCase: master.piecesPerCase,
-          pieces_per_case: master.piecesPerCase
+          pieces_per_case: master.piecesPerCase,
+          permitIndex: Number(val?.permitIndex || 1)
         };
       })
-      .filter(Boolean) as Array<{
-      brand: string;
-      size: string;
-      cases: number;
-      edp: number;
-      importFee: number;
-      totalImport: number;
-      cess: number;
-      mrp: number;
-      bl: number;
-      addEdPerCase: number;
-      totalAddEd: number;
-      piecesPerCase?: number;
-      pieces_per_case?: number;
-    }>;
+      .filter(Boolean) as any[];
   }
 
   getPermitBreakdown(): Array<{
@@ -6781,6 +6854,14 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const rawRows = this.getBrandReviewRows();
     if (!rawRows || rawRows.length === 0) return [];
 
+    // 1. Group by manual permitIndex first
+    const groupsMap = new Map<number, any[]>();
+    rawRows.forEach((r) => {
+      const pIdx = (r as any).permitIndex || 1;
+      if (!groupsMap.has(pIdx)) groupsMap.set(pIdx, []);
+      groupsMap.get(pIdx)!.push(r);
+    });
+
     const permits: Array<{
       permitIndex: number;
       permitName: string;
@@ -6792,39 +6873,45 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       items: any[];
     }> = [];
 
-    let currentPermitIndex = 1;
-    let currentCases = 0;
-    let currentItems: any[] = [];
+    let currentPermitSeq = 1;
 
-    for (const row of rawRows) {
-      let remCases = row.cases;
-      while (remCases > 0) {
-        const available = 700 - currentCases;
-        if (available <= 0) {
-          permits.push(this.buildPermitSummaryObject(currentPermitIndex, currentItems));
-          currentPermitIndex++;
-          currentCases = 0;
-          currentItems = [];
+    // 2. Iterate each manual permit group and enforce 700-case max per sub-permit
+    Array.from(groupsMap.keys()).sort((a, b) => a - b).forEach((groupIdx) => {
+      const groupItems = groupsMap.get(groupIdx)!;
+      let currentCases = 0;
+      let currentItems: any[] = [];
+
+      for (const row of groupItems) {
+        let remCases = row.cases;
+        while (remCases > 0) {
+          const available = 700 - currentCases;
+          if (available <= 0) {
+            permits.push(this.buildPermitSummaryObject(currentPermitSeq, currentItems));
+            currentPermitSeq++;
+            currentCases = 0;
+            currentItems = [];
+          }
+
+          const allocated = Math.min(remCases, 700 - currentCases);
+          currentItems.push({
+            ...row,
+            cases: allocated,
+            totalImport: row.importFee * allocated,
+            totalAddEd: row.addEdPerCase * allocated,
+            cess: row.cess ? (row.cess / row.cases) * allocated : 0,
+            bl: row.bl ? (row.bl / row.cases) * allocated : 0
+          });
+
+          currentCases += allocated;
+          remCases -= allocated;
         }
-
-        const allocated = Math.min(remCases, 700 - currentCases);
-        currentItems.push({
-          ...row,
-          cases: allocated,
-          totalImport: row.importFee * allocated,
-          totalAddEd: row.addEdPerCase * allocated,
-          cess: row.cess ? (row.cess / row.cases) * allocated : 0,
-          bl: row.bl ? (row.bl / row.cases) * allocated : 0
-        });
-
-        currentCases += allocated;
-        remCases -= allocated;
       }
-    }
 
-    if (currentItems.length > 0) {
-      permits.push(this.buildPermitSummaryObject(currentPermitIndex, currentItems));
-    }
+      if (currentItems.length > 0) {
+        permits.push(this.buildPermitSummaryObject(currentPermitSeq, currentItems));
+        currentPermitSeq++;
+      }
+    });
 
     return permits;
   }
@@ -6859,11 +6946,14 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   get supplierSummaryRows(): Array<{ label: string; value: string }> {
     const raw = this.supplierForm.getRawValue();
-    return [
-      { label: 'Supplier Company', value: String(raw.supplierCompanyName || '-') },
-      { label: 'C/O Logistics Partner', value: String(raw.logisticsPartner || '-') },
-      { label: 'Source Address', value: String(raw.sourceAddress || '-') }
+    const rows: Array<{ label: string; value: string }> = [
+      { label: 'Supplier Company', value: String(raw.supplierCompanyName || '-') }
     ];
+    if (raw.logisticsPartner) {
+      rows.push({ label: 'C/O Logistics Partner', value: String(raw.logisticsPartner) });
+    }
+    rows.push({ label: 'Source Address', value: String(raw.sourceAddress || '-') });
+    return rows;
   }
 
   get routeSummaryRows(): Array<{ label: string; value: string }> {
@@ -7346,7 +7436,28 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   populateDefaultBrandRows(): void {
     this.lineItems.clear();
-    this.addLineItem();
+    if (this.brandMaster && this.brandMaster.length > 0) {
+      const first = this.brandMaster[0];
+      this.selectedNewBrandName = first.brandName;
+      this.selectedNewBrandKey = this.getBrandKey(first);
+      this.newBrandCases = 1;
+      this.lineItems.push(this.fb.group({
+        selectedBrandName: [first.brandName, Validators.required],
+        brandKey: [this.getBrandKey(first), Validators.required],
+        cases: [1, [Validators.required, Validators.min(1)]],
+        permitIndex: [1]
+      }) as FormGroup);
+    } else {
+      this.lineItems.push(this.fb.group({
+        selectedBrandName: ['', Validators.required],
+        brandKey: ['', Validators.required],
+        cases: [1, [Validators.required, Validators.min(1)]],
+        permitIndex: [1]
+      }) as FormGroup);
+    }
+    this.currentActivePermitIndex = 1;
+    this.checkHologramStockAllocation();
+    this.syncBrandStepValidity();
   }
 
   private isBrandStepValid(): boolean {
