@@ -330,14 +330,16 @@ export class RequisitionComponent implements OnInit, OnDestroy {
           const stageName = this.normalizeStageToken(row?.current_stage_name || row?.currentStageName);
           const statusCode = this.normalizeStageToken(row?.status_code || row?.statusCode);
           const combined = `${status} ${stageName} ${statusCode}`;
-          const isFinished =
-            combined.includes('reject') ||
-            combined.includes('cancel') ||
-            combined.includes('invalid') ||
-            combined.includes('expire');
+          // Only pending (unapproved) revalidations lock permits. Once approved, permits are unlocked and active.
+          const isPending =
+            !combined.includes('reject') &&
+            !combined.includes('cancel') &&
+            !combined.includes('invalid') &&
+            !combined.includes('expire') &&
+            !combined.includes('approv') &&
+            !combined.includes('rv09');
 
-          // Valid revalidations (both pending and approved) lock permits for arrival & cancellation
-          if (!isFinished) {
+          if (isPending) {
             const rawRef = this.resolveRevalidationLinkedRequisitionRef(row);
             const refKey = this.normalizeRefToken(rawRef);
             const ourRefKey = this.normalizeRefToken(row?.our_ref_no || row?.ourRefNo);
@@ -2488,12 +2490,16 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       const statusCode = this.normalizeStageToken(row?.status_code || row?.statusCode);
       const combined = `${status} ${stageName} ${statusCode}`;
 
-      // Consider revalidation "active/placed" for this requisition ref unless explicitly rejected/cancelled.
-      const isRejectedOrCancelled =
-        combined.includes('reject') ||
-        combined.includes('cancel');
+      // Only consider revalidation "active/in-progress" if not yet approved/rejected/cancelled.
+      const isPending =
+        !combined.includes('reject') &&
+        !combined.includes('cancel') &&
+        !combined.includes('invalid') &&
+        !combined.includes('expire') &&
+        !combined.includes('approv') &&
+        !combined.includes('rv09');
 
-      if (!isRejectedOrCancelled) {
+      if (isPending) {
         index[refKey] = true;
       }
     }

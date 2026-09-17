@@ -156,7 +156,7 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
                 (revals || []).forEach((r: any) => {
                   const status = String(r.status || '').toLowerCase();
                   const statusCode = String(r.status_code || r.statusCode || '').toLowerCase();
-                  if (status.includes('reject') || status.includes('invalid') || status.includes('expire')) {
+                  if (status.includes('reject') || status.includes('invalid') || status.includes('expire') || status.includes('approv') || statusCode === 'rv_09') {
                     return;
                   }
                   
