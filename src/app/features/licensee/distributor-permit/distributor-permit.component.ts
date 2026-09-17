@@ -3603,17 +3603,33 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const assigned = Number(
       app?.totalHologramsAssigned ??
       app?.total_holograms_assigned ??
-      app?.totalHolograms ??
-      app?.total_holograms ??
       0
     );
     if (assigned > 0) return assigned;
+
+    const permits = app?.permit_wise_details || app?.permitWiseDetails || [];
+    if (Array.isArray(permits) && permits.length > 0) {
+      let sumPermits = 0;
+      for (const p of permits) {
+        if (p.total_holograms || p.totalHolograms) {
+          sumPermits += Number(p.total_holograms || p.totalHolograms);
+        } else {
+          const items = p.line_items || p.lineItems || p.items || [];
+          sumPermits += items.reduce((s: number, it: any) => {
+            const cases = Number(it.cases || it.quantity_cases || 0);
+            const pieces = Number(it.pieces_per_case || it.piecesPerCase || (it.size_ml ? this.getPiecesInCase(it.size_ml) : 12));
+            return s + (cases * pieces);
+          }, 0);
+        }
+      }
+      if (sumPermits > 0) return sumPermits;
+    }
 
     const lineItems = app?.line_items || app?.lineItems || [];
     if (Array.isArray(lineItems) && lineItems.length > 0) {
       return lineItems.reduce((sum: number, item: any) => {
         const cases = Number(item.cases || item.quantity_cases || item.total_cases || 0);
-        const pieces = Number(item.pieces_per_case || item.piecesPerCase || 12);
+        const pieces = Number(item.pieces_per_case || item.piecesPerCase || (item.size_ml ? this.getPiecesInCase(item.size_ml) : 12));
         return sum + (cases * pieces);
       }, 0);
     }
@@ -3634,6 +3650,109 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       count: Number(rng?.count || 0),
       permit_number: rng?.permit_number || rng?.permitNumber || ''
     }));
+  }
+
+  getPermitWiseHologramSummary(row: DistributorPermitRow | any): any[] {
+    if (!row) return [];
+    const app = row?.application || row;
+    const isAppr = this.isApproved(row);
+
+    const assignedRanges = this.getHologramRanges(row);
+    if (isAppr && assignedRanges.length > 0) {
+      return assignedRanges.map((rng: any, idx: number) => ({
+        permitIndex: rng.permit_index || rng.permitIndex || idx + 1,
+        permitName: rng.permit_number || rng.permitNumber || (`Permit #${rng.permit_index || idx + 1}`),
+        ref_no: rng.ref_no || 'IMFL_HOLO_PRO',
+        from: rng.from,
+        to: rng.to,
+        count: rng.count,
+        status: 'RESERVED',
+        isPending: false
+      }));
+    }
+
+    let permits = app?.permit_wise_details || app?.permitWiseDetails || [];
+    if (!Array.isArray(permits) || permits.length === 0) {
+      const lineItems = app?.line_items || app?.lineItems || [];
+      const groupsMap = new Map<number, any[]>();
+      lineItems.forEach((li: any) => {
+        const pIdx = Number(li.permit_index || li.permitIndex || 1);
+        if (!groupsMap.has(pIdx)) groupsMap.set(pIdx, []);
+        groupsMap.get(pIdx)!.push(li);
+      });
+
+      if (groupsMap.size > 0) {
+        permits = [];
+        Array.from(groupsMap.keys()).sort((a, b) => a - b).forEach((pIdx) => {
+          const items = groupsMap.get(pIdx)!;
+          const totalCases = items.reduce((sum: number, it: any) => sum + Number(it.cases || it.quantity_cases || 0), 0);
+          const totalHolograms = items.reduce((sum: number, it: any) => {
+            const c = Number(it.cases || it.quantity_cases || 0);
+            const pcs = Number(it.pieces_per_case || it.piecesPerCase || (it.size_ml ? this.getPiecesInCase(it.size_ml) : 12));
+            return sum + (c * pcs);
+          }, 0);
+          permits.push({
+            permit_sequence: pIdx,
+            permit_index: pIdx,
+            permitIndex: pIdx,
+            permit_number: `${app?.reference_no || app?.referenceNo || row.referenceNo || 'IMFL_REQ'}-P${pIdx}`,
+            permitName: `Permit #${pIdx} (${totalCases} Cases)`,
+            total_cases: totalCases,
+            totalCases,
+            total_holograms: totalHolograms,
+            totalHolograms,
+            status: 'PENDING',
+            line_items: items
+          });
+        });
+      }
+    }
+
+    if (!Array.isArray(permits) || permits.length === 0) {
+      const totalHolograms = this.getHologramsRequiredCount(row);
+      const totalCases = Number(app?.total_cases || app?.cases || app?.totalCases || 1);
+      return [{
+        permitIndex: 1,
+        permitName: `${app?.reference_no || app?.referenceNo || row.referenceNo || 'IMFL_REQ'}-P1 (${totalCases} Cases)`,
+        ref_no: 'Pending Allocation',
+        from: 'Pending',
+        to: 'Pending',
+        count: totalHolograms,
+        status: 'PENDING',
+        isPending: true
+      }];
+    }
+
+    return permits.map((p: any, idx: number) => {
+      const pIdx = Number(p.permit_sequence || p.permitSequence || p.permit_index || p.permitIndex || idx + 1);
+      const items = p.line_items || p.lineItems || p.items || [];
+      const totalCases = Number(p.total_cases ?? p.totalCases ?? (items.length > 0 ? items.reduce((s: number, it: any) => s + Number(it.cases || it.quantity_cases || 0), 0) : 1));
+      let totalHolo = Number(p.total_holograms ?? p.totalHolograms ?? 0);
+      if (totalHolo <= 0 && items.length > 0) {
+        totalHolo = items.reduce((s: number, it: any) => {
+          const c = Number(it.cases || it.quantity_cases || 0);
+          const pcs = Number(it.pieces_per_case || it.piecesPerCase || (it.size_ml ? this.getPiecesInCase(it.size_ml) : 12));
+          return s + (c * pcs);
+        }, 0);
+      }
+      if (totalHolo <= 0) {
+        totalHolo = totalCases * 12;
+      }
+
+      const pNum = p.permit_number || p.permitNumber || `${app?.reference_no || app?.referenceNo || row.referenceNo || 'IMFL_REQ'}-P${pIdx}`;
+      const permitLabel = `${pNum} (${totalCases} Cases)`;
+
+      return {
+        permitIndex: pIdx,
+        permitName: permitLabel,
+        ref_no: 'Pending Allocation',
+        from: 'Pending',
+        to: 'Pending',
+        count: totalHolo,
+        status: 'PENDING',
+        isPending: true
+      };
+    });
   }
 
   openCommissionerPermitApprovalModal(row: DistributorPermitRow | any, event?: Event): void {
@@ -3663,13 +3782,15 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         const totalCases = items.reduce((sum: number, it: any) => sum + Number(it.cases || it.quantity_cases || 0), 0);
         const totalHolograms = items.reduce((sum: number, it: any) => {
           const c = Number(it.cases || it.quantity_cases || 0);
-          const pcs = Number(it.pieces_per_case || it.piecesPerCase || 12);
+          const pcs = Number(it.pieces_per_case || it.piecesPerCase || (it.size_ml ? this.getPiecesInCase(it.size_ml) : 12));
           return sum + (c * pcs);
         }, 0);
+        const permitNum = `${row.applicationId || row.referenceNo || 'IMFL_PERMIT'}-P${pIdx}`;
         permits.push({
           permitIndex: pIdx,
-          permitName: `Permit #${pIdx} (${totalCases} Cases)`,
-          permit_number: `IMFL_PERMIT/${row.applicationId || row.referenceNo}/P${pIdx}`,
+          permit_sequence: pIdx,
+          permitName: `${permitNum} (${totalCases} Cases)`,
+          permit_number: permitNum,
           totalCases: totalCases,
           totalHolograms: totalHolograms,
           isApproved: true,
@@ -3678,31 +3799,47 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
             brand: it.brand || it.brand_name || it.brandName || 'Brand',
             size: `${it.size_ml || it.sizeMl || 750} ml`,
             cases: Number(it.cases || it.quantity_cases || 0),
-            piecesPerCase: Number(it.pieces_per_case || it.piecesPerCase || 12),
-            hologramsRequired: Number(it.cases || 0) * Number(it.pieces_per_case || it.piecesPerCase || 12)
+            piecesPerCase: Number(it.pieces_per_case || it.piecesPerCase || (it.size_ml ? this.getPiecesInCase(it.size_ml) : 12)),
+            hologramsRequired: Number(it.cases || 0) * Number(it.pieces_per_case || it.piecesPerCase || (it.size_ml ? this.getPiecesInCase(it.size_ml) : 12))
           }))
         });
       });
     } else {
       permits = permits.map((p: any, idx: number) => {
-        const pIdx = Number(p.permitIndex || idx + 1);
-        const totalCases = Number(p.totalCases || (p.items || []).reduce((s: number, it: any) => s + Number(it.cases || 0), 0));
-        const totalHolo = Number(p.totalHolograms || (p.items || []).reduce((s: number, it: any) => {
-          const c = Number(it.cases || 0);
-          const pcs = Number(it.piecesPerCase || it.pieces_per_case || 12);
-          return s + (c * pcs);
-        }, totalCases * 12));
+        const pIdx = Number(p.permit_sequence || p.permitSequence || p.permit_index || p.permitIndex || idx + 1);
+        const items = p.line_items || p.lineItems || p.items || [];
+        const totalCases = Number(p.total_cases ?? p.totalCases ?? (items.length > 0 ? items.reduce((s: number, it: any) => s + Number(it.cases || it.quantity_cases || 0), 0) : 0));
+        let totalHolo = Number(p.total_holograms ?? p.totalHolograms ?? 0);
+        if (totalHolo <= 0 && items.length > 0) {
+          totalHolo = items.reduce((s: number, it: any) => {
+            const c = Number(it.cases || it.quantity_cases || 0);
+            const pcs = Number(it.pieces_per_case || it.piecesPerCase || (it.size_ml ? this.getPiecesInCase(it.size_ml) : 12));
+            return s + (c * pcs);
+          }, 0);
+        }
+        if (totalHolo <= 0) {
+          totalHolo = totalCases * 12;
+        }
+
+        const permitNum = p.permit_number || p.permitNumber || `${row.applicationId || row.referenceNo || 'IMFL_PERMIT'}-P${pIdx}`;
 
         return {
           permitIndex: pIdx,
-          permitName: p.permitName || `Permit #${pIdx} (${totalCases} Cases)`,
-          permit_number: p.permit_number || p.permitNumber || `IMFL_PERMIT/${row.applicationId || row.referenceNo}/P${pIdx}`,
+          permit_sequence: pIdx,
+          permitName: `${permitNum} (${totalCases} Cases)`,
+          permit_number: permitNum,
           totalCases: totalCases,
           totalHolograms: totalHolo,
           isApproved: p.status ? p.status === 'APPROVED' : true,
           status: p.status || 'APPROVED',
           assignedRanges: p.assignedRanges || p.assigned_ranges || [],
-          items: p.items || []
+          items: items.map((it: any) => ({
+            brand: it.brand || it.brand_name || it.brandName || 'Brand',
+            size: `${it.size_ml || it.sizeMl || 750} ml`,
+            cases: Number(it.cases || it.quantity_cases || 0),
+            piecesPerCase: Number(it.pieces_per_case || it.piecesPerCase || (it.size_ml ? this.getPiecesInCase(it.size_ml) : 12)),
+            hologramsRequired: Number(it.cases || 0) * Number(it.pieces_per_case || it.piecesPerCase || (it.size_ml ? this.getPiecesInCase(it.size_ml) : 12))
+          }))
         };
       });
     }
@@ -3711,8 +3848,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       const totCases = Number(rawApp.cases || rawApp.total_cases || 1);
       permits = [{
         permitIndex: 1,
+        permit_sequence: 1,
         permitName: `Permit #1 (${totCases} Cases)`,
-        permit_number: `IMFL_PERMIT/${row.applicationId || row.referenceNo}/P1`,
+        permit_number: `${row.applicationId || row.referenceNo || 'IMFL_PERMIT'}-P1`,
         totalCases: totCases,
         totalHolograms: totCases * 12,
         isApproved: true,
@@ -6319,7 +6457,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           import_pass_fee_per_case: master.importPassFeePerCase || 1400,
           mrp_per_bottle: master.mrpPerBottle || 850,
           additional_ed_per_case: master.additionalEdPerCase || 350,
-          education_cess_per_case: master.educationCessPerCase || 60
+          education_cess_per_case: master.educationCessPerCase || 60,
+          permit_index: Number(value.permitIndex || 1),
+          permitIndex: Number(value.permitIndex || 1)
         };
       })
       .filter(Boolean) as any[];
