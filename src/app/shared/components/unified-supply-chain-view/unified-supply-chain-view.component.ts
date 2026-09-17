@@ -4322,19 +4322,14 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         this.distributorPermitService.clearCache();
         this.sidebarPendingBadgeService.triggerRefresh();
 
-        // Specific flow routing for requisition
-        if (this.applicationType === 'requisition') {
-            this.router.navigate(['/dashboard'], { queryParams: { section: 'requisition' } });
+        // 1. IMFL / Distributor Permit Flow Routing (must check before generic requisition check)
+        if (source === 'distributor-permit' || source === 'imfl-requisition' || this.isImflDistributorPermitSource() || this.isImflRequisition()) {
+            const tabParam = this.applicationType === 'cancellation' ? 'cancellation' : (this.applicationType === 'revalidation' ? 'revalidation' : 'requisition');
+            this.router.navigate(['/dashboard'], { queryParams: { section: 'distributor-permit', tab: tabParam } });
             return;
         }
 
-        // 1. If user navigated from within the app, return directly to exact origin page
-        if (this.isBrowser && typeof window !== 'undefined' && window.history.length > 1) {
-            this.location.back();
-            return;
-        }
-
-        // 2. Explicit Fallbacks when window history is not available
+        // 2. Specific source checks
         if (source === 'secretary-licenses') {
             this.router.navigate(['/dashboard'], { queryParams: { section: 'secretary-licenses' } });
             return;
@@ -4359,12 +4354,6 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             return;
         }
 
-        if (source === 'distributor-permit' || source === 'imfl-requisition') {
-            const tabParam = this.applicationType === 'cancellation' ? 'cancellation' : (this.applicationType === 'revalidation' ? 'revalidation' : 'requisition');
-            this.router.navigate(['/dashboard'], { queryParams: { section: 'distributor-permit', tab: tabParam } });
-            return;
-        }
-
         // IT Cell hologram flows should return to the IT Cell dashboard section, not the licensee hologram section.
         if (source === 'itcell' || source === 'it-cell') {
             this.router.navigate(['/dashboard'], { queryParams: { section: 'itcell-hologram', tab: 'hologram' } });
@@ -4377,8 +4366,13 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             return;
         }
 
+        // 3. Generic Bulk Spirit / ENA requisition
+        if (this.applicationType === 'requisition') {
+            this.router.navigate(['/dashboard'], { queryParams: { section: 'requisition' } });
+            return;
+        }
+
         const supplyChainDashboardTypes: ApplicationType[] = [
-            'requisition',
             'revalidation',
             'cancellation',
             'transit',
