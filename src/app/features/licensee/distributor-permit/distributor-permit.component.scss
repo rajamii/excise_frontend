@@ -1510,12 +1510,20 @@
   border-top-color: #8b5cf6 !important;
 }
 
+.border-top-warning {
+  border-top-color: #f59e0b !important;
+}
+
 .border-top-danger {
   border-top-color: #ef4444 !important;
 }
 
 .bg-primary-gradient {
   background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+}
+
+.bg-warning-gradient {
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
 }
 
 .bg-success-gradient {

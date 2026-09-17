@@ -9598,6 +9598,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
           const totProcured = Number(stats.totalProcured ?? stats.total_procured ?? 0);
           const totReceived = Number(stats.totalReceived ?? stats.total_received ?? 0);
+          const totReserved = Number(stats.totalReserved ?? stats.total_reserved ?? stats.totalAllocatedToPermits ?? stats.total_allocated_to_permits ?? 0);
           const totAvail = Number(stats.totalAvailable ?? stats.total_available ?? 0);
           const totUtil = Number(stats.totalUtilizedInWarehouse ?? stats.total_utilized_in_warehouse ?? 0);
           const totDisp = Number(stats.totalDispatchedToRetailers ?? stats.total_dispatched_to_retailers ?? 0);
@@ -9608,6 +9609,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
             totalProcured: totProcured,
             total_received: totReceived,
             totalReceived: totReceived,
+            total_reserved: totReserved,
+            totalReserved: totReserved,
+            total_allocated_to_permits: totReserved,
+            totalAllocatedToPermits: totReserved,
             total_available: totAvail,
             totalAvailable: totAvail,
             total_utilized_in_warehouse: totUtil,
@@ -9673,32 +9678,34 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     });
   }
 
+  get overviewBatches(): any[] {
+    return this.hologramOverviewData?.batches || [];
+  }
+
   get filteredOverviewBatches(): any[] {
-    const batches: any[] = this.hologramOverviewData?.batches || [];
+    const batches = this.overviewBatches;
     const q = this.overviewSearchFilter.trim().toLowerCase();
     const st = this.overviewStatusFilter.trim().toLowerCase();
 
     return batches.filter((b) => {
       const ref = String(b.imfl_hologram_ref_no || b.imflHologramRefNo || '').toLowerCase();
-      const dist = String(b.distributor_name || b.distributorName || '').toLowerCase();
       const lic = String(b.license_number || b.licenseNumber || '').toLowerCase();
-      const fromR = String(b.hologram_from_range || b.hologramFromRange || '').toLowerCase();
-      const toR = String(b.hologram_to_range || b.hologramToRange || '').toLowerCase();
-      const officer = String(b.recorded_by_name || b.recordedByName || '').toLowerCase();
-      const status = String(b.status || 'RECEIVED').toLowerCase();
-
-      let matchesStatus = true;
-      if (st !== 'all') {
-        matchesStatus = status === st;
-      }
-
-      const matchesSearch = !q || ref.includes(q) || dist.includes(q) || lic.includes(q) || fromR.includes(q) || toR.includes(q) || officer.includes(q);
-      return matchesStatus && matchesSearch;
+      const dist = String(b.distributor_name || b.distributorName || '').toLowerCase();
+      const est = String(b.establishment_name || b.establishmentName || '').toLowerCase();
+      const status = String(b.status || '').toLowerCase();
+      const stMatch = st === 'all' || status === st;
+      const qMatch = !q || ref.includes(q) || lic.includes(q) || dist.includes(q) || est.includes(q);
+      return stMatch && qMatch;
     });
   }
 
-  get filteredOverviewRanges(): any[] {
+  get overviewRanges(): any[] {
     const ranges: any[] = this.hologramOverviewData?.all_ranges || this.hologramOverviewData?.allRanges || [];
+    return ranges;
+  }
+
+  get filteredOverviewRanges(): any[] {
+    const ranges = this.overviewRanges;
     const q = this.overviewSearchFilter.trim().toLowerCase();
     const st = this.overviewStatusFilter.trim().toLowerCase();
 
@@ -9707,15 +9714,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       const fromR = String(r.from || '').toLowerCase();
       const toR = String(r.to || '').toLowerCase();
       const officer = String(r.recorded_by_name || r.recordedByName || '').toLowerCase();
-      const status = String(r.status || 'AVAILABLE').toLowerCase();
-
-      let matchesStatus = true;
-      if (st !== 'all') {
-        matchesStatus = status === st;
-      }
-
-      const matchesSearch = !q || ref.includes(q) || fromR.includes(q) || toR.includes(q) || officer.includes(q);
-      return matchesStatus && matchesSearch;
+      const status = String(r.status || '').toLowerCase();
+      const stMatch = st === 'all' || status === st;
+      const qMatch = !q || ref.includes(q) || fromR.includes(q) || toR.includes(q) || officer.includes(q);
+      return stMatch && qMatch;
     });
   }
 
@@ -9764,20 +9766,99 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       for (const u of (b.used_hologram_ranges || b.usedHologramRanges || [])) {
         const reqRef = u.requisition_ref_no || u.requisitionRefNo || u.permit_application_ref || u.permitApplicationRef || 'IMFL Requisition';
         const isReverted = String(u.status || '').toUpperCase() === 'REVERTED' || String(u.status || '').toUpperCase() === 'CANCELLED' || String(u.status || '').toUpperCase() === 'RESTORED';
-        const permitNo = u.permit_number || u.permitNumber || (u.permit_index ? `Permit #${u.permit_index}` : 'Permit #1');
-
-        // Check if matching application is approved
+        
+        // Find matching application
         const matchingApp = (this.applications || []).find((a: any) => {
           const ref = String(a.referenceNo || a.reference_no || a.id || a.applicationId || '').toLowerCase();
           return ref === String(reqRef).toLowerCase();
         });
+
+        // Determine permit number nicely
+        let permitNo = u.permit_number || u.permitNumber || '';
+        if (!permitNo || permitNo === reqRef) {
+          if (u.permit_index) {
+            permitNo = `${reqRef}-P${u.permit_index}`;
+          } else {
+            const pWise = matchingApp?.permit_wise_details || matchingApp?.permitWiseDetails || [];
+            if (Array.isArray(pWise) && pWise.length === 1) {
+              permitNo = pWise[0]?.permit_number || pWise[0]?.permitNumber || `${reqRef}-P1`;
+            } else if (Array.isArray(pWise) && pWise.length > 1) {
+              const matchPwd = pWise.find((pw: any) => {
+                const prs = pw.assigned_hologram_ranges || pw.hologram_ranges || [];
+                return prs.some((pr: any) => String(pr.from) === String(u.from) && String(pr.to) === String(u.to));
+              });
+              if (matchPwd) {
+                permitNo = matchPwd.permit_number || matchPwd.permitNumber;
+              } else {
+                permitNo = `${reqRef}-P1`;
+              }
+            } else {
+              permitNo = `${reqRef}-P1`;
+            }
+          }
+        }
+
         const isAppApproved = matchingApp ? this.isApproved(matchingApp) : (String(u.status || '').toUpperCase() === 'APPROVED' || String(u.status || '').toUpperCase() === 'ALLOCATED');
+
+        // Resolve permit list from permit_wise_details
+        const permitsList: any[] = [];
+        const rawPWise = matchingApp?.permit_wise_details || matchingApp?.permitWiseDetails || [];
+        let pWiseArray: any[] = [];
+        if (Array.isArray(rawPWise) && rawPWise.length > 0) {
+          pWiseArray = rawPWise;
+        } else if (typeof rawPWise === 'string') {
+          try { pWiseArray = JSON.parse(rawPWise); } catch (e) { pWiseArray = []; }
+        }
+
+        if (pWiseArray.length > 0) {
+          pWiseArray.forEach((pw: any, pIdx: number) => {
+            const pNum = pw.permit_number || pw.permitNumber || `${reqRef}-P${pIdx + 1}`;
+            let pQty = Number(pw.total_bottles || pw.bottles || pw.expected_bottles || 0);
+            if (!pQty && Array.isArray(pw.line_items || pw.items)) {
+              pQty = (pw.line_items || pw.items).reduce((acc: number, sub: any) => {
+                const sz = Number(sub.size_ml || sub.pack_size || 750);
+                const pcs = Number(sub.pieces_per_case || sub.bottles_per_case || (sz >= 750 ? 12 : sz >= 375 ? 24 : 48));
+                const cases = Number(sub.cases || sub.expected_cases || 0);
+                return acc + (Number(sub.bottles || sub.expected_bottles) || (cases * pcs));
+              }, 0);
+            }
+            if (!pQty) {
+              pQty = Math.floor(Number(u.count || 0) / pWiseArray.length);
+            }
+
+            let pRange = 'Pending Approval';
+            const pwRanges = pw.assigned_hologram_ranges || pw.hologram_ranges || [];
+            if (isAppApproved && Array.isArray(pwRanges) && pwRanges.length > 0) {
+              pRange = pwRanges.map((pr: any) => `${pr.from} → ${pr.to}`).join(', ');
+            } else if (isAppApproved && (pw.hologram_from || pw.hologram_to)) {
+              pRange = `${pw.hologram_from} → ${pw.hologram_to}`;
+            } else if (isAppApproved && pWiseArray.length === 1 && u.from && u.to) {
+              pRange = `${u.from} → ${u.to}`;
+            }
+
+            permitsList.push({
+              permit_number: pNum,
+              permit_index: pIdx + 1,
+              quantity: pQty || Number(u.count || 0),
+              serial_range: pRange,
+              is_approved: isAppApproved
+            });
+          });
+        } else {
+          permitsList.push({
+            permit_number: permitNo || `${reqRef}-P1`,
+            permit_index: 1,
+            quantity: Number(u.count || 0),
+            serial_range: isAppApproved ? `${u.from} → ${u.to}` : 'Pending Approval',
+            is_approved: isAppApproved
+          });
+        }
 
         if (isAppApproved) {
           // 1. Approved by Commissioner - show real assigned serial range and permit number
           usageItems.push({
             activity_type: 'ALLOCATED_TO_PERMIT',
-            activity_label: `Assigned to IMFL Requisition (${reqRef}) - ${permitNo}`,
+            activity_label: `Assigned to IMFL Requisition (${reqRef})`,
             ref_no: b.imfl_hologram_ref_no || b.imflHologramRefNo,
             serial_range: `${u.from} → ${u.to}`,
             quantity: Number(u.count || 0),
@@ -9785,13 +9866,14 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
             recorded_by_name: u.applicant_name || u.applicantName || b.recorded_by_name || b.recordedByName || 'Distributor Licensee',
             activity_date: u.assigned_at || u.assignedAt || b.arrival_date || b.arrivalDate,
             status: 'ALLOCATED',
-            notes: `Assigned ${u.count || 0} pcs (${u.from} → ${u.to}) for ${permitNo} (Approved by Commissioner)`
+            notes: `Holograms allocated across ${permitsList.length} permit(s) (Approved by Commissioner)`,
+            permits: permitsList
           });
         } else {
           // 2. Pending Commissioner Approval - show as Pending Approval
           usageItems.push({
             activity_type: 'PENDING_APPROVAL',
-            activity_label: `IMFL Requisition (${reqRef}) - ${permitNo}`,
+            activity_label: `IMFL Requisition (${reqRef})`,
             ref_no: b.imfl_hologram_ref_no || b.imflHologramRefNo,
             serial_range: 'Pending Approval',
             quantity: Number(u.count || 0),
@@ -9799,7 +9881,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
             recorded_by_name: u.applicant_name || u.applicantName || b.recorded_by_name || b.recordedByName || 'Distributor Licensee',
             activity_date: u.assigned_at || u.assignedAt || b.arrival_date || b.arrivalDate,
             status: 'PENDING',
-            notes: `Awaiting Commissioner Approval before serial number allocation`
+            notes: `Awaiting Commissioner Approval before serial number allocation (${permitsList.length} permit${permitsList.length > 1 ? 's' : ''})`,
+            permits: permitsList
           });
         }
 
@@ -9811,7 +9894,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           }
           usageItems.push({
             activity_type: 'REVERTED',
-            activity_label: 'Reverted to Stock (Cancelled/Rejected)',
+            activity_label: `Reverted to Stock - Requisition: ${reqRef}`,
             ref_no: b.imfl_hologram_ref_no || b.imflHologramRefNo,
             serial_range: `${u.from} → ${u.to}`,
             quantity: Number(u.count || 0),
@@ -9819,7 +9902,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
             recorded_by_name: u.reverted_by || u.revertedByName || 'Permit Section / Excise Authority',
             activity_date: u.reverted_at || u.revertedAt || u.assigned_at || u.assignedAt || b.arrival_date || b.arrivalDate,
             status: 'REVERTED',
-            notes: revNotes
+            notes: revNotes,
+            permits: permitsList
           });
         }
       }

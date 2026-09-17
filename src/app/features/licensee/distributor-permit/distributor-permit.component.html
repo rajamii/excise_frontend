@@ -1567,7 +1567,7 @@
         <!-- KPI Summary Cards Grid -->
         <div class="row g-3 mb-4">
           <!-- Total Procured -->
-          <div class="col-xl-2 col-lg-4 col-md-4 col-sm-6">
+          <div class="col-xl col-lg-4 col-md-4 col-sm-6">
             <div class="summary-card holo-stat-card border-top-primary">
               <div class="card-icon bg-primary-gradient"><i class="bi bi-bag-check-fill text-white"></i></div>
               <div class="card-content">
@@ -1578,7 +1578,7 @@
           </div>
 
           <!-- Total Received -->
-          <div class="col-xl-2 col-lg-4 col-md-4 col-sm-6">
+          <div class="col-xl col-lg-4 col-md-4 col-sm-6">
             <div class="summary-card holo-stat-card border-top-success">
               <div class="card-icon bg-success-gradient"><i class="bi bi-qr-code-scan text-white"></i></div>
               <div class="card-content">
@@ -1588,19 +1588,30 @@
             </div>
           </div>
 
+          <!-- Reserved for Requisitions -->
+          <div class="col-xl col-lg-4 col-md-4 col-sm-6">
+            <div class="summary-card holo-stat-card border-top-warning">
+              <div class="card-icon bg-warning-gradient"><i class="bi bi-bookmark-check-fill text-white"></i></div>
+              <div class="card-content">
+                <h3 class="card-value text-warning" style="color: #d97706 !important;">{{ ((hologramOverviewData?.summary_stats?.total_reserved ?? hologramOverviewData?.summary_stats?.total_allocated_to_permits) || 0) | number }}</h3>
+                <p class="card-label">Reserved for Requisitions</p>
+              </div>
+            </div>
+          </div>
+
           <!-- Available Usable Balance -->
-          <div class="col-xl-2 col-lg-4 col-md-4 col-sm-6">
+          <div class="col-xl col-lg-4 col-md-4 col-sm-6">
             <div class="summary-card holo-stat-card border-top-emerald">
               <div class="card-icon bg-emerald-gradient"><i class="bi bi-shield-fill-check text-white"></i></div>
               <div class="card-content">
                 <h3 class="card-value text-emerald">{{ (hologramOverviewData?.summary_stats?.total_available || 0) | number }}</h3>
-                <p class="card-label">Available Balance</p>
+                <p class="card-label">Available for Next Requisition</p>
               </div>
             </div>
           </div>
 
           <!-- Affixed in Warehouse -->
-          <div class="col-xl-2 col-lg-4 col-md-4 col-sm-6">
+          <div class="col-xl col-lg-4 col-md-4 col-sm-6">
             <div class="summary-card holo-stat-card border-top-indigo">
               <div class="card-icon bg-indigo-gradient"><i class="bi bi-boxes text-white"></i></div>
               <div class="card-content">
@@ -1611,7 +1622,7 @@
           </div>
 
           <!-- Dispatched to Retailers -->
-          <div class="col-xl-2 col-lg-4 col-md-4 col-sm-6">
+          <div class="col-xl col-lg-4 col-md-4 col-sm-6">
             <div class="summary-card holo-stat-card border-top-purple">
               <div class="card-icon bg-purple-gradient"><i class="bi bi-truck text-white"></i></div>
               <div class="card-content">
@@ -1622,7 +1633,7 @@
           </div>
 
           <!-- Damaged Holograms -->
-          <div class="col-xl-2 col-lg-4 col-md-4 col-sm-6">
+          <div class="col-xl col-lg-4 col-md-4 col-sm-6">
             <div class="summary-card holo-stat-card border-top-danger">
               <div class="card-icon bg-danger-gradient"><i class="bi bi-exclamation-triangle-fill text-white"></i></div>
               <div class="card-content">
@@ -1653,7 +1664,13 @@
               class="progress-bar bg-success bg-gradient"
               role="progressbar"
               [style.width.%]="getOverviewStockPercentage(hologramOverviewData?.summary_stats?.total_available, hologramOverviewData?.summary_stats?.total_received)"
-              [title]="'Available: ' + (hologramOverviewData?.summary_stats?.total_available | number)"
+              [title]="'Available for Next Requisition: ' + (hologramOverviewData?.summary_stats?.total_available | number)"
+            ></div>
+            <div
+              class="progress-bar bg-warning bg-gradient"
+              role="progressbar"
+              [style.width.%]="getOverviewStockPercentage(hologramOverviewData?.summary_stats?.total_reserved ?? hologramOverviewData?.summary_stats?.total_allocated_to_permits, hologramOverviewData?.summary_stats?.total_received)"
+              [title]="'Reserved for Requisitions: ' + ((hologramOverviewData?.summary_stats?.total_reserved ?? hologramOverviewData?.summary_stats?.total_allocated_to_permits) | number)"
             ></div>
             <div
               class="progress-bar bg-primary bg-gradient"
@@ -1679,7 +1696,11 @@
           <div class="d-flex flex-wrap gap-4 pt-2 small">
             <div class="d-flex align-items-center gap-2">
               <span class="rounded-circle d-inline-block" style="width: 12px; height: 12px; background-color: #10b981;"></span>
-              <span class="fw-semibold text-dark">Available ({{ getOverviewStockPercentage(hologramOverviewData?.summary_stats?.total_available, hologramOverviewData?.summary_stats?.total_received) }}%)</span>
+              <span class="fw-semibold text-dark">Available for Next Requisition ({{ getOverviewStockPercentage(hologramOverviewData?.summary_stats?.total_available, hologramOverviewData?.summary_stats?.total_received) }}%)</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="rounded-circle d-inline-block" style="width: 12px; height: 12px; background-color: #f59e0b;"></span>
+              <span class="fw-semibold text-dark">Reserved for Requisitions ({{ getOverviewStockPercentage(hologramOverviewData?.summary_stats?.total_reserved ?? hologramOverviewData?.summary_stats?.total_allocated_to_permits, hologramOverviewData?.summary_stats?.total_received) }}%)</span>
             </div>
             <div class="d-flex align-items-center gap-2">
               <span class="rounded-circle d-inline-block" style="width: 12px; height: 12px; background-color: #3b82f6;"></span>
@@ -2092,7 +2113,25 @@
                       <i class="bi" [ngClass]="item.status === 'DAMAGED' ? 'bi-exclamation-triangle-fill text-danger' : item.status === 'DISPATCHED' ? 'bi-truck text-purple' : item.status === 'REVERTED' ? 'bi-arrow-counterclockwise text-warning' : 'bi-boxes text-primary'"></i>
                       <span>{{ item.activity_label }}</span>
                     </div>
-                    <small class="text-muted">{{ item.notes }}</small>
+                    <small class="text-muted d-block mb-1">{{ item.notes }}</small>
+
+                    <!-- Permit-wise Breakdown details below IMFL Reference in same row -->
+                    <div class="mt-2 d-flex flex-column gap-1.5" *ngIf="item.permits && item.permits.length > 0">
+                      <div *ngFor="let p of item.permits" class="d-inline-flex flex-wrap align-items-center gap-2 px-2.5 py-1 rounded-2 border bg-light small" style="max-width: fit-content;">
+                        <span class="badge bg-primary text-white font-monospace fw-semibold" style="font-size: 11px;">
+                          <i class="bi bi-file-earmark-text me-1"></i>{{ p.permit_number }}
+                        </span>
+                        <span class="fw-semibold text-secondary" style="font-size: 11.5px;">
+                          Quantity: <strong class="text-dark font-monospace">{{ p.quantity | number }} pcs</strong>
+                        </span>
+                        <span class="text-muted" style="font-size: 11px;">•</span>
+                        <span class="fw-semibold d-inline-flex align-items-center gap-1" [ngClass]="p.is_approved ? 'text-success' : 'text-warning'" style="font-size: 11.5px;">
+                          <i class="bi" [ngClass]="p.is_approved ? 'bi-check-circle-fill text-success' : 'bi-clock-history text-warning'"></i>
+                          Hologram Range:
+                          <span class="font-monospace fw-bold" [ngClass]="p.is_approved ? 'text-success' : 'text-dark'">{{ p.serial_range }}</span>
+                        </span>
+                      </div>
+                    </div>
                   </td>
                   <td>
                     <span class="font-monospace fw-bold text-dark">{{ item.serial_range }}</span>
