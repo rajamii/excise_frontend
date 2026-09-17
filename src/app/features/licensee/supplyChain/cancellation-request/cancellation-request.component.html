@@ -1,183 +1,221 @@
 <div class="main-container">
-  <div *ngIf="errorMessage" class="alert alert-danger">
-    {{ errorMessage }}
+  <div *ngIf="errorMessage" class="alert alert-danger d-flex align-items-center mb-3">
+    <i class="bi bi-exclamation-octagon-fill me-2 fs-5"></i>
+    <div>{{ errorMessage }}</div>
   </div>
 
-  <div *ngIf="isLoading" class="text-center p-4">
-    <div class="spinner-border text-primary" role="status">
+  <div *ngIf="isLoading" class="text-center py-4">
+    <div class="spinner-border text-danger" role="status">
       <span class="visually-hidden">Loading...</span>
     </div>
-    <p class="mt-2">Loading details...</p>
+    <p class="mt-2 text-muted fw-semibold">Loading cancellation details...</p>
   </div>
 
-  <div class="card p-4 mb-4">
-    <div class="section-title">
-      <i class="bi bi-list-check"></i>Select Permit(s) for Cancellation
-    </div>
-    <div class="dropdown mb-3">
-      <button
-        class="btn btn-outline-primary dropdown-toggle w-100"
-        type="button"
-        data-bs-toggle="dropdown"
-        [disabled]="isPermitSelectionLocked()"
-        aria-expanded="false"
-      >
-        {{ getPermitDropdownLabel() }}
-      </button>
-      <div class="dropdown-menu p-2 w-100">
-        <div *ngFor="let permit of permits" class="form-check">
-          <input
-            class="form-check-input"
-            type="checkbox"
-            [id]="'chkPermit_' + permit.number"
-            [value]="permit.number"
-            [checked]="permit.isCancelled || permit.isSelected"
-            [disabled]="permit.isLocked"
-            (change)="togglePermit(permit, $event)"
-          />
-          <label class="form-check-label" [for]="'chkPermit_' + permit.number">
-            Permit No. {{ permit.number }} - {{ formatCurrency(permit.amount) }}
-            <span class="text-muted ms-1">({{ getPerPermitQuantityLabel() || 'per permit' }})</span>
-            <span *ngIf="permit.isCancelled" class="badge bg-secondary ms-1">Cancelled</span>
-            <span *ngIf="!permit.isCancelled && permit.isLocked && permit.lockReason === 'Under revalidation'" class="badge bg-warning text-dark ms-1">Revalidated</span>
-            <span *ngIf="!permit.isCancelled && permit.isLocked && permit.lockReason === 'Arrived'" class="badge bg-success text-white ms-1">Arrived</span>
-            <span *ngIf="!permit.isCancelled && permit.isLocked && permit.lockReason !== 'Under revalidation' && permit.lockReason !== 'Arrived'" class="badge bg-danger ms-1">{{ permit.lockReason }}</span>
-          </label>
+  <div *ngIf="!isLoading">
+    <!-- Card 1: Permit Selection -->
+    <div class="cancellation-panel mb-3">
+      <div class="panel-header">
+        <i class="bi bi-list-check text-danger me-2"></i>
+        <span>Select Permit(s) for Cancellation</span>
+      </div>
+      <div class="panel-body">
+        <div class="permit-dropdown" [class.open]="permitDropdownOpen">
+          <button
+            class="permit-dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center py-2 px-3"
+            type="button"
+            (click)="togglePermitDropdown()"
+            [disabled]="isPermitSelectionLocked()"
+          >
+            <span class="text-truncate">{{ getPermitDropdownLabel() }}</span>
+            <i class="bi" [ngClass]="permitDropdownOpen ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+          </button>
+          <div class="permit-dropdown-menu shadow" *ngIf="permitDropdownOpen">
+            <div *ngFor="let permit of permits" class="form-check py-1 px-3">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                [id]="'chkPermit_' + permit.number"
+                [value]="permit.number"
+                [checked]="permit.isCancelled || permit.isSelected"
+                [disabled]="permit.isLocked"
+                (change)="togglePermit(permit, $event)"
+              />
+              <label class="form-check-label ms-1" [for]="'chkPermit_' + permit.number">
+                <strong>Permit No. {{ permit.number }}</strong> - {{ formatCurrency(permit.amount) }}
+                <span class="text-muted ms-1">({{ getPerPermitQuantityLabel() || 'per permit' }})</span>
+                <span *ngIf="permit.isCancelled" class="badge bg-secondary ms-1">Cancelled</span>
+                <span *ngIf="!permit.isCancelled && permit.isLocked && permit.lockReason === 'Under revalidation'" class="badge bg-warning text-dark ms-1">Revalidated</span>
+                <span *ngIf="!permit.isCancelled && permit.isLocked && permit.lockReason === 'Arrived'" class="badge bg-success text-white ms-1">Arrived</span>
+                <span *ngIf="!permit.isCancelled && permit.isLocked && permit.lockReason !== 'Under revalidation' && permit.lockReason !== 'Arrived'" class="badge bg-danger ms-1">{{ permit.lockReason }}</span>
+              </label>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="card p-4" *ngIf="requisitionData">
-    <h5 class="mb-3 border-bottom pb-2">Cancellation Request Details</h5>
+    <!-- Card 2: Requisition Details Table -->
+    <div class="cancellation-panel mb-3" *ngIf="requisitionData">
+      <div class="panel-header">
+        <i class="bi bi-file-earmark-text text-danger me-2"></i>
+        <span>Cancellation Request Details</span>
+      </div>
+      <div class="panel-body p-0">
+        <div class="table-responsive">
+          <table class="table table-bordered align-middle mb-0 cancellation-table">
+            <tbody>
+              <tr>
+                <td class="param-col">Requisition Reference No.</td>
+                <td class="value-col fw-bold">{{ requisitionData.ourRefNo }}</td>
+              </tr>
+              <tr>
+                <td class="param-col">Dated</td>
+                <td class="value-col">{{ requisitionData.requisitionDate | date : "dd/MM/yyyy" }}</td>
+              </tr>
+              <tr>
+                <td class="param-col">Surrender of Import Permit No(s)</td>
+                <td class="value-col">
+                  <span *ngIf="selectedPermits.length > 0; else noPermits" class="badge bg-danger text-white px-2 py-1" style="font-size: 0.88rem;">
+                    {{ selectedPermits.join(", ") }}
+                  </span>
+                  <ng-template #noPermits><em class="text-muted">None selected</em></ng-template>
+                </td>
+              </tr>
+              <tr *ngIf="getRevalidatedPermitsList().length > 0">
+                <td class="param-col">Revalidated Permit(s)</td>
+                <td class="value-col">
+                  <span class="badge bg-warning text-dark" style="font-size: 0.85rem;">{{ getRevalidatedPermitsList().join(", ") }}</span>
+                </td>
+              </tr>
+              <tr *ngIf="getArrivedPermitsList().length > 0">
+                <td class="param-col">Arrived Permit(s)</td>
+                <td class="value-col">
+                  <span class="badge bg-success text-white" style="font-size: 0.85rem;">{{ getArrivedPermitsList().join(", ") }}</span>
+                </td>
+              </tr>
+              <tr>
+                <td class="param-col">Requisition Details</td>
+                <td class="value-col">
+                  Fresh Import Permit for <strong>{{ getTotalBalance() }} BL</strong>
+                  (<i>{{ requisitionData.grainEnaNumber }} x {{ selectedPermits.length }}</i>)<br />
+                  <span class="text-muted">Strength:</span> {{ requisitionData.strength }} | 
+                  <span class="text-muted">From:</span> {{ requisitionData.liftedFromDistilleryName }}
+                </td>
+              </tr>
+              <tr>
+                <td class="param-col">Route</td>
+                <td class="value-col">{{ requisitionData.viaRoute }}</td>
+              </tr>
+              <tr>
+                <td class="param-col">Cancellation Charges</td>
+                <td class="value-col text-danger fw-bold fs-6">- {{ formatCurrency(getCancellationCharges()) }}</td>
+              </tr>
+              <tr>
+                <td class="param-col">Refund Amount</td>
+                <td class="value-col text-success fw-bold fs-6">+ {{ formatCurrency(getPermitRefundAmount()) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-    <div class="table-responsive">
-      <table class="table table-bordered align-middle">
-        <thead class="table-light">
-          <tr>
-            <th>Parameter</th>
-            <th>Details</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><strong>Requisition Reference No.</strong></td>
-            <td>{{ requisitionData.ourRefNo }}</td>
-          </tr>
-          <tr>
-            <td><strong>Dated</strong></td>
-            <td>{{ requisitionData.requisitionDate | date : "dd/MM/yyyy" }}</td>
-          </tr>
-          <tr>
-            <td><strong>Surrender of Import Permit No(s)</strong></td>
-            <td>
-              <span *ngIf="selectedPermits.length > 0; else noPermits">
-                {{ selectedPermits.join(", ") }}
-              </span>
-              <ng-template #noPermits><em class="text-muted">None selected</em></ng-template>
-            </td>
-          </tr>
-          <tr *ngIf="getRevalidatedPermitsList().length > 0">
-            <td><strong>Revalidated Permit(s)</strong></td>
-            <td>
-              <span class="badge bg-warning text-dark" style="font-size: 0.85rem;">{{ getRevalidatedPermitsList().join(", ") }}</span>
-            </td>
-          </tr>
-          <tr *ngIf="getArrivedPermitsList().length > 0">
-            <td><strong>Arrived Permit(s)</strong></td>
-            <td>
-              <span class="badge bg-success text-white" style="font-size: 0.85rem;">{{ getArrivedPermitsList().join(", ") }}</span>
-            </td>
-          </tr>
-          <tr>
-            <td><strong>Requisition Details</strong></td>
-            <td>
-              Fresh Import Permit for <strong>{{ getTotalBalance() }}</strong>
-              (<i>{{ requisitionData.grainEnaNumber }} x {{ selectedPermits.length }}</i>)<br />
-              Strength: {{ requisitionData.strength }}<br />
-              From: {{ requisitionData.liftedFromDistilleryName }}
-            </td>
-          </tr>
-          <tr>
-            <td><strong>Route</strong></td>
-            <td>{{ requisitionData.viaRoute }}</td>
-          </tr>
-          <tr>
-            <td><strong>Cancellation Charges</strong></td>
-            <td class="text-danger fw-bold">{{ formatCurrency(getCancellationCharges()) }}</td>
-          </tr>
-          <tr>
-            <td><strong>Refund Amount</strong></td>
-            <td class="text-success fw-bold">+ {{ formatCurrency(getPermitRefundAmount()) }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="cancellation-declaration-note p-3">
+        <div class="d-flex align-items-start">
+          <i class="bi bi-info-circle-fill text-primary me-2 mt-1"></i>
+          <small class="text-muted">
+            We are surrendering the above Import Permits along with the Non Execution Certificate due to non-availability of
+            tankers / Export Permission not granted. We request a fresh Import Permit for the specified quantity.
+          </small>
+        </div>
+      </div>
     </div>
 
-    <div class="alert alert-light border mt-2">
-      <small>
-        <i class="bi bi-info-circle me-1"></i>
-        We are surrendering the above Import Permits along with the Non Execution Certificate due to non-availability of
-        tankers / Export Permission not granted. We request a fresh Import Permit for the specified quantity.
-      </small>
+    <!-- Actions -->
+    <div class="d-flex justify-content-end gap-2 pt-2">
+      <button class="btn btn-outline-secondary px-4" (click)="goBack()">Cancel</button>
+      <button
+        *ngIf="!isPermitSelectionLocked()"
+        class="btn btn-danger px-4 fw-semibold"
+        [disabled]="newlySelectedPermits.length === 0 || isSubmittingCancellation"
+        (click)="showDeclaration()">
+        <span
+          *ngIf="isSubmittingCancellation"
+          class="spinner-border spinner-border-sm me-2"
+          role="status"
+          aria-hidden="true"
+        ></span>
+        {{ isSubmittingCancellation ? 'Submitting...' : 'Submit Cancellation Request' }}
+      </button>
     </div>
-  </div>
-
-  <div class="d-flex justify-content-end gap-3 mt-4">
-    <button class="btn btn-outline-secondary" (click)="goBack()">Cancel</button>
-    <button
-      *ngIf="!isPermitSelectionLocked()"
-      class="btn btn-danger"
-      [disabled]="newlySelectedPermits.length === 0 || isSubmittingCancellation"
-      (click)="showDeclaration()">
-      <span
-        *ngIf="isSubmittingCancellation"
-        class="spinner-border spinner-border-sm me-2"
-        role="status"
-        aria-hidden="true"
-      ></span>
-      {{ isSubmittingCancellation ? 'Submitting...' : 'Submit Cancellation Request' }}
-    </button>
   </div>
 </div>
 
+<!-- Important Declaration Modal -->
 <div
-  class="modal fade"
+  class="modal fade nested-modal"
   [class.show]="showDeclarationModal"
   [style.display]="showDeclarationModal ? 'block' : 'none'"
   id="declarationModal"
   tabindex="-1"
+  role="dialog"
+  aria-modal="true"
 >
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header bg-warning text-dark">
-        <h5 class="modal-title">
-          <i class="bi bi-exclamation-triangle me-2"></i>Important Declaration
-        </h5>
-        <button type="button" class="btn-close" [disabled]="isSubmittingCancellation" (click)="showDeclarationModal = false"></button>
+  <div class="modal-dialog modal-dialog-centered declaration-modal-dialog">
+    <div class="modal-content declaration-modal-content">
+      <div class="declaration-header">
+        <div class="header-title-wrap">
+          <i class="bi bi-exclamation-triangle-fill header-icon"></i>
+          <div>
+            <h5 class="declaration-title mb-0">Important Declaration</h5>
+            <p class="declaration-subtitle mb-0">Review cancellation charges & refund adjustments</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" [disabled]="isSubmittingCancellation" (click)="showDeclarationModal = false" aria-label="Close"></button>
       </div>
-      <div class="modal-body">
-        <div class="alert alert-warning" *ngIf="newlySelectedPermits.length > 0">
-          <strong>Note:</strong> By submitting this cancellation request, you acknowledge that
-          <b>{{ formatCurrency(getPermitRefundAmount()) }} will be credited back</b>
-          (refund) and <b>{{ formatCurrency(getCancellationCharges()) }} will be deducted</b>
-          as cancellation charges ({{ newlySelectedPermits.length }} permit(s), {{ formatCurrency(cancellationChargePerPermit) }} each).
+
+      <div class="declaration-body">
+        <!-- Impact grid -->
+        <div class="declaration-impact-grid mb-3">
+          <div class="impact-card refund-impact">
+            <div class="impact-label">Refund Credit</div>
+            <div class="impact-amount text-success">+ {{ formatCurrency(getPermitRefundAmount()) }}</div>
+            <div class="impact-detail">{{ newlySelectedPermits.length }} permit(s) refunded</div>
+          </div>
+          <div class="impact-card fee-impact">
+            <div class="impact-label">Cancellation Charges</div>
+            <div class="impact-amount text-danger">- {{ formatCurrency(getCancellationCharges()) }}</div>
+            <div class="impact-detail">{{ formatCurrency(cancellationChargePerPermit) }} / permit</div>
+          </div>
         </div>
-        <div class="alert alert-info" *ngIf="selectedPermits.length > newlySelectedPermits.length">
-          <strong>Info:</strong>
-          {{ selectedPermits.length - newlySelectedPermits.length }}
-          permit(s) are already cancelled and will not incur additional charges.
+
+        <div class="declaration-info-box mb-3" *ngIf="newlySelectedPermits.length > 0">
+          <div class="d-flex align-items-start">
+            <i class="bi bi-info-circle-fill text-primary me-2 mt-1"></i>
+            <div>
+              <span class="fw-semibold">Permits to Surrender:</span>
+              <div class="mt-1 d-flex flex-wrap gap-1">
+                <span *ngFor="let p of newlySelectedPermits" class="badge bg-light text-dark border">Permit #{{ p }}</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="alert alert-info" *ngIf="newlySelectedPermits.length === 0">
-          <strong>Info:</strong> All selected permits are already cancelled. No additional charges will be deducted.
+
+        <div class="declaration-alert-box mb-3" *ngIf="selectedPermits.length > newlySelectedPermits.length">
+          <i class="bi bi-info-circle text-primary me-2"></i>
+          <span>{{ selectedPermits.length - newlySelectedPermits.length }} permit(s) are already cancelled and will not incur additional charges.</span>
         </div>
-        <p class="mb-0">Do you wish to proceed?</p>
+
+        <div class="declaration-prompt-card">
+          <i class="bi bi-arrow-right-circle text-primary me-2"></i>
+          <span>Do you wish to proceed to wallet deduction and confirmation?</span>
+        </div>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" [disabled]="isSubmittingCancellation" (click)="showDeclarationModal = false">
+
+      <div class="modal-footer declaration-footer">
+        <button type="button" class="btn btn-outline-secondary px-4" [disabled]="isSubmittingCancellation" (click)="showDeclarationModal = false">
           Cancel
         </button>
-        <button type="button" class="btn btn-success" [disabled]="isSubmittingCancellation" (click)="openWalletConfirmation()">
+        <button type="button" class="btn btn-proceed px-4 fw-semibold" [disabled]="isSubmittingCancellation" (click)="openWalletConfirmation()">
           <span
             *ngIf="isSubmittingCancellation"
             class="spinner-border spinner-border-sm me-2"
@@ -185,18 +223,22 @@
             aria-hidden="true"
           ></span>
           {{ isSubmittingCancellation ? 'Please wait...' : 'Yes, Proceed' }}
+          <i class="bi bi-arrow-right-short ms-1" *ngIf="!isSubmittingCancellation"></i>
         </button>
       </div>
     </div>
   </div>
 </div>
 
+<!-- Wallet Confirmation Modal -->
 <div
-  class="modal fade"
+  class="modal fade nested-modal"
   [class.show]="showWalletConfirmationModal"
   [style.display]="showWalletConfirmationModal ? 'block' : 'none'"
   id="walletConfirmationModal"
   tabindex="-1"
+  role="dialog"
+  aria-modal="true"
 >
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content wallet-confirmation-modal">
@@ -207,7 +249,7 @@
           </h5>
           <p class="wallet-confirmation-subtitle mb-0">Review wallet balance and deduction details before you proceed.</p>
         </div>
-        <button type="button" class="btn-close btn-close-white" [disabled]="isSubmittingCancellation" (click)="closeWalletConfirmation()"></button>
+        <button type="button" class="btn-close btn-close-white" [disabled]="isSubmittingCancellation" (click)="closeWalletConfirmation()" aria-label="Close"></button>
       </div>
 
       <div class="wallet-confirmation-body">
@@ -231,74 +273,74 @@
           </div>
 
           <div class="wallet-confirmation-content" [class.is-submitting]="isSubmittingCancellation">
-          <div class="wallet-summary-grid">
-            <div class="wallet-summary-tile">
-              <span class="wallet-summary-label">Payment For</span>
-              <strong>Cancellation</strong>
+            <div class="wallet-summary-grid">
+              <div class="wallet-summary-tile">
+                <span class="wallet-summary-label">Payment For</span>
+                <strong>Cancellation</strong>
+              </div>
+              <div class="wallet-summary-tile">
+                <span class="wallet-summary-label">Reference No.</span>
+                <strong>{{ requisitionData?.ourRefNo || referenceNo }}</strong>
+              </div>
+              <div class="wallet-summary-tile">
+                <span class="wallet-summary-label">Wallet Source</span>
+                <strong>{{ walletSourceLabel }}</strong>
+              </div>
             </div>
-            <div class="wallet-summary-tile">
-              <span class="wallet-summary-label">Reference No.</span>
-              <strong>{{ requisitionData?.ourRefNo || referenceNo }}</strong>
-            </div>
-            <div class="wallet-summary-tile">
-              <span class="wallet-summary-label">Wallet Source</span>
-              <strong>{{ walletSourceLabel }}</strong>
-            </div>
-          </div>
 
-          <div class="wallet-balance-grid">
-            <div class="wallet-balance-card current">
-              <span class="wallet-summary-label">Current Balance</span>
-              <strong>{{ formatCurrency(availableWalletBalance) }}</strong>
+            <div class="wallet-balance-grid">
+              <div class="wallet-balance-card current">
+                <span class="wallet-summary-label">Current Balance</span>
+                <strong>{{ formatCurrency(availableWalletBalance) }}</strong>
+              </div>
+              <div class="wallet-balance-card refund">
+                <span class="wallet-summary-label">Refund on Proceed</span>
+                <strong>+ {{ formatCurrency(getPermitRefundAmount()) }}</strong>
+                <small class="text-muted d-block mt-1">{{ formatCurrency(getPerPermitRefundAmount()) }} per permit</small>
+              </div>
+              <div class="wallet-balance-card deduct">
+                <span class="wallet-summary-label">Cancellation Charge</span>
+                <strong>- {{ formatCurrency(getCancellationCharges()) }}</strong>
+                <small class="text-muted d-block mt-1">{{ formatCurrency(cancellationChargePerPermit) }} per permit</small>
+              </div>
+              <div class="wallet-balance-card after" [class.insufficient]="!hasSufficientWalletBalance()">
+                <span class="wallet-summary-label">Balance After Proceed</span>
+                <strong>{{ formatCurrency(getBalanceAfterProceed()) }}</strong>
+              </div>
             </div>
-            <div class="wallet-balance-card refund">
-              <span class="wallet-summary-label">Refund on Proceed</span>
-              <strong>+ {{ formatCurrency(getPermitRefundAmount()) }}</strong>
-              <small class="text-muted d-block mt-1">{{ formatCurrency(getPerPermitRefundAmount()) }} per permit</small>
-            </div>
-            <div class="wallet-balance-card deduct">
-              <span class="wallet-summary-label">Cancellation Charge</span>
-              <strong>- {{ formatCurrency(getCancellationCharges()) }}</strong>
-              <small class="text-muted d-block mt-1">{{ formatCurrency(cancellationChargePerPermit) }} per permit</small>
-            </div>
-            <div class="wallet-balance-card after" [class.insufficient]="!hasSufficientWalletBalance()">
-              <span class="wallet-summary-label">Balance After Proceed</span>
-              <strong>{{ formatCurrency(getBalanceAfterProceed()) }}</strong>
-            </div>
-          </div>
 
-          <div class="wallet-info-banner mb-3">
-            <i class="bi bi-info-circle-fill me-2"></i>
-            On proceed, permit refund will be credited back and cancellation charges will be deducted immediately.
-          </div>
+            <div class="wallet-info-banner mb-3">
+              <i class="bi bi-info-circle-fill me-2"></i>
+              On proceed, permit refund will be credited back and cancellation charges will be deducted immediately.
+            </div>
 
-          <div *ngIf="!hasSufficientWalletBalance()" class="alert alert-danger mb-3">
-            Insufficient wallet balance. Please add money before proceeding with this cancellation request.
-          </div>
+            <div *ngIf="!hasSufficientWalletBalance()" class="alert alert-danger mb-3">
+              Insufficient wallet balance. Please add money before proceeding with this cancellation request.
+            </div>
 
-          <div class="form-check wallet-declaration-box">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              id="walletDeclarationAccepted"
-              [disabled]="isSubmittingCancellation"
-              [(ngModel)]="walletDeclarationAccepted"
-            />
-            <label class="form-check-label" for="walletDeclarationAccepted">
-              I confirm that the above amount may be deducted from my wallet and this request may be forwarded to the next stage.
-            </label>
-          </div>
+            <div class="form-check wallet-declaration-box">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="walletDeclarationAccepted"
+                [disabled]="isSubmittingCancellation"
+                [(ngModel)]="walletDeclarationAccepted"
+              />
+              <label class="form-check-label" for="walletDeclarationAccepted">
+                I confirm that the above amount may be deducted from my wallet and this request may be forwarded to the next stage.
+              </label>
+            </div>
           </div>
         </ng-container>
       </div>
 
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" [disabled]="isSubmittingCancellation" (click)="closeWalletConfirmation()">
+        <button type="button" class="btn btn-outline-secondary px-4" [disabled]="isSubmittingCancellation" (click)="closeWalletConfirmation()">
           Cancel
         </button>
         <button
           type="button"
-          class="btn btn-success"
+          class="btn btn-success px-4 fw-semibold"
           [disabled]="!canProceedWithWalletConfirmation()"
           (click)="confirmCancellation()"
         >
@@ -315,33 +357,40 @@
   </div>
 </div>
 
+<!-- Success Modal -->
 <div
-  class="modal fade"
+  class="modal fade nested-modal"
   [class.show]="showSuccessModal"
   [style.display]="showSuccessModal ? 'block' : 'none'"
   id="successModal"
   tabindex="-1"
+  role="dialog"
+  aria-modal="true"
 >
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
+    <div class="modal-content success-modal-content">
       <div class="modal-header bg-success text-white">
         <h5 class="modal-title">
           <i class="bi bi-check-circle me-2"></i>Success
         </h5>
-        <button type="button" class="btn-close" (click)="showSuccessModal = false"></button>
+        <button type="button" class="btn-close btn-close-white" (click)="showSuccessModal = false" aria-label="Close"></button>
       </div>
-      <div class="modal-body">
-        <div class="alert alert-success">
-          <strong>Cancellation request submitted successfully!</strong><br />
-          <span>{{ successMessage }}</span>
-          <br />
-          <small class="text-muted">
-            Refund will only be processed if it gets rejected by the Commissioner.
-          </small>
+      <div class="modal-body p-4">
+        <div class="text-center mb-3">
+          <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
+          <h5 class="mt-2 fw-bold text-dark">Cancellation Request Submitted</h5>
+        </div>
+        <div class="alert alert-light border">
+          <span class="text-muted">{{ successMessage }}</span>
+          <div class="mt-2">
+            <small class="text-muted">
+              Refund will only be processed if it gets rejected by the Commissioner.
+            </small>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-success" (click)="redirectToDashboard()">
+        <button type="button" class="btn btn-success px-4" (click)="redirectToDashboard()">
           OK
         </button>
       </div>
@@ -349,8 +398,9 @@
   </div>
 </div>
 
+<!-- Backdrop for nested sub-modals -->
 <div
-  class="modal-backdrop fade"
+  class="nested-modal-backdrop fade"
   [class.show]="showDeclarationModal || showWalletConfirmationModal || showSuccessModal"
-  [style.display]="showDeclarationModal || showWalletConfirmationModal || showSuccessModal ? 'block' : 'none'"
+  *ngIf="showDeclarationModal || showWalletConfirmationModal || showSuccessModal"
 ></div>

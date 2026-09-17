@@ -442,27 +442,30 @@
 </div>
 
 <!-- Cancellation Modal Wrapper -->
-<div class="modal fade" *ngIf="isCancellationModalOpen" [class.show]="isCancellationModalOpen"
-  [style.display]="isCancellationModalOpen ? 'block' : 'none'" tabindex="-1" role="dialog" aria-modal="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Request Cancellation</h5>
-        <button type="button" class="btn-close" (click)="closeCancellationModal()" aria-label="Close"></button>
+<div class="custom-app-modal" *ngIf="isCancellationModalOpen" tabindex="-1" role="dialog" aria-modal="true">
+  <div class="custom-modal-dialog" role="document">
+    <div class="modal-content cancellation-modal">
+      <div class="modal-header cancellation-modal-header">
+        <div class="header-content">
+          <i class="bi bi-x-circle-fill header-icon"></i>
+          <div>
+            <h5 class="modal-title">Request Cancellation</h5>
+            <p class="modal-subtitle">Surrender Import Permit(s) and submit cancellation request</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closeCancellationModal()" aria-label="Close"></button>
       </div>
-      <div class="modal-body p-0">
+      <div class="modal-body cancellation-modal-body">
         <app-cancellation-request [referenceNo]="selectedRequisitionRef" (close)="closeCancellationModal()">
         </app-cancellation-request>
       </div>
     </div>
   </div>
 </div>
-<div class="modal-backdrop fade show" *ngIf="isCancellationModalOpen"></div>
 
 <!-- Arrival Update Modal -->
-<div class="modal fade" *ngIf="isArrivalModalOpen" [class.show]="isArrivalModalOpen"
-  [style.display]="isArrivalModalOpen ? 'block' : 'none'" tabindex="-1" role="dialog" aria-modal="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+<div class="custom-app-modal" *ngIf="isArrivalModalOpen" tabindex="-1" role="dialog" aria-modal="true">
+  <div class="custom-modal-dialog" role="document">
     <div class="modal-content arrival-update-modal">
       <div class="modal-header arrival-update-header">
         <div class="header-content">
@@ -749,7 +752,6 @@
     </div>
   </div>
 </div>
-<div class="modal-backdrop fade show" *ngIf="isArrivalModalOpen"></div>
 
 <!-- Arrival BL View Modal -->
 <div class="modal fade" *ngIf="isArrivalViewModalOpen" [class.show]="isArrivalViewModalOpen"

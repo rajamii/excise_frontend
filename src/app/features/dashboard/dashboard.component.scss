@@ -7,7 +7,7 @@
     min-height: calc(100vh - 80px);
     position: relative;
     background: linear-gradient(135deg, #f8fafc 0%, #eef4ff 100%) !important;
-    overflow: hidden;
+    overflow: visible;
 
     &::before {
         content: '';

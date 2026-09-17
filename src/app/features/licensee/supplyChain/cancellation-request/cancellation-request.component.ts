@@ -57,6 +57,7 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
   showWalletConfirmationModal = false;
   showSuccessModal = false;
   showCancelModal = false;
+  permitDropdownOpen = false;
 
   successMessage = '';
   errorMessage = '';
@@ -415,6 +416,10 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
   }
 
   onPermitSelectionChange() {}
+
+  togglePermitDropdown() {
+    this.permitDropdownOpen = !this.permitDropdownOpen;
+  }
 
   togglePermit(permit: Permit, event: any) {
     if (permit.isLocked) {
