@@ -143,6 +143,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   hologramStockRemaining = 0;
   hologramStockErrorMessage = '';
   commissionerStockResponse: any = null;
+  previouslyReservedHologramsTotal = 0;
+  nextAvailableHologramSerialFrom = '';
+  nextAvailableHologramSerialTo = '';
 
   ngOnInit(): void {
     this.brandStepForm.setValidators(() => this.isBrandStepValidPublic ? null : { lineItemsInvalid: true });
@@ -356,6 +359,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   openApplyForm(): void {
     this.isFormView = true;
     this.stepperSelectedIndex = 1;
+    this.loadHologramOverview(true);
     this.checkHologramStockAllocation();
     this.router.navigate([], {
       relativeTo: this.route,
@@ -3738,26 +3742,60 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   getHologramsAssignedCount(row: DistributorPermitRow | any): number {
     const isAppr = this.isApproved(row);
     if (!isAppr) return 0;
-    const app = row?.application || row;
+    const refNo = String(
+      row?.applicationId ||
+      row?.referenceNo ||
+      row?.reference_no ||
+      row?.id ||
+      row?.application?.referenceNo ||
+      row?.application?.reference_no ||
+      row?.application?.id ||
+      ''
+    ).trim();
+
+    const fullApp = (this.applications || []).find((a: any) => {
+      const aRef = String(a.referenceNo || a.reference_no || a.id || a.applicationId || '').trim();
+      return aRef && refNo && (aRef.toLowerCase() === refNo.toLowerCase());
+    }) || row?.application || row;
+
     return Number(
-      app?.totalHologramsAssigned ??
-      app?.total_holograms_assigned ??
-      app?.totalHolograms ??
-      app?.total_holograms ??
+      fullApp?.totalHologramsAssigned ??
+      fullApp?.total_holograms_assigned ??
+      fullApp?.totalHolograms ??
+      fullApp?.total_holograms ??
       0
     );
   }
 
   getHologramsRequiredCount(row: DistributorPermitRow | any): number {
-    const app = row?.application || row;
+    const refNo = String(
+      row?.applicationId ||
+      row?.referenceNo ||
+      row?.reference_no ||
+      row?.id ||
+      row?.application?.referenceNo ||
+      row?.application?.reference_no ||
+      row?.application?.id ||
+      ''
+    ).trim();
+
+    const fullApp = (this.applications || []).find((a: any) => {
+      const aRef = String(a.referenceNo || a.reference_no || a.id || a.applicationId || '').trim();
+      return aRef && refNo && (aRef.toLowerCase() === refNo.toLowerCase());
+    }) || row?.application || row;
+
     const assigned = Number(
-      app?.totalHologramsAssigned ??
-      app?.total_holograms_assigned ??
+      fullApp?.totalHologramsAssigned ??
+      fullApp?.total_holograms_assigned ??
       0
     );
     if (assigned > 0) return assigned;
 
-    const permits = app?.permit_wise_details || app?.permitWiseDetails || [];
+    let permits: any[] = fullApp?.permit_wise_details || fullApp?.permitWiseDetails || [];
+    if (typeof permits === 'string') {
+      try { permits = JSON.parse(permits); } catch { permits = []; }
+    }
+
     if (Array.isArray(permits) && permits.length > 0) {
       let sumPermits = 0;
       for (const p of permits) {
@@ -3775,7 +3813,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       if (sumPermits > 0) return sumPermits;
     }
 
-    const lineItems = app?.line_items || app?.lineItems || [];
+    let lineItems: any[] = fullApp?.line_items || fullApp?.lineItems || [];
+    if (typeof lineItems === 'string') {
+      try { lineItems = JSON.parse(lineItems); } catch { lineItems = []; }
+    }
+
     if (Array.isArray(lineItems) && lineItems.length > 0) {
       return lineItems.reduce((sum: number, item: any) => {
         const cases = Number(item.cases || item.quantity_cases || item.total_cases || 0);
@@ -3783,31 +3825,65 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         return sum + (cases * pieces);
       }, 0);
     }
-    const totCases = Number(app?.total_cases || app?.cases || app?.totalCases || 1);
+    const totCases = Number(fullApp?.total_cases || fullApp?.cases || fullApp?.totalCases || 1);
     return totCases * 12;
   }
 
   getHologramRanges(row: DistributorPermitRow | any): any[] {
     const isAppr = this.isApproved(row);
     if (!isAppr) return [];
-    const app = row?.application || row;
-    const raw = app?.assignedHologramRanges || app?.assigned_hologram_ranges || [];
+    const refNo = String(
+      row?.applicationId ||
+      row?.referenceNo ||
+      row?.reference_no ||
+      row?.id ||
+      row?.application?.referenceNo ||
+      row?.application?.reference_no ||
+      row?.application?.id ||
+      ''
+    ).trim();
+
+    const fullApp = (this.applications || []).find((a: any) => {
+      const aRef = String(a.referenceNo || a.reference_no || a.id || a.applicationId || '').trim();
+      return aRef && refNo && (aRef.toLowerCase() === refNo.toLowerCase());
+    }) || row?.application || row;
+
+    let raw = fullApp?.assignedHologramRanges || fullApp?.assigned_hologram_ranges || [];
+    if (typeof raw === 'string') {
+      try { raw = JSON.parse(raw); } catch { raw = []; }
+    }
     if (!Array.isArray(raw)) return [];
     return raw.map((rng: any) => ({
       ref_no: rng?.refNo || rng?.ref_no || rng?.procurement_ref_no || rng?.procurementRefNo || '',
       from: String(rng?.from || ''),
       to: String(rng?.to || ''),
       count: Number(rng?.count || 0),
-      permit_number: rng?.permit_number || rng?.permitNumber || ''
+      permit_number: rng?.permit_number || rng?.permitNumber || '',
+      permit_index: Number(rng?.permit_index || rng?.permitIndex || 0)
     }));
   }
 
   getPermitWiseHologramSummary(row: DistributorPermitRow | any): any[] {
     if (!row) return [];
-    const app = row?.application || row;
-    const isAppr = this.isApproved(row);
+    const refNo = String(
+      row?.applicationId ||
+      row?.referenceNo ||
+      row?.reference_no ||
+      row?.id ||
+      row?.application?.referenceNo ||
+      row?.application?.reference_no ||
+      row?.application?.id ||
+      ''
+    ).trim();
 
-    let permits: any[] = app?.permit_wise_details || app?.permitWiseDetails || [];
+    const fullApp = (this.applications || []).find((a: any) => {
+      const aRef = String(a.referenceNo || a.reference_no || a.id || a.applicationId || '').trim();
+      return aRef && refNo && (aRef.toLowerCase() === refNo.toLowerCase());
+    }) || row?.application || row;
+
+    const isAppr = this.isApproved(fullApp);
+
+    let permits: any[] = fullApp?.permit_wise_details || fullApp?.permitWiseDetails || row?.permit_wise_details || row?.permitWiseDetails || [];
     if (typeof permits === 'string') {
       try {
         permits = JSON.parse(permits);
@@ -3816,54 +3892,113 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       }
     }
 
-    if (!Array.isArray(permits) || permits.length === 0) {
-      let lineItems: any[] = app?.line_items || app?.lineItems || app?.items || [];
-      if (typeof lineItems === 'string') {
-        try {
-          lineItems = JSON.parse(lineItems);
-        } catch (e) {
-          lineItems = [];
-        }
+    let lineItems: any[] = fullApp?.line_items || fullApp?.lineItems || fullApp?.items || row?.line_items || row?.lineItems || [];
+    if (typeof lineItems === 'string') {
+      try {
+        lineItems = JSON.parse(lineItems);
+      } catch (e) {
+        lineItems = [];
       }
-      if (Array.isArray(lineItems) && lineItems.length > 0) {
-        const groupsMap = new Map<number, any[]>();
-        lineItems.forEach((li: any) => {
-          const pIdx = Number(li.permit_index || li.permitIndex || li.permit_sequence || li.permitSequence || 1);
-          if (!groupsMap.has(pIdx)) groupsMap.set(pIdx, []);
-          groupsMap.get(pIdx)!.push(li);
-        });
+    }
 
-        if (groupsMap.size > 0) {
-          permits = [];
-          Array.from(groupsMap.keys()).sort((a, b) => a - b).forEach((pIdx) => {
-            const items = groupsMap.get(pIdx)!;
-            const totalCases = items.reduce((sum: number, it: any) => sum + Number(it.cases || it.quantity_cases || it.quantityCases || 0), 0);
-            const totalHolograms = items.reduce((sum: number, it: any) => {
-              const c = Number(it.cases || it.quantity_cases || it.quantityCases || 0);
-              const pcs = Number(it.pieces_per_case || it.piecesPerCase || (it.size_ml ? this.getPiecesInCase(it.size_ml) : (it.size ? this.getPiecesInCase(it.size) : 12)));
-              return sum + (c * pcs);
-            }, 0);
-            permits.push({
-              permit_sequence: pIdx,
-              permit_index: pIdx,
-              permitIndex: pIdx,
-              permit_number: `${app?.reference_no || app?.referenceNo || row.referenceNo || 'IMFL_REQ'}-P${pIdx}`,
-              permitName: `Permit #${pIdx} (${totalCases} Cases)`,
-              total_cases: totalCases,
-              totalCases,
-              total_holograms: totalHolograms,
-              totalHolograms,
-              status: isAppr ? 'RESERVED' : 'PENDING',
-              line_items: items
-            });
-          });
+    // If permits has at most 1 item or empty, but there are multiple line items, group line items permit-wise
+    if ((!Array.isArray(permits) || permits.length <= 1) && Array.isArray(lineItems) && lineItems.length > 1) {
+      const groupsMap = new Map<string | number, any[]>();
+
+      lineItems.forEach((li: any, idx: number) => {
+        let pKey: string | number = '';
+        const pNum = String(li.permit_number || li.permitNumber || '').trim();
+        const pMatch = pNum.match(/-P(\d+)$/i) || pNum.match(/Permit\s*#?(\d+)/i);
+        if (pMatch) {
+          pKey = parseInt(pMatch[1], 10);
+        } else if (li.permit_index !== undefined && li.permit_index !== null) {
+          pKey = Number(li.permit_index);
+        } else if (li.permitIndex !== undefined && li.permitIndex !== null) {
+          pKey = Number(li.permitIndex);
+        } else if (li.permit_sequence !== undefined && li.permit_sequence !== null) {
+          pKey = Number(li.permit_sequence);
+        } else {
+          pKey = idx + 1;
         }
+
+        if (!groupsMap.has(pKey)) groupsMap.set(pKey, []);
+        groupsMap.get(pKey)!.push(li);
+      });
+
+      if (groupsMap.size > 1 || (permits.length === 0 && groupsMap.size > 0)) {
+        const sortedKeys = Array.from(groupsMap.keys()).sort((a, b) => Number(a) - Number(b));
+        permits = sortedKeys.map((pKey, sIdx) => {
+          const items = groupsMap.get(pKey)!;
+          const seq = typeof pKey === 'number' ? pKey : sIdx + 1;
+          const totalCases = items.reduce((sum: number, it: any) => sum + Number(it.cases || it.quantity_cases || it.quantityCases || 0), 0);
+          const totalHolograms = items.reduce((sum: number, it: any) => {
+            const c = Number(it.cases || it.quantity_cases || it.quantityCases || 0);
+            const pcs = Number(it.pieces_per_case || it.piecesPerCase || (it.size_ml ? this.getPiecesInCase(it.size_ml) : (it.size ? this.getPiecesInCase(it.size) : 12)));
+            return sum + (c * pcs);
+          }, 0);
+          return {
+            permit_sequence: seq,
+            permit_index: seq,
+            permitIndex: seq,
+            permit_number: `${refNo || 'IMFL_REQ'}-P${seq}`,
+            permitName: `Permit #${seq} (${totalCases} Cases)`,
+            total_cases: totalCases,
+            totalCases,
+            total_holograms: totalHolograms,
+            totalHolograms,
+            status: isAppr ? 'RESERVED' : 'PENDING',
+            line_items: items
+          };
+        });
+      }
+    }
+
+    // Expand any permits containing multiple line items into individual permit entries
+    if (Array.isArray(permits) && permits.length > 0) {
+      const hasMultiLinePermit = permits.some((p: any) => Array.isArray(p.line_items) && p.line_items.length > 1);
+      if (hasMultiLinePermit) {
+        const expandedPermits: any[] = [];
+        let seq = 1;
+        permits.forEach((p: any) => {
+          const items = Array.isArray(p.line_items) ? p.line_items : [];
+          if (items.length > 1) {
+            items.forEach((it: any) => {
+              const itCases = Number(it.cases || it.quantity_cases || it.quantityCases || 1);
+              const pcs = Number(it.pieces_per_case || it.piecesPerCase || (it.size_ml ? this.getPiecesInCase(it.size_ml) : (it.size ? this.getPiecesInCase(it.size) : 12)));
+              const holo = itCases * pcs;
+              expandedPermits.push({
+                permit_sequence: seq,
+                permit_index: seq,
+                permitIndex: seq,
+                permit_number: `${refNo || 'IMFL_REQ'}-P${seq}`,
+                permitName: `Permit #${seq} (${itCases} Case${itCases > 1 ? 's' : ''})`,
+                total_cases: itCases,
+                totalCases: itCases,
+                total_holograms: holo,
+                totalHolograms: holo,
+                status: isAppr ? 'RESERVED' : 'PENDING',
+                line_items: [it]
+              });
+              seq++;
+            });
+          } else {
+            expandedPermits.push({
+              ...p,
+              permit_sequence: p.permit_sequence || seq,
+              permit_index: p.permit_index || seq,
+              permitIndex: p.permit_index || seq,
+              permit_number: p.permit_number || `${refNo || 'IMFL_REQ'}-P${seq}`
+            });
+            seq++;
+          }
+        });
+        permits = expandedPermits;
       }
     }
 
     if (!Array.isArray(permits) || permits.length === 0) {
-      const totalHolograms = this.getHologramsRequiredCount(row);
-      const totalCases = Number(app?.total_cases || app?.cases || app?.totalCases || (app?.line_items?.reduce((s: number, it: any) => s + Number(it.cases || it.quantity_cases || 0), 0)) || 1);
+      const totalHolograms = this.getHologramsRequiredCount(fullApp);
+      const totalCases = Number(fullApp?.total_cases || fullApp?.cases || fullApp?.totalCases || (Array.isArray(lineItems) ? lineItems.reduce((s: number, it: any) => s + Number(it.cases || it.quantity_cases || 0), 0) : 1) || 1);
       
       if (totalCases > 700) {
         permits = [];
@@ -3876,7 +4011,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
             permit_sequence: pSeq,
             permit_index: pSeq,
             permitIndex: pSeq,
-            permit_number: `${app?.reference_no || app?.referenceNo || row.referenceNo || 'IMFL_REQ'}-P${pSeq}`,
+            permit_number: `${refNo || 'IMFL_REQ'}-P${pSeq}`,
             permitName: `Permit #${pSeq} (${c} Cases)`,
             total_cases: c,
             totalCases: c,
@@ -3892,7 +4027,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           permit_sequence: 1,
           permit_index: 1,
           permitIndex: 1,
-          permit_number: `${app?.reference_no || app?.referenceNo || row.referenceNo || 'IMFL_REQ'}-P1`,
+          permit_number: `${refNo || 'IMFL_REQ'}-P1`,
           permitName: `Permit #1 (${totalCases} Cases)`,
           total_cases: totalCases,
           totalCases,
@@ -3903,7 +4038,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       }
     }
 
-    const assignedRanges = this.getHologramRanges(row);
+    const assignedRanges = this.getHologramRanges(fullApp);
 
     return permits.map((p: any, idx: number) => {
       const pIdx = Number(p.permit_sequence || p.permitSequence || p.permit_index || p.permitIndex || idx + 1);
@@ -3921,13 +4056,20 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         totalHolo = totalCases * 12;
       }
 
-      const pNum = p.permit_number || p.permitNumber || `${app?.reference_no || app?.referenceNo || row.referenceNo || 'IMFL_REQ'}-P${pIdx}`;
+      const pNum = p.permit_number || p.permitNumber || `${refNo || 'IMFL_REQ'}-P${pIdx}`;
       const permitLabel = `${pNum} (${totalCases} Cases)`;
 
       if (isAppr && assignedRanges.length > 0) {
-        const matchRng = assignedRanges.find((r: any) => r.permit_number === pNum || r.permit_index === pIdx) || assignedRanges[idx] || assignedRanges[0];
+        const matchRng = assignedRanges.find((r: any) => {
+          const rPNum = String(r.permit_number || r.permitNumber || '').toLowerCase().trim();
+          const rPIdx = Number(r.permit_index || r.permitIndex || 0);
+          return (rPNum && rPNum === pNum.toLowerCase()) || (rPIdx > 0 && rPIdx === pIdx);
+        }) || assignedRanges[idx] || assignedRanges[0];
+
         return {
           permitIndex: pIdx,
+          permit_index: pIdx,
+          permit_number: pNum,
           permitName: permitLabel,
           ref_no: matchRng?.ref_no || 'IMFL_HOLO_PRO',
           from: matchRng?.from || '1',
@@ -3940,6 +4082,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
       return {
         permitIndex: pIdx,
+        permit_index: pIdx,
+        permit_number: pNum,
         permitName: permitLabel,
         ref_no: 'Pending Allocation',
         from: 'Pending',
@@ -7714,10 +7858,40 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }, 0);
   }
 
+  get calculatedPreviouslyReservedHologramsTotal(): number {
+    const activeApps = (this.applications || []).filter((app: any) => {
+      const rawApp: any = app;
+      const appType = rawApp['applicationType'] || 'requisition';
+      if (appType !== 'requisition') return false;
+      const st = String(rawApp['status'] || rawApp['currentStage'] || rawApp['current_stage_name'] || rawApp['current_stage']?.name || '').toLowerCase();
+      return !st.includes('reject') && !st.includes('cancel');
+    });
+
+    let sum = 0;
+    for (const app of activeApps) {
+      const assigned = this.getHologramsAssignedCount(app);
+      if (assigned > 0) {
+        sum += assigned;
+      } else {
+        sum += this.getHologramsRequiredCount(app);
+      }
+    }
+    return sum;
+  }
+
   checkHologramStockAllocation(): void {
     const required = this.totalRequiredHolograms;
     this.isCheckingHologramStock = true;
-    this.permitService.getHologramStock(required)
+    this.previouslyReservedHologramsTotal = this.calculatedPreviouslyReservedHologramsTotal;
+
+    // Use forkJoin so both stock AND overview are available when we compute net fresh stock.
+    // If hologramOverviewData is already cached we skip the extra HTTP call.
+    forkJoin({
+      stock: this.permitService.getHologramStock(required).pipe(catchError(() => of(null))),
+      overview: this.hologramOverviewData
+        ? of(null)
+        : this.imflHoloService.getHologramOverview().pipe(catchError(() => of(null)))
+    })
       .pipe(
         takeUntil(this.destroy$),
         finalize(() => {
@@ -7727,39 +7901,107 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         })
       )
       .subscribe({
-        next: (res: any) => {
-          this.availableHologramStock = Number(
-            res?.availableStock ??
-            res?.totalAvailableStock ??
-            res?.available_stock ??
-            res?.total_available_stock ??
-            0
-          );
+        next: ({ stock: res, overview: overviewRes }) => {
           this.hologramStockBatches = res?.batches || [];
-          const rawRanges = res?.assignedRanges || res?.allocatedRanges || res?.assigned_ranges || res?.allocated_ranges || [];
-          this.assignedHologramRangesPreview = (Array.isArray(rawRanges) ? rawRanges : []).map((rng: any) => ({
-            ref_no: rng?.refNo || rng?.ref_no || rng?.procurement_ref_no || rng?.procurementRefNo || '',
-            from: String(rng?.from || ''),
-            to: String(rng?.to || ''),
-            count: Number(rng?.count || 0),
-            batch_label: rng?.batchLabel || rng?.batch_label || ''
-          }));
-          this.hologramStockRemaining = Number(
-            res?.remainingStockAfterAllocation ??
-            res?.remainingStock ??
-            res?.remaining_stock_after_allocation ??
-            res?.remaining_stock ??
-            0
-          );
-          this.isHologramStockSufficient = res?.isSufficient ?? res?.is_sufficient ?? (this.availableHologramStock >= required);
-          this.hologramStockErrorMessage = res?.errorMessage || res?.error_message || '';
+
+          // If overview was freshly fetched (not already cached), build a minimal normalised entry
+          if (overviewRes && !this.hologramOverviewData) {
+            const distInfo = overviewRes.distributorInfo || overviewRes.distributor_info || {};
+            const stats = overviewRes.summaryStats || overviewRes.summary_stats || {};
+            const totReceived = Number(stats.totalReceived ?? stats.total_received ?? 0);
+            const backendReserved = Number(stats.totalReserved ?? stats.total_reserved ?? 0);
+            const totReserved = Math.max(backendReserved, this.previouslyReservedHologramsTotal);
+            const totUtil = Number(stats.totalUtilizedInWarehouse ?? stats.total_utilized_in_warehouse ?? 0);
+            const totDisp = Number(stats.totalDispatchedToRetailers ?? stats.total_dispatched_to_retailers ?? 0);
+            const totDam = Number(stats.totalDamaged ?? stats.total_damaged ?? 0);
+            const totAvail = Math.max(0, totReceived - totReserved - totUtil - totDisp - totDam);
+            const normalizedStats = {
+              total_received: totReceived, totalReceived: totReceived,
+              total_reserved: totReserved, totalReserved: totReserved,
+              total_available: totAvail, totalAvailable: totAvail,
+              total_utilized_in_warehouse: totUtil, totalUtilizedInWarehouse: totUtil,
+              total_dispatched_to_retailers: totDisp, totalDispatchedToRetailers: totDisp,
+              total_damaged: totDam, totalDamaged: totDam
+            };
+            this.hologramOverviewData = {
+              summary_stats: normalizedStats,
+              summaryStats: normalizedStats,
+              distributor_info: distInfo,
+              distributorInfo: distInfo,
+              batches: [],
+              all_ranges: [],
+              allRanges: []
+            };
+          }
+
+          // Read from the now-guaranteed hologramOverviewData
+          const backendStats = this.hologramOverviewData?.summary_stats || this.hologramOverviewData?.summaryStats;
+
+          // Prefer the pre-computed total_available from the overview (already deducts reserved/utilized/dispatched/damaged)
+          let netFreshAvailable: number;
+          if (backendStats) {
+            netFreshAvailable = Number(backendStats.total_available ?? backendStats.totalAvailable ?? 0);
+          } else {
+            // Absolute fallback
+            const grossReceived = Number(
+              res?.totalReceivedStock ?? res?.totalReceived ?? res?.availableStock ?? res?.totalAvailableStock ?? 0
+            );
+            netFreshAvailable = Math.max(0, grossReceived - this.previouslyReservedHologramsTotal);
+          }
+
+          this.availableHologramStock = netFreshAvailable;
+          this.hologramStockRemaining = netFreshAvailable - required;
+          this.isHologramStockSufficient = (netFreshAvailable >= required);
+
+          // Calculate fresh serial starting point
+          const allRanges = this.hologramOverviewData?.all_ranges || this.hologramOverviewData?.allRanges || [];
+          let startSerialNum = 1;
+          if (Array.isArray(allRanges) && allRanges.length > 0) {
+            const firstR = allRanges[0];
+            const parsedStart = parseInt(String(firstR.from || '1').match(/\d+$/)?.[0] || '1', 10);
+            if (parsedStart > 0) startSerialNum = parsedStart;
+          }
+
+          const utilizedStock = Number(backendStats?.total_utilized_in_warehouse ?? backendStats?.totalUtilizedInWarehouse ?? 0);
+          const nextFreshStart = startSerialNum + this.previouslyReservedHologramsTotal + utilizedStock;
+          const nextFreshEnd = nextFreshStart + required - 1;
+          const grossReceivedForSerial = Number(backendStats?.total_received ?? backendStats?.totalReceived ?? 0);
+          const totalEnd = startSerialNum + grossReceivedForSerial - 1;
+
+          this.nextAvailableHologramSerialFrom = `${nextFreshStart}`;
+          this.nextAvailableHologramSerialTo = `${Math.min(totalEnd, nextFreshStart + Math.max(0, netFreshAvailable - 1))}`;
+
+          if (required > 0 && this.isHologramStockSufficient) {
+            this.assignedHologramRangesPreview = [{
+              ref_no: allRanges[0]?.ref_no || res?.batches?.[0]?.imfl_hologram_ref_no || 'IMFL_HOLO_WAREHOUSE',
+              from: `${nextFreshStart}`,
+              to: `${nextFreshEnd}`,
+              count: required,
+              batch_label: 'Fresh Available Range'
+            }];
+          } else {
+            this.assignedHologramRangesPreview = [];
+          }
+
+          if (!this.isHologramStockSufficient && required > 0) {
+            this.hologramStockErrorMessage = `Insufficient fresh hologram stock. You require ${required} pcs, but only ${netFreshAvailable} pcs are available for next requisition (${this.previouslyReservedHologramsTotal} pcs already reserved).`;
+          } else {
+            this.hologramStockErrorMessage = '';
+          }
+
           this.syncBrandStepValidity();
           this.cdr.detectChanges();
         },
         error: (err) => {
           console.error('Failed to check hologram stock:', err);
-          this.isHologramStockSufficient = false;
-          this.hologramStockErrorMessage = 'Unable to check hologram stock availability.';
+          const backendStats = this.hologramOverviewData?.summary_stats || this.hologramOverviewData?.summaryStats;
+          const netFreshAvailable = backendStats
+            ? Number(backendStats.total_available ?? backendStats.totalAvailable ?? 0)
+            : Math.max(0, 0 - this.previouslyReservedHologramsTotal);
+          this.availableHologramStock = netFreshAvailable;
+          this.hologramStockRemaining = netFreshAvailable - required;
+          this.isHologramStockSufficient = (netFreshAvailable >= required);
+          this.syncBrandStepValidity();
           this.cdr.detectChanges();
         }
       });
