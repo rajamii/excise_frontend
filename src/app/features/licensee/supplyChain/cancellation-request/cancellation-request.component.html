@@ -48,13 +48,14 @@
                   <span class="permit-number">Permit No. {{ permit.number }}</span>
                   <span class="permit-amount">{{ formatCurrency(permit.amount) }}</span>
                   <span class="text-muted permit-qty" *ngIf="getPerPermitQuantityLabel()">({{ getPerPermitQuantityLabel() }})</span>
-                  <span class="permit-fee-tag">
+                  <span class="permit-fee-tag" *ngIf="!permit.isLocked && !permit.isCancelled">
                     <i class="bi bi-dash-circle-fill me-1"></i>Rs {{ cancellationChargePerPermit | number }} cancellation fee
                   </span>
                   <span *ngIf="permit.isCancelled" class="badge bg-secondary">Cancelled</span>
                   <span *ngIf="!permit.isCancelled && permit.isLocked && permit.lockReason === 'Under revalidation'" class="badge bg-warning text-dark">🔒 Under Revalidation</span>
                   <span *ngIf="!permit.isCancelled && permit.isLocked && permit.lockReason === 'Arrived'" class="badge bg-success text-white">✓ Arrived</span>
-                  <span *ngIf="!permit.isCancelled && permit.isLocked && permit.lockReason !== 'Under revalidation' && permit.lockReason !== 'Arrived'" class="badge bg-danger">{{ permit.lockReason }}</span>
+                  <span *ngIf="!permit.isCancelled && permit.isLocked && (permit.lockReason === 'Cancellation Requested' || permit.lockReason === 'Already submitted' || permit.lockReason === 'Paid')" class="badge bg-danger text-white">⏳ Cancellation Under Process</span>
+                  <span *ngIf="!permit.isCancelled && permit.isLocked && permit.lockReason !== 'Under revalidation' && permit.lockReason !== 'Arrived' && permit.lockReason !== 'Cancellation Requested' && permit.lockReason !== 'Already submitted' && permit.lockReason !== 'Paid'" class="badge bg-danger">{{ permit.lockReason }}</span>
                 </div>
               </label>
             </div>
@@ -88,6 +89,12 @@
                     {{ selectedPermits.join(", ") }}
                   </span>
                   <ng-template #noPermits><em class="text-muted">None selected</em></ng-template>
+                </td>
+              </tr>
+              <tr *ngIf="getAlreadySubmittedPermitsList().length > 0">
+                <td class="param-col">Cancellation Under Process</td>
+                <td class="value-col">
+                  <span class="badge bg-danger text-white" style="font-size: 0.85rem;">{{ getAlreadySubmittedPermitsList().join(", ") }}</span>
                 </td>
               </tr>
               <tr *ngIf="getRevalidatedPermitsList().length > 0">

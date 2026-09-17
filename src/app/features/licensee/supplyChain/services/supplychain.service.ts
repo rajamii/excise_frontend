@@ -340,7 +340,7 @@ export class SupplyChainService {
   }
 
   getCancellations(): Observable<any[]> {
-    return this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/`).pipe(
+    return this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/?_t=${Date.now()}`).pipe(
       map((response: any) => {
         if (Array.isArray(response)) return response;
         if (response?.results) return response.results;

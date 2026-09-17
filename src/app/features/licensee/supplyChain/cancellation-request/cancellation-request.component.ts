@@ -232,7 +232,7 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
 
   fetchExistingCancellations() {
     this.http
-      .get<any[] | CancellationListResponse>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/?requisition_ref_no=${this.referenceNo}`)
+      .get<any[] | CancellationListResponse>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/?requisition_ref_no=${this.referenceNo}&_t=${Date.now()}`)
       .subscribe({
         next: (cancelData) => {
           console.log('Cancellation Data:', cancelData);
@@ -261,7 +261,7 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
             const isApproved = this.isCommissionerApprovedCancellation(record);
             const isPaid = this.isPaidCancellation(record);
             const isLocked = this.isActiveCancellationRequest(record) || isPaid;
-            const lockReason = isApproved ? 'Cancelled' : (isPaid ? 'Paid' : 'Already submitted');
+            const lockReason = isApproved ? 'Cancelled' : (isPaid ? 'Paid' : 'Cancellation Requested');
 
             permitNumbers.forEach((num: string) => {
               const existing = permitStateMap.get(num) || {
@@ -579,6 +579,12 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
 
   getArrivedPermitsList(): string[] {
     return Array.from(this.arrivedPermitNumbers || []);
+  }
+
+  getAlreadySubmittedPermitsList(): string[] {
+    return (this.permits || [])
+      .filter((p) => !p.isCancelled && p.isLocked && (p.lockReason === 'Cancellation Requested' || p.lockReason === 'Already submitted' || p.lockReason === 'Paid'))
+      .map((p) => p.number);
   }
 
   openWalletConfirmation() {
