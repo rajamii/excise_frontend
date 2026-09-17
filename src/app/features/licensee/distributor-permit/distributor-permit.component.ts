@@ -32,6 +32,7 @@ type DistributorPermitStatusGroup = Exclude<DistributorPermitStatusFilter, 'all'
 interface DistributorPermitRow {
   id: string;
   applicationId: string;
+  parentApplicationId?: string;
   distributorPermitRef: string;
   submittedOn: string;
   submittedDate: Date | null;
@@ -400,12 +401,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   get activeTabRows(): DistributorPermitRow[] {
-    return this.rows.filter((row) => {
-      const ref = String(row.applicationId || '').toUpperCase();
-      const appType = String(row.application?.['applicationType'] || '').toLowerCase();
-
-      if (this.activeTab === 'requisition') {
-        // Only real requisition entries: not a revalidation/cancellation type and not an activated schedule
+    if (this.activeTab === 'requisition') {
+      return this.rows.filter((row) => {
+        const ref = String(row.applicationId || '').toUpperCase();
+        const appType = String(row.application?.['applicationType'] || '').toLowerCase();
         return (
           !ref.startsWith('IMFLREV') &&
           !ref.startsWith('IMFLCAN') &&
@@ -413,29 +412,94 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           appType !== 'cancellation' &&
           !row.isActivatedSchedule
         );
-      } else if (this.activeTab === 'brand-arrival') {
-        // Only paid / approved requisition entries ready for brand arrival recording
-        const isPaid = this.canUpdateBrandsArrival(row);
-        return (
-          !ref.startsWith('IMFLREV') &&
-          !ref.startsWith('IMFLCAN') &&
-          appType !== 'revalidation' &&
-          appType !== 'cancellation' &&
-          !row.isActivatedSchedule &&
-          isPaid
-        );
-      } else if (this.activeTab === 'revalidation') {
+      });
+    } else if (this.activeTab === 'brand-arrival') {
+      const brandArrivalRows: DistributorPermitRow[] = [];
+      this.rows.forEach((row) => {
+        const ref = String(row.applicationId || '').toUpperCase();
+        const appType = String(row.application?.['applicationType'] || '').toLowerCase();
+        if (
+          ref.startsWith('IMFLREV') ||
+          ref.startsWith('IMFLCAN') ||
+          appType === 'revalidation' ||
+          appType === 'cancellation' ||
+          row.isActivatedSchedule
+        ) {
+          return;
+        }
+
+        if (!this.canUpdateBrandsArrival(row)) {
+          return;
+        }
+
+        const app = row.application || row;
+        let pWise = app.permit_wise_details || app.permitWiseDetails || [];
+        if (typeof pWise === 'string') {
+          try { pWise = JSON.parse(pWise); } catch { pWise = []; }
+        }
+
+        if (Array.isArray(pWise) && pWise.length > 0) {
+          const approvedPermits = pWise.filter((p: any) => p.isApproved !== false && p.status !== 'ON_HOLD');
+          if (approvedPermits.length > 0) {
+            approvedPermits.forEach((p: any, idx: number) => {
+              const pNum = p.permit_number || p.permitNumber || `${row.applicationId}-P${p.permit_sequence || idx + 1}`;
+              const pCases = Number(p.total_cases ?? p.totalCases ?? (p.line_items?.reduce((s: number, it: any) => s + Number(it.cases || 0), 0) || row.cases));
+              let pRanges = p.assignedRanges || p.assigned_ranges || p.assigned_hologram_ranges || p.assignedHologramRanges || [];
+              if (!Array.isArray(pRanges) || pRanges.length === 0) {
+                const allAppRanges = (app as any)['assigned_hologram_ranges'] || (app as any)['assignedHologramRanges'] || [];
+                pRanges = allAppRanges.filter((r: any) => {
+                  const rPNum = String(r.permit_number || r.permitNumber || '').toLowerCase().trim();
+                  const rPIdx = Number(r.permit_index || r.permitIndex || 0);
+                  return (rPNum && rPNum === pNum.toLowerCase()) || (rPIdx && rPIdx === Number(p.permit_sequence || idx + 1));
+                });
+                if (pRanges.length === 0 && approvedPermits.length === 1) {
+                  pRanges = allAppRanges;
+                }
+              }
+              const firstItem = p.line_items?.[0] || p.items?.[0];
+              const brand = firstItem?.brand_name || firstItem?.brandName || firstItem?.brand || row.brandName;
+
+              brandArrivalRows.push({
+                ...row,
+                id: pNum,
+                applicationId: pNum,
+                parentApplicationId: row.applicationId,
+                distributorPermitRef: pNum,
+                cases: pCases,
+                brandName: brand,
+                application: {
+                  ...app,
+                  current_permit_number: pNum,
+                  parent_reference_no: row.applicationId,
+                  current_permit_detail: p,
+                  assigned_hologram_ranges: pRanges
+                }
+              });
+            });
+            return;
+          }
+        }
+
+        brandArrivalRows.push(row);
+      });
+      return brandArrivalRows;
+    } else if (this.activeTab === 'revalidation') {
+      return this.rows.filter((row) => {
+        const ref = String(row.applicationId || '').toUpperCase();
+        const appType = String(row.application?.['applicationType'] || '').toLowerCase();
         if (this.isOfficerUser) {
-          // Officers (e.g. Commissioner) should only see submitted IMFLREV applications, NOT unsubmitted activated schedules
           return (ref.startsWith('IMFLREV') || appType === 'revalidation') && !row.isActivatedSchedule;
         }
-        // Real IMFLREV rows OR activated schedule items ready for revalidation
         return ref.startsWith('IMFLREV') || appType === 'revalidation' || row.isActivatedSchedule;
-      } else if (this.activeTab === 'cancellation') {
+      });
+    } else if (this.activeTab === 'cancellation') {
+      return this.rows.filter((row) => {
+        const ref = String(row.applicationId || '').toUpperCase();
+        const appType = String(row.application?.['applicationType'] || '').toLowerCase();
         return ref.startsWith('IMFLCAN') || appType === 'cancellation';
-      }
-      return true;
-    });
+      });
+    }
+    return this.rows;
   }
 
   get counts(): { total: number; approved: number; pending: number; underProcess: number; objection: number; rejected: number } {
@@ -948,24 +1012,76 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }
   }
 
+  getAssignedHologramRangeSummary(row: any): string {
+    const app = row?.application || row;
+    let ranges = app?.assigned_hologram_ranges || app?.assignedHologramRanges || row?.assigned_hologram_ranges || row?.assignedHologramRanges || [];
+    if (typeof ranges === 'string') {
+      try { ranges = JSON.parse(ranges); } catch { ranges = []; }
+    }
+    if (!Array.isArray(ranges) || ranges.length === 0) {
+      const pWise = app?.permit_wise_details || app?.permitWiseDetails || [];
+      if (Array.isArray(pWise)) {
+        const curP = String(row?.applicationId || row?.permit_number || '').toLowerCase();
+        const matchingP = pWise.find((p: any) => String(p.permit_number || '').toLowerCase() === curP);
+        if (matchingP) {
+          ranges = matchingP.assignedRanges || matchingP.assigned_ranges || matchingP.assigned_hologram_ranges || matchingP.assignedHologramRanges || [];
+        }
+      }
+    }
+    if (!Array.isArray(ranges) || ranges.length === 0) return 'Not Assigned';
+    return ranges.map((r: any) => `${r.from} → ${r.to} (${r.count || (Number(r.to) - Number(r.from) + 1)} pcs)`).join(', ');
+  }
+
   openUpdateBrandsArrivalModal(rowOrApp: any): void {
     const app = rowOrApp?.application || rowOrApp || {};
-    const refNo = String(app.reference_no || app.referenceNo || app.id || rowOrApp?.applicationId || '').trim();
+    const currentPermitNo = String(app.current_permit_number || rowOrApp?.permit_number || rowOrApp?.distributorPermitRef || rowOrApp?.applicationId || app.reference_no || app.referenceNo || '').trim();
+    const parentRefNo = String(app.parent_reference_no || app.reference_no || app.referenceNo || app.id || rowOrApp?.applicationId || '').trim();
+
     const fullApp = (this.applications || []).find((a: any) => {
       const aRef = String(a.referenceNo || a.reference_no || a.id || '').trim();
-      return aRef && aRef.toLowerCase() === refNo.toLowerCase();
+      return aRef && (aRef.toLowerCase() === parentRefNo.toLowerCase() || aRef.toLowerCase() === currentPermitNo.toLowerCase());
     }) || app;
 
-    this.arrivalModalData = fullApp;
+    this.arrivalModalData = {
+      ...fullApp,
+      current_permit_number: currentPermitNo,
+      parent_reference_no: parentRefNo,
+      supplier_company_name: fullApp.supplier_company_name || fullApp.supplierCompanyName || app.supplier_company_name || app.supplierCompanyName || 'Corona Maharashtra',
+      source_address: fullApp.source_address || fullApp.sourceAddress || app.source_address || app.sourceAddress,
+      route_details: fullApp.route_details || fullApp.routeDetails || app.route_details || app.routeDetails,
+      vehicle_number: this.getVehicleNumberForRow(rowOrApp) || fullApp?.vehicle_number || fullApp?.vehicleNumber || app?.vehicle_number || app?.vehicleNumber || ''
+    };
     let veh = this.getVehicleNumberForRow(rowOrApp) || fullApp?.vehicle_number || fullApp?.vehicleNumber || app?.vehicle_number || app?.vehicleNumber || '';
     this.arrivalCommonVehicle = veh;
     this.arrivalCommonDate = this.todayIso();
     this.arrivalCommonRemarks = '';
     
-    // Extract assigned hologram ranges from requisition
-    let rawRanges = fullApp.assigned_hologram_ranges || fullApp.assignedHologramRanges ||
-                    app.assigned_hologram_ranges || app.assignedHologramRanges ||
-                    rowOrApp?.assigned_hologram_ranges || rowOrApp?.assignedHologramRanges || [];
+    // Extract assigned hologram ranges specifically for this permit
+    let rawRanges: any[] = [];
+    const currentPermitDetail = app.current_permit_detail;
+    if (currentPermitDetail) {
+      rawRanges = currentPermitDetail.assignedRanges || currentPermitDetail.assigned_ranges || currentPermitDetail.assigned_hologram_ranges || currentPermitDetail.assignedHologramRanges || [];
+    }
+    if ((!Array.isArray(rawRanges) || rawRanges.length === 0) && fullApp) {
+      const pWise = fullApp.permit_wise_details || fullApp.permitWiseDetails || [];
+      if (Array.isArray(pWise)) {
+        const matchingP = pWise.find((p: any) => {
+          const pNum = String(p.permit_number || p.permitNumber || '').toLowerCase().trim();
+          return pNum && (pNum === currentPermitNo.toLowerCase() || currentPermitNo.toLowerCase().startsWith(pNum));
+        });
+        if (matchingP) {
+          rawRanges = matchingP.assignedRanges || matchingP.assigned_ranges || matchingP.assigned_hologram_ranges || matchingP.assignedHologramRanges || [];
+        }
+      }
+    }
+    if (!Array.isArray(rawRanges) || rawRanges.length === 0) {
+      const allAppRanges = fullApp.assigned_hologram_ranges || fullApp.assignedHologramRanges || app.assigned_hologram_ranges || app.assignedHologramRanges || [];
+      const filteredRanges = allAppRanges.filter((r: any) => {
+        const rPNum = String(r.permit_number || r.permitNumber || '').toLowerCase().trim();
+        return rPNum && (rPNum === currentPermitNo.toLowerCase() || currentPermitNo.toLowerCase().startsWith(rPNum));
+      });
+      rawRanges = filteredRanges.length > 0 ? filteredRanges : allAppRanges;
+    }
     if (typeof rawRanges === 'string') {
       try { rawRanges = JSON.parse(rawRanges); } catch(e) { rawRanges = []; }
     }
@@ -983,10 +1099,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }
 
     // Fallback search in usage details or overview if not directly attached
-    if ((!Array.isArray(rawRanges) || rawRanges.length === 0) && refNo) {
+    if ((!Array.isArray(rawRanges) || rawRanges.length === 0) && parentRefNo) {
       const matchingUsage = (this.usageDetailsList || []).filter((u: any) => {
         const uRef = String(u.requisition_ref_no || u.requisitionRef || u.permit_number || u.permitNumber || '').toLowerCase().trim();
-        return uRef && (uRef === refNo.toLowerCase() || uRef.includes(refNo.toLowerCase()) || refNo.toLowerCase().includes(uRef));
+        return uRef && (uRef === parentRefNo.toLowerCase() || uRef === currentPermitNo.toLowerCase() || parentRefNo.toLowerCase().includes(uRef));
       });
       if (matchingUsage.length > 0) {
         rawRanges = matchingUsage.map((u: any) => ({
@@ -999,12 +1115,12 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       }
     }
 
-    if ((!Array.isArray(rawRanges) || rawRanges.length === 0) && refNo) {
+    if ((!Array.isArray(rawRanges) || rawRanges.length === 0) && parentRefNo) {
       const batches = this.hologramOverviewData?.batches || [];
       for (const b of batches) {
         for (const u of (b.used_hologram_ranges || b.usedHologramRanges || [])) {
           const reqRef = String(u.requisition_ref_no || u.requisitionRefNo || u.permit_application_ref || u.permitApplicationRef || '').toLowerCase().trim();
-          if (reqRef && (reqRef === refNo.toLowerCase() || reqRef.includes(refNo.toLowerCase()) || refNo.toLowerCase().includes(reqRef))) {
+          if (reqRef && (reqRef === parentRefNo.toLowerCase() || reqRef === currentPermitNo.toLowerCase() || parentRefNo.toLowerCase().includes(reqRef))) {
             rawRanges.push({
               ref_no: b.imfl_hologram_ref_no || b.imflHologramRefNo || u.ref_no || '',
               from: String(u.from || ''),
@@ -1025,7 +1141,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       status: rng.status || 'RESERVED'
     }));
 
-    // Extract permit details or line items
+    // Extract permit details or line items specific to currentPermitNo
     let details = app.permit_wise_details || app.permitWiseDetails || rowOrApp?.permit_wise_details || rowOrApp?.permitWiseDetails;
     if (typeof details === 'string') {
       try { details = JSON.parse(details); } catch(e) { details = []; }
@@ -1037,8 +1153,14 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     
     const itemsToProcess: any[] = [];
     if (Array.isArray(details) && details.length > 0) {
-      details.forEach((d: any, pIdx: number) => {
-        const permitNo = d.permit_number || `${app.reference_no || app.referenceNo || 'IMFLREQ'}-P${pIdx + 1}`;
+      const filteredDetails = details.filter((d: any, pIdx: number) => {
+        const pNum = String(d.permit_number || `${parentRefNo}-P${pIdx + 1}`).toLowerCase().trim();
+        return !currentPermitNo || pNum === currentPermitNo.toLowerCase() || currentPermitNo.toLowerCase().startsWith(pNum) || pNum.startsWith(currentPermitNo.toLowerCase());
+      });
+      const targetDetails = filteredDetails.length > 0 ? filteredDetails : details;
+
+      targetDetails.forEach((d: any, pIdx: number) => {
+        const permitNo = d.permit_number || currentPermitNo || `${app.reference_no || app.referenceNo || 'IMFLREQ'}-P${pIdx + 1}`;
         let subItems = d.line_items || d.items;
         if (typeof subItems === 'string') {
           try { subItems = JSON.parse(subItems); } catch(e) { subItems = []; }
@@ -1059,12 +1181,12 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
             const aPNo = String(a.permit_number || a.permitNumber || '').toLowerCase().trim();
             const aAppRef = String(a.distributor_permit?.reference_no || a.distributor_permit || a.application_ref || '').toLowerCase().trim();
             const curPNo = (sub.permit_number || permitNo).toLowerCase().trim();
-            return (aPNo && (aPNo === curPNo || aPNo.includes(curPNo))) || (aAppRef && aAppRef === refNo.toLowerCase());
+            return (aPNo && (aPNo === curPNo || aPNo.includes(curPNo))) || (aAppRef && aAppRef === parentRefNo.toLowerCase());
           }) || (this.allCasesProcessedList || []).find((c: any) => {
             const cPNo = String(c.permit_number || c.permitNumber || '').toLowerCase().trim();
             const cAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase().trim();
             const curPNo = (sub.permit_number || permitNo).toLowerCase().trim();
-            return (cPNo && (cPNo === curPNo || cPNo.includes(curPNo))) || (cAppRef && cAppRef === refNo.toLowerCase());
+            return (cPNo && (cPNo === curPNo || cPNo.includes(curPNo))) || (cAppRef && cAppRef === parentRefNo.toLowerCase());
           });
 
           const arrCases = matchingArrival ? Number(matchingArrival.arrived_cases ?? matchingArrival.arrivedCases ?? expCases) : expCases;
@@ -1118,7 +1240,13 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         });
       });
     } else if (Array.isArray(lineItems) && lineItems.length > 0) {
-      lineItems.forEach((l: any, idx: number) => {
+      const filteredLines = lineItems.filter((l: any) => {
+        const lPNum = String(l.permit_number || '').toLowerCase().trim();
+        return !currentPermitNo || !lPNum || lPNum === currentPermitNo.toLowerCase();
+      });
+      const targetLines = filteredLines.length > 0 ? filteredLines : lineItems;
+
+      targetLines.forEach((l: any, idx: number) => {
         const size = Number(l.size_ml || l.pack_size || 750);
         const pieces = Number(l.pieces_per_case || this.getPiecesInCase(size));
         const expCases = Number(l.cases || l.expected_cases || 1);
@@ -1130,13 +1258,13 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         const matchingArrival = (this.allArrivalsList || []).find((a: any) => {
           const aPNo = String(a.permit_number || a.permitNumber || '').toLowerCase().trim();
           const aAppRef = String(a.distributor_permit?.reference_no || a.distributor_permit || a.application_ref || '').toLowerCase().trim();
-          const curPNo = (l.permit_number || `${app.reference_no || app.referenceNo || 'IMFLREQ'}-P${idx + 1}`).toLowerCase().trim();
-          return (aPNo && (aPNo === curPNo || aPNo.includes(curPNo))) || (aAppRef && aAppRef === refNo.toLowerCase());
+          const curPNo = (l.permit_number || currentPermitNo || `${app.reference_no || app.referenceNo || 'IMFLREQ'}-P${idx + 1}`).toLowerCase().trim();
+          return (aPNo && (aPNo === curPNo || aPNo.includes(curPNo))) || (aAppRef && aAppRef === parentRefNo.toLowerCase());
         }) || (this.allCasesProcessedList || []).find((c: any) => {
           const cPNo = String(c.permit_number || c.permitNumber || '').toLowerCase().trim();
           const cAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase().trim();
-          const curPNo = (l.permit_number || `${app.reference_no || app.referenceNo || 'IMFLREQ'}-P${idx + 1}`).toLowerCase().trim();
-          return (cPNo && (cPNo === curPNo || cPNo.includes(curPNo))) || (cAppRef && cAppRef === refNo.toLowerCase());
+          const curPNo = (l.permit_number || currentPermitNo || `${app.reference_no || app.referenceNo || 'IMFLREQ'}-P${idx + 1}`).toLowerCase().trim();
+          return (cPNo && (cPNo === curPNo || cPNo.includes(curPNo))) || (cAppRef && cAppRef === parentRefNo.toLowerCase());
         });
 
         const arrCases = matchingArrival ? Number(matchingArrival.arrived_cases ?? matchingArrival.arrivedCases ?? expCases) : expCases;
@@ -1199,10 +1327,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
       const matchingArrival = (this.allArrivalsList || []).find((a: any) => {
         const aAppRef = String(a.distributor_permit?.reference_no || a.distributor_permit || a.application_ref || '').toLowerCase().trim();
-        return aAppRef && aAppRef === refNo.toLowerCase();
+        return aAppRef && aAppRef === parentRefNo.toLowerCase();
       }) || (this.allCasesProcessedList || []).find((c: any) => {
         const cAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase().trim();
-        return cAppRef && cAppRef === refNo.toLowerCase();
+        return cAppRef && cAppRef === parentRefNo.toLowerCase();
       });
 
       const arrCases = matchingArrival ? Number(matchingArrival.arrived_cases ?? matchingArrival.arrivedCases ?? expCases) : expCases;
@@ -3207,23 +3335,44 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     if (ref.startsWith('IMFLREV') || ref.startsWith('IMFLCAN')) {
       return false;
     }
-    const isPaid = Boolean(
-      app?.is_excise_duty_fee_paid ||
-      app?.isExciseDutyFeePaid ||
-      rowOrApp?.paymentStatus === 'Paid' ||
-      rowOrApp?.payment_status === 'Paid' ||
-      rowOrApp?.payment_status === 'completed' ||
-      String(app?.status || '').toLowerCase().includes('payslip') ||
-      String(app?.status || '').toLowerCase().includes('approved') ||
-      String(app?.status || '').toLowerCase().includes('arrival') ||
-      String(app?.status || '').toLowerCase().includes('paid') ||
-      String(rowOrApp?.currentStage || '').toLowerCase().includes('payslip') ||
-      String(rowOrApp?.currentStage || '').toLowerCase().includes('approved') ||
-      String(rowOrApp?.currentStage || '').toLowerCase().includes('arrival') ||
-      String(rowOrApp?.currentStage || '').toLowerCase().includes('paid') ||
-      Number(app?.current_stage_id || app?.current_stage?.id || 0) >= 151
-    );
-    return isPaid;
+
+    const stageId = Number(app?.current_stage_id || app?.currentStageId || app?.current_stage?.id || rowOrApp?.currentStageId || 0);
+    const stageName = String(app?.current_stage?.name || app?.current_stage_name || app?.current_stage || app?.status || rowOrApp?.currentStage || '').toLowerCase().trim();
+
+    // Block any stages before Commissioner final approval:
+    // 147, 148, 149 (initial/permit section), 153 (commissioner 1st approval), 154 (awaiting payment),
+    // 155, 156 (payslip permit section), 157 (payslip commissioner review), 150, 152, 166 (rejected/cancelled)
+    if (
+      stageId === 147 || stageId === 148 || stageId === 149 || stageId === 150 ||
+      stageId === 152 || stageId === 153 || stageId === 154 || stageId === 155 ||
+      stageId === 156 || stageId === 157 || stageId === 166 ||
+      stageName.includes('reject') || stageName.includes('cancel') ||
+      stageName.includes('forwarded') || stageName.includes('payslip') ||
+      stageName.includes('awaiting payment') || stageName.includes('pending')
+    ) {
+      return false;
+    }
+
+    // Must be final Approved by Commissioner (Stage 151 / Approved)
+    const isApproved = (stageId === 151 || stageName.includes('approved')) && !stageName.includes('payslip') && !stageName.includes('forwarded');
+    if (!isApproved) {
+      return false;
+    }
+
+    // Must have hologram ranges assigned by Commissioner
+    const hasAppRanges = (app.assigned_hologram_ranges || app.assignedHologramRanges || []).length > 0;
+    let hasPermitRanges = false;
+    let pWise = app.permit_wise_details || app.permitWiseDetails || rowOrApp?.permit_wise_details || rowOrApp?.permitWiseDetails;
+    if (typeof pWise === 'string') {
+      try { pWise = JSON.parse(pWise); } catch { pWise = []; }
+    }
+    if (Array.isArray(pWise) && pWise.length > 0) {
+      hasPermitRanges = pWise.some((p: any) => 
+        (p.assignedRanges || p.assigned_ranges || p.assigned_hologram_ranges || p.assignedHologramRanges || []).length > 0
+      );
+    }
+
+    return hasAppRanges || hasPermitRanges;
   }
 
   getVehicleNumberForRow(row: any): string {

@@ -759,11 +759,11 @@
               <thead>
                 <tr>
                   <th>Sl. No.</th>
-                  <th>Application ID</th>
-                  <th>Submitted Date</th>
-                  <th>Permit Ref No.</th>
-                  <th>Applicant Company</th>
+                  <th>Permit Number</th>
+                  <th>Parent Requisition</th>
+                  <th>Assigned Holograms</th>
                   <th>Supplier Distillery</th>
+                  <th>Cases</th>
                   <th>Payment Status</th>
                   <th>Arrival & Hologram Status</th>
                   <th>Arrival Action</th>
@@ -773,17 +773,25 @@
                 <tr *ngFor="let row of filteredRows; let i = index; trackBy: trackByRow" (click)="onViewDetails(row)">
                   <td>{{ (pageIndex * pageSize) + i + 1 }}</td>
                   <td class="fw-semibold">
-                    <span class="text-primary font-monospace">{{ row.applicationId }}</span>
-                  </td>
-                  <td>{{ row.submittedOn }}</td>
-                  <td>
-                    <span class="badge bg-slate-100 text-slate-800 border font-monospace px-2 py-1">
-                      {{ (row.distributorPermitRef && row.distributorPermitRef !== 'N/A') ? row.distributorPermitRef : ((row.supplierName && row.supplierName !== 'N/A') ? row.supplierName : 'IMFL-PERMIT') }}
+                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 font-monospace px-2 py-1 fs-7">
+                      <i class="bi bi-file-earmark-text me-1"></i>{{ row.applicationId }}
                     </span>
                   </td>
-                  <td>{{ resolveApplicantName(row) }}</td>
+                  <td>
+                    <span class="badge bg-slate-100 text-slate-800 border font-monospace px-2 py-1">
+                      {{ row.parentApplicationId || row.applicationId }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 font-monospace px-2 py-1" style="color: #0284c7 !important;">
+                      <i class="bi bi-upc-scan me-1"></i>{{ getAssignedHologramRangeSummary(row) }}
+                    </span>
+                  </td>
                   <td>
                     <span class="text-muted fw-semibold">{{ row.supplierName || 'N/A' }}</span>
+                  </td>
+                  <td>
+                    <span class="fw-bold text-dark">{{ row.cases | number }} Cases</span>
                   </td>
                   <td>
                     <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">
@@ -4750,7 +4758,10 @@
             Update Brands & Cases Arrival Register
           </h4>
           <small class="text-light opacity-75">
-            Requisition Ref: <span class="fw-bold text-warning">{{ arrivalModalData?.reference_no || arrivalModalData?.referenceNo || arrivalModalData?.id }}</span>
+            Permit: <span class="fw-bold text-warning font-monospace">{{ arrivalModalData?.current_permit_number || arrivalModalData?.permit_number || arrivalModalData?.reference_no }}</span>
+            <span *ngIf="arrivalModalData?.parent_reference_no && arrivalModalData?.parent_reference_no !== (arrivalModalData?.current_permit_number || arrivalModalData?.permit_number)">
+              • Requisition Ref: <span class="fw-bold text-light font-monospace">{{ arrivalModalData?.parent_reference_no }}</span>
+            </span>
             • Supplier: <span class="fw-bold">{{ arrivalModalData?.supplier_company_name || arrivalModalData?.supplierCompanyName || 'Corona Maharashtra' }}</span>
           </small>
         </div>
@@ -4770,11 +4781,11 @@
         <small class="text-muted text-uppercase fw-bold d-block" style="font-size: 11px;">Payment & Stage Verification</small>
         <div class="d-flex align-items-center gap-2 mt-1">
           <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">
-            <i class="bi bi-check-circle-fill me-1"></i> Fee Paid / Slip Verified
+            <i class="bi bi-check-circle-fill me-1"></i> Fee Paid & Approved
           </span>
         </div>
         <small class="text-muted d-block mt-1">
-          Stage: <strong class="text-dark">Forwarded PaySlip Permit Section (156)</strong>
+          Stage: <strong class="text-success">Approved by Commissioner</strong>
         </small>
       </div>
 
