@@ -2670,34 +2670,22 @@
               </div>
             </section>
 
-            <!-- Hologram Allocation Review Panel -->
+            <!-- IMFL Holograms Summary Panel -->
             <section class="dp-review-panel dp-review-panel--wide">
               <div class="d-flex justify-content-between align-items-center mb-3">
-                <h3 class="m-0"><i class="bi bi-upc-scan me-2 text-primary"></i>Allocated IMFL Holograms Summary</h3>
-                <span class="badge bg-success fs-6 px-3 py-2">{{ totalRequiredHolograms | number }} Hologram(s) Assigned</span>
+                <h3 class="m-0"><i class="bi bi-upc-scan me-2 text-primary"></i>IMFL Holograms Summary</h3>
+                <span class="badge bg-success fs-6 px-3 py-2">{{ totalRequiredHolograms | number }} Hologram(s) Required</span>
               </div>
 
               <div class="card border shadow-sm rounded p-3 bg-light">
-                <div class="row g-3 mb-2">
+                <div class="row g-3">
                   <div class="col-md-6">
-                    <span class="text-muted d-block fs-7">Total Holograms Required &amp; Reserved:</span>
+                    <span class="text-muted d-block fs-7">Total Holograms Required:</span>
                     <strong class="fs-5 text-primary">{{ totalRequiredHolograms | number }} Pieces</strong>
                   </div>
                   <div class="col-md-6 text-md-end">
                     <span class="text-muted d-block fs-7">Warehouse Stock Availability:</span>
-                    <strong class="fs-5 text-success"><i class="bi bi-check-circle-fill me-1"></i>Verified &amp; Allocated</strong>
-                  </div>
-                </div>
-
-                <div *ngIf="assignedHologramRangesPreview.length > 0" class="mt-2 pt-2 border-top">
-                  <small class="fw-semibold text-secondary d-block mb-2">Sequential Serial Numbers Assigned to this Permit:</small>
-                  <div class="d-flex flex-wrap gap-2">
-                    <div class="badge bg-white text-dark border p-2 d-flex align-items-center gap-2 shadow-xs" *ngFor="let rng of assignedHologramRangesPreview">
-                      <i class="bi bi-tag-fill text-primary"></i>
-                      <span><strong>{{ rng.ref_no || rng.procurement_ref_no }}</strong>:</span>
-                      <span class="text-primary fw-bold">{{ rng.from }} &rarr; {{ rng.to }}</span>
-                      <span class="badge bg-primary text-white">{{ rng.count }} pcs</span>
-                    </div>
+                    <strong class="fs-5 text-success"><i class="bi bi-check-circle-fill me-1"></i>Verified &amp; Available</strong>
                   </div>
                 </div>
               </div>

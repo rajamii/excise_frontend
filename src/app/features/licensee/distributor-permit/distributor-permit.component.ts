@@ -143,7 +143,6 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   hologramStockErrorMessage = '';
 
   ngOnInit(): void {
-    this.addLineItem();
     this.brandStepForm.setValidators(() => this.isBrandStepValidPublic ? null : { lineItemsInvalid: true });
     this.syncBrandStepValidity();
     this.loadInitialData();
@@ -6082,8 +6081,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   onTopBrandSelect(brandName: string): void {
     this.selectedNewBrandName = brandName;
-    const sizes = this.getAvailableSizesForBrand(brandName);
-    this.selectedNewBrandKey = sizes.length > 0 ? this.getBrandKey(sizes[0]) : '';
+    this.selectedNewBrandKey = '';
   }
 
   onTopSizeSelect(brandKey: string): void {
@@ -6119,6 +6117,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       }) as FormGroup);
     }
 
+    this.selectedNewBrandName = '';
+    this.selectedNewBrandKey = '';
     this.newBrandCases = 1;
     this.checkHologramStockAllocation();
     this.syncBrandStepValidity();
@@ -7813,25 +7813,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   populateDefaultBrandRows(): void {
     this.lineItems.clear();
-    if (this.brandMaster && this.brandMaster.length > 0) {
-      const first = this.brandMaster[0];
-      this.selectedNewBrandName = first.brandName;
-      this.selectedNewBrandKey = this.getBrandKey(first);
-      this.newBrandCases = 1;
-      this.lineItems.push(this.fb.group({
-        selectedBrandName: [first.brandName, Validators.required],
-        brandKey: [this.getBrandKey(first), Validators.required],
-        cases: [1, [Validators.required, Validators.min(1)]],
-        permitIndex: [1]
-      }) as FormGroup);
-    } else {
-      this.lineItems.push(this.fb.group({
-        selectedBrandName: ['', Validators.required],
-        brandKey: ['', Validators.required],
-        cases: [1, [Validators.required, Validators.min(1)]],
-        permitIndex: [1]
-      }) as FormGroup);
-    }
+    this.selectedNewBrandName = '';
+    this.selectedNewBrandKey = '';
+    this.newBrandCases = 1;
     this.currentActivePermitIndex = 1;
     this.checkHologramStockAllocation();
     this.syncBrandStepValidity();
