@@ -370,7 +370,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         source === 'license-renewal' ||
         type === 'new-license' ||
         type === 'license-renewal' ||
-        action === 'pay';
+        ((source.includes('license') || type.includes('license') || requestedTab.includes('license')) && action === 'pay');
 
       if (viewParam === 'others' || isLicenseFeeAction) {
         this.walletViewMode = 'others';
@@ -884,7 +884,7 @@ private initializeWalletContextAndLoadData(): void {
       requestedSource === 'license-renewal' ||
       requestedType === 'new-license' ||
       requestedType === 'license-renewal' ||
-      requestedAction === 'pay' ||
+      ((requestedSource.includes('license') || requestedType.includes('license') || requestedTab.includes('license')) && requestedAction === 'pay') ||
       requestedView === 'others';
 
     if ((!isFullWalletModule || isLicenseFeeAction) && this.walletViewMode !== 'others' && requestedView !== 'wallets') {
