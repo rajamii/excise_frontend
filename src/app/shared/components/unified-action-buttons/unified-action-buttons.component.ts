@@ -1486,7 +1486,6 @@ private getTransitRejectSummary(): {
   private handleViewAction(): void {
     console.log('🔧 UNIFIED BUTTONS: Handling VIEW action');
     
-    // Force navigation directly using window.location for reliability
     const ref = this.item?.referenceNo ?? this.item?.['refNo'] ?? '';
     const id = this.item?.id ?? this.item?.['pk'] ?? '';
     
@@ -1497,22 +1496,7 @@ private getTransitRejectSummary(): {
       source: this.context || 'licensee'
     };
     
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams();
-      Object.entries(queryParams).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-          params.set(key, String(value));
-        }
-      });
-      const query = params.toString();
-      const url = query ? `/supply-chain-view?${query}` : '/supply-chain-view';
-      console.log('🚀 NAVIGATE to view:', url);
-      
-      // Use setTimeout to defer navigation to next event loop cycle
-      setTimeout(() => {
-        window.location.href = url;
-      }, 0);
-    }
+    this.router.navigate(['/supply-chain-view'], { queryParams });
   }
 
   private handleViewSlipAction(): void {

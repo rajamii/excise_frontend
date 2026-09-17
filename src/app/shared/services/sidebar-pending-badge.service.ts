@@ -318,7 +318,7 @@ export class SidebarPendingBadgeService {
         }
         return this.enaRequisitionService.getRequisitions().pipe(
           map((response) => this.toArray(response)),
-          map((items) => this.countActionableWithStatusFallback(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY']))
+          map((items) => this.countRequisitionOfficerActionable(items))
         );
 
       case 'revalidation':
@@ -612,41 +612,190 @@ export class SidebarPendingBadgeService {
     }).length;
   }
 
+  private getCurrentRoleId(): number {
+    try {
+      const roleIdStr = localStorage.getItem('role_id');
+      if (roleIdStr && !isNaN(Number(roleIdStr))) return Number(roleIdStr);
+      const userRaw = localStorage.getItem('currentUser') || sessionStorage.getItem('currentUser') || localStorage.getItem('account') || localStorage.getItem('user');
+      if (userRaw) {
+        const parsed = JSON.parse(userRaw);
+        const rId = parsed?.roleId || parsed?.role_id || parsed?.role?.id;
+        if (rId && !isNaN(Number(rId))) return Number(rId);
+      }
+    } catch (e) {}
+    return 0;
+  }
+
+  private isPermitSectionOfficer(): boolean {
+    const roleId = this.getCurrentRoleId();
+    if (roleId === 5) return true;
+    try {
+      const userRaw = localStorage.getItem('currentUser') || sessionStorage.getItem('currentUser') || localStorage.getItem('account');
+      if (userRaw) {
+        const u = JSON.parse(userRaw);
+        const name = String(u?.role?.name || u?.roleName || u?.role || '').toLowerCase();
+        if (name.includes('permit') && name.includes('section')) return true;
+      }
+    } catch {}
+    return false;
+  }
+
+  private isCommissionerOfficer(): boolean {
+    const roleId = this.getCurrentRoleId();
+    if (roleId === 10 || roleId === 9) return true;
+    try {
+      const userRaw = localStorage.getItem('currentUser') || sessionStorage.getItem('currentUser') || localStorage.getItem('account');
+      if (userRaw) {
+        const u = JSON.parse(userRaw);
+        const name = String(u?.role?.name || u?.roleName || u?.role || '').toLowerCase();
+        if (name.includes('commissioner')) return true;
+      }
+    } catch {}
+    return false;
+  }
+
+  private isItCellOfficer(): boolean {
+    const roleId = this.getCurrentRoleId();
+    if (roleId === 6) return true;
+    try {
+      const userRaw = localStorage.getItem('currentUser') || sessionStorage.getItem('currentUser') || localStorage.getItem('account');
+      if (userRaw) {
+        const u = JSON.parse(userRaw);
+        const name = String(u?.role?.name || u?.roleName || u?.role || '').toLowerCase();
+        if (name.includes('itcell') || name.includes('it_cell') || name.includes('it cell')) return true;
+      }
+    } catch {}
+    return false;
+  }
+
+  /**
+   * Count actionable bulk spirit requisitions specifically for the current officer role.
+   * For Permit Section: counts initial PENDING and payslip review stages; excludes items forwarded to commissioner.
+   * For Commissioner: counts items forwarded to commissioner for review.
+   */
+  public countRequisitionOfficerActionable(items: any[]): number {
+    const isPS = this.isPermitSectionOfficer();
+    const isComm = this.isCommissionerOfficer();
+
+    return (items || []).filter((item) => {
+      const statusToken = this.normalizeStageToken(item?.status);
+      const stageToken = this.normalizeStageToken(item?.current_stage_name ?? item?.currentStageName);
+      const combined = `${statusToken} ${stageToken}`;
+
+      // Exclude final / terminal states
+      if (combined.includes('approv') || combined.includes('reject') || combined.includes('cancel') ||
+          combined.includes('complete') || combined.includes('terminate')) {
+        // Special case: payslip review back at Permit Section stage
+        if (isPS && combined.includes('permitsection') &&
+            (combined.includes('forward') || combined.includes('payslip') || combined.includes('submit')) &&
+            !combined.includes('approvedpayslip') && !combined.includes('rejectedpayslip')) {
+          return true;
+        }
+        return false;
+      }
+
+      if (isPS) {
+        // If forwarded to Commissioner, Permit Section has already acted -> NOT pending for PS
+        if (combined.includes('commissioner')) return false;
+        // Awaiting payment from licensee is not pending for Permit Section
+        if (combined.includes('awaiting') || (combined.includes('payment') && !combined.includes('payslip'))) return false;
+
+        // Plain PENDING is at Permit Section stage (awaiting initial review)
+        if (statusToken === 'pending' || stageToken === 'pending') return true;
+
+        // Forwarded back to Permit Section for payslip review
+        if (combined.includes('permitsection') &&
+            (combined.includes('forward') || combined.includes('payslip') || combined.includes('submit'))) {
+          return true;
+        }
+
+        const actions = this.extractAllowedActions(item);
+        if (actions.some(a => ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY'].includes(a))) {
+          return true;
+        }
+
+        return false;
+      }
+
+      if (isComm) {
+        // Exclude items not yet at Commissioner stage
+        if ((statusToken === 'pending' || stageToken === 'pending') && !combined.includes('commissioner')) {
+          return false;
+        }
+
+        // Forwarded to Commissioner for approval
+        if (combined.includes('commissioner') && (combined.includes('forward') || combined.includes('review') || combined.includes('pending'))) {
+          return true;
+        }
+
+        const actions = this.extractAllowedActions(item);
+        if (combined.includes('commissioner') && actions.some(a => ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY'].includes(a))) {
+          return true;
+        }
+
+        return false;
+      }
+
+      // Other officer roles
+      const actions = this.extractAllowedActions(item);
+      return actions.some(a => ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY'].includes(a));
+    }).length;
+  }
+
   /**
    * Like countActionable but also adds items whose status indicates they are routed
    * to an officer's stage even when the backend hasn't set allowedActions.
-   * Used for Permit Section and Commissioner sidebar badge counts.
+   * Role-aware for Permit Section, Commissioner, and IT Cell sidebar badge counts.
    */
   public countActionableWithStatusFallback(items: any[], actionableActions: string[]): number {
     const actionable = new Set(this.toUpperActions(actionableActions));
+    const isPS = this.isPermitSectionOfficer();
+    const isComm = this.isCommissionerOfficer();
+    const isIT = this.isItCellOfficer();
 
-    // First pass: items with matching allowedActions
-    const countedByActions = (items || []).filter((item) => {
-      const actions = this.extractAllowedActions(item);
-      return actions.some((action) => actionable.has(action));
-    });
-    const countedIds = new Set(countedByActions.map((item) => item?.id));
-
-    // Second pass: items with no allowedActions but status clearly routes to this officer
-    const countedByStatus = (items || []).filter((item) => {
-      if (countedIds.has(item?.id)) return false; // already counted
+    return (items || []).filter((item) => {
       const st = this.normalizeStageToken(item?.status ?? item?.current_stage_name ?? item?.currentStageName ?? '');
       if (!st) return false;
       if (st.includes('approv') || st.includes('reject') || st.includes('cancel') ||
-          st.includes('complete') || st.includes('terminate')) return false;
-      // Plain PENDING (just submitted, awaiting first officer review)
-      if (st === 'pending') return true;
-      // Forwarded back to Permit Section for payslip action
-      if (st.includes('permitsection') &&
-          (st.includes('forward') || st.includes('payslip') || st.includes('submit'))) return true;
-      // Forwarded to Commissioner for review
-      if (st.includes('commissioner') && st.includes('forward')) return true;
-      // IT Cell: forwarded to IT Cell for review (e.g. "UNDER IT CELL REVIEW")
-      if (st.includes('itcell') || st.includes('itreview') || st.includes('submittedhp')) return true;
-      return false;
-    });
+          st.includes('complete') || st.includes('terminate')) {
+        // Special case: payslip review at Permit Section stage
+        if (isPS && st.includes('permitsection') &&
+            (st.includes('forward') || st.includes('payslip') || st.includes('submit')) &&
+            !st.includes('approvedpayslip') && !st.includes('rejectedpayslip')) {
+          return true;
+        }
+        return false;
+      }
 
-    return countedByActions.length + countedByStatus.length;
+      if (isPS) {
+        if (st.includes('commissioner')) return false;
+        if (st.includes('awaiting') || (st.includes('payment') && !st.includes('payslip'))) return false;
+        if (st === 'pending') return true;
+        if (st.includes('permitsection') && (st.includes('forward') || st.includes('payslip') || st.includes('submit'))) return true;
+        const actions = this.extractAllowedActions(item);
+        return actions.some((action) => actionable.has(action));
+      }
+
+      if (isComm) {
+        if (st === 'pending' && !st.includes('commissioner')) return false;
+        if (st.includes('commissioner') && (st.includes('forward') || st.includes('review') || st.includes('pending'))) return true;
+        const actions = this.extractAllowedActions(item);
+        return actions.some((action) => actionable.has(action));
+      }
+
+      if (isIT) {
+        if (st.includes('itcell') || st.includes('itreview') || st.includes('submittedhp')) return true;
+        const actions = this.extractAllowedActions(item);
+        return actions.some((action) => actionable.has(action));
+      }
+
+      // Default
+      const actions = this.extractAllowedActions(item);
+      if (actions.length > 0) {
+        return actions.some((action) => actionable.has(action));
+      }
+      return st === 'pending';
+    }).length;
   }
 
   private normalizeStageToken(value: any): string {

@@ -10,7 +10,7 @@ import { UnifiedActionButtonsComponent } from '../../../../../shared/components/
 import { UnifiedActionsService } from '../../../../../shared/services/unified-actions.service';
 import { SidebarPendingBadgeService } from '../../../../../shared/services/sidebar-pending-badge.service';
 import { forkJoin, of, Subscription } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, debounceTime } from 'rxjs/operators';
 
 interface TableData {
   id?: number;
@@ -198,15 +198,35 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     this.isBrowser = isPlatformBrowser(platformId);
   }
 
+  private refreshSub: Subscription | null = null;
+  private pageshowHandler = (event: PageTransitionEvent) => {
+    if (event.persisted) {
+      console.log('🔄 RequisitionComponent: Page restored from cache, reloading data');
+      this.loadData();
+    }
+  };
+
   ngOnInit(): void {
     this.cleanupSidebarLockState();
-    this.sidebarPendingBadgeService.triggerRefresh();
     this.captureArrivalAutoOpenRequest();
     this.captureCancellationAutoOpenRequest();
     this.queryParamSub = this.route.queryParamMap.subscribe(() => {
       this.captureCancellationAutoOpenRequest();
       this.tryAutoOpenCancellationModal();
     });
+
+    this.refreshSub = this.sidebarPendingBadgeService.refreshNeeded$
+      .pipe(debounceTime(300))
+      .subscribe(() => {
+        console.log('🔄 RequisitionComponent: Received refresh notification, reloading data');
+        this.enaRequisitionService.clearCache();
+        this.loadData();
+      });
+
+    if (this.isBrowser && typeof window !== 'undefined') {
+      window.addEventListener('pageshow', this.pageshowHandler);
+    }
+
     this.loadData();
   }
 
@@ -214,6 +234,13 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     if (this.queryParamSub) {
       this.queryParamSub.unsubscribe();
       this.queryParamSub = null;
+    }
+    if (this.refreshSub) {
+      this.refreshSub.unsubscribe();
+      this.refreshSub = null;
+    }
+    if (this.isBrowser && typeof window !== 'undefined') {
+      window.removeEventListener('pageshow', this.pageshowHandler);
     }
     this.cleanupSidebarLockState();
     this.setBulkRecordModalMode(false);
@@ -271,7 +298,6 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   loadData(): void {
     console.log('DEBUG: Loading requisition data...');
     this.enaRequisitionService.clearCache();
-    this.sidebarPendingBadgeService.triggerRefresh();
 
     forkJoin({
       requisitions: this.enaRequisitionService.getRequisitions().pipe(catchError(() => of([]))),
@@ -445,18 +471,27 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   private maybeAutoSelectPendingSummary(): void {
-    if (this.initialSummaryAutoSelected) return;
-    this.initialSummaryAutoSelected = true;
-
-    // If user already selected a filter (or came in with one), don't override.
-    if (this.requisitionStatusFilter || this.activeSummaryFilter) return;
-
     const pendingCount = this.getRequisitionStatusCount('PENDING');
     if (pendingCount > 0) {
-      this.activeSummaryFilter = 'PENDING';
-      this.requisitionStatusFilter = 'PENDING';
-      this.applyFilters();
+      if (!this.requisitionStatusFilter || this.activeSummaryFilter === 'PENDING') {
+        this.activeSummaryFilter = 'PENDING';
+        this.requisitionStatusFilter = 'PENDING';
+      }
+    } else {
+      // When pending is 0 and we were on PENDING tab (or initial unselected state),
+      // transition to UNDERPROCESS if available for officer roles, otherwise ALL.
+      if (!this.requisitionStatusFilter || this.requisitionStatusFilter === 'PENDING' || this.activeSummaryFilter === 'PENDING') {
+        const underProcessCount = this.getRequisitionStatusCount('UNDERPROCESS');
+        if (underProcessCount > 0 && (this.isPermitSection() || this.isCommissioner())) {
+          this.activeSummaryFilter = 'UNDERPROCESS';
+          this.requisitionStatusFilter = 'UNDERPROCESS';
+        } else {
+          this.activeSummaryFilter = '';
+          this.requisitionStatusFilter = '';
+        }
+      }
     }
+    this.applyFilters();
   }
 
   private captureArrivalAutoOpenRequest(): void {
@@ -2475,49 +2510,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       source: this.getUserContext()
     };
 
-    console.log('[REQUISITION] Slip click', { id, refNo, queryParams, status: item?.status, stage: item?.currentStageName });
-
-    if (this.isBrowser) {
-      const params = new URLSearchParams();
-      if (queryParams.id) params.set('id', String(queryParams.id));
-      if (queryParams.type) params.set('type', String(queryParams.type));
-      if (queryParams.refNo) params.set('refNo', String(queryParams.refNo));
-      if (queryParams.ref) params.set('ref', String(queryParams.ref));
-      if (queryParams.referenceNo) params.set('referenceNo', String(queryParams.referenceNo));
-      if (queryParams.source) params.set('source', String(queryParams.source));
-      const query = params.toString();
-      const target = query ? `/payment-slip-view?${query}` : '/payment-slip-view';
-      console.log('[REQUISITION] Direct slip target:', target);
-      window.location.assign(target);
-      return;
-    }
-
-    this.router.navigate(['/payment-slip-view'], { queryParams })
-      .then((ok) => {
-        if (ok) return;
-        if (!this.isBrowser) return;
-        const params = new URLSearchParams();
-        if (queryParams.id) params.set('id', String(queryParams.id));
-        if (queryParams.type) params.set('type', String(queryParams.type));
-        if (queryParams.refNo) params.set('refNo', String(queryParams.refNo));
-        if (queryParams.ref) params.set('ref', String(queryParams.ref));
-        if (queryParams.referenceNo) params.set('referenceNo', String(queryParams.referenceNo));
-        if (queryParams.source) params.set('source', String(queryParams.source));
-        const query = params.toString();
-        window.location.href = query ? `/payment-slip-view?${query}` : '/payment-slip-view';
-      })
-      .catch(() => {
-        if (!this.isBrowser) return;
-        const params = new URLSearchParams();
-        if (queryParams.id) params.set('id', String(queryParams.id));
-        if (queryParams.type) params.set('type', String(queryParams.type));
-        if (queryParams.refNo) params.set('refNo', String(queryParams.refNo));
-        if (queryParams.ref) params.set('ref', String(queryParams.ref));
-        if (queryParams.referenceNo) params.set('referenceNo', String(queryParams.referenceNo));
-        if (queryParams.source) params.set('source', String(queryParams.source));
-        const query = params.toString();
-        window.location.href = query ? `/payment-slip-view?${query}` : '/payment-slip-view';
-      });
+    this.router.navigate(['/payment-slip-view'], { queryParams });
   }
 
   openRequisitionLetter(item: TableData, event?: Event): void {
@@ -2535,23 +2528,6 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       source: this.getUserContext()
     };
 
-    console.log('[REQUISITION] Letter click', { id, refNo, queryParams, status: item?.status, stage: item?.currentStageName });
-
-    if (this.isBrowser) {
-      const params = new URLSearchParams();
-      if (queryParams.id) params.set('id', String(queryParams.id));
-      if (queryParams.type) params.set('type', String(queryParams.type));
-      if (queryParams.refNo) params.set('refNo', String(queryParams.refNo));
-      if (queryParams.ref) params.set('ref', String(queryParams.ref));
-      if (queryParams.referenceNo) params.set('referenceNo', String(queryParams.referenceNo));
-      if (queryParams.source) params.set('source', String(queryParams.source));
-      const query = params.toString();
-      const target = query ? `/unified-letter-view/requisition?${query}` : '/unified-letter-view/requisition';
-      console.log('[REQUISITION] Direct letter target:', target);
-      window.location.assign(target);
-      return;
-    }
-
     this.router.navigate(['/unified-letter-view/requisition'], { queryParams });
   }
 
@@ -2567,18 +2543,6 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       ref: refNo || undefined,
       source: this.getUserContext()
     };
-
-    if (this.isBrowser) {
-      const params = new URLSearchParams();
-      if (queryParams.id) params.set('id', String(queryParams.id));
-      if (queryParams.type) params.set('type', String(queryParams.type));
-      if (queryParams.ref) params.set('ref', String(queryParams.ref));
-      if (queryParams.source) params.set('source', String(queryParams.source));
-      const query = params.toString();
-      const target = query ? `/supply-chain-view?${query}` : '/supply-chain-view';
-      window.location.assign(target);
-      return;
-    }
 
     this.router.navigate(['/supply-chain-view'], { queryParams });
   }
@@ -2714,26 +2678,38 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     // the item is currently at the PS stage (e.g. "FORWARDED PAYSLIP PERMIT SECTION"
     // means the payslip came back to PS for approval after the licensee paid).
     if (this.isPermitSection()) {
-      const actions: string[] = item?.allowedActions ?? [];
-      const hasActionableAction = Array.isArray(actions) && (actions.includes('APPROVE') || actions.includes('REJECT') ||
-             actions.includes('FORWARD') || actions.includes('VERIFY'));
-      if (hasActionableAction) return true;
       const statusToken = this.normalizeStageToken(item?.status);
       const stageToken = this.normalizeStageToken(item?.currentStageName);
       const combined = `${statusToken} ${stageToken}`;
-      // Awaiting payment from applicant is under process for Permit Section (no officer action needed)
-      if (combined.includes('awaiting') || (combined.includes('payment') && !combined.includes('payslip'))) return false;
+
+      // Exclude approved/rejected/cancelled
+      if (combined.includes('approv') || combined.includes('reject') || combined.includes('cancel')) {
+        // Exception: payslip review back at Permit Section stage
+        if (combined.includes('permitsection') &&
+            (combined.includes('forward') || combined.includes('payslip') || combined.includes('submit')) &&
+            !combined.includes('approvedpayslip') && !combined.includes('rejectedpayslip')) {
+          return true;
+        }
+        return false;
+      }
+
       // If the record has been forwarded to Commissioner, Permit Section has already acted
       if (combined.includes('commissioner')) return false;
+      // Awaiting payment from applicant is under process for Permit Section (no officer action needed)
+      if (combined.includes('awaiting') || (combined.includes('payment') && !combined.includes('payslip'))) return false;
 
       // Plain PENDING = just submitted by licensee
       if (statusToken === 'pending' || stageToken === 'pending') return true;
       // Status indicates the item is currently AT the Permit Section stage:
       //  • "FORWARDED PAYSLIP PERMIT SECTION" → payslip back at PS for approval
       if (combined.includes('permitsection') &&
-          (combined.includes('forward') || combined.includes('payslip') || combined.includes('submit')) &&
-          !combined.includes('approv') &&
-          !combined.includes('reject')) return true;
+          (combined.includes('forward') || combined.includes('payslip') || combined.includes('submit'))) return true;
+
+      const actions: string[] = item?.allowedActions ?? [];
+      const hasActionableAction = Array.isArray(actions) && (actions.includes('APPROVE') || actions.includes('REJECT') ||
+             actions.includes('FORWARD') || actions.includes('VERIFY'));
+      if (hasActionableAction) return true;
+
       return false;
     }
     if (this.isApprovedCommissionerAwaitingPayment(item)) {

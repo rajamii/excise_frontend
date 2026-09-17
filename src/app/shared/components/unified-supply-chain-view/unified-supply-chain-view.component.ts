@@ -1990,6 +1990,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                         'COMPLETE', 'ASSIGN_CARTONS', 'PAY',
                         'SUBMITPAYSLIP', 'APPROVEPAYSLIP', 'REJECTPAYSLIP', 'REVERT'
                     ].includes(action)) {
+                        this.enaRequisitionService.clearCache();
+                        this.supplyChainService.clearCache();
                         this.distributorPermitService.clearCache();
                         this.sidebarPendingBadgeService.triggerRefresh();
                         const currentId = this.applicationData?.id?.toString() || '';
@@ -4315,8 +4317,16 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
         // Always invalidate all cached counts & lists before returning to dashboard
         this.licenseApplicationService.invalidateAllDashboardCaches();
+        this.enaRequisitionService.clearCache();
+        this.supplyChainService.clearCache();
         this.distributorPermitService.clearCache();
         this.sidebarPendingBadgeService.triggerRefresh();
+
+        // Specific flow routing for requisition
+        if (this.applicationType === 'requisition') {
+            this.router.navigate(['/dashboard'], { queryParams: { section: 'requisition' } });
+            return;
+        }
 
         // 1. If user navigated from within the app, return directly to exact origin page
         if (this.isBrowser && typeof window !== 'undefined' && window.history.length > 1) {
