@@ -3745,8 +3745,6 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   getHologramsAssignedCount(row: DistributorPermitRow | any): number {
-    const isAppr = this.isApproved(row);
-    if (!isAppr) return 0;
     const refNo = String(
       row?.applicationId ||
       row?.referenceNo ||
@@ -3835,8 +3833,6 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   getHologramRanges(row: DistributorPermitRow | any): any[] {
-    const isAppr = this.isApproved(row);
-    if (!isAppr) return [];
     const refNo = String(
       row?.applicationId ||
       row?.referenceNo ||
@@ -3866,6 +3862,12 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       permit_number: rng?.permit_number || rng?.permitNumber || '',
       permit_index: Number(rng?.permit_index || rng?.permitIndex || 0)
     }));
+  }
+
+  /** A partially approved application remains at stage 157; use its persisted
+   * permit-wise ranges rather than the application-level final-stage status. */
+  hasApprovedHologramAllocation(row: DistributorPermitRow | any): boolean {
+    return this.getHologramRanges(row).length > 0;
   }
 
   getPermitWiseHologramSummary(row: DistributorPermitRow | any): any[] {
@@ -4064,13 +4066,21 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       const pNum = p.permit_number || p.permitNumber || `${refNo || 'IMFL_REQ'}-P${pIdx}`;
       const permitLabel = `${pNum} (${totalCases} Cases)`;
 
-      if (isAppr && assignedRanges.length > 0) {
-        const matchRng = assignedRanges.find((r: any) => {
+      const ownRanges = p.assigned_hologram_ranges || p.assignedRanges || p.assigned_ranges || p.hologram_ranges || [];
+      const normalizedOwnRanges = Array.isArray(ownRanges) ? ownRanges.map((rng: any) => ({
+        ref_no: rng?.refNo || rng?.ref_no || rng?.procurement_ref_no || '',
+        from: String(rng?.from || ''), to: String(rng?.to || ''), count: Number(rng?.count || 0),
+        permit_number: rng?.permit_number || rng?.permitNumber || pNum,
+        permit_index: Number(rng?.permit_index || rng?.permitIndex || pIdx)
+      })) : [];
+      const matchRng = normalizedOwnRanges[0] || assignedRanges.find((r: any) => {
           const rPNum = String(r.permit_number || r.permitNumber || '').toLowerCase().trim();
           const rPIdx = Number(r.permit_index || r.permitIndex || 0);
           return (rPNum && rPNum === pNum.toLowerCase()) || (rPIdx > 0 && rPIdx === pIdx);
-        }) || assignedRanges[idx] || assignedRanges[0];
+        });
+      const permitApproved = String(p.status || '').toUpperCase() === 'APPROVED' || !!matchRng;
 
+      if (permitApproved && matchRng) {
         return {
           permitIndex: pIdx,
           permit_index: pIdx,

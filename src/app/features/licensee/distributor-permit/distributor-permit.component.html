@@ -4114,24 +4114,24 @@
             </div>
           </div>
           <div class="col-md-6">
-            <div class="p-3 rounded border h-100 d-flex flex-column justify-content-between" [ngClass]="isApproved(selectedPermitHologramDetailsRow) ? 'bg-primary bg-opacity-10 border-primary border-opacity-25' : 'bg-warning bg-opacity-10 border-warning border-opacity-25'">
+            <div class="p-3 rounded border h-100 d-flex flex-column justify-content-between" [ngClass]="hasApprovedHologramAllocation(selectedPermitHologramDetailsRow) ? 'bg-primary bg-opacity-10 border-primary border-opacity-25' : 'bg-warning bg-opacity-10 border-warning border-opacity-25'">
               <div>
-                <small class="d-block fw-bold text-uppercase" [ngClass]="isApproved(selectedPermitHologramDetailsRow) ? 'text-primary' : 'text-dark'" style="font-size: 11px;">
-                  {{ isApproved(selectedPermitHologramDetailsRow) ? 'Total Holograms Assigned & Reserved' : 'Total Holograms Required' }}
+                <small class="d-block fw-bold text-uppercase" [ngClass]="hasApprovedHologramAllocation(selectedPermitHologramDetailsRow) ? 'text-primary' : 'text-dark'" style="font-size: 11px;">
+                  {{ hasApprovedHologramAllocation(selectedPermitHologramDetailsRow) ? 'Total Holograms Assigned & Reserved' : 'Total Holograms Required' }}
                 </small>
-                <strong class="fs-3 font-monospace" [ngClass]="isApproved(selectedPermitHologramDetailsRow) ? 'text-primary' : 'text-dark'">
-                  {{ (isApproved(selectedPermitHologramDetailsRow) ? getHologramsAssignedCount(selectedPermitHologramDetailsRow) : getHologramsRequiredCount(selectedPermitHologramDetailsRow)) | number }} Pieces
+                <strong class="fs-3 font-monospace" [ngClass]="hasApprovedHologramAllocation(selectedPermitHologramDetailsRow) ? 'text-primary' : 'text-dark'">
+                  {{ (hasApprovedHologramAllocation(selectedPermitHologramDetailsRow) ? getHologramsAssignedCount(selectedPermitHologramDetailsRow) : getHologramsRequiredCount(selectedPermitHologramDetailsRow)) | number }} Pieces
                 </strong>
               </div>
               <div class="mt-2 d-flex align-items-center justify-content-between">
-                <span class="badge py-1.5 px-2.5 shadow-xs" [ngClass]="isApproved(selectedPermitHologramDetailsRow) ? 'bg-success text-white' : 'bg-warning text-dark'">
-                  <i class="bi" [ngClass]="isApproved(selectedPermitHologramDetailsRow) ? 'bi-check-circle-fill me-1' : 'bi-clock-history me-1'"></i>
-                  {{ isApproved(selectedPermitHologramDetailsRow) ? 'Allocated & Reserved' : 'Pending Commissioner Approval' }}
+                <span class="badge py-1.5 px-2.5 shadow-xs" [ngClass]="hasApprovedHologramAllocation(selectedPermitHologramDetailsRow) ? 'bg-success text-white' : 'bg-warning text-dark'">
+                  <i class="bi" [ngClass]="hasApprovedHologramAllocation(selectedPermitHologramDetailsRow) ? 'bi-check-circle-fill me-1' : 'bi-clock-history me-1'"></i>
+                  {{ hasApprovedHologramAllocation(selectedPermitHologramDetailsRow) ? 'Allocated & Reserved' : 'Pending Commissioner Approval' }}
                 </span>
-                <span class="small text-muted font-monospace" *ngIf="isApproved(selectedPermitHologramDetailsRow)">
+                <span class="small text-muted font-monospace" *ngIf="hasApprovedHologramAllocation(selectedPermitHologramDetailsRow)">
                   {{ getHologramRanges(selectedPermitHologramDetailsRow).length }} Serial Range(s)
                 </span>
-                <span class="small text-muted font-monospace" *ngIf="!isApproved(selectedPermitHologramDetailsRow)">
+                <span class="small text-muted font-monospace" *ngIf="!hasApprovedHologramAllocation(selectedPermitHologramDetailsRow)">
                   Range Pending Approval
                 </span>
               </div>
@@ -4144,10 +4144,10 @@
           <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center">
             <span class="fw-bold text-primary fs-7">
               <i class="bi bi-list-ol me-1"></i>
-              {{ isApproved(selectedPermitHologramDetailsRow) ? 'Sequential Serial Numbers Assigned' : 'Permit-Wise Hologram Allocation' }}
+              {{ hasApprovedHologramAllocation(selectedPermitHologramDetailsRow) ? 'Sequential Serial Numbers Assigned' : 'Permit-Wise Hologram Allocation' }}
             </span>
-            <span class="badge" [ngClass]="isApproved(selectedPermitHologramDetailsRow) ? 'bg-primary text-white' : 'bg-warning text-dark'">
-              {{ isApproved(selectedPermitHologramDetailsRow) ? (getHologramRanges(selectedPermitHologramDetailsRow).length + ' Batch Allocation(s)') : 'Pending Commissioner Approval' }}
+            <span class="badge" [ngClass]="hasApprovedHologramAllocation(selectedPermitHologramDetailsRow) ? 'bg-primary text-white' : 'bg-warning text-dark'">
+              {{ hasApprovedHologramAllocation(selectedPermitHologramDetailsRow) ? (getHologramRanges(selectedPermitHologramDetailsRow).length + ' Batch Allocation(s)') : 'Pending Commissioner Approval' }}
             </span>
           </div>
           <div class="table-responsive">
