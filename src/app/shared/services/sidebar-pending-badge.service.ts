@@ -134,10 +134,7 @@ export class SidebarPendingBadgeService {
             shareReplay(1),
             catchError(() => of([] as any[]))
           );
-          tasks[section] = reqs$.pipe(
-            map((items) => this.countRequisitionAwaitingPayment(items)),
-            catchError(() => of(0))
-          );
+          tasks[section] = of(0);
           tasks[`${section}:payment`] = reqs$.pipe(
             map((items) => this.countRequisitionAwaitingPayment(items)),
             catchError(() => of(0))
@@ -311,14 +308,17 @@ export class SidebarPendingBadgeService {
 
       case 'requisition':
         if (audience === 'licensee') {
-          return this.enaRequisitionService.getRequisitions().pipe(
-            map((response) => this.toArray(response)),
-            map((items) => this.countRequisitionAwaitingPayment(items))
-          );
+          return of(0);
         }
         return this.enaRequisitionService.getRequisitions().pipe(
           map((response) => this.toArray(response)),
           map((items) => this.countRequisitionOfficerActionable(items))
+        );
+
+      case 'requisition:payment':
+        return this.enaRequisitionService.getRequisitions().pipe(
+          map((response) => this.toArray(response)),
+          map((items) => this.countRequisitionAwaitingPayment(items))
         );
 
       case 'revalidation':
@@ -843,7 +843,11 @@ export class SidebarPendingBadgeService {
 
       // Exclude Awaiting Payment stage (stageId 29 or approved commissioner status)
       const stageId = Number(item?.current_stage ?? item?.currentStage ?? item?.stage_id ?? item?.stageId ?? -1);
-      if (stageId === 29 || raw.includes('approvedcommissioner')) return false;
+      if (stageId === 29 ||
+          raw.includes('approvedcommissioner') ||
+          raw.includes('approvedbycommissioner') ||
+          (raw.includes('commissioner') && raw.includes('approved')) ||
+          raw.includes('awaitingpayment')) return false;
 
       // Count if it's pending review or forwarded/submitted status (including payslip states)
       return raw.includes('pending') || raw.includes('submit') ||
@@ -878,7 +882,7 @@ export class SidebarPendingBadgeService {
 
   /**
    * Count requisition items that require payment from the licensee.
-   * Only stage 29 "Approved Commissioner" triggers the badge — the licensee
+   * Stage 29 "Approved Commissioner" or "Approved by Commissioner" triggers the badge — the licensee
    * must make payment at this stage before the permit is issued.
    * Once payment is made the item moves to a post-payment stage (forwarded payslip,
    * approved payslip, etc.) and the badge must be cleared.
@@ -894,13 +898,17 @@ export class SidebarPendingBadgeService {
       ).toLowerCase().replace(/[^a-z0-9]/g, '');
       const combined = `${status} ${stageName}`;
 
-      // Exclude non-actionable licensee stages
+      // Exclude non-payment / post-payment stages
       const nonPaymentMarkers = [
         'pending', 'submit', 'submitted', 'forwardedcommissioner', 'forwardedoic',
         'forwardedpayslip', 'approvedpayslip', 'rejectedpayslip', 'paymentcompleted',
-        'paymentdone', 'permitsection', 'approved', 'rejected', 'cancelled', 'draft'
+        'paymentdone', 'rejected', 'cancelled', 'draft'
       ];
       if (nonPaymentMarkers.some(m => combined.includes(m))) return false;
+
+      if (combined.includes('permitsection') && (combined.includes('forward') || combined.includes('payslip'))) {
+        return false;
+      }
 
       // Exclude if a payment reference already exists
       const hasPaymentRef = Boolean(
@@ -914,8 +922,12 @@ export class SidebarPendingBadgeService {
       const stageId = Number(item?.current_stage ?? item?.currentStage ?? item?.stage_id ?? item?.stageId ?? -1);
       if (stageId === 29) return true;
 
-      // Fallback: match by status/stage name containing "approved commissioner"
-      return combined.includes('approvedcommissioner') || combined.includes('awaitingpayment');
+      // Fallback: match by status/stage name containing "approved commissioner" / "approved by commissioner"
+      return combined.includes('approvedcommissioner') ||
+             combined.includes('approvedbycommissioner') ||
+             combined.includes('commissionerapproved') ||
+             (combined.includes('commissioner') && combined.includes('approved')) ||
+             combined.includes('awaitingpayment');
     }).length;
   }
 

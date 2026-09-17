@@ -632,6 +632,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       }
 
       const filter = this.normalizeStageToken(this.requisitionStatusFilter);
+      if (filter === 'awaitingpayment' || filter === 'payment') {
+        return this.isApprovedCommissionerAwaitingPayment(item);
+      }
       if (filter === 'pending' || filter === 'review') {
         return (this.isCommissioner() || this.isPermitSection())
           ? this.isPendingLikeStatus(item)
@@ -2211,7 +2214,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
   private syncActiveSummaryFilter(): void {
     const normalized = this.normalizeStageToken(this.requisitionStatusFilter);
-    if (['pending', 'approved', 'rejected', 'underprocess', 'cancellation', 'cancel', 'cancelled'].includes(normalized)) {
+    if (['pending', 'approved', 'rejected', 'underprocess', 'cancellation', 'cancel', 'cancelled', 'awaitingpayment', 'payment'].includes(normalized)) {
       this.activeSummaryFilter = this.requisitionStatusFilter;
       return;
     }
@@ -2220,6 +2223,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
   getRequisitionStatusCount(status: string): number {
     const filter = this.normalizeStageToken(status);
+    if (filter === 'awaitingpayment' || filter === 'payment') {
+      return this.summaryRequisitionData.filter(item => this.isApprovedCommissionerAwaitingPayment(item)).length;
+    }
     if (filter === 'pending' || filter === 'review') {
       // Commissioner and Permit Section: pending = action required RIGHT NOW
       const predicate = (this.isCommissioner() || this.isPermitSection())
@@ -2552,19 +2558,34 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   isApprovedCommissionerAwaitingPayment(item: TableData): boolean {
+    const actions: string[] = item?.allowedActions ?? [];
+    if (Array.isArray(actions) && actions.includes('PAY')) return true;
+
     const status = this.normalizeStageToken(item?.status);
     const stage = this.normalizeStageToken(item?.currentStageName);
     const combined = `${status} ${stage}`;
 
     // Once payment is made the item moves to a post-payment stage — no longer actionable
-    const postPaymentMarkers = ['forwardedpayslip', 'approvedpayslip', 'rejectedpayslip', 'paymentcompleted', 'paymentdone', 'permitsection'];
+    const postPaymentMarkers = ['forwardedpayslip', 'approvedpayslip', 'rejectedpayslip', 'paymentcompleted', 'paymentdone'];
     if (postPaymentMarkers.some(m => combined.includes(m))) return false;
+
+    if (combined.includes('permitsection') && (combined.includes('forward') || combined.includes('payslip'))) {
+      return false;
+    }
 
     // Also clear if a payment reference exists on the item
     if (item?.paymentId || item?.paymentDate) return false;
 
-    // Business rule: "APPROVED COMMISSIONER" still needs payment, so keep it in Pending.
-    return combined.includes('approvedcommissioner');
+    // Stage 29 is the Commissioner Approved / Awaiting Payment stage
+    const stageId = Number(item?.currentStage ?? (item as any)?.stageId ?? -1);
+    if (stageId === 29) return true;
+
+    // Business rule: "APPROVED COMMISSIONER" or "APPROVED BY COMMISSIONER" still needs payment
+    return combined.includes('approvedcommissioner') ||
+           combined.includes('approvedbycommissioner') ||
+           combined.includes('commissionerapproved') ||
+           (combined.includes('commissioner') && combined.includes('approved')) ||
+           combined.includes('awaitingpayment');
   }
 
   /**
@@ -2773,9 +2794,12 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   private isPendingSummaryStatus(item: TableData): boolean {
-    // For licensee view: anything in-flight (pending OR under process) counts as Pending,
-    // since the licensee has no action to take — they're just waiting.
-    return this.isPendingLikeStatus(item) && !this.isCancellationLikeStatus(item);
+    // For licensee view: anything in-flight (pending, forwarded, awaiting payment, payslip review)
+    // counts under the Pending summary card since it is not final approved or rejected.
+    if (this.isApprovedLikeStatus(item)) return false;
+    if (this.isRejectedLikeStatus(item)) return false;
+    if (this.isCancellationLikeStatus(item)) return false;
+    return true;
   }
 
   private toBooleanFlag(value: any, fallback?: boolean): boolean | undefined {

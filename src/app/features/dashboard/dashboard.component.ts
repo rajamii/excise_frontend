@@ -930,6 +930,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
               if (stageId > 33) return true;
               return false;
             }
+            if (this.sidebarPendingBadgeService.countRequisitionAwaitingPayment([x]) > 0) {
+              return false;
+            }
             return (combined.includes('approved') || combined.includes('issued')) && !combined.includes('reject');
           }).length;
           const rejected = items.filter(x => {
@@ -950,7 +953,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             awaitingPayment: awaitingPayment
           };
           // feed badge counts too
-          this.supplyChainPendingCounts['requisition'] = pending;
+          this.supplyChainPendingCounts['requisition'] = this.isLicenseeUser() ? 0 : pending;
           if (this.isLicenseeUser()) {
             this.supplyChainPendingCounts['requisition:payment'] = awaitingPayment;
           }

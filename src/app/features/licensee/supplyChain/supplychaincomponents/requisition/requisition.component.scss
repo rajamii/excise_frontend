@@ -367,6 +367,30 @@
       color: #5c6bc0;
     }
   }
+
+  &.awaiting-payment-requests {
+    --summary-accent-start: #0284c7;
+    --summary-accent-end: #0369a1;
+    .card-icon {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: white;
+    }
+    .card-value {
+      color: #0284c7;
+    }
+  }
+
+  &.rejected-requests {
+    --summary-accent-start: #dc3545;
+    --summary-accent-end: #c82333;
+    .card-icon {
+      background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+      color: white;
+    }
+    .card-value {
+      color: #dc3545;
+    }
+  }
 }
 
 // Compact Filter Section

@@ -22,84 +22,135 @@
       </div>
     </div>
 
-    <div class="summary-card pending-requests summary-card-clickable" role="button" tabindex="0" *ngIf="isCommissioner()"
-      (click)="onSummaryCardClick('PENDING')" [class.active]="activeSummaryFilter === 'PENDING'">
-      <div class="card-icon">
-        <i class="bi bi-clock"></i>
+    <!-- Commissioner Cards -->
+    <ng-container *ngIf="isCommissioner()">
+      <div class="summary-card pending-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('PENDING')" [class.active]="activeSummaryFilter === 'PENDING'">
+        <div class="card-icon">
+          <i class="bi bi-clock"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getRequisitionStatusCount('PENDING') }}</h3>
+          <p class="card-label">Pending Review</p>
+        </div>
       </div>
-      <div class="card-content">
-        <h3 class="card-value">{{ getRequisitionStatusCount('PENDING') }}</h3>
-        <p class="card-label">Pending Review</p>
-      </div>
-    </div>
 
-    <!-- Under Process card: visible to commissioner only — items in workflow but no action needed yet -->
-    <div class="summary-card underprocess-requests summary-card-clickable" role="button" tabindex="0" *ngIf="isCommissioner()"
-      (click)="onSummaryCardClick('UNDERPROCESS')" [class.active]="activeSummaryFilter === 'UNDERPROCESS'">
-      <div class="card-icon">
-        <i class="bi bi-arrow-repeat"></i>
+      <div class="summary-card underprocess-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('UNDERPROCESS')" [class.active]="activeSummaryFilter === 'UNDERPROCESS'">
+        <div class="card-icon">
+          <i class="bi bi-arrow-repeat"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getRequisitionStatusCount('UNDERPROCESS') }}</h3>
+          <p class="card-label">Under Process</p>
+        </div>
       </div>
-      <div class="card-content">
-        <h3 class="card-value">{{ getRequisitionStatusCount('UNDERPROCESS') }}</h3>
-        <p class="card-label">Under Process</p>
-      </div>
-    </div>
 
-    <!-- Under Process card: visible to permit section — items in workflow but no action needed yet -->
-    <div class="summary-card underprocess-requests summary-card-clickable" role="button" tabindex="0" *ngIf="isPermitSection()"
-      (click)="onSummaryCardClick('UNDERPROCESS')" [class.active]="activeSummaryFilter === 'UNDERPROCESS'">
-      <div class="card-icon">
-        <i class="bi bi-arrow-repeat"></i>
+      <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('APPROVED')" [class.active]="activeSummaryFilter === 'APPROVED'">
+        <div class="card-icon">
+          <i class="bi bi-check-circle"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getRequisitionStatusCount('APPROVED') }}</h3>
+          <p class="card-label">Approved</p>
+        </div>
       </div>
-      <div class="card-content">
-        <h3 class="card-value">{{ getRequisitionStatusCount('UNDERPROCESS') }}</h3>
-        <p class="card-label">Under Process</p>
-      </div>
-    </div>
 
-    <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
-      (click)="onSummaryCardClick('APPROVED')" [class.active]="activeSummaryFilter === 'APPROVED'">
-      <div class="card-icon">
-        <i class="bi bi-check-circle"></i>
+      <div class="summary-card rejected-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('REJECTED')" [class.active]="activeSummaryFilter === 'REJECTED'">
+        <div class="card-icon">
+          <i class="bi bi-x-circle"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getRequisitionStatusCount('REJECTED') }}</h3>
+          <p class="card-label">Rejected</p>
+        </div>
       </div>
-      <div class="card-content">
-        <h3 class="card-value">{{ getRequisitionStatusCount('APPROVED') }}</h3>
-        <p class="card-label">Approved</p>
-      </div>
-    </div>
+    </ng-container>
 
-    <div class="summary-card rejected-requests summary-card-clickable" role="button" tabindex="0" *ngIf="isCommissioner()"
-      (click)="onSummaryCardClick('REJECTED')" [class.active]="activeSummaryFilter === 'REJECTED'">
-      <div class="card-icon">
-        <i class="bi bi-x-circle"></i>
+    <!-- Permit Section Cards -->
+    <ng-container *ngIf="isPermitSection()">
+      <div class="summary-card pending-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('PENDING')" [class.active]="activeSummaryFilter === 'PENDING'">
+        <div class="card-icon">
+          <i class="bi bi-clock"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getRequisitionStatusCount('PENDING') }}</h3>
+          <p class="card-label">Pending</p>
+        </div>
       </div>
-      <div class="card-content">
-        <h3 class="card-value">{{ getRequisitionStatusCount('REJECTED') }}</h3>
-        <p class="card-label">Rejected</p>
-      </div>
-    </div>
 
-    <div class="summary-card pending-requests summary-card-clickable" role="button" tabindex="0" *ngIf="!isCommissioner()"
-      (click)="onSummaryCardClick('PENDING')" [class.active]="activeSummaryFilter === 'PENDING'">
-      <div class="card-icon">
-        <i class="bi bi-clock"></i>
+      <div class="summary-card underprocess-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('UNDERPROCESS')" [class.active]="activeSummaryFilter === 'UNDERPROCESS'">
+        <div class="card-icon">
+          <i class="bi bi-arrow-repeat"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getRequisitionStatusCount('UNDERPROCESS') }}</h3>
+          <p class="card-label">Under Process</p>
+        </div>
       </div>
-      <div class="card-content">
-        <h3 class="card-value">{{ getRequisitionStatusCount('PENDING') }}</h3>
-        <p class="card-label">Pending</p>
-      </div>
-    </div>
 
-    <div class="summary-card rejected-requests summary-card-clickable" role="button" tabindex="0" *ngIf="!isCommissioner()"
-      (click)="onSummaryCardClick('REJECTED')" [class.active]="activeSummaryFilter === 'REJECTED'">
-      <div class="card-icon">
-        <i class="bi bi-x-circle"></i>
+      <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('APPROVED')" [class.active]="activeSummaryFilter === 'APPROVED'">
+        <div class="card-icon">
+          <i class="bi bi-check-circle"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getRequisitionStatusCount('APPROVED') }}</h3>
+          <p class="card-label">Approved</p>
+        </div>
       </div>
-      <div class="card-content">
-        <h3 class="card-value">{{ getRequisitionStatusCount('REJECTED') }}</h3>
-        <p class="card-label">Rejected</p>
+
+      <div class="summary-card rejected-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('REJECTED')" [class.active]="activeSummaryFilter === 'REJECTED'">
+        <div class="card-icon">
+          <i class="bi bi-x-circle"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getRequisitionStatusCount('REJECTED') }}</h3>
+          <p class="card-label">Rejected</p>
+        </div>
       </div>
-    </div>
+    </ng-container>
+
+    <!-- Licensee / Other User Cards -->
+    <ng-container *ngIf="!isCommissioner() && !isPermitSection()">
+      <div class="summary-card pending-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('PENDING')" [class.active]="activeSummaryFilter === 'PENDING'">
+        <div class="card-icon">
+          <i class="bi bi-clock"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getRequisitionStatusCount('PENDING') }}</h3>
+          <p class="card-label">Pending</p>
+        </div>
+      </div>
+
+      <div class="summary-card approved-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('APPROVED')" [class.active]="activeSummaryFilter === 'APPROVED'">
+        <div class="card-icon">
+          <i class="bi bi-check-circle"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getRequisitionStatusCount('APPROVED') }}</h3>
+          <p class="card-label">Approved</p>
+        </div>
+      </div>
+
+      <div class="summary-card rejected-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('REJECTED')" [class.active]="activeSummaryFilter === 'REJECTED'">
+        <div class="card-icon">
+          <i class="bi bi-x-circle"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getRequisitionStatusCount('REJECTED') }}</h3>
+          <p class="card-label">Rejected</p>
+        </div>
+      </div>
+    </ng-container>
 
   </div>
 </div>
