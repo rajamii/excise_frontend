@@ -564,7 +564,7 @@
                                 ? ' (cancelled)'
                             : (getArrivalPermitServerStatus(permitNo) === 'REJECTED'
                                 ? ' (rejected)'
-                            : (activeRevalidationPermitNumbers.has(permitNo)
+                            : (isArrivalPermitRevalidated(permitNo)
                                 ? ' (revalidated)'
                                 : (isArrivalPermitSaved(permitNo) ? ' (saved)' : ''))))))
                      }}
@@ -584,10 +584,10 @@
                             ? 'Cancelled (Pending)'
                         : (getArrivalPermitServerStatus(selectedArrivalPermitNo) === 'CANCELLED'
                             ? 'Cancelled'
-                        : (activeRevalidationPermitNumbers.has(selectedArrivalPermitNo)
+                        : (isArrivalPermitRevalidated(selectedArrivalPermitNo)
                             ? 'Revalidated'
                             : 'Submitted to OIC (Pending)')))
-                     }}
+                    }}
                   </strong>
                 </div>
               </div>

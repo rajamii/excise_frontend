@@ -126,6 +126,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   summaryRequisitionData: TableData[] = [];
   private revalidationApprovedDateByRef: Record<string, string> = {};
   private revalidationActiveByRef: Record<string, boolean> = {};
+  public activeRevalidationPermitsByRef: Record<string, Set<string>> = {};
   public activeRevalidationPermitNumbers = new Set<string>();
 
   // Filter properties
@@ -323,6 +324,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
         this.revalidationActiveByRef = this.buildRevalidationActiveRefIndex(revalidations || []);
 
         this.activeRevalidationPermitNumbers.clear();
+        this.activeRevalidationPermitsByRef = {};
         (revalidations || []).forEach((row: any) => {
           const status = this.normalizeStageToken(row?.status);
           const stageName = this.normalizeStageToken(row?.current_stage_name || row?.currentStageName);
@@ -331,16 +333,32 @@ export class RequisitionComponent implements OnInit, OnDestroy {
           const isFinished =
             combined.includes('reject') ||
             combined.includes('cancel') ||
-            combined.includes('approv') ||
-            combined.includes('rv09');
+            combined.includes('invalid') ||
+            combined.includes('expire');
 
-          // Only unapproved/pending revalidations lock permits
+          // Valid revalidations (both pending and approved) lock permits for arrival & cancellation
           if (!isFinished) {
+            const rawRef = this.resolveRevalidationLinkedRequisitionRef(row);
+            const refKey = this.normalizeRefToken(rawRef);
+            const ourRefKey = this.normalizeRefToken(row?.our_ref_no || row?.ourRefNo);
+            const revRefKey = refKey ? refKey.replace('REQ/', 'REV/') : '';
+            const reqRefKey = refKey ? refKey.replace('REV/', 'REQ/') : '';
+
+            const keys = new Set([refKey, ourRefKey, revRefKey, reqRefKey].filter(Boolean));
+            keys.forEach(k => {
+              if (!this.activeRevalidationPermitsByRef[k]) {
+                this.activeRevalidationPermitsByRef[k] = new Set<string>();
+              }
+            });
+
             const permitsRaw = String(row?.detailsPermitsNumber || row?.details_permits_number || '');
             permitsRaw.split(',').forEach((p) => {
               const token = p.trim();
               if (token) {
                 this.activeRevalidationPermitNumbers.add(token);
+                keys.forEach(k => {
+                  this.activeRevalidationPermitsByRef[k].add(token);
+                });
               }
             });
           }
@@ -1936,10 +1954,28 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     return String(this.arrivalServerPermitStatusByPermit[token] || '').toUpperCase();
   }
 
+  isArrivalPermitRevalidated(permitNo: string): boolean {
+    const token = String(permitNo || '').trim();
+    if (!token) return false;
+    const refKey = this.normalizeRefToken(this.selectedArrivalRequisition?.referenceNo);
+    const revRefKey = refKey ? refKey.replace('REQ/', 'REV/') : '';
+    const reqRefKey = refKey ? refKey.replace('REV/', 'REQ/') : '';
+
+    if (refKey && this.activeRevalidationPermitsByRef[refKey]?.has(token)) return true;
+    if (revRefKey && this.activeRevalidationPermitsByRef[revRefKey]?.has(token)) return true;
+    if (reqRefKey && this.activeRevalidationPermitsByRef[reqRefKey]?.has(token)) return true;
+
+    if (this.selectedArrivalRequisition && this.hasActiveRevalidationOnSameRef(this.selectedArrivalRequisition) && this.activeRevalidationPermitNumbers.has(token)) {
+      return true;
+    }
+
+    return false;
+  }
+
   isArrivalPermitLocked(permitNo: string): boolean {
     const status = this.getArrivalPermitServerStatus(permitNo);
     const isLockedByServer = status === 'PENDING' || status === 'APPROVED' || status === 'CANCELLED' || status === 'CANCEL_REQUESTED';
-    const isLockedByReval = this.activeRevalidationPermitNumbers.has(permitNo);
+    const isLockedByReval = this.isArrivalPermitRevalidated(permitNo);
     return isLockedByServer || isLockedByReval;
   }
 
@@ -2055,6 +2091,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     return permits
       .map((x) => String(x || '').trim())
       .filter(Boolean)
+      .filter((permitNo) => !this.isArrivalPermitLocked(permitNo))
       .filter((permitNo) => this.isArrivalPermitSaved(permitNo))
       .filter((permitNo) => (this.arrivalSavedEntriesByPermit[permitNo] || []).length > 0);
   }
@@ -2276,12 +2313,18 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   getRevalidatedPermitsForCurrentArrival(): string[] {
-    return this.arrivalPermitNumbers.filter(p => this.activeRevalidationPermitNumbers.has(p));
+    return this.arrivalPermitNumbers.filter(p => this.isArrivalPermitRevalidated(p));
   }
 
   hasActiveRevalidationOnSameRef(item: TableData): boolean {
-    const refKey = this.normalizeRefToken(item.referenceNo);
-    return Boolean(refKey && this.revalidationActiveByRef[refKey]);
+    const refKey = this.normalizeRefToken(item?.referenceNo);
+    const revRefKey = refKey ? refKey.replace('REQ/', 'REV/') : '';
+    const reqRefKey = refKey ? refKey.replace('REV/', 'REQ/') : '';
+    return Boolean(
+      (refKey && this.revalidationActiveByRef[refKey]) ||
+      (revRefKey && this.revalidationActiveByRef[revRefKey]) ||
+      (reqRefKey && this.revalidationActiveByRef[reqRefKey])
+    );
   }
 
   /**
@@ -2318,9 +2361,18 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       return '';
     }
     if (!item.detailsPermitsNumber) return '';
+
+    const refKey = this.normalizeRefToken(item.referenceNo);
+    const revRefKey = refKey ? refKey.replace('REQ/', 'REV/') : '';
+    const reqRefKey = refKey ? refKey.replace('REV/', 'REQ/') : '';
     
     const permits = item.detailsPermitsNumber.split(',').map(p => p.trim()).filter(Boolean);
-    const revalidatedPermits = permits.filter(p => this.activeRevalidationPermitNumbers.has(p));
+    const revalidatedPermits = permits.filter(p =>
+      (refKey && this.activeRevalidationPermitsByRef[refKey]?.has(p)) ||
+      (revRefKey && this.activeRevalidationPermitsByRef[revRefKey]?.has(p)) ||
+      (reqRefKey && this.activeRevalidationPermitsByRef[reqRefKey]?.has(p)) ||
+      (this.hasActiveRevalidationOnSameRef(item) && this.activeRevalidationPermitNumbers.has(p))
+    );
     
     return revalidatedPermits.join(', ');
   }

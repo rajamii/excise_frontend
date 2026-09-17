@@ -18,35 +18,44 @@
         <i class="bi bi-list-check text-danger me-2"></i>
         <span>Select Permit(s) for Cancellation</span>
       </div>
-      <div class="panel-body">
-        <div class="permit-dropdown" [class.open]="permitDropdownOpen">
-          <button
-            class="permit-dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center py-2 px-3"
-            type="button"
-            (click)="togglePermitDropdown()"
-            [disabled]="isPermitSelectionLocked()"
-          >
-            <span class="text-truncate">{{ getPermitDropdownLabel() }}</span>
-            <i class="bi" [ngClass]="permitDropdownOpen ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
-          </button>
-          <div class="permit-dropdown-menu shadow" *ngIf="permitDropdownOpen">
-            <div *ngFor="let permit of permits" class="form-check py-1 px-3">
+      <div class="panel-body p-0">
+        <!-- Show permits as inline rows — no dropdown, no clipping issue -->
+        <div *ngIf="isPermitSelectionLocked()" class="permit-locked-msg px-3 py-2">
+          <i class="bi bi-lock-fill me-1 text-secondary"></i>
+          <span class="text-muted">Permit selection is locked for this requisition.</span>
+        </div>
+        <div *ngIf="!isPermitSelectionLocked() && permits.length === 0" class="px-3 py-2 text-muted fst-italic">
+          No permits available.
+        </div>
+        <div class="permit-list">
+          <div *ngFor="let permit of permits; let last = last"
+            class="permit-row"
+            [class.permit-row-last]="last"
+            [class.permit-cancelled]="permit.isCancelled"
+            [class.permit-locked]="permit.isLocked">
+            <div class="form-check mb-0 d-flex align-items-center gap-2">
               <input
-                class="form-check-input"
+                class="form-check-input flex-shrink-0"
                 type="checkbox"
                 [id]="'chkPermit_' + permit.number"
                 [value]="permit.number"
                 [checked]="permit.isCancelled || permit.isSelected"
-                [disabled]="permit.isLocked"
+                [disabled]="permit.isLocked || isPermitSelectionLocked()"
                 (change)="togglePermit(permit, $event)"
               />
-              <label class="form-check-label ms-1" [for]="'chkPermit_' + permit.number">
-                <strong>Permit No. {{ permit.number }}</strong> - {{ formatCurrency(permit.amount) }}
-                <span class="text-muted ms-1">({{ getPerPermitQuantityLabel() || 'per permit' }})</span>
-                <span *ngIf="permit.isCancelled" class="badge bg-secondary ms-1">Cancelled</span>
-                <span *ngIf="!permit.isCancelled && permit.isLocked && permit.lockReason === 'Under revalidation'" class="badge bg-warning text-dark ms-1">Revalidated</span>
-                <span *ngIf="!permit.isCancelled && permit.isLocked && permit.lockReason === 'Arrived'" class="badge bg-success text-white ms-1">Arrived</span>
-                <span *ngIf="!permit.isCancelled && permit.isLocked && permit.lockReason !== 'Under revalidation' && permit.lockReason !== 'Arrived'" class="badge bg-danger ms-1">{{ permit.lockReason }}</span>
+              <label class="form-check-label w-100" [for]="'chkPermit_' + permit.number">
+                <div class="d-flex align-items-center flex-wrap gap-2">
+                  <span class="permit-number">Permit No. {{ permit.number }}</span>
+                  <span class="permit-amount">{{ formatCurrency(permit.amount) }}</span>
+                  <span class="text-muted permit-qty" *ngIf="getPerPermitQuantityLabel()">({{ getPerPermitQuantityLabel() }})</span>
+                  <span class="permit-fee-tag">
+                    <i class="bi bi-dash-circle-fill me-1"></i>Rs {{ cancellationChargePerPermit | number }} cancellation fee
+                  </span>
+                  <span *ngIf="permit.isCancelled" class="badge bg-secondary">Cancelled</span>
+                  <span *ngIf="!permit.isCancelled && permit.isLocked && permit.lockReason === 'Under revalidation'" class="badge bg-warning text-dark">🔒 Under Revalidation</span>
+                  <span *ngIf="!permit.isCancelled && permit.isLocked && permit.lockReason === 'Arrived'" class="badge bg-success text-white">✓ Arrived</span>
+                  <span *ngIf="!permit.isCancelled && permit.isLocked && permit.lockReason !== 'Under revalidation' && permit.lockReason !== 'Arrived'" class="badge bg-danger">{{ permit.lockReason }}</span>
+                </div>
               </label>
             </div>
           </div>

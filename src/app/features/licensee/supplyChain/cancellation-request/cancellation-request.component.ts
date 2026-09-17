@@ -156,7 +156,7 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
                 (revals || []).forEach((r: any) => {
                   const status = String(r.status || '').toLowerCase();
                   const statusCode = String(r.status_code || r.statusCode || '').toLowerCase();
-                  if (status.includes('reject') || status.includes('invalid') || status.includes('expire') || status.includes('approv') || statusCode === 'rv_09') {
+                  if (status.includes('reject') || status.includes('invalid') || status.includes('expire')) {
                     return;
                   }
                   
@@ -164,7 +164,7 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
                     const permitsRaw = String(r.detailsPermitsNumber || r.details_permits_number || '');
                     permitsRaw.split(',').forEach((p) => {
                       const token = p.trim();
-                      if (token && requisitionPermitSet.has(token)) {
+                      if (token) {
                         this.revalPermitNumbers.add(token);
                       }
                     });
@@ -477,6 +477,28 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
     if (this.isSubmittingCancellation) {
       return;
     }
+
+    // Use ALL three sources to identify locked permits
+    const allLockedNums = new Set([
+      ...this.permits.filter(p => p.isLocked).map(p => p.number),
+      ...Array.from(this.revalPermitNumbers || []),
+      ...Array.from(this.arrivedPermitNumbers || [])
+    ]);
+
+    if (allLockedNums.size > 0) {
+      this.newlySelectedPermits = this.newlySelectedPermits.filter(n => !allLockedNums.has(n));
+      this.selectedPermits = this.selectedPermits.filter(n => !allLockedNums.has(n));
+      this.permits.forEach(p => {
+        if (allLockedNums.has(p.number)) p.isSelected = false;
+      });
+    }
+
+    if (this.newlySelectedPermits.length === 0) {
+      this.errorMessage = 'No valid permits selected. Some permits may be locked (under revalidation or already arrived). Please deselect locked permits.';
+      return;
+    }
+
+    this.errorMessage = '';
     const refundAmount = this.getPermitRefundAmount();
     const feeAmount = this.getCancellationCharges();
     this.successMessage =
@@ -566,7 +588,7 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
     this.showDeclarationModal = false;
 
     if (!this.currentLicenseeId) {
-      alert('Licensee profile not loaded. Cannot submit cancellation.');
+      this.errorMessage = 'Licensee profile not loaded. Cannot submit cancellation.';
       return;
     }
 
@@ -621,15 +643,36 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
       return;
     }
 
+    // Build a comprehensive set of locked/revalidated permit numbers from ALL sources
+    const lockedFromArray = new Set(
+      this.permits.filter(p => p.isLocked).map(p => p.number)
+    );
+    // Also include revalPermitNumbers and arrivedPermitNumbers directly
+    const allLockedNums = new Set([
+      ...Array.from(lockedFromArray),
+      ...Array.from(this.revalPermitNumbers || []),
+      ...Array.from(this.arrivedPermitNumbers || [])
+    ]);
+
+    const permitsToSubmit = this.newlySelectedPermits.filter(n => !allLockedNums.has(n));
+
+    console.log('[CancellationSubmit] newlySelected:', this.newlySelectedPermits, '| locked:', [...allLockedNums], '| toSubmit:', permitsToSubmit);
+
+    if (permitsToSubmit.length === 0) {
+      this.errorMessage = 'No valid permits to cancel. All selected permits are locked (under revalidation or have arrived). Please deselect them and try again.';
+      this.showWalletConfirmationModal = false;
+      return;
+    }
+
     this.isSubmittingCancellation = true;
 
     const payload = {
       reference_no: this.referenceNo,
-      permit_numbers: this.newlySelectedPermits,
+      permit_numbers: permitsToSubmit,
       licensee_id: this.currentLicenseeId,
     };
 
-    console.log('Submitting cancellation with payload:', payload);
+    console.log('[CancellationSubmit] Final payload:', payload);
 
     this.supplyChainService.submitCancellation(payload).subscribe({
       next: (response: any) => {
@@ -682,15 +725,35 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
       },
       error: (error) => {
         console.error('Error submitting cancellation:', error);
-        console.error('Error details:', {
-          status: error.status,
-          statusText: error.statusText,
-          error: error.error,
-          message: error.message
-        });
-        this.errorMessage = 'Failed to submit cancellation: ' + (error.error?.error || error.error?.message || error.message);
+        const backendMsg: string = error.error?.error || error.error?.message || error.message || '';
+
+        // Parse which permit numbers the backend says are under revalidation
+        // Backend message: "Some selected permits are currently under revalidation: 8, 12"
+        const revalMatch = backendMsg.match(/under revalidation[:\s]+([\d,\s]+)/i);
+        if (revalMatch) {
+          const revalNums = revalMatch[1].split(',').map((n: string) => n.trim()).filter(Boolean);
+          const revalSet = new Set(revalNums);
+
+          // Auto-remove those permits from selection and mark them locked
+          this.newlySelectedPermits = this.newlySelectedPermits.filter(n => !revalSet.has(n));
+          this.selectedPermits = this.selectedPermits.filter(n => !revalSet.has(n));
+          this.permits.forEach(p => {
+            if (revalSet.has(p.number)) {
+              p.isLocked = true;
+              p.lockReason = 'Under revalidation';
+              p.isSelected = false;
+              this.revalPermitNumbers.add(p.number);
+            }
+          });
+
+          this.errorMessage = `Permit(s) ${revalNums.join(', ')} are under revalidation and have been removed from your selection. Please review and try again.`;
+        } else {
+          this.errorMessage = 'Failed to submit cancellation: ' + backendMsg;
+        }
+
         this.isSubmittingCancellation = false;
-        alert(this.errorMessage);
+        this.showWalletConfirmationModal = false;
+        // DO NOT call alert() — error is shown in-component via errorMessage binding
       },
     });
   }
