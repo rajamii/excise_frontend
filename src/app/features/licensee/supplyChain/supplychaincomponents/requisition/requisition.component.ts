@@ -2646,13 +2646,6 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   private isPendingLikeStatus(item: TableData): boolean {
     // For commissioner: pending = action required (via allowedActions APPROVE/REJECT/etc.)
     if (this.isCommissioner()) {
-      const actions: string[] = item?.allowedActions ?? [];
-      const hasActionableAction = Array.isArray(actions) && (
-        actions.includes('APPROVE') || actions.includes('REJECT') ||
-        actions.includes('FORWARD') || actions.includes('VERIFY')
-      );
-      if (hasActionableAction) return true;
-
       const statusToken = this.normalizeStageToken(item?.status);
       const stageToken = this.normalizeStageToken(item?.currentStageName);
       const combined = `${statusToken} ${stageToken}`;
@@ -2662,13 +2655,17 @@ export class RequisitionComponent implements OnInit, OnDestroy {
         return false;
       }
 
-      // If backend explicitly returned empty allowedActions, Commissioner has already acted
-      if (Array.isArray(actions) && actions.length === 0) {
-        return false;
+      // If forwarded to Commissioner or currently at Commissioner stage, this IS Pending Review for Commissioner!
+      if (combined.includes('commissioner') && (combined.includes('forward') || combined.includes('review') || combined.includes('pending'))) {
+        return true;
       }
 
-      // Plain PENDING = just submitted initial requisition
-      if (statusToken === 'pending' || stageToken === 'pending') return true;
+      const actions: string[] = item?.allowedActions ?? [];
+      const hasActionableAction = Array.isArray(actions) && (
+        actions.includes('APPROVE') || actions.includes('REJECT') ||
+        actions.includes('FORWARD') || actions.includes('VERIFY')
+      );
+      if (combined.includes('commissioner') && hasActionableAction) return true;
 
       return false;
     }
