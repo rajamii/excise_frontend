@@ -3755,6 +3755,192 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     });
   }
 
+  get isCommissionerUser(): boolean {
+    const { isCommissioner } = this.getUserRoleInfo();
+    return isCommissioner;
+  }
+
+  get isPermitSectionUser(): boolean {
+    const { isPermitSection } = this.getUserRoleInfo();
+    return isPermitSection;
+  }
+
+  isCommissionerFirstApprovalStage(row: DistributorPermitRow | any): boolean {
+    const rawApp = row?.application || row;
+    const stageId = Number(rawApp?.current_stage_id || rawApp?.currentStageId || rawApp?.current_stage?.id || 0);
+    const stageName = String(rawApp?.current_stage?.name || rawApp?.current_stage_name || rawApp?.status || row?.currentStage || '').toLowerCase();
+    if (stageName.includes('payslip') || stageName.includes('permit')) {
+      return false;
+    }
+    return stageId === 153 || stageName.includes('commissioner');
+  }
+
+  isCommissionerFinalApprovalStage(row: DistributorPermitRow | any): boolean {
+    const rawApp = row?.application || row;
+    const stageId = Number(rawApp?.current_stage_id || rawApp?.currentStageId || rawApp?.current_stage?.id || 0);
+    const stageName = String(rawApp?.current_stage?.name || rawApp?.current_stage_name || rawApp?.status || row?.currentStage || '').toLowerCase();
+    return stageId === 157 || (stageName.includes('payslip') && stageName.includes('commissioner'));
+  }
+
+  isCommissionerApprovalStage(row: DistributorPermitRow | any): boolean {
+    return this.isCommissionerFirstApprovalStage(row) || this.isCommissionerFinalApprovalStage(row);
+  }
+
+  isPermitSectionStage(row: DistributorPermitRow | any): boolean {
+    const rawApp = row?.application || row;
+    const stageId = Number(rawApp?.current_stage_id || rawApp?.currentStageId || rawApp?.current_stage?.id || 0);
+    const stageName = String(rawApp?.current_stage?.name || rawApp?.current_stage_name || rawApp?.status || row?.currentStage || '').toLowerCase();
+
+    // If it is at Commissioner stage, Permit Section can NOT act
+    if (stageId === 153 || stageId === 157 || (stageName.includes('commissioner') && !stageName.includes('payslip permit') && !stageName.includes('forwarded permit'))) {
+      return false;
+    }
+    return stageId === 148 || stageId === 149 || stageId === 147 || stageId === 156 || stageName.includes('permit') || stageName.includes('pending') || stageName.includes('payslip permit');
+  }
+
+  canOfficerApprove(row: DistributorPermitRow | any): boolean {
+    if (!row || !this.isOfficerUser) return false;
+    if (this.isApproved(row) || row?.statusGroup === 'rejected') return false;
+
+    const rawApp = row?.application || row;
+    const stageId = Number(rawApp?.current_stage_id || rawApp?.currentStageId || rawApp?.current_stage?.id || 0);
+    const stageName = String(rawApp?.current_stage?.name || rawApp?.current_stage_name || rawApp?.status || row?.currentStage || '').toLowerCase().trim();
+
+    // If awaiting payment, neither officer can approve
+    if (stageId === 154 || stageName.includes('payment') || stageName.includes('awaiting payment')) {
+      return false;
+    }
+
+    const { isPermitSection, isCommissioner, isAdmin } = this.getUserRoleInfo();
+
+    if (isCommissioner) {
+      return this.isCommissionerApprovalStage(row);
+    }
+
+    if (isPermitSection) {
+      return this.isPermitSectionStage(row);
+    }
+
+    if (isAdmin) {
+      return this.isCommissionerApprovalStage(row) || this.isPermitSectionStage(row);
+    }
+
+    return false;
+  }
+
+  getOfficerApproveButtonLabel(row: DistributorPermitRow | any): string {
+    if (this.isCommissionerUser) {
+      if (this.isCommissionerFinalApprovalStage(row)) {
+        return 'Approve Permits';
+      }
+      if (this.isCommissionerFirstApprovalStage(row)) {
+        return 'Approve Application';
+      }
+    }
+    if (this.isPermitSectionStage(row)) {
+      return 'Forward to Commissioner';
+    }
+    return 'Approve';
+  }
+
+  handleOfficerApproveAction(row: DistributorPermitRow | any, event?: Event): void {
+    if (event) {
+      try { event.preventDefault(); } catch {}
+      try { event.stopPropagation(); } catch {}
+    }
+
+    // ONLY Commissioner at FINAL approval stage (AFTER payment, Stage 157) sees the permit-wise hologram allocation modal popup!
+    if (this.isCommissionerUser && this.isCommissionerFinalApprovalStage(row)) {
+      this.openCommissionerPermitApprovalModal(row, event);
+      return;
+    }
+
+    // For Permit Section forwarding or Commissioner first approval (Stage 153): directly approve and forward to the next step
+    const rawApp = row?.application || row;
+    const refNo = row.applicationId || row.referenceNo || row.id || '';
+    let actionLabel = 'Approve Application';
+    let confirmText = `Are you sure you want to approve and forward application ${refNo} to the next step?`;
+
+    if (this.isPermitSectionStage(row)) {
+      actionLabel = 'Forward to Commissioner';
+      confirmText = `Are you sure you want to approve and forward application ${refNo} to the Commissioner?`;
+    } else if (this.isCommissionerUser && this.isCommissionerFirstApprovalStage(row)) {
+      actionLabel = 'Approve & Request Payment';
+      confirmText = `Are you sure you want to approve application ${refNo} and send it to the applicant for duty payment?`;
+    }
+
+    void Swal.fire({
+      title: `${actionLabel}?`,
+      text: confirmText,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Proceed',
+      confirmButtonColor: '#0b4ea2',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.executeIntermediateOfficerForward(row);
+      }
+    });
+  }
+
+  executeIntermediateOfficerForward(row: DistributorPermitRow | any): void {
+    const rawApp = row?.application || row;
+    const refNo = row.applicationId || row.referenceNo || row.id || '';
+    const currentStageId = Number(rawApp?.current_stage_id || rawApp?.currentStageId || rawApp?.current_stage?.id || 148);
+
+    let targetStageId = 153; // Forwarded Commissioner
+    let targetStageName = 'Forwarded Commissioner';
+    let remarks = 'Approved and forwarded by Permit Section';
+    let successMsg = `Application ${refNo} has been approved and forwarded to the Commissioner.`;
+
+    if (currentStageId === 156 || String(rawApp?.status || '').toLowerCase().includes('payslip permit')) {
+      targetStageId = 157; // Forwarded PaySLip Commissioner
+      targetStageName = 'Forwarded PaySLip Commissioner';
+      remarks = 'Payment slip verified and forwarded to Commissioner';
+      successMsg = `Payment slip for application ${refNo} has been forwarded to the Commissioner.`;
+    } else if (currentStageId === 153 || (!String(rawApp?.status || '').toLowerCase().includes('payslip') && String(rawApp?.status || '').toLowerCase().includes('commissioner'))) {
+      targetStageId = 154; // awaiting payment
+      targetStageName = 'awaiting payment';
+      remarks = 'Approved by Commissioner - Awaiting Payment';
+      successMsg = `Application ${refNo} has been approved and moved to Awaiting Payment.`;
+    } else if (currentStageId === 157) {
+      targetStageId = 151; // Approved
+      targetStageName = 'Approved';
+      remarks = 'Final Approval by Commissioner';
+      successMsg = `Application ${refNo} has been approved.`;
+    }
+
+    const action = (currentStageId === 153) ? 'APPROVE' : 'FORWARD';
+
+    const payload: any = {
+      action: action,
+      application_id: refNo,
+      target_stage_id: targetStageId,
+      status: targetStageName,
+      current_stage_name: targetStageName,
+      remarks: remarks
+    };
+
+    this.unifiedActionsService.executeAction(action, row, 'distributor_permit', 'officer_forward', {
+      workflowContextData: payload
+    }).subscribe({
+      next: () => {
+        void Swal.fire({
+          icon: 'success',
+          title: 'Application Updated',
+          text: successMsg,
+          timer: 2500,
+          showConfirmButton: false
+        });
+        this.loadApplications();
+      },
+      error: () => {
+        this.loadApplications();
+      }
+    });
+  }
+
   openCommissionerPermitApprovalModal(row: DistributorPermitRow | any, event?: Event): void {
     if (event) {
       try { event.preventDefault(); } catch {}

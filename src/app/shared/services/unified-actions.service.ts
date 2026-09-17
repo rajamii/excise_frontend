@@ -373,8 +373,12 @@ export class UnifiedActionsService {
 
     if (this.isImflRequisitionItem(item, itemType)) {
       const targetId = encodeURIComponent(String(item.referenceNo || item.reference_no || item.id || '').trim());
+      const body = {
+        action: 'APPROVE',
+        ...(options?.workflowContextData || {})
+      };
       return this.toActionResult(
-        this.http.post<any>(`${environment.apiBaseUrl}/transactional/distributor-permit/${targetId}/perform-action/`, { action: 'APPROVE' }),
+        this.http.post<any>(`${environment.apiBaseUrl}/transactional/distributor-permit/${targetId}/perform-action/`, body),
         'Distributor permit requisition approved successfully',
         'Failed to approve distributor permit requisition'
       );
@@ -743,8 +747,12 @@ export class UnifiedActionsService {
 
     if (this.isImflRequisitionItem(item, itemType)) {
       const targetId = encodeURIComponent(String(item.referenceNo || item.reference_no || item.id || '').trim());
+      const body = {
+        action: 'FORWARD',
+        ...(options?.workflowContextData || {})
+      };
       return this.toActionResult(
-        this.http.post<any>(`${environment.apiBaseUrl}/transactional/distributor-permit/${targetId}/perform-action/`, { action: 'FORWARD' }),
+        this.http.post<any>(`${environment.apiBaseUrl}/transactional/distributor-permit/${targetId}/perform-action/`, body),
         'Distributor permit requisition forwarded successfully',
         'Failed to forward distributor permit requisition'
       );
