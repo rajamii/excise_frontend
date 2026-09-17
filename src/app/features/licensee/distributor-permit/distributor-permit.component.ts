@@ -3343,6 +3343,14 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
     const stageId = Number(app?.current_stage_id || app?.currentStageId || app?.current_stage?.id || rowOrApp?.currentStageId || 0);
     const stageName = String(app?.current_stage?.name || app?.current_stage_name || app?.current_stage || app?.status || rowOrApp?.currentStage || '').toLowerCase().trim();
+    let pWise = app.permit_wise_details || app.permitWiseDetails || rowOrApp?.permit_wise_details || rowOrApp?.permitWiseDetails;
+    if (typeof pWise === 'string') {
+      try { pWise = JSON.parse(pWise); } catch { pWise = []; }
+    }
+    const hasApprovedPermitWithRange = Array.isArray(pWise) && pWise.some((p: any) =>
+      String(p?.status || '').toUpperCase() === 'APPROVED' &&
+      (p.assignedRanges || p.assigned_ranges || p.assigned_hologram_ranges || p.assignedHologramRanges || []).length > 0
+    );
 
     // Block any stages before Commissioner final approval:
     // 147, 148, 149 (initial/permit section), 153 (commissioner 1st approval), 154 (awaiting payment),
@@ -3350,16 +3358,17 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     if (
       stageId === 147 || stageId === 148 || stageId === 149 || stageId === 150 ||
       stageId === 152 || stageId === 153 || stageId === 154 || stageId === 155 ||
-      stageId === 156 || stageId === 157 || stageId === 166 ||
+      stageId === 156 || stageId === 166 ||
       stageName.includes('reject') || stageName.includes('cancel') ||
-      stageName.includes('forwarded') || stageName.includes('payslip') ||
+      ((stageName.includes('forwarded') || stageName.includes('payslip')) && !hasApprovedPermitWithRange) ||
       stageName.includes('awaiting payment') || stageName.includes('pending')
     ) {
       return false;
     }
 
-    // Must be final Approved by Commissioner (Stage 151 / Approved)
-    const isApproved = (stageId === 151 || stageName.includes('approved')) && !stageName.includes('payslip') && !stageName.includes('forwarded');
+    // Final approval enables every permit; a partial final approval enables only
+    // the permits that already have a Commissioner-assigned hologram range.
+    const isApproved = hasApprovedPermitWithRange || ((stageId === 151 || stageName.includes('approved')) && !stageName.includes('payslip') && !stageName.includes('forwarded'));
     if (!isApproved) {
       return false;
     }
@@ -3367,10 +3376,6 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     // Must have hologram ranges assigned by Commissioner
     const hasAppRanges = (app.assigned_hologram_ranges || app.assignedHologramRanges || []).length > 0;
     let hasPermitRanges = false;
-    let pWise = app.permit_wise_details || app.permitWiseDetails || rowOrApp?.permit_wise_details || rowOrApp?.permitWiseDetails;
-    if (typeof pWise === 'string') {
-      try { pWise = JSON.parse(pWise); } catch { pWise = []; }
-    }
     if (Array.isArray(pWise) && pWise.length > 0) {
       hasPermitRanges = pWise.some((p: any) => 
         (p.assignedRanges || p.assigned_ranges || p.assigned_hologram_ranges || p.assignedHologramRanges || []).length > 0
@@ -4319,8 +4324,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           permit_number: permitNum,
           totalCases: totalCases,
           totalHolograms: totalHolograms,
-          isApproved: true,
-          status: 'APPROVED',
+          // A newly opened final-approval screen must not approve permits implicitly.
+          isApproved: false,
+          selectedForApproval: false,
+          status: 'PENDING_APPROVAL',
           items: items.map((it: any) => ({
             brand: it.brand || it.brand_name || it.brandName || 'Brand',
             size: `${it.size_ml || it.sizeMl || 750} ml`,
@@ -4356,8 +4363,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           permit_number: permitNum,
           totalCases: totalCases,
           totalHolograms: totalHolo,
-          isApproved: p.status ? p.status === 'APPROVED' : true,
-          status: p.status || 'APPROVED',
+          isApproved: String(p.status || '').toUpperCase() === 'APPROVED',
+          selectedForApproval: false,
+          status: p.status || 'PENDING_APPROVAL',
           assignedRanges: p.assignedRanges || p.assigned_ranges || [],
           items: items.map((it: any) => ({
             brand: it.brand || it.brand_name || it.brandName || 'Brand',
@@ -4379,8 +4387,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         permit_number: `${row.applicationId || row.referenceNo || 'IMFL_PERMIT'}-P1`,
         totalCases: totCases,
         totalHolograms: totCases * 12,
-        isApproved: true,
-        status: 'APPROVED',
+        isApproved: false,
+        selectedForApproval: false,
+        status: 'PENDING_APPROVAL',
         items: []
       }];
     }
@@ -4416,7 +4425,32 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   get commissionerApprovedPermits(): any[] {
-    return (this.commissionerApprovalPermits || []).filter(p => p.isApproved);
+    return (this.commissionerApprovalPermits || []).filter(p => p.isApproved || p.selectedForApproval);
+  }
+
+  get commissionerPendingPermits(): any[] {
+    return (this.commissionerApprovalPermits || []).filter(p => !p.isApproved);
+  }
+
+  get commissionerSelectedPendingPermits(): any[] {
+    return this.commissionerPendingPermits.filter(p => p.selectedForApproval);
+  }
+
+  get areAllPendingPermitsSelected(): boolean {
+    return this.commissionerPendingPermits.length > 0 &&
+      this.commissionerPendingPermits.every(p => p.selectedForApproval);
+  }
+
+  toggleApproveAllPermits(): void {
+    const selectAll = !this.areAllPendingPermitsSelected;
+    this.commissionerPendingPermits.forEach(p => p.selectedForApproval = selectAll);
+    this.recalculateCommissionerRangesPreview();
+  }
+
+  togglePermitForApproval(permit: any): void {
+    if (permit?.isApproved) return;
+    permit.selectedForApproval = !permit.selectedForApproval;
+    this.recalculateCommissionerRangesPreview();
   }
 
   get commissionerApprovedPermitsCount(): number {
@@ -4467,8 +4501,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   setPermitApprovalStatus(permitIndex: number, isApproved: boolean): void {
     const p = this.commissionerApprovalPermits.find(item => item.permitIndex === permitIndex);
     if (p) {
-      p.isApproved = isApproved;
-      p.status = isApproved ? 'APPROVED' : 'ON_HOLD';
+      // This only stages the decision. It becomes APPROVED after confirmation succeeds.
+      if (!p.isApproved) p.selectedForApproval = isApproved;
+      if (!isApproved && !p.isApproved) p.status = 'ON_HOLD';
       this.recalculateCommissionerRangesPreview();
       this.cdr.detectChanges();
     }
@@ -4499,7 +4534,13 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }
 
     this.commissionerApprovalPermits.forEach((p) => {
-      if (p.isApproved) {
+      // Existing approvals already have a committed range. Never move that range
+      // when the Commissioner returns to approve the remaining permits.
+      if (p.isApproved && Array.isArray(p.assignedRanges) && p.assignedRanges.length > 0) {
+        p.assigned_hologram_ranges = p.assignedRanges;
+        return;
+      }
+      if (p.isApproved || p.selectedForApproval) {
         const count = Number(p.totalHolograms || (p.totalCases * 12));
         const fromSerial = currentSerialPointer;
         const toSerial = currentSerialPointer + count - 1;
@@ -4508,7 +4549,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           from: fromSerial,
           to: toSerial,
           count: count,
-          status: 'RESERVED'
+          status: 'ALLOCATED_TO_PERMIT'
         }];
         currentSerialPointer = toSerial + 1;
       } else {
@@ -4520,7 +4561,19 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   confirmCommissionerPermitApproval(): void {
     if (!this.selectedCommissionerApprovalRow) return;
     const row = this.selectedCommissionerApprovalRow;
+    const newlyApprovedPermits = this.commissionerSelectedPendingPermits;
+    if (newlyApprovedPermits.length === 0) {
+      void Swal.fire('Select permits', 'Select at least one pending permit, or use Approve All Permits.', 'info');
+      return;
+    }
+    newlyApprovedPermits.forEach(p => {
+      p.isApproved = true;
+      p.selectedForApproval = false;
+      p.status = 'APPROVED';
+      p.assigned_hologram_ranges = p.assignedRanges || [];
+    });
     const approvedPermits = this.commissionerApprovalPermits.filter(p => p.isApproved);
+    approvedPermits.forEach(p => p.assigned_hologram_ranges = p.assignedRanges || p.assigned_hologram_ranges || []);
     const heldPermits = this.commissionerApprovalPermits.filter(p => !p.isApproved);
 
     this.isSubmittingCommissionerApproval = true;
@@ -4544,11 +4597,13 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       return ref === targetRef;
     });
 
+    const allPermitsApproved = heldPermits.length === 0;
+    const applicationStatus = allPermitsApproved ? 'Approved by Commissioner' : 'Forwarded PaySLip Commissioner';
     if (appMatch) {
-      appMatch['status'] = 'Approved by Commissioner';
-      appMatch['currentStage'] = 'Approved by Commissioner';
-      appMatch['current_stage_name'] = 'Approved by Commissioner';
-      appMatch['current_stage_id'] = 151;
+      appMatch['status'] = applicationStatus;
+      appMatch['currentStage'] = applicationStatus;
+      appMatch['current_stage_name'] = applicationStatus;
+      appMatch['current_stage_id'] = allPermitsApproved ? 151 : 157;
       appMatch['permit_wise_details'] = this.commissionerApprovalPermits;
       appMatch['assignedHologramRanges'] = allAssignedRanges;
       appMatch['assigned_hologram_ranges'] = allAssignedRanges;
@@ -4562,16 +4617,17 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       permit_wise_details: this.commissionerApprovalPermits,
       assigned_hologram_ranges: allAssignedRanges,
       total_holograms_assigned: totalApprovedHolograms,
-      status: 'Approved by Commissioner',
-      current_stage_name: 'Approved by Commissioner'
+      status: applicationStatus,
+      current_stage_name: applicationStatus,
+      partial_permit_approval: !allPermitsApproved
     };
 
     this.unifiedActionsService.executeAction('APPROVE', row, 'distributor_permit', 'permit_approval', { workflowContextData: payload }).subscribe({
       next: () => {
-        this.finishApprovalSuccess(approvedPermits, heldPermits, totalApprovedHolograms);
+        this.finishApprovalSuccess(newlyApprovedPermits, heldPermits, totalApprovedHolograms);
       },
       error: () => {
-        this.finishApprovalSuccess(approvedPermits, heldPermits, totalApprovedHolograms);
+        this.finishApprovalSuccess(newlyApprovedPermits, heldPermits, totalApprovedHolograms);
       }
     });
   }
@@ -7918,6 +7974,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
             const normalizedStats = {
               total_received: totReceived, totalReceived: totReceived,
               total_reserved: totReserved, totalReserved: totReserved,
+              total_reserved_pending_approval: totReserved, totalReservedPendingApproval: totReserved,
+              total_allocated_to_permits: totReserved, totalAllocatedToPermits: totReserved,
+              total_used_holograms: (totUtil + totDisp), totalUsedHolograms: (totUtil + totDisp),
               total_available: totAvail, totalAvailable: totAvail,
               total_utilized_in_warehouse: totUtil, totalUtilizedInWarehouse: totUtil,
               total_dispatched_to_retailers: totDisp, totalDispatchedToRetailers: totDisp,
@@ -10012,8 +10071,12 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
             totalReceived: totReceived,
             total_reserved: totReserved,
             totalReserved: totReserved,
+            total_reserved_pending_approval: totReserved,
+            totalReservedPendingApproval: totReserved,
             total_allocated_to_permits: totReserved,
             totalAllocatedToPermits: totReserved,
+            total_used_holograms: (totUtil + totDisp),
+            totalUsedHolograms: (totUtil + totDisp),
             total_available: totAvail,
             totalAvailable: totAvail,
             total_utilized_in_warehouse: totUtil,

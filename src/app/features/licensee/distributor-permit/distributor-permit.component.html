@@ -1588,13 +1588,24 @@
             </div>
           </div>
 
-          <!-- Reserved for Requisitions -->
+          <!-- Reserved while a permit is awaiting Commissioner approval -->
           <div class="col-xl col-lg-4 col-md-4 col-sm-6">
             <div class="summary-card holo-stat-card border-top-warning">
               <div class="card-icon bg-warning-gradient"><i class="bi bi-bookmark-check-fill text-white"></i></div>
               <div class="card-content">
-                <h3 class="card-value text-warning" style="color: #d97706 !important;">{{ ((hologramOverviewData?.summary_stats?.total_reserved ?? hologramOverviewData?.summary_stats?.total_allocated_to_permits) || 0) | number }}</h3>
-                <p class="card-label">Reserved for Requisitions</p>
+                <h3 class="card-value text-warning" style="color: #d97706 !important;">{{ ((hologramOverviewData?.summary_stats?.total_reserved_pending_approval ?? hologramOverviewData?.summary_stats?.total_reserved) || 0) | number }}</h3>
+                <p class="card-label">Reserved / Pending Approval</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Commissioner-approved permit holograms are now used -->
+          <div class="col-xl col-lg-4 col-md-4 col-sm-6">
+            <div class="summary-card holo-stat-card border-top-primary">
+              <div class="card-icon bg-primary-gradient"><i class="bi bi-check2-circle text-white"></i></div>
+              <div class="card-content">
+                <h3 class="card-value text-primary">{{ (hologramOverviewData?.summary_stats?.total_used_holograms || 0) | number }}</h3>
+                <p class="card-label">Used Holograms</p>
               </div>
             </div>
           </div>
@@ -1669,8 +1680,14 @@
             <div
               class="progress-bar bg-warning bg-gradient"
               role="progressbar"
-              [style.width.%]="getOverviewStockPercentage(hologramOverviewData?.summary_stats?.total_reserved ?? hologramOverviewData?.summary_stats?.total_allocated_to_permits, hologramOverviewData?.summary_stats?.total_received)"
-              [title]="'Reserved for Requisitions: ' + ((hologramOverviewData?.summary_stats?.total_reserved ?? hologramOverviewData?.summary_stats?.total_allocated_to_permits) | number)"
+              [style.width.%]="getOverviewStockPercentage(hologramOverviewData?.summary_stats?.total_reserved_pending_approval, hologramOverviewData?.summary_stats?.total_received)"
+              [title]="'Reserved / Pending Approval: ' + (hologramOverviewData?.summary_stats?.total_reserved_pending_approval | number)"
+            ></div>
+            <div
+              class="progress-bar bg-primary bg-gradient"
+              role="progressbar"
+              [style.width.%]="getOverviewStockPercentage(hologramOverviewData?.summary_stats?.total_used_holograms, hologramOverviewData?.summary_stats?.total_received)"
+              [title]="'Used Holograms: ' + (hologramOverviewData?.summary_stats?.total_used_holograms | number)"
             ></div>
             <div
               class="progress-bar bg-primary bg-gradient"
@@ -1700,7 +1717,11 @@
             </div>
             <div class="d-flex align-items-center gap-2">
               <span class="rounded-circle d-inline-block" style="width: 12px; height: 12px; background-color: #f59e0b;"></span>
-              <span class="fw-semibold text-dark">Reserved for Requisitions ({{ getOverviewStockPercentage(hologramOverviewData?.summary_stats?.total_reserved ?? hologramOverviewData?.summary_stats?.total_allocated_to_permits, hologramOverviewData?.summary_stats?.total_received) }}%)</span>
+              <span class="fw-semibold text-dark">Reserved / Pending Approval ({{ getOverviewStockPercentage(hologramOverviewData?.summary_stats?.total_reserved_pending_approval, hologramOverviewData?.summary_stats?.total_received) }}%)</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="rounded-circle d-inline-block" style="width: 12px; height: 12px; background-color: #2563eb;"></span>
+              <span class="fw-semibold text-dark">Used Holograms ({{ getOverviewStockPercentage(hologramOverviewData?.summary_stats?.total_used_holograms, hologramOverviewData?.summary_stats?.total_received) }}%)</span>
             </div>
             <div class="d-flex align-items-center gap-2">
               <span class="rounded-circle d-inline-block" style="width: 12px; height: 12px; background-color: #3b82f6;"></span>
@@ -4296,15 +4317,13 @@
                 </span>
               </div>
 
-              <!-- Permit Decision Actions -->
-              <div class="btn-group btn-group-sm" role="group">
-                <button type="button" class="btn" [ngClass]="permit.isApproved ? 'btn-success text-white fw-bold' : 'btn-outline-success'" (click)="setPermitApprovalStatus(permit.permitIndex, true)">
-                  <i class="bi bi-check-lg me-1"></i> Approve Permit
-                </button>
-                <button type="button" class="btn" [ngClass]="!permit.isApproved ? 'btn-warning text-dark fw-bold' : 'btn-outline-warning text-dark'" (click)="setPermitApprovalStatus(permit.permitIndex, false)">
-                  <i class="bi bi-pause-fill me-1"></i> Keep on Hold
-                </button>
-              </div>
+              <label class="d-flex align-items-center gap-2 mb-0 px-3 py-2 rounded border" [ngClass]="permit.isApproved ? 'bg-success bg-opacity-10 border-success' : (permit.selectedForApproval ? 'bg-primary bg-opacity-10 border-primary' : 'bg-white')" style="cursor: pointer;">
+                <input type="checkbox" class="form-check-input m-0" [checked]="permit.isApproved || permit.selectedForApproval" [disabled]="permit.isApproved" (change)="togglePermitForApproval(permit)">
+                <span class="fw-bold small" [ngClass]="permit.isApproved ? 'text-success' : 'text-primary'">
+                  <i class="bi me-1" [ngClass]="permit.isApproved ? 'bi-check-circle-fill' : 'bi-check2-square'"></i>
+                  {{ permit.isApproved ? 'Approved' : (permit.selectedForApproval ? 'Selected for Approval' : 'Select Permit') }}
+                </span>
+              </label>
             </div>
 
             <div class="card-body p-3">
@@ -4323,13 +4342,13 @@
                   </div>
                 </div>
                 <div class="col-md-3 col-sm-6">
-                  <div class="p-2 rounded border h-100 d-flex flex-column justify-content-center" [ngClass]="permit.isApproved ? 'bg-success bg-opacity-10 border-success' : 'bg-light border-secondary border-opacity-25'">
+                    <div class="p-2 rounded border h-100 d-flex flex-column justify-content-center" [ngClass]="(permit.isApproved || permit.selectedForApproval) ? 'bg-success bg-opacity-10 border-success' : 'bg-light border-secondary border-opacity-25'">
                     <small class="text-muted d-block mb-0.5">Assigned Hologram Range</small>
-                    <ng-container *ngIf="permit.isApproved && permit.assignedRanges && permit.assignedRanges.length > 0">
+                    <ng-container *ngIf="(permit.isApproved || permit.selectedForApproval) && permit.assignedRanges && permit.assignedRanges.length > 0">
                       <strong class="fs-6 font-monospace text-success">{{ permit.assignedRanges[0].from }} &rarr; {{ permit.assignedRanges[0].to }}</strong>
                       <small class="text-success d-block" style="font-size: 11px;">({{ permit.assignedRanges[0].count }} pcs)</small>
                     </ng-container>
-                    <span class="badge bg-secondary mx-auto mt-0.5" *ngIf="!permit.isApproved || !permit.assignedRanges || permit.assignedRanges.length === 0">
+                      <span class="badge bg-secondary mx-auto mt-0.5" *ngIf="(!permit.isApproved && !permit.selectedForApproval) || !permit.assignedRanges || permit.assignedRanges.length === 0">
                       On Hold (0 pcs)
                     </span>
                   </div>
@@ -4337,8 +4356,8 @@
                 <div class="col-md-3 col-sm-6">
                   <div class="p-2 bg-white rounded border h-100 d-flex flex-column justify-content-center">
                     <small class="text-muted d-block mb-0.5">Approval Decision</small>
-                    <span class="badge mx-auto mt-0.5" [ngClass]="permit.isApproved ? 'bg-success' : 'bg-warning text-dark'" style="font-size: 12px;">
-                      {{ permit.isApproved ? 'Approved for Allocation' : 'Kept On Hold' }}
+                    <span class="badge mx-auto mt-0.5" [ngClass]="permit.isApproved ? 'bg-success' : (permit.selectedForApproval ? 'bg-primary' : 'bg-warning text-dark')" style="font-size: 12px;">
+                      {{ permit.isApproved ? 'Approved & Allocated' : (permit.selectedForApproval ? 'Will be Approved' : 'Pending Approval') }}
                     </span>
                   </div>
                 </div>
@@ -4376,11 +4395,16 @@
           Cancel
         </button>
 
-        <button type="button" class="btn btn-primary px-4 btn-sm fw-bold d-flex align-items-center gap-1 shadow-sm" style="background-color: #0b4ea2; border-color: #0b4ea2;" (click)="confirmCommissionerPermitApproval()" [disabled]="isSubmittingCommissionerApproval">
+        <div class="d-flex gap-2 align-items-center">
+          <button type="button" class="btn btn-outline-success px-3 btn-sm fw-bold" (click)="toggleApproveAllPermits()" [disabled]="isSubmittingCommissionerApproval || commissionerPendingPermits.length === 0">
+            <i class="bi bi-check2-all me-1"></i>{{ areAllPendingPermitsSelected ? 'Clear Selection' : 'Approve All Permits' }}
+          </button>
+          <button type="button" class="btn btn-primary px-4 btn-sm fw-bold d-flex align-items-center gap-1 shadow-sm" style="background-color: #0b4ea2; border-color: #0b4ea2;" (click)="confirmCommissionerPermitApproval()" [disabled]="isSubmittingCommissionerApproval || commissionerSelectedPendingPermits.length === 0">
           <span class="spinner-border spinner-border-sm me-1" *ngIf="isSubmittingCommissionerApproval"></span>
           <i class="bi bi-check2-all me-1" *ngIf="!isSubmittingCommissionerApproval"></i>
-          <span>Confirm &amp; Approve Selected Permits</span>
-        </button>
+          <span>Approve Selected ({{ commissionerSelectedPendingPermits.length }})</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
