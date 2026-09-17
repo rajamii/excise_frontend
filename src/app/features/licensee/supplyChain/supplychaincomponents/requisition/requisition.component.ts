@@ -18,6 +18,8 @@ interface TableData {
   submissionDate: string;
   submissionDateRaw?: string;
   approvalDateRaw?: string;
+  updatedAtRaw?: string;
+  createdAtRaw?: string;
   distilleryName: string;
   establishmentName?: string;
   status: string;
@@ -364,6 +366,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
             submissionDate: formattedDate,
             submissionDateRaw: dateVal || '',
             approvalDateRaw: item.approvalDate || item.approval_date || '',
+            updatedAtRaw: item.updated_at || item.updatedAt || '',
+            createdAtRaw: item.created_at || item.createdAt || '',
             distilleryName: item.liftedFromDistilleryName || item.lifted_from_distillery_name || item.distilleryName || item.distillery_name || item.manufacturingUnit || 'N/A',
             establishmentName:
               item.establishmentName ||
@@ -444,6 +448,13 @@ export class RequisitionComponent implements OnInit, OnDestroy {
             arrivalApprovedPermitNumbers: String(item.arrival_approved_permit_numbers || item.arrivalApprovedPermitNumbers || ''),
             arrivalCancelledPermitNumbers: String(item.arrival_cancelled_permit_numbers || item.arrivalCancelledPermitNumbers || '')
           };
+        });
+
+        // Sort descending: latest action / update / payment / submission at top
+        this.requisitionData.sort((a, b) => {
+          const timeA = new Date(a.updatedAtRaw || a.paymentDate || a.approvalDateRaw || a.submissionDateRaw || a.createdAtRaw || 0).getTime() || (a.id || 0);
+          const timeB = new Date(b.updatedAtRaw || b.paymentDate || b.approvalDateRaw || b.submissionDateRaw || b.createdAtRaw || 0).getTime() || (b.id || 0);
+          return timeB - timeA;
         });
 
         console.log('DEBUG: Processed requisition data:', this.requisitionData);
