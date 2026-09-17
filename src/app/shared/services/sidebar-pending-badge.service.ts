@@ -27,6 +27,9 @@ export class SidebarPendingBadgeService {
   triggerRefresh(): void {
     console.log('🔄 BADGE SERVICE: Clearing cache and triggering sidebar refresh');
     this.countsCache.clear();
+    this.enaRequisitionService.clearCache();
+    this.supplyChainService.clearCache();
+    this.hologramService.clearCache();
     this.distributorPermitService.clearCache();
     if (this.licenseApplicationService) {
       this.licenseApplicationService.invalidateAllDashboardCaches();

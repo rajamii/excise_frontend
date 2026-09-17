@@ -3636,6 +3636,36 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         return roleId === 10 || roleId === 5 || roleId === 1 || roleId === 3 || roleId === 6 || roleId === 7 || roleId === 9 || roleId === 12 || roleId === 14;
     }
 
+    openPaymentSlipView(): void {
+        const id = String(this.applicationData?.['id'] ?? this.applicationData?.['pk'] ?? this.route.snapshot.queryParamMap.get('id') ?? '').trim();
+        const ref = String(this.applicationData?.['referenceNo'] ?? this.applicationData?.['reference_no'] ?? this.route.snapshot.queryParamMap.get('ref') ?? '').trim();
+        const source = this.getUserContext();
+        const queryParams: any = {
+            id: id || undefined,
+            type: 'requisition',
+            refNo: ref || undefined,
+            ref: ref || undefined,
+            referenceNo: ref || undefined,
+            source: source || undefined
+        };
+        this.router.navigate(['/payment-slip-view'], { queryParams });
+    }
+
+    openPermitSlipView(): void {
+        const id = String(this.applicationData?.['id'] ?? this.applicationData?.['pk'] ?? this.route.snapshot.queryParamMap.get('id') ?? '').trim();
+        const ref = String(this.applicationData?.['referenceNo'] ?? this.applicationData?.['reference_no'] ?? this.route.snapshot.queryParamMap.get('ref') ?? '').trim();
+        const source = this.getUserContext();
+        const queryParams: any = {
+            id: id || undefined,
+            type: 'requisition',
+            refNo: ref || undefined,
+            ref: ref || undefined,
+            referenceNo: ref || undefined,
+            source: source || undefined
+        };
+        this.router.navigate(['/unified-letter-view/requisition'], { queryParams });
+    }
+
     openAuthorityLetterModal(): void {
         const app = this.applicationData;
         const ref = app?.['referenceNo'] || app?.['reference_no'] || app?.['id'] || '';

@@ -1517,47 +1517,41 @@ private getTransitRejectSummary(): {
 
   private handleViewSlipAction(): void {
     console.log('🔧 UNIFIED BUTTONS: Handling VIEW_SLIP action for item:', this.item);
+    // Emit to parent so parent can handle if needed
+    this.actionClicked.emit({ action: 'VIEW_SLIP', item: this.item });
     
-    // Force navigation directly using window.location for reliability
     const url = this.getSlipHref();
     console.log('🚀 NAVIGATE to slip:', url);
     
     if (typeof window !== 'undefined') {
-      // Use setTimeout to defer navigation to next event loop cycle
-      setTimeout(() => {
-        window.location.href = url;
-      }, 0);
+      window.location.href = url;
     }
   }
 
   private handleViewPaymentSlipAction(): void {
     console.log('🔧 UNIFIED BUTTONS: Handling VIEW_PAYMENT_SLIP action for item:', this.item);
+    // Emit to parent so parent can handle if needed
+    this.actionClicked.emit({ action: 'VIEW_PAYMENT_SLIP', item: this.item });
     
-    // Force navigation directly using window.location for reliability
-    const queryParams = {
-      id: this.item.id,
-      type: this.itemType,
-      refNo: this.item.referenceNo,
-      ref: this.item.referenceNo,
-      referenceNo: this.item.referenceNo,
-      source: this.context || 'dashboard'
-    };
+    const id = this.item?.id ?? this.item?.['pk'] ?? '';
+    const refNo = this.item?.referenceNo ?? this.item?.['refNo'] ?? '';
+    
+    const params = new URLSearchParams();
+    if (id !== undefined && id !== null && id !== '') params.set('id', String(id));
+    params.set('type', this.itemType);
+    if (refNo) {
+      params.set('refNo', String(refNo));
+      params.set('ref', String(refNo));
+      params.set('referenceNo', String(refNo));
+    }
+    params.set('source', this.context || 'dashboard');
+    
+    const query = params.toString();
+    const url = query ? `/payment-slip-view?${query}` : '/payment-slip-view';
+    console.log('🚀 NAVIGATE to payment slip:', url);
     
     if (typeof window !== 'undefined') {
-      const params = new URLSearchParams();
-      Object.entries(queryParams).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-          params.set(key, String(value));
-        }
-      });
-      const query = params.toString();
-      const url = query ? `/payment-slip-view?${query}` : '/payment-slip-view';
-      console.log('🚀 NAVIGATE to payment slip:', url);
-      
-      // Use setTimeout to defer navigation to next event loop cycle
-      setTimeout(() => {
-        window.location.href = url;
-      }, 0);
+      window.location.href = url;
     }
   }
 
@@ -2142,17 +2136,27 @@ private getTransitRejectSummary(): {
     const normalized = String(action || '').toUpperCase().trim().replace(/[\s-]+/g, '_');
     if (!normalized) return '';
     switch (normalized) {
-      case 'VIEWSLIP':
+      case 'VIEW_PAYMENT_SLIP':
       case 'VIEWPAYMENTSLIP':
       case 'VIEW_PAYMENTSLIP':
       case 'VIEW_PAY_SLIP':
       case 'PAYMENTSLIP':
       case 'PAY_SLIP':
+        return 'VIEW_PAYMENT_SLIP';
+      case 'VIEW_PERMIT_SLIP':
+      case 'VIEWPERMITSLIP':
+      case 'PERMITSLIP':
+      case 'PERMIT_SLIP':
+        return 'VIEW_PERMIT_SLIP';
+      case 'VIEWSLIP':
       case 'SLIP_VIEW':
-      case 'SUBMITPAYSLIP':
-      case 'APPROVEPAYSLIP':
-      case 'REJECTPAYSLIP':
         return 'VIEW_SLIP';
+      case 'SUBMITPAYSLIP':
+        return 'SUBMITPAYSLIP';
+      case 'APPROVEPAYSLIP':
+        return 'APPROVEPAYSLIP';
+      case 'REJECTPAYSLIP':
+        return 'REJECTPAYSLIP';
       case 'VIEWAPPLICATION':
       case 'VIEW_DETAILS':
       case 'VIEWDETAILS':
@@ -2177,11 +2181,8 @@ private getTransitRejectSummary(): {
       event.stopImmediatePropagation();
     }
     
-    // Use setTimeout to defer execution to next event loop cycle
-    // This allows Angular's change detection to complete first
-    setTimeout(() => {
-      this.onActionClick(button);
-    }, 0);
+    // Execute immediately (synchronous) so window.location.href navigation works in same event tick
+    this.onActionClick(button);
   }
 
   logButtonInteraction(eventType: string, button: ActionButtonConfig): void {

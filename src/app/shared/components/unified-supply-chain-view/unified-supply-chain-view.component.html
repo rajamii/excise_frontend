@@ -2156,6 +2156,20 @@
                             <i class="bi bi-printer me-2"></i>Print Application
                         </button>
 
+                        <!-- View Payment Slip: shown for requisition after final approval (all roles) -->
+                        <button class="btn btn-warning btn-lg application-footer-actions__print" type="button"
+                                *ngIf="isRequisition() && isApprovedApplication()"
+                                (click)="openPaymentSlipView()">
+                            <i class="bi bi-receipt me-2"></i>View Payment Slip
+                        </button>
+
+                        <!-- View Permit Slip: shown for requisition after final approval (commissioner & permit-section only) -->
+                        <button class="btn btn-success btn-lg application-footer-actions__print" type="button"
+                                *ngIf="isRequisition() && isApprovedApplication() && !isLicenseeContext()"
+                                (click)="openPermitSlipView()">
+                            <i class="bi bi-file-earmark-text me-2"></i>View Permit Slip
+                        </button>
+
                         <button class="btn btn-success btn-lg application-footer-actions__print" type="button" *ngIf="isImflRequisition() && isApprovedApplication() && canViewAuthorityLetter" (click)="openAuthorityLetterModal()">
                             <i class="bi bi-file-earmark-pdf-fill me-2"></i>Authority Letter (Import Pass)
                         </button>

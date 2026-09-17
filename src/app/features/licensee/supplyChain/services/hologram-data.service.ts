@@ -273,6 +273,11 @@ export class HologramDataService {
     return request$;
   }
 
+  public clearCache(): void {
+    this.responseCache.clear();
+    this.inflightRequests.clear();
+  }
+
   private invalidateCache(...keys: string[]): void {
     for (const key of keys) {
       this.responseCache.delete(key);

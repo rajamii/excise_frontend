@@ -8,6 +8,7 @@ import { SupplyChainService } from '../../services/supplychain.service';
 import { CancellationRequestComponent } from '../../cancellation-request/cancellation-request.component';
 import { UnifiedActionButtonsComponent } from '../../../../../shared/components/unified-action-buttons/unified-action-buttons.component';
 import { UnifiedActionsService } from '../../../../../shared/services/unified-actions.service';
+import { SidebarPendingBadgeService } from '../../../../../shared/services/sidebar-pending-badge.service';
 import { forkJoin, of, Subscription } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
@@ -115,6 +116,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   private enaRequisitionService = inject(EnaRequisitionService);
   private supplyChainService = inject(SupplyChainService);
   private unifiedActionsService = inject(UnifiedActionsService);
+  private sidebarPendingBadgeService = inject(SidebarPendingBadgeService);
 
   // Data properties
   requisitionData: TableData[] = [];
@@ -198,6 +200,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.cleanupSidebarLockState();
+    this.sidebarPendingBadgeService.triggerRefresh();
     this.captureArrivalAutoOpenRequest();
     this.captureCancellationAutoOpenRequest();
     this.queryParamSub = this.route.queryParamMap.subscribe(() => {
@@ -218,6 +221,19 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
   // Unified action handler
   onUnifiedAction(event: { action: string, item: any }): void {
+    const action = String(event?.action || '').toUpperCase().trim();
+
+    // Navigation actions — child component (unified-action-buttons) handles direct navigation.
+    // We just return early to avoid calling the workflow API for navigation-only actions.
+    if (
+      action === 'VIEW' || action === 'VIEW_DETAILS' ||
+      action === 'VIEW_PAYMENT_SLIP' || action === 'VIEWPAYMENTSLIP' || action === 'PAYMENT_SLIP' ||
+      action === 'VIEW_SLIP' || action === 'VIEWSLIP' ||
+      action === 'VIEW_PERMIT_SLIP' || action === 'PERMIT_SLIP'
+    ) {
+      return;
+    }
+
     const context = this.getUserContext();
 
     this.unifiedActionsService.executeAction(
@@ -232,6 +248,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
             alert(result.message);
           }
           this.enaRequisitionService.clearCache();
+          this.sidebarPendingBadgeService.triggerRefresh();
           this.loadData();
         } else {
           alert(`Action failed: ${result.message}`);
@@ -254,6 +271,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   loadData(): void {
     console.log('DEBUG: Loading requisition data...');
     this.enaRequisitionService.clearCache();
+    this.sidebarPendingBadgeService.triggerRefresh();
 
     forkJoin({
       requisitions: this.enaRequisitionService.getRequisitions().pipe(catchError(() => of([]))),
@@ -685,36 +703,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   getActionIncludeList(item: TableData): string[] {
-    const actions = ['VIEW'];
-    
-    // WORKFLOW LOGIC:
-    // 1. After licensee pays → Show "View Payment Slip" for everyone (licensee, permit section, commissioner)
-    // 2. After commissioner approves (final stage) → Show BOTH "View Payment Slip" AND "View Permit Slip" for commissioner/permit section
-    // 3. For approved requisitions → Show "Cancel" button (if no active revalidation/cancellation)
-    
-    const hasPayment = this.hasPaymentBeenMade(item);
-    const isFinalApproved = this.isCommissionerFinalApproval(item);
-    console.log('🔍 getActionIncludeList:', {
-      itemId: item.id,
-      refNo: item.referenceNo,
-      status: item.status,
-      hasPayment,
-      isFinalApproved,
-      isCommissioner: this.isCommissioner()
-    });
-    
-    // Show "View Payment Slip" after payment is made (for all roles)
-    if (hasPayment) {
-      actions.push('VIEW_PAYMENT_SLIP');
-    }
-    
-    // Show "View Permit Slip" for commissioner and permit section after final approval
-    if (isFinalApproved && (this.isCommissioner() || this.isPermitSection())) {
-      actions.push('VIEW_SLIP');
-    }
-    
-    console.log('🔍 Final actions array:', actions);
-    return actions;
+    return ['VIEW'];
   }
 
   canCancelRequisition(item: TableData): boolean {
@@ -826,38 +815,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   isCommissionerFinalApproval(item: TableData): boolean {
-    // Check if commissioner has given final approval
-    const isFinalStage = Boolean(item.currentStageIsFinal);
-    const status = this.normalizeStageToken(item.status);
-    const stageName = this.normalizeStageToken(item.currentStageName);
-    
-    // STRICT CHECK: Must be explicitly marked as final stage by backend
-    // Don't rely on status alone - backend must set currentStageIsFinal = true
-    if (!isFinalStage) {
-      console.log('🔍 isCommissionerFinalApproval: NOT final stage', {
-        status,
-        stageName,
-        isFinalStage
-      });
-      return false;
-    }
-    
-    // Final approval indicators (only checked if isFinalStage is true)
-    const isApprovedStatus = (
-      (status.includes('approv') || status.includes('issued') || status.includes('complete')) ||
-      (stageName.includes('approv') || stageName.includes('issued') || stageName.includes('complete'))
-    ) && !status.includes('reject') && !stageName.includes('reject');
-    
-    console.log('🔍 isCommissionerFinalApproval check:', {
-      status,
-      stageName,
-      isFinalStage,
-      isApprovedStatus,
-      result: isFinalStage && isApprovedStatus
-    });
-    
-    // Must be BOTH final stage AND approved status
-    return isFinalStage && isApprovedStatus;
+    return this.isCommissionerFinalApproved(item);
   }
 
   shouldShowCommissionerPermitSlip(item: TableData): boolean {
@@ -2560,6 +2518,69 @@ export class RequisitionComponent implements OnInit, OnDestroy {
         const query = params.toString();
         window.location.href = query ? `/payment-slip-view?${query}` : '/payment-slip-view';
       });
+  }
+
+  openRequisitionLetter(item: TableData, event?: Event): void {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    const id = item?.id;
+    const refNo = String(item?.referenceNo || '').trim();
+    const queryParams = {
+      id: id || undefined,
+      type: 'requisition',
+      refNo: refNo || undefined,
+      ref: refNo || undefined,
+      referenceNo: refNo || undefined,
+      source: this.getUserContext()
+    };
+
+    console.log('[REQUISITION] Letter click', { id, refNo, queryParams, status: item?.status, stage: item?.currentStageName });
+
+    if (this.isBrowser) {
+      const params = new URLSearchParams();
+      if (queryParams.id) params.set('id', String(queryParams.id));
+      if (queryParams.type) params.set('type', String(queryParams.type));
+      if (queryParams.refNo) params.set('refNo', String(queryParams.refNo));
+      if (queryParams.ref) params.set('ref', String(queryParams.ref));
+      if (queryParams.referenceNo) params.set('referenceNo', String(queryParams.referenceNo));
+      if (queryParams.source) params.set('source', String(queryParams.source));
+      const query = params.toString();
+      const target = query ? `/unified-letter-view/requisition?${query}` : '/unified-letter-view/requisition';
+      console.log('[REQUISITION] Direct letter target:', target);
+      window.location.assign(target);
+      return;
+    }
+
+    this.router.navigate(['/unified-letter-view/requisition'], { queryParams });
+  }
+
+  openRequisitionView(item: TableData, event?: Event): void {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    const id = item?.id;
+    const refNo = String(item?.referenceNo || '').trim();
+    const queryParams = {
+      id: id || undefined,
+      type: 'requisition',
+      ref: refNo || undefined,
+      source: this.getUserContext()
+    };
+
+    if (this.isBrowser) {
+      const params = new URLSearchParams();
+      if (queryParams.id) params.set('id', String(queryParams.id));
+      if (queryParams.type) params.set('type', String(queryParams.type));
+      if (queryParams.ref) params.set('ref', String(queryParams.ref));
+      if (queryParams.source) params.set('source', String(queryParams.source));
+      const query = params.toString();
+      const target = query ? `/supply-chain-view?${query}` : '/supply-chain-view';
+      window.location.assign(target);
+      return;
+    }
+
+    this.router.navigate(['/supply-chain-view'], { queryParams });
   }
 
   private normalizeStageToken(value: any): string {
