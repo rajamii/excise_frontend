@@ -490,6 +490,32 @@ export class RevalidationComponent implements OnInit {
     });
   }
 
+  /** Opens the stable ENA details view, independent of the shared action-button workflow. */
+  openDetails(item: TableData): void {
+    this.router.navigate(['/supply-chain-view'], {
+      queryParams: {
+        id: item.id,
+        ref: item.referenceNo,
+        type: 'revalidation',
+        source: this.getUserContext()
+      }
+    });
+  }
+
+  /** Opens the matching payment slip for this revalidation. */
+  openPaymentSlip(item: TableData): void {
+    this.router.navigate(['/payment-slip-view'], {
+      queryParams: {
+        id: item.id,
+        ref: item.referenceNo,
+        refNo: item.referenceNo,
+        referenceNo: item.referenceNo,
+        type: 'revalidation',
+        source: this.getUserContext()
+      }
+    });
+  }
+
   // Unified action handler
   onUnifiedAction(event: { action: string, item: any }): void {
     const context = this.getUserContext();

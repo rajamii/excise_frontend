@@ -558,6 +558,32 @@ export class CancellationComponent implements OnInit {
     });
   }
 
+  /** Opens the stable ENA details view, rather than the dev-only cancellation letter route. */
+  openDetails(item: TableData): void {
+    this.router.navigate(['/supply-chain-view'], {
+      queryParams: {
+        id: item.id,
+        ref: item.referenceNo,
+        type: 'cancellation',
+        source: this.getUserContext()
+      }
+    });
+  }
+
+  /** Opens the matching payment slip for this cancellation. */
+  openPaymentSlip(item: TableData): void {
+    this.router.navigate(['/payment-slip-view'], {
+      queryParams: {
+        id: item.id,
+        ref: item.referenceNo,
+        refNo: item.referenceNo,
+        referenceNo: item.referenceNo,
+        type: 'cancellation',
+        source: this.getUserContext()
+      }
+    });
+  }
+
   approveCancellation(item: TableData): void {
     if (!item.id) {
       alert('Cannot approve: Missing cancellation ID');
