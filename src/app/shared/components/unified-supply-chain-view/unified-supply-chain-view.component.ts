@@ -4341,11 +4341,23 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         }
 
         if (source === 'commissioner-dashboard' || source === 'commissioner') {
-            if (this.roleService.hasRole(10)) {
-                this.router.navigate(['/officer-dashboard/commissioner']);
+            // Bulk Spirit / ENA requisitions opened from Commissioner dashboard
+            // should go back to the licensee/admin requisition list, not the officer panel.
+            if (this.applicationType === 'requisition') {
+                this.router.navigate(['/dashboard'], { queryParams: { section: 'requisition' } });
             } else {
-                this.router.navigate(['/dashboard'], { queryParams: { section: 'secretary-timeline' } });
+                this.router.navigate(['/officer-dashboard/commissioner']);
             }
+            return;
+        }
+
+        if (source === 'permit-section' || source === 'permit_section') {
+            this.router.navigate(['/officer-dashboard/permit-section']);
+            return;
+        }
+
+        if (source === 'oic' || (source === 'officer-in-charge' && this.applicationType !== 'transit')) {
+            this.router.navigate(['/officer-dashboard/oic']);
             return;
         }
 
