@@ -1113,13 +1113,27 @@ private initializeWalletContextAndLoadData(): void {
         ? (normalizedStatus === 'Refunded' ? 'Refunded' : 'Credited')
         : 'Debited';
 
+      let reference = String(this.pickAny(row, ['reference_no', 'referenceNo', 'transaction_id', 'transactionId'], '-')).trim();
+      const remarks = String(this.pickAny(row, ['remarks'], '')).trim();
+      if (remarks.includes('[Permits:') && !reference.includes('(')) {
+        const match = remarks.match(/\[Permits:\s*([^\]]+)\]/i);
+        if (match && match[1]) {
+          reference = `${reference} (Permits: ${match[1].trim()})`;
+        }
+      } else if (remarks.includes('(Permits:') && !reference.includes('(')) {
+        const match = remarks.match(/\(Permits:\s*([^\)]+)\)/i);
+        if (match && match[1]) {
+          reference = `${reference} (Permits: ${match[1].trim()})`;
+        }
+      }
+
       return {
         id: String(this.pickAny(row, ['wallet_transaction_id', 'walletTransactionId'], `${index + 1}`)),
         date: String(createdAt).slice(0, 10),
         type,
         amount: this.toNumber(this.pickAny(row, ['amount'], 0)),
         balanceAfter,
-        reference: this.pickAny(row, ['reference_no', 'referenceNo', 'transaction_id', 'transactionId'], '-'),
+        reference,
         paymentFor,
         walletType
       };

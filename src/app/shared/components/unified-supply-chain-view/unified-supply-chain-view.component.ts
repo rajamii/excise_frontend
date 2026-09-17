@@ -4926,6 +4926,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     isPaymentAgreed = false;
     isSubmittingPayment = false;
     paymentBrandStockItems: any[] = [];
+    paymentPermitWiseBreakdown: any[] = [];
     paymentApplicationToProcess: any = null;
 
     get paymentExciseDeduction(): number {
@@ -4957,6 +4958,30 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         return '';
     }
 
+    get paymentPermitWiseTotalCases(): number {
+        return (this.paymentPermitWiseBreakdown || []).reduce((sum, p) => sum + (Number(p.cases) || 0), 0);
+    }
+
+    get paymentPermitWiseTotalHolograms(): number {
+        return (this.paymentPermitWiseBreakdown || []).reduce((sum, p) => sum + (Number(p.holograms) || 0), 0);
+    }
+
+    get paymentPermitWiseTotalImportFee(): number {
+        return (this.paymentPermitWiseBreakdown || []).reduce((sum, p) => sum + (Number(p.importPassFee) || 0), 0);
+    }
+
+    get paymentPermitWiseTotalAddEd(): number {
+        return (this.paymentPermitWiseBreakdown || []).reduce((sum, p) => sum + (Number(p.additionalEd) || 0), 0);
+    }
+
+    get paymentPermitWiseTotalEduCess(): number {
+        return (this.paymentPermitWiseBreakdown || []).reduce((sum, p) => sum + (Number(p.educationCess) || 0), 0);
+    }
+
+    get paymentPermitWiseGrandTotal(): number {
+        return (this.paymentPermitWiseBreakdown || []).reduce((sum, p) => sum + (Number(p.totalPayable) || 0), 0);
+    }
+
     openImflPaymentConfirmationModal(item?: any): void {
         const app = item || this.applicationData;
         if (!app) return;
@@ -4971,29 +4996,114 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         let eduCess = Number(app.total_education_cess ?? app.totalEducationCess ?? app.total_edu_cess ?? app.totalEduCess ?? appData?.total_education_cess ?? appData?.total_edu_cess ?? 0);
 
         const brandItems: any[] = [];
+        const permitBreakdown: any[] = [];
+
+        const permitDetails = app.permitWiseDetails || app.permit_wise_details || appData?.permitWiseDetails || appData?.permit_wise_details || [];
         const lineItems = app.lineItems || app.line_items || appData?.lineItems || appData?.line_items || [];
 
-        if (Array.isArray(lineItems) && lineItems.length > 0) {
+        if (Array.isArray(permitDetails) && permitDetails.length > 0) {
             let calcImport = 0;
             let calcAddEd = 0;
             let calcEduCess = 0;
 
-            lineItems.forEach((li: any) => {
-                const cases = Number(li.cases ?? li.no_of_cases ?? li.noOfCases ?? li.quantity ?? li.qty ?? li.permit_qty_cases ?? 0);
-                let bpc = Number(li.bottlesPerCase ?? li.bottles_per_case ?? li.bpc ?? li.pack_size ?? 0);
-                const bottleSize = li.bottleSizeMl || li.bottle_size_ml || li.size || 750;
+            permitDetails.forEach((p: any, idx: number) => {
+                const pNum = p.permit_number || p.permitNumber || `Permit #${p.permit_index || p.permit_sequence || idx + 1}`;
+                const items = p.line_items || p.lineItems || p.items || [];
 
-                if (!bpc || bpc <= 0) {
-                    const sizeNum = Number(bottleSize);
-                    if (sizeNum === 750 || sizeNum === 650 || sizeNum === 700) bpc = 12;
-                    else if (sizeNum === 375 || sizeNum === 500) bpc = 24;
-                    else if (sizeNum === 180) bpc = 48;
-                    else bpc = 12;
+                let pCases = Number(p.total_cases ?? p.cases ?? 0);
+                let pHolograms = Number(p.total_holograms ?? p.holograms ?? 0);
+                let pImportFee = Number(p.total_import_fee ?? p.total_import ?? p.import_fee ?? 0);
+                let pAddEd = Number(p.total_additional_ed ?? p.additional_ed ?? p.add_ed ?? 0);
+                let pEduCess = Number(p.total_education_cess ?? p.education_cess ?? p.cess ?? 0);
+
+                const brandSummaryList: string[] = [];
+
+                if (Array.isArray(items) && items.length > 0) {
+                    let itemsImport = 0;
+                    let itemsAddEd = 0;
+                    let itemsCess = 0;
+                    let itemsCases = 0;
+                    let itemsHolo = 0;
+
+                    items.forEach((item: any) => {
+                        const bName = item.brand_name || item.brand || item.brandName || 'IMFL Brand';
+                        const sizeMl = item.size_ml || item.sizeMl || item.bottleSizeMl || (typeof item.size === 'string' ? parseInt(item.size, 10) : item.size) || 750;
+                        const cases = Number(item.cases ?? item.no_of_cases ?? item.quantity_cases ?? item.quantity ?? item.qty ?? 1);
+                        const bpc = Number(item.pieces_per_case ?? item.piecesPerCase ?? item.bottlesPerCase ?? item.bottles_per_case ?? item.bpc ?? (Number(sizeMl) === 180 ? 6 : 12));
+                        const deduction = Number(item.hologramsRequired ?? item.holograms_required ?? item.total_holograms ?? (cases * bpc));
+
+                        const importRate = Number(item.import_pass_fee_per_case || item.importPassFeePerCase || item.import_fee || 1400);
+                        const addEdRate = Number(item.additional_ed_per_case || item.additionalEdPerCase || item.add_ed || 350);
+                        const cessRate = Number(item.education_cess_per_case || item.educationCessPerCase || item.cess || 60);
+
+                        const itemImport = Number(item.total_import ?? item.totalImport ?? (importRate * cases));
+                        const itemAddEd = Number(item.total_additional_ed ?? item.totalAdditionalEd ?? (addEdRate * cases));
+                        const itemCess = Number(item.total_education_cess ?? item.totalEducationCess ?? (cessRate * cases));
+
+                        itemsCases += cases;
+                        itemsHolo += deduction;
+                        itemsImport += itemImport;
+                        itemsAddEd += itemAddEd;
+                        itemsCess += itemCess;
+
+                        brandSummaryList.push(`${bName} (${sizeMl}ml)`);
+
+                        const currentStock = Number(item.currentStock ?? item.current_stock ?? item.currentStockPieces ?? item.current_stock_pieces ?? 0);
+                        const stockAfter = Number(item.stockAfter ?? item.stock_after ?? Math.max(0, currentStock - deduction));
+
+                        brandItems.push({
+                            permitNumber: pNum,
+                            brandName: bName,
+                            bottleSizeMl: sizeMl,
+                            cases: cases,
+                            piecesPerCase: bpc,
+                            deductionPieces: deduction,
+                            currentStock: currentStock,
+                            stockAfter: stockAfter
+                        });
+                    });
+
+                    if (pCases === 0) pCases = itemsCases;
+                    if (pHolograms === 0) pHolograms = itemsHolo;
+                    if (pImportFee === 0) pImportFee = itemsImport;
+                    if (pAddEd === 0) pAddEd = itemsAddEd;
+                    if (pEduCess === 0) pEduCess = itemsCess;
                 }
 
-                const importFeeRate = Number(li.importPassFeePerCase || li.import_pass_fee_per_case || li.import_fee || li.importFee || 0);
-                const addEdRate = Number(li.additionalEdPerCase || li.additional_ed_per_case || li.additional_ed || li.add_ed || li.additionalEd || 0);
-                const cessRate = Number(li.educationCessPerCase || li.education_cess_per_case || li.education_cess || li.cess || 0);
+                calcImport += pImportFee;
+                calcAddEd += pAddEd;
+                calcEduCess += pEduCess;
+
+                permitBreakdown.push({
+                    permitNumber: pNum,
+                    brandSummary: brandSummaryList.join(', ') || 'IMFL Items',
+                    cases: pCases || 1,
+                    holograms: pHolograms || ((pCases || 1) * 6),
+                    importPassFee: pImportFee,
+                    additionalEd: pAddEd,
+                    educationCess: pEduCess,
+                    totalPayable: pImportFee + pAddEd + pEduCess
+                });
+            });
+
+            if (calcImport > 0 || calcAddEd > 0 || calcEduCess > 0) {
+                importFee = calcImport;
+                addEd = calcAddEd;
+                eduCess = calcEduCess;
+            }
+        } else if (Array.isArray(lineItems) && lineItems.length > 0) {
+            let calcImport = 0;
+            let calcAddEd = 0;
+            let calcEduCess = 0;
+
+            lineItems.forEach((li: any, idx: number) => {
+                const cases = Number(li.cases ?? li.no_of_cases ?? li.noOfCases ?? li.quantity ?? li.qty ?? li.permit_qty_cases ?? li.quantity_cases ?? 1);
+                const bottleSize = li.size_ml || li.sizeMl || li.bottleSizeMl || li.bottle_size_ml || (typeof li.size === 'string' ? parseInt(li.size, 10) : li.size) || 750;
+                const bpc = Number(li.pieces_per_case ?? li.piecesPerCase ?? li.bottlesPerCase ?? li.bottles_per_case ?? li.bpc ?? li.pack_size ?? (Number(bottleSize) === 180 ? 6 : 12));
+
+                const importFeeRate = Number(li.importPassFeePerCase || li.import_pass_fee_per_case || li.import_fee || li.importFee || 1400);
+                const addEdRate = Number(li.additionalEdPerCase || li.additional_ed_per_case || li.additional_ed || li.add_ed || li.additionalEd || 350);
+                const cessRate = Number(li.educationCessPerCase || li.education_cess_per_case || li.education_cess || li.cess || 60);
 
                 const itemImport = Number(li.total_import ?? li.totalImport ?? (importFeeRate * cases));
                 const itemAddEd = Number(li.total_additional_ed ?? li.totalAdditionalEd ?? li.total_add_ed ?? li.totalAddEd ?? (addEdRate * cases));
@@ -5003,16 +5113,31 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 calcAddEd += itemAddEd;
                 calcEduCess += itemCess;
 
-                const deduction = cases * bpc;
-                const currentStock = li.currentStock !== undefined ? Number(li.currentStock) : (li.current_stock !== undefined ? Number(li.current_stock) : null);
-                const stockAfter = currentStock !== null ? (currentStock - deduction) : null;
+                const deduction = Number(li.hologramsRequired ?? li.holograms_required ?? (cases * bpc));
+                const currentStock = Number(li.currentStock ?? li.current_stock ?? li.currentStockPieces ?? li.current_stock_pieces ?? 0);
+                const stockAfter = Number(li.stockAfter ?? li.stock_after ?? Math.max(0, currentStock - deduction));
+                const pNum = li.permit_number || li.permitNumber || `Permit #${idx + 1}`;
 
                 brandItems.push({
+                    permitNumber: pNum,
                     brandName: li.brandName || li.brand_name || li.brand || 'IMFL Brand',
                     bottleSizeMl: bottleSize,
+                    cases: cases,
+                    piecesPerCase: bpc,
                     deductionPieces: deduction,
                     currentStock: currentStock,
                     stockAfter: stockAfter
+                });
+
+                permitBreakdown.push({
+                    permitNumber: pNum,
+                    brandSummary: `${li.brandName || li.brand_name || li.brand || 'IMFL Brand'} (${bottleSize}ml)`,
+                    cases: cases,
+                    holograms: deduction,
+                    importPassFee: itemImport,
+                    additionalEd: itemAddEd,
+                    educationCess: itemCess,
+                    totalPayable: itemImport + itemAddEd + itemCess
                 });
             });
 
@@ -5020,39 +5145,6 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 importFee = calcImport;
                 addEd = calcAddEd;
                 eduCess = calcEduCess;
-            }
-        } else {
-            const details = app.permitWiseDetails || app.permit_wise_details || appData?.permitWiseDetails || appData?.permit_wise_details || [];
-            if (Array.isArray(details) && details.length > 0) {
-                let calcImport = 0;
-                let calcAddEd = 0;
-                let calcEduCess = 0;
-
-                details.forEach((p: any) => {
-                    const items = p.items || [];
-                    items.forEach((item: any) => {
-                        const cases = Number(item.cases || 0);
-                        calcImport += Number(item.totalImport || item.total_import_fee || (item.importFee || 0) * cases);
-                        calcAddEd += Number(item.totalAddEd || item.total_additional_ed || (item.addEdPerCase || 0) * cases);
-                        calcEduCess += Number(item.cess || item.total_education_cess || 0);
-
-                        const bpc = Number(item.bottlesPerCase || 12);
-                        const deduction = cases * bpc;
-                        brandItems.push({
-                            brandName: item.brandName || item.brand_name || item.brand || 'IMFL Brand',
-                            bottleSizeMl: item.bottleSizeMl || 750,
-                            deductionPieces: deduction,
-                            currentStock: null,
-                            stockAfter: null
-                        });
-                    });
-                });
-
-                if (calcImport > 0 || calcAddEd > 0 || calcEduCess > 0) {
-                    importFee = calcImport;
-                    addEd = calcAddEd;
-                    eduCess = calcEduCess;
-                }
             }
         }
 
@@ -5074,6 +5166,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         this.paymentAddEdTotal = addEd;
         this.paymentEduCessTotal = eduCess;
         this.paymentBrandStockItems = brandItems;
+        this.paymentPermitWiseBreakdown = permitBreakdown;
 
         this.loadLiveWalletBalances((exBal, cessBal) => {
             this.paymentExciseCurrentBalance = exBal;
@@ -5130,6 +5223,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     closeImflPaymentConfirmationModal(): void {
         this.showImflPaymentConfirmationModal = false;
         this.paymentApplicationToProcess = null;
+        this.paymentPermitWiseBreakdown = [];
+        this.paymentBrandStockItems = [];
         this.isPaymentAgreed = false;
         this.isSubmittingPayment = false;
         this.cdr.detectChanges();

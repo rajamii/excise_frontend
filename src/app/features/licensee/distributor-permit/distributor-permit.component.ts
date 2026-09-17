@@ -7247,6 +7247,28 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return { isPermitSection, isCommissioner, isAdmin };
   }
 
+  canLicenseePay(row: DistributorPermitRow | any): boolean {
+    if (!row) return false;
+    const rawApp = row?.application || row;
+    const stageId = Number(rawApp?.current_stage_id || rawApp?.currentStageId || rawApp?.current_stage?.id || 0);
+    const stageName = String(rawApp?.current_stage?.name || rawApp?.current_stage_name || rawApp?.status || row?.currentStage || '').toLowerCase().trim();
+    const isFeePaid = Boolean(rawApp?.is_excise_duty_fee_paid || rawApp?.isExciseDutyFeePaid);
+    const isPayPending = String(row?.paymentStatus || rawApp?.payment_status || '').toLowerCase() !== 'paid' && !isFeePaid;
+
+    const isPaymentStage = stageId === 154 || stageId === 144 || stageName.includes('payment') || stageName.includes('awaiting payment');
+
+    return isPaymentStage && isPayPending && !this.isOfficerUser;
+  }
+
+  onPayPermit(row: DistributorPermitRow | any, event?: Event): void {
+    if (event) {
+      try { event.preventDefault(); } catch {}
+      try { event.stopPropagation(); } catch {}
+    }
+    const rawApp = row?.application || row;
+    this.openPaymentConfirmationModal(rawApp);
+  }
+
   getStatusGroup(statusStr: string | undefined, rawApp?: any): DistributorPermitStatusGroup {
     const value = String(statusStr || rawApp?.status || '').toLowerCase();
     const stageId = Number(rawApp?.current_stage_id || rawApp?.currentStageId || rawApp?.current_stage?.id || 0);
@@ -7271,15 +7293,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       return 'approved';
     }
 
-    if (stageId === 144 || value.includes('awaiting payment') || value.includes('awaiting_payment') || (value.includes('awaiting') && value.includes('pay')) || value.includes('awaiting')) {
-      return 'under_process';
-    }
-
     const { isPermitSection, isCommissioner } = this.getUserRoleInfo();
 
     const isCommissionerStage = stageId === 153 || stageId === 157 || stageId === 160 || stageId === 162 || stageId === 163 || (value.includes('commissioner') && !value.includes('payslip permit'));
     const isPermitSectionStage = stageId === 148 || stageId === 147 || stageId === 149 || stageId === 155 || stageId === 156 || value.includes('permit') || value.includes('oic') || value.includes('payslip permit') || value.includes('forwarded payslip permit');
-    const isPaymentStage = stageId === 154 || (value.includes('payment') && !value.includes('payslip')) || value.includes('awaiting payment');
+    const isPaymentStage = stageId === 154 || stageId === 144 || (value.includes('payment') && !value.includes('payslip')) || value.includes('awaiting payment');
 
     if (isPermitSection) {
       if (isCommissionerStage || isPaymentStage) {
@@ -7294,6 +7312,14 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       }
       if (isCommissionerStage) {
         return 'pending';
+      }
+    } else {
+      // Licensee Distributor User
+      if (isPaymentStage) {
+        return 'pending'; // Payment is pending on licensee side!
+      }
+      if (isPermitSectionStage || isCommissionerStage) {
+        return 'under_process'; // Under review / process by departmental officers
       }
     }
 

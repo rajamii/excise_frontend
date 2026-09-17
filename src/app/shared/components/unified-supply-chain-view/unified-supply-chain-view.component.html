@@ -2883,11 +2883,12 @@
   tabindex="-1"
   *ngIf="showImflPaymentConfirmationModal"
   style="z-index: 1065;"
+  (click)="closeImflPaymentConfirmationModal()"
 >
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content shadow-lg border-0 rounded-3 overflow-hidden">
+  <div class="modal-dialog modal-dialog-centered modal-xl" style="max-width: 1100px; width: 95%; margin: 1.5rem auto;" (click)="$event.stopPropagation()">
+    <div class="modal-content shadow-lg border-0 rounded-4 overflow-hidden" style="max-height: 90vh; display: flex; flex-direction: column;">
       <!-- Modal Header (Green Header Bar) -->
-      <div class="modal-header text-white py-3 px-4 d-flex justify-content-between align-items-center" style="background-color: #0f766e !important;">
+      <div class="modal-header text-white py-3 px-4 d-flex justify-content-between align-items-center flex-shrink-0" style="background-color: #0f766e !important;">
         <h5 class="modal-title m-0 fw-bold d-flex align-items-center text-white" style="font-size: 1.15rem;">
           <i class="bi bi-wallet2 me-2 fs-5"></i>
           Payment Deduction Confirmation
@@ -2900,7 +2901,7 @@
         ></button>
       </div>
 
-      <div class="modal-body p-4 bg-light">
+      <div class="modal-body p-4 bg-light flex-grow-1" style="max-height: calc(90vh - 135px); overflow-y: auto;">
         <!-- Insufficient Balance Alert Banner -->
         <div class="alert alert-danger d-flex align-items-center py-2.5 px-3 mb-3 border-danger border-opacity-25 rounded-3" *ngIf="isPaymentBalanceInsufficient">
           <i class="bi bi-exclamation-triangle-fill me-2 text-danger fs-5 flex-shrink-0"></i>
@@ -2910,11 +2911,13 @@
         </div>
 
         <!-- Section Title -->
-        <h6 class="fw-bold text-primary mb-3" style="color: #2563eb !important;">Wallet Deduction Preview</h6>
+        <h6 class="fw-bold text-primary mb-2.5" style="color: #2563eb !important;">
+          <i class="bi bi-credit-card-2-front me-1"></i>Wallet Deduction Preview
+        </h6>
 
         <!-- Wallet Deduction Table -->
         <div class="table-responsive bg-white rounded-3 border shadow-sm mb-4">
-          <table class="table align-middle mb-0" style="font-size: 14px;">
+          <table class="table align-middle mb-0" style="font-size: 13.5px;">
             <thead style="background-color: #dbeafe; color: #1e3a8a;">
               <tr>
                 <th class="py-2.5 px-3">Wallet</th>
@@ -2960,27 +2963,95 @@
           </table>
         </div>
 
+        <!-- Permit-Wise Payment Breakdown Section -->
+        <ng-container *ngIf="paymentPermitWiseBreakdown && paymentPermitWiseBreakdown.length > 0">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="fw-bold text-primary m-0" style="color: #2563eb !important;">
+              <i class="bi bi-file-earmark-spreadsheet me-1"></i>Permit-Wise Payment Breakdown
+            </h6>
+            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1" style="font-size: 11.5px;">
+              {{ paymentPermitWiseBreakdown.length }} Permit(s) Total
+            </span>
+          </div>
+
+          <div class="table-responsive bg-white rounded-3 border shadow-sm mb-3">
+            <table class="table align-middle mb-0" style="font-size: 13px;">
+              <thead style="background-color: #f1f5f9; color: #334155;">
+                <tr>
+                  <th class="py-2.5 px-3" style="min-width: 170px;">Permit No.</th>
+                  <th class="py-2.5 px-3" style="min-width: 140px;">Items & Size</th>
+                  <th class="py-2.5 px-3 text-center" style="min-width: 70px;">Cases</th>
+                  <th class="py-2.5 px-3 text-center" style="min-width: 80px;">Holograms</th>
+                  <th class="py-2.5 px-3 text-end" style="min-width: 100px;">Import Fee</th>
+                  <th class="py-2.5 px-3 text-end" style="min-width: 90px;">Add. ED</th>
+                  <th class="py-2.5 px-3 text-end" style="min-width: 90px;">Edu. Cess</th>
+                  <th class="py-2.5 px-3 text-end text-success fw-bold" style="min-width: 120px;">Total Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let p of paymentPermitWiseBreakdown">
+                  <td class="py-2.5 px-3 fw-semibold text-dark">
+                    <span class="badge bg-light text-dark border px-2 py-1 font-monospace">{{ p.permitNumber }}</span>
+                  </td>
+                  <td class="py-2.5 px-3 text-muted">{{ p.brandSummary }}</td>
+                  <td class="py-2.5 px-3 text-center fw-semibold text-dark">{{ p.cases }}</td>
+                  <td class="py-2.5 px-3 text-center fw-semibold text-dark">{{ p.holograms }}</td>
+                  <td class="py-2.5 px-3 text-end">₹{{ p.importPassFee | number:'1.2-2' }}</td>
+                  <td class="py-2.5 px-3 text-end">₹{{ p.additionalEd | number:'1.2-2' }}</td>
+                  <td class="py-2.5 px-3 text-end">₹{{ p.educationCess | number:'1.2-2' }}</td>
+                  <td class="py-2.5 px-3 text-end fw-bold text-success" style="font-size: 13.5px;">₹{{ p.totalPayable | number:'1.2-2' }}</td>
+                </tr>
+              </tbody>
+              <tfoot style="background-color: #f8fafc; border-top: 2px solid #e2e8f0;">
+                <tr class="fw-bold">
+                  <td class="py-2.5 px-3" colspan="2">Total (All Permits)</td>
+                  <td class="py-2.5 px-3 text-center text-primary fs-6">{{ paymentPermitWiseTotalCases }}</td>
+                  <td class="py-2.5 px-3 text-center text-primary fs-6">{{ paymentPermitWiseTotalHolograms }}</td>
+                  <td class="py-2.5 px-3 text-end">₹{{ paymentPermitWiseTotalImportFee | number:'1.2-2' }}</td>
+                  <td class="py-2.5 px-3 text-end">₹{{ paymentPermitWiseTotalAddEd | number:'1.2-2' }}</td>
+                  <td class="py-2.5 px-3 text-end">₹{{ paymentPermitWiseTotalEduCess | number:'1.2-2' }}</td>
+                  <td class="py-2.5 px-3 text-end text-success fs-6 fw-bolder">₹{{ paymentPermitWiseGrandTotal | number:'1.2-2' }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </ng-container>
+
         <!-- Brand Stock Deduction Review Section (if items present) -->
         <ng-container *ngIf="paymentBrandStockItems && paymentBrandStockItems.length > 0">
-          <h6 class="fw-bold text-primary mb-2" style="color: #2563eb !important;">Brand stock deduction review</h6>
+          <h6 class="fw-bold text-primary mb-2" style="color: #2563eb !important;">
+            <i class="bi bi-box-seam me-1"></i>Brand Stock Deduction Review
+          </h6>
           <div class="table-responsive bg-white rounded-3 border shadow-sm mb-2">
-            <table class="table align-middle mb-0" style="font-size: 13.5px;">
+            <table class="table align-middle mb-0" style="font-size: 13px;">
               <thead style="background-color: #cff4fc; color: #055160;">
                 <tr>
-                  <th class="py-2 px-3">Brand</th>
-                  <th class="py-2 px-3 text-center">Size (ml)</th>
-                  <th class="py-2 px-3 text-end">Current Stock (pieces)</th>
-                  <th class="py-2 px-3 text-end">Deduction (pieces)</th>
-                  <th class="py-2 px-3 text-end">Stock after proceed</th>
+                  <th class="py-2 px-3" style="min-width: 170px;">Permit</th>
+                  <th class="py-2 px-3" style="min-width: 140px;">Brand</th>
+                  <th class="py-2 px-3 text-center" style="min-width: 90px;">Size (ml)</th>
+                  <th class="py-2 px-3 text-center" style="min-width: 70px;">Cases</th>
+                  <th class="py-2 px-3 text-center" style="min-width: 90px;">Bottles / Case</th>
+                  <th class="py-2 px-3 text-end" style="min-width: 120px;">Deduction (pieces)</th>
+                  <th class="py-2 px-3 text-end" style="min-width: 120px;">Current Stock</th>
+                  <th class="py-2 px-3 text-end" style="min-width: 130px;">Stock after proceed</th>
                 </tr>
               </thead>
               <tbody>
                 <tr *ngFor="let item of paymentBrandStockItems">
+                  <td class="py-2 px-3">
+                    <span class="badge bg-light text-dark border px-2 py-1 font-monospace">{{ item.permitNumber || '-' }}</span>
+                  </td>
                   <td class="py-2 px-3 fw-semibold text-dark">{{ item.brandName }}</td>
-                  <td class="py-2 px-3 text-center">{{ item.bottleSizeMl }}</td>
-                  <td class="py-2 px-3 text-end">{{ item.currentStock !== null ? (item.currentStock | number:'1.0-0') : '-' }}</td>
-                  <td class="py-2 px-3 text-end text-danger fw-semibold">- {{ item.deductionPieces | number:'1.0-0' }}</td>
-                  <td class="py-2 px-3 text-end fw-bold">{{ item.stockAfter !== null ? (item.stockAfter | number:'1.0-0') : '-' }}</td>
+                  <td class="py-2 px-3 text-center">
+                    <span class="badge bg-secondary bg-opacity-10 text-dark">{{ item.bottleSizeMl }} ml</span>
+                  </td>
+                  <td class="py-2 px-3 text-center fw-medium">{{ item.cases || 1 }}</td>
+                  <td class="py-2 px-3 text-center fw-medium">{{ item.piecesPerCase || 6 }}</td>
+                  <td class="py-2 px-3 text-end text-danger fw-bold">- {{ item.deductionPieces | number:'1.0-0' }} pcs</td>
+                  <td class="py-2 px-3 text-end fw-semibold text-dark">{{ item.currentStock | number:'1.0-0' }} pcs</td>
+                  <td class="py-2 px-3 text-end fw-bold" [ngClass]="item.stockAfter < 0 ? 'text-danger' : 'text-success'">
+                    {{ item.stockAfter | number:'1.0-0' }} pcs
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -3005,7 +3076,7 @@
       </div>
 
       <!-- Modal Footer Action Buttons -->
-      <div class="modal-footer bg-white border-top py-2.5 px-4 d-flex justify-content-end gap-2">
+      <div class="modal-footer bg-white border-top py-2.5 px-4 d-flex justify-content-end gap-2 flex-shrink-0">
         <button
           type="button"
           class="btn btn-outline-secondary px-4 fw-semibold"
