@@ -142,6 +142,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   hologramStockBatches: any[] = [];
   hologramStockRemaining = 0;
   hologramStockErrorMessage = '';
+  commissionerStockResponse: any = null;
 
   ngOnInit(): void {
     this.brandStepForm.setValidators(() => this.isBrandStepValidPublic ? null : { lineItemsInvalid: true });
@@ -4194,12 +4195,16 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       }];
     }
 
+    const appId = String(row.reference_no || row.referenceNo || rawApp?.reference_no || rawApp?.referenceNo || row.applicationId || row.id || '').trim();
+    const licNo = String(row.license_number || row.licenseNumber || rawApp?.license_number || rawApp?.applicant_license_no || row.applicant_license_no || '').trim();
+
     this.commissionerApprovalPermits = permits;
 
-    // Fetch warehouse stock to compute sequential ranges preview
-    this.permitService.getHologramStock(9999).subscribe({
+    // Fetch warehouse stock for this specific application / distributor
+    this.permitService.getHologramStock(9999, appId, licNo).subscribe({
       next: (res: any) => {
-        this.commissionerAvailableStockTotal = Number(res?.availableStock ?? res?.available_stock ?? 0);
+        this.commissionerStockResponse = res;
+        this.commissionerAvailableStockTotal = Number(res?.availableStock ?? res?.available_stock ?? res?.total_available_stock ?? 0);
         this.commissionerWarehouseStockBatches = res?.batches || [];
         this.recalculateCommissionerRangesPreview();
         this.showCommissionerPermitApprovalModal = true;
@@ -4213,10 +4218,60 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     });
   }
 
+  get commissionerDefaultBatchRef(): string {
+    if (this.commissionerWarehouseStockBatches && this.commissionerWarehouseStockBatches.length > 0) {
+      return this.commissionerWarehouseStockBatches[0].imfl_hologram_ref_no || this.commissionerWarehouseStockBatches[0].ref_no || 'IMFL_HOLO_PRO/2026-27/0001';
+    }
+    return 'IMFL_HOLO_PRO/2026-27/0001';
+  }
+
+  get commissionerApprovedPermits(): any[] {
+    return (this.commissionerApprovalPermits || []).filter(p => p.isApproved);
+  }
+
+  get commissionerApprovedPermitsCount(): number {
+    return this.commissionerApprovedPermits.length;
+  }
+
+  get commissionerTotalApprovedHolograms(): number {
+    return this.commissionerApprovedPermits.reduce((acc, p) => acc + Number(p.totalHolograms || (p.totalCases * 12)), 0);
+  }
+
+  get commissionerNextAvailableRangeText(): string {
+    if (this.commissionerStockResponse?.next_available_range && this.commissionerStockResponse.next_available_range !== 'None') {
+      return this.commissionerStockResponse.next_available_range;
+    }
+    if (this.commissionerStockResponse?.nextAvailableRange && this.commissionerStockResponse.nextAvailableRange !== 'None') {
+      return this.commissionerStockResponse.nextAvailableRange;
+    }
+    if (this.commissionerWarehouseStockBatches && this.commissionerWarehouseStockBatches.length > 0) {
+      const b = this.commissionerWarehouseStockBatches[0];
+      if (b.next_available_range && b.next_available_range !== 'None') {
+        return b.next_available_range;
+      }
+      if (b.available_ranges && b.available_ranges.length > 0) {
+        return `${b.available_ranges[0].from} → ${b.available_ranges[b.available_ranges.length - 1].to}`;
+      }
+    }
+    return `1 → ${this.commissionerAvailableStockTotal || 1000}`;
+  }
+
+  get commissionerAllocatedRangeText(): string {
+    const approved = this.commissionerApprovedPermits;
+    if (approved.length === 0) return 'None';
+    const first = approved[0]?.assignedRanges?.[0]?.from;
+    const last = approved[approved.length - 1]?.assignedRanges?.[0]?.to;
+    if (first && last) {
+      return `${first} → ${last}`;
+    }
+    return `${this.commissionerTotalApprovedHolograms} pcs`;
+  }
+
   closeCommissionerPermitApprovalModal(): void {
     this.showCommissionerPermitApprovalModal = false;
     this.selectedCommissionerApprovalRow = null;
     this.commissionerApprovalPermits = [];
+    this.commissionerStockResponse = null;
   }
 
   setPermitApprovalStatus(permitIndex: number, isApproved: boolean): void {
@@ -4233,12 +4288,24 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     let currentSerialPointer = 1;
     let defaultBatchRef = 'IMFL_HOLO_PRO/2026-27/0001';
 
+    if (this.commissionerStockResponse?.next_available_from) {
+      currentSerialPointer = parseInt(String(this.commissionerStockResponse.next_available_from), 10);
+    } else if (this.commissionerStockResponse?.nextAvailableFrom) {
+      currentSerialPointer = parseInt(String(this.commissionerStockResponse.nextAvailableFrom), 10);
+    } else if (this.commissionerWarehouseStockBatches && this.commissionerWarehouseStockBatches.length > 0) {
+      const b = this.commissionerWarehouseStockBatches[0];
+      if (b.next_available_from) {
+        currentSerialPointer = parseInt(String(b.next_available_from), 10);
+      } else if (b.available_ranges && b.available_ranges.length > 0) {
+        currentSerialPointer = parseInt(String(b.available_ranges[0].from || '1'), 10);
+      } else if (b.used_count !== undefined) {
+        currentSerialPointer = parseInt(String(b.used_count || 0), 10) + 1;
+      }
+    }
+
     if (this.commissionerWarehouseStockBatches && this.commissionerWarehouseStockBatches.length > 0) {
       const b = this.commissionerWarehouseStockBatches[0];
       defaultBatchRef = b.imfl_hologram_ref_no || b.ref_no || defaultBatchRef;
-      if (b.available_ranges && b.available_ranges.length > 0) {
-        currentSerialPointer = parseInt(String(b.available_ranges[0].from || '1'), 10);
-      }
     }
 
     this.commissionerApprovalPermits.forEach((p) => {

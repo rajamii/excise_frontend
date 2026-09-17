@@ -235,8 +235,14 @@ export class DistributorPermitService {
     return this.http.get<any>(`${this.baseUrl}/retailer-stock/`, { params: httpParams });
   }
 
-  getHologramStock(requiredCount: number = 0): Observable<any> {
-    const params = new HttpParams().set('required_count', requiredCount.toString());
+  getHologramStock(requiredCount: number = 0, applicationId?: string, licenseNumber?: string): Observable<any> {
+    let params = new HttpParams().set('required_count', requiredCount.toString());
+    if (applicationId) {
+      params = params.set('application_id', applicationId);
+    }
+    if (licenseNumber) {
+      params = params.set('license_number', licenseNumber);
+    }
     return this.http.get<any>(`${this.baseUrl}/hologram-stock/`, { params });
   }
 
