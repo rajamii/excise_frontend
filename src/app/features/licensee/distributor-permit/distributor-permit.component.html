@@ -1868,10 +1868,12 @@
                 <option value="all">All Status</option>
                 <option value="received">Received</option>
                 <option value="available">Available</option>
+                <option value="allocated">Allocated</option>
                 <option value="utilized">Utilized</option>
                 <option value="reverted">Reverted</option>
                 <option value="damaged">Damaged</option>
-                <option value="pending_serials">Pending</option>
+                <option value="pending">Pending</option>
+                <option value="pending_serials">Pending Serials</option>
               </select>
             </div>
           </div>
@@ -2112,50 +2114,59 @@
 
           <!-- View Mode 4: Usage Details Table -->
           <div class="table-responsive" *ngIf="activeOverviewViewMode === 'usage' && !isLoadingHologramOverview && filteredUsageDetails.length > 0">
-            <table class="table table-hover align-middle mb-0 dp-table">
+            <table class="table table-hover align-middle mb-0 dp-table" style="min-width: 1350px;">
               <thead class="table-light">
                 <tr>
-                  <th class="ps-4">Sl. No</th>
-                  <th>Activity / Event</th>
-                  <th>Serial Range / Batch Used</th>
-                  <th>Quantity Consumed</th>
-                  <th>Consignment Ref</th>
-                  <th>Establishment</th>
-                  <th>Authorized Officer</th>
-                  <th>Timestamp</th>
-                  <th class="pe-4">Usage Status</th>
+                  <th class="ps-4" style="width: 60px;">Sl. No</th>
+                  <th style="min-width: 480px; width: 38%;">Activity / Event</th>
+                  <th style="min-width: 160px;">Serial Range / Batch Used</th>
+                  <th style="min-width: 140px;">Quantity Consumed</th>
+                  <th style="min-width: 180px;">Consignment Ref</th>
+                  <th style="min-width: 160px;">Establishment</th>
+                  <th style="min-width: 140px;">Authorized Officer</th>
+                  <th style="min-width: 140px;">Timestamp</th>
+                  <th class="pe-4 text-center" style="width: 120px;">Usage Status</th>
                 </tr>
               </thead>
               <tbody>
                 <tr *ngFor="let item of filteredUsageDetails; let i = index">
                   <td class="ps-4 fw-semibold text-muted">{{ i + 1 }}</td>
                   <td>
-                    <div class="fw-bold text-dark d-flex align-items-center gap-2">
+                    <div class="fw-bold text-dark d-flex align-items-center gap-2 fs-6">
                       <i class="bi" [ngClass]="item.status === 'DAMAGED' ? 'bi-exclamation-triangle-fill text-danger' : item.status === 'DISPATCHED' ? 'bi-truck text-purple' : item.status === 'REVERTED' ? 'bi-arrow-counterclockwise text-warning' : 'bi-boxes text-primary'"></i>
                       <span>{{ item.activity_label }}</span>
                     </div>
                     <small class="text-muted d-block mb-1">{{ item.notes }}</small>
 
                     <!-- Permit-wise Breakdown details below IMFL Reference in same row -->
-                    <div class="mt-2 d-flex flex-column gap-1.5" *ngIf="item.permits && item.permits.length > 0">
-                      <div *ngFor="let p of item.permits" class="d-inline-flex flex-wrap align-items-center gap-2 px-2.5 py-1 rounded-2 border bg-light small" style="max-width: fit-content;">
-                        <span class="badge bg-primary text-white font-monospace fw-semibold" style="font-size: 11px;">
-                          <i class="bi bi-file-earmark-text me-1"></i>{{ p.permit_number }}
-                        </span>
-                        <span class="fw-semibold text-secondary" style="font-size: 11.5px;">
-                          Quantity: <strong class="text-dark font-monospace">{{ p.quantity | number }} pcs</strong>
-                        </span>
-                        <span class="text-muted" style="font-size: 11px;">•</span>
-                        <span class="fw-semibold d-inline-flex align-items-center gap-1" [ngClass]="p.is_approved ? 'text-success' : 'text-warning'" style="font-size: 11.5px;">
-                          <i class="bi" [ngClass]="p.is_approved ? 'bi-check-circle-fill text-success' : 'bi-clock-history text-warning'"></i>
-                          Hologram Range:
-                          <span class="font-monospace fw-bold" [ngClass]="p.is_approved ? 'text-success' : 'text-dark'">{{ p.serial_range }}</span>
-                        </span>
+                    <div class="mt-2.5 d-flex flex-column gap-2" *ngIf="item.permits && item.permits.length > 0">
+                      <div
+                        *ngFor="let p of item.permits"
+                        class="d-flex flex-wrap align-items-center justify-content-between px-3 py-1.5 rounded-3 border bg-white shadow-xs"
+                        style="max-width: 520px; width: 100%; border-color: #e2e8f0 !important;"
+                      >
+                        <div class="d-flex align-items-center gap-2">
+                          <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 font-monospace fw-bold px-2 py-1" style="font-size: 11.5px;">
+                            <i class="bi bi-file-earmark-text me-1"></i>{{ p.permit_number }}
+                          </span>
+                          <span class="fw-semibold text-secondary" style="font-size: 12px;">
+                            Qty: <strong class="text-dark font-monospace">{{ p.quantity | number }} pcs</strong>
+                          </span>
+                        </div>
+                        <div class="d-flex align-items-center gap-1.5 ms-auto">
+                          <span class="fw-semibold d-inline-flex align-items-center gap-1" [ngClass]="p.is_approved ? 'text-success' : 'text-warning'" style="font-size: 12px;">
+                            <i class="bi" [ngClass]="p.is_approved ? 'bi-check-circle-fill text-success' : 'bi-clock-history text-warning'"></i>
+                            <span class="text-muted small">Range:</span>
+                            <span class="font-monospace fw-bold px-2 py-0.5 rounded" [ngClass]="p.is_approved ? 'bg-success bg-opacity-10 text-success border border-success border-opacity-20' : 'bg-warning bg-opacity-10 text-dark border border-warning border-opacity-25'">
+                              {{ p.serial_range }}
+                            </span>
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </td>
                   <td>
-                    <span class="font-monospace fw-bold text-dark">{{ item.serial_range }}</span>
+                    <span class="font-monospace fw-bold text-dark fs-6">{{ item.serial_range }}</span>
                   </td>
                   <td>
                     <span class="badge" [ngClass]="item.status === 'DAMAGED' ? 'bg-danger bg-opacity-10 text-danger' : item.status === 'REVERTED' ? 'bg-warning bg-opacity-10 text-dark' : 'bg-primary bg-opacity-10 text-primary'" style="font-size: 13px;">
