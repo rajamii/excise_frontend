@@ -747,20 +747,24 @@ small.text-muted {
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
-  align-items: center;
-  z-index: 9999;
-  animation: fadeIn 0.3s ease;
+  align-items: flex-start;
+  padding: 30px 16px;
+  overflow-y: auto;
+  z-index: 99999;
 }
 
 .custom-modal {
   background: white;
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  max-width: 600px;
+  max-width: 900px;
   width: 90%;
-  max-height: 90vh;
+  max-height: calc(100vh - 60px);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   overflow: hidden;
-  animation: slideIn 0.3s ease;
+  margin: 0 auto;
 }
 
 .custom-modal-header {

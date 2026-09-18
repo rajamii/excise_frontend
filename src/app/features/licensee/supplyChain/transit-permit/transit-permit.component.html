@@ -595,9 +595,9 @@
 </div>
 
 <!-- Declaration Modal (Pure Angular reactive overlay) -->
-<div class="custom-modal-overlay" *ngIf="showDeclarationModal"
-  style="display: flex; z-index: 10500; animation: none; padding: 20px 0; overflow-y: auto;">
-  <div class="custom-modal" style="max-width: 1050px; width: 95%; max-height: 90vh; display: flex; flex-direction: column; animation: none; margin: auto;">
+<div class="custom-modal-overlay" *ngIf="showDeclarationModal" (click)="cancelDeclaration()">
+  <div class="custom-modal" (click)="$event.stopPropagation()"
+    style="max-width: 950px; width: 95%; max-height: 88vh; display: flex; flex-direction: column; min-height: 0; animation: none;">
 
     <!-- Header -->
     <div class="modal-header bg-primary text-white py-3 px-4" style="flex-shrink: 0;">
@@ -608,7 +608,7 @@
     </div>
 
     <!-- Body -->
-    <div class="modal-body p-4" style="background-color: #f8f9fa; overflow-y: auto; flex: 1 1 auto;">
+    <div class="modal-body p-4" style="background-color: #f8f9fa; overflow-y: auto; flex: 1 1 auto; min-height: 0; max-height: calc(88vh - 130px);">
 
       <!-- Top Section Row -->
       <div class="row g-4 mb-4">
@@ -780,9 +780,9 @@
 </div>
 
 <!-- Payment Deduction Confirmation Modal -->
-<div class="custom-modal-overlay" *ngIf="paymentDeductionPopupVisible"
-  style="display: flex; z-index: 11000; animation: none; padding: 20px 0; overflow-y: auto;">
-  <div class="custom-modal" style="max-width: 1100px; width: 95%; max-height: 90vh; display: flex; flex-direction: column; animation: none; margin: auto;">
+<div class="custom-modal-overlay" *ngIf="paymentDeductionPopupVisible" (click)="closePaymentDeductionPopup()">
+  <div class="custom-modal" (click)="$event.stopPropagation()"
+    style="max-width: 950px; width: 95%; max-height: 88vh; display: flex; flex-direction: column; min-height: 0; animation: none;">
     <div class="modal-header bg-success text-white py-3 px-4" style="flex-shrink: 0;">
       <h5 class="modal-title fw-bold mb-0">
         <i class="bi bi-wallet2 me-2"></i>Payment Deduction Confirmation
@@ -791,7 +791,7 @@
         (click)="closePaymentDeductionPopup()"></button>
     </div>
 
-    <div class="modal-body p-4 bg-light" style="overflow-y: auto; flex: 1 1 auto;">
+    <div class="modal-body p-4 bg-light" style="overflow-y: auto; flex: 1 1 auto; min-height: 0; max-height: calc(88vh - 130px);">
         <div class="alert alert-info mb-4" *ngIf="!paymentPreviewError">
           <i class="bi bi-info-circle-fill me-2"></i>
           Excise Duty &amp; Additional Excise Duty are deducted from the <strong>Excise Wallet</strong>.
