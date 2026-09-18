@@ -734,9 +734,32 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   calculateHologramRange(item: any): void {
-    const pieces = Number(item.pieces_per_case || 12);
+    // If assigned hologram ranges exist with count, respect the assigned count
+    const assignedCount = (item.assigned_hologram_ranges || []).reduce((acc: number, r: any) => {
+      return acc + (Number(r.count) || this.getHologramRangeCount(r.from, r.to));
+    }, 0);
+
     const expCases = Math.max(0, Number(item.expected_cases || 0));
-    const expBottles = Number(item.expected_bottles || (expCases * pieces));
+    let pieces = Number(item.pieces_per_case || 0);
+    if (!pieces || pieces === 0) {
+      if (assignedCount > 0 && expCases > 0) {
+        pieces = Math.max(1, Math.round(assignedCount / expCases));
+      } else {
+        pieces = Number(item.pack_size ? this.getPiecesInCase(item.pack_size) : 12);
+      }
+      item.pieces_per_case = pieces;
+    }
+
+    let expBottles = Number(item.expected_bottles || 0);
+    if (!expBottles || expBottles === 0) {
+      expBottles = (assignedCount > 0 && expCases <= 1) ? assignedCount : (expCases * pieces);
+      item.expected_bottles = expBottles;
+    } else if (assignedCount > 0 && expBottles > assignedCount && (expCases === 1 || expBottles === expCases * 48)) {
+      expBottles = assignedCount;
+      item.expected_bottles = expBottles;
+      pieces = Math.max(1, Math.round(assignedCount / Math.max(1, expCases)));
+      item.pieces_per_case = pieces;
+    }
     
     // Smart Validation: Arrived cases cannot exceed expected cases or be negative
     let arrCases = Number(item.arrived_cases ?? expCases);
@@ -744,7 +767,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     if (arrCases > expCases) arrCases = expCases;
     item.arrived_cases = arrCases;
 
-    const arrBottles = arrCases * pieces;
+    let arrBottles = (arrCases === expCases && assignedCount > 0 && assignedCount < expCases * pieces) ? assignedCount : (arrCases * pieces);
     item.arrived_bottles = arrBottles;
 
     // Case-level damage / missing cases
@@ -765,8 +788,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     // Net Good/Usable Stock
     const goodBottles = Math.max(0, arrBottles - damBottles);
     item.good_bottles = goodBottles;
-    item.good_cases = Math.floor(goodBottles / pieces);
-    item.good_loose_bottles = goodBottles % pieces;
+    item.good_cases = Math.floor(goodBottles / Math.max(1, pieces));
+    item.good_loose_bottles = goodBottles % Math.max(1, pieces);
 
     // 1. Arrived Ranges Sync
     if (!item.arrived_hg_ranges || item.arrived_hg_ranges.length === 0) {
@@ -823,6 +846,20 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const hasAnyFrom = (item.arrived_hg_ranges || []).some((r: any) => r.from);
     if (!hasAnyFrom) return true; // not entered yet
     const total = this.getArrivedHologramTotalCount(item);
+    
+    // If assigned count matches total entered holograms, adjust arrived_bottles to match
+    const assignedCount = (item.assigned_hologram_ranges || []).reduce((acc: number, r: any) => {
+      return acc + (Number(r.count) || this.getHologramRangeCount(r.from, r.to));
+    }, 0);
+    if (total > 0 && assignedCount > 0 && total === assignedCount && item.arrived_bottles !== total) {
+      item.arrived_bottles = total;
+      item.expected_bottles = total;
+      item.pieces_per_case = Math.max(1, Math.round(total / Math.max(1, item.expected_cases || 1)));
+      item.good_bottles = Math.max(0, total - (item.damaged_bottles || 0));
+      item.good_cases = Math.floor(item.good_bottles / Math.max(1, item.pieces_per_case));
+      return true;
+    }
+
     return total === item.arrived_bottles;
   }
 
@@ -1175,9 +1212,30 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         }
         subItems.forEach((sub: any) => {
           const size = Number(sub.size_ml || sub.pack_size || d.size_ml || d.pack_size || rowOrApp?.sizeMl || 750);
-          const pieces = Number(sub.pieces_per_case || sub.bottles_per_case || d.pieces_per_case || this.getPiecesInCase(size));
           const expCases = Number(sub.cases || sub.expected_cases || d.cases || d.total_cases || rowOrApp?.cases || 0);
-          const expBottles = Number(sub.bottles || sub.expected_bottles || (expCases * pieces));
+          let expBottles = Number(sub.bottles || sub.expected_bottles || sub.quantity || sub.pieces || 0);
+          
+          let assignedHgCount = 0;
+          let subAssigned = sub.assigned_hologram_ranges || sub.assignedRanges || d.assigned_hologram_ranges || d.assignedRanges || rawRanges || [];
+          if (Array.isArray(subAssigned) && subAssigned.length > 0) {
+            assignedHgCount = subAssigned.reduce((acc: number, r: any) => acc + (Number(r.count) || this.getHologramRangeCount(r.from, r.to)), 0);
+          }
+
+          let pieces = Number(sub.pieces_per_case || sub.bottles_per_case || d.pieces_per_case || 0);
+          if (!pieces || pieces === 0) {
+            if (assignedHgCount > 0 && expCases > 0) {
+              pieces = Math.max(1, Math.round(assignedHgCount / expCases));
+            } else {
+              pieces = Number(this.getPiecesInCase(size));
+            }
+          }
+          if (!expBottles || expBottles === 0) {
+            expBottles = (assignedHgCount > 0 && expCases <= 1) ? assignedHgCount : (expCases * pieces);
+          } else if (assignedHgCount > 0 && expBottles > assignedHgCount && (expCases === 1 || expBottles === expCases * 48)) {
+            expBottles = assignedHgCount;
+            pieces = Math.max(1, Math.round(assignedHgCount / Math.max(1, expCases)));
+          }
+
           const brandName = sub.brand_name || sub.brandName || d.brand_name || rowOrApp?.brandName || app.brand_name || 'Corona Extra Premium Beer';
           const brandType = sub.brand_type || d.brand_type || rowOrApp?.liquorType || (brandName.toLowerCase().includes('beer') ? 'BEER' : 'WHISKY');
           const supplier = app.supplier_company_name || app.supplierCompanyName || rowOrApp?.supplierName || d.supplier_name || 'Corona Maharashtra';
@@ -1207,6 +1265,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
             hgRanges = (hgFrom && hgTo) ? [{ from: hgFrom, to: hgTo }] : [{ from: '', to: '' }];
           }
 
+          const arrBottles = (arrCases === expCases && assignedHgCount > 0 && assignedHgCount < expCases * pieces) ? assignedHgCount : (arrCases * pieces);
+          const damCases = Number(matchingArrival?.damaged_cases || matchingArrival?.damagedCases || Math.max(0, expCases - arrCases));
+          const damCaseBottles = damCases * pieces;
+          const damBottles = Number(matchingArrival?.damaged_bottles || matchingArrival?.damagedBottles || 0);
+
           const itemObj = {
             permit_number: sub.permit_number || permitNo,
             brand_name: brandName,
@@ -1217,20 +1280,20 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
             expected_cases: expCases,
             expected_bottles: expBottles,
             arrived_cases: arrCases,
-            arrived_bottles: arrCases * pieces,
-            damaged_bottles: Number(matchingArrival?.damaged_bottles || matchingArrival?.damagedBottles || 0),
-            damaged_cases: Number(matchingArrival?.damaged_cases || matchingArrival?.damagedCases || Math.max(0, expCases - arrCases)),
-            damaged_case_bottles: Math.max(0, expCases - arrCases) * pieces,
-            total_damaged_bottles: Number(matchingArrival?.total_damaged_bottles || 0),
-            good_bottles: arrCases * pieces,
-            good_cases: arrCases,
-            good_loose_bottles: 0,
+            arrived_bottles: arrBottles,
+            damaged_bottles: damBottles,
+            damaged_cases: damCases,
+            damaged_case_bottles: damCaseBottles,
+            total_damaged_bottles: Number(matchingArrival?.total_damaged_bottles || (damCaseBottles + damBottles)),
+            good_bottles: Math.max(0, arrBottles - damBottles),
+            good_cases: Math.floor(Math.max(0, arrBottles - damBottles) / Math.max(1, pieces)),
+            good_loose_bottles: Math.max(0, arrBottles - damBottles) % Math.max(1, pieces),
             vehicle_number: vehNo || this.arrivalCommonVehicle,
             batch_number: matchingArrival?.batch_number || '',
             hologram_from: hgFrom,
             hologram_to: hgTo,
             arrived_hg_ranges: hgRanges,
-            hologram_count: arrCases * pieces,
+            hologram_count: arrBottles,
             assigned_hologram_ranges: [],
             assigned_hg_label: '',
             damaged_cases_hg_from: '',
@@ -1253,9 +1316,30 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
       targetLines.forEach((l: any, idx: number) => {
         const size = Number(l.size_ml || l.pack_size || 750);
-        const pieces = Number(l.pieces_per_case || this.getPiecesInCase(size));
         const expCases = Number(l.cases || l.expected_cases || 1);
-        const expBottles = Number(l.bottles || expCases * pieces);
+        let expBottles = Number(l.bottles || l.expected_bottles || l.quantity || l.pieces || 0);
+
+        let assignedHgCount = 0;
+        let lAssigned = l.assigned_hologram_ranges || l.assignedRanges || rawRanges || [];
+        if (Array.isArray(lAssigned) && lAssigned.length > 0) {
+          assignedHgCount = lAssigned.reduce((acc: number, r: any) => acc + (Number(r.count) || this.getHologramRangeCount(r.from, r.to)), 0);
+        }
+
+        let pieces = Number(l.pieces_per_case || 0);
+        if (!pieces || pieces === 0) {
+          if (assignedHgCount > 0 && expCases > 0) {
+            pieces = Math.max(1, Math.round(assignedHgCount / expCases));
+          } else {
+            pieces = Number(this.getPiecesInCase(size));
+          }
+        }
+        if (!expBottles || expBottles === 0) {
+          expBottles = (assignedHgCount > 0 && expCases <= 1) ? assignedHgCount : (expCases * pieces);
+        } else if (assignedHgCount > 0 && expBottles > assignedHgCount && (expCases === 1 || expBottles === expCases * 48)) {
+          expBottles = assignedHgCount;
+          pieces = Math.max(1, Math.round(assignedHgCount / Math.max(1, expCases)));
+        }
+
         const brandName = l.brand_name || l.brandName || 'Corona Extra Premium Beer';
         const brandType = l.brand_type || (brandName.toLowerCase().includes('beer') ? 'BEER' : 'WHISKY');
         const supplier = app.supplier_company_name || app.supplierCompanyName || rowOrApp?.supplierName || 'Corona Maharashtra';
@@ -1285,6 +1369,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           hgRanges = (hgFrom && hgTo) ? [{ from: hgFrom, to: hgTo }] : [{ from: '', to: '' }];
         }
 
+        const arrBottles = (arrCases === expCases && assignedHgCount > 0 && assignedHgCount < expCases * pieces) ? assignedHgCount : (arrCases * pieces);
+        const damCases = Number(matchingArrival?.damaged_cases || matchingArrival?.damagedCases || Math.max(0, expCases - arrCases));
+        const damCaseBottles = damCases * pieces;
+        const damBottles = Number(matchingArrival?.damaged_bottles || matchingArrival?.damagedBottles || 0);
+
         const itemObj = {
           permit_number: l.permit_number || `${app.reference_no || app.referenceNo || 'IMFLREQ'}-P${idx + 1}`,
           brand_name: brandName,
@@ -1295,20 +1384,20 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           expected_cases: expCases,
           expected_bottles: expBottles,
           arrived_cases: arrCases,
-          arrived_bottles: arrCases * pieces,
-          damaged_bottles: Number(matchingArrival?.damaged_bottles || matchingArrival?.damagedBottles || 0),
-          damaged_cases: Number(matchingArrival?.damaged_cases || matchingArrival?.damagedCases || Math.max(0, expCases - arrCases)),
-          damaged_case_bottles: Math.max(0, expCases - arrCases) * pieces,
-          total_damaged_bottles: Number(matchingArrival?.total_damaged_bottles || 0),
-          good_bottles: arrCases * pieces,
-          good_cases: arrCases,
-          good_loose_bottles: 0,
+          arrived_bottles: arrBottles,
+          damaged_bottles: damBottles,
+          damaged_cases: damCases,
+          damaged_case_bottles: damCaseBottles,
+          total_damaged_bottles: Number(matchingArrival?.total_damaged_bottles || (damCaseBottles + damBottles)),
+          good_bottles: Math.max(0, arrBottles - damBottles),
+          good_cases: Math.floor(Math.max(0, arrBottles - damBottles) / Math.max(1, pieces)),
+          good_loose_bottles: Math.max(0, arrBottles - damBottles) % Math.max(1, pieces),
           vehicle_number: vehNo || this.arrivalCommonVehicle,
           batch_number: matchingArrival?.batch_number || '',
           hologram_from: hgFrom,
           hologram_to: hgTo,
           arrived_hg_ranges: hgRanges,
-          hologram_count: arrCases * pieces,
+          hologram_count: arrBottles,
           assigned_hologram_ranges: [],
           assigned_hg_label: '',
           damaged_cases_hg_from: '',
@@ -1324,8 +1413,14 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     } else {
       // Fallback single item
       const size = Number(rowOrApp?.sizeMl || 750);
-      const pieces = this.getPiecesInCase(size);
       const expCases = Number(rowOrApp?.cases || 1);
+      let assignedHgCount = 0;
+      if (Array.isArray(rawRanges) && rawRanges.length > 0) {
+        assignedHgCount = rawRanges.reduce((acc: number, r: any) => acc + (Number(r.count) || this.getHologramRangeCount(r.from, r.to)), 0);
+      }
+      let pieces = (assignedHgCount > 0 && expCases > 0) ? Math.max(1, Math.round(assignedHgCount / expCases)) : this.getPiecesInCase(size);
+      let expBottles = (assignedHgCount > 0 && expCases <= 1) ? assignedHgCount : (expCases * pieces);
+
       const brandName = rowOrApp?.brandName || app.brand_name || 'Corona Extra Premium Beer';
       const brandType = brandName.toLowerCase().includes('beer') ? 'BEER' : 'WHISKY';
       const supplier = app.supplier_company_name || rowOrApp?.supplierName || 'Corona Maharashtra';
@@ -1351,6 +1446,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         hgRanges = (hgFrom && hgTo) ? [{ from: hgFrom, to: hgTo }] : [{ from: '', to: '' }];
       }
 
+      const arrBottles = (arrCases === expCases && assignedHgCount > 0 && assignedHgCount < expCases * pieces) ? assignedHgCount : (arrCases * pieces);
+      const damCases = Number(matchingArrival?.damaged_cases || matchingArrival?.damagedCases || Math.max(0, expCases - arrCases));
+      const damCaseBottles = damCases * pieces;
+      const damBottles = Number(matchingArrival?.damaged_bottles || matchingArrival?.damagedBottles || 0);
+
       const itemObj = {
         permit_number: app.reference_no || app.referenceNo || 'IMFLREQ/2026-27/0003-P1',
         brand_name: brandName,
@@ -1359,22 +1459,22 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         pack_size: size,
         pieces_per_case: pieces,
         expected_cases: expCases,
-        expected_bottles: expCases * pieces,
+        expected_bottles: expBottles,
         arrived_cases: arrCases,
-        arrived_bottles: arrCases * pieces,
-        damaged_bottles: Number(matchingArrival?.damaged_bottles || matchingArrival?.damagedBottles || 0),
-        damaged_cases: Number(matchingArrival?.damaged_cases || matchingArrival?.damagedCases || Math.max(0, expCases - arrCases)),
-        damaged_case_bottles: Math.max(0, expCases - arrCases) * pieces,
-        total_damaged_bottles: Number(matchingArrival?.total_damaged_bottles || 0),
-        good_bottles: arrCases * pieces,
-        good_cases: expCases,
-        good_loose_bottles: 0,
+        arrived_bottles: arrBottles,
+        damaged_bottles: damBottles,
+        damaged_cases: damCases,
+        damaged_case_bottles: damCaseBottles,
+        total_damaged_bottles: Number(matchingArrival?.total_damaged_bottles || (damCaseBottles + damBottles)),
+        good_bottles: Math.max(0, arrBottles - damBottles),
+        good_cases: Math.floor(Math.max(0, arrBottles - damBottles) / Math.max(1, pieces)),
+        good_loose_bottles: Math.max(0, arrBottles - damBottles) % Math.max(1, pieces),
         vehicle_number: vehNo || this.arrivalCommonVehicle,
         batch_number: matchingArrival?.batch_number || '',
         hologram_from: hgFrom,
         hologram_to: hgTo,
         arrived_hg_ranges: hgRanges,
-        hologram_count: arrCases * pieces,
+        hologram_count: arrBottles,
         assigned_hologram_ranges: [],
         assigned_hg_label: '',
         damaged_cases_hg_from: '',
@@ -1457,12 +1557,20 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       }
 
       if (assignedItemRanges.length > 0) {
+        const assignedTotal = assignedItemRanges.reduce((acc, r) => acc + (r.count || 0), 0);
         item.assigned_hologram_ranges = assignedItemRanges;
         item.assigned_hg_label = assignedItemRanges.map(r => `${r.from} → ${r.to}`).join(', ');
         item.arrived_hg_ranges = assignedItemRanges.map(r => ({ from: r.from, to: r.to }));
         item.hologram_from = assignedItemRanges[0].from;
         item.hologram_to = assignedItemRanges[assignedItemRanges.length - 1].to;
-        item.hologram_count = neededBottles;
+        if (assignedTotal > 0 && assignedTotal !== neededBottles && (item.expected_cases <= 1 || item.arrived_cases <= 1)) {
+          item.expected_bottles = assignedTotal;
+          item.arrived_bottles = assignedTotal;
+          item.pieces_per_case = Math.max(1, Math.round(assignedTotal / Math.max(1, item.expected_cases || 1)));
+          item.good_bottles = Math.max(0, assignedTotal - (item.damaged_bottles || 0));
+          item.good_cases = Math.floor(item.good_bottles / Math.max(1, item.pieces_per_case));
+        }
+        item.hologram_count = assignedTotal || neededBottles;
         item.hologram_ref_no = assignedItemRanges[0].ref_no || '';
       }
       this.onArrivalItemCalculationsChange(item);
@@ -1472,10 +1580,20 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   applyAssignedRangeToItem(item: any): void {
     if (item.assigned_hologram_ranges && item.assigned_hologram_ranges.length > 0) {
+      const assignedTotal = item.assigned_hologram_ranges.reduce((acc: number, r: any) => {
+        return acc + (Number(r.count) || this.getHologramRangeCount(r.from, r.to));
+      }, 0);
+      if (assignedTotal > 0 && item.arrived_bottles !== assignedTotal && (item.expected_cases <= 1 || item.arrived_cases <= 1)) {
+        item.expected_bottles = assignedTotal;
+        item.arrived_bottles = assignedTotal;
+        item.pieces_per_case = Math.max(1, Math.round(assignedTotal / Math.max(1, item.expected_cases || 1)));
+        item.good_bottles = Math.max(0, assignedTotal - (item.damaged_bottles || 0));
+        item.good_cases = Math.floor(item.good_bottles / Math.max(1, item.pieces_per_case));
+      }
       item.arrived_hg_ranges = item.assigned_hologram_ranges.map((r: any) => ({ from: r.from, to: r.to }));
       item.hologram_from = item.assigned_hologram_ranges[0].from;
       item.hologram_to = item.assigned_hologram_ranges[item.assigned_hologram_ranges.length - 1].to;
-      item.hologram_count = item.arrived_bottles || item.expected_bottles;
+      item.hologram_count = assignedTotal || item.arrived_bottles || item.expected_bottles;
       this.onArrivalItemCalculationsChange(item);
     } else if (this.arrivalAssignedHologramRanges.length > 0) {
       this.autoAssignRequisitionRangesToBrands();
