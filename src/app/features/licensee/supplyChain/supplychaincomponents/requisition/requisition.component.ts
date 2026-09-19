@@ -9,6 +9,7 @@ import { CancellationRequestComponent } from '../../cancellation-request/cancell
 import { UnifiedActionButtonsComponent } from '../../../../../shared/components/unified-action-buttons/unified-action-buttons.component';
 import { UnifiedActionsService } from '../../../../../shared/services/unified-actions.service';
 import { SidebarPendingBadgeService } from '../../../../../shared/services/sidebar-pending-badge.service';
+import { BulkSpiritUsageService, BulkSpiritUsageRecord, BulkSpiritInventorySummaryResponse } from '../../../../../core/services/bulk-spirit-usage.service';
 import { forkJoin, of, Subscription } from 'rxjs';
 import { catchError, debounceTime } from 'rxjs/operators';
 
@@ -192,6 +193,20 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   private pendingCancellationRef: string = '';
   private pendingCancellationId: number | null = null;
   private autoCancellationHandled = false;
+
+  // Bulk Spirit Usage Properties
+  private bulkSpiritUsageService = inject(BulkSpiritUsageService);
+  isBulkSpiritUsageModalOpen = false;
+  isBulkSpiritUsageLoading = false;
+  isBulkSpiritUsageSubmitting = false;
+  bulkSpiritUsageErrorMessage = '';
+  bulkSpiritUsageSuccessMessage = '';
+  bulkSpiritInventorySummary: BulkSpiritInventorySummaryResponse | null = null;
+  bulkSpiritUsageHistory: BulkSpiritUsageRecord[] = [];
+  newUsageSpiritType: string = '';
+  newUsageQuantity: number | null = null;
+  newUsagePurpose: string = 'Production / Blending';
+  newUsageRemarks: string = '';
 
   // Pagination
   currentPage: number = 1;
@@ -1019,29 +1034,91 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   openArrivalSummaryModal(): void {
-    this.closeSidebarIfOpen();
-    this.setBulkRecordModalMode(true);
-    this.isArrivalSummaryModalOpen = true;
-    this.isArrivalSummaryLoading = true;
-    this.arrivalSummaryErrorMessage = '';
-    this.arrivalSummaryDateFilter = '';
-    // Default to current running month; user can clear filters to view all months together.
-    this.arrivalSummaryMonthFilter = this.toIsoMonth(new Date());
-    this.allArrivalDetailsRows = [];
-    this.filteredArrivalDetailsRows = [];
-    this.arrivalSummaryPageIndex = 0;
-    this.arrivalSummaryPageSize = 5;
+    this.router.navigate(['/dashboard'], { queryParams: { section: 'bulk-spirit-inventory' } });
+  }
 
-    this.enaRequisitionService.getAllRequisitionArrivalDetails().subscribe({
-      next: (response: any) => {
-        const rows = Array.isArray(response?.data) ? response.data : [];
-        this.allArrivalDetailsRows = rows.map((row: any) => this.mapArrivalSummaryRow(row));
-        this.applyArrivalSummaryFilters();
-        this.isArrivalSummaryLoading = false;
+  openBulkSpiritUsageModal(): void {
+    this.router.navigate(['/dashboard'], { queryParams: { section: 'bulk-spirit-usage' } });
+  }
+
+  loadBulkSpiritUsageData(): void {
+    this.isBulkSpiritUsageLoading = true;
+    this.bulkSpiritUsageErrorMessage = '';
+
+    forkJoin({
+      inventory: this.bulkSpiritUsageService.getInventorySummary().pipe(catchError(() => of(null))),
+      history: this.bulkSpiritUsageService.getUsageRequests().pipe(catchError(() => of([])))
+    }).subscribe({
+      next: ({ inventory, history }: any) => {
+        this.bulkSpiritInventorySummary = inventory;
+
+        let records: BulkSpiritUsageRecord[] = [];
+        if (Array.isArray(history)) {
+          records = history;
+        } else if (history?.results && Array.isArray(history.results)) {
+          records = history.results;
+        } else if (history?.data && Array.isArray(history.data)) {
+          records = history.data;
+        }
+        this.bulkSpiritUsageHistory = records;
+
+        // Auto-select first spirit type if none selected
+        if (!this.newUsageSpiritType && inventory?.data && inventory.data.length > 0) {
+          const withStock = inventory.data.find((item: any) => item.available_bl > 0);
+          this.newUsageSpiritType = withStock ? withStock.bulk_spirit_type : inventory.data[0].bulk_spirit_type;
+        }
+        this.isBulkSpiritUsageLoading = false;
       },
       error: () => {
-        this.isArrivalSummaryLoading = false;
-        this.arrivalSummaryErrorMessage = 'Unable to load BL details summary.';
+        this.isBulkSpiritUsageLoading = false;
+        this.bulkSpiritUsageErrorMessage = 'Failed to load bulk spirit inventory and usage data.';
+      }
+    });
+  }
+
+  getSelectedSpiritAvailableBL(): number {
+    if (!this.bulkSpiritInventorySummary?.data || !this.newUsageSpiritType) {
+      return 0;
+    }
+    const found = this.bulkSpiritInventorySummary.data.find(
+      d => d.bulk_spirit_type.toLowerCase() === this.newUsageSpiritType.toLowerCase()
+    );
+    return found ? found.available_bl : 0;
+  }
+
+  isUsageQuantityValid(): boolean {
+    const qty = Number(this.newUsageQuantity || 0);
+    const available = this.getSelectedSpiritAvailableBL();
+    return qty > 0 && qty <= available && Boolean(this.newUsageSpiritType);
+  }
+
+  submitBulkSpiritUsage(): void {
+    if (!this.isUsageQuantityValid()) {
+      return;
+    }
+    this.isBulkSpiritUsageSubmitting = true;
+    this.bulkSpiritUsageErrorMessage = '';
+    this.bulkSpiritUsageSuccessMessage = '';
+
+    const payload = {
+      bulk_spirit_type: this.newUsageSpiritType,
+      quantity: Number(this.newUsageQuantity),
+      purpose: this.newUsagePurpose || 'Production / Blending',
+      remarks: this.newUsageRemarks || ''
+    };
+
+    this.bulkSpiritUsageService.createUsageRequest(payload).subscribe({
+      next: (res: any) => {
+        this.isBulkSpiritUsageSubmitting = false;
+        this.bulkSpiritUsageSuccessMessage = `Usage request ${res?.reference_no || ''} submitted successfully for OIC approval!`;
+        this.newUsageQuantity = null;
+        this.newUsageRemarks = '';
+        this.loadBulkSpiritUsageData();
+      },
+      error: (err: any) => {
+        this.isBulkSpiritUsageSubmitting = false;
+        const msg = err?.error?.quantity || err?.error?.bulk_spirit_type || err?.error?.message || err?.message || 'Failed to submit usage request.';
+        this.bulkSpiritUsageErrorMessage = Array.isArray(msg) ? msg.join(' ') : String(msg);
       }
     });
   }

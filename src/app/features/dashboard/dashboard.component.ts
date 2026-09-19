@@ -68,6 +68,8 @@ import { LicenseRenewalDashboardComponent } from '../licensee/supplyChain/supply
 import { SpecialPermitDashboardComponent } from '../licensee/supplyChain/supplychaincomponents/special-permit/special-permit-dashboard.component';
 import { RegistrationManagementComponent } from '../licensee/supplyChain/supplychaincomponents/registration-management/registration-management.component';
 import { PaymentConfirmationComponent } from '../licensee/supplyChain/payments/paymentconformationpage/payment-confirmation.component';
+import { BulkSpiritUsageComponent } from '../licensee/supplyChain/supplychaincomponents/bulk-spirit-usage/bulk-spirit-usage.component';
+import { BulkSpiritInventoryComponent } from '../licensee/supplyChain/supplychaincomponents/bulk-spirit-inventory/bulk-spirit-inventory.component';
 
 // Officer-specific Components
 import { HologramMonthlyReportComponent } from '../licensee/supplyChain/registers/hologram-monthly-report/hologram-monthly-report.component';
@@ -161,6 +163,8 @@ const CHART_BAR_LABELS_PLUGIN = [{
     SpecialPermitDashboardComponent,
     RegistrationManagementComponent,
     PaymentConfirmationComponent,
+    BulkSpiritUsageComponent,
+    BulkSpiritInventoryComponent,
     // Officer-specific Components
     HologramMonthlyReportComponent,
     HologramdetailsComponent,
@@ -4445,6 +4449,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       'special-permit': 'Dry Day Permit',
       'special-permit-apply': 'Prepare Dry Day Permit Application',
       'distributor-permit': 'IMFL Requisition / Cancellation',
+      'bulk-spirit-usage': 'Bulk Spirit Usage Management',
+      'bulk-spirit-inventory': 'Bulk Spirit Inventory Records',
 
       // SPA Forms
       'transit-permit': 'Apply Transit Permit',

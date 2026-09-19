@@ -3,6 +3,7 @@ import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { EnaRequisitionService } from '../../../../core/services/ena-requisition.service';
+import { BulkSpiritUsageService, BulkSpiritUsageRecord } from '../../../../core/services/bulk-spirit-usage.service';
 import { Subject, from } from 'rxjs';
 import { concatMap, takeUntil } from 'rxjs/operators';
 
@@ -58,6 +59,19 @@ interface BlDetailRow {
         </button>
       </section>
 
+      <!-- Main Section Tabs -->
+      <div class="nav-tabs-wrapper mb-4 d-flex gap-2">
+        <button type="button" class="tab-pill-btn" [class.active-tab]="activeMainTab === 'arrivals'" (click)="setMainTab('arrivals')">
+          Tanker Arrival Submissions ({{ rows.length }})
+        </button>
+        <button type="button" class="tab-pill-btn" [class.active-tab]="activeMainTab === 'usage_requests'" (click)="setMainTab('usage_requests')">
+          Bulk Spirit Requests ({{ usageRequests.length }})
+          <span class="badge bg-warning text-dark ms-2" *ngIf="getPendingUsageCount() > 0">{{ getPendingUsageCount() }}</span>
+        </button>
+      </div>
+
+      <!-- ================= ARRIVALS TAB ================= -->
+      <ng-container *ngIf="activeMainTab === 'arrivals'">
       <section class="stats-grid">
         <article class="stat-card total stat-card-clickable" role="button" tabindex="0" aria-label="Show all Bulk Spirit details"
           (click)="onStatCardClick('ALL')" (keydown.enter)="onStatCardClick('ALL')"
@@ -599,6 +613,205 @@ interface BlDetailRow {
           </div>
         </div>
       </ng-container>
+      </ng-container>
+
+      <!-- ================= USAGE REQUESTS TAB ================= -->
+      <ng-container *ngIf="activeMainTab === 'usage_requests'">
+        <section class="stats-grid">
+          <article class="stat-card total stat-card-clickable" role="button" tabindex="0"
+            (click)="usageReviewStatus = 'ALL'" [class.active]="usageReviewStatus === 'ALL'">
+            <div>
+              <span class="stat-kicker">All usage submissions</span>
+              <h3>Total Requests</h3>
+            </div>
+            <div class="stat-pill">{{ getAllUsageCount() }}</div>
+          </article>
+
+          <article class="stat-card pending stat-card-clickable" role="button" tabindex="0"
+            (click)="usageReviewStatus = 'PENDING'" [class.active]="usageReviewStatus === 'PENDING'">
+            <div>
+              <span class="stat-kicker">Awaiting OIC action</span>
+              <h3>Pending</h3>
+            </div>
+            <div class="stat-pill">{{ getPendingUsageCount() }}</div>
+          </article>
+
+          <article class="stat-card approved stat-card-clickable" role="button" tabindex="0"
+            (click)="usageReviewStatus = 'APPROVED'" [class.active]="usageReviewStatus === 'APPROVED'">
+            <div>
+              <span class="stat-kicker">Approved by OIC</span>
+              <h3>Approved</h3>
+            </div>
+            <div class="stat-pill">{{ getApprovedUsageCount() }}</div>
+          </article>
+
+          <article class="stat-card rejected stat-card-clickable" role="button" tabindex="0"
+            (click)="usageReviewStatus = 'REJECTED'" [class.active]="usageReviewStatus === 'REJECTED'">
+            <div>
+              <span class="stat-kicker">Rejected by OIC</span>
+              <h3>Rejected</h3>
+            </div>
+            <div class="stat-pill">{{ getRejectedUsageCount() }}</div>
+          </article>
+        </section>
+
+        <section class="filters-panel">
+          <div class="filters-heading">
+            <div>
+              <h4>Usage Request Filters</h4>
+              <br>
+            </div>
+          </div>
+          <div class="filters-grid">
+            <label class="field-block">
+              <span class="field-label">Month</span>
+              <input type="month" class="field-input" [(ngModel)]="usageSelectedMonth">
+            </label>
+            <label class="field-block search-block">
+              <span class="field-label">Search</span>
+              <input class="field-input" [(ngModel)]="usageSearchTerm" placeholder="Search by ref no, licensee, distillery or spirit type">
+            </label>
+          </div>
+        </section>
+
+        <div *ngIf="usageSuccessMessage" class="status-banner" style="background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;padding:0.75rem 1rem;border-radius:12px;margin-bottom:1rem;">
+          {{ usageSuccessMessage }}
+        </div>
+        <div *ngIf="usageErrorMessage" class="status-banner error">{{ usageErrorMessage }}</div>
+
+        <section class="table-panel">
+          <div class="table-panel-header" *ngIf="getFilteredUsageRequests().length > 0">
+            <div>
+              <h4>Bulk Spirit Requests</h4>
+              <p>{{ getFilteredUsageRequests().length }} record(s) visible.</p>
+            </div>
+          </div>
+
+          <div class="table-wrap" *ngIf="getFilteredUsageRequests().length > 0; else noUsageState">
+            <table class="bl-table">
+              <thead>
+                <tr>
+                  <th>Ref. No</th>
+                  <th>Licensee</th>
+                  <th>Distillery / Unit</th>
+                  <th>Spirit Type</th>
+                  <th>Quantity (BL)</th>
+                  <th>Purpose</th>
+                  <th>Submitted</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of getFilteredUsageRequests()">
+                  <td>
+                    <span class="ref-badge">{{ item.reference_no }}</span>
+                  </td>
+                  <td>{{ item.licensee_id || '-' }}</td>
+                  <td>{{ item.distillery_name || item.applicant_name || '-' }}</td>
+                  <td>
+                    <span class="badge bg-light text-dark border">{{ item.bulk_spirit_type }}</span>
+                  </td>
+                  <td>
+                    <strong style="color: #0284c7;">{{ item.quantity | number:'1.2-2' }}</strong> BL
+                  </td>
+                  <td>{{ item.purpose || '-' }}</td>
+                  <td>{{ formatDate(item.created_at) }}</td>
+                  <td>
+                    <span class="status-chip"
+                      [ngClass]="{
+                        'pending': item.status.toLowerCase().includes('pending'),
+                        'approved': item.status.toLowerCase().includes('approved'),
+                        'rejected': item.status.toLowerCase().includes('rejected')
+                      }">
+                      {{ item.status }}
+                    </span>
+                  </td>
+                  <td>
+                    <div *ngIf="item.status.toLowerCase().includes('pending'); else usageReviewedMeta" class="row-actions">
+                      <button type="button" class="action-btn approve" (click)="approveUsage(item)" [disabled]="usageActingId === item.id">
+                        Approve
+                      </button>
+                      <button type="button" class="action-btn reject" (click)="openUsageRejectDialog(item)" [disabled]="usageActingId === item.id">
+                        Reject
+                      </button>
+                    </div>
+                    <ng-template #usageReviewedMeta>
+                      <div class="review-meta">
+                        <div class="review-time" *ngIf="item.reviewed_at">{{ formatDate(item.reviewed_at) }}</div>
+                        <div *ngIf="item.reviewed_by" class="small text-muted">By: {{ item.reviewed_by }}</div>
+                        <div *ngIf="item.rejection_reason" class="small text-danger">Reason: {{ item.rejection_reason }}</div>
+                      </div>
+                    </ng-template>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <ng-template #noUsageState>
+            <div class="empty-state">
+              <div class="empty-orb">ENA</div>
+              <div class="empty-title">No Bulk Spirit usage requests found</div>
+              <div class="empty-subtitle">Usage requests submitted by distillery licensees will appear here for OIC approval.</div>
+            </div>
+          </ng-template>
+        </section>
+
+        <!-- Usage Reject Dialog -->
+        <ng-container *ngIf="usageRejectDialog.open">
+          <div class="confirm-backdrop" (click)="closeUsageRejectDialog()"></div>
+          <div class="confirm-shell" role="dialog" aria-modal="true">
+            <div class="confirm-card" (click)="$event.stopPropagation()">
+              <div class="confirm-head">
+                <div class="confirm-icon" aria-hidden="true">!</div>
+                <div class="confirm-title">
+                  <h3>Reject Bulk Spirit Usage Request</h3>
+                  <p>
+                    If you reject this request, the deducted BL quantity (<strong>{{ usageRejectDialog.item?.quantity | number:'1.2-2' }} BL</strong>) will be restored back to the licensee's available inventory.
+                  </p>
+                </div>
+                <button type="button" class="confirm-close" (click)="closeUsageRejectDialog()">×</button>
+              </div>
+
+              <div class="confirm-body">
+                <div class="confirm-row">
+                  <span class="confirm-label">Reference No</span>
+                  <span class="confirm-value">{{ usageRejectDialog.item?.reference_no }}</span>
+                </div>
+                <div class="confirm-row">
+                  <span class="confirm-label">Spirit Type</span>
+                  <span class="confirm-value">{{ usageRejectDialog.item?.bulk_spirit_type }}</span>
+                </div>
+                <div class="confirm-row">
+                  <span class="confirm-label">Quantity</span>
+                  <span class="confirm-value">{{ usageRejectDialog.item?.quantity | number:'1.2-2' }} BL</span>
+                </div>
+
+                <label class="confirm-field">
+                  <span class="confirm-label">Rejection Remarks <span class="text-danger">*</span></span>
+                  <textarea
+                    class="confirm-textarea"
+                    rows="3"
+                    [disabled]="usageRejectSubmitting"
+                    [(ngModel)]="usageRejectDialog.remarks"
+                    placeholder="Enter reason for rejecting this usage request (required)"></textarea>
+                </label>
+              </div>
+
+              <div class="confirm-actions">
+                <button type="button" class="confirm-btn ghost" (click)="closeUsageRejectDialog()" [disabled]="usageRejectSubmitting">
+                  Cancel
+                </button>
+                <button type="button" class="confirm-btn danger" (click)="confirmUsageReject()"
+                  [disabled]="usageRejectSubmitting || !(usageRejectDialog.remarks || '').trim()">
+                  {{ usageRejectSubmitting ? 'Rejecting...' : 'Reject Request' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+      </ng-container>
 
       <ng-template #emptyState>
         <div class="empty-state">
@@ -612,6 +825,32 @@ interface BlDetailRow {
   styles: [`
     :host {
       display: block;
+    }
+
+    .tab-pill-btn {
+      padding: 0.65rem 1.25rem;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      transition: all 0.2s ease;
+    }
+
+    .tab-pill-btn:hover {
+      background: #f1f5f9;
+      color: #0f172a;
+    }
+
+    .tab-pill-btn.active-tab {
+      background: linear-gradient(135deg, #1e3a8a, #0284c7);
+      color: #ffffff;
+      border-color: transparent;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
     }
 
     .bl-review-shell {
@@ -2094,8 +2333,23 @@ interface BlDetailRow {
 })
 export class OicBlDetailsComponent implements OnInit, OnDestroy {
   private enaRequisitionService = inject(EnaRequisitionService);
+  private bulkSpiritUsageService = inject(BulkSpiritUsageService);
   private route = inject(ActivatedRoute);
   private destroy$ = new Subject<void>();
+
+  // Main Section Tab
+  activeMainTab: 'arrivals' | 'usage_requests' = 'arrivals';
+
+  // Bulk Spirit Usage State
+  usageRequests: BulkSpiritUsageRecord[] = [];
+  usageReviewStatus: 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED' = 'ALL';
+  usageSearchTerm = '';
+  usageSelectedMonth = '';
+  usageActingId: number | null = null;
+  usageRejectDialog = { open: false, item: null as BulkSpiritUsageRecord | null, remarks: '' };
+  usageRejectSubmitting = false;
+  usageSuccessMessage = '';
+  usageErrorMessage = '';
 
   loading = false;
   errorMessage = '';
@@ -2130,6 +2384,7 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
     const currentDate = new Date();
     const currentMonth = currentDate.toISOString().slice(0, 7); // YYYY-MM format
     this.selectedMonth = currentMonth;
+    this.usageSelectedMonth = currentMonth;
     
     this.route.queryParamMap.pipe(takeUntil(this.destroy$)).subscribe((params) => {
       const focus = String(params.get('focus') || '').toLowerCase();
@@ -2137,9 +2392,155 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
         this.reviewStatus = 'PENDING';
         this.resetPagination();
       }
+      const tab = String(params.get('tab') || '').toLowerCase();
+      if (tab === 'usage' || tab === 'usage_requests' || tab === 'bulk-spirit-requests') {
+        this.setMainTab('usage_requests');
+      }
     });
 
     this.loadRows();
+    this.loadUsageRequests();
+  }
+
+  setMainTab(tab: 'arrivals' | 'usage_requests'): void {
+    this.activeMainTab = tab;
+    if (tab === 'usage_requests') {
+      this.loadUsageRequests();
+    }
+  }
+
+  loadUsageRequests(): void {
+    this.bulkSpiritUsageService.getUsageRequests().subscribe({
+      next: (res: any) => {
+        let list: BulkSpiritUsageRecord[] = [];
+        if (Array.isArray(res)) {
+          list = res;
+        } else if (res?.results && Array.isArray(res.results)) {
+          list = res.results;
+        } else if (res?.data && Array.isArray(res.data)) {
+          list = res.data;
+        }
+        this.usageRequests = list;
+      },
+      error: () => {
+        // Silently handle error or set message
+      }
+    });
+  }
+
+  getFilteredUsageRequests(): BulkSpiritUsageRecord[] {
+    return this.usageRequests.filter((item) => {
+      // Status filter
+      const st = String(item.status || '').toUpperCase();
+      if (this.usageReviewStatus !== 'ALL') {
+        if (this.usageReviewStatus === 'PENDING' && !st.includes('PENDING')) return false;
+        if (this.usageReviewStatus === 'APPROVED' && !st.includes('APPROVED')) return false;
+        if (this.usageReviewStatus === 'REJECTED' && !st.includes('REJECTED')) return false;
+      }
+
+      // Month filter
+      if (this.usageSelectedMonth && item.created_at) {
+        const itemMonth = item.created_at.slice(0, 7);
+        if (itemMonth !== this.usageSelectedMonth) return false;
+      }
+
+      // Search term
+      if (this.usageSearchTerm) {
+        const query = this.usageSearchTerm.toLowerCase();
+        const ref = String(item.reference_no || '').toLowerCase();
+        const lic = String(item.licensee_id || '').toLowerCase();
+        const dist = String(item.distillery_name || '').toLowerCase();
+        const sp = String(item.bulk_spirit_type || '').toLowerCase();
+        if (!ref.includes(query) && !lic.includes(query) && !dist.includes(query) && !sp.includes(query)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }
+
+  getAllUsageCount(): number {
+    return this.usageRequests.length;
+  }
+
+  getPendingUsageCount(): number {
+    return this.usageRequests.filter(item => String(item.status || '').toUpperCase().includes('PENDING')).length;
+  }
+
+  getApprovedUsageCount(): number {
+    return this.usageRequests.filter(item => String(item.status || '').toUpperCase().includes('APPROVED')).length;
+  }
+
+  getRejectedUsageCount(): number {
+    return this.usageRequests.filter(item => String(item.status || '').toUpperCase().includes('REJECTED')).length;
+  }
+
+  approveUsage(item: BulkSpiritUsageRecord): void {
+    if (!item.id) return;
+    if (!confirm(`Are you sure you want to approve Bulk Spirit Usage request ${item.reference_no}?`)) {
+      return;
+    }
+
+    this.usageActingId = item.id;
+    this.usageErrorMessage = '';
+    this.usageSuccessMessage = '';
+
+    this.bulkSpiritUsageService.performAction(item.id, 'APPROVE').subscribe({
+      next: (res: any) => {
+        this.usageActingId = null;
+        this.usageSuccessMessage = `Usage request ${item.reference_no} approved successfully!`;
+        this.loadUsageRequests();
+      },
+      error: (err: any) => {
+        this.usageActingId = null;
+        this.usageErrorMessage = err?.error?.message || err?.message || 'Failed to approve usage request.';
+      }
+    });
+  }
+
+  openUsageRejectDialog(item: BulkSpiritUsageRecord): void {
+    this.usageRejectDialog = {
+      open: true,
+      item: item,
+      remarks: ''
+    };
+  }
+
+  closeUsageRejectDialog(): void {
+    this.usageRejectDialog = {
+      open: false,
+      item: null,
+      remarks: ''
+    };
+  }
+
+  confirmUsageReject(): void {
+    const item = this.usageRejectDialog.item;
+    if (!item || !item.id) return;
+
+    const remarks = String(this.usageRejectDialog.remarks || '').trim();
+    if (!remarks) {
+      alert('Please enter reason for rejection.');
+      return;
+    }
+
+    this.usageRejectSubmitting = true;
+    this.usageErrorMessage = '';
+    this.usageSuccessMessage = '';
+
+    this.bulkSpiritUsageService.performAction(item.id, 'REJECT', remarks).subscribe({
+      next: (res: any) => {
+        this.usageRejectSubmitting = false;
+        this.closeUsageRejectDialog();
+        this.usageSuccessMessage = `Usage request ${item.reference_no} rejected. Deducted BL quantity has been restored to the licensee's available inventory.`;
+        this.loadUsageRequests();
+      },
+      error: (err: any) => {
+        this.usageRejectSubmitting = false;
+        this.usageErrorMessage = err?.error?.message || err?.message || 'Failed to reject usage request.';
+      }
+    });
   }
 
   ngOnDestroy(): void {

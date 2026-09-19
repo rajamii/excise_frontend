@@ -1,0 +1,256 @@
+<div class="bulk-spirit-usage-page">
+  <!-- Premium Branded Header Banner -->
+  <div class="header-banner shadow-sm mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+      <div class="d-flex align-items-center gap-3">
+        <button type="button" class="btn btn-glass-back" (click)="goBackToRequisition()">
+          <i class="bi bi-arrow-left me-1"></i> Back to Requisitions
+        </button>
+        <div class="d-flex align-items-center gap-3">
+          <div class="banner-icon-badge">
+            <i class="bi bi-box-arrow-up-right"></i>
+          </div>
+          <div>
+            <h2 class="banner-title mb-1">ENA Bulk Spirit Usage Management</h2>
+            <p class="banner-subtitle mb-0">Request, monitor, and manage bulk spirit withdrawals against verified factory inventory</p>
+          </div>
+        </div>
+      </div>
+      <div class="banner-actions">
+        <button type="button" class="btn btn-glass-refresh" (click)="loadData()" [disabled]="loading">
+          <i class="bi bi-arrow-clockwise me-1" [class.spin]="loading"></i> Refresh
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Real-time Stock Cards Grid -->
+  <div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6">
+      <div class="stock-card card border-0 shadow-sm rounded-4 p-3 bg-white">
+        <div class="d-flex align-items-center">
+          <div class="card-icon-box bg-primary bg-opacity-10 text-primary me-3">
+            <i class="bi bi-truck fs-3"></i>
+          </div>
+          <div>
+            <span class="text-uppercase fw-semibold text-muted tracking-wide" style="font-size: 0.75rem;">Total Arrived Inventory</span>
+            <h3 class="mb-0 fw-bold text-dark mt-1">
+              {{ (inventorySummary?.totalArrivedBl || 0) | number:'1.2-2' }} <small class="fs-6 fw-normal text-muted">BL</small>
+            </h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+      <div class="stock-card card border-0 shadow-sm rounded-4 p-3 bg-white">
+        <div class="d-flex align-items-center">
+          <div class="card-icon-box bg-success bg-opacity-10 text-success me-3">
+            <i class="bi bi-check-circle-fill fs-3"></i>
+          </div>
+          <div>
+            <span class="text-uppercase fw-semibold text-muted tracking-wide" style="font-size: 0.75rem;">Approved Used Stock</span>
+            <h3 class="mb-0 fw-bold text-dark mt-1">
+              {{ (inventorySummary?.totalUsedBl || 0) | number:'1.2-2' }} <small class="fs-6 fw-normal text-muted">BL</small>
+            </h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+      <div class="stock-card card border-0 shadow-sm rounded-4 p-3 bg-white">
+        <div class="d-flex align-items-center">
+          <div class="card-icon-box bg-warning bg-opacity-10 text-warning me-3">
+            <i class="bi bi-hourglass-split fs-3"></i>
+          </div>
+          <div>
+            <span class="text-uppercase fw-semibold text-muted tracking-wide" style="font-size: 0.75rem;">Pending Approval</span>
+            <h3 class="mb-0 fw-bold text-dark mt-1">
+              {{ (inventorySummary?.totalPendingBl || 0) | number:'1.2-2' }} <small class="fs-6 fw-normal text-muted">BL</small>
+            </h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+      <div class="stock-card card border-0 shadow-sm rounded-4 p-3 text-white" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
+        <div class="d-flex align-items-center">
+          <div class="card-icon-box bg-white bg-opacity-25 text-white me-3">
+            <i class="bi bi-droplet-fill fs-3"></i>
+          </div>
+          <div>
+            <span class="text-uppercase fw-semibold text-white-50 tracking-wide" style="font-size: 0.75rem;">Available in Stock</span>
+            <h3 class="mb-0 fw-bold text-white mt-1">
+              {{ (inventorySummary?.totalAvailableBl || 0) | number:'1.2-2' }} <small class="fs-6 fw-normal text-white-50">BL</small>
+            </h3>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success & Error Alerts -->
+  <div class="alert alert-success alert-dismissible fade show d-flex align-items-center rounded-3 mb-4 shadow-sm" *ngIf="successMessage">
+    <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+    <div class="fw-semibold">{{ successMessage }}</div>
+    <button type="button" class="btn-close" (click)="successMessage=''"></button>
+  </div>
+
+  <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center rounded-3 mb-4 shadow-sm" *ngIf="errorMessage">
+    <i class="bi bi-exclamation-octagon-fill me-2 fs-5"></i>
+    <div class="fw-semibold">{{ errorMessage }}</div>
+    <button type="button" class="btn-close" (click)="errorMessage=''"></button>
+  </div>
+
+  <!-- Create New Usage Request Card -->
+  <div class="card border-0 shadow-sm rounded-4 mb-4" style="background: #ffffff; border: 1px solid #e2e8f0 !important;">
+    <div class="card-header bg-white border-bottom py-3 px-4">
+      <div class="d-flex align-items-center">
+        <i class="bi bi-plus-circle-fill text-primary me-2 fs-5"></i>
+        <h5 class="mb-0 fw-bold text-dark">Submit New Bulk Spirit Usage Request</h5>
+      </div>
+    </div>
+    <div class="card-body p-4">
+      <div class="row g-3">
+        <div class="col-lg-3 col-md-6">
+          <label class="form-label fw-semibold text-secondary small">Bulk Spirit Type <span class="text-danger">*</span></label>
+          <select class="form-select" [(ngModel)]="selectedSpiritType">
+            <option value="" disabled>-- Select Spirit Type --</option>
+            <option *ngFor="let item of inventorySummary?.items" [value]="item.bulkSpiritType">
+              {{ item.bulkSpiritType }} (Avail: {{ item.availableBl | number:'1.2-2' }} BL)
+            </option>
+          </select>
+          <div class="mt-2" *ngIf="selectedSpiritType">
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+              Available: <strong>{{ getSelectedAvailableBL() | number:'1.2-2' }} BL</strong>
+            </span>
+          </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+          <label class="form-label fw-semibold text-secondary small">Quantity in Bulk Liters (BL) <span class="text-danger">*</span></label>
+          <input type="number" class="form-control" [(ngModel)]="requestedQuantity" placeholder="e.g. 500.00" min="0.01" [max]="getSelectedAvailableBL()">
+          <div class="mt-2" *ngIf="requestedQuantity && requestedQuantity > getSelectedAvailableBL()">
+            <small class="text-danger fw-semibold d-block">
+              <i class="bi bi-exclamation-triangle-fill me-1"></i> Exceeds stock ({{ getSelectedAvailableBL() | number:'1.2-2' }} BL)
+            </small>
+          </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+          <label class="form-label fw-semibold text-secondary small">Purpose of Usage</label>
+          <input type="text" class="form-control" [(ngModel)]="purpose" placeholder="e.g. Production / Blending">
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+          <label class="form-label fw-semibold text-secondary small">Remarks / Batch Notes</label>
+          <input type="text" class="form-control" [(ngModel)]="remarks" placeholder="Optional remarks">
+        </div>
+
+        <div class="col-12 d-flex justify-content-end mt-3">
+          <button type="button" class="btn btn-primary px-4 py-2 fw-semibold shadow-sm"
+            [disabled]="!isFormValid() || submitting"
+            (click)="submitUsage()">
+            <span *ngIf="submitting" class="spinner-border spinner-border-sm me-2"></span>
+            <i *ngIf="!submitting" class="bi bi-send-fill me-2"></i>
+            Submit Usage Request
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- History & Audit Table -->
+  <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+    <div class="card-header bg-white border-bottom py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+      <div class="d-flex align-items-center">
+        <i class="bi bi-clock-history text-primary me-2 fs-5"></i>
+        <h5 class="mb-0 fw-bold text-dark">Usage Requests History & Audit</h5>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <div class="btn-group" role="group">
+          <button type="button" class="btn btn-sm btn-outline-secondary" [class.active]="statusFilter==='ALL'" (click)="statusFilter='ALL'; applyFilters()">All</button>
+          <button type="button" class="btn btn-sm btn-outline-warning" [class.active]="statusFilter==='PENDING'" (click)="statusFilter='PENDING'; applyFilters()">Pending</button>
+          <button type="button" class="btn btn-sm btn-outline-success" [class.active]="statusFilter==='APPROVED'" (click)="statusFilter='APPROVED'; applyFilters()">Approved</button>
+          <button type="button" class="btn btn-sm btn-outline-danger" [class.active]="statusFilter==='REJECTED'" (click)="statusFilter='REJECTED'; applyFilters()">Rejected</button>
+        </div>
+        <span class="badge bg-secondary rounded-pill px-3 py-2 ms-2">{{ filteredUsageHistory.length }} Records</span>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0 usage-table">
+        <thead>
+          <tr>
+            <th class="ps-4">#</th>
+            <th>Ref. No</th>
+            <th>Submission Date</th>
+            <th>Spirit Type</th>
+            <th>Quantity (BL)</th>
+            <th>Purpose</th>
+            <th>Status</th>
+            <th class="pe-4">OIC Review / Remarks</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of filteredUsageHistory; let i = index">
+            <td class="ps-4 text-muted fw-semibold">{{ i + 1 }}</td>
+            <td>
+              <span class="badge bg-light text-primary border border-primary-subtle fw-bold fs-6 px-3 py-1">
+                {{ item.reference_no }}
+              </span>
+            </td>
+            <td>
+              <span class="fw-semibold text-dark">{{ item.created_at | date:'dd-MMM-yyyy, hh:mm a' }}</span>
+            </td>
+            <td>
+              <span class="badge bg-light text-dark border px-2 py-1">{{ item.bulk_spirit_type }}</span>
+            </td>
+            <td>
+              <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6 fw-bold px-3 py-1">
+                {{ item.quantity | number:'1.2-2' }} BL
+              </span>
+            </td>
+            <td>{{ item.purpose || '-' }}</td>
+            <td>
+              <span class="badge rounded-pill px-3 py-1"
+                [ngClass]="{
+                  'bg-warning text-dark': item.status.toLowerCase().includes('pending'),
+                  'bg-success text-white': item.status.toLowerCase().includes('approved'),
+                  'bg-danger text-white': item.status.toLowerCase().includes('rejected')
+                }">
+                <i class="bi me-1"
+                  [ngClass]="{
+                    'bi-hourglass-split': item.status.toLowerCase().includes('pending'),
+                    'bi-check-circle': item.status.toLowerCase().includes('approved'),
+                    'bi-x-circle': item.status.toLowerCase().includes('rejected')
+                  }"></i>
+                {{ item.status }}
+              </span>
+            </td>
+            <td class="pe-4">
+              <div *ngIf="item.status.toLowerCase().includes('rejected')" class="text-danger small fw-semibold">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i> Reason: {{ item.rejection_reason || '-' }}
+              </div>
+              <div *ngIf="item.reviewed_by" class="text-muted small">
+                Reviewed by: <strong>{{ item.reviewed_by }}</strong>
+                <span *ngIf="item.reviewed_at">({{ item.reviewed_at | date:'dd-MMM-yyyy' }})</span>
+              </div>
+              <div *ngIf="!item.reviewed_by && item.status.toLowerCase().includes('pending')" class="text-muted small">
+                <i class="bi bi-clock me-1"></i> Awaiting OIC review
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="filteredUsageHistory.length === 0 && !loading">
+            <td colspan="8" class="text-center py-5 text-muted">
+              <i class="bi bi-inbox fs-1 d-block mb-2 text-muted"></i>
+              <h6 class="fw-bold text-secondary">No Bulk Spirit Usage requests found</h6>
+              <p class="text-muted small mb-0">Use the form above to submit a new usage request from your available stock.</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

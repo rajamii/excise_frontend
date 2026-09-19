@@ -69,7 +69,7 @@
       class="supply-chain-content"
       [class.hologram-overview-wrapper]="selectedSupplyChainSection === 'hologram-overview'">
       <!-- Section Header -->
-      <div class="section-header" *ngIf="selectedSupplyChainSection !== 'distributor-permit'">
+      <div class="section-header" *ngIf="selectedSupplyChainSection !== 'distributor-permit' && selectedSupplyChainSection !== 'bulk-spirit-inventory' && selectedSupplyChainSection !== 'bulk-spirit-usage'">
         <div class="header-left">
           <button mat-icon-button (click)="clearSupplyChainSection()" class="back-button">
             <mat-icon>arrow_back</mat-icon>
@@ -160,6 +160,8 @@
       <div class="section-content" [class.hologram-overview-content]="selectedSupplyChainSection === 'hologram-overview'">
         <!-- Common sections -->
         <app-requisition *ngIf="selectedSupplyChainSection === 'requisition'"></app-requisition>
+        <app-bulk-spirit-usage *ngIf="selectedSupplyChainSection === 'bulk-spirit-usage'"></app-bulk-spirit-usage>
+        <app-bulk-spirit-inventory *ngIf="selectedSupplyChainSection === 'bulk-spirit-inventory'"></app-bulk-spirit-inventory>
         <app-revalidation *ngIf="selectedSupplyChainSection === 'revalidation'"></app-revalidation>
         <app-cancellation *ngIf="selectedSupplyChainSection === 'cancellation'"></app-cancellation>
         <app-transit *ngIf="selectedSupplyChainSection === 'transit'"></app-transit>
