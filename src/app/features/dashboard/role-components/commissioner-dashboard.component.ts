@@ -195,14 +195,16 @@ interface CommissionerData {
                       </span>
                     </td>
                     <td class="actions actions-cell">
-                      <app-unified-action-buttons
-                        [item]="application"
-                        [itemType]="'hologram'"
-                        [context]="'commissioner'"
-                        [displayMode]="'table'"
-                        [includeActions]="['VIEW']"
-                        (actionClicked)="onUnifiedAction($event)">
-                      </app-unified-action-buttons>
+                      <div class="d-flex align-items-center justify-content-center">
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1 holo-view-btn shadow-sm"
+                          (click)="viewApplication(application)"
+                          title="View Application Details">
+                          <i class="bi bi-eye-fill"></i>
+                          <span>View Details</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 </tbody>
@@ -865,6 +867,24 @@ interface CommissionerData {
     .empty-state p {
       margin-bottom: 0;
       font-size: 1rem;
+    }
+
+    .holo-view-btn {
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #1C2B78 0%, #2d4aa7 100%);
+      border: none;
+      color: #ffffff;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+
+      &:hover {
+        background: linear-gradient(135deg, #15215d 0%, #1f3780 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(28, 43, 120, 0.25);
+      }
     }
   `]
 })
@@ -1536,6 +1556,21 @@ export class CommissionerDashboardComponent implements OnInit {
     return this.allApplications.filter(app => 
       app.status.toLowerCase().includes(status.toLowerCase())
     ).length;
+  }
+
+  viewApplication(application: CommissionerData | any): void {
+    const ref = application?.referenceNo || application?.refNo || application?.ref_no || '';
+    const id = application?.id || '';
+    const type = application?.type || 'hologram';
+
+    this.router.navigate(['/supply-chain-view'], {
+      queryParams: {
+        ref: ref,
+        id: id,
+        type: type,
+        source: 'commissioner'
+      }
+    });
   }
 
   // Unified action handler
