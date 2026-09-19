@@ -812,6 +812,70 @@ interface BlDetailRow {
             </div>
           </div>
         </ng-container>
+
+        <!-- Usage Approve Dialog Modal -->
+        <ng-container *ngIf="usageApproveDialog.open">
+          <div class="confirm-backdrop" (click)="closeUsageApproveDialog()"></div>
+          <div class="confirm-shell" role="dialog" aria-modal="true">
+            <div class="confirm-card" (click)="$event.stopPropagation()">
+              <div class="confirm-head">
+                <div class="confirm-icon success" aria-hidden="true">✓</div>
+                <div class="confirm-title">
+                  <h3>Approve Bulk Spirit Usage Request</h3>
+                  <p>
+                    Confirm approval for <strong>{{ usageApproveDialog.item?.reference_no }}</strong>. The requested BL will be recorded as approved and deducted from available inventory.
+                  </p>
+                </div>
+                <button type="button" class="confirm-close" (click)="closeUsageApproveDialog()">×</button>
+              </div>
+
+              <div class="confirm-body">
+                <div class="confirm-row">
+                  <span class="confirm-label">Reference No</span>
+                  <span class="confirm-value">{{ usageApproveDialog.item?.reference_no }}</span>
+                </div>
+                <div class="confirm-row" *ngIf="usageApproveDialog.item?.licensee_id">
+                  <span class="confirm-label">Licensee / Distillery</span>
+                  <span class="confirm-value">{{ usageApproveDialog.item?.licensee_id }} ({{ usageApproveDialog.item?.distillery_name || '-' }})</span>
+                </div>
+                <div class="confirm-row">
+                  <span class="confirm-label">Spirit Type</span>
+                  <span class="confirm-value">{{ usageApproveDialog.item?.bulk_spirit_type }}</span>
+                </div>
+                <div class="confirm-row">
+                  <span class="confirm-label">Quantity</span>
+                  <span class="confirm-value" style="color: #059669; font-weight: 900;">
+                    {{ usageApproveDialog.item?.quantity | number:'1.2-2' }} BL
+                  </span>
+                </div>
+                <div class="confirm-row" *ngIf="usageApproveDialog.item?.purpose">
+                  <span class="confirm-label">Purpose</span>
+                  <span class="confirm-value">{{ usageApproveDialog.item?.purpose }}</span>
+                </div>
+
+                <label class="confirm-field">
+                  <span class="confirm-label">Approval Remarks (Optional)</span>
+                  <textarea
+                    class="confirm-textarea"
+                    rows="2"
+                    [disabled]="usageApproveSubmitting"
+                    [(ngModel)]="usageApproveDialog.remarks"
+                    placeholder="Enter optional remarks or approval notes..."></textarea>
+                </label>
+              </div>
+
+              <div class="confirm-actions">
+                <button type="button" class="confirm-btn ghost" (click)="closeUsageApproveDialog()" [disabled]="usageApproveSubmitting">
+                  Cancel
+                </button>
+                <button type="button" class="confirm-btn success" (click)="confirmUsageApprove()" [disabled]="usageApproveSubmitting">
+                  <span *ngIf="usageApproveSubmitting" class="spinner-border spinner-border-sm me-1"></span>
+                  {{ usageApproveSubmitting ? 'Approving...' : 'Confirm & Approve' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </ng-container>
       </ng-container>
 
       <ng-template #emptyState>
@@ -1606,6 +1670,18 @@ interface BlDetailRow {
       box-shadow: 0 18px 34px rgba(220, 38, 38, 0.22);
     }
 
+    .confirm-btn.success {
+      background: linear-gradient(135deg, #059669, #10b981);
+      color: #ffffff;
+      box-shadow: 0 18px 34px rgba(5, 150, 105, 0.22);
+    }
+
+    .confirm-icon.success {
+      color: #059669;
+      background: rgba(209, 250, 229, 0.95);
+      border-color: rgba(52, 211, 153, 0.45);
+    }
+
     .confirm-btn:not(:disabled):hover {
       transform: translateY(-1px);
       filter: brightness(1.02);
@@ -2348,6 +2424,8 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
   usageSearchTerm = '';
   usageSelectedMonth = '';
   usageActingId: number | null = null;
+  usageApproveDialog = { open: false, item: null as BulkSpiritUsageRecord | null, remarks: '' };
+  usageApproveSubmitting = false;
   usageRejectDialog = { open: false, item: null as BulkSpiritUsageRecord | null, remarks: '' };
   usageRejectSubmitting = false;
   usageSuccessMessage = '';
@@ -2515,28 +2593,49 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
     return this.usageRequests.filter(item => String(item.status || '').toUpperCase().includes('REJECTED')).length;
   }
 
-  approveUsage(item: BulkSpiritUsageRecord): void {
-    if (!item.id) return;
-    if (!confirm(`Are you sure you want to approve Bulk Spirit Usage request ${item.reference_no}?`)) {
-      return;
-    }
+  openUsageApproveDialog(item: BulkSpiritUsageRecord): void {
+    this.usageApproveDialog = {
+      open: true,
+      item: item,
+      remarks: ''
+    };
+  }
 
-    this.usageActingId = item.id;
+  closeUsageApproveDialog(): void {
+    this.usageApproveDialog = {
+      open: false,
+      item: null,
+      remarks: ''
+    };
+  }
+
+  confirmUsageApprove(): void {
+    const item = this.usageApproveDialog.item;
+    if (!item || !item.id) return;
+
+    this.usageApproveSubmitting = true;
     this.usageErrorMessage = '';
     this.usageSuccessMessage = '';
 
-    this.bulkSpiritUsageService.performAction(item.id, 'APPROVE').subscribe({
+    const remarks = String(this.usageApproveDialog.remarks || '').trim();
+
+    this.bulkSpiritUsageService.performAction(item.id, 'APPROVE', remarks).subscribe({
       next: (res: any) => {
-        this.usageActingId = null;
+        this.usageApproveSubmitting = false;
+        this.closeUsageApproveDialog();
         this.usageSuccessMessage = `Usage request ${item.reference_no} approved successfully!`;
         this.loadUsageRequests();
         this.sidebarPendingBadgeService.triggerRefresh();
       },
       error: (err: any) => {
-        this.usageActingId = null;
+        this.usageApproveSubmitting = false;
         this.usageErrorMessage = err?.error?.message || err?.message || 'Failed to approve usage request.';
       }
     });
+  }
+
+  approveUsage(item: BulkSpiritUsageRecord): void {
+    this.openUsageApproveDialog(item);
   }
 
   openUsageRejectDialog(item: BulkSpiritUsageRecord): void {
