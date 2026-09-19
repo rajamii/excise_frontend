@@ -4702,6 +4702,42 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         return status.includes('reject') || stage.includes('reject');
     }
 
+    isAutoRejected(): boolean {
+        if (!this.applicationData) return false;
+        const raw = this.applicationData as any;
+        if (raw.is_auto_rejected || raw.isAutoRejected) return true;
+        const stageName = String(raw.currentStageName || raw.current_stage_name || raw.current_stage || '').toLowerCase();
+        const stageId = Number(raw.currentStageId || raw.current_stage_id || 0);
+        return stageId === 180 || stageId === 166 || (stageName.includes('reject') && (stageName.includes('no action') || stageName.includes('payment') || stageName.includes('objection')));
+    }
+
+    getRejectionReason(): string {
+        if (!this.applicationData) return 'Application was rejected.';
+        const raw = this.applicationData as any;
+        const explicit = raw.rejection_reason || raw.rejectionReason || raw.rejection_remarks || raw.rejectionRemarks || raw.remarks;
+        if (this.hasText(explicit)) {
+            return String(explicit).trim();
+        }
+
+        const stageName = String(raw.currentStageName || raw.current_stage_name || raw.current_stage || '').toLowerCase();
+        const stageId = Number(raw.currentStageId || raw.current_stage_id || 0);
+
+        if (stageId === 180 || (stageName.includes('payment') && stageName.includes('reject'))) {
+            return 'Application automatically rejected: The required License Fee and Security Deposit payments were not completed within the configured payment deadline.';
+        }
+
+        if (stageId === 166 || (stageName.includes('objection') && stageName.includes('reject'))) {
+            return 'Application automatically rejected: The applicant did not respond to or resolve the raised objection within the configured time limit.';
+        }
+
+        const rejectedBy = this.getRejectedByDisplayName();
+        if (this.hasText(rejectedBy)) {
+            return `Application was rejected by ${rejectedBy}.`;
+        }
+
+        return 'Application was rejected during processing.';
+    }
+
     getRejectedByDisplayName(): string {
         const explicit = (this.applicationData as any)?.rejectedByDisplay;
         if (this.hasText(explicit)) {

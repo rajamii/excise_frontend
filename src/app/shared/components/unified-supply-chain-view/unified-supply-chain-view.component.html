@@ -63,6 +63,28 @@
             </div>
         </div>
 
+        <!-- Prominent Rejection Notice Alert Banner -->
+        <div class="alert alert-danger mb-4 shadow-sm border-start border-danger border-4 no-print" 
+             *ngIf="isApplicationRejected()"
+             style="background-color: #fef2f2; border-radius: 10px; padding: 16px 20px; border-color: #ef4444 !important;">
+            <div class="d-flex gap-3 align-items-start">
+                <div style="background-color: #fee2e2; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <i class="bi" [ngClass]="isAutoRejected() ? 'bi-clock-history text-danger' : 'bi-x-circle-fill text-danger'" style="font-size: 22px;"></i>
+                </div>
+                <div style="flex-grow: 1;">
+                    <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                        <h5 class="alert-heading text-danger fw-bold mb-0" style="font-size: 16px;">
+                            {{ isAutoRejected() ? 'Application Automatically Rejected by System' : 'Application Rejected' }}
+                        </h5>
+                        <span class="badge bg-danger text-white ms-auto" style="font-size: 11px; padding: 4px 8px;">REJECTED</span>
+                    </div>
+                    <p class="mb-0 text-dark fw-medium" style="font-size: 14px; line-height: 1.5; margin-top: 6px;">
+                        <strong>Reason for Rejection:</strong> {{ getRejectionReason() }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
         <!-- Prominent Countdown Timer Alert Banner for Active Objection & Payment Stages -->
         <div class="countdown-detail-banner mb-4 shadow-sm no-print"
              *ngIf="activeCountdownTimer"

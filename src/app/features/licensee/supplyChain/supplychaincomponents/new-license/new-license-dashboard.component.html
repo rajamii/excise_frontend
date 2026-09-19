@@ -186,6 +186,17 @@
                   </ng-container>
                 </div>
 
+                <!-- Prominent Rejection Note Box for Auto-Rejected and Rejected Applications -->
+                <div *ngIf="row.statusGroup === 'rejected' || isRowRejected(row)" class="rejection-note-box" [class.auto-rejected]="row.isAutoRejected">
+                  <div class="rejection-note-head">
+                    <i class="bi" [ngClass]="row.isAutoRejected ? 'bi-clock-history' : 'bi-x-circle-fill'"></i>
+                    <span>{{ row.isAutoRejected ? 'Auto-Rejected (Timer Expired)' : 'Rejection Reason' }}</span>
+                  </div>
+                  <div class="rejection-note-body">
+                    {{ row.rejectionReason || getComputedRejectionNote(row) }}
+                  </div>
+                </div>
+
                 <!-- Prominent Countdown Timer Box for Active Objection or Payment -->
                 <div *ngIf="row.activeTimer" class="countdown-timer-box" [ngClass]="row.activeTimer.timerType + ' urgency-' + row.activeTimer.urgency">
                   <div class="timer-box-head">

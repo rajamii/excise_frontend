@@ -76,6 +76,8 @@ interface NewLicenseItem {
   objectionDeadlineAt?: string | null;
   objectionTimeRemainingSeconds?: number | null;
   activeTimer?: ActiveCountdownTimer | null;
+  rejectionReason?: string | null;
+  isAutoRejected?: boolean;
 }
 
 interface GroupedNewLicenseResponse {
@@ -835,6 +837,35 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
         const objectionDeadlineAt = item?.objection_deadline_at || item?.objectionDeadlineAt || null;
         const objectionTimeRemainingSeconds = item?.objection_time_remaining_seconds ?? item?.objectionTimeRemainingSeconds ?? null;
 
+        const stageId = Number(currentStageId || 0);
+        const isAutoRejected = Boolean(
+          (item?.is_auto_rejected ?? item?.isAutoRejected) ||
+          stageId === 180 ||
+          stageId === 166 ||
+          (rawLower.includes('no action') && rawLower.includes('reject')) ||
+          (rawLower.includes('payment') && rawLower.includes('reject')) ||
+          (rawLower.includes('objection') && rawLower.includes('reject'))
+        );
+
+        let rejectionReason = String(
+          item?.rejection_reason ||
+          item?.rejectionReason ||
+          item?.rejection_remarks ||
+          item?.rejectionRemarks ||
+          item?.remarks ||
+          ''
+        ).trim() || null;
+
+        if (!rejectionReason && isRejected) {
+          if (stageId === 180 || (rawLower.includes('payment') && rawLower.includes('reject'))) {
+            rejectionReason = 'Application automatically rejected: License Fee and Security Deposit payments were not completed within the allowed payment window.';
+          } else if (stageId === 166 || (rawLower.includes('objection') && rawLower.includes('reject'))) {
+            rejectionReason = 'Application automatically rejected: No action or clarification was submitted on the raised objection within the allowed time limit.';
+          } else {
+            rejectionReason = `Application rejected at stage: ${currentStage}`;
+          }
+        }
+
         return ({
           id: applicationId,
           applicationId,
@@ -866,7 +897,9 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
           isObjectionTimerActive,
           objectionDeadlineAt,
           objectionTimeRemainingSeconds,
-          activeTimer: null
+          activeTimer: null,
+          rejectionReason,
+          isAutoRejected
         });
       });
     };
@@ -1307,5 +1340,22 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
         setTimeout(() => this.loadData(), 1500);
       }
     });
+  }
+
+  isRowRejected(row: NewLicenseItem): boolean {
+    const raw = String(row?.currentStageRaw || '').toLowerCase();
+    return row?.statusGroup === 'rejected' || raw.includes('reject');
+  }
+
+  getComputedRejectionNote(row: NewLicenseItem): string {
+    if (row?.rejectionReason) return row.rejectionReason;
+    const raw = String(row?.currentStageRaw || '').toLowerCase();
+    if (raw.includes('payment')) {
+      return 'Application automatically rejected: Required License Fee and Security Deposit payments were not completed within the allowed payment window.';
+    }
+    if (raw.includes('objection')) {
+      return 'Application automatically rejected: No action was submitted on the raised objection within the allowed time limit.';
+    }
+    return 'Application was rejected by the department.';
   }
 }
