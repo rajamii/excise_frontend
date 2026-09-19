@@ -3945,38 +3945,87 @@
 </div>
 
 <!-- Permit Wise Details Modal -->
-<div class="modal fade show d-block" tabindex="-1" style="background: rgba(0, 0, 0, 0.6); z-index: 1060;" *ngIf="showPermitDetailsModal">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
-    <div class="modal-content border-0 shadow-lg">
+<div class="modal fade show d-block" tabindex="-1" style="background: rgba(0, 0, 0, 0.65); z-index: 1060;" *ngIf="showPermitDetailsModal">
+  <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 1150px; width: 95%;">
+    <div class="modal-content border-0 shadow-lg rounded-3 overflow-hidden">
+      <!-- Modal Header -->
       <div class="modal-header bg-gradient bg-primary text-white py-3 px-4">
-        <h5 class="modal-title fw-bold">
-          <i class="bi bi-card-checklist me-2"></i>
-          Permit Wise Details - {{ selectedPermitDetailsRow?.applicationId || selectedPermitDetailsRow?.referenceNo }}
+        <h5 class="modal-title fw-bold d-flex align-items-center mb-0">
+          <i class="bi bi-card-checklist fs-4 me-2"></i>
+          <span>Permit Wise Details &mdash; <span class="font-monospace fw-normal">{{ selectedPermitDetailsRow?.applicationId || selectedPermitDetailsRow?.referenceNo }}</span></span>
         </h5>
-        <button type="button" class="btn-close btn-close-white" (click)="closePermitDetailsModal()"></button>
+        <button type="button" class="btn-close btn-close-white" (click)="closePermitDetailsModal()" aria-label="Close"></button>
       </div>
-      <div class="modal-body p-4" style="max-height: 75vh; overflow-y: auto;">
-        <div class="mb-3 d-flex justify-content-between align-items-center bg-light p-3 rounded border">
-          <div>
-            <strong>Applicant:</strong> {{ selectedPermitDetailsRow?.applicantName || 'N/A' }} <br />
-            <small class="text-muted">Supplier: {{ selectedPermitDetailsRow?.supplierName || 'N/A' }}</small>
+
+      <div class="modal-body p-4 bg-light bg-opacity-50" style="max-height: 80vh; overflow-y: auto;">
+        <!-- Summary Info Header Banner -->
+        <div class="row g-3 mb-4">
+          <!-- Applicant & Supplier Card -->
+          <div class="col-md-7">
+            <div class="p-3 bg-white rounded-3 border shadow-xs h-100 d-flex flex-column justify-content-between">
+              <div>
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <span class="text-muted fw-bold text-uppercase" style="font-size: 11px; letter-spacing: 0.5px;">
+                    <i class="bi bi-file-earmark-text text-primary me-1"></i> Requisition Reference
+                  </span>
+                  <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 font-monospace px-2.5 py-1">
+                    {{ selectedPermitDetailsRow?.applicationId || selectedPermitDetailsRow?.referenceNo }}
+                  </span>
+                </div>
+                <div class="fs-6 text-dark mb-1">
+                  <span class="text-muted">Applicant:</span> <strong class="text-dark">{{ resolveApplicantName(selectedPermitDetailsRow) || selectedPermitDetailsRow?.applicantName || 'N/A' }}</strong>
+                </div>
+                <div class="small text-muted" *ngIf="selectedPermitDetailsRow?.supplierName || selectedPermitDetailsRow?.application?.supplier_name">
+                  <i class="bi bi-building me-1"></i> Supplier: <strong class="text-secondary">{{ selectedPermitDetailsRow?.supplierName || selectedPermitDetailsRow?.application?.supplier_name }}</strong>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="text-end">
-            <span class="badge bg-info text-dark fs-6">{{ selectedPermitWiseItems.length }} Permit(s)</span>
+
+          <!-- Total Permits & Volume Summary Card -->
+          <div class="col-md-5">
+            <div class="p-3 bg-white rounded-3 border shadow-xs h-100 d-flex flex-column justify-content-between">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-muted fw-bold text-uppercase" style="font-size: 11px; letter-spacing: 0.5px;">
+                  <i class="bi bi-grid text-primary me-1"></i> Permits Breakdown
+                </span>
+                <span class="badge bg-info text-dark fw-bold px-2.5 py-1">
+                  {{ selectedPermitWiseItems.length }} Permit(s)
+                </span>
+              </div>
+              <div class="d-flex align-items-center justify-content-between pt-1">
+                <div>
+                  <small class="text-muted d-block" style="font-size: 11px;">Total Cases</small>
+                  <strong class="fs-5 text-primary font-monospace">{{ selectedPermitDetailsRow?.cases || selectedPermitDetailsRow?.totalCases || selectedPermitDetailsRow?.application?.cases || selectedPermitDetailsRow?.application?.total_cases || 0 }} Cases</strong>
+                </div>
+                <div class="text-end" *ngIf="hasApprovedHologramAllocation(selectedPermitDetailsRow)">
+                  <small class="text-muted d-block" style="font-size: 11px;">Holograms Reserved</small>
+                  <span class="badge bg-success font-monospace px-2.5 py-1.5">
+                    <i class="bi bi-upc-scan me-1"></i> {{ getHologramsAssignedCount(selectedPermitDetailsRow) | number }} pcs
+                  </span>
+                </div>
+                <div class="text-end" *ngIf="!hasApprovedHologramAllocation(selectedPermitDetailsRow)">
+                  <small class="text-muted d-block" style="font-size: 11px;">Hologram Status</small>
+                  <span class="badge bg-warning text-dark px-2.5 py-1.5">
+                    <i class="bi bi-clock me-1"></i> Pending Approval
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Allocated Hologram Serial Numbers in Modal -->
+        <!-- Allocated Holograms Global Strip (If Approved) -->
         <div
-          class="mb-3 p-3 bg-white rounded border shadow-xs"
+          class="mb-4 p-3 bg-white rounded-3 border border-success border-opacity-25 shadow-xs"
           *ngIf="(selectedPermitDetailsRow?.assigned_hologram_ranges || selectedPermitDetailsRow?.application?.assigned_hologram_ranges || selectedPermitDetailsRow?.assignedHologramRanges)?.length > 0"
         >
           <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
-            <span class="fw-bold text-primary fs-7">
-              <i class="bi bi-upc-scan me-1"></i> Allocated IMFL Holograms Serial Numbers:
+            <span class="fw-bold text-success fs-7 d-flex align-items-center">
+              <i class="bi bi-upc-scan me-2 fs-6"></i> Allocated IMFL Hologram Serial Ranges
             </span>
-            <span class="badge bg-success fs-7">
-              {{ (selectedPermitDetailsRow?.total_holograms_assigned || selectedPermitDetailsRow?.application?.total_holograms_assigned || selectedPermitDetailsRow?.totalHologramsAssigned) | number }} Pcs Assigned
+            <span class="badge bg-success font-monospace">
+              {{ (selectedPermitDetailsRow?.total_holograms_assigned || selectedPermitDetailsRow?.application?.total_holograms_assigned || selectedPermitDetailsRow?.totalHologramsAssigned) | number }} Pcs Total
             </span>
           </div>
           <div class="d-flex flex-wrap gap-2 pt-1">
@@ -3986,125 +4035,236 @@
             >
               <i class="bi bi-tag-fill text-primary"></i>
               <span><strong>{{ rng.ref_no || rng.procurement_ref_no }}</strong>:</span>
-              <span class="text-primary fw-bold">{{ rng.from }} &rarr; {{ rng.to }}</span>
+              <span class="text-primary fw-bold font-monospace">{{ rng.from }} &rarr; {{ rng.to }}</span>
               <span class="badge bg-primary text-white ms-1">{{ rng.count }} pcs</span>
             </div>
           </div>
         </div>
 
-        <div class="accordion" id="permitDetailsAccordion">
-          <div class="card mb-3 border shadow-sm" *ngFor="let item of selectedPermitWiseItems; let idx = index">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center py-2 px-3">
-              <h6 class="m-0 fw-bold text-primary">
-                <i class="bi bi-card-heading me-2"></i>
-                Permit Number: {{ item.permitNumber }}
-              </h6>
+        <!-- Permit Cards -->
+        <div class="d-flex flex-column gap-3">
+          <div class="card border shadow-sm rounded-3 overflow-hidden" *ngFor="let item of selectedPermitWiseItems; let idx = index">
+            <!-- Permit Card Header -->
+            <div class="card-header bg-white py-2.5 px-3 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
               <div class="d-flex align-items-center gap-2">
-                <!-- Cancellation Status Badges -->
-                <span class="badge bg-danger text-white fs-7" *ngIf="item.cancellationStatus === 'approved'">
+                <span class="badge bg-primary text-white rounded-pill px-2.5 py-1 fs-7">#{{ idx + 1 }}</span>
+                <h6 class="m-0 fw-bold text-dark font-monospace d-flex align-items-center">
+                  <i class="bi bi-card-heading text-primary me-2"></i>
+                  {{ item.permitNumber }}
+                </h6>
+              </div>
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <!-- Stock Arrival Status Badges -->
+                <span class="badge bg-success text-white py-1.5 px-2.5 shadow-xs" *ngIf="!item.cancellationStatus && item.arrivalStatus === 'approved'">
+                  <i class="bi bi-check2-all me-1"></i> Stock Arrival Approved
+                </span>
+                <span class="badge bg-warning text-dark py-1.5 px-2.5 shadow-xs" *ngIf="!item.cancellationStatus && item.arrivalStatus === 'under_review'">
+                  <i class="bi bi-clock-history me-1"></i> Stock Arrival Pending Verification
+                </span>
+                <span class="badge bg-danger text-white py-1.5 px-2.5 shadow-xs" *ngIf="!item.cancellationStatus && item.arrivalStatus === 'rejected'">
+                  <i class="bi bi-x-octagon-fill me-1"></i> Stock Arrival Rejected
+                </span>
+                <span class="badge bg-light text-muted border py-1.5 px-2.5" *ngIf="!item.cancellationStatus && !item.arrivalRecord">
+                  <i class="bi bi-truck me-1"></i> Awaiting Arrival
+                </span>
+
+                <!-- Cancellation / Revalidation Status Badges -->
+                <span class="badge bg-danger text-white py-1.5 px-2.5 shadow-xs" *ngIf="item.cancellationStatus === 'approved'">
                   <i class="bi bi-x-circle-fill me-1"></i> Cancelled
                 </span>
-                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger fs-7" *ngIf="item.cancellationStatus === 'under_process'">
+                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger py-1.5 px-2.5" *ngIf="item.cancellationStatus === 'under_process'">
                   <i class="bi bi-clock-history me-1"></i> Cancellation Under Process
                 </span>
-                <span class="badge bg-secondary fs-7" *ngIf="item.cancellationStatus === 'rejected'">
+                <span class="badge bg-secondary py-1.5 px-2.5" *ngIf="item.cancellationStatus === 'rejected'">
                   <i class="bi bi-slash-circle me-1"></i> Cancellation Rejected
                 </span>
 
-                <!-- Revalidation Status Badges -->
-                <span class="badge bg-warning text-dark fs-7" *ngIf="item.revalidationStatus === 'under_process'">
+                <span class="badge bg-warning text-dark py-1.5 px-2.5 shadow-xs" *ngIf="item.revalidationStatus === 'under_process'">
                   <i class="bi bi-arrow-repeat me-1"></i> Revalidation Under Process
                 </span>
-                <span class="badge bg-info text-white fs-7" *ngIf="item.revalidationStatus === 'approved'">
+                <span class="badge bg-info text-white py-1.5 px-2.5 shadow-xs" *ngIf="item.revalidationStatus === 'approved'">
                   <i class="bi bi-check-circle-fill me-1"></i> Revalidated
-                </span>
-
-                <!-- Arrival Status Badges -->
-                <span class="badge bg-warning text-dark fs-7" *ngIf="!item.cancellationStatus && item.arrivalStatus === 'under_review'">
-                  <i class="bi bi-clock-history me-1"></i> Stock Cases Arrival Pending Approval
-                </span>
-                <span class="badge bg-success text-white fs-7" *ngIf="!item.cancellationStatus && item.arrivalStatus === 'approved'">
-                  <i class="bi bi-check2-all me-1"></i> Stock Arrival Approved
-                </span>
-                <span class="badge bg-danger text-white fs-7" *ngIf="!item.cancellationStatus && item.arrivalStatus === 'rejected'">
-                  <i class="bi bi-x-octagon-fill me-1"></i> Stock Arrival Rejected (Re-entry / Cancellation Allowed)
                 </span>
               </div>
             </div>
+
+            <!-- Permit Card Body: 3 Balanced Panels -->
             <div class="card-body p-3">
               <div class="row g-3">
-                <div class="col-md-4">
-                  <div class="border-end pe-3 h-100">
-                    <h6 class="text-muted fs-7 text-uppercase fw-bold mb-2"><i class="bi bi-box me-1"></i> Allocation Details</h6>
-                    <p class="mb-1"><strong>Brand Name:</strong> <span class="text-primary fw-semibold d-block text-truncate" [title]="item.brandName">{{ item.brandName }}</span></p>
-                    <p class="mb-1"><strong>Size (ml):</strong> {{ item.sizeMl }} ml ({{ item.piecesPerCase || item.pieces_per_case || getPiecesInCase(item.sizeMl) }} pcs/case)</p>
-                    <p class="mb-0"><strong>Allocated Cases:</strong> <span class="badge bg-primary fs-7">{{ item.totalCases }} Cases</span></p>
-                  </div>
-                </div>
+                <!-- Panel 1: Allocation & Brands -->
+                <div class="col-lg-4 col-md-12">
+                  <div class="p-3 bg-light rounded-3 border h-100 d-flex flex-column justify-content-between">
+                    <div>
+                      <h6 class="text-primary fs-7 text-uppercase fw-bold mb-2 pb-1 border-bottom d-flex align-items-center justify-content-between">
+                        <span><i class="bi bi-box-seam me-1"></i> Allocation Details</span>
+                        <span class="badge bg-primary text-white font-monospace">{{ item.totalCases }} Cases</span>
+                      </h6>
 
-                <div class="col-md-4">
-                  <div class="border-end pe-3 h-100">
-                    <h6 class="text-muted fs-7 text-uppercase fw-bold mb-2"><i class="bi bi-truck me-1"></i> Stock Arrival Details</h6>
-                    <div *ngIf="item.arrivalRecord; else noArrivalBlock">
-                      <div class="p-2 rounded bg-danger bg-opacity-10 border border-danger border-opacity-25 mb-2" *ngIf="item.arrivalStatus === 'rejected'">
-                        <small class="fw-bold text-danger d-block mb-1"><i class="bi bi-exclamation-octagon-fill me-1"></i> Physical Stock Arrival Rejected by OIC</small>
-                        <small class="d-block text-dark">Car / Vehicle No: <strong>{{ item.vehicleNumber || 'N/A' }}</strong></small>
-                        <small class="d-block text-dark">Arrived Cases: <strong>{{ item.arrivedCases }} Cases</strong></small>
-                        <small class="d-block text-danger mt-1" *ngIf="item.arrivalNotes"><strong>OIC Rejection Notes:</strong> "{{ item.arrivalNotes }}"</small>
-                        <small class="d-block text-primary mt-1 fw-semibold"><i class="bi bi-arrow-counterclockwise me-1"></i> Action Re-opened: Re-entry or cancellation allowed.</small>
+                      <!-- If multiple brands / line items in this permit -->
+                      <div *ngIf="item.lineItems && item.lineItems.length > 1; else singleBrandBlock" class="d-flex flex-column gap-2 mb-2">
+                        <div class="p-2 bg-white rounded border shadow-2xs" *ngFor="let li of item.lineItems; let liIdx = index">
+                          <div class="fw-semibold text-dark text-truncate" [title]="li.brand_name || li.brandName || item.brandName">
+                            <i class="bi bi-tag-fill text-primary me-1 small"></i>{{ li.brand_name || li.brandName || item.brandName }}
+                          </div>
+                          <div class="d-flex justify-content-between align-items-center small text-muted mt-1">
+                            <span>{{ li.size_ml || li.sizeMl || item.sizeMl }} ml ({{ li.pieces_per_case || li.piecesPerCase || item.piecesPerCase }} pcs/cs)</span>
+                            <span class="badge bg-light text-dark border">{{ li.cases || li.totalCases || li.total_cases || 0 }} Cases</span>
+                          </div>
+                        </div>
                       </div>
 
-                      <div *ngIf="item.arrivalStatus !== 'rejected'">
-                        <p class="mb-1">
-                          <strong>Car / Vehicle Registration No:</strong>
-                          <span class="fw-bold text-dark d-block" *ngIf="item.vehicleNumber">{{ item.vehicleNumber }}</span>
-                          <span class="text-muted d-block" *ngIf="!item.vehicleNumber">N/A</span>
-                        </p>
-                        <p class="mb-1">
-                          <strong>Arrived Cases:</strong>
-                          <span class="fw-bold" [ngClass]="item.arrivalStatus === 'approved' ? 'text-success' : 'text-warning text-darken-3'">{{ item.arrivedCases }} Cases</span> / {{ item.expectedCases }} Expected
-                        </p>
-                        <p class="mb-1" *ngIf="item.submittedDate"><strong>Submitted Date:</strong> {{ item.submittedDate | date:'dd-MMM-yyyy HH:mm' }}</p>
-                        <p class="mb-0 text-muted fst-italic" *ngIf="item.arrivalNotes"><strong>Arrival Notes:</strong> "{{ item.arrivalNotes }}"</p>
+                      <!-- Single Brand Fallback -->
+                      <ng-template #singleBrandBlock>
+                        <div class="mb-2">
+                          <small class="text-muted d-block" style="font-size: 11px;">Brand Name</small>
+                          <strong class="text-dark d-block text-truncate fs-6" [title]="item.brandName">
+                            <i class="bi bi-tag text-primary me-1"></i>{{ item.brandName }}
+                          </strong>
+                        </div>
+                        <div class="row g-2 mb-2">
+                          <div class="col-6">
+                            <small class="text-muted d-block" style="font-size: 11px;">Package Size</small>
+                            <span class="fw-semibold text-dark">{{ item.sizeMl }} ml</span>
+                          </div>
+                          <div class="col-6">
+                            <small class="text-muted d-block" style="font-size: 11px;">Pack Ratio</small>
+                            <span class="fw-semibold text-dark">{{ item.piecesPerCase }} pcs/case</span>
+                          </div>
+                        </div>
+                      </ng-template>
+                    </div>
+
+                    <!-- Permit Specific Hologram Info Tag -->
+                    <div class="mt-2 pt-2 border-top" *ngIf="item.hologramSummary && !item.hologramSummary.isPending">
+                      <div class="d-flex align-items-center justify-content-between">
+                        <small class="text-muted" style="font-size: 11px;">Assigned Holograms:</small>
+                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 font-monospace">
+                          <i class="bi bi-upc-scan me-1"></i>{{ item.hologramSummary.from }} &rarr; {{ item.hologramSummary.to }} ({{ item.hologramSummary.count }} pcs)
+                        </span>
                       </div>
                     </div>
-                    <ng-template #noArrivalBlock>
-                      <p class="text-muted mb-0 small"><i class="bi bi-info-circle me-1"></i> No physical stock arrival details submitted for this permit yet.</p>
-                    </ng-template>
                   </div>
                 </div>
 
-                <div class="col-md-4">
-                  <div class="h-100">
-                    <h6 class="text-muted fs-7 text-uppercase fw-bold mb-2"><i class="bi bi-file-earmark-text me-1"></i> Permit Requests &amp; Lifecycle</h6>
+                <!-- Panel 2: Stock Arrival Details -->
+                <div class="col-lg-4 col-md-12">
+                  <div class="p-3 bg-light rounded-3 border h-100 d-flex flex-column justify-content-between">
+                    <div>
+                      <h6 class="text-primary fs-7 text-uppercase fw-bold mb-2 pb-1 border-bottom">
+                        <i class="bi bi-truck me-1"></i> Stock Arrival Details
+                      </h6>
 
-                    <!-- Cancellation details if any -->
-                    <div class="mb-2 p-2 rounded bg-danger bg-opacity-10 border border-danger border-opacity-25" *ngIf="item.cancellationRecord">
-                      <small class="fw-bold text-danger d-block mb-1"><i class="bi bi-x-circle-fill me-1"></i> Cancellation Request</small>
-                      <small class="d-block text-dark">Ref: <strong>{{ item.cancellationRecord.referenceNo || item.cancellationRecord.reference_no }}</strong></small>
-                      <small class="d-block text-muted">Status: <span class="fw-semibold text-danger">{{ item.cancellationRecord.status || item.cancellationRecord.currentStage }}</span></small>
-                      <small class="d-block text-muted text-truncate" *ngIf="item.cancellationRecord.cancellation_reason" [title]="item.cancellationRecord.cancellation_reason">Reason: {{ item.cancellationRecord.cancellation_reason }}</small>
-                    </div>
+                      <div *ngIf="item.arrivalRecord; else noArrivalBlock">
+                        <!-- Rejection Alert -->
+                        <div class="p-2.5 rounded bg-danger bg-opacity-10 border border-danger border-opacity-25 mb-2" *ngIf="item.arrivalStatus === 'rejected'">
+                          <div class="fw-bold text-danger small mb-1">
+                            <i class="bi bi-exclamation-octagon-fill me-1"></i> Physical Arrival Rejected by OIC
+                          </div>
+                          <div class="small text-dark">Vehicle: <strong>{{ item.vehicleNumber || 'N/A' }}</strong></div>
+                          <div class="small text-dark">Arrived: <strong>{{ item.arrivedCases }} Cases</strong></div>
+                          <div class="small text-danger mt-1" *ngIf="item.arrivalNotes">
+                            <em>"{{ item.arrivalNotes }}"</em>
+                          </div>
+                          <div class="small text-primary mt-1 fw-semibold">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Re-entry or cancellation allowed.
+                          </div>
+                        </div>
 
-                    <!-- Revalidation details if any -->
-                    <div class="mb-2 p-2 rounded bg-warning bg-opacity-10 border border-warning border-opacity-25" *ngIf="item.revalidationRecord">
-                      <small class="fw-bold text-dark d-block mb-1"><i class="bi bi-arrow-repeat me-1"></i> Revalidation Request</small>
-                      <small class="d-block text-dark">Ref: <strong>{{ item.revalidationRecord.referenceNo || item.revalidationRecord.reference_no }}</strong></small>
-                      <small class="d-block text-muted">Status: <span class="fw-semibold text-dark">{{ item.revalidationRecord.status || item.revalidationRecord.currentStage }}</span></small>
-                    </div>
+                        <!-- Normal or Approved Stock Arrival Info -->
+                        <div *ngIf="item.arrivalStatus !== 'rejected'">
+                          <div class="mb-2">
+                            <small class="text-muted d-block" style="font-size: 11px;">Car / Vehicle Registration No</small>
+                            <span class="fw-bold font-monospace text-dark d-block">
+                              <i class="bi bi-truck-front text-secondary me-1" *ngIf="item.vehicleNumber"></i>
+                              {{ item.vehicleNumber || 'N/A' }}
+                            </span>
+                          </div>
+                          <div class="row g-2 mb-2">
+                            <div class="col-6">
+                              <small class="text-muted d-block" style="font-size: 11px;">Arrived Cases</small>
+                              <span class="badge fs-7 fw-bold" [ngClass]="item.arrivalStatus === 'approved' ? 'bg-success text-white' : 'bg-warning text-dark'">
+                                {{ item.arrivedCases }} Cases
+                              </span>
+                            </div>
+                            <div class="col-6">
+                              <small class="text-muted d-block" style="font-size: 11px;">Expected Cases</small>
+                              <span class="fw-semibold text-dark">{{ item.expectedCases }} Cases</span>
+                            </div>
+                          </div>
+                          <div class="mb-1" *ngIf="item.submittedDate">
+                            <small class="text-muted d-block" style="font-size: 11px;">Arrival Date &amp; Time</small>
+                            <span class="small text-dark font-monospace">{{ item.submittedDate | date:'dd-MMM-yyyy HH:mm' }}</span>
+                          </div>
+                          <div class="mt-2 p-2 bg-white rounded border small text-muted" *ngIf="item.arrivalNotes">
+                            <strong class="text-dark">Notes:</strong> "{{ item.arrivalNotes }}"
+                          </div>
+                        </div>
+                      </div>
 
-                    <div *ngIf="!item.cancellationRecord && !item.revalidationRecord">
-                      <p class="text-muted mb-0 small"><i class="bi bi-check-circle text-success me-1"></i> Permit active with no cancellation or revalidation requests.</p>
+                      <ng-template #noArrivalBlock>
+                        <div class="text-center py-4 text-muted">
+                          <i class="bi bi-truck-flatbed text-secondary fs-3 d-block mb-1"></i>
+                          <div class="fw-semibold small text-secondary">No Physical Stock Arrival Yet</div>
+                          <small class="d-block text-muted px-2 mt-1" style="font-size: 11px;">
+                            Consignment dispatch and warehouse arrival details have not been submitted for this permit.
+                          </small>
+                        </div>
+                      </ng-template>
                     </div>
                   </div>
                 </div>
+
+                <!-- Panel 3: Permit Lifecycle & Status -->
+                <div class="col-lg-4 col-md-12">
+                  <div class="p-3 bg-light rounded-3 border h-100 d-flex flex-column justify-content-between">
+                    <div>
+                      <h6 class="text-primary fs-7 text-uppercase fw-bold mb-2 pb-1 border-bottom">
+                        <i class="bi bi-shield-check me-1"></i> Permit Requests &amp; Lifecycle
+                      </h6>
+
+                      <!-- Cancellation Record -->
+                      <div class="p-2.5 rounded bg-danger bg-opacity-10 border border-danger border-opacity-25 mb-2" *ngIf="item.cancellationRecord">
+                        <div class="fw-bold text-danger small mb-1 d-flex align-items-center">
+                          <i class="bi bi-x-circle-fill me-1"></i> Cancellation Request
+                        </div>
+                        <div class="small text-dark">Ref: <strong class="font-monospace">{{ item.cancellationRecord.referenceNo || item.cancellationRecord.reference_no }}</strong></div>
+                        <div class="small text-muted">Status: <span class="fw-semibold text-danger">{{ item.cancellationRecord.status || item.cancellationRecord.currentStage }}</span></div>
+                        <div class="small text-muted text-truncate mt-1" *ngIf="item.cancellationRecord.cancellation_reason" [title]="item.cancellationRecord.cancellation_reason">
+                          Reason: <em>{{ item.cancellationRecord.cancellation_reason }}</em>
+                        </div>
+                      </div>
+
+                      <!-- Revalidation Record -->
+                      <div class="p-2.5 rounded bg-warning bg-opacity-10 border border-warning border-opacity-25 mb-2" *ngIf="item.revalidationRecord">
+                        <div class="fw-bold text-dark small mb-1 d-flex align-items-center">
+                          <i class="bi bi-arrow-repeat me-1"></i> Revalidation Request
+                        </div>
+                        <div class="small text-dark">Ref: <strong class="font-monospace">{{ item.revalidationRecord.referenceNo || item.revalidationRecord.reference_no }}</strong></div>
+                        <div class="small text-muted">Status: <span class="fw-semibold text-dark">{{ item.revalidationRecord.status || item.revalidationRecord.currentStage }}</span></div>
+                      </div>
+
+                      <!-- Active and Good Standing -->
+                      <div *ngIf="!item.cancellationRecord && !item.revalidationRecord" class="text-center py-4 text-muted">
+                        <i class="bi bi-check-circle-fill text-success fs-3 d-block mb-1"></i>
+                        <div class="fw-semibold small text-success">Permit Active &amp; Valid</div>
+                        <small class="d-block text-muted px-2 mt-1" style="font-size: 11px;">
+                          No cancellation, disputes, or revalidation requests recorded against this permit.
+                        </small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
         </div>
+
       </div>
-      <div class="modal-footer bg-light py-2 px-4">
-        <button type="button" class="btn btn-secondary px-4 btn-sm" (click)="closePermitDetailsModal()">Close</button>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer bg-light py-2.5 px-4 border-top">
+        <button type="button" class="btn btn-secondary px-4 btn-sm shadow-xs" (click)="closePermitDetailsModal()">Close</button>
       </div>
     </div>
   </div>

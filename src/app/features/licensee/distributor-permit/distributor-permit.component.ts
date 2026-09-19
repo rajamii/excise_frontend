@@ -5060,6 +5060,26 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         }
       }
 
+      // Line items belonging to this permit
+      let permitLineItems = p.line_items || p.lineItems;
+      if (!Array.isArray(permitLineItems) || permitLineItems.length === 0) {
+        const allLines = rawApp?.line_items || rawApp?.lineItems || [];
+        permitLineItems = allLines.filter((li: any) => {
+          const liPermitNo = String(li.permit_number || li.permitNumber || '').toLowerCase().trim();
+          return !liPermitNo || liPermitNo === pNumLower;
+        });
+      }
+      if (!Array.isArray(permitLineItems) || permitLineItems.length === 0) {
+        permitLineItems = firstLineItem ? [firstLineItem] : [];
+      }
+
+      // Find assigned hologram summary for this permit
+      const holoSummaries = this.getPermitWiseHologramSummary(rawApp || row);
+      const matchingHolo = (holoSummaries || []).find((h: any) => {
+        const hPermit = String(h.permitName || h.permitNumber || '').toLowerCase().trim();
+        return hPermit === pNumLower || hPermit.includes(pNumLower) || pNumLower.includes(hPermit);
+      });
+
       return {
         ...p,
         permitNumber: pNum,
@@ -5067,6 +5087,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         brandName: brandName || 'N/A',
         sizeMl: sizeMlVal,
         piecesPerCase: piecesPerCaseVal,
+        lineItems: permitLineItems,
+        hologramSummary: matchingHolo || null,
         arrivalRecord: arrivalObj,
         vehicleNumber: vehicleNo || '',
         arrivedCases: arrivedCasesVal,
