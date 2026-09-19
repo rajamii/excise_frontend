@@ -915,10 +915,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
        this.router.navigate(['/dashboard'], {
          queryParams: { section: section, focus: 'pending' }
        });
-    } else if (section === 'bl-details' && this.isOicUser() && this.getPendingCount(section) > 0) {
-      // When there are pending ENA arrival details, open the module focused on pending items.
+    } else if (section === 'bl-details' && this.isOicUser()) {
       this.router.navigate(['/dashboard'], {
-        queryParams: { section: section, focus: 'pending' }
+        queryParams: { section: section }
       });
     } else if (section === 'imfl-requisition-cases') {
       this.router.navigate(['/dashboard'], {

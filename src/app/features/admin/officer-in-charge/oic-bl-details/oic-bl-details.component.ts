@@ -2378,6 +2378,8 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
   fromDate: string = '';
   toDate: string = '';
 
+  private pendingFocusRequested = false;
+
   pageSizeOptions: number[] = [5, 10, 15];
   pageSize = 5;
   currentPage = 1;
@@ -2390,10 +2392,7 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
     
     this.route.queryParamMap.pipe(takeUntil(this.destroy$)).subscribe((params) => {
       const focus = String(params.get('focus') || '').toLowerCase();
-      if (focus === 'pending') {
-        this.reviewStatus = 'PENDING';
-        this.resetPagination();
-      }
+      this.pendingFocusRequested = focus === 'pending';
       const tab = String(params.get('tab') || '').toLowerCase();
       if (tab === 'usage' || tab === 'usage_requests' || tab === 'bulk-spirit-requests') {
         this.setMainTab('usage_requests');
@@ -2406,15 +2405,47 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
 
   setMainTab(tab: 'arrivals' | 'usage_requests'): void {
     this.activeMainTab = tab;
-    if (tab === 'usage_requests') {
+    if (tab === 'arrivals') {
+      if (this.reviewStatus === 'PENDING' && this.getCount('PENDING') === 0) {
+        this.reviewStatus = 'ALL';
+      }
+    } else if (tab === 'usage_requests') {
       this.loadUsageRequests();
+      if (this.usageReviewStatus === 'PENDING' && this.getPendingUsageCount() === 0) {
+        this.usageReviewStatus = 'ALL';
+      }
     }
+  }
+
+  private normalizeUsageRecord(r: any): BulkSpiritUsageRecord {
+    return {
+      id: Number(r?.id || 0),
+      reference_no: String(r?.referenceNo ?? r?.reference_no ?? r?.ref_no ?? ''),
+      licensee_id: String(r?.licenseeId ?? r?.licensee_id ?? ''),
+      distillery_name: String(r?.distilleryName ?? r?.distillery_name ?? r?.applicantName ?? r?.applicant_name ?? ''),
+      applicant: Number(r?.applicant || 0),
+      applicant_name: String(r?.applicantName ?? r?.applicant_name ?? ''),
+      bulk_spirit_type: String(r?.bulkSpiritType ?? r?.bulk_spirit_type ?? r?.spiritType ?? r?.spirit_type ?? ''),
+      quantity: Number(r?.quantity || 0),
+      purpose: String(r?.purpose || ''),
+      remarks: String(r?.remarks || ''),
+      status: String(r?.status || 'Pending'),
+      status_code: String(r?.statusCode ?? r?.status_code ?? ''),
+      rejection_reason: String(r?.rejectionReason ?? r?.rejection_reason ?? ''),
+      workflow: Number(r?.workflow || 0),
+      current_stage: Number((r?.currentStage ?? r?.current_stage) || 0),
+      current_stage_name: String((r?.currentStageName ?? r?.current_stage_name) || ''),
+      reviewed_by: String((r?.reviewedBy ?? r?.reviewed_by) || ''),
+      reviewed_at: String((r?.reviewedAt ?? r?.reviewed_at) || ''),
+      created_at: String((r?.createdAt ?? r?.created_at) || ''),
+      updated_at: String((r?.updatedAt ?? r?.updated_at) || '')
+    };
   }
 
   loadUsageRequests(): void {
     this.bulkSpiritUsageService.getUsageRequests().subscribe({
       next: (res: any) => {
-        let list: BulkSpiritUsageRecord[] = [];
+        let list: any[] = [];
         if (Array.isArray(res)) {
           list = res;
         } else if (res?.results && Array.isArray(res.results)) {
@@ -2422,7 +2453,13 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
         } else if (res?.data && Array.isArray(res.data)) {
           list = res.data;
         }
-        this.usageRequests = list;
+        this.usageRequests = list.map(item => this.normalizeUsageRecord(item));
+
+        if (this.pendingFocusRequested && this.activeMainTab === 'usage_requests') {
+          this.usageReviewStatus = this.getPendingUsageCount() > 0 ? 'PENDING' : 'ALL';
+        } else if (this.usageReviewStatus === 'PENDING' && this.getPendingUsageCount() === 0) {
+          this.usageReviewStatus = 'ALL';
+        }
       },
       error: () => {
         // Silently handle error or set message
@@ -2559,6 +2596,26 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
       next: (response: any) => {
         const rows = Array.isArray(response?.data) ? response.data : [];
         this.rows = rows.map((row: any) => this.mapRow(row));
+
+        if (this.pendingFocusRequested) {
+          const pendingArrivals = this.getCount('PENDING');
+          if (pendingArrivals > 0) {
+            this.reviewStatus = 'PENDING';
+          } else {
+            // No pending arrivals. If there are pending usage requests, navigate to that tab
+            if (this.getPendingUsageCount() > 0) {
+              this.setMainTab('usage_requests');
+              this.usageReviewStatus = 'PENDING';
+            } else {
+              this.reviewStatus = 'ALL';
+            }
+          }
+        } else {
+          if (this.reviewStatus === 'PENDING' && this.getCount('PENDING') === 0) {
+            this.reviewStatus = 'ALL';
+          }
+        }
+
         this.resetPagination();
         this.loading = false;
       },
