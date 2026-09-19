@@ -12,11 +12,14 @@
           </div>
           <div>
             <h2 class="banner-title mb-1">ENA Bulk Spirit Inventory Records</h2>
-            <p class="banner-subtitle mb-0">View, audit, and analyze all verified bulk spirit tanker arrivals and factory receipts</p>
+            <p class="banner-subtitle mb-0">Live factory stock balances, usage deductions, and verified tanker arrival history</p>
           </div>
         </div>
       </div>
-      <div class="banner-actions">
+      <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn btn-glass-usage" (click)="goToUsage()">
+          <i class="bi bi-box-arrow-up-right me-1"></i> Bulk Spirit Usage
+        </button>
         <button type="button" class="btn btn-glass-refresh" (click)="loadData()" [disabled]="loading">
           <i class="bi bi-arrow-clockwise me-1" [class.spin]="loading"></i> Refresh
         </button>
@@ -24,17 +27,19 @@
     </div>
   </div>
 
-  <!-- Metric Summary Cards -->
+  <!-- Real-Time Stock Balance Cards Grid -->
   <div class="row g-3 mb-4">
     <div class="col-xl-3 col-md-6">
       <div class="metric-card card border-0 shadow-sm rounded-4 p-3 bg-white">
         <div class="d-flex align-items-center">
           <div class="metric-icon-box bg-primary bg-opacity-10 text-primary me-3">
-            <i class="bi bi-card-checklist fs-3"></i>
+            <i class="bi bi-truck fs-3"></i>
           </div>
           <div>
-            <span class="text-uppercase fw-semibold text-muted tracking-wide" style="font-size: 0.75rem;">Total Arrival Records</span>
-            <h3 class="mb-0 fw-bold text-dark mt-1">{{ allRows.length }}</h3>
+            <span class="text-uppercase fw-semibold text-muted tracking-wide" style="font-size: 0.75rem;">Total Arrived Stock</span>
+            <h3 class="mb-0 fw-bold text-dark mt-1">
+              {{ (liveInventory.totalArrivedBl || 0) | number:'1.2-2' }} <small class="fs-6 fw-normal text-muted">BL</small>
+            </h3>
           </div>
         </div>
       </div>
@@ -43,12 +48,30 @@
     <div class="col-xl-3 col-md-6">
       <div class="metric-card card border-0 shadow-sm rounded-4 p-3 bg-white">
         <div class="d-flex align-items-center">
-          <div class="metric-icon-box bg-info bg-opacity-10 text-info me-3">
-            <i class="bi bi-truck fs-3"></i>
+          <div class="metric-icon-box bg-success bg-opacity-10 text-success me-3">
+            <i class="bi bi-check-circle-fill fs-3"></i>
           </div>
           <div>
-            <span class="text-uppercase fw-semibold text-muted tracking-wide" style="font-size: 0.75rem;">Total Tankers Arrived</span>
-            <h3 class="mb-0 fw-bold text-dark mt-1">{{ getFilteredTotalTankers() }}</h3>
+            <span class="text-uppercase fw-semibold text-muted tracking-wide" style="font-size: 0.75rem;">Approved Used Stock</span>
+            <h3 class="mb-0 fw-bold text-dark mt-1">
+              {{ (liveInventory.totalUsedBl || 0) | number:'1.2-2' }} <small class="fs-6 fw-normal text-muted">BL</small>
+            </h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+      <div class="metric-card card border-0 shadow-sm rounded-4 p-3 bg-white">
+        <div class="d-flex align-items-center">
+          <div class="metric-icon-box bg-warning bg-opacity-10 text-warning me-3">
+            <i class="bi bi-hourglass-split fs-3"></i>
+          </div>
+          <div>
+            <span class="text-uppercase fw-semibold text-muted tracking-wide" style="font-size: 0.75rem;">In-Flight (Pending OIC)</span>
+            <h3 class="mb-0 fw-bold text-dark mt-1">
+              {{ (liveInventory.totalPendingBl || 0) | number:'1.2-2' }} <small class="fs-6 fw-normal text-muted">BL</small>
+            </h3>
           </div>
         </div>
       </div>
@@ -61,184 +84,309 @@
             <i class="bi bi-droplet-fill fs-3"></i>
           </div>
           <div>
-            <span class="text-uppercase fw-semibold text-white-50 tracking-wide" style="font-size: 0.75rem;">Total BL (Filtered)</span>
-            <h3 class="mb-0 fw-bold text-white mt-1">{{ getFilteredTotalBL() | number:'1.2-2' }} <small class="fs-6 fw-normal text-white-50">BL</small></h3>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-xl-3 col-md-6">
-      <div class="metric-card card border-0 shadow-sm rounded-4 p-3 text-white" style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);">
-        <div class="d-flex align-items-center">
-          <div class="metric-icon-box bg-white bg-opacity-25 text-white me-3">
-            <i class="bi bi-check2-circle fs-3"></i>
-          </div>
-          <div>
-            <span class="text-uppercase fw-semibold text-white-50 tracking-wide" style="font-size: 0.75rem;">Active Filtered Entries</span>
-            <h3 class="mb-0 fw-bold text-white mt-1">{{ filteredRows.length }}</h3>
+            <span class="text-uppercase fw-semibold text-white-50 tracking-wide" style="font-size: 0.75rem;">Net Live Available Stock</span>
+            <h3 class="mb-0 fw-bold text-white mt-1">
+              {{ (liveInventory.totalAvailableBl || 0) | number:'1.2-2' }} <small class="fs-6 fw-normal text-white-50">BL</small>
+            </h3>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Filter Card -->
-  <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white filter-card">
-    <div class="row g-3 align-items-end">
-      <div class="col-md-3">
-        <label class="form-label fw-semibold text-secondary small">
-          <i class="bi bi-search me-1"></i> Quick Search
-        </label>
-        <input type="text" class="form-control" [(ngModel)]="searchTerm" (input)="applyFilters()" placeholder="Ref no, distillery, tanker...">
+  <!-- View Switcher & Navigation Header -->
+  <div class="card border-0 shadow-sm rounded-4 p-3 mb-4 bg-white view-switcher-card">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+      <!-- Tab Switcher -->
+      <div class="nav-pills-custom d-flex gap-2">
+        <button type="button" class="btn tab-btn"
+          [class.active]="activeView === 'live-inventory'"
+          (click)="setActiveView('live-inventory')">
+          <i class="bi bi-diagram-3-fill me-2"></i>
+          Live Stock by Spirit Type
+          <span class="badge ms-2" [class.bg-white]="activeView==='live-inventory'" [class.text-primary]="activeView==='live-inventory'" [class.bg-primary-subtle]="activeView!=='live-inventory'" [class.text-primary-emphasis]="activeView!=='live-inventory'">
+            {{ liveInventory.items.length }}
+          </span>
+        </button>
+
+        <button type="button" class="btn tab-btn"
+          [class.active]="activeView === 'arrival-entries'"
+          (click)="setActiveView('arrival-entries')">
+          <i class="bi bi-truck-flatbed me-2"></i>
+          Tanker Arrival Entries & History
+          <span class="badge ms-2" [class.bg-white]="activeView==='arrival-entries'" [class.text-primary]="activeView==='arrival-entries'" [class.bg-secondary-subtle]="activeView!=='arrival-entries'" [class.text-dark]="activeView!=='arrival-entries'">
+            {{ allArrivalRows.length }}
+          </span>
+        </button>
       </div>
-      <div class="col-md-3">
-        <label class="form-label fw-semibold text-secondary small">
-          <i class="bi bi-calendar-event me-1"></i> Date Filter
-        </label>
-        <input type="date" class="form-control" [(ngModel)]="dateFilter" (change)="applyFilters()">
-      </div>
-      <div class="col-md-3">
-        <label class="form-label fw-semibold text-secondary small">
-          <i class="bi bi-calendar3 me-1"></i> Month Filter
-        </label>
-        <input type="month" class="form-control" [(ngModel)]="monthFilter" (change)="applyFilters()">
-      </div>
-      <div class="col-md-3 d-flex gap-2">
-        <button type="button" class="btn btn-outline-secondary w-100" (click)="clearFilters()">
-          <i class="bi bi-x-circle me-1"></i> Clear Filters
+
+      <!-- Quick Action Button to toggle to the other view -->
+      <div>
+        <button *ngIf="activeView === 'live-inventory'" type="button" class="btn btn-outline-primary btn-sm px-3 py-2 fw-semibold" (click)="setActiveView('arrival-entries')">
+          <i class="bi bi-table me-1"></i> View Tanker Arrival Entries <i class="bi bi-arrow-right ms-1"></i>
+        </button>
+        <button *ngIf="activeView === 'arrival-entries'" type="button" class="btn btn-outline-primary btn-sm px-3 py-2 fw-semibold" (click)="setActiveView('live-inventory')">
+          <i class="bi bi-diagram-3 me-1"></i> View Live Stock by Spirit Type <i class="bi bi-arrow-right ms-1"></i>
         </button>
       </div>
     </div>
   </div>
 
-  <!-- Monthly BL Summary Table -->
-  <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden" *ngIf="getMonthlyRows().length > 0">
-    <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
-      <div class="d-flex align-items-center">
-        <i class="bi bi-calendar2-month text-primary me-2 fs-5"></i>
-        <h5 class="mb-0 fw-bold text-dark">Monthly BL Summary</h5>
+  <!-- ========================================================================= -->
+  <!-- VIEW 1: LIVE INVENTORY BY BULK SPIRIT TYPE -->
+  <!-- ========================================================================= -->
+  <div *ngIf="activeView === 'live-inventory'">
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+      <div class="card-header bg-white border-bottom py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div class="d-flex align-items-center">
+          <i class="bi bi-boxes text-primary me-2 fs-5"></i>
+          <div>
+            <h5 class="mb-0 fw-bold text-dark">Live Bulk Spirit Stock Balances</h5>
+            <small class="text-muted">Real-time breakdown of arrived, used, pending, and net available Bulk Liters (BL)</small>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <div class="input-group input-group-sm" style="max-width: 260px;">
+            <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+            <input type="text" class="form-control border-start-0" [(ngModel)]="spiritSearchTerm" (input)="applySpiritFilter()" placeholder="Search spirit type...">
+          </div>
+        </div>
       </div>
-      <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1">
-        {{ getMonthlyRows().length }} Month(s)
-      </span>
-    </div>
-    <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0 summary-table">
-        <thead>
-          <tr>
-            <th class="ps-4"><i class="bi bi-calendar me-1"></i> Month</th>
-            <th><i class="bi bi-list-ol me-1"></i> Total Entries</th>
-            <th><i class="bi bi-truck me-1"></i> Total Tankers</th>
-            <th class="pe-4"><i class="bi bi-droplet-fill me-1"></i> Total Bulk Liter (BL)</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let row of getMonthlyRows()">
-            <td class="ps-4 fw-semibold text-dark">{{ row.monthLabel }}</td>
-            <td>
-              <span class="badge bg-light text-dark border px-2 py-1">{{ row.entries }} entry(s)</span>
-            </td>
-            <td>
-              <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">
-                <i class="bi bi-truck me-1"></i>{{ row.totalTankers }} Tanker(s)
-              </span>
-            </td>
-            <td class="pe-4 fw-bold text-success fs-6">{{ row.totalBulkLiter | number:'1.2-2' }} BL</td>
-          </tr>
-        </tbody>
-      </table>
+
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 custom-table">
+          <thead>
+            <tr>
+              <th class="ps-4">#</th>
+              <th>Bulk Spirit Type</th>
+              <th>Total Arrived (BL)</th>
+              <th>Approved Used (BL)</th>
+              <th>Pending Approval (BL)</th>
+              <th>Live Available Stock (BL)</th>
+              <th>Stock Status</th>
+              <th class="pe-4 text-end">Quick Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of filteredSpiritItems; let i = index" [class.table-light-highlight]="item.availableBl > 0">
+              <td class="ps-4 text-muted fw-semibold">{{ i + 1 }}</td>
+              <td>
+                <div class="d-flex align-items-center">
+                  <div class="spirit-icon-dot me-2" [ngClass]="{'bg-success': item.availableBl > 0, 'bg-warning': item.availableBl === 0 && item.totalPendingUsageBl > 0, 'bg-secondary': item.availableBl === 0 && item.totalPendingUsageBl === 0}"></div>
+                  <strong class="text-dark fs-6">{{ item.bulkSpiritType }}</strong>
+                </div>
+              </td>
+              <td>
+                <span class="fw-semibold text-secondary">{{ item.totalArrivedBl | number:'1.2-2' }} BL</span>
+              </td>
+              <td>
+                <span class="text-muted">{{ item.totalApprovedUsageBl | number:'1.2-2' }} BL</span>
+              </td>
+              <td>
+                <span *ngIf="item.totalPendingUsageBl > 0" class="badge bg-warning-subtle text-dark border border-warning-subtle px-2 py-1">
+                  <i class="bi bi-hourglass-split me-1"></i>{{ item.totalPendingUsageBl | number:'1.2-2' }} BL
+                </span>
+                <span *ngIf="item.totalPendingUsageBl === 0" class="text-muted">0.00 BL</span>
+              </td>
+              <td>
+                <span class="badge fs-6 fw-bold px-3 py-2"
+                  [ngClass]="item.availableBl > 0 ? 'bg-success text-white' : 'bg-light text-muted border'">
+                  <i class="bi bi-droplet-fill me-1" *ngIf="item.availableBl > 0"></i>
+                  {{ item.availableBl | number:'1.2-2' }} BL
+                </span>
+              </td>
+              <td>
+                <span class="badge rounded-pill px-3 py-1"
+                  [ngClass]="{
+                    'bg-success-subtle text-success border border-success-subtle': item.status === 'In Stock',
+                    'bg-warning-subtle text-dark border border-warning-subtle': item.status === 'Pending Approval',
+                    'bg-light text-muted border': item.status === 'No Stock'
+                  }">
+                  {{ item.status }}
+                </span>
+              </td>
+              <td class="pe-4 text-end">
+                <button type="button" class="btn btn-sm btn-primary px-3 fw-semibold shadow-sm"
+                  [disabled]="item.availableBl <= 0"
+                  (click)="goToUsage(item.bulkSpiritType)">
+                  <i class="bi bi-send-fill me-1"></i> Use Spirit
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="filteredSpiritItems.length === 0 && !loading">
+              <td colspan="8" class="text-center py-5 text-muted">
+                <i class="bi bi-inbox fs-1 d-block mb-2 text-muted"></i>
+                <h6 class="fw-bold text-secondary">No Bulk Spirit Types found</h6>
+                <p class="text-muted small mb-0">No matching spirit type was found for your search query.</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
-  <!-- Arrival Entries Table -->
-  <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-    <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
-      <div class="d-flex align-items-center">
-        <i class="bi bi-table text-primary me-2 fs-5"></i>
-        <h5 class="mb-0 fw-bold text-dark">Arrival Entries</h5>
+  <!-- ========================================================================= -->
+  <!-- VIEW 2: TANKER ARRIVAL ENTRIES & HISTORY -->
+  <!-- ========================================================================= -->
+  <div *ngIf="activeView === 'arrival-entries'">
+    <!-- Filter Card -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white filter-card">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label fw-semibold text-secondary small">
+            <i class="bi bi-search me-1"></i> Quick Search
+          </label>
+          <input type="text" class="form-control" [(ngModel)]="arrivalSearchTerm" (input)="applyArrivalFilters()" placeholder="Ref no, distillery, tanker...">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold text-secondary small">
+            <i class="bi bi-calendar-event me-1"></i> Date Filter
+          </label>
+          <input type="date" class="form-control" [(ngModel)]="dateFilter" (change)="applyArrivalFilters()">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold text-secondary small">
+            <i class="bi bi-calendar3 me-1"></i> Month Filter
+          </label>
+          <input type="month" class="form-control" [(ngModel)]="monthFilter" (change)="applyArrivalFilters()">
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+          <button type="button" class="btn btn-outline-secondary w-100" (click)="clearArrivalFilters()">
+            <i class="bi bi-x-circle me-1"></i> Clear Filters
+          </button>
+        </div>
       </div>
-      <span class="badge bg-primary text-white rounded-pill px-3 py-2">{{ filteredRows.length }} Entries</span>
-    </div>
-    <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0 custom-table">
-        <thead>
-          <tr>
-            <th class="ps-4">#</th>
-            <th>Arrival Date</th>
-            <th>Reference No</th>
-            <th>Distillery</th>
-            <th>Tankers</th>
-            <th>Requested Qty</th>
-            <th>Received Qty (BL)</th>
-            <th>Tanker Details</th>
-            <th class="pe-4 text-center">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let row of pagedRows; let i = index">
-            <td class="ps-4 text-muted fw-semibold">{{ pageStart + i }}</td>
-            <td>
-              <span class="fw-semibold text-dark">{{ row.arrivalDate ? (row.arrivalDate | date:'dd-MMM-yyyy') : '-' }}</span>
-            </td>
-            <td>
-              <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold fs-6 px-3 py-1">
-                {{ row.referenceNo }}
-              </span>
-              <span class="badge bg-warning text-dark ms-2" *ngIf="row.editedByOic" title="Edited by OIC">Edited by OIC</span>
-            </td>
-            <td>
-              <div class="d-flex align-items-center">
-                <i class="bi bi-building text-secondary me-2"></i>
-                <span class="fw-semibold text-dark">{{ row.distilleryName || '-' }}</span>
-              </div>
-            </td>
-            <td>
-              <span class="badge bg-light text-dark border px-2 py-1">
-                <i class="bi bi-truck text-primary me-1"></i>{{ row.tankerCount }} Tanker(s)
-              </span>
-            </td>
-            <td>{{ row.requestedTotalQuantity | number:'1.2-2' }} <small class="text-muted">BL</small></td>
-            <td>
-              <span class="badge bg-success-subtle text-success border border-success-subtle fs-6 fw-bold px-3 py-1">
-                {{ row.totalBulkLiter | number:'1.2-2' }} BL
-              </span>
-            </td>
-            <td>
-              <div class="d-flex flex-column gap-1">
-                <span class="tanker-chip" *ngFor="let line of getTankerDetailsLines(row.tankerDetails)">
-                  <i class="bi bi-truck text-primary me-1"></i> {{ line }}
-                </span>
-              </div>
-            </td>
-            <td class="pe-4 text-center">
-              <span class="badge bg-success text-white rounded-pill px-3 py-1">
-                <i class="bi bi-check-circle me-1"></i> {{ row.approvalStatus || 'APPROVED' }}
-              </span>
-            </td>
-          </tr>
-          <tr *ngIf="filteredRows.length === 0 && !loading">
-            <td colspan="9" class="text-center py-5 text-muted">
-              <i class="bi bi-inbox fs-1 d-block mb-2 text-muted"></i>
-              <h6 class="fw-bold text-secondary">No Bulk Spirit arrival records found</h6>
-              <p class="text-muted small mb-0">Try adjusting your date or search filters above.</p>
-            </td>
-          </tr>
-        </tbody>
-      </table>
     </div>
 
-    <!-- Pagination Footer -->
-    <div class="card-footer bg-white border-top py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-3" *ngIf="filteredRows.length > 0">
-      <span class="text-muted small">Showing {{ pageStart }}-{{ pageEnd }} of {{ filteredRows.length }} entries</span>
-      <div class="d-flex align-items-center gap-2">
-        <label class="text-muted small mb-0">Page size:</label>
-        <select class="form-select form-select-sm" style="width: auto;" [(ngModel)]="pageSize" (change)="pageIndex=0">
-          <option *ngFor="let opt of pageSizeOptions" [ngValue]="opt">{{ opt }}</option>
-        </select>
-        <button class="btn btn-outline-secondary btn-sm" (click)="prevPage()" [disabled]="pageIndex <= 0">Prev</button>
-        <span class="text-muted small">Page {{ pageIndex + 1 }} / {{ totalPages }}</span>
-        <button class="btn btn-outline-secondary btn-sm" (click)="nextPage()" [disabled]="pageIndex >= totalPages - 1">Next</button>
+    <!-- Monthly BL Summary Table -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden" *ngIf="getMonthlyRows().length > 0">
+      <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+          <i class="bi bi-calendar2-month text-primary me-2 fs-5"></i>
+          <h5 class="mb-0 fw-bold text-dark">Monthly BL Summary</h5>
+        </div>
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1">
+          {{ getMonthlyRows().length }} Month(s)
+        </span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 summary-table">
+          <thead>
+            <tr>
+              <th class="ps-4"><i class="bi bi-calendar me-1"></i> Month</th>
+              <th><i class="bi bi-list-ol me-1"></i> Total Entries</th>
+              <th><i class="bi bi-truck me-1"></i> Total Tankers</th>
+              <th class="pe-4"><i class="bi bi-droplet-fill me-1"></i> Total Bulk Liter (BL)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of getMonthlyRows()">
+              <td class="ps-4 fw-semibold text-dark">{{ row.monthLabel }}</td>
+              <td>
+                <span class="badge bg-light text-dark border px-2 py-1">{{ row.entries }} entry(s)</span>
+              </td>
+              <td>
+                <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">
+                  <i class="bi bi-truck me-1"></i>{{ row.totalTankers }} Tanker(s)
+                </span>
+              </td>
+              <td class="pe-4 fw-bold text-success fs-6">{{ row.totalBulkLiter | number:'1.2-2' }} BL</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Arrival Entries Table -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+      <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+          <i class="bi bi-table text-primary me-2 fs-5"></i>
+          <h5 class="mb-0 fw-bold text-dark">Arrival Entries</h5>
+        </div>
+        <span class="badge bg-primary text-white rounded-pill px-3 py-2">{{ filteredArrivalRows.length }} Entries</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 custom-table">
+          <thead>
+            <tr>
+              <th class="ps-4">#</th>
+              <th>Arrival Date</th>
+              <th>Reference No</th>
+              <th>Distillery</th>
+              <th>Tankers</th>
+              <th>Requested Qty</th>
+              <th>Received Qty (BL)</th>
+              <th>Tanker Details</th>
+              <th class="pe-4 text-center">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of pagedArrivalRows; let i = index">
+              <td class="ps-4 text-muted fw-semibold">{{ pageStart + i }}</td>
+              <td>
+                <span class="fw-semibold text-dark">{{ row.arrivalDate ? (row.arrivalDate | date:'dd-MMM-yyyy') : '-' }}</span>
+              </td>
+              <td>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold fs-6 px-3 py-1">
+                  {{ row.referenceNo }}
+                </span>
+                <span class="badge bg-warning text-dark ms-2" *ngIf="row.editedByOic" title="Edited by OIC">Edited by OIC</span>
+              </td>
+              <td>
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-building text-secondary me-2"></i>
+                  <span class="fw-semibold text-dark">{{ row.distilleryName || '-' }}</span>
+                </div>
+              </td>
+              <td>
+                <span class="badge bg-light text-dark border px-2 py-1">
+                  <i class="bi bi-truck text-primary me-1"></i>{{ row.tankerCount }} Tanker(s)
+                </span>
+              </td>
+              <td>{{ row.requestedTotalQuantity | number:'1.2-2' }} <small class="text-muted">BL</small></td>
+              <td>
+                <span class="badge bg-success-subtle text-success border border-success-subtle fs-6 fw-bold px-3 py-1">
+                  {{ row.totalBulkLiter | number:'1.2-2' }} BL
+                </span>
+              </td>
+              <td>
+                <div class="d-flex flex-column gap-1">
+                  <span class="tanker-chip" *ngFor="let line of getTankerDetailsLines(row.tankerDetails)">
+                    <i class="bi bi-truck text-primary me-1"></i> {{ line }}
+                  </span>
+                </div>
+              </td>
+              <td class="pe-4 text-center">
+                <span class="badge bg-success text-white rounded-pill px-3 py-1">
+                  <i class="bi bi-check-circle me-1"></i> {{ row.approvalStatus || 'APPROVED' }}
+                </span>
+              </td>
+            </tr>
+            <tr *ngIf="filteredArrivalRows.length === 0 && !loading">
+              <td colspan="9" class="text-center py-5 text-muted">
+                <i class="bi bi-inbox fs-1 d-block mb-2 text-muted"></i>
+                <h6 class="fw-bold text-secondary">No Bulk Spirit arrival records found</h6>
+                <p class="text-muted small mb-0">Try adjusting your date or search filters above.</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination Footer -->
+      <div class="card-footer bg-white border-top py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-3" *ngIf="filteredArrivalRows.length > 0">
+        <span class="text-muted small">Showing {{ pageStart }}-{{ pageEnd }} of {{ filteredArrivalRows.length }} entries</span>
+        <div class="d-flex align-items-center gap-2">
+          <label class="text-muted small mb-0">Page size:</label>
+          <select class="form-select form-select-sm" style="width: auto;" [(ngModel)]="pageSize" (change)="pageIndex=0">
+            <option *ngFor="let opt of pageSizeOptions" [ngValue]="opt">{{ opt }}</option>
+          </select>
+          <button class="btn btn-outline-secondary btn-sm" (click)="prevPage()" [disabled]="pageIndex <= 0">Prev</button>
+          <span class="text-muted small">Page {{ pageIndex + 1 }} / {{ totalArrivalPages }}</span>
+          <button class="btn btn-outline-secondary btn-sm" (click)="nextPage()" [disabled]="pageIndex >= totalArrivalPages - 1">Next</button>
+        </div>
       </div>
     </div>
   </div>
