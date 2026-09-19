@@ -4563,7 +4563,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           isApproved: String(p.status || '').toUpperCase() === 'APPROVED',
           selectedForApproval: false,
           status: p.status || 'PENDING_APPROVAL',
-          assignedRanges: p.assignedRanges || p.assigned_ranges || [],
+          assignedRanges: p.assignedRanges || p.assigned_ranges || p.assigned_hologram_ranges || p.assignedHologramRanges || p.hologram_ranges || [],
           items: items.map((it: any) => ({
             brand: it.brand || it.brand_name || it.brandName || 'Brand',
             size: `${it.size_ml || it.sizeMl || 750} ml`,
@@ -4658,34 +4658,59 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return this.commissionerApprovedPermits.reduce((acc, p) => acc + Number(p.totalHolograms || (p.totalCases * 12)), 0);
   }
 
+  get commissionerSelectedPendingHolograms(): number {
+    return this.commissionerSelectedPendingPermits.reduce((acc, p) => acc + Number(p.totalHolograms || (p.totalCases * 12)), 0);
+  }
+
   get commissionerNextAvailableRangeText(): string {
-    if (this.commissionerStockResponse?.next_available_range && this.commissionerStockResponse.next_available_range !== 'None') {
-      return this.commissionerStockResponse.next_available_range;
-    }
-    if (this.commissionerStockResponse?.nextAvailableRange && this.commissionerStockResponse.nextAvailableRange !== 'None') {
-      return this.commissionerStockResponse.nextAvailableRange;
-    }
-    if (this.commissionerWarehouseStockBatches && this.commissionerWarehouseStockBatches.length > 0) {
+    let maxCommittedSerial = 0;
+    (this.commissionerApprovalPermits || []).forEach(p => {
+      if (p.isApproved && Array.isArray(p.assignedRanges) && p.assignedRanges.length > 0) {
+        p.assignedRanges.forEach((r: any) => {
+          const t = parseInt(String(r.to || r.to_serial || '0'), 10);
+          if (!isNaN(t) && t > maxCommittedSerial) {
+            maxCommittedSerial = t;
+          }
+        });
+      }
+    });
+
+    let baseStart = 1;
+    let baseEnd = this.commissionerAvailableStockTotal || 1000;
+
+    if (this.commissionerStockResponse?.next_available_from) {
+      baseStart = parseInt(String(this.commissionerStockResponse.next_available_from), 10);
+    } else if (this.commissionerStockResponse?.nextAvailableFrom) {
+      baseStart = parseInt(String(this.commissionerStockResponse.nextAvailableFrom), 10);
+    } else if (this.commissionerWarehouseStockBatches && this.commissionerWarehouseStockBatches.length > 0) {
       const b = this.commissionerWarehouseStockBatches[0];
-      if (b.next_available_range && b.next_available_range !== 'None') {
-        return b.next_available_range;
+      if (b.next_available_from) {
+        baseStart = parseInt(String(b.next_available_from), 10);
+      } else if (b.available_ranges && b.available_ranges.length > 0) {
+        baseStart = parseInt(String(b.available_ranges[0].from || '1'), 10);
       }
-      if (b.available_ranges && b.available_ranges.length > 0) {
-        return `${b.available_ranges[0].from} → ${b.available_ranges[b.available_ranges.length - 1].to}`;
+      if (b.total_holograms) {
+        baseEnd = parseInt(String(b.total_holograms), 10);
       }
     }
-    return `1 → ${this.commissionerAvailableStockTotal || 1000}`;
+
+    const nextAvailStart = Math.max(baseStart, maxCommittedSerial > 0 ? maxCommittedSerial + 1 : 1);
+    if (nextAvailStart > baseEnd) {
+      return 'None (Fully Allocated)';
+    }
+    return `${nextAvailStart} → ${baseEnd}`;
   }
 
   get commissionerAllocatedRangeText(): string {
-    const approved = this.commissionerApprovedPermits;
-    if (approved.length === 0) return 'None';
-    const first = approved[0]?.assignedRanges?.[0]?.from;
-    const last = approved[approved.length - 1]?.assignedRanges?.[0]?.to;
-    if (first && last) {
-      return `${first} → ${last}`;
+    const newlySelected = this.commissionerSelectedPendingPermits;
+    if (newlySelected.length > 0) {
+      const first = newlySelected[0]?.assignedRanges?.[0]?.from;
+      const last = newlySelected[newlySelected.length - 1]?.assignedRanges?.[0]?.to;
+      if (first !== undefined && last !== undefined && first !== null && last !== null) {
+        return `${first} → ${last}`;
+      }
     }
-    return `${this.commissionerTotalApprovedHolograms} pcs`;
+    return 'None';
   }
 
   closeCommissionerPermitApprovalModal(): void {
@@ -4707,21 +4732,33 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   recalculateCommissionerRangesPreview(): void {
-    let currentSerialPointer = 1;
+    let maxCommittedSerial = 0;
+    (this.commissionerApprovalPermits || []).forEach(p => {
+      if (p.isApproved && Array.isArray(p.assignedRanges) && p.assignedRanges.length > 0) {
+        p.assignedRanges.forEach((r: any) => {
+          const t = parseInt(String(r.to || r.to_serial || '0'), 10);
+          if (!isNaN(t) && t > maxCommittedSerial) {
+            maxCommittedSerial = t;
+          }
+        });
+      }
+    });
+
+    let baseStockPointer = 1;
     let defaultBatchRef = 'IMFL_HOLO_PRO/2026-27/0001';
 
     if (this.commissionerStockResponse?.next_available_from) {
-      currentSerialPointer = parseInt(String(this.commissionerStockResponse.next_available_from), 10);
+      baseStockPointer = parseInt(String(this.commissionerStockResponse.next_available_from), 10);
     } else if (this.commissionerStockResponse?.nextAvailableFrom) {
-      currentSerialPointer = parseInt(String(this.commissionerStockResponse.nextAvailableFrom), 10);
+      baseStockPointer = parseInt(String(this.commissionerStockResponse.nextAvailableFrom), 10);
     } else if (this.commissionerWarehouseStockBatches && this.commissionerWarehouseStockBatches.length > 0) {
       const b = this.commissionerWarehouseStockBatches[0];
       if (b.next_available_from) {
-        currentSerialPointer = parseInt(String(b.next_available_from), 10);
+        baseStockPointer = parseInt(String(b.next_available_from), 10);
       } else if (b.available_ranges && b.available_ranges.length > 0) {
-        currentSerialPointer = parseInt(String(b.available_ranges[0].from || '1'), 10);
+        baseStockPointer = parseInt(String(b.available_ranges[0].from || '1'), 10);
       } else if (b.used_count !== undefined) {
-        currentSerialPointer = parseInt(String(b.used_count || 0), 10) + 1;
+        baseStockPointer = parseInt(String(b.used_count || 0), 10) + 1;
       }
     }
 
@@ -4730,14 +4767,19 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       defaultBatchRef = b.imfl_hologram_ref_no || b.ref_no || defaultBatchRef;
     }
 
+    let currentSerialPointer = Math.max(baseStockPointer, maxCommittedSerial > 0 ? maxCommittedSerial + 1 : 1);
+
     this.commissionerApprovalPermits.forEach((p) => {
       // Existing approvals already have a committed range. Never move that range
       // when the Commissioner returns to approve the remaining permits.
-      if (p.isApproved && Array.isArray(p.assignedRanges) && p.assignedRanges.length > 0) {
-        p.assigned_hologram_ranges = p.assignedRanges;
+      if (p.isApproved) {
+        if (Array.isArray(p.assignedRanges) && p.assignedRanges.length > 0) {
+          p.assigned_hologram_ranges = p.assignedRanges;
+        }
         return;
       }
-      if (p.isApproved || p.selectedForApproval) {
+
+      if (p.selectedForApproval) {
         const count = Number(p.totalHolograms || (p.totalCases * 12));
         const fromSerial = currentSerialPointer;
         const toSerial = currentSerialPointer + count - 1;
@@ -4748,9 +4790,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           count: count,
           status: 'ALLOCATED_TO_PERMIT'
         }];
+        p.assigned_hologram_ranges = p.assignedRanges;
         currentSerialPointer = toSerial + 1;
       } else {
         p.assignedRanges = [];
+        p.assigned_hologram_ranges = [];
       }
     });
   }

@@ -4293,16 +4293,23 @@
               <div class="col-md-4 col-sm-6">
                 <div class="p-2.5 bg-white rounded border h-100 d-flex flex-column justify-content-center">
                   <small class="text-muted d-block mb-1">Holograms Required (Selected)</small>
-                  <strong class="fs-6 text-dark font-monospace">{{ commissionerTotalApprovedHolograms }} pcs</strong>
-                  <small class="text-muted d-block mt-0.5">({{ commissionerApprovedPermitsCount }} of {{ commissionerApprovalPermits.length }} permits approved)</small>
+                  <strong class="fs-6 text-dark font-monospace">{{ commissionerSelectedPendingHolograms }} pcs</strong>
+                  <small class="text-muted d-block mt-0.5" *ngIf="commissionerPendingPermits.length > 0">
+                    ({{ commissionerSelectedPendingPermits.length }} of {{ commissionerPendingPermits.length }} pending permits selected)
+                  </small>
+                  <small class="text-success d-block mt-0.5" *ngIf="commissionerPendingPermits.length === 0">
+                    (All {{ commissionerApprovalPermits.length }} permits approved)
+                  </small>
                 </div>
               </div>
               <div class="col-md-4 col-sm-6">
-                <div class="p-2.5 bg-white rounded border h-100 d-flex flex-column justify-content-center" [style.background]="commissionerTotalApprovedHolograms > 0 ? '#f0fdf4' : '#fff'">
+                <div class="p-2.5 bg-white rounded border h-100 d-flex flex-column justify-content-center" [style.background]="commissionerSelectedPendingHolograms > 0 ? '#f0fdf4' : '#fff'">
                   <small class="text-muted d-block mb-1">Hologram Range to Allocate</small>
-                  <strong class="font-monospace text-success fs-5" *ngIf="commissionerTotalApprovedHolograms > 0">{{ commissionerAllocatedRangeText }}</strong>
-                  <span class="badge bg-secondary mx-auto mt-1" *ngIf="commissionerTotalApprovedHolograms === 0">No Permits Approved</span>
-                  <small class="text-success d-block mt-0.5" *ngIf="commissionerTotalApprovedHolograms > 0">({{ commissionerTotalApprovedHolograms }} pcs sequential)</small>
+                  <strong class="font-monospace text-success fs-5" *ngIf="commissionerSelectedPendingHolograms > 0">{{ commissionerAllocatedRangeText }}</strong>
+                  <span class="badge bg-secondary mx-auto mt-1" *ngIf="commissionerSelectedPendingHolograms === 0 && commissionerPendingPermits.length > 0">No Permits Selected</span>
+                  <span class="badge bg-success mx-auto mt-1" *ngIf="commissionerPendingPermits.length === 0">All Permits Allocated</span>
+                  <small class="text-success d-block mt-0.5" *ngIf="commissionerSelectedPendingHolograms > 0">({{ commissionerSelectedPendingHolograms }} pcs sequential)</small>
+                  <small class="text-muted d-block mt-0.5" *ngIf="commissionerSelectedPendingHolograms === 0 && commissionerPendingPermits.length > 0">Select pending permit below to allocate</small>
                 </div>
               </div>
             </div>
