@@ -133,9 +133,10 @@ export class EnaRequisitionService {
       .pipe(catchError(this.handleError));
   }
 
-  getAllRequisitionArrivalDetails(): Observable<any> {
+  getAllRequisitionArrivalDetails(reviewStatus: string = 'ALL'): Observable<any> {
+    const qs = reviewStatus ? `?review_status=${encodeURIComponent(reviewStatus)}` : '';
     return this.http
-      .get(`${this.apiUrl}arrival-bulk-liter-details/`, this.httpOptions)
+      .get(`${this.apiUrl}arrival-bulk-liter-details/${qs}`, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 

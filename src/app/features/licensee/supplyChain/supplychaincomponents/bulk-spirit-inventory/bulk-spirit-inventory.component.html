@@ -12,7 +12,7 @@
           </div>
           <div>
             <h2 class="banner-title mb-1">ENA Bulk Spirit Inventory Records</h2>
-            <p class="banner-subtitle mb-0">Live factory stock balances, usage deductions, and verified tanker arrival history</p>
+            <p class="banner-subtitle mb-0">Live factory stock balances, usage deductions, and unified BL transaction history</p>
           </div>
         </div>
       </div>
@@ -97,8 +97,8 @@
   <!-- View Switcher & Navigation Header -->
   <div class="card border-0 shadow-sm rounded-4 p-3 mb-4 bg-white view-switcher-card">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
-      <!-- Tab Switcher -->
-      <div class="nav-pills-custom d-flex gap-2">
+      <!-- 3-Tab Switcher -->
+      <div class="nav-pills-custom d-flex flex-wrap gap-2">
         <button type="button" class="btn tab-btn"
           [class.active]="activeView === 'live-inventory'"
           (click)="setActiveView('live-inventory')">
@@ -118,15 +118,25 @@
             {{ allArrivalRows.length }}
           </span>
         </button>
+
+        <button type="button" class="btn tab-btn"
+          [class.active]="activeView === 'bl-history'"
+          (click)="setActiveView('bl-history')">
+          <i class="bi bi-clock-history me-2"></i>
+          BL History (All Movements)
+          <span class="badge ms-2" [class.bg-white]="activeView==='bl-history'" [class.text-primary]="activeView==='bl-history'" [class.bg-info-subtle]="activeView!=='bl-history'" [class.text-info-emphasis]="activeView!=='bl-history'">
+            {{ allHistoryRows.length }}
+          </span>
+        </button>
       </div>
 
-      <!-- Quick Action Button to toggle to the other view -->
-      <div>
-        <button *ngIf="activeView === 'live-inventory'" type="button" class="btn btn-outline-primary btn-sm px-3 py-2 fw-semibold" (click)="setActiveView('arrival-entries')">
-          <i class="bi bi-table me-1"></i> View Tanker Arrival Entries <i class="bi bi-arrow-right ms-1"></i>
+      <!-- Quick Action Buttons -->
+      <div class="d-flex align-items-center gap-2">
+        <button *ngIf="activeView !== 'bl-history'" type="button" class="btn btn-outline-primary btn-sm px-3 py-2 fw-semibold" (click)="setActiveView('bl-history')">
+          <i class="bi bi-clock-history me-1"></i> View All BL History <i class="bi bi-arrow-right ms-1"></i>
         </button>
-        <button *ngIf="activeView === 'arrival-entries'" type="button" class="btn btn-outline-primary btn-sm px-3 py-2 fw-semibold" (click)="setActiveView('live-inventory')">
-          <i class="bi bi-diagram-3 me-1"></i> View Live Stock by Spirit Type <i class="bi bi-arrow-right ms-1"></i>
+        <button *ngIf="activeView === 'bl-history'" type="button" class="btn btn-outline-primary btn-sm px-3 py-2 fw-semibold" (click)="setActiveView('live-inventory')">
+          <i class="bi bi-diagram-3 me-1"></i> View Live Balances <i class="bi bi-arrow-right ms-1"></i>
         </button>
       </div>
     </div>
@@ -237,7 +247,7 @@
           <label class="form-label fw-semibold text-secondary small">
             <i class="bi bi-search me-1"></i> Quick Search
           </label>
-          <input type="text" class="form-control" [(ngModel)]="arrivalSearchTerm" (input)="applyArrivalFilters()" placeholder="Ref no, distillery, tanker...">
+          <input type="text" class="form-control" [(ngModel)]="arrivalSearchTerm" (input)="applyArrivalFilters()" placeholder="Ref no, distillery, spirit type, tanker...">
         </div>
         <div class="col-md-3">
           <label class="form-label fw-semibold text-secondary small">
@@ -303,7 +313,7 @@
       <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
         <div class="d-flex align-items-center">
           <i class="bi bi-table text-primary me-2 fs-5"></i>
-          <h5 class="mb-0 fw-bold text-dark">Arrival Entries</h5>
+          <h5 class="mb-0 fw-bold text-dark">Tanker Arrival Entries</h5>
         </div>
         <span class="badge bg-primary text-white rounded-pill px-3 py-2">{{ filteredArrivalRows.length }} Entries</span>
       </div>
@@ -314,12 +324,14 @@
               <th class="ps-4">#</th>
               <th>Arrival Date</th>
               <th>Reference No</th>
-              <th>Distillery</th>
+              <th>Distillery / Source</th>
+              <th>Spirit Type</th>
               <th>Tankers</th>
               <th>Requested Qty</th>
               <th>Received Qty (BL)</th>
               <th>Tanker Details</th>
-              <th class="pe-4 text-center">Status</th>
+              <th>Status</th>
+              <th class="pe-4 text-end">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -332,13 +344,16 @@
                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold fs-6 px-3 py-1">
                   {{ row.referenceNo }}
                 </span>
-                <span class="badge bg-warning text-dark ms-2" *ngIf="row.editedByOic" title="Edited by OIC">Edited by OIC</span>
+                <span class="badge bg-warning text-dark ms-1" *ngIf="row.editedByOic" title="Edited by OIC">OIC Edited</span>
               </td>
               <td>
                 <div class="d-flex align-items-center">
                   <i class="bi bi-building text-secondary me-2"></i>
                   <span class="fw-semibold text-dark">{{ row.distilleryName || '-' }}</span>
                 </div>
+              </td>
+              <td>
+                <span class="badge bg-light text-dark border px-2 py-1">{{ row.bulkSpiritType }}</span>
               </td>
               <td>
                 <span class="badge bg-light text-dark border px-2 py-1">
@@ -358,14 +373,24 @@
                   </span>
                 </div>
               </td>
-              <td class="pe-4 text-center">
-                <span class="badge bg-success text-white rounded-pill px-3 py-1">
-                  <i class="bi bi-check-circle me-1"></i> {{ row.approvalStatus || 'APPROVED' }}
+              <td>
+                <span class="badge rounded-pill px-3 py-1"
+                  [ngClass]="{
+                    'bg-success-subtle text-success border border-success-subtle': row.approvalStatus === 'APPROVED',
+                    'bg-warning-subtle text-dark border border-warning-subtle': row.approvalStatus === 'PENDING',
+                    'bg-danger-subtle text-danger border border-danger-subtle': row.approvalStatus === 'REJECTED'
+                  }">
+                  {{ row.approvalStatus || 'APPROVED' }}
                 </span>
+              </td>
+              <td class="pe-4 text-end">
+                <button type="button" class="btn btn-sm btn-outline-primary" (click)="openArrivalDetailModal(row)">
+                  <i class="bi bi-eye me-1"></i> View
+                </button>
               </td>
             </tr>
             <tr *ngIf="filteredArrivalRows.length === 0 && !loading">
-              <td colspan="9" class="text-center py-5 text-muted">
+              <td colspan="11" class="text-center py-5 text-muted">
                 <i class="bi bi-inbox fs-1 d-block mb-2 text-muted"></i>
                 <h6 class="fw-bold text-secondary">No Bulk Spirit arrival records found</h6>
                 <p class="text-muted small mb-0">Try adjusting your date or search filters above.</p>
@@ -390,4 +415,427 @@
       </div>
     </div>
   </div>
+
+  <!-- ========================================================================= -->
+  <!-- VIEW 3: UNIFIED BL HISTORY & FACTORY TRANSACTION LEDGER -->
+  <!-- ========================================================================= -->
+  <div *ngIf="activeView === 'bl-history'">
+    <!-- History Summary Cards -->
+    <div class="row g-3 mb-4">
+      <div class="col-lg-3 col-sm-6">
+        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-start border-4 border-success">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <span class="text-uppercase text-muted fw-semibold" style="font-size: 0.72rem;">Total Inflow (Arrivals)</span>
+              <h4 class="mb-0 fw-bold text-success mt-1">
+                +{{ getHistoryTotalInflow() | number:'1.2-2' }} <small class="fs-6 text-muted">BL</small>
+              </h4>
+            </div>
+            <div class="badge-inflow-circle">
+              <i class="bi bi-box-arrow-in-down fs-4 text-success"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-3 col-sm-6">
+        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-start border-4 border-primary">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <span class="text-uppercase text-muted fw-semibold" style="font-size: 0.72rem;">Total Outflow (Approved Used)</span>
+              <h4 class="mb-0 fw-bold text-primary mt-1">
+                -{{ getHistoryTotalOutflow() | number:'1.2-2' }} <small class="fs-6 text-muted">BL</small>
+              </h4>
+            </div>
+            <div class="badge-outflow-circle">
+              <i class="bi bi-box-arrow-up-right fs-4 text-primary"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-3 col-sm-6">
+        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-start border-4 border-warning">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <span class="text-uppercase text-muted fw-semibold" style="font-size: 0.72rem;">Pending Usage (In-Flight)</span>
+              <h4 class="mb-0 fw-bold text-warning-emphasis mt-1">
+                {{ getHistoryTotalPendingOutflow() | number:'1.2-2' }} <small class="fs-6 text-muted">BL</small>
+              </h4>
+            </div>
+            <div class="badge-pending-circle">
+              <i class="bi bi-hourglass-split fs-4 text-warning"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-3 col-sm-6">
+        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-start border-4 border-info">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <span class="text-uppercase text-muted fw-semibold" style="font-size: 0.72rem;">Total Ledger Records</span>
+              <h4 class="mb-0 fw-bold text-dark mt-1">
+                {{ filteredHistoryRows.length }} <small class="fs-6 text-muted">Movements</small>
+              </h4>
+            </div>
+            <div class="badge-ledger-circle">
+              <i class="bi bi-journal-text fs-4 text-info"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Multi-Filter Card -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white filter-card">
+      <div class="row g-3 align-items-end">
+        <div class="col-xl-3 col-md-6">
+          <label class="form-label fw-semibold text-secondary small">
+            <i class="bi bi-search me-1"></i> Search Movement
+          </label>
+          <input type="text" class="form-control" [(ngModel)]="historySearchTerm" (input)="applyHistoryFilters()" placeholder="Ref #, spirit, factory, purpose, tanker...">
+        </div>
+
+        <div class="col-xl-2 col-md-3 col-sm-6">
+          <label class="form-label fw-semibold text-secondary small">
+            <i class="bi bi-funnel me-1"></i> Movement Type
+          </label>
+          <select class="form-select" [(ngModel)]="historyTypeFilter" (change)="applyHistoryFilters()">
+            <option value="ALL">All Movements</option>
+            <option value="ARRIVAL">Stock In (Tanker Arrival)</option>
+            <option value="USAGE">Stock Out (Spirit Usage)</option>
+          </select>
+        </div>
+
+        <div class="col-xl-2 col-md-3 col-sm-6">
+          <label class="form-label fw-semibold text-secondary small">
+            <i class="bi bi-droplet me-1"></i> Spirit Type
+          </label>
+          <select class="form-select" [(ngModel)]="historySpiritFilter" (change)="applyHistoryFilters()">
+            <option value="ALL">All Spirit Types</option>
+            <option *ngFor="let st of distinctSpiritTypes" [value]="st">{{ st }}</option>
+          </select>
+        </div>
+
+        <div class="col-xl-2 col-md-4 col-sm-6">
+          <label class="form-label fw-semibold text-secondary small">
+            <i class="bi bi-check2-circle me-1"></i> Status
+          </label>
+          <select class="form-select" [(ngModel)]="historyStatusFilter" (change)="applyHistoryFilters()">
+            <option value="ALL">All Statuses</option>
+            <option value="APPROVED">Approved / In Stock</option>
+            <option value="PENDING">Pending OIC Approval</option>
+            <option value="REJECTED">Rejected</option>
+          </select>
+        </div>
+
+        <div class="col-xl-2 col-md-4 col-sm-6">
+          <label class="form-label fw-semibold text-secondary small">
+            <i class="bi bi-calendar-event me-1"></i> Date Filter
+          </label>
+          <input type="date" class="form-control" [(ngModel)]="historyDateFilter" (change)="applyHistoryFilters()">
+        </div>
+
+        <div class="col-xl-1 col-md-4 col-sm-12 d-flex">
+          <button type="button" class="btn btn-outline-secondary w-100" (click)="clearHistoryFilters()" title="Reset All Filters">
+            <i class="bi bi-x-circle"></i> Clear
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Unified BL History Ledger Table -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+      <div class="card-header bg-white border-bottom py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div class="d-flex align-items-center">
+          <i class="bi bi-clock-history text-primary me-2 fs-5"></i>
+          <div>
+            <h5 class="mb-0 fw-bold text-dark">BL Transaction Ledger & Factory Movement History</h5>
+            <small class="text-muted">Chronological audit trail of tanker arrivals, production usage requests, and approvals</small>
+          </div>
+        </div>
+        <span class="badge bg-primary text-white rounded-pill px-3 py-2">
+          {{ filteredHistoryRows.length }} Movement Record(s)
+        </span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 custom-table">
+          <thead>
+            <tr>
+              <th class="ps-4">#</th>
+              <th>Date & Time</th>
+              <th>Movement Type</th>
+              <th>Reference No</th>
+              <th>Spirit Type</th>
+              <th>Factory / Distillery</th>
+              <th>Quantity (BL)</th>
+              <th>Details / Purpose</th>
+              <th>Status</th>
+              <th class="pe-4 text-end">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of pagedHistoryRows; let i = index">
+              <td class="ps-4 text-muted fw-semibold">{{ historyPageStart + i }}</td>
+              <td>
+                <div class="d-flex flex-column">
+                  <span class="fw-semibold text-dark">{{ item.date ? (item.date | date:'dd-MMM-yyyy') : '-' }}</span>
+                  <small class="text-muted" *ngIf="item.date && item.date.includes('T')">{{ item.date | date:'shortTime' }}</small>
+                </div>
+              </td>
+              <td>
+                <span class="badge px-2.5 py-1.5 fw-semibold d-inline-flex align-items-center"
+                  [ngClass]="item.entryType === 'ARRIVAL' ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-primary-subtle text-primary border border-primary-subtle'">
+                  <i class="bi me-1" [ngClass]="item.entryType === 'ARRIVAL' ? 'bi-box-arrow-in-down' : 'bi-box-arrow-up-right'"></i>
+                  {{ item.entryTypeLabel }}
+                </span>
+              </td>
+              <td>
+                <span class="badge bg-light text-dark border fw-bold fs-6 px-3 py-1">
+                  {{ item.referenceNo }}
+                </span>
+              </td>
+              <td>
+                <strong class="text-dark">{{ item.bulkSpiritType }}</strong>
+              </td>
+              <td>
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-building text-secondary me-1.5"></i>
+                  <span class="text-secondary fw-medium">{{ item.distilleryOrFactory }}</span>
+                </div>
+              </td>
+              <td>
+                <span class="badge fs-6 fw-bold px-3 py-1.5"
+                  [ngClass]="item.direction === 'IN' ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-primary-subtle text-primary border border-primary-subtle'">
+                  {{ item.direction === 'IN' ? '+' : '-' }}{{ item.quantity | number:'1.2-2' }} BL
+                </span>
+              </td>
+              <td>
+                <div class="text-truncate" style="max-width: 250px;" [title]="item.purposeOrDetails">
+                  <span class="text-dark small">{{ item.purposeOrDetails }}</span>
+                </div>
+              </td>
+              <td>
+                <span class="badge rounded-pill px-3 py-1" [ngClass]="item.statusBadgeClass">
+                  {{ item.status }}
+                </span>
+              </td>
+              <td class="pe-4 text-end">
+                <button type="button" class="btn btn-sm btn-outline-primary px-3 fw-semibold" (click)="openHistoryDetailModal(item)">
+                  <i class="bi bi-eye me-1"></i> Details
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="filteredHistoryRows.length === 0 && !loading">
+              <td colspan="10" class="text-center py-5 text-muted">
+                <i class="bi bi-clock-history fs-1 d-block mb-2 text-muted"></i>
+                <h6 class="fw-bold text-secondary">No BL History records found</h6>
+                <p class="text-muted small mb-0">Try changing the filters above to view other transactions.</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination Footer -->
+      <div class="card-footer bg-white border-top py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-3" *ngIf="filteredHistoryRows.length > 0">
+        <span class="text-muted small">Showing {{ historyPageStart }}-{{ historyPageEnd }} of {{ filteredHistoryRows.length }} movements</span>
+        <div class="d-flex align-items-center gap-2">
+          <label class="text-muted small mb-0">Page size:</label>
+          <select class="form-select form-select-sm" style="width: auto;" [(ngModel)]="historyPageSize" (change)="historyPageIndex=0">
+            <option *ngFor="let opt of historyPageSizeOptions" [ngValue]="opt">{{ opt }}</option>
+          </select>
+          <button class="btn btn-outline-secondary btn-sm" (click)="prevHistoryPage()" [disabled]="historyPageIndex <= 0">Prev</button>
+          <span class="text-muted small">Page {{ historyPageIndex + 1 }} / {{ totalHistoryPages }}</span>
+          <button class="btn btn-outline-secondary btn-sm" (click)="nextHistoryPage()" [disabled]="historyPageIndex >= totalHistoryPages - 1">Next</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: BL HISTORY TRANSACTION DETAIL -->
+  <!-- ========================================================================= -->
+  <div class="custom-modal-backdrop" *ngIf="selectedHistoryItem" (click)="closeHistoryDetailModal()">
+    <div class="custom-modal-dialog" (click)="$event.stopPropagation()">
+      <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden bg-white">
+        <div class="modal-header bg-dark text-white px-4 py-3 d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-journal-check text-warning fs-4"></i>
+            <div>
+              <h5 class="modal-title mb-0 fw-bold text-white">BL Movement Details</h5>
+              <small class="text-white-50">{{ selectedHistoryItem.referenceNo }}</small>
+            </div>
+          </div>
+          <button type="button" class="btn-close btn-close-white" (click)="closeHistoryDetailModal()"></button>
+        </div>
+
+        <div class="modal-body p-4">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="text-muted small text-uppercase fw-semibold">Movement Type</label>
+              <div class="mt-1">
+                <span class="badge px-3 py-1.5 fs-6"
+                  [ngClass]="selectedHistoryItem.entryType === 'ARRIVAL' ? 'bg-success text-white' : 'bg-primary text-white'">
+                  <i class="bi me-1" [ngClass]="selectedHistoryItem.entryType === 'ARRIVAL' ? 'bi-box-arrow-in-down' : 'bi-box-arrow-up-right'"></i>
+                  {{ selectedHistoryItem.entryTypeLabel }}
+                </span>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <label class="text-muted small text-uppercase fw-semibold">Approval Status</label>
+              <div class="mt-1">
+                <span class="badge px-3 py-1.5 fs-6" [ngClass]="selectedHistoryItem.statusBadgeClass">
+                  {{ selectedHistoryItem.status }}
+                </span>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <label class="text-muted small text-uppercase fw-semibold">Bulk Spirit Type</label>
+              <p class="fw-bold text-dark fs-6 mb-0">{{ selectedHistoryItem.bulkSpiritType }}</p>
+            </div>
+
+            <div class="col-md-6">
+              <label class="text-muted small text-uppercase fw-semibold">Quantity</label>
+              <p class="fw-bold fs-5 mb-0" [ngClass]="selectedHistoryItem.direction === 'IN' ? 'text-success' : 'text-primary'">
+                {{ selectedHistoryItem.direction === 'IN' ? '+' : '-' }}{{ selectedHistoryItem.quantity | number:'1.2-2' }} BL
+              </p>
+            </div>
+
+            <div class="col-md-6">
+              <label class="text-muted small text-uppercase fw-semibold">Date & Time</label>
+              <p class="fw-semibold text-dark mb-0">{{ selectedHistoryItem.date ? (selectedHistoryItem.date | date:'dd-MMM-yyyy, hh:mm a') : '-' }}</p>
+            </div>
+
+            <div class="col-md-6">
+              <label class="text-muted small text-uppercase fw-semibold">Distillery / Factory Unit</label>
+              <p class="fw-semibold text-dark mb-0">{{ selectedHistoryItem.distilleryOrFactory }}</p>
+            </div>
+
+            <div class="col-12" *ngIf="selectedHistoryItem.tankerDetails && selectedHistoryItem.tankerDetails.length > 0">
+              <label class="text-muted small text-uppercase fw-semibold">Tanker Receipts Breakdown</label>
+              <div class="d-flex flex-wrap gap-2 mt-1">
+                <span class="tanker-chip px-3 py-1.5" *ngFor="let t of selectedHistoryItem.tankerDetails">
+                  <i class="bi bi-truck text-primary me-1"></i>
+                  <span *ngIf="t.permit_no" class="fw-semibold">Permit #{{ t.permit_no }}: </span>
+                  {{ t.tanker_no }} — <strong>{{ t.bulk_liter | number:'1.2-2' }} BL</strong>
+                </span>
+              </div>
+            </div>
+
+            <div class="col-12" *ngIf="selectedHistoryItem.purposeOrDetails">
+              <label class="text-muted small text-uppercase fw-semibold">Purpose & Remarks</label>
+              <div class="p-3 bg-light rounded-3 text-dark mt-1">
+                {{ selectedHistoryItem.purposeOrDetails }}
+              </div>
+            </div>
+
+            <div class="col-md-6" *ngIf="selectedHistoryItem.submittedBy">
+              <label class="text-muted small text-uppercase fw-semibold">Submitted By</label>
+              <p class="text-secondary mb-0">{{ selectedHistoryItem.submittedBy }}</p>
+            </div>
+
+            <div class="col-md-6" *ngIf="selectedHistoryItem.reviewedBy">
+              <label class="text-muted small text-uppercase fw-semibold">Reviewed By</label>
+              <p class="text-secondary mb-0">{{ selectedHistoryItem.reviewedBy }} <span *ngIf="selectedHistoryItem.reviewedAt">({{ selectedHistoryItem.reviewedAt | date:'dd-MMM-yyyy' }})</span></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer bg-light px-4 py-3 d-flex justify-content-end">
+          <button type="button" class="btn btn-secondary px-4 fw-semibold" (click)="closeHistoryDetailModal()">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: TANKER ARRIVAL DETAIL -->
+  <!-- ========================================================================= -->
+  <div class="custom-modal-backdrop" *ngIf="selectedArrivalItem" (click)="closeArrivalDetailModal()">
+    <div class="custom-modal-dialog" (click)="$event.stopPropagation()">
+      <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden bg-white">
+        <div class="modal-header bg-dark text-white px-4 py-3 d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-truck-flatbed text-warning fs-4"></i>
+            <div>
+              <h5 class="modal-title mb-0 fw-bold text-white">Tanker Arrival Inspection</h5>
+              <small class="text-white-50">Ref: {{ selectedArrivalItem.referenceNo }}</small>
+            </div>
+          </div>
+          <button type="button" class="btn-close btn-close-white" (click)="closeArrivalDetailModal()"></button>
+        </div>
+
+        <div class="modal-body p-4">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="text-muted small text-uppercase fw-semibold">Distillery Source</label>
+              <p class="fw-bold text-dark fs-6 mb-0">{{ selectedArrivalItem.distilleryName }}</p>
+            </div>
+
+            <div class="col-md-6">
+              <label class="text-muted small text-uppercase fw-semibold">Spirit Type</label>
+              <p class="fw-bold text-dark fs-6 mb-0">{{ selectedArrivalItem.bulkSpiritType }}</p>
+            </div>
+
+            <div class="col-md-6">
+              <label class="text-muted small text-uppercase fw-semibold">Arrival Date</label>
+              <p class="fw-semibold text-dark mb-0">{{ selectedArrivalItem.arrivalDate ? (selectedArrivalItem.arrivalDate | date:'dd-MMM-yyyy') : '-' }}</p>
+            </div>
+
+            <div class="col-md-6">
+              <label class="text-muted small text-uppercase fw-semibold">Received Total Quantity</label>
+              <p class="fw-bold text-success fs-5 mb-0">{{ selectedArrivalItem.totalBulkLiter | number:'1.2-2' }} BL</p>
+            </div>
+
+            <div class="col-12">
+              <label class="text-muted small text-uppercase fw-semibold">Tanker & Permit Details ({{ selectedArrivalItem.tankerCount }} Tankers)</label>
+              <div class="table-responsive mt-1 border rounded-3 overflow-hidden">
+                <table class="table table-sm table-hover mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th class="ps-3">#</th>
+                      <th>Permit No</th>
+                      <th>Tanker Number</th>
+                      <th class="pe-3 text-end">Bulk Liter (BL)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let t of selectedArrivalItem.tankerDetails; let idx = index">
+                      <td class="ps-3 text-muted">{{ idx + 1 }}</td>
+                      <td><span class="badge bg-light text-dark border">{{ t.permit_no || '-' }}</span></td>
+                      <td class="fw-semibold text-dark">{{ t.tanker_no || '-' }}</td>
+                      <td class="pe-3 text-end fw-bold text-success">{{ (t.bulk_liter || 0) | number:'1.2-2' }} BL</td>
+                    </tr>
+                    <tr *ngIf="!selectedArrivalItem.tankerDetails || selectedArrivalItem.tankerDetails.length === 0">
+                      <td colspan="4" class="text-center text-muted py-2">No tanker details recorded</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="col-md-6" *ngIf="selectedArrivalItem.reviewedBy">
+              <label class="text-muted small text-uppercase fw-semibold">Reviewed By</label>
+              <p class="text-secondary mb-0">{{ selectedArrivalItem.reviewedBy }}</p>
+            </div>
+
+            <div class="col-md-6" *ngIf="selectedArrivalItem.reviewRemarks">
+              <label class="text-muted small text-uppercase fw-semibold">Review Remarks</label>
+              <p class="text-secondary mb-0">{{ selectedArrivalItem.reviewRemarks }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer bg-light px-4 py-3 d-flex justify-content-end">
+          <button type="button" class="btn btn-secondary px-4 fw-semibold" (click)="closeArrivalDetailModal()">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+
