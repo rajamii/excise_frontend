@@ -398,43 +398,55 @@
             border-right: none;
           }
 
+          // Column widths - Balanced proportional distribution
           &.sl-no {
-            width: 60px;
+            width: 5%;
+            min-width: 50px;
             text-align: center;
           }
 
           &.ref-number {
-            width: 140px;
+            width: 15%;
+            min-width: 130px;
           }
 
           &.establishment-col {
-            min-width: 160px;
+            width: 22%;
+            min-width: 170px;
           }
 
           &.submission-date {
-            width: 120px;
+            width: 13%;
+            min-width: 110px;
+            text-align: center;
           }
 
           &.permit-number {
-            width: 100px;
+            width: 13%;
+            min-width: 110px;
+            text-align: center;
           }
 
           &.distillery-name {
-            width: 200px;
+            width: 18%;
+            min-width: 140px;
           }
 
           &.status {
-            width: 150px;
+            width: 18%;
+            min-width: 130px;
             text-align: center;
           }
 
           &.amount {
-            width: 140px;
+            width: 12%;
+            min-width: 100px;
             text-align: center;
           }
 
           &.actions {
-            width: 100px;
+            width: 14%;
+            min-width: 100px;
             text-align: center;
           }
         }
@@ -533,6 +545,63 @@
 
             &.actions {
               text-align: center;
+
+              .action-buttons-group {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+              }
+
+              .btn-action-icon {
+                width: 36px;
+                height: 36px;
+                border-radius: 8px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                border: 1px solid transparent;
+                cursor: pointer;
+                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                font-size: 1.05rem;
+                padding: 0;
+
+                &.btn-action-view {
+                  background-color: #eff6ff;
+                  color: #1d4ed8;
+                  border-color: #bfdbfe;
+
+                  &:hover {
+                    background-color: #1d4ed8;
+                    color: #ffffff;
+                    border-color: #1d4ed8;
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(29, 78, 216, 0.28);
+                  }
+
+                  &:active {
+                    transform: translateY(0);
+                  }
+                }
+
+                &.btn-action-slip {
+                  background-color: #f0fdf4;
+                  color: #15803d;
+                  border-color: #bbf7d0;
+
+                  &:hover {
+                    background-color: #15803d;
+                    color: #ffffff;
+                    border-color: #15803d;
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(21, 128, 61, 0.28);
+                  }
+
+                  &:active {
+                    transform: translateY(0);
+                  }
+                }
+              }
 
               .action-buttons {
                 display: flex;
