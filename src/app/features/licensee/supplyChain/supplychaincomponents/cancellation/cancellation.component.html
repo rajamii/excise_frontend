@@ -110,6 +110,7 @@
           <tr>
             <th class="sl-no">Sl. No.</th>
             <th class="ref-number">Reference No</th>
+            <th class="establishment-col" *ngIf="isCommissioner() || isPermitSection() || isAdmin()">Establishment / Company</th>
             <th class="submission-date">Request Date</th>
             <th class="permit-number">Permit Number</th>
             <th class="status">Status</th>
@@ -131,6 +132,16 @@
                 {
                 <span class="badge bg-warning text-dark">CRITICAL</span>
                 }
+              </div>
+            </td>
+            <td class="establishment-col" *ngIf="isCommissioner() || isPermitSection() || isAdmin()">
+              <div class="d-flex flex-column gap-1 align-items-start">
+                <span class="fw-bold text-dark establishment-title">{{ item.establishmentName || item.distilleryName || 'Mount Distilleries Limited' }}</span>
+                <div>
+                  <span class="badge bg-light text-primary border px-2 py-1 establishment-badge">
+                    <i class="bi bi-building me-1"></i>{{ item.establishmentType || 'Distillery' }}
+                  </span>
+                </div>
               </div>
             </td>
             <td class="submission-date">

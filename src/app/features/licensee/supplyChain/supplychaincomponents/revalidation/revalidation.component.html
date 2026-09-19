@@ -135,6 +135,7 @@
             <tr>
               <th class="sl-no">Sl. No.</th>
               <th class="ref-number">Reference No</th>
+              <th class="establishment-col" *ngIf="isCommissioner() || isPermitSection() || isAdmin()">Establishment / Company</th>
               <th class="submission-date">App. Sub. Date</th>
               <th class="reval-permits">Number of Permits</th>
               <th class="revalidation-extension">Revalidation Extended (From-To)</th>
@@ -157,6 +158,16 @@
                   @if (item.isLive) {
                   <span class="badge bg-danger text-white live-badge">LIVE</span>
                   }
+                </div>
+              </td>
+              <td class="establishment-col" *ngIf="isCommissioner() || isPermitSection() || isAdmin()">
+                <div class="d-flex flex-column gap-1 align-items-start">
+                  <span class="fw-bold text-dark establishment-title">{{ item.establishmentName || item.factoryName || item.distilleryName || 'Mount Distilleries Limited' }}</span>
+                  <div>
+                    <span class="badge bg-light text-primary border px-2 py-1 establishment-badge">
+                      <i class="bi bi-building me-1"></i>{{ item.establishmentType || 'Distillery' }}
+                    </span>
+                  </div>
                 </div>
               </td>
               <td class="submission-date">

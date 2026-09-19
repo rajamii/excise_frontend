@@ -407,6 +407,10 @@
             width: 140px;
           }
 
+          &.establishment-col {
+            min-width: 160px;
+          }
+
           &.submission-date {
             width: 120px;
           }
@@ -475,6 +479,22 @@
                 color: #1d4ed8;
                 font-family: 'Courier New', monospace;
                 font-size: 0.9rem;
+              }
+            }
+
+            &.establishment-col {
+              .establishment-title {
+                font-size: 0.88rem;
+                color: #1e293b;
+                line-height: 1.25;
+              }
+              .establishment-badge {
+                font-size: 0.72rem;
+                font-weight: 600;
+                letter-spacing: 0.3px;
+                background-color: #f1f5f9 !important;
+                color: #0d6efd !important;
+                border-color: #cbd5e1 !important;
               }
             }
 

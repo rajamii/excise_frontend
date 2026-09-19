@@ -15,6 +15,7 @@ interface TableData {
   submissionDate: string;
   distilleryName: string;
   establishmentName?: string;
+  establishmentType?: string;
   status: string;
   amount: string;
   workflowId?: number;
@@ -160,8 +161,9 @@ export class CancellationComponent implements OnInit {
           const refNo = item.reference_no || item.referenceNo || item.ourRefNo || item.our_ref_no || 'N/A';
           const dateStr = item.submitted_at || item.submittedAt || item.cancellationDate || item.cancellation_date || item.requisitionDate;
           const subDate = dateStr ? new Date(dateStr).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
-          const distName = item.distributor_permit_detail?.supplier_company_name || item.supplier_company_name || item.supplierName || item.branchName || item.distilleryName || 'N/A';
-          const estName = item.applicant_name || item.applicantName || item.establishmentName || 'N/A';
+          const distName = item.distributor_permit_detail?.supplier_company_name || item.supplier_company_name || item.supplierName || item.branchName || item.distilleryName || item.distillery_name || 'N/A';
+          const estName = item.establishment_name || item.establishmentName || item.applicant_name || item.applicantName || item.distillery_name || item.distilleryName || 'Mount Distilleries Limited';
+          const estType = item.establishment_type || item.establishmentType || item.license_subcategory || item.subcategory || 'Distillery';
           const permitNo = item.distributor_permit || item.distributor_permit_ref_no || item.cancelledPermitNumber || item.permitNumber || '-';
 
           const mappedItem = {
@@ -171,6 +173,7 @@ export class CancellationComponent implements OnInit {
             requestDate: subDate,
             distilleryName: distName,
             establishmentName: estName,
+            establishmentType: estType,
             status: item.current_stage_name || item.currentStageName || item.status || 'Forwarded To Commissioner',
             amount: (item.distributor_permit_detail?.total_import_value || item.totalCancellationAmount || item.cancellationBrAmount || '0.00').toString(),
             workflowId: item.workflow || item.workflow_id || 17,
@@ -1159,6 +1162,10 @@ export class CancellationComponent implements OnInit {
     const hasRole = this.accountService.hasAnyRole(['permit-section', 'permit section', 'permit_section', 'Permit Section']);
     const isPermitSectionRoute = this.isBrowser && (window.location.pathname.includes('permit-section') || window.location.pathname.includes('app-permit-section'));
     return hasRole || isPermitSectionRoute;
+  }
+
+  isAdmin(): boolean {
+    return this.isCommissioner() || this.isPermitSection() || this.accountService.hasAnyRole(['admin', 'site_admin', 'super_admin', 'level_1', 'level_2', 'level_3', 'level_4', 'level_5', 'officer']);
   }
 
   getUserType(): 'commissioner' | 'permit-section' | 'licensee' {

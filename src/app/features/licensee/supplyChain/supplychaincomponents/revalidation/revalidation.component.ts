@@ -24,6 +24,8 @@ interface TableData {
   validityPeriodDays?: number;
   distilleryName: string;
   factoryName?: string;
+  establishmentName?: string;
+  establishmentType?: string;
   status: string;
   statusCode?: string;
   amount: string;
@@ -132,6 +134,8 @@ export class RevalidationComponent implements OnInit {
           validUpToRaw: item.validUpTo || item.valid_up_to || '',
           validityPeriodDays: Number(item.validityPeriodDays || item.validity_period_days || 45),
           factoryName: item.establishment_name || item.establishmentName || item.factory_name || item.factoryName || '',
+          establishmentName: item.establishment_name || item.establishmentName || item.factory_name || item.factoryName || item.distilleryName || item.distillery_name || 'Mount Distilleries Limited',
+          establishmentType: item.establishment_type || item.establishmentType || item.license_subcategory || item.subcategory || 'Distillery',
           distilleryName: item.distilleryName || item.distillery_name,
           status: item.status,
           statusCode: item.statusCode || item.status_code || '',
@@ -629,7 +633,13 @@ export class RevalidationComponent implements OnInit {
   }
 
   isPermitSection(): boolean {
-    return this.isBrowser && (window.location.pathname.includes('permit-section') || window.location.pathname.includes('app-permit-section'));
+    const hasRole = this.accountService.hasAnyRole(['permit-section', 'permit section', 'permit_section', 'Permit Section']);
+    const isPermitSectionRoute = this.isBrowser && (window.location.pathname.includes('permit-section') || window.location.pathname.includes('app-permit-section'));
+    return hasRole || isPermitSectionRoute;
+  }
+
+  isAdmin(): boolean {
+    return this.isCommissioner() || this.isPermitSection() || this.accountService.hasAnyRole(['admin', 'site_admin', 'super_admin', 'level_1', 'level_2', 'level_3', 'level_4', 'level_5', 'officer']);
   }
 
   /**

@@ -22,6 +22,7 @@ interface TableData {
   createdAtRaw?: string;
   distilleryName: string;
   establishmentName?: string;
+  establishmentType?: string;
   status: string;
   amount: string;
   workflowId?: number;
@@ -396,7 +397,14 @@ export class RequisitionComponent implements OnInit, OnDestroy {
               item.manufacturing_unit_name ||
               item.licenseeName ||
               item.licensee_name ||
-              'N/A',
+              'Mount Distilleries Limited',
+            establishmentType:
+              item.establishmentType ||
+              item.establishment_type ||
+              item.licenseSubcategory ||
+              item.license_subcategory ||
+              item.subcategory ||
+              'Distillery',
             status: item.status || 'PENDING',
             amount: item.amount || item.paymentAmount || item.payment_amount || item.totalAmount || item.total_amount || item.totalbl || '0.00',
             workflowId: item.workflow || item.workflow_id || item.workflowId,
@@ -696,6 +704,10 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
   isPermitSection(): boolean {
     return this.accountService.hasAnyRole(['permit-section', 'permit section', 'permit_section', 'Permit Section']);
+  }
+
+  isAdmin(): boolean {
+    return this.isCommissioner() || this.isPermitSection() || this.accountService.hasAnyRole(['admin', 'site_admin', 'super_admin', 'level_1', 'level_2', 'level_3', 'level_4', 'level_5', 'officer']);
   }
 
   /**

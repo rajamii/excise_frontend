@@ -385,11 +385,19 @@
               }
             }
 
-            &.submission-date {
-              .date-text {
+            &.establishment-col {
+              .establishment-title {
+                font-size: 0.88rem;
+                color: #1e293b;
+                line-height: 1.25;
+              }
+              .establishment-badge {
+                font-size: 0.72rem;
                 font-weight: 600;
-                color: #1f2937;
-                font-size: 0.9rem;
+                letter-spacing: 0.3px;
+                background-color: #f1f5f9 !important;
+                color: #0d6efd !important;
+                border-color: #cbd5e1 !important;
               }
             }
 
