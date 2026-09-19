@@ -773,7 +773,7 @@ export class FinalrequistionlettersComponent implements OnInit {
           <style>
             @page {
               size: A4 portrait;
-              margin: 8mm 8mm;
+              margin: 6mm 6mm;
             }
             * {
               box-sizing: border-box;
@@ -799,7 +799,7 @@ export class FinalrequistionlettersComponent implements OnInit {
               width: 100% !important;
               max-width: 185mm !important;
               margin: 8mm auto !important;
-              padding: 14px 18px 12px 18px !important;
+              padding: 12px 16px 10px 16px !important;
               page-break-inside: avoid !important;
               break-inside: avoid-page !important;
               background: white !important;
@@ -819,12 +819,18 @@ export class FinalrequistionlettersComponent implements OnInit {
               display: none !important;
             }
             .permit-copy {
-              border: 2px solid #000 !important;
+              border: 2.5px solid #000 !important;
               width: 100% !important;
-              max-width: 185mm !important;
+              max-width: 190mm !important;
+              height: 255mm !important;
+              min-height: 255mm !important;
+              max-height: 255mm !important;
               box-sizing: border-box !important;
-              padding: 8px 12px 6px 12px !important;
-              margin: 4mm auto !important;
+              padding: 10px 14px 8px 14px !important;
+              margin: 0 auto !important;
+              display: flex !important;
+              flex-direction: column !important;
+              justify-content: space-between !important;
               page-break-inside: avoid !important;
               break-inside: avoid-page !important;
               page-break-before: auto !important;
@@ -841,22 +847,27 @@ export class FinalrequistionlettersComponent implements OnInit {
             }
             .copy-number {
               color: black !important;
-              border-bottom: 1.5px solid #000 !important;
-              font-size: 11.5px !important;
+              border-bottom: 2px solid #000 !important;
+              font-size: 12px !important;
               text-align: center !important;
-              margin-bottom: 6px !important;
-              padding-bottom: 3px !important;
+              margin-bottom: 4px !important;
+              padding-bottom: 2px !important;
               font-weight: bold !important;
             }
             .permit-content {
+              display: flex !important;
+              flex-direction: column !important;
+              justify-content: space-between !important;
+              flex: 1 !important;
+              height: 100% !important;
               width: 100% !important;
               overflow: hidden !important;
             }
             .permit-copy .permit-top-header {
               position: relative !important;
               width: 100% !important;
-              min-height: 46px !important;
-              margin-bottom: 4px !important;
+              min-height: 42px !important;
+              margin-bottom: 2px !important;
             }
             .permit-copy .permit-copy-badge {
               position: absolute !important;
@@ -872,13 +883,13 @@ export class FinalrequistionlettersComponent implements OnInit {
               width: 100% !important;
             }
             .permit-copy .permit-logo-img {
-              height: 50px !important;
+              height: 48px !important;
               width: auto !important;
               display: inline-block !important;
             }
             .permit-copy .permit-titles-block {
               text-align: center !important;
-              margin-bottom: 8px !important;
+              margin-bottom: 6px !important;
             }
             .permit-copy .permit-dept-name {
               font-size: 14.5px !important;
@@ -904,23 +915,23 @@ export class FinalrequistionlettersComponent implements OnInit {
               justify-content: space-between !important;
               align-items: center !important;
               font-size: 11px !important;
-              margin-bottom: 8px !important;
+              margin-bottom: 6px !important;
               font-weight: 500 !important;
             }
             .permit-copy .permit-body-text {
               font-size: 11px !important;
-              line-height: 1.45 !important;
+              line-height: 1.4 !important;
               text-align: justify !important;
-              margin-bottom: 10px !important;
+              margin-bottom: 8px !important;
               color: #000 !important;
             }
             .permit-copy .permit-table-container {
-              margin-bottom: 10px !important;
+              margin-bottom: 8px !important;
             }
             .permit-copy .kind-quantity-title {
               font-size: 11px !important;
               font-weight: 700 !important;
-              margin-bottom: 4px !important;
+              margin-bottom: 3px !important;
             }
             .permit-copy .bulk-spirit-detail-table {
               width: 100% !important;
@@ -930,8 +941,8 @@ export class FinalrequistionlettersComponent implements OnInit {
             }
             .permit-copy .bulk-spirit-detail-table th,
             .permit-copy .bulk-spirit-detail-table td {
-              border: 1px solid #000 !important;
-              padding: 4px 6px !important;
+              border: 1.2px solid #000 !important;
+              padding: 4px 5px !important;
               text-align: center !important;
               vertical-align: middle !important;
             }
@@ -952,8 +963,8 @@ export class FinalrequistionlettersComponent implements OnInit {
             .permit-copy .permit-signature-block {
               display: flex !important;
               justify-content: flex-end !important;
-              margin-top: 10px !important;
-              margin-bottom: 10px !important;
+              margin-top: 6px !important;
+              margin-bottom: 6px !important;
               padding-right: 12px !important;
             }
             .permit-copy .signature-holder {
@@ -961,7 +972,7 @@ export class FinalrequistionlettersComponent implements OnInit {
               min-width: 180px !important;
             }
             .permit-copy .signature-holder .signature-space {
-              height: 45px !important;
+              height: 36px !important;
             }
             .permit-copy .signature-holder .sig-title {
               font-size: 11.5px !important;
@@ -975,32 +986,33 @@ export class FinalrequistionlettersComponent implements OnInit {
               margin-top: 1px !important;
             }
             .permit-copy .permit-conditions-box {
-              border: 1px solid #000 !important;
+              border: 1.2px solid #000 !important;
               padding: 6px 10px !important;
-              margin-bottom: 6px !important;
+              margin-bottom: 4px !important;
               background: #fff !important;
             }
             .permit-copy .conditions-heading {
               font-size: 10.5px !important;
               font-weight: 800 !important;
-              margin-bottom: 3px !important;
+              margin-bottom: 2px !important;
             }
             .permit-copy .conditions-items {
               margin: 0 !important;
               padding-left: 14px !important;
               font-size: 9.5px !important;
-              line-height: 1.35 !important;
+              line-height: 1.3 !important;
             }
             .permit-copy .conditions-items li {
-              margin-bottom: 2px !important;
+              margin-bottom: 1.5px !important;
               text-align: justify !important;
             }
             .permit-copy .permit-footer-disclaimer {
               font-size: 8.5px !important;
-              line-height: 1.25 !important;
+              line-height: 1.2 !important;
               text-align: center !important;
               color: #333 !important;
               font-style: italic !important;
+              padding-top: 2px !important;
             }
             ${styles}
           </style>
