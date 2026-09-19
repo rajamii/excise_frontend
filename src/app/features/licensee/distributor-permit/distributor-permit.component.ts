@@ -4110,49 +4110,6 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       }
     }
 
-    // Expand any permits containing multiple line items into individual permit entries
-    if (Array.isArray(permits) && permits.length > 0) {
-      const hasMultiLinePermit = permits.some((p: any) => Array.isArray(p.line_items) && p.line_items.length > 1);
-      if (hasMultiLinePermit) {
-        const expandedPermits: any[] = [];
-        let seq = 1;
-        permits.forEach((p: any) => {
-          const items = Array.isArray(p.line_items) ? p.line_items : [];
-          if (items.length > 1) {
-            items.forEach((it: any) => {
-              const itCases = Number(it.cases || it.quantity_cases || it.quantityCases || 1);
-              const pcs = Number(it.pieces_per_case || it.piecesPerCase || (it.size_ml ? this.getPiecesInCase(it.size_ml) : (it.size ? this.getPiecesInCase(it.size) : 12)));
-              const holo = itCases * pcs;
-              expandedPermits.push({
-                permit_sequence: seq,
-                permit_index: seq,
-                permitIndex: seq,
-                permit_number: `${refNo || 'IMFL_REQ'}-P${seq}`,
-                permitName: `Permit #${seq} (${itCases} Case${itCases > 1 ? 's' : ''})`,
-                total_cases: itCases,
-                totalCases: itCases,
-                total_holograms: holo,
-                totalHolograms: holo,
-                status: isAppr ? 'RESERVED' : 'PENDING',
-                line_items: [it]
-              });
-              seq++;
-            });
-          } else {
-            expandedPermits.push({
-              ...p,
-              permit_sequence: p.permit_sequence || seq,
-              permit_index: p.permit_index || seq,
-              permitIndex: p.permit_index || seq,
-              permit_number: p.permit_number || `${refNo || 'IMFL_REQ'}-P${seq}`
-            });
-            seq++;
-          }
-        });
-        permits = expandedPermits;
-      }
-    }
-
     if (!Array.isArray(permits) || permits.length === 0) {
       const totalHolograms = this.getHologramsRequiredCount(fullApp);
       const totalCases = Number(fullApp?.total_cases || fullApp?.cases || fullApp?.totalCases || (Array.isArray(lineItems) ? lineItems.reduce((s: number, it: any) => s + Number(it.cases || it.quantity_cases || 0), 0) : 1) || 1);
@@ -4525,13 +4482,21 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           isApproved: false,
           selectedForApproval: false,
           status: 'PENDING_APPROVAL',
-          items: items.map((it: any) => ({
-            brand: it.brand || it.brand_name || it.brandName || 'Brand',
-            size: `${it.size_ml || it.sizeMl || 750} ml`,
-            cases: Number(it.cases || it.quantity_cases || 0),
-            piecesPerCase: Number(it.pieces_per_case || it.piecesPerCase || (it.size_ml ? this.getPiecesInCase(it.size_ml) : 12)),
-            hologramsRequired: Number(it.cases || 0) * Number(it.pieces_per_case || it.piecesPerCase || (it.size_ml ? this.getPiecesInCase(it.size_ml) : 12))
-          }))
+          items: items.map((it: any) => {
+            const bName = it.brand || it.brand_name || it.brandName || 'Brand';
+            const sizeMl = it.size_ml || it.sizeMl || (it.size ? parseInt(it.size, 10) : 750);
+            const cases = Number(it.cases || it.quantity_cases || 0);
+            const pcs = Number(it.pieces_per_case || it.piecesPerCase || (sizeMl ? this.getPiecesInCase(sizeMl) : 12));
+            const holo = Number(it.hologramsRequired || (cases * pcs));
+            const sizeStr = it.size ? (String(it.size).includes('ml') ? String(it.size) : `${it.size} ml`) : `${sizeMl} ml`;
+            return {
+              brand: bName,
+              size: sizeStr,
+              cases: cases,
+              piecesPerCase: pcs,
+              hologramsRequired: holo
+            };
+          })
         });
       });
     } else {
@@ -4564,13 +4529,21 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           selectedForApproval: false,
           status: p.status || 'PENDING_APPROVAL',
           assignedRanges: p.assignedRanges || p.assigned_ranges || p.assigned_hologram_ranges || p.assignedHologramRanges || p.hologram_ranges || [],
-          items: items.map((it: any) => ({
-            brand: it.brand || it.brand_name || it.brandName || 'Brand',
-            size: `${it.size_ml || it.sizeMl || 750} ml`,
-            cases: Number(it.cases || it.quantity_cases || 0),
-            piecesPerCase: Number(it.pieces_per_case || it.piecesPerCase || (it.size_ml ? this.getPiecesInCase(it.size_ml) : 12)),
-            hologramsRequired: Number(it.cases || 0) * Number(it.pieces_per_case || it.piecesPerCase || (it.size_ml ? this.getPiecesInCase(it.size_ml) : 12))
-          }))
+          items: items.map((it: any) => {
+            const bName = it.brand || it.brand_name || it.brandName || 'Brand';
+            const sizeMl = it.size_ml || it.sizeMl || (it.size ? parseInt(it.size, 10) : 750);
+            const cases = Number(it.cases || it.quantity_cases || 0);
+            const pcs = Number(it.pieces_per_case || it.piecesPerCase || (sizeMl ? this.getPiecesInCase(sizeMl) : 12));
+            const holo = Number(it.hologramsRequired || (cases * pcs));
+            const sizeStr = it.size ? (String(it.size).includes('ml') ? String(it.size) : `${it.size} ml`) : `${sizeMl} ml`;
+            return {
+              brand: bName,
+              size: sizeStr,
+              cases: cases,
+              piecesPerCase: pcs,
+              hologramsRequired: holo
+            };
+          })
         };
       });
     }
@@ -7133,14 +7106,14 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         selectedBrandName: master.brandName,
         brandKey: this.selectedNewBrandKey,
         cases: Number(this.newBrandCases || 1),
-        permitIndex: this.currentActivePermitIndex
+        permitIndex: Number(this.currentActivePermitIndex || 1)
       });
     } else {
       this.lineItems.push(this.fb.group({
         selectedBrandName: [master.brandName, Validators.required],
         brandKey: [this.selectedNewBrandKey, Validators.required],
         cases: [Number(this.newBrandCases || 1), [Validators.required, Validators.min(1)]],
-        permitIndex: [this.currentActivePermitIndex]
+        permitIndex: [Number(this.currentActivePermitIndex || 1)]
       }) as FormGroup);
     }
 
@@ -7152,8 +7125,29 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
+  getAvailablePermitIndices(): number[] {
+    const indices = new Set<number>();
+    indices.add(1);
+    if (this.currentActivePermitIndex && Number(this.currentActivePermitIndex) > 0) {
+      indices.add(Number(this.currentActivePermitIndex));
+    }
+    if (this.lineItems && this.lineItems.controls) {
+      this.lineItems.controls.forEach((ctrl) => {
+        const p = Number((ctrl.value as any)?.permitIndex || 1);
+        if (p > 0) indices.add(p);
+      });
+    }
+    return Array.from(indices).sort((a, b) => a - b);
+  }
+
+  getMaxPermitIndex(): number {
+    const available = this.getAvailablePermitIndices();
+    return available.length > 0 ? Math.max(...available) : 1;
+  }
+
   startNewPermitGroup(): void {
-    this.currentActivePermitIndex++;
+    const nextPermit = this.getMaxPermitIndex() + 1;
+    this.currentActivePermitIndex = nextPermit;
     if (this.selectedNewBrandName && this.selectedNewBrandKey && this.newBrandCases >= 1) {
       // Directly add brand to the new permit group
       const master = this.getBrandMasterByKey(this.selectedNewBrandKey);
@@ -7162,24 +7156,26 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           selectedBrandName: [master.brandName, Validators.required],
           brandKey: [this.selectedNewBrandKey, Validators.required],
           cases: [Number(this.newBrandCases || 1), [Validators.required, Validators.min(1)]],
-          permitIndex: [this.currentActivePermitIndex]
+          permitIndex: [nextPermit]
         }) as FormGroup);
         this.checkHologramStockAllocation();
         this.syncBrandStepValidity();
       }
       void Swal.fire({
         icon: 'success',
-        title: `Added to Permit #${this.currentActivePermitIndex}`,
-        html: `<b>${this.newBrandCases} Cases</b> of <b>${this.selectedNewBrandName}</b> added to <b>Permit #${this.currentActivePermitIndex}</b>.`,
+        title: `Added to Permit #${nextPermit}`,
+        html: `<b>${this.newBrandCases} Cases</b> of <b>${this.selectedNewBrandName}</b> added to <b>Permit #${nextPermit}</b>.`,
         timer: 2000,
         showConfirmButton: false
       });
+      this.selectedNewBrandName = '';
+      this.selectedNewBrandKey = '';
       this.newBrandCases = 1;
     } else {
       void Swal.fire({
         icon: 'info',
-        title: `Active Permit: #${this.currentActivePermitIndex}`,
-        text: `Any brands added will now be assigned to Permit #${this.currentActivePermitIndex}.`,
+        title: `Target Permit: #${nextPermit}`,
+        text: `Any brands added will now be assigned to Permit #${nextPermit}.`,
         timer: 2000,
         showConfirmButton: false
       });
@@ -7264,11 +7260,12 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }
   }
 
-  setLinePermitIndex(index: number, newPermitIdx: number): void {
+  setLinePermitIndex(index: number, newPermitIdx: any): void {
     const ctrl = this.lineItems.at(index);
     if (!ctrl) return;
-    ctrl.patchValue({ permitIndex: Number(newPermitIdx) });
-    this.currentActivePermitIndex = Math.max(this.currentActivePermitIndex, Number(newPermitIdx));
+    const numIdx = Number(newPermitIdx);
+    ctrl.patchValue({ permitIndex: numIdx });
+    this.currentActivePermitIndex = Math.max(1, numIdx);
     this.checkHologramStockAllocation();
     this.syncBrandStepValidity();
     this.cdr.detectChanges();

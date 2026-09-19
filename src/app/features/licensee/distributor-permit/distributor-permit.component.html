@@ -2333,7 +2333,7 @@
                 </span>
               </div>
               <div class="row g-3 align-items-end">
-                <div class="col-md-5">
+                <div class="col-md-4">
                   <label class="form-label fw-bold text-secondary small mb-1">
                     <i class="bi bi-patch-check-fill text-primary me-1"></i>Select Brand <span class="text-danger">*</span>
                   </label>
@@ -2357,21 +2357,26 @@
                   </select>
                 </div>
 
-                <div class="col-md-2" style="max-width: 120px;">
+                <div class="col-md-2" style="max-width: 110px;">
                   <label class="form-label fw-bold text-secondary small mb-1">
                     <i class="bi bi-boxes text-primary me-1"></i>Cases <span class="text-danger">*</span>
                   </label>
                   <input type="number" min="1" class="form-control text-center fw-bold custom-cases-input" style="font-size: 13.5px;" [(ngModel)]="newBrandCases" />
                 </div>
 
-                <div class="col-md-2 d-flex gap-2">
+                <div class="col-md-2" style="max-width: 140px;">
+                  <label class="form-label fw-bold text-secondary small mb-1">
+                    <i class="bi bi-diagram-3-fill text-primary me-1"></i>Target Permit
+                  </label>
+                  <select class="form-select custom-brand-select fw-bold text-primary" style="font-size: 13.5px;" [(ngModel)]="currentActivePermitIndex">
+                    <option *ngFor="let p of getAvailablePermitIndices()" [value]="p">Permit #{{ p }}</option>
+                    <option [value]="getMaxPermitIndex() + 1">+ New Permit (#{{ getMaxPermitIndex() + 1 }})</option>
+                  </select>
+                </div>
+
+                <div class="col-md-1 d-flex gap-2">
                   <button type="button" class="btn btn-add-brand text-nowrap d-flex align-items-center gap-1 shadow-sm" (click)="addBrandFromTopRow()" [disabled]="!selectedNewBrandName || !selectedNewBrandKey || newBrandCases < 1">
                     <i class="bi bi-plus-circle-fill"></i> Add Brand
-                  </button>
-
-                  <button type="button" class="btn btn-break-permit text-nowrap d-flex align-items-center gap-1 shadow-sm" (click)="startNewPermitGroup()" title="Break into a new separate permit batch">
-                    <i class="bi bi-diagram-3-fill"></i> Break Permit
-                    <span class="badge bg-indigo text-white ms-1" *ngIf="currentActivePermitIndex > 1">#{{ currentActivePermitIndex }}</span>
                   </button>
                 </div>
               </div>
@@ -2384,7 +2389,7 @@
                   <thead style="background-color: #0b4ea2 !important;">
                     <tr style="background-color: #0b4ea2 !important;">
                       <th style="width: 45px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-center py-2 px-3">#</th>
-                      <th style="min-width: 220px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-start py-2">Brand Name</th>
+                      <th style="min-width: 220px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-start py-2">Brand Name &amp; Permit</th>
                       <th style="min-width: 150px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-start py-2">Size / Package</th>
                       <th style="width: 70px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-center py-2">Cases</th>
                       <th style="width: 120px; background-color: #0b4ea2 !important; color: #ffffff !important; border: none !important;" class="text-center py-2">Bulk Litres (BL)</th>
@@ -2399,10 +2404,13 @@
                     <tr *ngFor="let row of lineItemControls.controls; let i = index; trackBy: trackByIndex" style="border-bottom: 1px solid #e2e8f0; background-color: #ffffff;">
                       <td class="text-center fw-semibold text-muted py-3 px-3" style="border-bottom: 1px solid #e2e8f0;">{{ i + 1 }}</td>
                       <td class="fw-semibold text-dark text-start py-3" style="border-bottom: 1px solid #e2e8f0;">
-                        {{ getLineBrandName(i) }}
-                        <span class="badge ms-2" [ngClass]="getLinePermitIndex(i) > 1 ? 'bg-primary text-white shadow-sm' : 'bg-light text-primary border'">
-                          Permit #{{ getLinePermitIndex(i) }}
-                        </span>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                          <span>{{ getLineBrandName(i) }}</span>
+                          <select class="form-select form-select-sm fw-bold border-primary text-primary py-0 px-2" style="width: 130px; height: 26px; font-size: 11.5px;" [ngModel]="getLinePermitIndex(i)" (ngModelChange)="setLinePermitIndex(i, $event)">
+                            <option *ngFor="let pNum of getAvailablePermitIndices()" [value]="pNum">Permit #{{ pNum }}</option>
+                            <option [value]="getMaxPermitIndex() + 1">+ New Permit (#{{ getMaxPermitIndex() + 1 }})</option>
+                          </select>
+                        </div>
                       </td>
                       <td class="text-secondary text-start py-3" style="border-bottom: 1px solid #e2e8f0;">{{ getLineSizeLabel(i) }}</td>
                       <td class="text-center fw-bold text-dark py-3" style="border-bottom: 1px solid #e2e8f0;">{{ getLineCases(i) }}</td>
