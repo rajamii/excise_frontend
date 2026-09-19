@@ -4,6 +4,7 @@ import { Observable, forkJoin, of, Subject } from 'rxjs';
 import { catchError, map, tap, shareReplay, switchMap } from 'rxjs/operators';
 
 import { EnaRequisitionService } from '../../core/services/ena-requisition.service';
+import { BulkSpiritUsageService } from '../../core/services/bulk-spirit-usage.service';
 import { SupplyChainService } from '../../features/licensee/supplyChain/services/supplychain.service';
 import { HologramDataService } from '../../features/licensee/supplyChain/services/hologram-data.service';
 import { DistributorPermitService } from '../../core/services/distributor-permit.service';
@@ -41,6 +42,7 @@ export class SidebarPendingBadgeService {
   constructor(
     private http: HttpClient,
     private enaRequisitionService: EnaRequisitionService,
+    private bulkSpiritUsageService: BulkSpiritUsageService,
     private supplyChainService: SupplyChainService,
     private hologramService: HologramDataService,
     private distributorPermitService: DistributorPermitService,
@@ -457,13 +459,34 @@ export class SidebarPendingBadgeService {
           catchError(() => of(0))
         );
 
-      case 'bl-details':
-        // ENA arrival bulk-liter submissions awaiting OIC review.
-        return this.enaRequisitionService.getRequisitionArrivalDetailsByStatus('PENDING').pipe(
-          map((response) => (Array.isArray(response?.data) ? response.data : [])),
+      case 'bl-details': {
+        // ENA arrival bulk-liter submissions + Bulk Spirit Usage requests awaiting OIC review.
+        const arrival$ = this.enaRequisitionService.getRequisitionArrivalDetailsByStatus('PENDING').pipe(
+          map((response) => (Array.isArray(response?.data) ? response.data : (Array.isArray(response) ? response : []))),
           map((items) => items.length),
           catchError(() => of(0))
         );
+        const usage$ = this.bulkSpiritUsageService.getUsageRequests().pipe(
+          map((response) => {
+            const list = Array.isArray(response)
+              ? response
+              : (Array.isArray(response?.data)
+                ? response.data
+                : (Array.isArray(response?.results)
+                  ? response.results
+                  : []));
+            return list.filter((r: any) => {
+              const s = String(r?.status || r?.statusCode || '').toLowerCase();
+              return s.includes('pending') || s === 'bsu_00';
+            }).length;
+          }),
+          catchError(() => of(0))
+        );
+        return forkJoin([arrival$, usage$]).pipe(
+          map(([arrCount, usageCount]) => arrCount + usageCount),
+          catchError(() => of(0))
+        );
+      }
 
       default:
         return of(0);

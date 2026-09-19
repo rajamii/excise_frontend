@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { EnaRequisitionService } from '../../../../core/services/ena-requisition.service';
 import { BulkSpiritUsageService, BulkSpiritUsageRecord } from '../../../../core/services/bulk-spirit-usage.service';
+import { SidebarPendingBadgeService } from '../../../../shared/services/sidebar-pending-badge.service';
 import { Subject, from } from 'rxjs';
 import { concatMap, takeUntil } from 'rxjs/operators';
 
@@ -2334,6 +2335,7 @@ interface BlDetailRow {
 export class OicBlDetailsComponent implements OnInit, OnDestroy {
   private enaRequisitionService = inject(EnaRequisitionService);
   private bulkSpiritUsageService = inject(BulkSpiritUsageService);
+  private sidebarPendingBadgeService = inject(SidebarPendingBadgeService);
   private route = inject(ActivatedRoute);
   private destroy$ = new Subject<void>();
 
@@ -2491,6 +2493,7 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
         this.usageActingId = null;
         this.usageSuccessMessage = `Usage request ${item.reference_no} approved successfully!`;
         this.loadUsageRequests();
+        this.sidebarPendingBadgeService.triggerRefresh();
       },
       error: (err: any) => {
         this.usageActingId = null;
@@ -2535,6 +2538,7 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
         this.closeUsageRejectDialog();
         this.usageSuccessMessage = `Usage request ${item.reference_no} rejected. Deducted BL quantity has been restored to the licensee's available inventory.`;
         this.loadUsageRequests();
+        this.sidebarPendingBadgeService.triggerRefresh();
       },
       error: (err: any) => {
         this.usageRejectSubmitting = false;
@@ -2990,6 +2994,7 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
         this.reviewStatus = 'ALL';
         this.closeDetailsModal();
         this.loadRows();
+        this.sidebarPendingBadgeService.triggerRefresh();
       },
       error: () => {
         this.actingId = null;
@@ -3139,6 +3144,7 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
           this.reviewStatus = 'ALL';
           this.closeDetailsModal();
           this.loadRows();
+          this.sidebarPendingBadgeService.triggerRefresh();
         }
       });
   }
@@ -3177,6 +3183,7 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
         }
         this.closeRejectDialog();
         this.loadRows();
+        this.sidebarPendingBadgeService.triggerRefresh();
       },
       error: () => {
         this.actingId = null;

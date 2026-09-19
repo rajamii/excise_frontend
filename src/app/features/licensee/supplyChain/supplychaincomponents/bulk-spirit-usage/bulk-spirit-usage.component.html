@@ -35,7 +35,7 @@
           <div>
             <span class="text-uppercase fw-semibold text-muted tracking-wide" style="font-size: 0.75rem;">Total Arrived Inventory</span>
             <h3 class="mb-0 fw-bold text-dark mt-1">
-              {{ (inventorySummary?.totalArrivedBl || 0) | number:'1.2-2' }} <small class="fs-6 fw-normal text-muted">BL</small>
+              {{ (inventorySummary.totalArrivedBl || 0) | number:'1.2-2' }} <small class="fs-6 fw-normal text-muted">BL</small>
             </h3>
           </div>
         </div>
@@ -51,7 +51,7 @@
           <div>
             <span class="text-uppercase fw-semibold text-muted tracking-wide" style="font-size: 0.75rem;">Approved Used Stock</span>
             <h3 class="mb-0 fw-bold text-dark mt-1">
-              {{ (inventorySummary?.totalUsedBl || 0) | number:'1.2-2' }} <small class="fs-6 fw-normal text-muted">BL</small>
+              {{ (inventorySummary.totalUsedBl || 0) | number:'1.2-2' }} <small class="fs-6 fw-normal text-muted">BL</small>
             </h3>
           </div>
         </div>
@@ -67,7 +67,7 @@
           <div>
             <span class="text-uppercase fw-semibold text-muted tracking-wide" style="font-size: 0.75rem;">Pending Approval</span>
             <h3 class="mb-0 fw-bold text-dark mt-1">
-              {{ (inventorySummary?.totalPendingBl || 0) | number:'1.2-2' }} <small class="fs-6 fw-normal text-muted">BL</small>
+              {{ (inventorySummary.totalPendingBl || 0) | number:'1.2-2' }} <small class="fs-6 fw-normal text-muted">BL</small>
             </h3>
           </div>
         </div>
@@ -83,7 +83,7 @@
           <div>
             <span class="text-uppercase fw-semibold text-white-50 tracking-wide" style="font-size: 0.75rem;">Available in Stock</span>
             <h3 class="mb-0 fw-bold text-white mt-1">
-              {{ (inventorySummary?.totalAvailableBl || 0) | number:'1.2-2' }} <small class="fs-6 fw-normal text-white-50">BL</small>
+              {{ (inventorySummary.totalAvailableBl || 0) | number:'1.2-2' }} <small class="fs-6 fw-normal text-white-50">BL</small>
             </h3>
           </div>
         </div>
@@ -118,7 +118,7 @@
           <label class="form-label fw-semibold text-secondary small">Bulk Spirit Type <span class="text-danger">*</span></label>
           <select class="form-select" [(ngModel)]="selectedSpiritType">
             <option value="" disabled>-- Select Spirit Type --</option>
-            <option *ngFor="let item of inventorySummary?.items" [value]="item.bulkSpiritType">
+            <option *ngFor="let item of inventorySummary.items" [value]="item.bulkSpiritType">
               {{ item.bulkSpiritType }} (Avail: {{ item.availableBl | number:'1.2-2' }} BL)
             </option>
           </select>

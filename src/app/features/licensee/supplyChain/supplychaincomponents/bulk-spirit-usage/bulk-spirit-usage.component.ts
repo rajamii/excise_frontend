@@ -9,6 +9,7 @@ import {
   BulkSpiritUsageRecord
 } from '../../../../../core/services/bulk-spirit-usage.service';
 import { AccountService } from '../../../../../core/services/account.service';
+import { SidebarPendingBadgeService } from '../../../../../shared/services/sidebar-pending-badge.service';
 
 export interface NormalizedInventoryItem {
   bulkSpiritType: string;
@@ -37,6 +38,7 @@ export class BulkSpiritUsageComponent implements OnInit {
   private router = inject(Router);
   public accountService = inject(AccountService);
   private bulkSpiritUsageService = inject(BulkSpiritUsageService);
+  private sidebarPendingBadgeService = inject(SidebarPendingBadgeService);
 
   loading = false;
   submitting = false;
@@ -237,6 +239,7 @@ export class BulkSpiritUsageComponent implements OnInit {
         this.requestedQuantity = null;
         this.remarks = '';
         this.loadData();
+        this.sidebarPendingBadgeService.triggerRefresh();
       },
       error: (err: any) => {
         this.submitting = false;

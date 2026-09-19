@@ -13,6 +13,7 @@ import { UnifiedActionsService } from '../../../shared/services/unified-actions.
 import { HologramDataService } from '../../licensee/supplyChain/services/hologram-data.service';
 import { SidebarPendingBadgeService } from '../../../shared/services/sidebar-pending-badge.service';
 import { DistributorPermitService } from '../../../core/services/distributor-permit.service';
+import { BulkSpiritUsageService } from '../../../core/services/bulk-spirit-usage.service';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
@@ -264,6 +265,7 @@ export class OfficerInChargeDashboardComponent implements OnInit {
   private unifiedActionsService = inject(UnifiedActionsService);
   private hologramService = inject(HologramDataService);
   private enaRequisitionService = inject(EnaRequisitionService);
+  private bulkSpiritUsageService = inject(BulkSpiritUsageService);
   private sidebarPendingBadgeService = inject(SidebarPendingBadgeService);
   private distributorPermitService = inject(DistributorPermitService);
 
@@ -619,23 +621,54 @@ export class OfficerInChargeDashboardComponent implements OnInit {
   public blDetailsRejectedCount = 0;
 
   private loadBlDetailsPendingCount(): void {
-    this.enaRequisitionService.getRequisitionArrivalDetailsByStatus('ALL').subscribe({
-      next: (response: any) => {
-        const rows = Array.isArray(response?.data) ? response.data : (Array.isArray(response) ? response : []);
-        const scoped = this.filterByCurrentLicense(rows);
-        this.blDetailsAllCount = scoped.length;
-        this.blDetailsPendingCount = scoped.filter((r: any) => {
+    const arrivals$ = this.enaRequisitionService.getRequisitionArrivalDetailsByStatus('ALL').pipe(catchError(() => of({ data: [] })));
+    const usage$ = this.bulkSpiritUsageService.getUsageRequests().pipe(catchError(() => of([])));
+
+    forkJoin({ arrivals: arrivals$, usage: usage$ }).subscribe({
+      next: ({ arrivals, usage }: any) => {
+        const arrivalRows = Array.isArray(arrivals?.data) ? arrivals.data : (Array.isArray(arrivals) ? arrivals : []);
+        const scopedArrivals = this.filterByCurrentLicense(arrivalRows);
+
+        let usageRows: any[] = [];
+        if (Array.isArray(usage)) {
+          usageRows = usage;
+        } else if (Array.isArray(usage?.data)) {
+          usageRows = usage.data;
+        } else if (Array.isArray(usage?.results)) {
+          usageRows = usage.results;
+        }
+        const scopedUsage = this.filterByCurrentLicense(usageRows);
+
+        const arrPending = scopedArrivals.filter((r: any) => {
           const s = String(r?.approvalStatus || r?.approval_status || r?.review_status || r?.reviewStatus || r?.status || '').toUpperCase();
           return s.includes('PENDING') || s === '';
         }).length;
-        this.blDetailsApprovedCount = scoped.filter((r: any) => {
+        const arrApproved = scopedArrivals.filter((r: any) => {
           const s = String(r?.approvalStatus || r?.approval_status || r?.review_status || r?.reviewStatus || r?.status || '').toUpperCase();
           return s.includes('APPROV') || s.includes('COMPLET');
         }).length;
-        this.blDetailsRejectedCount = scoped.filter((r: any) => {
+        const arrRejected = scopedArrivals.filter((r: any) => {
           const s = String(r?.approvalStatus || r?.approval_status || r?.review_status || r?.reviewStatus || r?.status || '').toUpperCase();
           return s.includes('REJECT') || s.includes('CANCEL');
         }).length;
+
+        const usePending = scopedUsage.filter((r: any) => {
+          const s = String(r?.status || r?.statusCode || '').toUpperCase();
+          return s.includes('PENDING') || s === 'BSU_00';
+        }).length;
+        const useApproved = scopedUsage.filter((r: any) => {
+          const s = String(r?.status || r?.statusCode || '').toUpperCase();
+          return s.includes('APPROVED') || s === 'BSU_01';
+        }).length;
+        const useRejected = scopedUsage.filter((r: any) => {
+          const s = String(r?.status || r?.statusCode || '').toUpperCase();
+          return s.includes('REJECTED') || s === 'BSU_02';
+        }).length;
+
+        this.blDetailsAllCount = scopedArrivals.length + scopedUsage.length;
+        this.blDetailsPendingCount = arrPending + usePending;
+        this.blDetailsApprovedCount = arrApproved + useApproved;
+        this.blDetailsRejectedCount = arrRejected + useRejected;
       },
       error: () => {
         this.blDetailsAllCount = 0;
