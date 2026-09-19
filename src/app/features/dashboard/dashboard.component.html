@@ -77,8 +77,44 @@
           <h2>{{ getSupplyChainSectionTitle() }}</h2>
         </div>
 
-        <!-- Header Right: Wallet Toggle + Action Button -->
-        <div class="header-right" *ngIf="showHeaderAction() || shouldShowWalletViewToggle() || selectedSupplyChainSection === 'officer-activity'">
+        <!-- Header Right: Wallet Toggle + Countdown Widget + Action Button -->
+        <div class="header-right" *ngIf="showHeaderAction() || shouldShowWalletViewToggle() || selectedSupplyChainSection === 'officer-activity' || (selectedSupplyChainSection === 'new-license' && newLicenseActiveTimers.length > 0)">
+          
+          <!-- Prominent Header Countdown Timer Widget for New License (shown beside Apply button) -->
+          <div *ngIf="selectedSupplyChainSection === 'new-license' && newLicenseActiveTimers.length > 0"
+               class="header-countdown-widget"
+               [class.critical]="newLicenseActiveTimers[0]?.activeTimer?.urgency === 'critical'"
+               [class.expired]="newLicenseActiveTimers[0]?.activeTimer?.urgency === 'expired'">
+            <div class="hc-timer-badge">
+              <mat-icon class="hc-pulse-icon">timer</mat-icon>
+              <div class="hc-timer-info">
+                <span class="hc-timer-title">{{ newLicenseActiveTimers[0]?.activeTimer?.label }}</span>
+                <span class="hc-timer-ref">App #{{ newLicenseActiveTimers[0]?.applicationId }}</span>
+              </div>
+            </div>
+
+            <div class="hc-digits-box" [title]="newLicenseActiveTimers[0]?.activeTimer?.warningText">
+              <div class="hc-digit"><span class="val">{{ padZero(newLicenseActiveTimers[0]?.activeTimer?.days) }}</span><span class="lbl">D</span></div>
+              <span class="hc-sep">:</span>
+              <div class="hc-digit"><span class="val">{{ padZero(newLicenseActiveTimers[0]?.activeTimer?.hours) }}</span><span class="lbl">H</span></div>
+              <span class="hc-sep">:</span>
+              <div class="hc-digit"><span class="val">{{ padZero(newLicenseActiveTimers[0]?.activeTimer?.minutes) }}</span><span class="lbl">M</span></div>
+              <span class="hc-sep">:</span>
+              <div class="hc-digit"><span class="val">{{ padZero(newLicenseActiveTimers[0]?.activeTimer?.seconds) }}</span><span class="lbl">S</span></div>
+            </div>
+
+            <!-- View All Button if more than 1 timer is active -->
+            <button
+              *ngIf="newLicenseActiveTimers.length > 1"
+              type="button"
+              class="btn-view-all-timers"
+              (click)="openAllNewLicenseTimersModal()"
+              title="View all active countdown timers">
+              <mat-icon>format_list_bulleted</mat-icon>
+              <span>View All ({{ newLicenseActiveTimers.length }})</span>
+            </button>
+          </div>
+
           <div class="wallet-view-toggle" *ngIf="shouldShowWalletViewToggle()">
             <button
               mat-button
@@ -893,5 +929,89 @@
       </mat-card>
     </ng-container>
 
+  </div>
+</div>
+
+<!-- Modal / Popup for View All Active Action Timers -->
+<div class="active-timers-modal-overlay" *ngIf="allTimersModalOpen" (click)="closeAllNewLicenseTimersModal()">
+  <div class="active-timers-modal-dialog" (click)="$event.stopPropagation()">
+    <div class="atm-header">
+      <div class="atm-title-group">
+        <div class="atm-icon-circle">
+          <mat-icon>timer</mat-icon>
+        </div>
+        <div>
+          <h3>Active Action Countdowns ({{ newLicenseActiveTimers.length }})</h3>
+          <p>Applications requiring prompt attention before automatic system rejection</p>
+        </div>
+      </div>
+      <button type="button" class="atm-close-btn" (click)="closeAllNewLicenseTimersModal()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <div class="atm-body">
+      <div
+        class="atm-timer-card"
+        *ngFor="let item of newLicenseActiveTimers"
+        [class.critical]="item.activeTimer?.urgency === 'critical'"
+        [class.warn]="item.activeTimer?.urgency === 'warn'"
+        [class.expired]="item.activeTimer?.urgency === 'expired'">
+        
+        <div class="atm-card-top">
+          <div class="atm-app-meta">
+            <span class="atm-app-id">{{ item.applicationId }}</span>
+            <span
+              class="atm-badge"
+              [class.badge-objection]="item.activeTimer?.timerType === 'objection'"
+              [class.badge-payment]="item.activeTimer?.timerType === 'payment'">
+              {{ item.activeTimer?.label }}
+            </span>
+          </div>
+          <div class="atm-stage-desc">
+            <span class="atm-stage-name">{{ item.currentStage }}</span>
+            <span class="atm-cat-name" *ngIf="item.licenseCategoryName"> &bull; {{ item.licenseCategoryName }}</span>
+          </div>
+        </div>
+
+        <div class="atm-card-timer-row">
+          <div class="atm-digits-strip">
+            <div class="digit-cell"><span class="d-val">{{ padZero(item.activeTimer?.days) }}</span><span class="d-lbl">Days</span></div>
+            <span class="d-sep">:</span>
+            <div class="digit-cell"><span class="d-val">{{ padZero(item.activeTimer?.hours) }}</span><span class="d-lbl">Hours</span></div>
+            <span class="d-sep">:</span>
+            <div class="digit-cell"><span class="d-val">{{ padZero(item.activeTimer?.minutes) }}</span><span class="d-lbl">Mins</span></div>
+            <span class="d-sep">:</span>
+            <div class="digit-cell"><span class="d-val">{{ padZero(item.activeTimer?.seconds) }}</span><span class="d-lbl">Secs</span></div>
+          </div>
+          
+          <div class="atm-warning-text" [class.warn-critical]="item.activeTimer?.urgency === 'critical'" [class.warn-expired]="item.activeTimer?.urgency === 'expired'">
+            <mat-icon>warning_amber</mat-icon>
+            <span>{{ item.activeTimer?.warningText }}</span>
+          </div>
+        </div>
+
+        <div class="atm-card-actions">
+          <button type="button" class="atm-btn-details" (click)="onViewFromTimerModal(item)">
+            <mat-icon>visibility</mat-icon>
+            <span>View Details</span>
+          </button>
+          
+          <button *ngIf="item.canPayLicenseFee || item.canPayNow" type="button" class="atm-btn-pay" (click)="onPayFromTimerModal(item)">
+            <mat-icon>payments</mat-icon>
+            <span>Pay Fee Now</span>
+          </button>
+          
+          <button *ngIf="item.activeTimer?.timerType === 'objection'" type="button" class="atm-btn-action" (click)="onViewFromTimerModal(item)">
+            <mat-icon>rule</mat-icon>
+            <span>Fix Objection</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="atm-footer">
+      <button type="button" class="atm-footer-close" (click)="closeAllNewLicenseTimersModal()">Close</button>
+    </div>
   </div>
 </div>

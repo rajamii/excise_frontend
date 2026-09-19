@@ -162,6 +162,7 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
       clearInterval(this.countdownInterval);
       this.countdownInterval = null;
     }
+    this.licenseApplicationService.setActiveNewLicenseTimers([]);
   }
 
   isLicenseeUser(): boolean {
@@ -1144,6 +1145,23 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
     for (const row of this.allRows) {
       row.activeTimer = this.computeRowTimer(row, nowMs);
     }
+
+    const activeList = this.allRows
+      .filter(r => !!r.activeTimer)
+      .map(r => ({
+        applicationId: r.applicationId,
+        licenseCategoryName: r.licenseCategoryName,
+        applicantName: r.applicantName,
+        statusGroup: r.statusGroup,
+        currentStage: r.currentStage,
+        activeTimer: r.activeTimer,
+        canPayLicenseFee: r.canPayLicenseFee,
+        canPayNow: r.canPayNow,
+        rawRow: r
+      }))
+      .sort((a, b) => (a.activeTimer?.targetDeadline.getTime() || 0) - (b.activeTimer?.targetDeadline.getTime() || 0));
+
+    this.licenseApplicationService.setActiveNewLicenseTimers(activeList);
   }
 
   computeRowTimer(row: NewLicenseItem, nowMs: number): ActiveCountdownTimer | null {

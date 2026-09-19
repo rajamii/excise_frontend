@@ -23,6 +23,16 @@ export class LicenseApplicationService {
 
   private passPhotoSubject = new BehaviorSubject<File | null>(null);
   private siteDocumentsSubject = new BehaviorSubject<Map<string, File>>(new Map());
+  private activeNewLicenseTimersSubject = new BehaviorSubject<any[]>([]);
+  public activeNewLicenseTimers$ = this.activeNewLicenseTimersSubject.asObservable();
+
+  public setActiveNewLicenseTimers(timers: any[]): void {
+    this.activeNewLicenseTimersSubject.next(timers);
+  }
+
+  public getActiveNewLicenseTimers(): any[] {
+    return this.activeNewLicenseTimersSubject.getValue();
+  }
 
   constructor(private http: HttpClient) { }
 

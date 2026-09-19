@@ -23,6 +23,7 @@ import { RoleService } from '../../core/services/role.service';
 import { TimerConfigService } from '../../core/services/timer-config.service';
 import { RenewalConfigService } from '../../core/services/renewal-config.service';
 import { DashboardConfigService } from '../../core/services/dashboard-config.service';
+import { LicenseApplicationService } from '../../core/services/license-application.service';
 import { secureRandomFloat, secureRandomInt } from '../../core/utils/secure-random';
 import { UnifiedDashboardService } from '../../core/services/unified-dashboard.service';
 import { LicenseMeService } from '../../core/services/license-me.service';
@@ -219,6 +220,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Professional dashboard properties (from licensee dashboard)
   renewalWarnings: any[] = [];
+  newLicenseActiveTimers: any[] = [];
+  allTimersModalOpen = false;
   dashboardCounts: DashboardCount & { awaitingPayment?: number } = {
     applied: 0,
     pending: 0,
@@ -1514,6 +1517,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     private cdr: ChangeDetectorRef,
     private timerConfigService: TimerConfigService,
     private renewalConfigService: RenewalConfigService,
+    private licenseApplicationService: LicenseApplicationService,
     private ngZone: NgZone,
     private dialog: MatDialog
   ) { }
@@ -1524,6 +1528,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.handleQueryParams();
     this.initializeDashboard();
     this.initializeProfessionalFeatures();
+    this.licenseApplicationService.activeNewLicenseTimers$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((timers) => {
+        this.newLicenseActiveTimers = timers || [];
+        this.cdr.markForCheck();
+      });
     this.sidebarPendingBadgeService.refreshNeeded$
       .pipe(
         debounceTime(300),
@@ -4616,6 +4626,60 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         nav: Date.now()
       }
     });
+  }
+
+  openAllNewLicenseTimersModal(): void {
+    this.allTimersModalOpen = true;
+  }
+
+  closeAllNewLicenseTimersModal(): void {
+    this.allTimersModalOpen = false;
+  }
+
+  onViewFromTimerModal(item: any): void {
+    this.closeAllNewLicenseTimersModal();
+    const id = item?.applicationId;
+    if (!id) return;
+    const roleId = Number(this.roleService.getCurrentUser()?.roleId || 0);
+    const source = this.roleService.isLicenseeRole(roleId) ? 'licensee' : 'commissioner-dashboard';
+    this.router.navigate(['/supply-chain-view'], {
+      queryParams: {
+        id,
+        ref: id,
+        type: 'new-license',
+        source
+      }
+    });
+  }
+
+  onPayFromTimerModal(item: any): void {
+    this.closeAllNewLicenseTimersModal();
+    const applicationId = item?.applicationId;
+    if (!applicationId) return;
+    const rawRow = item?.rawRow || {};
+    const licenseFee = rawRow.licenseFeeAmount || 5000;
+    const securityFee = rawRow.securityFeeAmount || 5000;
+
+    this.router.navigate(['/dashboard'], {
+      queryParams: {
+        section: 'wallet',
+        action: 'pay',
+        tab: 'license_fee',
+        walletView: 'others',
+        id: applicationId,
+        type: 'new-license',
+        ref: applicationId,
+        referenceNo: applicationId,
+        amount: licenseFee,
+        securityAmount: securityFee,
+        source: 'new-license'
+      }
+    });
+  }
+
+  padZero(num: number | undefined | null): string {
+    const val = Number(num || 0);
+    return String(val < 0 ? 0 : val).padStart(2, '0');
   }
 
   // Remove the fallback method since we're using existing component
