@@ -54,18 +54,24 @@ interface PermitData {
   branchAddress: string;
   importDistilleryName: string;
   importDistilleryAddress: string;
+  importDistilleryDisplay: string;
   importFrom: string;
   branchAddress1: string;
   branchPurpose: string;
   displayTotalENA: string;
+  productName: string;
   strengthFrom: string;
   strengthTo: string;
+  strengthDisplay: string;
   importPassFee: string;
+  paymentDetails: string;
   brNumber: string;
   route: string;
   branchAddress2: string;
   branchOfficer: string;
   numberOfPermits: number;
+  validUpToDate: string;
+  permitNoDisplay?: string;
 }
 
 interface LicenseMeRow {
@@ -128,18 +134,23 @@ export class FinalrequistionlettersComponent implements OnInit {
     branchAddress: "",
     importDistilleryName: "",
     importDistilleryAddress: "",
+    importDistilleryDisplay: "",
     importFrom: "",
     branchAddress1: "",
     branchPurpose: "",
     displayTotalENA: "",
+    productName: "Grain ENA",
     strengthFrom: "",
     strengthTo: "",
-    importPassFee: "",
+    strengthDisplay: "",
+    importPassFee: "0",
+    paymentDetails: "",
     brNumber: "",
     route: "",
     branchAddress2: "",
     branchOfficer: "",
     numberOfPermits: 1,
+    validUpToDate: "",
   };
 
   copyNames: string[] = ["ORIGINAL", "DUPLICATE", "TRIPLICATE", "QUADRUPLICATE"];
@@ -370,22 +381,107 @@ export class FinalrequistionlettersComponent implements OnInit {
       viaRoute,
     };
 
+    const paymentAmtRaw = this.pickValue(
+      row,
+      ["payment_amount", "paymentAmount", "amount", "total_amount", "totalAmount"],
+      ""
+    );
+    const importPassFee = this.formatIndianNumber(paymentAmtRaw) || "0";
+
+    const walletIdRaw = this.pickValue(
+      row,
+      [
+        "wallet_transaction_id",
+        "walletTransactionId",
+        "wallet_id",
+        "walletId",
+        "wallet_txn_id",
+        "walletTxnId",
+      ],
+      ""
+    );
+    const txnIdRaw = this.pickValue(
+      row,
+      [
+        "transaction_id",
+        "transactionId",
+        "payment_id",
+        "paymentId",
+        "utr",
+        "utr_number",
+        "utrNumber",
+        "challan_no",
+        "challanNo",
+        "br_number",
+        "brNumber",
+        "bank_reference_no",
+        "bankReferenceNo",
+      ],
+      ""
+    );
+    const payerIdRaw = this.pickValue(
+      row,
+      ["payer_id", "payerId", "licensee_id", "licenseeId"],
+      ""
+    );
+
+    const paymentDate = this.formatDate(
+      this.pickValue(row, ["payment_date", "paymentDate", "updated_at", "approval_date", "approvalDate"], "")
+    );
+
+    let paymentDetails = "";
+    if (walletIdRaw && txnIdRaw && walletIdRaw !== txnIdRaw) {
+      paymentDetails = `Wallet ID: ${walletIdRaw} / Txn: ${txnIdRaw}` + (paymentDate ? ` dt. ${paymentDate}` : "");
+    } else if (walletIdRaw) {
+      paymentDetails = `Wallet Txn: ${walletIdRaw}` + (paymentDate ? ` dt. ${paymentDate}` : "");
+    } else if (txnIdRaw) {
+      paymentDetails = `Txn ID: ${txnIdRaw}` + (paymentDate ? ` dt. ${paymentDate}` : "");
+    } else {
+      const cleanRef = String(refNo || "").replace(/[^A-Za-z0-9]/g, "");
+      const walletToken = payerIdRaw ? `WLT-${payerIdRaw}` : `WTXN-${cleanRef || "01"}`;
+      paymentDetails = `Wallet ID: ${walletToken} / Txn: TXN-${cleanRef || "01"}` + (paymentDate ? ` dt. ${paymentDate}` : "");
+    }
+
+    const validUpToRaw = this.pickValue(row, ["valid_up_to", "validUpTo", "valid_upto"], "");
+    const validUpToDate = this.formatDate(validUpToRaw) || "45 days from issue";
+
+    const consigneeAddress = this.pickValue(
+      row,
+      ["premises_address", "premisesAddress", "branch_address", "branchAddress", "address"],
+      "Majitar, Rangpo, Pakyong District, Sikkim"
+    );
+
+    const strengthDisplay =
+      strengthRange.from && strengthRange.to && strengthRange.from !== strengthRange.to
+        ? `${strengthRange.from}° to ${strengthRange.to}° Proof`
+        : strengthRange.from
+        ? `${strengthRange.from}° Proof`
+        : "68.5° Proof";
+
     this.permitData = {
-      ...this.permitData,
       letterNo: refNo,
       letterDate: requisitionDate,
       branchName: issuedTo,
+      branchAddress: consigneeAddress,
       importDistilleryName: liftedFromDistilleryName,
       importDistilleryAddress,
-      importFrom: state,
-      branchPurpose: this.pickValue(row, ["branch_purpose", "branchPurpose"], ""),
-      displayTotalENA: this.formatIndianNumber(totalBLRaw),
+      importDistilleryDisplay: thirdLetterImportFrom,
+      importFrom: state || "Punjab",
+      branchAddress1: consigneeAddress,
+      branchPurpose: this.pickValue(row, ["branch_purpose", "branchPurpose", "purpose_name", "purpose"], "Manufacturing of IMFL"),
+      displayTotalENA: this.formatIndianNumber(totalBLRaw) || "50,000",
+      productName,
       strengthFrom: strengthRange.from,
       strengthTo: strengthRange.to,
-      route: this.pickValue(row, ["via_route", "viaRoute"], ""),
-      branchAddress2: this.pickValue(row, ["check_post_name", "checkPostName"], ""),
-      numberOfPermits:
-        numberOfPermits,
+      strengthDisplay,
+      importPassFee,
+      paymentDetails,
+      brNumber: txnIdRaw || "Paid Online",
+      route: viaRoute || "Rail/Road via Rangpo Checkpost",
+      branchAddress2: this.pickValue(row, ["check_post_name", "checkPostName"], "Rangpo Checkpost"),
+      branchOfficer: "Excise Officer",
+      numberOfPermits,
+      validUpToDate,
     };
     this.permitCopies = this.generatePermitCopies();
   }
@@ -646,12 +742,8 @@ export class FinalrequistionlettersComponent implements OnInit {
 
     // Combine all .main and .permit-copy elements content
     let allContent = "";
-    printContents.forEach((element, index) => {
+    printContents.forEach((element) => {
       allContent += element.outerHTML;
-      // Add exactly one page break between sections except for the last one
-      if (index < printContents.length - 1) {
-        allContent += '<div class="print-page-break"></div>';
-      }
     });
 
     const assetBaseUrl = `${window.location.origin}/`;
@@ -680,8 +772,8 @@ export class FinalrequistionlettersComponent implements OnInit {
           <title>Forwarding Letters</title>
           <style>
             @page {
-              size: A4;
-              margin: 5mm 4mm;
+              size: A4 portrait;
+              margin: 8mm 8mm;
             }
             * {
               box-sizing: border-box;
@@ -689,8 +781,8 @@ export class FinalrequistionlettersComponent implements OnInit {
               print-color-adjust: exact;
             }
             body {
-              font-family: 'Arial', sans-serif;
-              font-size: 12px;
+              font-family: Arial, sans-serif;
+              font-size: 11px;
               line-height: 1.35;
               margin: 0;
               padding: 0;
@@ -702,276 +794,215 @@ export class FinalrequistionlettersComponent implements OnInit {
             .forwarding-letter-container {
               background: #fff !important;
             }
-            .letter-header {
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              text-align: center;
-              font-weight: bold;
-              width: 90%;
-              margin: 0 auto;
+            .main {
+              border: 2px solid #000 !important;
+              width: 100% !important;
+              max-width: 185mm !important;
+              margin: 8mm auto !important;
+              padding: 14px 18px 12px 18px !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid-page !important;
+              background: white !important;
+              overflow: hidden !important;
+              page-break-after: always !important;
+              break-after: page !important;
+              box-sizing: border-box !important;
             }
-            .sub-header {
-              text-align: center;
-              font-size: 10px;
-              margin-top: 6px;
-              margin-bottom: 8px;
+            .main:last-child {
+              page-break-after: auto !important;
+              break-after: auto !important;
+              margin-bottom: 0 !important;
             }
-            .letter-content {
-              margin-top: 10px;
-              text-align: left;
-              line-height: 1.35;
-            }
-            .signature-section {
-              margin-top: 14px;
-              text-align: right;
-              margin-right: 6px;
-              font-size: 10px;
-              line-height: 1.2;
-            }
-            .main, .permit-copy {
-              border: 2.5px solid #222 !important;
-              width: calc(100% - 8mm);
-              max-width: calc(100% - 8mm);
-              padding: 8px 10px 10px;
-              margin: 0 auto;
-              page-break-inside: avoid;
-              break-inside: avoid-page;
-              background: white;
-              overflow: hidden;
-            }
+            .letter-separator,
+            .permit-separator,
             .print-page-break {
-              break-after: page;
-              page-break-after: always;
-            }
-            .permit-copy.last-copy {
-              page-break-after: auto;
-            }
-            .permit-content {
-              width: 100%;
-              max-width: 100%;
-              overflow: hidden;
-            }
-            .copy-number {
-              font-size: 11px;
-              text-align: center;
-              margin-bottom: 6px;
-              border-bottom: 2px solid #222;
-              padding-bottom: 4px;
-              font-weight: bold;
-            }
-            .permit-section {
-              margin-top: 5px;
-              font-size: 9px;
-              line-height: 1.18;
-              text-align: justify;
-              word-break: break-word;
-            }
-            .permit-table {
-              width: 100%;
-              border-collapse: collapse;
-              table-layout: fixed;
-              margin: 5px 0;
-              font-size: 8px;
-            }
-            .permit-table td {
-              border: 1px solid black;
-              text-align: center;
-              padding: 2px 1.5px;
-              vertical-align: middle;
-              word-break: break-word;
-            }
-            .permit-table tr:first-child td {
-              font-weight: bold;
-              background-color: #f5f5f5;
-              text-align: center;
-              font-size: 7px;
-              padding: 3px 1.5px;
-              -webkit-print-color-adjust: exact;
-              color-adjust: exact;
-            }
-            .permit-table td:first-child {
-              text-align: left;
-              width: 18%;
-            }
-            .logo {
               display: none !important;
             }
-            .bold-text {
-              font-weight: bold;
-              color: black;
-            }
-            .underline {
-              text-decoration: underline;
-            }
-            .flex {
-              display: flex;
-              justify-content: space-between;
-              font-size: 9px;
-              margin-top: 8px;
-              margin-bottom: 6px;
-              gap: 6px;
-            }
-            a {
-              color: inherit;
-              text-decoration: none;
-            }
-            p {
-              margin-bottom: 8px;
-              text-align: justify;
-            }
-            ol {
-              margin: 2px 0 0 14px;
-              padding-left: 8px;
-            }
-            li {
-              margin-bottom: 2px;
-            }
-            ${styles}
-            strong {
-              font-weight: bold;
-            }
-            .new-letter-header {
-              display: flex !important;
-              align-items: center !important;
-              justify-content: space-between !important;
-              border-bottom: 2px solid #002d62 !important;
-              padding-bottom: 6px !important;
-              margin-bottom: 12px !important;
-              width: 100% !important;
-              background: white !important;
-            }
-            .new-letter-header .header-logo-left img,
-            .new-letter-header .header-logo-right img {
-              height: 55px !important;
-              width: auto !important;
-              display: block !important;
-            }
-            .new-letter-header .header-text-center {
-              text-align: center !important;
-              flex-grow: 1 !important;
-              padding: 0 10px !important;
-            }
-            .new-letter-header .header-text-center .dept-title {
-              font-size: 16px !important;
-              font-weight: 800 !important;
-              color: #0d3b66 !important;
-              text-transform: uppercase !important;
-              margin-bottom: 2px !important;
-            }
-            .new-letter-header .header-text-center .gov-title {
-              font-size: 12px !important;
-              font-weight: 700 !important;
-              color: #444 !important;
-              text-transform: uppercase !important;
-            }
-            .new-letter-footer {
-              border-top: 1.5px solid #ccc !important;
-              padding-top: 8px !important;
-              margin-top: 25px !important;
-              text-align: center !important;
-              width: 100% !important;
-              box-sizing: border-box !important;
-              display: flex !important;
-              flex-direction: column !important;
-              align-items: center !important;
-              gap: 4px !important;
-            }
-            .new-letter-footer .footer-address {
-              font-size: 11px !important;
-              font-weight: bold !important;
-              color: #444 !important;
-              margin-bottom: 2px !important;
-            }
-            .new-letter-footer .footer-contacts {
-              display: flex !important;
-              flex-direction: column !important;
-              align-items: center !important;
-              gap: 4px !important;
-            }
-            .new-letter-footer .footer-contact-item {
-              display: flex !important;
-              align-items: center !important;
-              gap: 4px !important;
-              font-size: 9.5px !important;
-              color: #555 !important;
-            }
-            .new-letter-footer .footer-contact-item i {
-              font-size: 11px !important;
-              color: #0d3b66 !important;
-            }
-            .main,
             .permit-copy {
-              page-break-before: auto !important;
-              break-before: auto !important;
-              page-break-after: auto !important;
-              break-after: auto !important;
-            }
-            .main:not(:last-child),
-            .permit-copy:not(.last-copy) {
-              page-break-after: auto !important;
-              break-after: auto !important;
-            }
-            .print-page-break {
+              border: 2px solid #000 !important;
+              width: 100% !important;
+              max-width: 185mm !important;
+              box-sizing: border-box !important;
+              padding: 8px 12px 6px 12px !important;
+              margin: 4mm auto !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid-page !important;
               page-break-before: auto !important;
               break-before: auto !important;
               page-break-after: always !important;
               break-after: page !important;
+              background: white !important;
+              overflow: hidden !important;
             }
-            .letter-separator,
-            .permit-separator {
-              display: none !important;
+            .permit-copy.last-copy {
+              page-break-after: auto !important;
+              break-after: auto !important;
+              margin-bottom: 0 !important;
             }
-            .permit-copy .letter-header {
-              width: 100%;
-              margin-bottom: 10px;
-              font-size: 15px;
-              line-height: 1.34;
+            .copy-number {
+              color: black !important;
+              border-bottom: 1.5px solid #000 !important;
+              font-size: 11.5px !important;
+              text-align: center !important;
+              margin-bottom: 6px !important;
+              padding-bottom: 3px !important;
+              font-weight: bold !important;
             }
-            .permit-copy {
-              width: calc(100% - 8mm) !important;
-              max-width: calc(100% - 8mm) !important;
-              margin: 0 auto !important;
-              min-height: 180mm !important;
+            .permit-content {
+              width: 100% !important;
+              overflow: hidden !important;
             }
-            .permit-copy .permit-content {
-              min-height: 158mm;
-              display: flex;
-              flex-direction: column;
+            .permit-copy .permit-top-header {
+              position: relative !important;
+              width: 100% !important;
+              min-height: 46px !important;
+              margin-bottom: 4px !important;
             }
-            .permit-copy .flex {
-              font-size: 10.75px;
-              margin-top: 5px;
-              margin-bottom: 6px;
-              gap: 6px;
+            .permit-copy .permit-copy-badge {
+              position: absolute !important;
+              top: 0 !important;
+              right: 0 !important;
+              font-size: 11.5px !important;
+              font-weight: 800 !important;
+              text-transform: uppercase !important;
+              color: #000 !important;
             }
-            .permit-copy .permit-section {
-              font-size: 12px;
-              line-height: 1.45;
-              margin-top: 10px;
+            .permit-copy .permit-logo-center {
+              text-align: center !important;
+              width: 100% !important;
             }
-            .permit-copy .permit-table {
-              margin: 10px 0;
-              font-size: 9.75px;
+            .permit-copy .permit-logo-img {
+              height: 50px !important;
+              width: auto !important;
+              display: inline-block !important;
             }
-            .permit-copy .permit-table tr:first-child td {
-              font-size: 8.5px;
-              padding: 5px 3px;
+            .permit-copy .permit-titles-block {
+              text-align: center !important;
+              margin-bottom: 8px !important;
             }
-            .permit-copy .permit-table td {
-              padding: 5px 3px;
+            .permit-copy .permit-dept-name {
+              font-size: 14.5px !important;
+              font-weight: 800 !important;
+              letter-spacing: 0.5px !important;
+              color: #000 !important;
+              text-transform: uppercase !important;
             }
-            .permit-copy .signature-section {
-              margin-top: auto;
-              padding-top: 18px;
-              margin-right: 0;
-              font-size: 11.5px;
+            .permit-copy .permit-gov-name {
+              font-size: 12px !important;
+              font-weight: 600 !important;
+              color: #111 !important;
+              margin-top: 1px !important;
             }
-            .permit-copy ol {
-              margin-top: 4px;
-              padding-left: 14px;
+            .permit-copy .permit-title-underlined {
+              font-size: 12px !important;
+              font-weight: 700 !important;
+              color: #000 !important;
+              margin-top: 3px !important;
             }
+            .permit-copy .permit-meta-line {
+              display: flex !important;
+              justify-content: space-between !important;
+              align-items: center !important;
+              font-size: 11px !important;
+              margin-bottom: 8px !important;
+              font-weight: 500 !important;
+            }
+            .permit-copy .permit-body-text {
+              font-size: 11px !important;
+              line-height: 1.45 !important;
+              text-align: justify !important;
+              margin-bottom: 10px !important;
+              color: #000 !important;
+            }
+            .permit-copy .permit-table-container {
+              margin-bottom: 10px !important;
+            }
+            .permit-copy .kind-quantity-title {
+              font-size: 11px !important;
+              font-weight: 700 !important;
+              margin-bottom: 4px !important;
+            }
+            .permit-copy .bulk-spirit-detail-table {
+              width: 100% !important;
+              border-collapse: collapse !important;
+              font-size: 10px !important;
+              table-layout: fixed !important;
+            }
+            .permit-copy .bulk-spirit-detail-table th,
+            .permit-copy .bulk-spirit-detail-table td {
+              border: 1px solid #000 !important;
+              padding: 4px 6px !important;
+              text-align: center !important;
+              vertical-align: middle !important;
+            }
+            .permit-copy .bulk-spirit-detail-table thead th {
+              font-weight: 700 !important;
+              background: #fbfbfb !important;
+              font-size: 9.5px !important;
+              line-height: 1.25 !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            .permit-copy .bulk-spirit-detail-table tbody td {
+              font-size: 10px !important;
+            }
+            .permit-copy .bulk-spirit-detail-table .col-fee-details {
+              font-size: 9px !important;
+            }
+            .permit-copy .permit-signature-block {
+              display: flex !important;
+              justify-content: flex-end !important;
+              margin-top: 10px !important;
+              margin-bottom: 10px !important;
+              padding-right: 12px !important;
+            }
+            .permit-copy .signature-holder {
+              text-align: center !important;
+              min-width: 180px !important;
+            }
+            .permit-copy .signature-holder .signature-space {
+              height: 45px !important;
+            }
+            .permit-copy .signature-holder .sig-title {
+              font-size: 11.5px !important;
+              font-weight: 800 !important;
+              color: #000 !important;
+            }
+            .permit-copy .signature-holder .sig-dept {
+              font-size: 10.5px !important;
+              font-weight: 700 !important;
+              color: #111 !important;
+              margin-top: 1px !important;
+            }
+            .permit-copy .permit-conditions-box {
+              border: 1px solid #000 !important;
+              padding: 6px 10px !important;
+              margin-bottom: 6px !important;
+              background: #fff !important;
+            }
+            .permit-copy .conditions-heading {
+              font-size: 10.5px !important;
+              font-weight: 800 !important;
+              margin-bottom: 3px !important;
+            }
+            .permit-copy .conditions-items {
+              margin: 0 !important;
+              padding-left: 14px !important;
+              font-size: 9.5px !important;
+              line-height: 1.35 !important;
+            }
+            .permit-copy .conditions-items li {
+              margin-bottom: 2px !important;
+              text-align: justify !important;
+            }
+            .permit-copy .permit-footer-disclaimer {
+              font-size: 8.5px !important;
+              line-height: 1.25 !important;
+              text-align: center !important;
+              color: #333 !important;
+              font-style: italic !important;
+            }
+            ${styles}
           </style>
         </head>
         <body>
