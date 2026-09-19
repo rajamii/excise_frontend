@@ -5735,4 +5735,64 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         if (s === 500 || s === 650 || s === 700) return 12;
         return 12;
     }
+
+    getItemEdp(item: any): number {
+        if (!item) return 0;
+        const total = item.total_edp ?? item.totalEdp;
+        if (total !== undefined && total !== null) return Number(total);
+        const rate = Number(item.edp_per_case || item.edpPerCase || item.edp || 0);
+        const cases = Number(item.cases || item.quantity_cases || item.quantityCases || 1);
+        return rate * cases;
+    }
+
+    getItemAddEd(item: any): number {
+        if (!item) return 0;
+        const total = item.total_additional_ed ?? item.totalAdditionalEd ?? item.totalAddEd;
+        if (total !== undefined && total !== null) return Number(total);
+        const rate = Number(item.additional_ed_per_case || item.additionalEdPerCase || item.add_ed || 350);
+        const cases = Number(item.cases || item.quantity_cases || item.quantityCases || 1);
+        return rate * cases;
+    }
+
+    getItemImport(item: any): number {
+        if (!item) return 0;
+        const total = item.total_import ?? item.totalImport ?? item.totalImportFee;
+        if (total !== undefined && total !== null) return Number(total);
+        const rate = Number(item.import_pass_fee_per_case || item.importPassFeePerCase || item.import_fee || 1400);
+        const cases = Number(item.cases || item.quantity_cases || item.quantityCases || 1);
+        return rate * cases;
+    }
+
+    getItemCess(item: any): number {
+        if (!item) return 0;
+        const total = item.total_education_cess ?? item.totalEducationCess ?? item.cess;
+        if (total !== undefined && total !== null) return Number(total);
+        const rate = Number(item.education_cess_per_case || item.educationCessPerCase || 60);
+        const cases = Number(item.cases || item.quantity_cases || item.quantityCases || 1);
+        return rate * cases;
+    }
+
+    getItemBl(item: any): number {
+        if (!item) return 0;
+        const bl = item.bulk_litres ?? item.bulkLitres ?? item.bl;
+        if (bl !== undefined && bl !== null) return Number(bl);
+        const sizeMl = Number(item.size_ml || item.sizeMl || 750);
+        const bpc = Number(item.pieces_per_case || item.piecesPerCase || this.getPiecesPerCase(sizeMl));
+        const cases = Number(item.cases || item.quantity_cases || item.quantityCases || 1);
+        return (sizeMl * bpc * cases) / 1000;
+    }
+
+    getPermitTotalEdp(pDetail: any): number {
+        if (pDetail?.total_edp !== undefined && pDetail?.total_edp !== null) return Number(pDetail.total_edp);
+        if (pDetail?.totalEdp !== undefined && pDetail?.totalEdp !== null) return Number(pDetail.totalEdp);
+        const items = pDetail?.line_items || pDetail?.lineItems || [];
+        return items.reduce((sum: number, it: any) => sum + this.getItemEdp(it), 0);
+    }
+
+    getPermitTotalCess(pDetail: any): number {
+        if (pDetail?.total_education_cess !== undefined && pDetail?.total_education_cess !== null) return Number(pDetail.total_education_cess);
+        if (pDetail?.totalEducationCess !== undefined && pDetail?.totalEducationCess !== null) return Number(pDetail.totalEducationCess);
+        const items = pDetail?.line_items || pDetail?.lineItems || [];
+        return items.reduce((sum: number, it: any) => sum + this.getItemCess(it), 0);
+    }
 }
