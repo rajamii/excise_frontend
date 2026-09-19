@@ -63,6 +63,56 @@
             </div>
         </div>
 
+        <!-- Prominent Countdown Timer Alert Banner for Active Objection & Payment Stages -->
+        <div class="countdown-detail-banner mb-4 shadow-sm no-print"
+             *ngIf="activeCountdownTimer"
+             [ngClass]="activeCountdownTimer.timerType + ' urgency-' + activeCountdownTimer.urgency">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 p-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="timer-banner-icon">
+                        <i class="bi bi-clock-history"></i>
+                    </div>
+                    <div>
+                        <div class="timer-banner-title d-flex align-items-center gap-2">
+                            <span class="pulse-indicator"></span>
+                            <h5 class="mb-0 fw-bold">{{ activeCountdownTimer.title }}</h5>
+                        </div>
+                        <div class="timer-banner-desc text-muted mt-1" style="font-size: 13.5px;">
+                            {{ activeCountdownTimer.description }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="timer-banner-clock">
+                    <div class="timer-clock-digits d-flex align-items-center gap-2">
+                        <div class="clock-unit text-center">
+                            <span class="clock-val fw-bold">{{ padZero(activeCountdownTimer.days) }}</span>
+                            <span class="clock-lbl d-block">Days</span>
+                        </div>
+                        <span class="clock-sep fw-bold">:</span>
+                        <div class="clock-unit text-center">
+                            <span class="clock-val fw-bold">{{ padZero(activeCountdownTimer.hours) }}</span>
+                            <span class="clock-lbl d-block">Hours</span>
+                        </div>
+                        <span class="clock-sep fw-bold">:</span>
+                        <div class="clock-unit text-center">
+                            <span class="clock-val fw-bold">{{ padZero(activeCountdownTimer.minutes) }}</span>
+                            <span class="clock-lbl d-block">Minutes</span>
+                        </div>
+                        <span class="clock-sep fw-bold">:</span>
+                        <div class="clock-unit text-center">
+                            <span class="clock-val fw-bold sec-glow">{{ padZero(activeCountdownTimer.seconds) }}</span>
+                            <span class="clock-lbl d-block">Seconds</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="timer-banner-warning px-3 py-2 border-top d-flex align-items-center gap-2" style="font-size: 12.5px;">
+                <i class="bi bi-shield-exclamation text-danger fs-6"></i>
+                <span><b>Auto-Rejection Rule:</b> If required action is not completed before timer reaches 00:00:00, application will automatically be moved to <strong class="text-danger">{{ activeCountdownTimer.rejectionStage }}</strong>.</span>
+            </div>
+        </div>
+
         <div id="applicationPrintSection" class="card shadow-sm border-0 printable-content">
             <div class="application-header text-center fw-bold mb-3 fs-5">
                 <div class="d-flex align-items-center justify-content-center gap-3 mb-2">

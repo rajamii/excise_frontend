@@ -145,20 +145,15 @@ export class ResolveObjectionsDialogComponent implements OnInit, OnDestroy {
     if (!this.objectionDeadline) return;
     const remaining = this.objectionDeadline.getTime() - Date.now();
     if (remaining <= 0) {
-      this.deadlineCountdown = '0 min';
+      this.deadlineCountdown = '00d : 00h : 00m : 00s';
       this.deadlineUrgency = 'expired';
       if (this._countdownInterval !== null) { clearInterval(this._countdownInterval); this._countdownInterval = null; }
       return;
     }
-    this.deadlineUrgency = remaining <= 3_600_000 ? 'critical' : remaining <= 86_400_000 ? 'warn' : 'ok';
+    this.deadlineUrgency = remaining <= 86_400_000 ? 'critical' : remaining <= 172_800_000 ? 'warn' : 'ok';
     const s = Math.floor(remaining / 1_000);
     const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
-    const parts: string[] = [];
-    if (d > 0) parts.push(`${d} day${d !== 1 ? 's' : ''}`);
-    if (h > 0) parts.push(`${h} hr${h !== 1 ? 's' : ''}`);
-    if (m > 0) parts.push(`${m} min`);
-    if (d === 0 && h === 0) parts.push(`${sec} sec`);
-    this.deadlineCountdown = parts.join(', ') || '< 1 min';
+    this.deadlineCountdown = `${String(d).padStart(2, '0')} Days : ${String(h).padStart(2, '0')} Hours : ${String(m).padStart(2, '0')} Mins : ${String(sec).padStart(2, '0')} Secs`;
   }
 
   // ── End deadline helpers ─────────────────────────────────────────────────

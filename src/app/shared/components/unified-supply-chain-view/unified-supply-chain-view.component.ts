@@ -1,4 +1,4 @@
-import { Component, Inject, PLATFORM_ID, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, Inject, PLATFORM_ID, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { Location, CommonModule, isPlatformBrowser } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -403,13 +403,29 @@ interface PendingNewLicenseFeeApproval {
     templateUrl: './unified-supply-chain-view.component.html',
     styleUrls: ['./unified-supply-chain-view.component.scss']
 })
-export class UnifiedSupplyChainViewComponent implements OnInit {
+export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     applicationData?: UnifiedApplicationData;
     applicationType: ApplicationType = 'requisition';
     isLoading = false;
     errorMessage = '';
     objections: Objection[] = [];
     private objectionIndex = new Map<string, { hasUnresolved: boolean; hasResolved: boolean }>();
+
+    // Real-time Countdown Timer for Active Objection & Payment
+    activeCountdownTimer: {
+        timerType: 'objection' | 'payment';
+        title: string;
+        description: string;
+        days: number;
+        hours: number;
+        minutes: number;
+        seconds: number;
+        urgency: 'normal' | 'warn' | 'critical' | 'expired';
+        rejectionStage: string;
+        targetDeadline: Date;
+    } | null = null;
+    private countdownTimerInterval: any = null;
+    private timerExpiredTriggered = false;
 
     // Hologram supply order letter (IT Cell after payment)
     supplyOrderLetterOpen = false;
@@ -1087,11 +1103,176 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             next: (data) => {
                 this.objections = Array.isArray(data) ? data : [];
                 this.rebuildObjectionIndex();
+                this.initDetailCountdownTimer();
                 this.cdr.detectChanges();
             },
             error: () => {
                 this.objections = [];
                 this.rebuildObjectionIndex();
+                this.initDetailCountdownTimer();
+            }
+        });
+    }
+
+    ngOnDestroy(): void {
+        if (this.countdownTimerInterval) {
+            clearInterval(this.countdownTimerInterval);
+            this.countdownTimerInterval = null;
+        }
+    }
+
+    initDetailCountdownTimer(): void {
+        if (this.countdownTimerInterval) {
+            clearInterval(this.countdownTimerInterval);
+            this.countdownTimerInterval = null;
+        }
+
+        this.updateDetailCountdown();
+        this.countdownTimerInterval = setInterval(() => {
+            this.updateDetailCountdown();
+        }, 1000);
+    }
+
+    updateDetailCountdown(): void {
+        this.activeCountdownTimer = this.computeDetailCountdown();
+        this.cdr.detectChanges();
+    }
+
+    private computeDetailCountdown(): any {
+        if (!this.applicationData) return null;
+        if (this.applicationType !== 'new-license' && !this.isNewLicenseOrRenewal()) return null;
+
+        const rawData: any = this.applicationData;
+        const currentStageRaw = String(rawData.currentStage || rawData.current_stage || rawData.status || '').toLowerCase();
+        if (currentStageRaw.includes('reject') || currentStageRaw.includes('approved') || rawData.isApproved) {
+            return null;
+        }
+
+        const nowMs = Date.now();
+        const appId = String(rawData.referenceNo || rawData.id || rawData.application_id || '').trim();
+
+        // 1. Objection Timer
+        const isObjection = currentStageRaw.includes('objection') || this.hasAnyUnresolvedObjections() || Boolean(rawData.is_objection_timer_active || rawData.isObjectionTimerActive);
+        if (isObjection) {
+            let deadlineMs: number | null = null;
+            const unresolvedDeadlines = (this.objections || [])
+                .filter((o: any) => o && !o.isResolved && o.deadlineAt)
+                .map((o: any) => new Date(o.deadlineAt).getTime())
+                .filter((d: number) => !isNaN(d));
+
+            if (unresolvedDeadlines.length > 0) {
+                deadlineMs = Math.min(...unresolvedDeadlines);
+            }
+
+            if (!deadlineMs && (rawData.objection_deadline_at || rawData.objectionDeadlineAt)) {
+                const parsed = new Date(rawData.objection_deadline_at || rawData.objectionDeadlineAt).getTime();
+                if (!isNaN(parsed)) deadlineMs = parsed;
+            }
+
+            if (!deadlineMs) {
+                const base = rawData.submissionDate ? new Date(rawData.submissionDate).getTime() : nowMs;
+                deadlineMs = (isNaN(base) ? nowMs : base) + (7 * 24 * 60 * 60 * 1000);
+            }
+
+            const diff = deadlineMs - nowMs;
+            return this.buildDetailCountdown('objection', diff, deadlineMs, appId);
+        }
+
+        // 2. Payment Timer
+        const isAwaitingPayment = (currentStageRaw.includes('awaiting') && currentStageRaw.includes('payment')) ||
+            (currentStageRaw.includes('payment') && (!rawData.isLicenseFeePaid || !rawData.isSecurityFeePaid)) ||
+            Boolean(rawData.is_payment_timer_active || rawData.isPaymentTimerActive);
+
+        const feePending = !rawData.isLicenseFeePaid || !rawData.isSecurityFeePaid || !rawData.is_license_fee_paid || !rawData.is_security_fee_paid;
+
+        if (isAwaitingPayment && feePending) {
+            let deadlineMs: number | null = null;
+            if (rawData.payment_deadline_at || rawData.paymentDeadlineAt) {
+                const parsed = new Date(rawData.payment_deadline_at || rawData.paymentDeadlineAt).getTime();
+                if (!isNaN(parsed)) deadlineMs = parsed;
+            }
+
+            if (!deadlineMs) {
+                const base = rawData.submissionDate ? new Date(rawData.submissionDate).getTime() : nowMs;
+                deadlineMs = (isNaN(base) ? nowMs : base) + (7 * 24 * 60 * 60 * 1000);
+            }
+
+            const diff = deadlineMs - nowMs;
+            return this.buildDetailCountdown('payment', diff, deadlineMs, appId);
+        }
+
+        return null;
+    }
+
+    private buildDetailCountdown(timerType: 'objection' | 'payment', diffMs: number, deadlineMs: number, appId: string): any {
+        const isObjection = timerType === 'objection';
+        const title = isObjection ? 'Time Remaining for Objection Resolution' : 'Time Remaining for Fee Payment';
+        const description = isObjection
+            ? 'An objection has been raised on this application. Please resolve all objections before the countdown expires.'
+            : 'License Fee & Security Deposit payment is pending. Please complete both payments before the countdown expires.';
+        const rejectionStage = isObjection
+            ? 'Stage 166 – Rejected: No Action Taken on Objection'
+            : 'Stage 180 – Rejected: No Action Taken by User at Payment Stage';
+
+        if (diffMs <= 0) {
+            if (!this.timerExpiredTriggered && appId) {
+                this.timerExpiredTriggered = true;
+                this.triggerDetailTimerExpiration(appId);
+            }
+            return {
+                timerType,
+                title,
+                description: 'Deadline has expired. The application is being automatically rejected.',
+                days: 0,
+                hours: 0,
+                minutes: 0,
+                seconds: 0,
+                urgency: 'expired',
+                rejectionStage,
+                targetDeadline: new Date(deadlineMs)
+            };
+        }
+
+        const totalSec = Math.floor(diffMs / 1000);
+        const days = Math.floor(totalSec / 86400);
+        const hours = Math.floor((totalSec % 86400) / 3600);
+        const minutes = Math.floor((totalSec % 3600) / 60);
+        const seconds = totalSec % 60;
+
+        let urgency: 'normal' | 'warn' | 'critical' = 'normal';
+        if (diffMs <= 24 * 60 * 60 * 1000) {
+            urgency = 'critical';
+        } else if (diffMs <= 48 * 60 * 60 * 1000) {
+            urgency = 'warn';
+        }
+
+        return {
+            timerType,
+            title,
+            description,
+            days,
+            hours,
+            minutes,
+            seconds,
+            urgency,
+            rejectionStage,
+            targetDeadline: new Date(deadlineMs)
+        };
+    }
+
+    padZero(num: number): string {
+        return String(num < 0 ? 0 : num).padStart(2, '0');
+    }
+
+    triggerDetailTimerExpiration(appId: string): void {
+        if (!appId) return;
+        const encoded = encodeURIComponent(appId);
+        this.http.post<any>(`${environment.apiBaseUrl}/transactional/new_license_application/${encoded}/trigger-timer-expiration/`, {}).subscribe({
+            next: () => {
+                this.ngOnInit();
+            },
+            error: () => {
+                setTimeout(() => this.ngOnInit(), 2000);
             }
         });
     }

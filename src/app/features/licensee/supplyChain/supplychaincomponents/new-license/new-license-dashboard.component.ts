@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -17,6 +17,21 @@ import { SidebarPendingBadgeService } from '../../../../../shared/services/sideb
 import { timeout } from 'rxjs';
 import { ResolveObjectionsDialogComponent } from './resolve-objections-dialog/resolve-objections-dialog.component';
 import { ObjectionDetailsDialogComponent } from './objection-details-dialog/objection-details-dialog.component';
+
+export interface ActiveCountdownTimer {
+  timerType: 'objection' | 'payment';
+  label: string;
+  title: string;
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+  formattedTime: string;
+  urgency: 'normal' | 'warn' | 'critical' | 'expired';
+  warningText: string;
+  targetDeadline: Date;
+  rejectionStage: string;
+}
 
 interface NewLicenseCounts {
   applied: number;
@@ -52,6 +67,15 @@ interface NewLicenseItem {
   hasObjectionHistory?: boolean;
   hasObjectionUpdate?: boolean;
   updatedObjectionFields?: string[];
+
+  // Countdown timer fields
+  isPaymentTimerActive?: boolean;
+  paymentDeadlineAt?: string | null;
+  paymentTimeRemainingSeconds?: number | null;
+  isObjectionTimerActive?: boolean;
+  objectionDeadlineAt?: string | null;
+  objectionTimeRemainingSeconds?: number | null;
+  activeTimer?: ActiveCountdownTimer | null;
 }
 
 interface GroupedNewLicenseResponse {
@@ -69,7 +93,7 @@ interface GroupedNewLicenseResponse {
   templateUrl: './new-license-dashboard.component.html',
   styleUrls: ['./new-license-dashboard.component.scss']
 })
-export class NewLicenseDashboardComponent implements OnInit {
+export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   private router = inject(Router);
   private dialog = inject(MatDialog);
@@ -78,6 +102,9 @@ export class NewLicenseDashboardComponent implements OnInit {
   private licenseApplicationService = inject(LicenseApplicationService);
   private sidebarPendingBadgeService = inject(SidebarPendingBadgeService);
   private readonly apiBase = `${environment.apiBaseUrl}/transactional/new_license_application`;
+
+  private countdownInterval: any = null;
+  private expiredTriggeredIds = new Set<string>();
 
   isLoading = false;
   error: string | null = null;
@@ -122,14 +149,19 @@ export class NewLicenseDashboardComponent implements OnInit {
     return Array.from(new Set(numbers));
   }
 
-  
-
   ngOnInit(): void {
     this.loadData();
     this.sidebarPendingBadgeService.refreshNeeded$.subscribe(() => {
       console.log('🔄 NewLicenseDashboardComponent: Refreshing data due to refreshNeeded signal');
       this.loadData();
     });
+  }
+
+  ngOnDestroy(): void {
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
+    }
   }
 
   isLicenseeUser(): boolean {
@@ -181,6 +213,7 @@ export class NewLicenseDashboardComponent implements OnInit {
           awaitingPayment: 0
         };
         this.allRows = this.flattenGroupedData(grouped);
+        this.startCountdownTimer();
 
         // Calculate actual counts from rows
         const actualObjectionCount = this.allRows.filter(r => r.statusGroup === 'objection').length;
@@ -717,21 +750,23 @@ export class NewLicenseDashboardComponent implements OnInit {
         ).trim();
         const paymentStatus = this.normalizePaymentStatus(rawPayment);
         const feePaid = Boolean(item?.is_application_fee_paid ?? item?.isApplicationFeePaid);
+        const currentStageRaw = String(item?.current_stage_name || item?.currentStageName || item?.current_stage || '');
+        const currentStageId = item?.current_stage_id || item?.currentStageId || item?.current_stage;
+        const rawLower = currentStageRaw.toLowerCase();
+        const isRejected = statusGroup === 'rejected' || rawLower.includes('reject');
+
         const canView = paymentStatus === 'Successful' || feePaid;
-        const canPayNow = this.isLicenseeUser() && !feePaid && paymentStatus !== 'Successful';
+        const canPayNow = this.isLicenseeUser() && !feePaid && paymentStatus !== 'Successful' && !isRejected;
         const paymentDateRaw = item?.application_fee_payment_date || item?.applicationFeePaymentDate;
         const submittedOn = paymentStatus === 'Successful'
           ? this.formatDate(paymentDateRaw || item?.created_at || item?.createdAt || item?.submitted_on)
           : this.formatDate(item?.created_at || item?.createdAt || item?.submitted_on);
 
-        const currentStageRaw = String(item?.current_stage_name || item?.currentStageName || item?.current_stage || '');
-        const currentStageId = item?.current_stage_id || item?.currentStageId || item?.current_stage;
-        let finalStatusGroup: NewLicenseItem['statusGroup'] = statusGroup;
-        if (this.isLicenseeUser()) {
-          const rawLower = currentStageRaw.toLowerCase();
+        let finalStatusGroup: NewLicenseItem['statusGroup'] = isRejected ? 'rejected' : statusGroup;
+        if (this.isLicenseeUser() && !isRejected) {
           const isAwaiting = 
-            rawLower.includes('awaiting') && rawLower.includes('payment') ||
-            rawLower.includes('payment') ||
+            (rawLower.includes('awaiting') && rawLower.includes('payment')) ||
+            (rawLower.includes('payment') && !rawLower.includes('reject')) ||
             canPayNow ||
             currentStageId === 23 ||
             currentStageId === '23';
@@ -782,13 +817,22 @@ export class NewLicenseDashboardComponent implements OnInit {
         ).trim();
 
         const isAwaitingLicenseFee = this.isLicenseeUser() &&
-          (finalStatusGroup === 'awaiting-payment' || String(currentStageId) === '23' || currentStageRaw.toLowerCase().includes('awaiting')) &&
+          !isRejected &&
+          (finalStatusGroup === 'awaiting-payment' || String(currentStageId) === '23' || (currentStageRaw.toLowerCase().includes('awaiting') && !rawLower.includes('reject'))) &&
           (!isLicenseFeePaid || !isSecurityFeePaid);
 
         const rawLicFee = Number(item?.license_fee_amount ?? item?.licenseFeeAmount ?? item?.yearly_license_fee ?? item?.yearlyLicenseFee ?? 5000);
         const rawSecFee = Number(item?.security_fee_amount ?? item?.securityFeeAmount ?? item?.security_deposit_amount ?? item?.securityDepositAmount ?? 5000);
         const licenseFeeAmount = Number.isFinite(rawLicFee) && rawLicFee > 0 ? rawLicFee : 5000;
         const securityFeeAmount = Number.isFinite(rawSecFee) && rawSecFee > 0 ? rawSecFee : licenseFeeAmount;
+
+        const isPaymentTimerActive = Boolean(item?.is_payment_timer_active ?? item?.isPaymentTimerActive);
+        const paymentDeadlineAt = item?.payment_deadline_at || item?.paymentDeadlineAt || null;
+        const paymentTimeRemainingSeconds = item?.payment_time_remaining_seconds ?? item?.paymentTimeRemainingSeconds ?? null;
+
+        const isObjectionTimerActive = Boolean(item?.is_objection_timer_active ?? item?.isObjectionTimerActive);
+        const objectionDeadlineAt = item?.objection_deadline_at || item?.objectionDeadlineAt || null;
+        const objectionTimeRemainingSeconds = item?.objection_time_remaining_seconds ?? item?.objectionTimeRemainingSeconds ?? null;
 
         return ({
           id: applicationId,
@@ -814,7 +858,14 @@ export class NewLicenseDashboardComponent implements OnInit {
           statusGroup: finalStatusGroup,
           hasObjectionHistory,
           hasObjectionUpdate,
-          updatedObjectionFields
+          updatedObjectionFields,
+          isPaymentTimerActive,
+          paymentDeadlineAt,
+          paymentTimeRemainingSeconds,
+          isObjectionTimerActive,
+          objectionDeadlineAt,
+          objectionTimeRemainingSeconds,
+          activeTimer: null
         });
       });
     };
@@ -1072,5 +1123,171 @@ export class NewLicenseDashboardComponent implements OnInit {
 
   private syncActiveSummaryFilter(): void {
     // activeSummaryFilter is managed directly by onSummaryCardClick; nothing to sync here.
+  }
+
+  // ── Countdown Timer Mechanics ─────────────────────────────────────────────
+
+  startCountdownTimer(): void {
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
+    }
+
+    this.updateAllCountdowns();
+    this.countdownInterval = setInterval(() => {
+      this.updateAllCountdowns();
+    }, 1000);
+  }
+
+  updateAllCountdowns(): void {
+    const nowMs = Date.now();
+    for (const row of this.allRows) {
+      row.activeTimer = this.computeRowTimer(row, nowMs);
+    }
+  }
+
+  computeRowTimer(row: NewLicenseItem, nowMs: number): ActiveCountdownTimer | null {
+    // Timer is strictly shown ONLY for active Objection or Payment stages
+    if (row.statusGroup === 'approved' || row.statusGroup === 'rejected') {
+      return null;
+    }
+
+    const rawStageLower = String(row.currentStageRaw || '').toLowerCase();
+    if (rawStageLower.includes('reject') || rawStageLower.includes('approved')) {
+      return null;
+    }
+
+    // 1. Objection Timer Check
+    const isObjection = row.statusGroup === 'objection' || row.isObjectionTimerActive || rawStageLower.includes('objection');
+    if (isObjection) {
+      let deadlineMs: number | null = null;
+      if (row.objectionDeadlineAt) {
+        const parsed = new Date(row.objectionDeadlineAt).getTime();
+        if (!isNaN(parsed)) deadlineMs = parsed;
+      }
+      if (!deadlineMs && row.objectionTimeRemainingSeconds != null && row.objectionTimeRemainingSeconds > 0) {
+        deadlineMs = nowMs + (row.objectionTimeRemainingSeconds * 1000);
+      }
+      if (!deadlineMs) {
+        const base = row.submittedOn ? new Date(row.submittedOn).getTime() : nowMs;
+        deadlineMs = (isNaN(base) ? nowMs : base) + (7 * 24 * 60 * 60 * 1000);
+      }
+
+      const diff = deadlineMs - nowMs;
+      return this.buildCountdownObject('objection', diff, deadlineMs, row);
+    }
+
+    // 2. Payment Timer Check (Stage 23 / Awaiting Payment)
+    const isAwaitingPayment = row.statusGroup === 'awaiting-payment' ||
+      row.canPayLicenseFee ||
+      row.isPaymentTimerActive ||
+      (rawStageLower.includes('awaiting') && rawStageLower.includes('payment')) ||
+      (rawStageLower.includes('payment') && (!row.isLicenseFeePaid || !row.isSecurityFeePaid));
+
+    if (isAwaitingPayment && (!row.isLicenseFeePaid || !row.isSecurityFeePaid)) {
+      let deadlineMs: number | null = null;
+      if (row.paymentDeadlineAt) {
+        const parsed = new Date(row.paymentDeadlineAt).getTime();
+        if (!isNaN(parsed)) deadlineMs = parsed;
+      }
+      if (!deadlineMs && row.paymentTimeRemainingSeconds != null && row.paymentTimeRemainingSeconds > 0) {
+        deadlineMs = nowMs + (row.paymentTimeRemainingSeconds * 1000);
+      }
+      if (!deadlineMs) {
+        const base = row.submittedOn ? new Date(row.submittedOn).getTime() : nowMs;
+        deadlineMs = (isNaN(base) ? nowMs : base) + (7 * 24 * 60 * 60 * 1000);
+      }
+
+      const diff = deadlineMs - nowMs;
+      return this.buildCountdownObject('payment', diff, deadlineMs, row);
+    }
+
+    return null;
+  }
+
+  private buildCountdownObject(
+    timerType: 'objection' | 'payment',
+    diffMs: number,
+    deadlineMs: number,
+    row: NewLicenseItem
+  ): ActiveCountdownTimer {
+    const isObjection = timerType === 'objection';
+    const label = isObjection ? 'Objection Timer' : 'Payment Timer';
+    const title = isObjection ? 'Time Remaining (Objection)' : 'Time Remaining (Payment)';
+    const rejectionStage = isObjection
+      ? 'Stage 166 – Rejected: No Action Taken on Objection'
+      : 'Stage 180 – Rejected: No Action Taken by User at Payment Stage';
+
+    if (diffMs <= 0) {
+      if (!this.expiredTriggeredIds.has(row.applicationId)) {
+        this.expiredTriggeredIds.add(row.applicationId);
+        this.triggerTimerExpiration(row.applicationId);
+      }
+      return {
+        timerType,
+        label,
+        title,
+        days: 0,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        formattedTime: '00d : 00h : 00m : 00s',
+        urgency: 'expired',
+        warningText: 'Deadline expired. Auto-rejecting...',
+        targetDeadline: new Date(deadlineMs),
+        rejectionStage
+      };
+    }
+
+    const totalSec = Math.floor(diffMs / 1000);
+    const days = Math.floor(totalSec / 86400);
+    const hours = Math.floor((totalSec % 86400) / 3600);
+    const minutes = Math.floor((totalSec % 3600) / 60);
+    const seconds = totalSec % 60;
+
+    let urgency: ActiveCountdownTimer['urgency'] = 'normal';
+    if (diffMs <= 24 * 60 * 60 * 1000) {
+      urgency = 'critical';
+    } else if (diffMs <= 48 * 60 * 60 * 1000) {
+      urgency = 'warn';
+    }
+
+    const warningText = isObjection
+      ? 'Auto-rejects to Stage 166 on expiry'
+      : 'Auto-rejects to Stage 180 on expiry';
+
+    return {
+      timerType,
+      label,
+      title,
+      days,
+      hours,
+      minutes,
+      seconds,
+      formattedTime: `${this.padZero(days)}d : ${this.padZero(hours)}h : ${this.padZero(minutes)}m : ${this.padZero(seconds)}s`,
+      urgency,
+      warningText,
+      targetDeadline: new Date(deadlineMs),
+      rejectionStage
+    };
+  }
+
+  padZero(num: number): string {
+    return String(num < 0 ? 0 : num).padStart(2, '0');
+  }
+
+  triggerTimerExpiration(applicationId: string): void {
+    if (!applicationId || applicationId === 'N/A') return;
+    const encoded = encodeURIComponent(applicationId);
+    this.http.post<any>(`${this.apiBase}/${encoded}/trigger-timer-expiration/`, {}).subscribe({
+      next: (res) => {
+        console.log(`[Timer Expired] Auto-rejection executed for ${applicationId}:`, res);
+        this.loadData();
+      },
+      error: (err) => {
+        console.error(`[Timer Expired] Failed to trigger auto-rejection for ${applicationId}:`, err);
+        setTimeout(() => this.loadData(), 1500);
+      }
+    });
   }
 }

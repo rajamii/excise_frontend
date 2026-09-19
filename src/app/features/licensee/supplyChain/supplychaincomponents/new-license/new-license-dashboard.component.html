@@ -170,18 +170,56 @@
             </td>
             <!-- Current Stage -->
             <td>
-              <span class="status-badge {{ row.statusGroup }}">
-                {{ row.currentStage }}
-              </span>
-              <span *ngIf="isLicenseeUser() && row.statusGroup === 'objection'" class="badge bg-warning text-dark ms-2">
-                ACTION REQUIRED
-              </span>
-              <ng-container *ngIf="!isLicenseeUser() && (row.updatedObjectionFields?.length || row.hasObjectionUpdate)">
-                <span class="badge bg-info text-dark ms-2"
-                  [title]="row.updatedObjectionFields?.length ? ('Updated fields: ' + (row.updatedObjectionFields ?? []).join(', ')) : 'Updated'">
-                  UPDATED
-                </span>
-              </ng-container>
+              <div class="d-flex flex-column gap-2 align-items-start">
+                <div>
+                  <span class="status-badge {{ row.statusGroup }}">
+                    {{ row.currentStage }}
+                  </span>
+                  <span *ngIf="isLicenseeUser() && row.statusGroup === 'objection'" class="badge bg-warning text-dark ms-2">
+                    ACTION REQUIRED
+                  </span>
+                  <ng-container *ngIf="!isLicenseeUser() && (row.updatedObjectionFields?.length || row.hasObjectionUpdate)">
+                    <span class="badge bg-info text-dark ms-2"
+                      [title]="row.updatedObjectionFields?.length ? ('Updated fields: ' + (row.updatedObjectionFields ?? []).join(', ')) : 'Updated'">
+                      UPDATED
+                    </span>
+                  </ng-container>
+                </div>
+
+                <!-- Prominent Countdown Timer Box for Active Objection or Payment -->
+                <div *ngIf="row.activeTimer" class="countdown-timer-box" [ngClass]="row.activeTimer.timerType + ' urgency-' + row.activeTimer.urgency">
+                  <div class="timer-box-head">
+                    <span class="timer-pulse-dot"></span>
+                    <i class="bi bi-stopwatch-fill me-1"></i>
+                    <strong>{{ row.activeTimer.title }}</strong>
+                  </div>
+                  <div class="timer-digits-container">
+                    <div class="digit-cell">
+                      <span class="digit-number">{{ padZero(row.activeTimer.days) }}</span>
+                      <span class="digit-unit">Days</span>
+                    </div>
+                    <span class="digit-sep">:</span>
+                    <div class="digit-cell">
+                      <span class="digit-number">{{ padZero(row.activeTimer.hours) }}</span>
+                      <span class="digit-unit">Hours</span>
+                    </div>
+                    <span class="digit-sep">:</span>
+                    <div class="digit-cell">
+                      <span class="digit-number">{{ padZero(row.activeTimer.minutes) }}</span>
+                      <span class="digit-unit">Mins</span>
+                    </div>
+                    <span class="digit-sep">:</span>
+                    <div class="digit-cell">
+                      <span class="digit-number highlight-sec">{{ padZero(row.activeTimer.seconds) }}</span>
+                      <span class="digit-unit">Secs</span>
+                    </div>
+                  </div>
+                  <div class="timer-box-footer">
+                    <i class="bi bi-shield-exclamation me-1"></i>
+                    <span>{{ row.activeTimer.warningText }}</span>
+                  </div>
+                </div>
+              </div>
             </td>
               <td>
                 <button *ngIf="row.canView" class="btn btn-link p-0 action-eye me-2" title="View Details" (click)="viewApplication(row)">
