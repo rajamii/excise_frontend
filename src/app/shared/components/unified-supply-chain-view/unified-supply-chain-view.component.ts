@@ -4341,12 +4341,20 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         }
 
         if (source === 'commissioner-dashboard' || source === 'commissioner') {
-            // Bulk Spirit / ENA requisitions opened from Commissioner dashboard
-            // should go back to the licensee/admin requisition list, not the officer panel.
-            if (this.applicationType === 'requisition') {
+            const appTypeStr = String(this.applicationType || '');
+            if (this.applicationType === 'hologram') {
+                this.router.navigate(['/dashboard'], { queryParams: { section: 'hologram' } });
+            } else if (this.applicationType === 'requisition' || appTypeStr === 'bulk-spirit') {
                 this.router.navigate(['/dashboard'], { queryParams: { section: 'requisition' } });
+            } else if (appTypeStr.startsWith('imfl-') || appTypeStr === 'distributor-permit') {
+                const tab = appTypeStr === 'imfl-revalidation' ? 'revalidation' : (appTypeStr === 'imfl-cancellation' ? 'cancellation' : 'requisition');
+                this.router.navigate(['/dashboard'], { queryParams: { section: 'distributor-permit', tab: tab } });
+            } else if (this.applicationType === 'transit') {
+                this.router.navigate(['/dashboard'], { queryParams: { section: 'transit' } });
+            } else if (this.applicationType) {
+                this.router.navigate(['/dashboard'], { queryParams: { section: this.applicationType } });
             } else {
-                this.router.navigate(['/officer-dashboard/commissioner']);
+                this.router.navigate(['/dashboard']);
             }
             return;
         }
@@ -4417,7 +4425,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         if (currentUrl.includes('/app-permit-section/')) {
             this.router.navigate(['/app-permit-section']);
         } else if (currentUrl.includes('commissioner')) {
-            this.router.navigate(['/dev-commissioner-dashboard']);
+            this.router.navigate(['/dashboard'], { queryParams: { section: this.applicationType || 'hologram' } });
         } else {
             this.router.navigate(['/dashboard'], { queryParams: { section: this.applicationType } });
         }

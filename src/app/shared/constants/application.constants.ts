@@ -96,9 +96,9 @@ export const PAGE_TITLES = {
  * These should be configurable from backend
  */
 export const NAVIGATION_ROUTES = {
-    'commissioner-dashboard': '/dev-commissioner-dashboard',
-    'commissioner': '/dev-commissioner-dashboard',
-    'permit-section': '/app-permit-section',
+    'commissioner-dashboard': '/dashboard',
+    'commissioner': '/dashboard',
+    'permit-section': '/dashboard',
     'licensee-dashboard': '/dashboard',
     'licensee': '/dashboard'
 } as const;
