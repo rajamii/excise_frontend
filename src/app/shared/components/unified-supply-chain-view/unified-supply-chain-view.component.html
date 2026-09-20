@@ -989,7 +989,7 @@
                         [item]="applicationData"
                         [itemType]="applicationType"
                         [context]="getUserContext()"
-                        [excludeActions]="['VIEW']"
+                        [excludeActions]="getExcludeActionsForDetailView()"
                         [displayMode]="'detailed'"
                         (actionClicked)="onUnifiedAction($event)">
                     </app-unified-action-buttons>
@@ -2247,6 +2247,13 @@
                             <i class="bi bi-printer me-2"></i>Print Application
                         </button>
 
+                        <!-- Make Payment: shown for Company Registration or Company Collaboration when awaiting payment -->
+                        <button type="button" class="btn-company-make-payment"
+                                *ngIf="(isCompanyRegistration() && isCompanyRegistrationAwaitingPayment()) || (isCompanyCollaboration() && isCompanyCollabAwaitingPayment())"
+                                (click)="isCompanyRegistration() ? openCompanyRegistrationPaymentConfirmationModal() : openCompanyCollabPaymentConfirmationModal()">
+                            <i class="bi bi-credit-card-2-front-fill me-2"></i>Make Payment
+                        </button>
+
                         <!-- View Payment Slip: shown for requisition after final approval (all roles) -->
                         <button class="btn btn-warning btn-lg application-footer-actions__print" type="button"
                                 *ngIf="isRequisition() && isApprovedApplication()"
@@ -2278,7 +2285,7 @@
             [item]="applicationData"
             [itemType]="applicationType"
             [context]="getUserContext()"
-            [excludeActions]="['VIEW']"
+            [excludeActions]="getExcludeActionsForDetailView()"
             [includeActions]="getIncludeActionsForDetailView()"
             [displayMode]="'detailed'"
             (actionClicked)="onUnifiedAction($event)">
@@ -3297,4 +3304,119 @@
     </div>
   </div>
 </div>
+
+<!-- COMPANY REGISTRATION PAYMENT CONFIRMATION MODAL (Final Confirmation Design) -->
+<div class="modal-backdrop fade show" *ngIf="showCompanyRegistrationPaymentConfirmationModal" style="z-index: 1060;"></div>
+<div class="modal fade show d-block" tabindex="-1" *ngIf="showCompanyRegistrationPaymentConfirmationModal" style="z-index: 1065;" (click)="closeCompanyRegistrationPaymentConfirmationModal()">
+  <div class="modal-dialog modal-lg modal-dialog-centered" style="max-width: 780px;" (click)="$event.stopPropagation()">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+
+      <!-- Modal Header Banner -->
+      <div class="modal-header text-white px-4 py-3 border-0" style="background-color: #0f766e;">
+        <div>
+          <h5 class="modal-title fs-4 fw-bold mb-1 d-flex align-items-center text-white">
+            <i class="bi bi-wallet2 me-2"></i>Final Confirmation
+          </h5>
+          <div style="font-size: 13.5px; opacity: 0.9;">Review wallet balance and deduction details before you proceed.</div>
+        </div>
+        <button type="button" class="btn-close btn-close-white align-self-start mt-1" (click)="closeCompanyRegistrationPaymentConfirmationModal()"></button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="modal-body p-4 bg-white">
+
+        <!-- Top 3 Grid Cards -->
+        <div class="row g-3 mb-3">
+          <div class="col-md-4">
+            <div class="p-3 border rounded-3 bg-light bg-opacity-50 h-100">
+              <div class="text-muted fw-bold mb-1" style="font-size: 11px; letter-spacing: 0.5px;">PAYMENT FOR</div>
+              <div class="fw-bold text-dark fs-6 text-truncate" title="Company Registration Fee">Company Registration Fee</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="p-3 border rounded-3 bg-light bg-opacity-50 h-100">
+              <div class="text-muted fw-bold mb-1" style="font-size: 11px; letter-spacing: 0.5px;">REFERENCE NO.</div>
+              <div class="fw-bold text-dark fs-6 text-truncate" [title]="getCompanyRegistrationModalAppId()">{{ getCompanyRegistrationModalAppId() }}</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="p-3 border rounded-3 bg-light bg-opacity-50 h-100">
+              <div class="text-muted fw-bold mb-1" style="font-size: 11px; letter-spacing: 0.5px;">WALLET SOURCE</div>
+              <div class="fw-bold text-dark fs-6 text-truncate" title="License Fee Wallet">License Fee Wallet</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Company Name Banner -->
+        <div class="p-3 border rounded-3 bg-light bg-opacity-30 mb-3" *ngIf="getCompanyRegistrationModalCompanyName()">
+          <div class="text-muted fw-bold mb-1" style="font-size: 11px; letter-spacing: 0.5px;">COMPANY NAME</div>
+          <div class="fw-bold text-dark fs-6">{{ getCompanyRegistrationModalCompanyName() }}</div>
+        </div>
+
+        <!-- Bottom 3 Grid Cards (Financials) -->
+        <div class="row g-3 mb-3">
+          <div class="col-md-4">
+            <div class="p-3 border rounded-3 h-100" style="background-color: #f0f9ff; border-color: #bae6fd !important;">
+              <div class="text-muted fw-bold mb-1" style="font-size: 11px; letter-spacing: 0.5px; color: #0369a1 !important;">CURRENT BALANCE</div>
+              <div class="fw-extrabold fs-5" style="color: #0369a1;">Rs {{ companyRegistrationLicenseFeeCurrentBalance | number:'1.2-2' }}</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="p-3 border rounded-3 h-100" style="background-color: #fef2f2; border-color: #fecaca !important;">
+              <div class="text-muted fw-bold mb-1" style="font-size: 11px; letter-spacing: 0.5px; color: #991b1b !important;">DEDUCTION ON PROCEED</div>
+              <div class="fw-extrabold fs-5" style="color: #dc2626;">- Rs {{ totalCompanyRegistrationPayableAmount | number:'1.2-2' }}</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="p-3 border rounded-3 h-100" [style.background-color]="isCompanyRegistrationPaymentBalanceInsufficient ? '#fef2f2' : '#f0fdf4'" [style.border-color]="isCompanyRegistrationPaymentBalanceInsufficient ? '#fecaca' : '#bbf7d0'">
+              <div class="text-muted fw-bold mb-1" style="font-size: 11px; letter-spacing: 0.5px;" [style.color]="isCompanyRegistrationPaymentBalanceInsufficient ? '#991b1b' : '#15803d'">BALANCE AFTER PROCEED</div>
+              <div class="fw-extrabold fs-5" [style.color]="isCompanyRegistrationPaymentBalanceInsufficient ? '#dc2626' : '#16a34a'">
+                Rs {{ (companyRegistrationLicenseFeeCurrentBalance - totalCompanyRegistrationPayableAmount) | number:'1.2-2' }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Info Alert Banner -->
+        <div class="alert border-0 rounded-3 p-3 mb-3 d-flex align-items-center" style="background-color: #f0f9ff; color: #0284c7; border-left: 4px solid #0284c7 !important;">
+          <i class="bi bi-info-circle-fill me-2 fs-5 flex-shrink-0"></i>
+          <div style="font-size: 13.5px; font-weight: 500;">
+            This wallet deduction will be applied immediately from License Fee Wallet after you click proceed.
+          </div>
+        </div>
+
+        <!-- Insufficient Balance Red Alert (if insufficient) -->
+        <div class="alert alert-danger d-flex align-items-center p-3 mb-3 border-danger border-opacity-25 rounded-3" *ngIf="isCompanyRegistrationPaymentBalanceInsufficient">
+          <i class="bi bi-exclamation-octagon-fill me-2 fs-5 flex-shrink-0 text-danger"></i>
+          <div style="font-size: 13px;">
+            <strong>Insufficient Wallet Balance:</strong> Short by Rs {{ (totalCompanyRegistrationPayableAmount - companyRegistrationLicenseFeeCurrentBalance) | number:'1.2-2' }}. Please add funds to your License Fee Wallet to proceed.
+          </div>
+        </div>
+
+        <!-- Declaration Checkbox Card -->
+        <div class="p-3 border rounded-3 bg-light bg-opacity-30 d-flex align-items-start">
+          <input class="form-check-input mt-1 me-2.5 flex-shrink-0" type="checkbox" id="companyRegPaymentAgreeCheck" [(ngModel)]="isCompanyRegistrationPaymentAgreed">
+          <label class="form-check-label fw-medium text-dark cursor-pointer mb-0" for="companyRegPaymentAgreeCheck" style="font-size: 13px; line-height: 1.5;">
+            I understand and confirm that the registration fee of Rs {{ totalCompanyRegistrationPayableAmount | number:'1.2-2' }} will be deducted immediately from my License Fee Wallet when I proceed.
+          </label>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer bg-white border-top px-4 py-3 d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-outline-secondary px-4 fw-semibold rounded-3" (click)="closeCompanyRegistrationPaymentConfirmationModal()" [disabled]="isSubmittingCompanyRegistrationPayment">
+          Back
+        </button>
+        <button type="button" class="btn btn-success px-4 fw-bold rounded-3 shadow-sm d-flex align-items-center" style="background-color: #0f766e !important; border-color: #0f766e !important;" (click)="confirmExecuteCompanyRegistrationPayment()" [disabled]="!isCompanyRegistrationPaymentAgreed || isCompanyRegistrationPaymentBalanceInsufficient || isSubmittingCompanyRegistrationPayment">
+          <span class="spinner-border spinner-border-sm me-1.5" *ngIf="isSubmittingCompanyRegistrationPayment"></span>
+          <i class="bi bi-check-circle me-1.5" *ngIf="!isSubmittingCompanyRegistrationPayment"></i>
+          Proceed
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 

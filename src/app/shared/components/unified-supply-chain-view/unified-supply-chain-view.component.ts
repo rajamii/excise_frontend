@@ -2124,7 +2124,11 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         const context = this.getUserContext();
         const action = (event.action || '').toUpperCase();
 
-        if (action === 'PAY' || action === 'FORCE_PAY') {
+        if (action === 'PAY' || action === 'FORCE_PAY' || action === 'MAKE_PAYMENT') {
+            if (this.isCompanyRegistration() || this.applicationType === 'company-registration') {
+                this.openCompanyRegistrationPaymentConfirmationModal(event.item);
+                return;
+            }
             if (this.isCompanyCollaboration() || this.applicationType === 'company-collaboration') {
                 this.openCompanyCollabPaymentConfirmationModal(event.item);
                 return;
@@ -3554,6 +3558,14 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         return false;
     }
 
+    getExcludeActionsForDetailView(): string[] {
+        const base = ['VIEW'];
+        if (this.isCompanyRegistration() || this.isCompanyCollaboration()) {
+            base.push('MAKE_PAYMENT', 'PAY');
+        }
+        return base;
+    }
+
     getIncludeActionsForDetailView(): string[] | null {
         if (!this.applicationData) {
             return null;
@@ -3577,11 +3589,19 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         if (workflowModules.includes(String(this.applicationType || '').toLowerCase())) {
             const rawAllowedActions = this.applicationData.allowedActions ?? this.applicationData['allowed_actions'];
             if (Array.isArray(rawAllowedActions) && rawAllowedActions.length > 0) {
-                const actions = (rawAllowedActions as string[])
+                let actions = (rawAllowedActions as string[])
                     .map(a => String(a || '').toUpperCase().trim())
                     .filter(a => !!a && a !== 'VIEW');
+                if (this.isCompanyRegistration() || this.isCompanyCollaboration()) {
+                    actions = actions.filter(a => a !== 'MAKE_PAYMENT' && a !== 'PAY');
+                }
                 if (actions.length > 0) {
                     return Array.from(new Set(actions));
+                }
+            }
+            if (this.isCompanyRegistration() || this.isCompanyCollaboration()) {
+                if (this.isCompanyRegistrationAwaitingPayment() || this.isCompanyCollabAwaitingPayment()) {
+                    return [];
                 }
             }
             return null;
@@ -4498,7 +4518,45 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         return this.isSalesmanBarmanRegistration() || this.isSalesmanRenewal();
     }
     isCompanyRegistration(): boolean { return this.applicationType === 'company-registration'; }
+    isCompanyRegistrationAwaitingPayment(): boolean {
+        if (!this.isCompanyRegistration() || !this.applicationData) return false;
+        const stageName = String(
+            this.applicationData['current_stage_name'] ??
+            this.applicationData['currentStageName'] ??
+            this.applicationData['current_stage'] ??
+            this.applicationData.status ??
+            ''
+        ).toLowerCase();
+        const stageId = Number(
+            (this.applicationData as any)?.current_stage?.id ||
+            (this.applicationData as any)?.current_stage_id ||
+            (this.applicationData as any)?.currentStage ||
+            0
+        );
+        return stageId === 122 || stageId === 23 || stageId === 31 ||
+            stageName.includes('awaiting_payment') ||
+            (stageName.includes('awaiting') && stageName.includes('payment'));
+    }
     isCompanyCollaboration(): boolean { return this.applicationType === 'company-collaboration'; }
+    isCompanyCollabAwaitingPayment(): boolean {
+        if (!this.isCompanyCollaboration() || !this.applicationData) return false;
+        const stageName = String(
+            this.applicationData['current_stage_name'] ??
+            this.applicationData['currentStageName'] ??
+            this.applicationData['current_stage'] ??
+            this.applicationData.status ??
+            ''
+        ).toLowerCase();
+        const stageId = Number(
+            (this.applicationData as any)?.current_stage?.id ||
+            (this.applicationData as any)?.current_stage_id ||
+            (this.applicationData as any)?.currentStage ||
+            0
+        );
+        return stageId === 143 ||
+            stageName.includes('awaiting_payment') ||
+            (stageName.includes('awaiting') && stageName.includes('payment'));
+    }
     isLabelRegistration(): boolean { return this.applicationType === 'label-registration'; }
     isSalesmanBarmanRegistration(): boolean { return this.applicationType === 'salesman-barman-registration'; }
     getValidUpToDate(): Date | null {
@@ -5604,10 +5662,9 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     isSubmittingCollabPayment = false;
     collabLicenseFeeCurrentBalance = 0;
     collabFeeAmount = 25000;
-    regFeeAmount = 25000;
 
     get totalCollabPayableAmount(): number {
-        return (this.collabFeeAmount || 25000) + (this.regFeeAmount || 25000);
+        return this.collabFeeAmount || 25000;
     }
 
     get isCollabPaymentBalanceInsufficient(): boolean {
@@ -5624,11 +5681,15 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         const overviewSummary = app.overview_summary ?? app.overviewSummary ?? (this.applicationData as any)?.overview_summary ?? (this.applicationData as any)?.overviewSummary ?? {};
         const feeStructure = app.fee_structure ?? app.feeStructure ?? (this.applicationData as any)?.fee_structure ?? (this.applicationData as any)?.feeStructure ?? {};
 
-        const collabFee = Number(feeStructure.collaborationFee ?? feeStructure.collaboration_fee ?? 25000);
-        const regFee = Number(feeStructure.companyRegistrationFee ?? feeStructure.securityDeposit ?? feeStructure.security_deposit ?? 25000);
+        const collabFee = Number(
+            feeStructure.collaborationFee ??
+            feeStructure.collaboration_fee ??
+            feeStructure.collaborationFees ??
+            feeStructure.collaboration_fees ??
+            25000
+        );
 
         this.collabFeeAmount = collabFee > 0 ? collabFee : 25000;
-        this.regFeeAmount = regFee > 0 ? regFee : 25000;
 
         this.loadLiveLicenseFeeWalletBalance((lfBal) => {
             this.collabLicenseFeeCurrentBalance = lfBal;
@@ -5637,19 +5698,44 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         });
     }
 
-    private loadLiveLicenseFeeWalletBalance(callback: (balance: number) => void): void {
-        const user = this.roleService.getCurrentUser();
-        const licenseeId = String(
-            (this.applicationData as any)?.licensee_id ||
-            (this.applicationData as any)?.applicant ||
-            (this.applicationData as any)?.applicant_id ||
-            (user as any)?.licensee_id ||
-            (user as any)?.username ||
-            localStorage.getItem('username') ||
-            localStorage.getItem('licensee_id') ||
-            ''
-        ).trim();
+    private resolveLicenseeIdentityForWallet(): string {
+        try {
+            const fromSession = sessionStorage.getItem('currentUser');
+            if (fromSession) {
+                const parsed = JSON.parse(fromSession);
+                const val = parsed.licensee_id || parsed.licenseeId || parsed.licensee_id_no || parsed.licenseeIdNo || parsed.username || parsed.userName;
+                if (val && typeof val === 'string' && val.trim() && !/^\d+$/.test(val.trim())) {
+                    return val.trim();
+                }
+            }
+        } catch {}
 
+        const user = this.roleService.getCurrentUser();
+        if (user) {
+            const uLic = (user as any).licensee_id || (user as any).licenseeId || (user as any).username;
+            if (uLic && typeof uLic === 'string' && uLic.trim() && !/^\d+$/.test(uLic.trim())) {
+                return uLic.trim();
+            }
+        }
+
+        const ls = localStorage.getItem('licensee_id') || localStorage.getItem('username');
+        if (ls && typeof ls === 'string' && ls.trim() && !/^\d+$/.test(ls.trim())) {
+            return ls.trim();
+        }
+
+        const app = this.applicationData as any;
+        if (app) {
+            const appLic = app.license_number || app.licenseNumber || app.licensee_id || app.license_id || app.licenseId;
+            if (appLic && typeof appLic === 'string' && appLic.trim() && !/^\d+$/.test(appLic.trim())) {
+                return appLic.trim();
+            }
+        }
+
+        return (user as any)?.username || localStorage.getItem('username') || 'me';
+    }
+
+    private loadLiveLicenseFeeWalletBalance(callback: (balance: number) => void): void {
+        const licenseeId = this.resolveLicenseeIdentityForWallet();
         if (!licenseeId) {
             callback(0);
             return;
@@ -5660,16 +5746,12 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
             next: (summaryRes: any) => {
                 const rows = summaryRes?.results || (Array.isArray(summaryRes) ? summaryRes : []);
                 const lfRow = rows.find((r: any) => {
-                    const wt = String(r.wallet_type || r.walletType || r.wallet_type_code || '').toLowerCase();
+                    const wt = String(r.wallet_type || r.walletType || r.wallet_type_code || r.wallet_name || '').toLowerCase().replace(/[\s_-]+/g, '');
                     const hoa = String(r.head_of_account || r.headOfAccount || '');
-                    return wt === 'license_fee' || wt === 'licensefee' || wt.includes('license') || hoa.includes('105');
+                    return wt === 'licensefee' || wt === 'licensefees' || wt === 'license' || (wt.includes('license') && !wt.includes('excise')) || hoa.includes('800-45-02');
                 });
                 const lfBal = lfRow ? Number(lfRow.current_balance ?? lfRow.currentBalance ?? lfRow.walletAmount ?? 0) : 0;
-                if (lfBal > 0 || (rows && rows.length > 0)) {
-                    callback(lfBal);
-                    return;
-                }
-                this.fetchWalletBalanceFallback(licenseeId, callback);
+                callback(lfBal);
             },
             error: () => {
                 this.fetchWalletBalanceFallback(licenseeId, callback);
@@ -5682,8 +5764,9 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
             next: (wbRes: any) => {
                 const wallets = wbRes?.results || (Array.isArray(wbRes) ? wbRes : []);
                 const lfW = wallets.find((w: any) => {
-                    const wt = String(w.wallet_type || w.walletType || w.wallet_type_code || '').toLowerCase();
-                    return wt === 'license_fee' || wt === 'licensefee' || wt.includes('license');
+                    const wt = String(w.wallet_type || w.walletType || w.wallet_type_code || w.wallet_name || '').toLowerCase().replace(/[\s_-]+/g, '');
+                    const hoa = String(w.head_of_account || w.headOfAccount || '');
+                    return wt === 'licensefee' || wt === 'licensefees' || wt === 'license' || (wt.includes('license') && !wt.includes('excise')) || hoa.includes('800-45-02');
                 });
                 const lfBal = lfW ? Number(lfW.current_balance ?? lfW.currentBalance ?? lfW.walletAmount ?? 0) : 0;
                 callback(lfBal);
@@ -5763,6 +5846,91 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     getCollabModalBrands(): any[] {
         const app = this.collabPaymentApplicationToProcess || this.applicationData;
         return app?.selected_brands || app?.selectedBrands || [];
+    }
+
+    // ── Company Registration Payment Confirmation Modal ─────────────────────────
+    showCompanyRegistrationPaymentConfirmationModal = false;
+    companyRegistrationPaymentApplicationToProcess: any = null;
+    isCompanyRegistrationPaymentAgreed = false;
+    isSubmittingCompanyRegistrationPayment = false;
+    companyRegistrationLicenseFeeCurrentBalance = 0;
+    companyRegistrationFeeAmount = 5000;
+
+    get totalCompanyRegistrationPayableAmount(): number {
+        return this.companyRegistrationFeeAmount || 5000;
+    }
+
+    get isCompanyRegistrationPaymentBalanceInsufficient(): boolean {
+        return (this.companyRegistrationLicenseFeeCurrentBalance || 0) < this.totalCompanyRegistrationPayableAmount;
+    }
+
+    openCompanyRegistrationPaymentConfirmationModal(item?: any): void {
+        const app = item || this.applicationData;
+        if (!app) return;
+        this.companyRegistrationPaymentApplicationToProcess = app;
+        this.isCompanyRegistrationPaymentAgreed = false;
+        this.isSubmittingCompanyRegistrationPayment = false;
+
+        const fee = Number(
+            app.payment_amount ??
+            app.paymentAmount ??
+            app.fee ??
+            (this.applicationData as any)?.payment_amount ??
+            (this.applicationData as any)?.paymentAmount ??
+            5000
+        );
+        this.companyRegistrationFeeAmount = fee > 0 ? fee : 5000;
+
+        this.loadLiveLicenseFeeWalletBalance((lfBal) => {
+            this.companyRegistrationLicenseFeeCurrentBalance = lfBal;
+            this.showCompanyRegistrationPaymentConfirmationModal = true;
+            this.cdr.detectChanges();
+        });
+    }
+
+    closeCompanyRegistrationPaymentConfirmationModal(): void {
+        this.showCompanyRegistrationPaymentConfirmationModal = false;
+        this.companyRegistrationPaymentApplicationToProcess = null;
+        this.isCompanyRegistrationPaymentAgreed = false;
+        this.isSubmittingCompanyRegistrationPayment = false;
+        this.cdr.detectChanges();
+    }
+
+    confirmExecuteCompanyRegistrationPayment(): void {
+        const app = this.companyRegistrationPaymentApplicationToProcess || this.applicationData;
+        if (!app || this.isCompanyRegistrationPaymentBalanceInsufficient || this.isSubmittingCompanyRegistrationPayment) {
+            return;
+        }
+
+        this.isSubmittingCompanyRegistrationPayment = true;
+        const appId = app.application_id || app.applicationId || app.referenceNo || app.reference_no || app.id || this.getWorkflowApplicationId(app);
+
+        this.companyRegistrationService.payCompanyRegistrationFee(appId).subscribe({
+            next: (res) => {
+                this.isSubmittingCompanyRegistrationPayment = false;
+                this.showCompanyRegistrationPaymentConfirmationModal = false;
+                this.snackBar.open(res?.message || res?.detail || 'Company Registration fee paid successfully. Application is now approved.', 'Close', { duration: 4000 });
+                this.sidebarPendingBadgeService.triggerRefresh();
+                const currentRef = app.referenceNo || app.reference_no || appId;
+                this.loadApplicationData(currentRef, appId);
+                this.cdr.detectChanges();
+            },
+            error: (err) => {
+                this.isSubmittingCompanyRegistrationPayment = false;
+                this.snackBar.open(err?.error?.detail || err?.error?.message || 'Failed to complete payment for Company Registration', 'Close', { duration: 4000 });
+                this.cdr.detectChanges();
+            }
+        });
+    }
+
+    getCompanyRegistrationModalAppId(): string {
+        const app = this.companyRegistrationPaymentApplicationToProcess || this.applicationData;
+        return app?.application_id || app?.applicationId || app?.referenceNo || app?.reference_no || app?.id || 'COMP/2026-27/0001';
+    }
+
+    getCompanyRegistrationModalCompanyName(): string {
+        const app = this.companyRegistrationPaymentApplicationToProcess || this.applicationData;
+        return app?.company_name || app?.companyName || app?.distilleryName || 'Not specified';
     }
 
     getPiecesPerCase(size: any, bpc?: any): number {

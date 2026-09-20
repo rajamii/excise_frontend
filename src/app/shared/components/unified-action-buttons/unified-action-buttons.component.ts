@@ -927,8 +927,9 @@ private getTransitRejectSummary(): {
       case 'MAKE_PAYMENT':
         if (this.itemType === 'salesman-barman-registration') {
           this.handleSalesmanBarmanMakePaymentAction();
-        } else if (this.itemType === 'company-registration') {
-          this.handleCompanyRegistrationMakePaymentAction();
+        } else if (this.itemType === 'company-registration' || this.itemType === 'company-collaboration') {
+          // Emit actionClicked for PAY so parent components like unified-supply-chain-view open the dedicated modal
+          this.actionClicked.emit({ action: 'PAY', item: this.item });
         } else {
           this.handleNewLicenseMakePaymentAction();
         }
@@ -1034,8 +1035,7 @@ private getTransitRejectSummary(): {
 
   private isAwaitingCompanyRegistrationPaymentForLicensee(): boolean {
     if (this.itemType !== 'company-registration') return false;
-    if (this.context !== 'licensee') return false;
-    if (!this.isCurrentUserLicensee()) return false;
+    if (this.context !== 'licensee' && !this.isCurrentUserLicensee()) return false;
     const stageName = String(
       this.item?.['current_stage_name'] ??
       this.item?.['currentStageName'] ??
@@ -1043,7 +1043,22 @@ private getTransitRejectSummary(): {
       this.item?.status ??
       ''
     ).toLowerCase();
-    return stageName.includes('awaiting_payment') || (stageName.includes('awaiting') && stageName.includes('payment'));
+    const stageId = Number(this.item?.['current_stage']?.id || this.item?.['current_stage_id'] || this.item?.['currentStage'] || 0);
+    return stageId === 122 || stageId === 23 || stageId === 31 || stageName.includes('awaiting_payment') || (stageName.includes('awaiting') && stageName.includes('payment'));
+  }
+
+  private isAwaitingCompanyCollaborationPaymentForLicensee(): boolean {
+    if (this.itemType !== 'company-collaboration') return false;
+    if (this.context !== 'licensee' && !this.isCurrentUserLicensee()) return false;
+    const stageName = String(
+      this.item?.['current_stage_name'] ??
+      this.item?.['currentStageName'] ??
+      this.item?.['current_stage'] ??
+      this.item?.status ??
+      ''
+    ).toLowerCase();
+    const stageId = Number(this.item?.['current_stage']?.id || this.item?.['current_stage_id'] || this.item?.['currentStage'] || 0);
+    return stageId === 143 || stageName.includes('awaiting_payment') || (stageName.includes('awaiting') && stageName.includes('payment'));
   }
 
   private getNewLicenseFeeAmounts(): { licenseFee: number; securityFee: number; total: number } {
@@ -1885,6 +1900,23 @@ private getTransitRejectSummary(): {
       }
     }
 
+    // Company Collaboration: once application is routed to awaiting payment for licensee,
+    // show Make Payment (collaboration fee from license fee wallet).
+    // Also remove any workflow-level PAY or APPROVE action to avoid duplicate payment buttons.
+    if (this.isAwaitingCompanyCollaborationPaymentForLicensee()) {
+      result = result.filter(config => this.normalizeActionName(config.action) !== 'APPROVE');
+      result = result.filter(config => this.normalizeActionName(config.action) !== 'PAY');
+      if (!result.some(config => this.normalizeActionName(config.action) === 'MAKE_PAYMENT')) {
+        result.unshift({
+          action: 'MAKE_PAYMENT',
+          label: 'Make Payment',
+          icon: 'payment',
+          color: 'primary',
+          tooltip: 'Pay company collaboration fee from license fee wallet'
+        });
+      }
+    }
+
     // Salesman/Barman awaiting payment: always remove the raw PAY workflow action
     // when a MAKE_PAYMENT button is already present, to prevent duplicate payment buttons.
     // Also: if stage is awaiting_payment for salesman-barman licensee context but
@@ -1919,7 +1951,7 @@ private getTransitRejectSummary(): {
       }
     }
 
-    if (this.itemType === 'company-registration' && this.context === 'licensee' && this.isCurrentUserLicensee()) {
+    if (this.itemType === 'company-registration' && (this.context === 'licensee' || this.isCurrentUserLicensee())) {
       const stageName = String(
         this.item?.['current_stage_name'] ??
         this.item?.['currentStageName'] ??
@@ -1927,7 +1959,8 @@ private getTransitRejectSummary(): {
         this.item?.status ??
         ''
       ).toLowerCase();
-      const isAtPaymentStage = stageName.includes('awaiting_payment') ||
+      const stageId = Number(this.item?.['current_stage']?.id || this.item?.['current_stage_id'] || this.item?.['currentStage'] || 0);
+      const isAtPaymentStage = stageId === 122 || stageId === 23 || stageId === 31 || stageName.includes('awaiting_payment') ||
         (stageName.includes('awaiting') && stageName.includes('payment'));
 
       if (isAtPaymentStage) {
@@ -1956,8 +1989,13 @@ private getTransitRejectSummary(): {
       deduped.push(config);
     }
 
-    console.log('🔧 UNIFIED BUTTONS: Final filtered configs:', deduped);
-    return deduped;
+    // Ensure any excluded actions are strictly removed from the final list
+    const finalConfigs = exclude.length
+      ? deduped.filter(config => !exclude.includes(this.normalizeActionName(config.action)))
+      : deduped;
+
+    console.log('🔧 UNIFIED BUTTONS: Final filtered configs:', finalConfigs);
+    return finalConfigs;
   }
 
   private applyContextActionRestrictions(configs: ActionButtonConfig[]): ActionButtonConfig[] {
