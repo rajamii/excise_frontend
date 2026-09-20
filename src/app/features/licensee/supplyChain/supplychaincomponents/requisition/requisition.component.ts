@@ -987,24 +987,35 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       return false;
     }
 
+    if (!this.isCommissionerFinalApproval(item)) {
+      return false;
+    }
+
     const status = String(item?.arrivalApprovalStatus || '').toUpperCase();
     const approvedPermits = Number(item?.arrivalApprovedPermitsCount ?? 0) || 0;
     const pendingPermits = Number(item?.arrivalPendingPermitsCount ?? 0) || 0;
     const cancelledPermits = Number(item?.arrivalCancelledPermitsCount ?? 0) || 0;
     const total = Number(item?.arrivalTotalBulkLiter ?? 0);
-    const hasAnySubmitted =
+
+    // Show if any tanker/bulk liter data has been submitted
+    const hasArrivalSubmission =
       approvedPermits > 0 ||
       pendingPermits > 0 ||
       cancelledPermits > 0 ||
       (Number.isFinite(total) ? total > 0 : Boolean(item.hasArrivalDetails));
 
-    if (status === 'REJECTED' && !cancelledPermits) {
-      // After OIC rejection, tanker data is cleared and licensee must re-enter; keep inventory hidden unless
-      // there are cancelled permits to show in the "BL Details" modal.
+    // Also show if ANY permit has been acted on: arrived, cancelled or auto-revalidated
+    const hasActedPermit =
+      Boolean(this.getArrivedPermitNumbers(item)) ||
+      Boolean(this.getCancelledPermitNumbers(item)) ||
+      Boolean(this.getRevalidatedPermitNumbers(item));
+
+    if (status === 'REJECTED' && !cancelledPermits && !hasActedPermit) {
+      // After OIC rejection with nothing acted upon, hide inventory view.
       return false;
     }
 
-    return this.isCommissionerFinalApproval(item) && hasAnySubmitted;
+    return hasArrivalSubmission || hasActedPermit;
   }
 
   isArrivalRejected(item: TableData): boolean {
