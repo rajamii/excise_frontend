@@ -3606,8 +3606,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     isRevalidated: boolean;
     isArrivalApproved?: boolean;
     detail: any;
+    selected?: boolean;
   }> = [];
   selectedPermitDetail: any = null;
+  selectedPermitNumbersForCancellation: string[] = [];
 
   onCancelPermit(row: DistributorPermitRow | any, event?: Event): void {
     if (event) {
@@ -3765,7 +3767,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           isCancelled,
           isRevalidated: isRevalidatedWaiting,
           isArrivalApproved,
-          detail: p
+          detail: p,
+          selected: false
         });
       });
     } else {
@@ -3805,26 +3808,372 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         isCancelled: false,
         isRevalidated: false,
         isArrivalApproved,
-        detail: null
+        detail: null,
+        selected: false
       });
     }
 
-    const firstAvailable = this.availablePermitOptionsForCancellation.find(opt => !opt.isCancelled && !opt.isUnderProcess && !opt.isRevalidated && !(opt as any).isArrivalApproved);
-    this.selectedPermitNumberForCancellation = firstAvailable ? firstAvailable.permitNumber : (this.availablePermitOptionsForCancellation[0]?.permitNumber || appId);
-    this.onPermitSelectionChangeForCancellation();
+    // Default select first available permit
+    const firstAvailable = this.availablePermitOptionsForCancellation.find(
+      opt => !opt.isCancelled && !opt.isUnderProcess && !opt.isRevalidated && !(opt as any).isArrivalApproved
+    );
+    if (firstAvailable) {
+      firstAvailable.selected = true;
+    }
+    this.syncSelectedPermitNumbersForCancellation();
+
+    this.loadLiveWalletBalances((exBal, cessBal) => {
+      this.cancellationCurrentExciseBalance = exBal;
+      this.cancellationCurrentCessBalance = cessBal;
+      this.syncSelectedPermitNumbersForCancellation();
+      this.cdr.detectChanges();
+    });
 
     this.showCancellationModal = true;
   }
 
+  togglePermitSelectionForCancellation(opt: any): void {
+    if (opt.isUnderProcess || opt.isCancelled || opt.isRevalidated || opt.isArrivalApproved) {
+      return;
+    }
+    opt.selected = !opt.selected;
+    this.syncSelectedPermitNumbersForCancellation();
+  }
+
+  setPermitSelectionForCancellation(opt: any, isSelected: boolean): void {
+    if (opt.isUnderProcess || opt.isCancelled || opt.isRevalidated || opt.isArrivalApproved) {
+      return;
+    }
+    opt.selected = isSelected;
+    this.syncSelectedPermitNumbersForCancellation();
+  }
+
+  toggleSelectAllPermitsForCancellation(): void {
+    const availableOpts = this.availablePermitOptionsForCancellation.filter(
+      opt => !opt.isUnderProcess && !opt.isCancelled && !opt.isRevalidated && !opt.isArrivalApproved
+    );
+    const allSelected = availableOpts.length > 0 && availableOpts.every(opt => opt.selected);
+    availableOpts.forEach(opt => opt.selected = !allSelected);
+    this.syncSelectedPermitNumbersForCancellation();
+  }
+
+  isAllAvailablePermitsSelectedForCancellation(): boolean {
+    const availableOpts = this.availablePermitOptionsForCancellation.filter(
+      opt => !opt.isUnderProcess && !opt.isCancelled && !opt.isRevalidated && !opt.isArrivalApproved
+    );
+    return availableOpts.length > 0 && availableOpts.every(opt => opt.selected);
+  }
+
+  hasAvailablePermitsForCancellation(): boolean {
+    return this.availablePermitOptionsForCancellation.some(
+      opt => !opt.isUnderProcess && !opt.isCancelled && !opt.isRevalidated && !opt.isArrivalApproved
+    );
+  }
+
+  private syncSelectedPermitNumbersForCancellation(): void {
+    this.selectedPermitNumbersForCancellation = this.availablePermitOptionsForCancellation
+      .filter(opt => opt.selected)
+      .map(opt => opt.permitNumber);
+    this.selectedPermitNumberForCancellation = this.selectedPermitNumbersForCancellation.join(', ');
+    const selectedList = this.getSelectedCancellationPermitsList();
+    this.selectedPermitDetail = selectedList.length === 1 ? selectedList[0] : (selectedList.length > 1 ? selectedList : null);
+
+    const importFeeSum = this.getCancellationGrandTotalImportFee();
+    const addEdSum = this.getCancellationGrandTotalAddEd();
+    const cessSum = this.getCancellationGrandTotalCess();
+
+    this.cancellationRefundImportFee = importFeeSum;
+    this.cancellationRefundAddEd = addEdSum;
+    this.cancellationRefundEducationCess = cessSum;
+    this.cancellationTotalRefund = importFeeSum + addEdSum + cessSum;
+
+    const numPermits = selectedList.length;
+    this.cancellationFeeAmount = 1000 * numPermits;
+    this.cancellationNetExciseChange = (importFeeSum + addEdSum) - this.cancellationFeeAmount;
+    this.cancellationNetCessChange = cessSum;
+
+    this.cancellationProjectedExciseBalance = this.cancellationCurrentExciseBalance + this.cancellationNetExciseChange;
+    this.cancellationProjectedCessBalance = this.cancellationCurrentCessBalance + this.cancellationNetCessChange;
+  }
+
+  getSelectedCancellationPermitsList(): any[] {
+    const selected = this.availablePermitOptionsForCancellation.filter(opt => opt.selected);
+    const list: any[] = [];
+    selected.forEach(opt => {
+      if (opt.detail) {
+        list.push(opt.detail);
+      } else {
+        const rawApp: any = this.cancellationTargetRow?.application || this.cancellationTargetRow;
+        list.push({
+          permit_number: opt.permitNumber,
+          permitNumber: opt.permitNumber,
+          total_cases: opt.totalCases,
+          totalCases: opt.totalCases,
+          line_items: rawApp?.line_items || rawApp?.lineItems || []
+        });
+      }
+    });
+    return list;
+  }
+
+  getSelectedCancellationPermitNumbers(): string[] {
+    return this.availablePermitOptionsForCancellation
+      .filter(opt => opt.selected)
+      .map(opt => opt.permitNumber);
+  }
+
+  get cancellationSelectedPermitsCount(): number {
+    return this.getSelectedCancellationPermitsList().length;
+  }
+
+  get isAnyCancellationPermitSelected(): boolean {
+    return this.cancellationSelectedPermitsCount > 0;
+  }
+
+  getCancellationPermitLineItems(pDetail: any): any[] {
+    if (!pDetail) return [];
+
+    let items = pDetail.line_items || pDetail.lineItems || pDetail.items || pDetail.brand_details || pDetail.brands || [];
+    if (typeof items === 'string') {
+      try { items = JSON.parse(items); } catch { items = []; }
+    }
+
+    const row: any = this.cancellationTargetRow;
+    const rawApp: any = row?.application || row || {};
+    const fullApp: any = (this.applications || []).find((a: any) => {
+      const aRef = String(a.referenceNo || a.reference_no || a.id || a.applicationId || '').trim().toLowerCase();
+      const pRef = String(row?.applicationId || row?.referenceNo || row?.reference_no || '').trim().toLowerCase();
+      return aRef && pRef && (aRef === pRef);
+    }) || rawApp;
+
+    const pNum = String(pDetail.permit_number || pDetail.permitNumber || '').trim();
+    const pNumLower = pNum.toLowerCase();
+
+    if (Array.isArray(items) && items.length > 0) {
+      return items.map((it: any) => this.normalizeCancellationItem(it, pDetail, rawApp, fullApp));
+    }
+
+    let appItems = rawApp?.line_items || rawApp?.lineItems || fullApp?.line_items || fullApp?.lineItems || row?.line_items || row?.lineItems || [];
+    if (typeof appItems === 'string') {
+      try { appItems = JSON.parse(appItems); } catch { appItems = []; }
+    }
+
+    if (Array.isArray(appItems) && appItems.length > 0) {
+      const matchingItems = appItems.filter((it: any) => {
+        const itPNum = String(it.permit_number || it.permitNumber || '').trim().toLowerCase();
+        return itPNum && (itPNum === pNumLower || itPNum.includes(pNumLower) || pNumLower.includes(itPNum));
+      });
+
+      if (matchingItems.length > 0) {
+        return matchingItems.map((it: any) => this.normalizeCancellationItem(it, pDetail, rawApp, fullApp));
+      }
+
+      const pCases = Number(pDetail.total_cases || pDetail.totalCases || pDetail.cases || 0);
+      if (appItems.length === 1) {
+        const single = { ...appItems[0] };
+        if (pCases > 0) {
+          single.cases = pCases;
+          single.total_cases = pCases;
+        }
+        return [this.normalizeCancellationItem(single, pDetail, rawApp, fullApp)];
+      }
+
+      return appItems.map((it: any) => this.normalizeCancellationItem(it, pDetail, rawApp, fullApp));
+    }
+
+    const fallbackCases = Number(pDetail.total_cases || pDetail.totalCases || pDetail.cases || row?.cases || rawApp?.cases || 1);
+    const fallbackBrand = pDetail.brand_name || pDetail.brandName || rawApp.brand_name || rawApp.brandName || row?.brandName || fullApp?.brand_name || fullApp?.brandName || 'IMFL Spirit';
+    const fallbackSize = Number(pDetail.size_ml || pDetail.sizeMl || rawApp.size_ml || rawApp.sizeMl || row?.sizeMl || 750);
+    const fallbackBpc = Number(pDetail.pieces_per_case || pDetail.piecesPerCase || (fallbackSize <= 330 ? 24 : 12));
+    const fallbackImportFee = Number(pDetail.total_import_fee || pDetail.totalImportFee || (fallbackCases * 1400));
+    const fallbackAddEd = Number(pDetail.total_additional_ed || pDetail.totalAdditionalEd || (fallbackCases * 350));
+    const fallbackCess = Number(pDetail.total_education_cess || pDetail.totalEducationCess || (fallbackCases * 60));
+    const fallbackBL = Number(pDetail.total_bulk_litres || pDetail.totalBulkLitres || ((fallbackCases * fallbackSize * fallbackBpc) / 1000));
+
+    return [{
+      brand_name: fallbackBrand,
+      brandName: fallbackBrand,
+      size_ml: fallbackSize,
+      sizeMl: fallbackSize,
+      cases: fallbackCases,
+      total_cases: fallbackCases,
+      pieces_per_case: fallbackBpc,
+      import_pass_fee_per_case: fallbackCases > 0 ? (fallbackImportFee / fallbackCases) : 1400,
+      total_import: fallbackImportFee,
+      total_import_fee: fallbackImportFee,
+      additional_ed_per_case: fallbackCases > 0 ? (fallbackAddEd / fallbackCases) : 350,
+      total_additional_ed: fallbackAddEd,
+      education_cess_per_case: fallbackCases > 0 ? (fallbackCess / fallbackCases) : 60,
+      total_education_cess: fallbackCess,
+      bulk_litres: fallbackBL,
+      total_bulk_litres: fallbackBL,
+      permit_number: pNum
+    }];
+  }
+
+  private normalizeCancellationItem(it: any, pDetail: any, rawApp: any, fullApp: any): any {
+    const brandName = it.brand_name || it.brandName || it.brand || it.brand_details?.brand_name || it.brand_details?.name || pDetail?.brand_name || pDetail?.brandName || rawApp?.brand_name || rawApp?.brandName || fullApp?.brand_name || fullApp?.brandName || 'IMFL Item';
+    const sizeMl = Number(it.size_ml || it.sizeMl || it.size || it.pack_size || pDetail?.size_ml || pDetail?.sizeMl || rawApp?.size_ml || 750);
+    const cases = Number(it.cases || it.quantity_cases || it.total_cases || it.quantity || pDetail?.total_cases || pDetail?.totalCases || 1);
+    const piecesPerCase = Number(it.pieces_per_case || it.piecesPerCase || (sizeMl <= 330 ? 24 : (sizeMl <= 500 ? 24 : 12)));
+
+    let importFeePerCase = Number(it.import_pass_fee_per_case || it.importPassFeePerCase || it.import_fee || it.importFee || 0);
+    if (!importFeePerCase && pDetail?.total_import_fee && cases > 0) {
+      importFeePerCase = Number(pDetail.total_import_fee) / (Number(pDetail.total_cases) || cases);
+    }
+    if (!importFeePerCase) importFeePerCase = 1400;
+
+    let addEdPerCase = Number(it.additional_ed_per_case || it.additionalEdPerCase || it.additional_ed || it.additionalEd || it.add_ed || 0);
+    if (!addEdPerCase && pDetail?.total_additional_ed && cases > 0) {
+      addEdPerCase = Number(pDetail.total_additional_ed) / (Number(pDetail.total_cases) || cases);
+    }
+    if (!addEdPerCase) addEdPerCase = 350;
+
+    let cessPerCase = Number(it.education_cess_per_case || it.educationCessPerCase || it.education_cess || it.cess || 0);
+    if (!cessPerCase && pDetail?.total_education_cess && cases > 0) {
+      cessPerCase = Number(pDetail.total_education_cess) / (Number(pDetail.total_cases) || cases);
+    }
+    if (!cessPerCase) cessPerCase = 60;
+
+    const totalImport = Number(it.total_import || it.totalImport || it.total_import_fee || it.totalImportFee || (importFeePerCase * cases));
+    const totalAddEd = Number(it.total_additional_ed || it.totalAdditionalEd || it.total_add_ed || (addEdPerCase * cases));
+    const totalCess = Number(it.total_education_cess || it.totalEducationCess || it.total_edu_cess || (cessPerCase * cases));
+    const bulkLitres = Number(it.bulk_litres || it.bulkLitres || it.total_bulk_litres || ((cases * sizeMl * piecesPerCase) / 1000));
+
+    return {
+      ...it,
+      brand_name: brandName,
+      brandName: brandName,
+      size_ml: sizeMl,
+      sizeMl: sizeMl,
+      cases: cases,
+      total_cases: cases,
+      pieces_per_case: piecesPerCase,
+      import_pass_fee_per_case: importFeePerCase,
+      total_import: totalImport,
+      total_import_fee: totalImport,
+      additional_ed_per_case: addEdPerCase,
+      total_additional_ed: totalAddEd,
+      education_cess_per_case: cessPerCase,
+      total_education_cess: totalCess,
+      bulk_litres: bulkLitres,
+      total_bulk_litres: bulkLitres
+    };
+  }
+
+  getCancellationItemImportFee(item: any, pDetail?: any): number {
+    const direct = Number(item?.total_import ?? item?.totalImport ?? item?.total_import_fee ?? item?.totalImportFee ?? 0);
+    if (direct > 0) return direct;
+    const cases = Number(item?.cases || item?.total_cases || item?.totalCases || pDetail?.total_cases || pDetail?.totalCases || 0);
+    const rate = Number(item?.import_pass_fee_per_case || item?.importPassFeePerCase || item?.import_fee || item?.importFee || 1400);
+    return cases > 0 ? (rate * cases) : 0;
+  }
+
+  getCancellationItemAddEd(item: any, pDetail?: any): number {
+    const direct = Number(item?.total_additional_ed ?? item?.totalAdditionalEd ?? item?.total_add_ed ?? item?.totalAddEd ?? 0);
+    if (direct > 0) return direct;
+    const cases = Number(item?.cases || item?.total_cases || item?.totalCases || pDetail?.total_cases || pDetail?.totalCases || 0);
+    const rate = Number(item?.additional_ed_per_case || item?.additionalEdPerCase || item?.additional_ed || item?.additionalEd || item?.add_ed || item?.addEd || 350);
+    return cases > 0 ? (rate * cases) : 0;
+  }
+
+  getCancellationItemCess(item: any, pDetail?: any): number {
+    const direct = Number(item?.total_education_cess ?? item?.totalEducationCess ?? item?.total_edu_cess ?? item?.totalEduCess ?? item?.cess ?? 0);
+    if (direct > 0) return direct;
+    const cases = Number(item?.cases || item?.total_cases || item?.totalCases || pDetail?.total_cases || pDetail?.totalCases || 0);
+    const rate = Number(item?.education_cess_per_case || item?.educationCessPerCase || item?.education_cess || item?.cess || 60);
+    return cases > 0 ? (rate * cases) : 0;
+  }
+
+  getCancellationItemBL(item: any, pDetail?: any): number {
+    const direct = Number(item?.bulk_litres ?? item?.bulkLitres ?? item?.bl ?? item?.total_bulk_litres ?? item?.totalBulkLitres ?? 0);
+    if (direct > 0) return direct;
+    const cases = Number(item?.cases || item?.total_cases || item?.totalCases || pDetail?.total_cases || pDetail?.totalCases || 0);
+    const sizeMl = Number(item?.size_ml || item?.sizeMl || 750);
+    const pieces = Number(item?.pieces_per_case || item?.piecesPerCase || (sizeMl <= 330 ? 24 : (sizeMl <= 500 ? 24 : 12)));
+    return cases > 0 ? ((cases * sizeMl * pieces) / 1000) : 0;
+  }
+
+  getCancellationPermitTotalCases(pDetail: any): number {
+    const items = this.getCancellationPermitLineItems(pDetail);
+    if (Array.isArray(items) && items.length > 0) {
+      return items.reduce((acc: number, it: any) => acc + Number(it?.cases || it?.total_cases || 0), 0);
+    }
+    return Number(pDetail?.total_cases || pDetail?.totalCases || 0);
+  }
+
+  getCancellationPermitTotalImportFee(pDetail: any): number {
+    const items = this.getCancellationPermitLineItems(pDetail);
+    if (Array.isArray(items) && items.length > 0) {
+      return items.reduce((acc: number, it: any) => acc + this.getCancellationItemImportFee(it, pDetail), 0);
+    }
+    const direct = Number(pDetail?.total_import_fee || pDetail?.totalImportFee || pDetail?.total_import || pDetail?.totalImport || 0);
+    if (direct > 0) return direct;
+    return this.getCancellationPermitTotalCases(pDetail) * 1400;
+  }
+
+  getCancellationPermitTotalAddEd(pDetail: any): number {
+    const items = this.getCancellationPermitLineItems(pDetail);
+    if (Array.isArray(items) && items.length > 0) {
+      return items.reduce((acc: number, it: any) => acc + this.getCancellationItemAddEd(it, pDetail), 0);
+    }
+    const direct = Number(pDetail?.total_additional_ed || pDetail?.totalAdditionalEd || pDetail?.total_add_ed || pDetail?.totalAddEd || 0);
+    if (direct > 0) return direct;
+    return this.getCancellationPermitTotalCases(pDetail) * 350;
+  }
+
+  getCancellationPermitTotalCess(pDetail: any): number {
+    const items = this.getCancellationPermitLineItems(pDetail);
+    if (Array.isArray(items) && items.length > 0) {
+      return items.reduce((acc: number, it: any) => acc + this.getCancellationItemCess(it, pDetail), 0);
+    }
+    const direct = Number(pDetail?.total_education_cess || pDetail?.totalEducationCess || pDetail?.total_edu_cess || pDetail?.totalEduCess || pDetail?.cess || 0);
+    if (direct > 0) return direct;
+    return this.getCancellationPermitTotalCases(pDetail) * 60;
+  }
+
+  getCancellationPermitTotalBL(pDetail: any): number {
+    const items = this.getCancellationPermitLineItems(pDetail);
+    if (Array.isArray(items) && items.length > 0) {
+      return items.reduce((acc: number, it: any) => acc + this.getCancellationItemBL(it, pDetail), 0);
+    }
+    const direct = Number(pDetail?.total_bulk_litres || pDetail?.totalBulkLitres || pDetail?.bulk_litres || pDetail?.bl || 0);
+    if (direct > 0) return direct;
+    return (this.getCancellationPermitTotalCases(pDetail) * 750 * 12) / 1000;
+  }
+
+  getCancellationGrandTotalCases(): number {
+    return this.getSelectedCancellationPermitsList().reduce((acc, p) => acc + this.getCancellationPermitTotalCases(p), 0);
+  }
+
+  getCancellationGrandTotalImportFee(): number {
+    return this.getSelectedCancellationPermitsList().reduce((acc, p) => acc + this.getCancellationPermitTotalImportFee(p), 0);
+  }
+
+  getCancellationGrandTotalAddEd(): number {
+    return this.getSelectedCancellationPermitsList().reduce((acc, p) => acc + this.getCancellationPermitTotalAddEd(p), 0);
+  }
+
+  getCancellationGrandTotalCess(): number {
+    return this.getSelectedCancellationPermitsList().reduce((acc, p) => acc + this.getCancellationPermitTotalCess(p), 0);
+  }
+
+  getCancellationGrandTotalBL(): number {
+    return this.getSelectedCancellationPermitsList().reduce((acc, p) => acc + this.getCancellationPermitTotalBL(p), 0);
+  }
+
+  getCancellationGrandTotalRefund(): number {
+    return this.getCancellationGrandTotalImportFee() + this.getCancellationGrandTotalAddEd() + this.getCancellationGrandTotalCess();
+  }
+
   onPermitSelectionChangeForCancellation(): void {
-    const opt = this.availablePermitOptionsForCancellation.find(o => o.permitNumber === this.selectedPermitNumberForCancellation);
-    this.selectedPermitDetail = opt ? opt.detail : null;
+    this.syncSelectedPermitNumbersForCancellation();
   }
 
   isCurrentPermitDisabledForCancellation(): boolean {
-    const opt = this.availablePermitOptionsForCancellation.find(o => o.permitNumber === this.selectedPermitNumberForCancellation);
-    if (!opt) return false;
-    return Boolean(opt.isUnderProcess || opt.isCancelled || opt.isArrivalApproved || (opt as any).isRevalidated);
+    const selected = this.availablePermitOptionsForCancellation.filter(o => o.selected);
+    if (selected.length === 0) return true;
+    return selected.some(opt => opt.isUnderProcess || opt.isCancelled || opt.isArrivalApproved || (opt as any).isRevalidated);
   }
 
   closeCancellationModal(): void {
@@ -3833,6 +4182,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.cancellationTargetRow = null;
     this.selectedPermitDetail = null;
     this.selectedPermitNumberForCancellation = '';
+    this.selectedPermitNumbersForCancellation = [];
     this.availablePermitOptionsForCancellation = [];
   }
 
@@ -5148,19 +5498,18 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   openCancellationConfirmationModal(): void {
     if (!this.cancellationTargetRow) return;
-    if (!this.selectedPermitNumberForCancellation) {
-      alert('Please select a permit to cancel.');
+    const selectedPermits = this.getSelectedCancellationPermitsList();
+    if (selectedPermits.length === 0) {
+      alert('Please select at least one permit to cancel.');
       return;
     }
-    const selectedOpt = this.availablePermitOptionsForCancellation.find(o => o.permitNumber === this.selectedPermitNumberForCancellation);
-    if (selectedOpt && (selectedOpt.isCancelled || selectedOpt.isUnderProcess || selectedOpt.isRevalidated || (selectedOpt as any).isArrivalApproved)) {
-      if ((selectedOpt as any).isArrivalApproved) {
-        alert(`Stock arrival for Permit ${this.selectedPermitNumberForCancellation} has been approved by OIC and completed. Permits with completed stock arrival cannot be cancelled.`);
-      } else if (selectedOpt.isRevalidated) {
-        alert(`Permit ${this.selectedPermitNumberForCancellation} validity has expired and is waiting for revalidation. Please submit and complete revalidation before attempting to cancel.`);
-      } else {
-        alert(`Permit ${this.selectedPermitNumberForCancellation} is already ${selectedOpt.isCancelled ? 'cancelled' : 'under process for cancellation'}.`);
-      }
+
+    const invalidSelected = this.availablePermitOptionsForCancellation.filter(
+      opt => opt.selected && (opt.isCancelled || opt.isUnderProcess || opt.isRevalidated || opt.isArrivalApproved)
+    );
+    if (invalidSelected.length > 0) {
+      const names = invalidSelected.map(o => o.permitNumber).join(', ');
+      alert(`The following selected permit(s) cannot be cancelled: ${names}`);
       return;
     }
 
@@ -5173,46 +5522,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       return;
     }
 
-    let importFeeSum = 0;
-    let addEdSum = 0;
-    let cessSum = 0;
-
-    const rawApp = this.cancellationTargetRow.application || this.cancellationTargetRow;
-    const detail = this.selectedPermitDetail || {};
-    const lineItems = detail.line_items || detail.lineItems || rawApp.line_items || rawApp.lineItems || [];
-
-    if (Array.isArray(lineItems) && lineItems.length > 0) {
-      lineItems.forEach((item: any) => {
-        const cases = Number(item.cases || item.total_cases || item.totalCases || detail.total_cases || detail.totalCases || 0);
-        const importFeeRate = Number(item.import_pass_fee_per_case || item.importPassFeePerCase || 1400);
-        const addEdRate = Number(item.additional_ed_per_case || item.additionalEdPerCase || 350);
-        const cessRate = Number(item.education_cess_per_case || item.educationCessPerCase || 60);
-
-        let importFee = Number(item.total_import ?? item.totalImport ?? item.total_import_fee ?? item.totalImportFee ?? 0);
-        if (importFee === 0 && cases > 0) importFee = importFeeRate * cases;
-
-        let addEd = Number(item.total_additional_ed ?? item.totalAdditionalEd ?? item.total_add_ed ?? item.totalAddEd ?? 0);
-        if (addEd === 0 && cases > 0 && item.additional_ed_per_case !== 0) addEd = addEdRate * cases;
-
-        let cess = Number(item.total_education_cess ?? item.totalEducationCess ?? item.total_edu_cess ?? item.totalEduCess ?? item.cess ?? 0);
-        if (cess === 0 && cases > 0) cess = cessRate * cases;
-
-        importFeeSum += importFee;
-        addEdSum += addEd;
-        cessSum += cess;
-      });
-    }
-
-    const detailCases = Number(detail.total_cases || detail.totalCases || detail.cases || 0);
-    if (importFeeSum === 0 && detail) {
-      importFeeSum = Number(detail.total_import_fee || detail.totalImportFee || detail.total_import || (1400 * detailCases));
-    }
-    if (addEdSum === 0 && detail && detail.total_additional_ed !== undefined) {
-      addEdSum = Number(detail.total_additional_ed || detail.totalAdditionalEd || (350 * detailCases));
-    }
-    if (cessSum === 0 && detail) {
-      cessSum = Number(detail.total_education_cess || detail.totalEducationCess || detail.total_edu_cess || (60 * detailCases));
-    }
+    const importFeeSum = this.getCancellationGrandTotalImportFee();
+    const addEdSum = this.getCancellationGrandTotalAddEd();
+    const cessSum = this.getCancellationGrandTotalCess();
 
     this.cancellationRefundImportFee = importFeeSum;
     this.cancellationRefundAddEd = addEdSum;
@@ -5220,13 +5532,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.cancellationTotalRefund = importFeeSum + addEdSum + cessSum;
 
     // Fee = Rs.1000 per permit number being cancelled
-    const permitWiseDetails = this.selectedPermitDetail ? [this.selectedPermitDetail] : [];
-    const uniquePermitNos = new Set(
-      permitWiseDetails
-        .map((p: any) => p?.permit_number || p?.permitNumber || '')
-        .filter((n: string) => !!n)
-    );
-    const numPermits = uniquePermitNos.size || 1;
+    const numPermits = selectedPermits.length;
     this.cancellationFeeAmount = 1000 * numPermits;
     this.cancellationNetExciseChange = (importFeeSum + addEdSum) - this.cancellationFeeAmount;
     this.cancellationNetCessChange = cessSum;
@@ -5249,19 +5555,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   confirmCancellationSubmit(): void {
     if (!this.cancellationTargetRow) return;
-    if (!this.selectedPermitNumberForCancellation) {
-      alert('Please select a permit to cancel.');
-      return;
-    }
-    const selectedOpt = this.availablePermitOptionsForCancellation.find(o => o.permitNumber === this.selectedPermitNumberForCancellation);
-    if (selectedOpt && (selectedOpt.isCancelled || selectedOpt.isUnderProcess || selectedOpt.isRevalidated || (selectedOpt as any).isArrivalApproved)) {
-      if ((selectedOpt as any).isArrivalApproved) {
-        alert(`Stock arrival for Permit ${this.selectedPermitNumberForCancellation} has been approved by OIC and completed. Permits with completed stock arrival cannot be cancelled.`);
-      } else if (selectedOpt.isRevalidated) {
-        alert(`Permit ${this.selectedPermitNumberForCancellation} validity has expired and is waiting for revalidation. Please submit and complete revalidation before attempting to cancel.`);
-      } else {
-        alert(`Permit ${this.selectedPermitNumberForCancellation} is already ${selectedOpt.isCancelled ? 'cancelled' : 'under process for cancellation'}.`);
-      }
+    const selectedPermits = this.getSelectedCancellationPermitsList();
+    const selectedPermitNumbers = this.getSelectedCancellationPermitNumbers();
+    if (selectedPermits.length === 0 || selectedPermitNumbers.length === 0) {
+      alert('Please select at least one permit to cancel.');
       return;
     }
 
@@ -5275,13 +5572,14 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }
 
     const appId = this.cancellationTargetRow.applicationId;
-    const fullReason = `[Permit: ${this.selectedPermitNumberForCancellation}] ${this.cancellationReasonType}: ${this.cancellationReasonDetails.trim()}`;
+    const targetPermitStr = selectedPermitNumbers.join(', ');
+    const fullReason = `[Permit(s): ${targetPermitStr}] ${this.cancellationReasonType}: ${this.cancellationReasonDetails.trim()}`;
 
     this.isSubmittingCancellation = true;
     this.permitService.createCancellation({
       distributor_permit: appId,
-      cancelled_permit_number: this.selectedPermitNumberForCancellation,
-      permit_wise_details: this.selectedPermitDetail ? [this.selectedPermitDetail] : [],
+      cancelled_permit_number: targetPermitStr,
+      permit_wise_details: selectedPermits,
       cancellation_reason: fullReason
     }).subscribe({
       next: (res: any) => {
@@ -5291,7 +5589,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         this.paymentIntegrationService.clearWalletCache();
         const refNo = res.reference_no || res.id || '';
         alert(`IMFL Permit Cancellation Request ${refNo} Submitted Successfully!\n\n` +
-          `• Cancellation Processing Fee Debited: ₹${this.cancellationFeeAmount.toFixed(2)}\n` +
+          `• Number of Permits Cancelled: ${selectedPermits.length}\n` +
+          `• Cancellation Processing Fee Debited (${selectedPermits.length} × ₹1,000): ₹${this.cancellationFeeAmount.toFixed(2)}\n` +
           `• Excise Duty Refund Credited: ₹${this.cancellationRefundImportFee.toFixed(2)}\n` +
           `• Additional Excise Duty Refund Credited: ₹${this.cancellationRefundAddEd.toFixed(2)}\n` +
           `• Education Duty Refund Credited: ₹${this.cancellationRefundEducationCess.toFixed(2)}\n` +
@@ -6338,34 +6637,182 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return '';
   }
 
-  getCancelledPermitNumbersText(row: any): string {
-    if (!row) return '';
-    const appId = String(row?.applicationId || row?.referenceNo || '').toLowerCase();
-    if (!appId) return '';
-    const match: any = (this.applications || []).find((a: any) => {
-      const isCan = String(a?.['referenceNo'] || a?.['reference_no'] || '').startsWith('IMFLCAN') || a?.['applicationType'] === 'cancellation';
-      const target = String(a?.['application']?.['distributor_permit'] || a?.['distributor_permit'] || '').toLowerCase();
-      return isCan && target === appId;
-    });
-    if (match) {
-      return match['cancelledPermitNumber'] || match['cancelled_permit_number'] || match['application']?.['cancelled_permit_number'] || 'Cancelled';
+  getRevalidationInfo(row: any): { isRevalidated: boolean; isUnderProcess: boolean; isRequired: boolean; permitNumbers: string[]; label: string } | null {
+    if (!row) return null;
+    const appId = String(row.applicationId || row.referenceNo || row.reference_no || row.id || '').trim();
+    if (!appId) return null;
+    const appIdLower = appId.toLowerCase();
+
+    if (appIdLower.startsWith('imflrev') || row.applicationType === 'revalidation') {
+      const stage = String(row.currentStage || row.status || '').toUpperCase();
+      const isAppr = stage.includes('APPROVED') || stage.includes('COMPLETED');
+      return {
+        isRevalidated: isAppr,
+        isUnderProcess: !isAppr,
+        isRequired: false,
+        permitNumbers: [row.revalidatedPermitNumber || row.distributorPermitRef || row.applicationId],
+        label: isAppr ? 'Revalidated' : 'Revalidation Under Process'
+      };
     }
-    return '';
+
+    const revApps = (this.applications || []).filter((a: any) => {
+      const aRef = String(a.referenceNo || a.reference_no || a.id || '').trim().toLowerCase();
+      const isRev = aRef.startsWith('imflrev') || a.applicationType === 'revalidation';
+      if (!isRev) return false;
+      if (a.isActivatedSchedule || a.is_activated_schedule || a['application']?.is_activated_schedule) return false;
+
+      const refTarget = String(a.application?.distributor_permit || a.application?.distributorPermit || a.distributor_permit || a.distributorPermitRef || '').toLowerCase().trim();
+      const targetNo = String(a.application?.distributor_permit_ref_no || a.distributor_permit_ref_no || a.revalidated_permit_number || a.revalidatedPermitNumber || a.application?.revalidated_permit_number || a.application?.revalidatedPermitNumber || '').toLowerCase().trim();
+      const remarksText = String(a.remarks || a.revalidation_reason || a.revalidationReason || a.application?.remarks || '').toLowerCase().trim();
+
+      return (
+        (refTarget && (refTarget === appIdLower || refTarget.includes(appIdLower) || appIdLower.includes(refTarget))) ||
+        (targetNo && (targetNo === appIdLower || targetNo.includes(appIdLower) || appIdLower.includes(targetNo))) ||
+        (remarksText && remarksText.includes(appIdLower)) ||
+        (aRef && aRef.includes(appIdLower))
+      );
+    });
+
+    if (revApps.length > 0) {
+      const approvedRev = revApps.find((a: any) => {
+        const st = String(a.status || a.currentStage || a.current_stage?.name || '').toUpperCase();
+        return st.includes('APPROVED') || st.includes('COMPLETED');
+      });
+
+      const pNums: string[] = [];
+      revApps.forEach((a: any) => {
+        const pNum = a.revalidatedPermitNumber || a.revalidated_permit_number || a.application?.revalidated_permit_number || a.application?.revalidatedPermitNumber;
+        if (pNum && !pNums.includes(pNum)) {
+          pNums.push(pNum);
+        }
+      });
+
+      const isApproved = Boolean(approvedRev);
+      return {
+        isRevalidated: isApproved,
+        isUnderProcess: !isApproved,
+        isRequired: false,
+        permitNumbers: pNums,
+        label: isApproved ? 'Revalidated' : 'Revalidation Under Process'
+      };
+    }
+
+    const rawApp = row.application || row;
+    const now = new Date();
+    const validUpToStr = rawApp?.valid_up_to || rawApp?.validUpTo || row?.application?.valid_up_to || '';
+    const validUpToDate = validUpToStr ? new Date(validUpToStr) : null;
+    const isExpired = Boolean(validUpToDate && validUpToDate <= now);
+    const isActivatedSched = Boolean(
+      row?.isActivatedSchedule ||
+      rawApp?.is_activated_schedule ||
+      rawApp?.can_submit_application ||
+      String(row?.currentStage || rawApp?.status || '').toLowerCase().includes('activated') ||
+      String(row?.currentStage || rawApp?.status || '').toLowerCase().includes('ready for revalidation') ||
+      String(row?.currentStage || rawApp?.status || '').toLowerCase().includes('expired')
+    );
+
+    if (isExpired || isActivatedSched) {
+      return {
+        isRevalidated: false,
+        isUnderProcess: false,
+        isRequired: true,
+        permitNumbers: [],
+        label: 'Revalidation Required'
+      };
+    }
+
+    const pWise = rawApp?.permit_wise_details || rawApp?.permitWiseDetails || [];
+    if (Array.isArray(pWise) && pWise.length > 0) {
+      const revalidatedP = pWise.filter((p: any) => p.isRevalidated || p.revalidated || String(p.status || '').toUpperCase().includes('REVALIDAT'));
+      if (revalidatedP.length > 0) {
+        return {
+          isRevalidated: true,
+          isUnderProcess: false,
+          isRequired: false,
+          permitNumbers: revalidatedP.map((p: any) => p.permit_number || p.permitNumber),
+          label: 'Revalidated'
+        };
+      }
+    }
+
+    return null;
+  }
+
+  getCancellationInfo(row: any): { isCancelled: boolean; isUnderProcess: boolean; permitNumbers: string[]; label: string } | null {
+    if (!row) return null;
+    const appId = String(row.applicationId || row.referenceNo || row.reference_no || row.id || '').trim();
+    if (!appId) return null;
+    const appIdLower = appId.toLowerCase();
+
+    if (appIdLower.startsWith('imflcan') || row.applicationType === 'cancellation') {
+      const stage = String(row.currentStage || row.status || '').toUpperCase();
+      const isAppr = stage.includes('APPROVED') || stage.includes('COMPLETED');
+      return {
+        isCancelled: isAppr,
+        isUnderProcess: !isAppr,
+        permitNumbers: [row.cancelledPermitNumber || row.distributorPermitRef || row.applicationId],
+        label: isAppr ? 'Cancelled' : 'Cancellation Under Process'
+      };
+    }
+
+    const canApps = (this.applications || []).filter((a: any) => {
+      const isCan = String(a.referenceNo || a.reference_no || a.id || '').startsWith('IMFLCAN') || a.applicationType === 'cancellation';
+      if (!isCan) return false;
+      const refTarget = String(a.application?.distributor_permit || a.application?.distributorPermit || a.distributor_permit || a.distributorPermitRef || '').toLowerCase().trim();
+      const targetNo = String(a.application?.distributor_permit_ref_no || a.distributor_permit_ref_no || a.cancelled_permit_number || a.cancelledPermitNumber || a.application?.cancelled_permit_number || a.application?.cancelledPermitNumber || '').toLowerCase().trim();
+      const remarksText = String(a.remarks || a.cancellation_reason || a.cancellationReason || a.application?.remarks || '').toLowerCase().trim();
+      const aRef = String(a.referenceNo || a.reference_no || '').toLowerCase().trim();
+
+      return (
+        (refTarget && (refTarget === appIdLower || refTarget.includes(appIdLower) || appIdLower.includes(refTarget))) ||
+        (targetNo && (targetNo === appIdLower || targetNo.includes(appIdLower) || appIdLower.includes(targetNo))) ||
+        (remarksText && remarksText.includes(appIdLower)) ||
+        (aRef && aRef.includes(appIdLower))
+      );
+    });
+
+    if (canApps.length > 0) {
+      const approvedCan = canApps.find((a: any) => {
+        const st = String(a.status || a.currentStage || a.current_stage?.name || '').toUpperCase();
+        return st.includes('APPROVED') || st.includes('COMPLETED');
+      });
+
+      const pNums: string[] = [];
+      canApps.forEach((a: any) => {
+        const pNum = a.cancelledPermitNumber || a.cancelled_permit_number || a.application?.cancelled_permit_number || a.application?.cancelledPermitNumber;
+        if (pNum && !pNums.includes(pNum)) {
+          pNums.push(pNum);
+        }
+      });
+
+      const isApproved = Boolean(approvedCan);
+      return {
+        isCancelled: isApproved,
+        isUnderProcess: !isApproved,
+        permitNumbers: pNums,
+        label: isApproved ? 'Cancelled' : 'Cancellation Under Process'
+      };
+    }
+
+    return null;
+  }
+
+  getCancelledPermitNumbersText(row: any): string {
+    const info = this.getCancellationInfo(row);
+    if (!info) return '';
+    if (info.permitNumbers && info.permitNumbers.length > 0) {
+      return info.permitNumbers.join(', ');
+    }
+    return info.label;
   }
 
   getRevalidatedPermitNumbersText(row: any): string {
-    if (!row) return '';
-    const appId = String(row?.applicationId || row?.referenceNo || '').toLowerCase();
-    if (!appId) return '';
-    const match: any = (this.applications || []).find((a: any) => {
-      const isRev = String(a?.['referenceNo'] || a?.['reference_no'] || '').startsWith('IMFLREV') || a?.['applicationType'] === 'revalidation';
-      const target = String(a?.['application']?.['distributor_permit'] || a?.['distributor_permit'] || '').toLowerCase();
-      return isRev && target === appId;
-    });
-    if (match) {
-      return match['revalidatedPermitNumber'] || match['revalidated_permit_number'] || match['application']?.['revalidated_permit_number'] || 'Revalidated';
+    const info = this.getRevalidationInfo(row);
+    if (!info) return '';
+    if (info.permitNumbers && info.permitNumbers.length > 0) {
+      return info.permitNumbers.join(', ');
     }
-    return '';
+    return info.label;
   }
 
   getArrivedPermitNumbersText(row: any): string {
