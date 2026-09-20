@@ -1241,26 +1241,50 @@ private initializeWalletContextAndLoadData(): void {
     // Prefer explicit wallet type when available (fixes license/security utilization rows
     // incorrectly showing "Wallet Recharge" in those tabs).
     if (walletType === 'license_fee') {
+      if (reference.startsWith('CCOL/') || sourceModule.includes('collaboration') || remarks.includes('collaboration') || remarks.includes('collab')) {
+        return 'Company Collaboration Licensee Fee Paid';
+      }
+      if (reference.startsWith('COMP/') || sourceModule.includes('registration') || remarks.includes('company registration') || remarks.includes('comp_reg') || remarks.includes('registration fee')) {
+        return 'Company Registration Licensee Fee Paid';
+      }
       if (reference.startsWith('RCOL/') || reference.startsWith('CC/1101/')) {
-        return 'com coll renewal fee';
+        return 'Company Collaboration Renewal Fee Paid';
+      }
+      if (reference.startsWith('SB/') || sourceModule.includes('salesman') || sourceModule.includes('barman') || remarks.includes('salesman') || remarks.includes('barman')) {
+        return 'Salesman/Barman Registration Fee Paid';
+      }
+      if (reference.startsWith('NLI/') || reference.startsWith('NA/')) {
+        return 'New License Fee Paid';
       }
       return 'Licensee Fee Paid';
     }
     if (walletType === 'security_deposit') {
-      if (reference.startsWith('CCOL/') || sourceModule.includes('collaboration') || sourceModule.includes('ccol')) {
-        return 'com col security paid';
+      if (reference.startsWith('CCOL/') || sourceModule.includes('collaboration') || sourceModule.includes('ccol') || remarks.includes('collaboration')) {
+        return 'Company Collaboration Security Deposit Paid';
+      }
+      if (reference.startsWith('COMP/') || sourceModule.includes('registration') || remarks.includes('registration')) {
+        return 'Company Registration Security Deposit Paid';
       }
       return 'Security Fee Paid';
     }
 
     if (sourceModule.includes('security') && sourceModule.includes('deposit')) {
-      if (reference.startsWith('CCOL/') || sourceModule.includes('collaboration') || sourceModule.includes('ccol')) {
-        return 'com col security paid';
+      if (reference.startsWith('CCOL/') || sourceModule.includes('collaboration') || sourceModule.includes('ccol') || remarks.includes('collaboration')) {
+        return 'Company Collaboration Security Deposit Paid';
+      }
+      if (reference.startsWith('COMP/') || sourceModule.includes('registration') || remarks.includes('registration')) {
+        return 'Company Registration Security Deposit Paid';
       }
       return 'Security Paid';
     }
     if (sourceModule.includes('license') && sourceModule.includes('fee')) {
-      return 'Licensee Fee';
+      if (reference.startsWith('CCOL/') || remarks.includes('collaboration') || remarks.includes('collab')) {
+        return 'Company Collaboration Licensee Fee Paid';
+      }
+      if (reference.startsWith('COMP/') || remarks.includes('registration')) {
+        return 'Company Registration Licensee Fee Paid';
+      }
+      return 'Licensee Fee Paid';
     }
     if (
       sourceModule.includes('imfl_hologram') ||
