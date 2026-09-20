@@ -4196,6 +4196,11 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                   justify-content: space-between !important;
                   box-sizing: border-box !important;
                   margin: 0 auto !important;
+                  background-color: #ffffff !important;
+                  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='330' height='160' viewBox='0 0 330 160'%3E%3Ctext x='6' y='72' font-family='Arial, sans-serif' font-size='34' font-weight='700' letter-spacing='2' fill='%2316583A' fill-opacity='0.055'%3ESIKKIM EXCISE%3C/text%3E%3Ctext x='6' y='142' font-family='Arial, sans-serif' font-size='34' font-weight='700' letter-spacing='2' fill='%2316583A' fill-opacity='0.055'%3ESIKKIM EXCISE%3C/text%3E%3C/svg%3E") !important;
+                  background-repeat: repeat !important;
+                  background-position: top center !important;
+                  background-size: 330px 160px !important;
                 }
                 .letter-body-content {
                   flex: 1 0 auto;
