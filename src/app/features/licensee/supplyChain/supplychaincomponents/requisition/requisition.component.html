@@ -341,41 +341,43 @@
               </span>
             </td>
             <td class="actions" (click)="$event.stopPropagation()" style="position: relative; z-index: 1000;">
-              <!-- Unified Action Buttons Component -->
-              <app-unified-action-buttons
-                [item]="item"
-                [itemType]="'requisition'"
-                [context]="getUserContext()"
-                [includeActions]="getActionIncludeList(item)"
-                (actionClicked)="onUnifiedAction($event)">
-              </app-unified-action-buttons>
-              <button
-                *ngIf="shouldShowCancelPermit(item)"
-                type="button"
-                class="btn btn-sm mt-2 cancel-permit-btn"
-                (click)="openCancellationModal(item)">
-                Cancel Permit
-              </button>
-              <button
-                *ngIf="canUpdateArrival(item)"
-                type="button"
-                class="btn btn-sm mt-2 arrival-update-btn"
-                (click)="openArrivalModal(item)">
-                {{ isArrivalRejected(item) ? 'Re-enter Bulk Spirit Arrival' : 'Update Bulk Spirit Arrival' }}
-              </button>
-              <button
-                *ngIf="canViewArrivalDetails(item)"
-                type="button"
-                class="btn btn-sm mt-2 arrival-view-btn"
-                (click)="openArrivalViewModal(item)">
-               View Bulk Spirit Inventory
-              </button>
-              <span
-                *ngIf="shouldShowArrivalRejectedBadge(item)"
-                class="badge bg-danger text-white mt-2"
-                style="display: inline-block; width: 100%; padding: 0.5rem 0.6rem; border-radius: 10px; text-align: center; font-weight: 700;">
-                BL Entry Rejected — re-enter tanker details
-              </span>
+              <!-- View Application Button -->
+              <div class="d-flex flex-column align-items-center gap-2">
+                <button
+                  type="button"
+                  class="btn btn-primary btn-sm view-app-btn"
+                  (click)="viewRequisitionApplication(item)"
+                  title="View Application Details">
+                  <i class="bi bi-eye me-1"></i> View Application
+                </button>
+                <button
+                  *ngIf="shouldShowCancelPermit(item)"
+                  type="button"
+                  class="btn btn-sm cancel-permit-btn"
+                  (click)="openCancellationModal(item)">
+                  Cancel Permit
+                </button>
+                <button
+                  *ngIf="canUpdateArrival(item)"
+                  type="button"
+                  class="btn btn-sm arrival-update-btn"
+                  (click)="openArrivalModal(item)">
+                  {{ isArrivalRejected(item) ? 'Re-enter Bulk Spirit Arrival' : 'Update Bulk Spirit Arrival' }}
+                </button>
+                <button
+                  *ngIf="canViewArrivalDetails(item)"
+                  type="button"
+                  class="btn btn-sm arrival-view-btn"
+                  (click)="openArrivalViewModal(item)">
+                  View Bulk Spirit Inventory
+                </button>
+                <span
+                  *ngIf="shouldShowArrivalRejectedBadge(item)"
+                  class="badge bg-danger text-white"
+                  style="display: inline-block; width: 100%; padding: 0.5rem 0.6rem; border-radius: 10px; text-align: center; font-weight: 700;">
+                  BL Entry Rejected — re-enter tanker details
+                </span>
+              </div>
             </td>
           </tr>
           }

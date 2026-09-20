@@ -6,7 +6,7 @@ import { AccountService } from '../../../../../core/services/account.service';
 import { EnaRequisitionService } from '../../../../../core/services/ena-requisition.service';
 import { SupplyChainService } from '../../services/supplychain.service';
 import { CancellationRequestComponent } from '../../cancellation-request/cancellation-request.component';
-import { UnifiedActionButtonsComponent } from '../../../../../shared/components/unified-action-buttons/unified-action-buttons.component';
+
 import { UnifiedActionsService } from '../../../../../shared/services/unified-actions.service';
 import { SidebarPendingBadgeService } from '../../../../../shared/services/sidebar-pending-badge.service';
 import { BulkSpiritUsageService, BulkSpiritUsageRecord, BulkSpiritInventorySummaryResponse } from '../../../../../core/services/bulk-spirit-usage.service';
@@ -104,7 +104,7 @@ interface ArrivalMonthSummaryRow {
 @Component({
   selector: 'app-requisition',
   standalone: true,
-  imports: [CommonModule, FormsModule, CancellationRequestComponent, UnifiedActionButtonsComponent],
+  imports: [CommonModule, FormsModule, CancellationRequestComponent],
   templateUrl: './requisition.component.html',
   styleUrls: ['./requisition.component.scss']
 })
