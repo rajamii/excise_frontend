@@ -7,7 +7,7 @@ import { HttpClient } from '@angular/common/http';
 import { SupplyChainService } from '../../services/supplychain.service';
 import { environment } from '../../../../../../environments/environment';
 import { AccountService } from '../../../../../core/services/account.service';
-import { UnifiedActionButtonsComponent } from '../../../../../shared/components/unified-action-buttons/unified-action-buttons.component';
+
 import { UnifiedActionsService } from '../../../../../shared/services/unified-actions.service';
 
 interface TableData {
@@ -43,7 +43,7 @@ interface TableData {
 @Component({
   selector: 'app-revalidation',
   standalone: true,
-  imports: [CommonModule, FormsModule, UnifiedActionButtonsComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './revalidation.component.html',
   styleUrl: './revalidation.component.scss'
 })

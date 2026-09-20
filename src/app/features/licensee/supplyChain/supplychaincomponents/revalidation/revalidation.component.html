@@ -185,23 +185,25 @@
                 </span>
               </td>
               <td class="actions">
-                <div class="action-buttons-group d-flex justify-content-center align-items-center gap-2">
-                  <button type="button" class="btn-action-icon btn-action-view" (click)="openDetails(item)" title="View Details" aria-label="View Details">
-                    <i class="bi bi-eye"></i>
-                  </button>
-                  <button *ngIf="hasPaymentBeenMade(item)" type="button" class="btn-action-icon btn-action-slip" (click)="openPaymentSlip(item)" title="Payment Slip" aria-label="Payment Slip">
-                    <i class="bi bi-receipt"></i>
+                <div class="action-buttons-group d-flex flex-column justify-content-center align-items-center gap-2">
+                  <div class="d-flex justify-content-center align-items-center gap-2">
+                    <button type="button" class="btn-action-icon btn-action-view" (click)="openDetails(item)" title="View Application" aria-label="View Application">
+                      <i class="bi bi-eye"></i>
+                    </button>
+                    <button *ngIf="hasPaymentBeenMade(item)" type="button" class="btn-action-icon btn-action-slip" (click)="openPaymentSlip(item)" title="Payment Slip" aria-label="Payment Slip">
+                      <i class="bi bi-receipt"></i>
+                    </button>
+                  </div>
+                  <!-- Yellow Request Revalidation Button -->
+                  <button
+                    *ngIf="item.allowedActions && item.allowedActions.length > 0"
+                    type="button"
+                    class="btn-reval-request"
+                    (click)="requestRevlidation(item)"
+                    title="Request Revalidation">
+                    <i class="bi bi-arrow-repeat me-1"></i> Request Revalidation
                   </button>
                 </div>
-                <!-- Unified Action Buttons Component -->
-                <app-unified-action-buttons
-                  [item]="item"
-                  [itemType]="'revalidation'"
-                  [context]="getUserContext()"
-                  [includeActions]="getActionIncludeList(item)"
-                  [excludeActions]="['VIEW', 'VIEW_PAYMENT_SLIP', 'VIEW_PERMIT_SLIP', 'VIEW_SLIP']"
-                  (actionClicked)="onUnifiedAction($event)">
-                </app-unified-action-buttons>
               </td>
             </tr>
             }
