@@ -574,6 +574,14 @@ export class RevalidationComponent implements OnInit {
     });
   }
 
+  shouldShowRequestRevalidation(item: TableData): boolean {
+    if (this.isCommissioner() || this.isPermitSection() || this.isAdmin()) {
+      return false;
+    }
+    const actions = item?.allowedActions || [];
+    return actions.includes('REQUEST_REVALIDATION') || (actions.length > 0 && !actions.every(a => a.startsWith('VIEW')));
+  }
+
   getCurrentPage(): number {
     return this.currentPage;
   }

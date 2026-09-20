@@ -49,22 +49,12 @@
           <span *ngFor="let row of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70]">SIKKIM EXCISE</span>
         </div>
         <!-- Official Letter Header -->
-        <div class="letter-header d-flex justify-content-between align-items-center mb-3">
-          <!-- Left: State Emblem -->
-          <div class="header-seal-left">
-            <img src="assets/emblem_2.jpg" alt="Government Emblem" class="govt-seal" style="height: 75px; width: auto; object-fit: contain;" />
+        <div class="letter-header text-center mb-3">
+          <div class="mb-2">
+            <img src="assets/Excise_Logo.png" alt="Excise Department Sikkim Logo" class="govt-seal" style="height: 65px; width: auto; object-fit: contain; display: inline-block;" />
           </div>
-          
-          <!-- Center: Department Title -->
-          <div class="header-center text-center flex-grow-1 px-2">
-            <div class="dept-title" style="font-size: 22px; font-weight: 800; letter-spacing: 1.5px; color: #1e3a8a; text-transform: uppercase; margin: 0;">EXCISE DEPARTMENT</div>
-            <div class="dept-subtitle" style="font-size: 15px; font-weight: 700; letter-spacing: 1px; color: #1e3a8a; text-transform: uppercase; margin: 4px 0 0 0;">GOVERNMENT OF SIKKIM</div>
-          </div>
-
-          <!-- Right: Sikkim Logo -->
-          <div class="header-seal-right">
-            <img src="assets/fav-icon.png" alt="Sikkim Logo" class="govt-seal" style="height: 75px; width: auto; object-fit: contain;" />
-          </div>
+          <div class="dept-title" style="font-size: 22px; font-weight: 800; letter-spacing: 1.5px; color: #1e3a8a; text-transform: uppercase; margin: 0;">EXCISE DEPARTMENT</div>
+          <div class="dept-subtitle" style="font-size: 15px; font-weight: 700; letter-spacing: 1px; color: #1e3a8a; text-transform: uppercase; margin: 3px 0 0 0;">GOVERNMENT OF SIKKIM</div>
         </div>
 
         <div style="border-bottom: 2px solid #334155; margin-bottom: 25px;"></div>
@@ -113,32 +103,24 @@
           }
         </div>
 
-        <!-- Official Stamp & Signatures -->
-        <div class="d-flex justify-content-between align-items-end my-5 pt-3">
-          <!-- Left: Round Seal -->
-          <div class="text-center ps-2">
-            <div style="width: 105px; height: 105px; border: 2px dashed #1e3a8a; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #1e3a8a; font-size: 10px; font-weight: bold; text-transform: uppercase; transform: rotate(-5deg); padding: 5px;">
-              <span>Excise Department</span>
-              <span style="font-size: 14px; line-height: 1;">★</span>
-              <span>Govt. of Sikkim</span>
+        <div class="letter-body-content flex-grow-1">
+          <!-- Official Signatures (Stamp Removed, Right Aligned) -->
+          <div class="d-flex justify-content-end align-items-end my-4 pt-2">
+            <!-- Right: Commissioner Signature -->
+            <div class="text-center pe-2" style="line-height: 1.3; min-width: 220px;">
+              <div style="height: 48px; margin-bottom: 2px;">
+                <img src="assets/EC_Sign_1.png" alt="Signature" style="max-height: 46px; object-fit: contain;" />
+              </div>
+              <div class="fw-bold" style="font-size: 14px; color: #0f172a;">B. Chhetri (SES)</div>
+              <div class="fw-bold" style="font-size: 13px; color: #0f172a;">Commissioner of Excise</div>
+              <div class="fw-bold" style="font-size: 13px; color: #0f172a; text-decoration: underline;">Excise Headquarters/Gangtok</div>
+              <div style="font-size: 12px; color: #555; margin-top: 4px;">Commissioner<br>Excise Department<br>Government of Sikkim</div>
             </div>
-          </div>
-
-          <!-- Right: Commissioner Signature -->
-          <div class="text-center pe-2" style="line-height: 1.3;">
-            <div style="height: 48px; margin-bottom: 2px;">
-              <img src="assets/EC_Sign_1.png" alt="Signature" style="max-height: 46px; object-fit: contain;" />
-            </div>
-            <div class="fw-bold" style="font-size: 14px; color: #0f172a;">B. Chhetri (SES)</div>
-            <div class="fw-bold" style="font-size: 13px; color: #0f172a;">Commissioner of Excise</div>
-            <div class="fw-bold" style="font-size: 13px; color: #0f172a; text-decoration: underline;">Excise Headquarters/Gangtok</div>
-            <div style="font-size: 12px; color: #334155;">File no: {{ cancellationLetterData.fileNumber || 'GOS/71/EX/HQ/2026-27' }}</div>
-            <div style="font-size: 12px; color: #555; margin-top: 2px;">Commissioner<br>Excise Department<br>Government of Sikkim</div>
           </div>
         </div>
 
-        <!-- Official Footer -->
-        <div class="border-top pt-3 mt-4 text-center text-muted" style="font-size: 11px; line-height: 1.4;">
+        <!-- Official Footer at End of Document -->
+        <div class="letter-footer-section border-top pt-3 mt-auto text-center text-muted" style="font-size: 11px; line-height: 1.4;">
           <div>Excise Headquarters, M. G. Marg, Gangtok - 737 101</div>
           <div class="d-flex justify-content-center gap-3 mt-1">
             <span>🌐 excise.sikkim.gov.in</span>

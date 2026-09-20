@@ -4172,9 +4172,40 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
               <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
               <style>
                 @page { size: A4 portrait; margin: 8mm; }
-                * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                body { font-family: 'Times New Roman', Times, serif; padding: 20px; background: white; color: #111; font-size: 13px; line-height: 1.6; }
-                .final-letter-paper { border: none !important; box-shadow: none !important; padding: 0 !important; max-width: 100% !important; }
+                * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
+                html, body { 
+                  height: 100%;
+                  margin: 0;
+                  padding: 0;
+                  background: white; 
+                  color: #111; 
+                  font-family: 'Times New Roman', Times, serif; 
+                  font-size: 13.5px; 
+                  line-height: 1.6; 
+                }
+                .final-letter-paper { 
+                  border: 2px solid #1e3a8a !important; 
+                  box-shadow: none !important; 
+                  padding: 24px 30px 18px 30px !important; 
+                  width: 100% !important; 
+                  max-width: 100% !important; 
+                  min-height: calc(297mm - 16mm) !important;
+                  height: calc(297mm - 16mm) !important;
+                  display: flex !important;
+                  flex-direction: column !important;
+                  justify-content: space-between !important;
+                  box-sizing: border-box !important;
+                  margin: 0 auto !important;
+                }
+                .letter-body-content {
+                  flex: 1 0 auto;
+                }
+                .letter-footer-section {
+                  margin-top: auto !important;
+                  border-top: 1px solid #cbd5e1 !important;
+                  padding-top: 12px !important;
+                }
+                .border-top { border-top: 1px solid #cbd5e1 !important; }
               </style>
             </head>
             <body>

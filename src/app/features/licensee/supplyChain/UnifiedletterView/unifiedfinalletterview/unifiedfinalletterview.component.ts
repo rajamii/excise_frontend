@@ -904,15 +904,27 @@ export class UnifiedfinalletterviewComponent implements OnInit {
         }
         .final-letter-container {
           width: 198mm;
-          height: auto;
-          min-height: 0;
+          min-height: calc(297mm - 12mm);
+          height: calc(297mm - 12mm);
           margin: 0 auto;
-          padding: 9mm 11mm;
+          padding: 8mm 11mm 6mm 11mm;
           position: relative;
           overflow: hidden;
-          border: 1.5px solid #555;
+          border: 2px solid #1e3a8a;
           background: #fff;
           page-break-inside: avoid;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          box-sizing: border-box;
+        }
+        .letter-body-content {
+          flex: 1 0 auto;
+        }
+        .letter-footer-section {
+          margin-top: auto !important;
+          border-top: 1px solid #cbd5e1 !important;
+          padding-top: 8px !important;
         }
         .print-watermark {
           position: absolute;

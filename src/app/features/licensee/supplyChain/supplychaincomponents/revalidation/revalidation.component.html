@@ -194,9 +194,9 @@
                       <i class="bi bi-receipt"></i>
                     </button>
                   </div>
-                  <!-- Yellow Request Revalidation Button -->
+                  <!-- Yellow Request Revalidation Button (Licensee Only) -->
                   <button
-                    *ngIf="item.allowedActions && item.allowedActions.length > 0"
+                    *ngIf="shouldShowRequestRevalidation(item)"
                     type="button"
                     class="btn-reval-request"
                     (click)="requestRevlidation(item)"

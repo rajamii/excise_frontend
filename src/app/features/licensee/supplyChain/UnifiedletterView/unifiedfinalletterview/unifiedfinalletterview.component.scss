@@ -53,9 +53,20 @@
   max-width: 800px;
   margin: 0 auto;
   box-shadow: 0 0 20px rgba(0,0,0,0.1);
-  border: 2px solid #4f4f4f;
+  border: 2px solid #1e3a8a;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   box-sizing: border-box;
   overflow: hidden;
+}
+
+.letter-body-content {
+  flex: 1 0 auto;
+}
+
+.letter-footer-section {
+  margin-top: auto;
 }
 
 .print-watermark {

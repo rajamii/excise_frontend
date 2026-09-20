@@ -971,6 +971,13 @@ export class FinalrequistionlettersComponent implements OnInit {
               text-align: center !important;
               min-width: 180px !important;
             }
+            .permit-copy .signature-holder .signature-image {
+              max-height: 42px !important;
+              width: auto !important;
+              object-fit: contain !important;
+              display: block !important;
+              margin: 0 auto 2px auto !important;
+            }
             .permit-copy .signature-holder .signature-space {
               height: 36px !important;
             }
