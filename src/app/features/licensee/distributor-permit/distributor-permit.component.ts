@@ -4173,7 +4173,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   isCurrentPermitDisabledForCancellation(): boolean {
     const selected = this.availablePermitOptionsForCancellation.filter(o => o.selected);
     if (selected.length === 0) return true;
-    return selected.some(opt => opt.isUnderProcess || opt.isCancelled || opt.isArrivalApproved || (opt as any).isRevalidated);
+    return selected.some(opt => opt.isUnderProcess || opt.isCancelled || opt.isArrivalApproved);
   }
 
   closeCancellationModal(): void {
@@ -5505,7 +5505,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }
 
     const invalidSelected = this.availablePermitOptionsForCancellation.filter(
-      opt => opt.selected && (opt.isCancelled || opt.isUnderProcess || opt.isRevalidated || opt.isArrivalApproved)
+      opt => opt.selected && (opt.isCancelled || opt.isUnderProcess || opt.isArrivalApproved)
     );
     if (invalidSelected.length > 0) {
       const names = invalidSelected.map(o => o.permitNumber).join(', ');
@@ -5517,9 +5517,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       alert('Please accept the declaration to proceed.');
       return;
     }
-    if (!this.cancellationReasonDetails.trim()) {
-      alert('Please enter detailed remarks/reason for cancellation.');
-      return;
+    if (!this.cancellationReasonDetails || !this.cancellationReasonDetails.trim()) {
+      this.cancellationReasonDetails = this.cancellationReasonType || 'Non-availability of tankers / Transport issues';
     }
 
     const importFeeSum = this.getCancellationGrandTotalImportFee();
