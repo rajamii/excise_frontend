@@ -3563,6 +3563,14 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         if (this.isCompanyRegistration() || this.isCompanyCollaboration()) {
             base.push('MAKE_PAYMENT', 'PAY');
         }
+        if (this.isCompanyCollaboration()) {
+            const isPaid = Boolean(this.applicationData?.['is_license_fee_paid'] || this.applicationData?.['is_paid'] || this.applicationData?.['isLicenseFeePaid']);
+            const stageName = String(this.applicationData?.['current_stage_name'] ?? this.applicationData?.['current_stage'] ?? '').toLowerCase();
+            const stageId = Number((this.applicationData as any)?.current_stage?.id || (this.applicationData as any)?.current_stage_id || (this.applicationData as any)?.currentStage || 0);
+            if (stageId === 144 || stageName.includes('final_commissioner_review') || (isPaid && (stageName.includes('commissioner') || stageName.includes('final')))) {
+                base.push('REJECT');
+            }
+        }
         return base;
     }
 
@@ -3594,6 +3602,14 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                     .filter(a => !!a && a !== 'VIEW');
                 if (this.isCompanyRegistration() || this.isCompanyCollaboration()) {
                     actions = actions.filter(a => a !== 'MAKE_PAYMENT' && a !== 'PAY');
+                }
+                if (this.isCompanyCollaboration()) {
+                    const isPaid = Boolean(this.applicationData?.['is_license_fee_paid'] || this.applicationData?.['is_paid'] || this.applicationData?.['isLicenseFeePaid']);
+                    const stageName = String(this.applicationData?.['current_stage_name'] ?? this.applicationData?.['current_stage'] ?? '').toLowerCase();
+                    const stageId = Number((this.applicationData as any)?.current_stage?.id || (this.applicationData as any)?.current_stage_id || (this.applicationData as any)?.currentStage || 0);
+                    if (stageId === 144 || stageName.includes('final_commissioner_review') || (isPaid && (stageName.includes('commissioner') || stageName.includes('final')))) {
+                        actions = actions.filter(a => a !== 'REJECT');
+                    }
                 }
                 if (actions.length > 0) {
                     return Array.from(new Set(actions));

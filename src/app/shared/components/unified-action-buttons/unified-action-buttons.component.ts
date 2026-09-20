@@ -1061,6 +1061,21 @@ private getTransitRejectSummary(): {
     return stageId === 143 || stageName.includes('awaiting_payment') || (stageName.includes('awaiting') && stageName.includes('payment'));
   }
 
+  private isCompanyCollabPostPaymentReview(): boolean {
+    if (this.itemType !== 'company-collaboration') return false;
+    const stageName = String(
+      this.item?.['current_stage_name'] ??
+      this.item?.['currentStageName'] ??
+      this.item?.['current_stage'] ??
+      this.item?.status ??
+      ''
+    ).toLowerCase();
+    const stageId = Number(this.item?.['current_stage']?.id || this.item?.['current_stage_id'] || this.item?.['currentStage'] || 0);
+    const isPaid = Boolean(this.item?.['is_license_fee_paid'] || this.item?.['is_paid'] || this.item?.['isLicenseFeePaid']);
+
+    return stageId === 144 || stageName.includes('final_commissioner_review') || (isPaid && (stageName.includes('commissioner') || stageName.includes('final')));
+  }
+
   private getNewLicenseFeeAmounts(): { licenseFee: number; securityFee: number; total: number } {
     const licenseFee = this.toNumber(
       this.item?.['license_fee_amount'] ??
@@ -1917,6 +1932,11 @@ private getTransitRejectSummary(): {
       }
     }
 
+    // Company Collaboration: after payment is completed (final review), hide the Reject button so only Approve is available.
+    if (this.isCompanyCollabPostPaymentReview()) {
+      result = result.filter(config => this.normalizeActionName(config.action) !== 'REJECT');
+    }
+
     // Salesman/Barman awaiting payment: always remove the raw PAY workflow action
     // when a MAKE_PAYMENT button is already present, to prevent duplicate payment buttons.
     // Also: if stage is awaiting_payment for salesman-barman licensee context but
@@ -1975,6 +1995,23 @@ private getTransitRejectSummary(): {
             tooltip: 'Pay company registration fee from license fee wallet'
           });
         }
+      }
+    }
+
+    if (this.itemType === 'company-collaboration') {
+      const isPaid = Boolean(this.item?.['is_license_fee_paid'] || this.item?.['is_paid'] || this.item?.['isLicenseFeePaid']);
+      const stageName = String(
+        this.item?.['current_stage_name'] ??
+        this.item?.['currentStageName'] ??
+        this.item?.['current_stage'] ??
+        this.item?.status ??
+        ''
+      ).toLowerCase();
+      const stageId = Number(this.item?.['current_stage']?.id || this.item?.['current_stage_id'] || this.item?.['currentStage'] || 0);
+      const isPostPaymentReview = stageId === 144 || stageName.includes('final_commissioner_review') || (isPaid && (stageName.includes('commissioner') || stageName.includes('final')));
+
+      if (isPostPaymentReview) {
+        result = result.filter(config => this.normalizeActionName(config.action) !== 'REJECT');
       }
     }
 
