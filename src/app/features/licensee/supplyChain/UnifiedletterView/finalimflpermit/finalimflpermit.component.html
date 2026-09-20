@@ -43,7 +43,7 @@
         <!-- Permit Info Row -->
         <div class="info-row d-flex justify-content-between align-items-center mb-3">
           <div class="permit-no">
-            Permit Number: <span class="underlined">{{ permitData.reference_no || permitData.referenceNo || 'CIV/839' }}</span>
+            Permit Number: <span class="underlined">{{ getPermitNumbersDisplay() }}</span>
           </div>
           <div class="permit-date">
             Date: <span>{{ (permitData.submitted_at || permitData.created_at || currentDate) | date:'dd/MM/yyyy' }}</span>
@@ -70,27 +70,41 @@
           <table class="liquor-table">
             <thead>
               <tr>
-                <th class="text-center" style="width: 10%;">Sl. No.</th>
-                <th class="text-start ps-3">Brand</th>
-                <th class="text-center" style="width: 15%;">Size</th>
-                <th class="text-center" style="width: 15%;">Cases</th>
-                <th class="text-end pe-3" style="width: 20%;">Bulk Litres</th>
+                <th class="text-center" style="width: 4%;">#</th>
+                <th class="text-start ps-1.5" style="width: 17%;">Permit No.</th>
+                <th class="text-start ps-1.5" style="width: 18%;">Brand</th>
+                <th class="text-center" style="width: 8%;">Size</th>
+                <th class="text-center" style="width: 6%;">Cases</th>
+                <th class="text-end pe-1.5" style="width: 10%;">Bulk Litres (BL)</th>
+                <th class="text-end pe-1.5" style="width: 11%;">Excise Duty</th>
+                <th class="text-end pe-1.5" style="width: 13%;">Additional Excise Duty</th>
+                <th class="text-end pe-1.5" style="width: 12%;">Import Pass Fee</th>
+                <th class="text-end pe-1.5" style="width: 11%;">Education Cess</th>
               </tr>
             </thead>
             <tbody>
               <tr *ngFor="let item of getLineItems(); let idx = index">
                 <td class="text-center">{{ idx + 1 }}</td>
-                <td class="text-start ps-3 fw-semibold">{{ item.brand_name || item.brandName || item.brand }}</td>
-                <td class="text-center">{{ item.size_ml || item.sizeMl || item.size || 750 }} ml</td>
-                <td class="text-center">{{ getItemCases(item) }}</td>
-                <td class="text-end pe-3">{{ getItemBulkLitres(item) | number:'1.2-2' }}</td>
+                <td class="text-start ps-1.5 fw-semibold">{{ item.permit_number }}</td>
+                <td class="text-start ps-1.5 fw-semibold">{{ cleanBrandName(item.brand_name || item.brandName || item.brand) }}</td>
+                <td class="text-center">{{ item.size_ml }} ml</td>
+                <td class="text-center fw-bold">{{ item.cases }}</td>
+                <td class="text-end pe-1.5 fw-bold text-nowrap">{{ item.bulk_litres | number:'1.2-2' }} BL</td>
+                <td class="text-end pe-1.5 text-nowrap">{{ getItemEdp(item) | currency:'INR':'symbol':'1.2-2' }}</td>
+                <td class="text-end pe-1.5 text-nowrap">{{ getItemAddEd(item) | currency:'INR':'symbol':'1.2-2' }}</td>
+                <td class="text-end pe-1.5 text-success fw-bold text-nowrap">{{ getItemImport(item) | currency:'INR':'symbol':'1.2-2' }}</td>
+                <td class="text-end pe-1.5 text-nowrap">{{ getItemCess(item) | currency:'INR':'symbol':'1.2-2' }}</td>
               </tr>
             </tbody>
             <tfoot>
               <tr class="total-row fw-bold">
-                <td colspan="3" class="text-end pe-3">Total</td>
-                <td class="text-center">{{ getTotalCases() }}</td>
-                <td class="text-end pe-3">{{ getTotalBulkLitres() | number:'1.2-2' }}</td>
+                <td colspan="4" class="text-end pe-2">Total</td>
+                <td class="text-center fw-bold">{{ getTotalCases() }}</td>
+                <td class="text-end pe-1.5 fw-bold text-nowrap">{{ getTotalBulkLitres() | number:'1.2-2' }} BL</td>
+                <td class="text-end pe-1.5 fw-bold text-nowrap">{{ getTotalEdp() | currency:'INR':'symbol':'1.2-2' }}</td>
+                <td class="text-end pe-1.5 fw-bold text-nowrap">{{ getTotalAddEd() | currency:'INR':'symbol':'1.2-2' }}</td>
+                <td class="text-end pe-1.5 text-success fw-bold text-nowrap">{{ getTotalImport() | currency:'INR':'symbol':'1.2-2' }}</td>
+                <td class="text-end pe-1.5 fw-bold text-nowrap">{{ getTotalCess() | currency:'INR':'symbol':'1.2-2' }}</td>
               </tr>
             </tfoot>
           </table>

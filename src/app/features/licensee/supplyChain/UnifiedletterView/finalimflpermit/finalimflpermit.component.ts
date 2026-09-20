@@ -50,11 +50,14 @@ export class FinalimflpermitComponent implements OnInit {
     }
 
     const ref = this.route.snapshot.queryParams['ref'] || this.route.snapshot.queryParams['id'];
-    if (ref && (!this.permitData || (this.permitData.reference_no !== ref && this.permitData.referenceNo !== ref))) {
+    const pWise = this.permitData?.permit_wise_details || this.permitData?.permitWiseDetails;
+    const hasItems = (Array.isArray(this.permitData?.line_items) && this.permitData.line_items.length > 0) || (Array.isArray(pWise) && pWise.length > 0);
+
+    if (ref && (!this.permitData || (this.permitData.reference_no !== ref && this.permitData.referenceNo !== ref) || !hasItems)) {
       this.permitService.getApplication(ref).subscribe({
         next: (res: any) => {
           if (res) {
-            this.permitData = res;
+            this.permitData = { ...(this.permitData || {}), ...res };
           }
         },
         error: (err: any) => console.error('Failed to load IMFL permit data by ref:', err)
@@ -62,42 +65,194 @@ export class FinalimflpermitComponent implements OnInit {
     }
   }
 
+  getPermitNumbersDisplay(): string {
+    if (!this.permitData) return 'CIV/839';
+    const pWise = this.permitData.permit_wise_details || this.permitData.permitWiseDetails;
+    if (Array.isArray(pWise) && pWise.length > 0) {
+      const pNums = pWise
+        .map((p: any, idx: number) => p.permit_number || p.permitNumber || p.permit_no || (this.permitData.reference_no ? `${this.permitData.reference_no}-P${idx + 1}` : `Permit #${idx + 1}`))
+        .filter(Boolean);
+      if (pNums.length > 0) {
+        return pNums.join(', ');
+      }
+    }
+    return this.permitData.reference_no || this.permitData.referenceNo || 'CIV/839';
+  }
+
   getLineItems(): any[] {
     if (!this.permitData) return [];
-    if (Array.isArray(this.permitData.line_items) && this.permitData.line_items.length > 0) {
-      return this.permitData.line_items;
+
+    const pWise = this.permitData.permit_wise_details || this.permitData.permitWiseDetails;
+    const items: any[] = [];
+
+    if (Array.isArray(pWise) && pWise.length > 0) {
+      pWise.forEach((p: any, pIdx: number) => {
+        const permitNo = p.permit_number || p.permitNumber || p.permit_no || (this.permitData.reference_no ? `${this.permitData.reference_no}-P${pIdx + 1}` : `Permit #${pIdx + 1}`);
+        const pItems = p.line_items || p.lineItems || p.items || [];
+        if (Array.isArray(pItems) && pItems.length > 0) {
+          pItems.forEach((it: any) => {
+            const cases = this.getItemCases(it, p);
+            const sizeMl = this.getItemSizeMl(it);
+            const bl = this.getItemBulkLitres(it, cases, sizeMl);
+            items.push({
+              ...it,
+              permit_number: it.permit_number || it.permitNumber || permitNo,
+              brand_name: it.brand_name || it.brandName || it.brand || 'IMFL Brand',
+              size_ml: sizeMl,
+              cases: cases,
+              bulk_litres: bl
+            });
+          });
+        } else {
+          const cases = Number(p.total_cases ?? p.totalCases ?? p.cases ?? 1);
+          const topItems = this.permitData.line_items || this.permitData.lineItems || this.permitData.items || [];
+          const matchedTop = topItems[pIdx] || topItems[0];
+          const bName = matchedTop ? (matchedTop.brand_name || matchedTop.brandName || matchedTop.brand) : 'IMFL Brand';
+          const sizeMl = matchedTop ? this.getItemSizeMl(matchedTop) : 750;
+          const directBL = p.total_bulk_litres ?? p.totalBulkLitres;
+          const bl = (directBL !== undefined && directBL !== null && directBL !== '' && !isNaN(Number(directBL)))
+            ? Number(directBL)
+            : this.getItemBulkLitres(matchedTop || {}, cases, sizeMl);
+
+          items.push({
+            permit_number: permitNo,
+            brand_name: bName,
+            size_ml: sizeMl,
+            cases: cases,
+            bulk_litres: bl
+          });
+        }
+      });
+      if (items.length > 0) {
+        return items;
+      }
     }
-    if (Array.isArray(this.permitData.lineItems) && this.permitData.lineItems.length > 0) {
-      return this.permitData.lineItems;
-    }
-    return [];
+
+    const rawItems = (Array.isArray(this.permitData.line_items) && this.permitData.line_items.length > 0)
+      ? this.permitData.line_items
+      : (Array.isArray(this.permitData.lineItems) && this.permitData.lineItems.length > 0)
+        ? this.permitData.lineItems
+        : (Array.isArray(this.permitData.items) && this.permitData.items.length > 0)
+          ? this.permitData.items
+          : [];
+
+    return rawItems.map((it: any, idx: number) => {
+      const cases = this.getItemCases(it);
+      const sizeMl = this.getItemSizeMl(it);
+      const bl = this.getItemBulkLitres(it, cases, sizeMl);
+      const permitNo = it.permit_number || it.permitNumber || (this.permitData.reference_no ? `${this.permitData.reference_no}-P${idx + 1}` : `Permit #${idx + 1}`);
+      return {
+        ...it,
+        permit_number: permitNo,
+        brand_name: it.brand_name || it.brandName || it.brand || 'IMFL Brand',
+        size_ml: sizeMl,
+        cases: cases,
+        bulk_litres: bl
+      };
+    });
   }
 
-  getItemCases(item: any): number {
-    if (!item) return 0;
-    const cases = Number(item.cases ?? item.no_of_cases ?? item.quantity_cases ?? item.case_quantity ?? item.total_cases ?? 0);
-    return isNaN(cases) ? 0 : cases;
+  getItemSizeMl(item: any): number {
+    if (!item) return 750;
+    const val = item.size_ml ?? item.sizeMl ?? item.size;
+    if (typeof val === 'string') {
+      const parsed = parseInt(val.replace(/\D/g, ''), 10);
+      return isNaN(parsed) || parsed <= 0 ? 750 : parsed;
+    }
+    const num = Number(val);
+    return isNaN(num) || num <= 0 ? 750 : num;
   }
 
-  getItemBulkLitres(item: any): number {
+  getItemCases(item: any, parentPermit?: any): number {
+    if (!item && !parentPermit) return 1;
+    const val = item?.cases ?? item?.quantity_cases ?? item?.quantityCases ?? item?.no_of_cases ?? item?.case_quantity ?? item?.quantity ?? item?.total_cases ?? item?.totalCases ?? parentPermit?.total_cases ?? parentPermit?.totalCases ?? parentPermit?.cases;
+    const num = Number(val);
+    if (!isNaN(num) && num > 0) {
+      return num;
+    }
+    const totalCases = Number(this.permitData?.total_cases ?? this.permitData?.totalCases ?? 0);
+    if (totalCases > 0) {
+      return totalCases;
+    }
+    return 1;
+  }
+
+  getItemBulkLitres(item: any, cases?: number, sizeMl?: number): number {
     if (!item) return 0;
-    const directBL = item.bulk_litres ?? item.bulkLitres ?? item.bulk_liter ?? item.bulkLiter ?? item.total_bl ?? item.total_bulk_litres;
-    if (directBL !== undefined && directBL !== null && directBL !== '' && !isNaN(Number(directBL))) {
+    const directBL = item.bulk_litres ?? item.bulkLitres ?? item.bulk_liter ?? item.bulkLiter ?? item.total_bl ?? item.total_bulk_litres ?? item.totalBulkLitres;
+    if (directBL !== undefined && directBL !== null && directBL !== '' && !isNaN(Number(directBL)) && Number(directBL) > 0) {
       return Number(directBL);
     }
-    const cases = this.getItemCases(item);
-    const sizeMl = Number(item.size_ml || item.sizeMl || item.size || 750);
-    const bottlesPerCase = Number(item.bottles_per_case || item.bottlesPerCase || item.case_size || (sizeMl === 750 ? 12 : sizeMl === 375 ? 24 : sizeMl === 180 ? 48 : 12));
-    const calculatedBL = (cases * bottlesPerCase * (isNaN(sizeMl) ? 750 : sizeMl)) / 1000;
-    return isNaN(calculatedBL) ? (cases * 9) : calculatedBL;
+    const c = cases !== undefined ? cases : this.getItemCases(item);
+    const s = sizeMl !== undefined ? sizeMl : this.getItemSizeMl(item);
+    const bottlesPerCase = Number(item.pieces_per_case || item.piecesPerCase || item.bottles_per_case || item.bottlesPerCase || item.case_size || (s === 750 ? 12 : s === 375 ? 24 : s === 180 ? 48 : 12));
+    const calculatedBL = (c * bottlesPerCase * s) / 1000;
+    return isNaN(calculatedBL) || calculatedBL <= 0 ? (c * 9) : calculatedBL;
+  }
+
+  getItemEdp(item: any): number {
+    if (!item) return 0;
+    const total = item.total_edp ?? item.totalEdp ?? item.total_excise_duty ?? item.totalExciseDuty ?? item.excise_duty_amount;
+    if (total !== undefined && total !== null && !isNaN(Number(total)) && Number(total) > 0) return Number(total);
+    const rawRate = item.edp_per_case ?? item.edpPerCase ?? item.edp ?? item.excise_duty_per_case ?? item.exciseDutyPerCase ?? item.excise_duty ?? item.exciseDuty ?? item.duty_per_case ?? item.duty;
+    const rate = (rawRate !== undefined && rawRate !== null && !isNaN(Number(rawRate)) && Number(rawRate) > 0) ? Number(rawRate) : 5800;
+    const cases = Number(item.cases || this.getItemCases(item));
+    return rate * cases;
+  }
+
+  getItemAddEd(item: any): number {
+    if (!item) return 0;
+    const total = item.total_additional_ed ?? item.totalAdditionalEd ?? item.totalAddEd;
+    if (total !== undefined && total !== null && !isNaN(Number(total))) return Number(total);
+    const rate = Number(item.additional_ed_per_case || item.additionalEdPerCase || item.add_ed || 350);
+    const cases = Number(item.cases || this.getItemCases(item));
+    return rate * cases;
+  }
+
+  getItemImport(item: any): number {
+    if (!item) return 0;
+    const total = item.total_import ?? item.totalImport ?? item.totalImportFee;
+    if (total !== undefined && total !== null && !isNaN(Number(total))) return Number(total);
+    const rate = Number(item.import_pass_fee_per_case || item.importPassFeePerCase || item.import_fee || 1400);
+    const cases = Number(item.cases || this.getItemCases(item));
+    return rate * cases;
+  }
+
+  getItemCess(item: any): number {
+    if (!item) return 0;
+    const total = item.total_education_cess ?? item.totalEducationCess ?? item.cess;
+    if (total !== undefined && total !== null && !isNaN(Number(total))) return Number(total);
+    const rate = Number(item.education_cess_per_case || item.educationCessPerCase || 60);
+    const cases = Number(item.cases || this.getItemCases(item));
+    return rate * cases;
   }
 
   getTotalCases(): number {
-    return this.getLineItems().reduce((sum, item) => sum + this.getItemCases(item), 0);
+    return this.getLineItems().reduce((sum, item) => sum + (Number(item.cases) || this.getItemCases(item)), 0);
   }
 
   getTotalBulkLitres(): number {
-    return this.getLineItems().reduce((sum, item) => sum + this.getItemBulkLitres(item), 0);
+    return this.getLineItems().reduce((sum, item) => sum + (Number(item.bulk_litres) || this.getItemBulkLitres(item)), 0);
+  }
+
+  getTotalEdp(): number {
+    return this.getLineItems().reduce((sum, item) => sum + this.getItemEdp(item), 0);
+  }
+
+  getTotalAddEd(): number {
+    return this.getLineItems().reduce((sum, item) => sum + this.getItemAddEd(item), 0);
+  }
+
+  getTotalImport(): number {
+    return this.getLineItems().reduce((sum, item) => sum + this.getItemImport(item), 0);
+  }
+
+  getTotalCess(): number {
+    return this.getLineItems().reduce((sum, item) => sum + this.getItemCess(item), 0);
+  }
+
+  cleanBrandName(name: string): string {
+    return String(name || '').trim().replace(/^`+|`+$/g, '');
   }
 
   getValidityDate(): string {
@@ -169,9 +324,9 @@ export class FinalimflpermitComponent implements OnInit {
           .pass-title { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #1e3a8a; }
           .info-row { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; font-weight: bold; margin-bottom: 10px; }
           .auth-paragraph { font-size: 12.5px; line-height: 1.6; text-align: justify; margin-bottom: 12px; }
-          .table-heading { font-size: 12.5px; font-weight: bold; text-decoration: underline; text-align: center; margin-bottom: 6px; }
-          .liquor-table { width: 100% !important; border-collapse: collapse !important; font-size: 11.5px !important; margin-bottom: 12px !important; }
-          .liquor-table th, .liquor-table td { border: 1.2px solid #000 !important; padding: 5px 8px !important; }
+          .table-heading { font-size: 12px; font-weight: bold; text-decoration: underline; text-align: center; margin-bottom: 6px; }
+          .liquor-table { width: 100% !important; border-collapse: collapse !important; font-size: 9.5px !important; margin-bottom: 10px !important; }
+          .liquor-table th, .liquor-table td { border: 1.2px solid #000 !important; padding: 3.5px 4px !important; }
           .liquor-table th { background-color: #f1f5f9 !important; font-weight: 700 !important; text-align: center !important; }
           .liquor-table tfoot td { background-color: #f8fafc !important; font-weight: 700 !important; }
           .signature-block { margin-top: 10px; margin-bottom: 10px; }

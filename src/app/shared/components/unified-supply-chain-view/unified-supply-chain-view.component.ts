@@ -3864,6 +3864,9 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                 route_details: app['route_details'] || app['routeDetails'] || '',
                 submitted_at: app['submitted_at'] || app['created_at'] || '',
                 status: app['status'] || 'Approved',
+                total_cases: app['total_cases'] || app['totalCases'] || 0,
+                total_bulk_litres: app['total_bulk_litres'] || app['totalBulkLitres'] || 0,
+                permit_wise_details: app['permit_wise_details'] || app['permitWiseDetails'] || [],
                 line_items: Array.isArray(app['line_items']) ? app['line_items']
                          : Array.isArray(app['lineItems'])   ? app['lineItems']
                          : []
@@ -5774,9 +5777,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
 
     getItemEdp(item: any): number {
         if (!item) return 0;
-        const total = item.total_edp ?? item.totalEdp;
-        if (total !== undefined && total !== null) return Number(total);
-        const rate = Number(item.edp_per_case || item.edpPerCase || item.edp || 0);
+        const total = item.total_edp ?? item.totalEdp ?? item.total_excise_duty ?? item.totalExciseDuty ?? item.excise_duty_amount;
+        if (total !== undefined && total !== null && !isNaN(Number(total)) && Number(total) > 0) return Number(total);
+        const rawRate = item.edp_per_case ?? item.edpPerCase ?? item.edp ?? item.excise_duty_per_case ?? item.exciseDutyPerCase ?? item.excise_duty ?? item.exciseDuty ?? item.duty_per_case ?? item.duty;
+        const rate = (rawRate !== undefined && rawRate !== null && !isNaN(Number(rawRate)) && Number(rawRate) > 0) ? Number(rawRate) : 5800;
         const cases = Number(item.cases || item.quantity_cases || item.quantityCases || 1);
         return rate * cases;
     }
@@ -5818,17 +5822,80 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         return (sizeMl * bpc * cases) / 1000;
     }
 
-    getPermitTotalEdp(pDetail: any): number {
-        if (pDetail?.total_edp !== undefined && pDetail?.total_edp !== null) return Number(pDetail.total_edp);
-        if (pDetail?.totalEdp !== undefined && pDetail?.totalEdp !== null) return Number(pDetail.totalEdp);
-        const items = pDetail?.line_items || pDetail?.lineItems || [];
+    getPermitLineItems(pDetail: any, pIdx: number = 0): any[] {
+        if (!pDetail) return [];
+        if (Array.isArray(pDetail.line_items) && pDetail.line_items.length > 0) return pDetail.line_items;
+        if (Array.isArray(pDetail.lineItems) && pDetail.lineItems.length > 0) return pDetail.lineItems;
+        if (Array.isArray(pDetail.items) && pDetail.items.length > 0) return pDetail.items;
+
+        const appLineItems = Array.isArray(this.applicationData?.['lineItems']) && this.applicationData['lineItems'].length > 0
+            ? this.applicationData['lineItems']
+            : Array.isArray(this.applicationData?.['line_items']) && this.applicationData['line_items'].length > 0
+                ? this.applicationData['line_items']
+                : [];
+
+        if (appLineItems.length > 0) {
+            const pNum = (pDetail.permit_number || pDetail.permitNumber || '').toLowerCase().trim();
+            if (pNum) {
+                const matched = appLineItems.filter((it: any) => {
+                    const itPNum = String(it.permit_number || it.permitNumber || '').toLowerCase().trim();
+                    return itPNum === pNum;
+                });
+                if (matched.length > 0) return matched;
+            }
+            if (appLineItems[pIdx]) {
+                return [{
+                    ...appLineItems[pIdx],
+                    cases: pDetail.total_cases ?? pDetail.totalCases ?? pDetail.cases ?? appLineItems[pIdx].cases ?? 1
+                }];
+            }
+            return appLineItems.map((it: any) => ({
+                ...it,
+                cases: pDetail.total_cases ?? pDetail.totalCases ?? pDetail.cases ?? it.cases ?? 1
+            }));
+        }
+        return [];
+    }
+
+    getPermitTotalCases(pDetail: any, pIdx: number = 0): number {
+        if (pDetail?.total_cases !== undefined && pDetail?.total_cases !== null && !isNaN(Number(pDetail.total_cases)) && Number(pDetail.total_cases) > 0) return Number(pDetail.total_cases);
+        if (pDetail?.totalCases !== undefined && pDetail?.totalCases !== null && !isNaN(Number(pDetail.totalCases)) && Number(pDetail.totalCases) > 0) return Number(pDetail.totalCases);
+        const items = this.getPermitLineItems(pDetail, pIdx);
+        return items.reduce((sum: number, it: any) => sum + Number(it.cases || it.quantity_cases || it.quantityCases || 1), 0);
+    }
+
+    getPermitTotalBulkLitres(pDetail: any, pIdx: number = 0): number {
+        if (pDetail?.total_bulk_litres !== undefined && pDetail?.total_bulk_litres !== null && !isNaN(Number(pDetail.total_bulk_litres)) && Number(pDetail.total_bulk_litres) > 0) return Number(pDetail.total_bulk_litres);
+        if (pDetail?.totalBulkLitres !== undefined && pDetail?.totalBulkLitres !== null && !isNaN(Number(pDetail.totalBulkLitres)) && Number(pDetail.totalBulkLitres) > 0) return Number(pDetail.totalBulkLitres);
+        const items = this.getPermitLineItems(pDetail, pIdx);
+        return items.reduce((sum: number, it: any) => sum + this.getItemBl(it), 0);
+    }
+
+    getPermitTotalEdp(pDetail: any, pIdx: number = 0): number {
+        if (pDetail?.total_edp !== undefined && pDetail?.total_edp !== null && !isNaN(Number(pDetail.total_edp))) return Number(pDetail.total_edp);
+        if (pDetail?.totalEdp !== undefined && pDetail?.totalEdp !== null && !isNaN(Number(pDetail.totalEdp))) return Number(pDetail.totalEdp);
+        const items = this.getPermitLineItems(pDetail, pIdx);
         return items.reduce((sum: number, it: any) => sum + this.getItemEdp(it), 0);
     }
 
-    getPermitTotalCess(pDetail: any): number {
-        if (pDetail?.total_education_cess !== undefined && pDetail?.total_education_cess !== null) return Number(pDetail.total_education_cess);
-        if (pDetail?.totalEducationCess !== undefined && pDetail?.totalEducationCess !== null) return Number(pDetail.totalEducationCess);
-        const items = pDetail?.line_items || pDetail?.lineItems || [];
+    getPermitTotalAddEd(pDetail: any, pIdx: number = 0): number {
+        if (pDetail?.total_additional_ed !== undefined && pDetail?.total_additional_ed !== null && !isNaN(Number(pDetail.total_additional_ed)) && Number(pDetail.total_additional_ed) > 0) return Number(pDetail.total_additional_ed);
+        if (pDetail?.totalAdditionalEd !== undefined && pDetail?.totalAdditionalEd !== null && !isNaN(Number(pDetail.totalAdditionalEd)) && Number(pDetail.totalAdditionalEd) > 0) return Number(pDetail.totalAdditionalEd);
+        const items = this.getPermitLineItems(pDetail, pIdx);
+        return items.reduce((sum: number, it: any) => sum + this.getItemAddEd(it), 0);
+    }
+
+    getPermitTotalImportFee(pDetail: any, pIdx: number = 0): number {
+        if (pDetail?.total_import_fee !== undefined && pDetail?.total_import_fee !== null && !isNaN(Number(pDetail.total_import_fee)) && Number(pDetail.total_import_fee) > 0) return Number(pDetail.total_import_fee);
+        if (pDetail?.totalImportFee !== undefined && pDetail?.totalImportFee !== null && !isNaN(Number(pDetail.totalImportFee)) && Number(pDetail.totalImportFee) > 0) return Number(pDetail.totalImportFee);
+        const items = this.getPermitLineItems(pDetail, pIdx);
+        return items.reduce((sum: number, it: any) => sum + this.getItemImport(it), 0);
+    }
+
+    getPermitTotalCess(pDetail: any, pIdx: number = 0): number {
+        if (pDetail?.total_education_cess !== undefined && pDetail?.total_education_cess !== null && !isNaN(Number(pDetail.total_education_cess)) && Number(pDetail.total_education_cess) > 0) return Number(pDetail.total_education_cess);
+        if (pDetail?.totalEducationCess !== undefined && pDetail?.totalEducationCess !== null && !isNaN(Number(pDetail.totalEducationCess)) && Number(pDetail.totalEducationCess) > 0) return Number(pDetail.totalEducationCess);
+        const items = this.getPermitLineItems(pDetail, pIdx);
         return items.reduce((sum: number, it: any) => sum + this.getItemCess(it), 0);
     }
 }

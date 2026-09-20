@@ -6924,6 +6924,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       route_details: rawApp?.route_details || rawApp?.routeDetails || '',
       submitted_at: rawApp?.submitted_at || rawApp?.created_at || (row as any)?.submittedOn || '',
       status: rawApp?.status || (row as any)?.currentStage || 'Approved',
+      total_cases: rawApp?.total_cases || rawApp?.totalCases || app?.total_cases || app?.totalCases || (row as any)?.totalCases || 0,
+      total_bulk_litres: rawApp?.total_bulk_litres || rawApp?.totalBulkLitres || app?.total_bulk_litres || app?.totalBulkLitres || 0,
+      permit_wise_details: rawApp?.permit_wise_details || rawApp?.permitWiseDetails || app?.permit_wise_details || app?.permitWiseDetails || (row as any)?.permitWiseDetails || [],
       line_items: Array.isArray(rawApp?.line_items) && rawApp.line_items.length > 0 ? rawApp.line_items
                : Array.isArray(rawApp?.lineItems) && rawApp.lineItems.length > 0     ? rawApp.lineItems
                : Array.isArray(app?.line_items)                                       ? app.line_items
@@ -7589,8 +7592,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
                 brandName: li.brandName || li.brand_name || li.brand?.name || 'N/A',
                 sizeMl: li.sizeMl || li.size_ml || li.size || 0,
                 cases: li.cases || 0,
-                edpPerCase: li.edpPerCase || li.edp_per_case || 0,
-                importPassFeePerCase: li.importPassFeePerCase || li.import_pass_fee_per_case || 0,
+                edpPerCase: li.edpPerCase || li.edp_per_case || 5800,
+                importPassFeePerCase: li.importPassFeePerCase || li.import_pass_fee_per_case || 1400,
                 totalImport: li.totalImport || li.total_import_fee || li.total_import || 0,
                 bulkLitres: li.bulkLitres || li.bulk_litres || 0
               }))

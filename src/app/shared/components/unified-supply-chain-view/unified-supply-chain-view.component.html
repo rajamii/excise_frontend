@@ -233,9 +233,9 @@
                                         <span class="text-primary fw-bold">{{ pDetail.permit_number || pDetail.permitNumber }}</span>
                                     </div>
                                     <div class="d-flex gap-3 text-muted fs-7 me-3">
-                                        <span>Cases: <strong>{{ pDetail.total_cases || pDetail.totalCases }}</strong></span>
-                                        <span>Import Fee: <strong>₹{{ pDetail.total_import_fee || pDetail.totalImportFee | number:'1.2-2' }}</strong></span>
-                                        <span>Bulk Litres: <strong>{{ pDetail.total_bulk_litres || pDetail.totalBulkLitres | number:'1.2-2' }} BL</strong></span>
+                                        <span>Cases: <strong>{{ getPermitTotalCases(pDetail, pIdx) }}</strong></span>
+                                        <span>Import Fee: <strong>₹{{ getPermitTotalImportFee(pDetail, pIdx) | number:'1.2-2' }}</strong></span>
+                                        <span>Bulk Litres: <strong>{{ getPermitTotalBulkLitres(pDetail, pIdx) | number:'1.2-2' }} BL</strong></span>
                                     </div>
                                 </button>
                             </h2>
@@ -257,7 +257,7 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                <tr *ngFor="let item of pDetail.line_items || pDetail.lineItems; let idx = index">
+                                                <tr *ngFor="let item of getPermitLineItems(pDetail, pIdx); let idx = index">
                                                     <td class="text-muted fw-semibold">{{ idx + 1 }}</td>
                                                     <td class="fw-semibold text-primary">{{ item.brand_name || item.brandName || item.brand || 'IMFL Brand' }}</td>
                                                     <td class="text-secondary">{{ item.size_ml || item.sizeMl || 750 }} ml ({{ getPiecesPerCase(item.size_ml || item.sizeMl, item.pieces_per_case || item.piecesPerCase || item.bottles_per_case || item.bottlesPerCase) }} pcs/case)</td>
@@ -274,12 +274,12 @@
 
                                     <!-- Permit Subtotal Bar -->
                                     <div class="p-2.5 bg-light rounded border mt-3 d-flex flex-wrap gap-2 justify-content-around text-center">
-                                        <div><small class="text-muted d-block text-uppercase" style="font-size: 11px;">Total Cases</small><strong class="fs-6 font-monospace">{{ pDetail.total_cases || pDetail.totalCases }}</strong></div>
-                                        <div><small class="text-muted d-block text-uppercase" style="font-size: 11px;">Bulk Litres</small><strong class="text-primary fs-6 font-monospace">{{ (pDetail.total_bulk_litres || pDetail.totalBulkLitres) | number:'1.2-2' }} BL</strong></div>
-                                        <div><small class="text-muted d-block text-uppercase" style="font-size: 11px;">Excise Duty</small><strong class="text-dark fs-6 font-monospace">{{ getPermitTotalEdp(pDetail) | currency:'INR':'symbol':'1.2-2' }}</strong></div>
-                                        <div><small class="text-muted d-block text-uppercase" style="font-size: 11px;">Additional Excise Duty</small><strong class="text-dark fs-6 font-monospace">{{ (pDetail.total_additional_ed || pDetail.totalAdditionalEd || 0) | currency:'INR':'symbol':'1.2-2' }}</strong></div>
-                                        <div><small class="text-muted d-block text-uppercase" style="font-size: 11px;">Import Pass Fee</small><strong class="text-success fs-6 font-monospace">{{ (pDetail.total_import_fee || pDetail.totalImportFee || 0) | currency:'INR':'symbol':'1.2-2' }}</strong></div>
-                                        <div><small class="text-muted d-block text-uppercase" style="font-size: 11px;">Education Cess</small><strong class="text-dark fs-6 font-monospace">{{ getPermitTotalCess(pDetail) | currency:'INR':'symbol':'1.2-2' }}</strong></div>
+                                        <div><small class="text-muted d-block text-uppercase" style="font-size: 11px;">Total Cases</small><strong class="fs-6 font-monospace">{{ getPermitTotalCases(pDetail, pIdx) }}</strong></div>
+                                        <div><small class="text-muted d-block text-uppercase" style="font-size: 11px;">Bulk Litres</small><strong class="text-primary fs-6 font-monospace">{{ getPermitTotalBulkLitres(pDetail, pIdx) | number:'1.2-2' }} BL</strong></div>
+                                        <div><small class="text-muted d-block text-uppercase" style="font-size: 11px;">Excise Duty</small><strong class="text-dark fs-6 font-monospace">{{ getPermitTotalEdp(pDetail, pIdx) | currency:'INR':'symbol':'1.2-2' }}</strong></div>
+                                        <div><small class="text-muted d-block text-uppercase" style="font-size: 11px;">Additional Excise Duty</small><strong class="text-dark fs-6 font-monospace">{{ getPermitTotalAddEd(pDetail, pIdx) | currency:'INR':'symbol':'1.2-2' }}</strong></div>
+                                        <div><small class="text-muted d-block text-uppercase" style="font-size: 11px;">Import Pass Fee</small><strong class="text-success fs-6 font-monospace">{{ getPermitTotalImportFee(pDetail, pIdx) | currency:'INR':'symbol':'1.2-2' }}</strong></div>
+                                        <div><small class="text-muted d-block text-uppercase" style="font-size: 11px;">Education Cess</small><strong class="text-dark fs-6 font-monospace">{{ getPermitTotalCess(pDetail, pIdx) | currency:'INR':'symbol':'1.2-2' }}</strong></div>
                                     </div>
                                 </div>
                             </div>
@@ -526,9 +526,9 @@
                                         <span class="text-danger fw-bold fs-6">{{ pDetail.permit_number || pDetail.permitNumber }}</span>
                                     </div>
                                     <div class="d-flex gap-3 text-dark fs-7 me-3">
-                                        <span>Cases: <strong>{{ pDetail.total_cases || pDetail.totalCases }}</strong></span>
-                                        <span>Import Fee: <strong>₹{{ (pDetail.total_import_fee || pDetail.totalImportFee) | number:'1.2-2' }}</strong></span>
-                                        <span>Bulk Litres: <strong>{{ (pDetail.total_bulk_litres || pDetail.totalBulkLitres) | number:'1.2-2' }} BL</strong></span>
+                                        <span>Cases: <strong>{{ getPermitTotalCases(pDetail, pIdx) }}</strong></span>
+                                        <span>Import Fee: <strong>₹{{ getPermitTotalImportFee(pDetail, pIdx) | number:'1.2-2' }}</strong></span>
+                                        <span>Bulk Litres: <strong>{{ getPermitTotalBulkLitres(pDetail, pIdx) | number:'1.2-2' }} BL</strong></span>
                                     </div>
                                 </button>
                             </h2>
@@ -550,7 +550,7 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                <tr *ngFor="let item of pDetail.line_items || pDetail.lineItems; let itemIdx = index">
+                                                <tr *ngFor="let item of getPermitLineItems(pDetail, pIdx); let itemIdx = index">
                                                     <td>{{ itemIdx + 1 }}</td>
                                                     <td class="fw-semibold text-primary">{{ item.brand_name || item.brandName || item.brand || 'IMFL Brand' }}</td>
                                                     <td>{{ item.size_ml || item.sizeMl || 750 }} ml</td>
@@ -565,12 +565,12 @@
                                         </table>
                                     </div>
                                     <div class="p-2.5 bg-light rounded border d-flex flex-wrap gap-2 justify-content-around text-center small">
-                                        <div><span class="text-muted d-block text-uppercase" style="font-size: 11px;">Total Cases</span><strong class="fs-6 font-monospace">{{ pDetail.total_cases || pDetail.totalCases }}</strong></div>
-                                        <div><span class="text-muted d-block text-uppercase" style="font-size: 11px;">Bulk Litres</span><strong class="text-primary fs-6 font-monospace">{{ (pDetail.total_bulk_litres || pDetail.totalBulkLitres) | number:'1.2-2' }} BL</strong></div>
-                                        <div><span class="text-muted d-block text-uppercase" style="font-size: 11px;">Excise Duty</span><strong class="text-dark fs-6 font-monospace">{{ getPermitTotalEdp(pDetail) | currency:'INR':'symbol':'1.2-2' }}</strong></div>
-                                        <div><span class="text-muted d-block text-uppercase" style="font-size: 11px;">Additional Excise Duty</span><strong class="text-dark fs-6 font-monospace">{{ (pDetail.total_additional_ed || pDetail.totalAdditionalEd || 0) | currency:'INR':'symbol':'1.2-2' }}</strong></div>
-                                        <div><span class="text-muted d-block text-uppercase" style="font-size: 11px;">Import Pass Fee</span><strong class="text-success fs-6 font-monospace">{{ (pDetail.total_import_fee || pDetail.totalImportFee || 0) | currency:'INR':'symbol':'1.2-2' }}</strong></div>
-                                        <div><span class="text-muted d-block text-uppercase" style="font-size: 11px;">Education Cess</span><strong class="text-dark fs-6 font-monospace">{{ getPermitTotalCess(pDetail) | currency:'INR':'symbol':'1.2-2' }}</strong></div>
+                                        <div><span class="text-muted d-block text-uppercase" style="font-size: 11px;">Total Cases</span><strong class="fs-6 font-monospace">{{ getPermitTotalCases(pDetail, pIdx) }}</strong></div>
+                                        <div><span class="text-muted d-block text-uppercase" style="font-size: 11px;">Bulk Litres</span><strong class="text-primary fs-6 font-monospace">{{ getPermitTotalBulkLitres(pDetail, pIdx) | number:'1.2-2' }} BL</strong></div>
+                                        <div><span class="text-muted d-block text-uppercase" style="font-size: 11px;">Excise Duty</span><strong class="text-dark fs-6 font-monospace">{{ getPermitTotalEdp(pDetail, pIdx) | currency:'INR':'symbol':'1.2-2' }}</strong></div>
+                                        <div><span class="text-muted d-block text-uppercase" style="font-size: 11px;">Additional Excise Duty</span><strong class="text-dark fs-6 font-monospace">{{ getPermitTotalAddEd(pDetail, pIdx) | currency:'INR':'symbol':'1.2-2' }}</strong></div>
+                                        <div><span class="text-muted d-block text-uppercase" style="font-size: 11px;">Import Pass Fee</span><strong class="text-success fs-6 font-monospace">{{ getPermitTotalImportFee(pDetail, pIdx) | currency:'INR':'symbol':'1.2-2' }}</strong></div>
+                                        <div><span class="text-muted d-block text-uppercase" style="font-size: 11px;">Education Cess</span><strong class="text-dark fs-6 font-monospace">{{ getPermitTotalCess(pDetail, pIdx) | currency:'INR':'symbol':'1.2-2' }}</strong></div>
                                     </div>
                                 </div>
                             </div>
@@ -2254,9 +2254,9 @@
                             <i class="bi bi-receipt me-2"></i>View Payment Slip
                         </button>
 
-                        <!-- View Permit Slip: shown for requisition after final approval (commissioner & permit-section only) -->
+                        <!-- View Permit Slip: shown for ENA bulk spirit requisition after final approval (commissioner & permit-section only) -->
                         <button class="btn btn-success btn-lg application-footer-actions__print" type="button"
-                                *ngIf="isRequisition() && isApprovedApplication() && !isLicenseeContext()"
+                                *ngIf="isRequisition() && isApprovedApplication() && !isLicenseeContext() && !isImflRequisition()"
                                 (click)="openPermitSlipView()">
                             <i class="bi bi-file-earmark-text me-2"></i>View Permit Slip
                         </button>
