@@ -25,99 +25,92 @@
       <!-- Top Copy Type Indicator -->
       <div class="bill-type">{{ copyType }}</div>
 
-      <!-- Header Title -->
-      <div class="header text-center mb-3">
-        <div class="dept-title">EXCISE DEPARTMENT</div>
-        <div class="state-title">Government of Sikkim</div>
-      </div>
-
-      <!-- Pass Title -->
-      <div class="pass-title-box text-center my-3 py-2">
-        <div class="pass-title">PASS FOR THE IMPORT OF DUTY-PAID IMPORTED FOREIGN LIQUOR</div>
-      </div>
-
-      <!-- Permit Info Row -->
-      <div class="info-row d-flex justify-content-between align-items-center mb-3">
-        <div class="permit-no">
-          Permit Number: <span class="underlined">{{ permitData.reference_no || permitData.referenceNo || 'CIV/839' }}</span>
+      <div class="permit-body-content">
+        <!-- Header with Central Excise Logo -->
+        <div class="header text-center mb-3">
+          <div class="mb-2">
+            <img src="assets/Excise_Logo.png" alt="Excise Department Sikkim Logo" class="permit-logo-img" style="height: 60px; width: auto; object-fit: contain; display: inline-block;" />
+          </div>
+          <div class="dept-title">EXCISE DEPARTMENT</div>
+          <div class="state-title">Government of Sikkim</div>
         </div>
-        <div class="permit-date">
-          Date: <span>{{ (permitData.submitted_at || permitData.created_at || currentDate) | date:'dd/MM/yyyy' }}</span>
+
+        <!-- Pass Title -->
+        <div class="pass-title-box text-center my-3 py-2">
+          <div class="pass-title">PASS FOR THE IMPORT OF DUTY-PAID IMPORTED FOREIGN LIQUOR</div>
         </div>
-      </div>
 
-      <!-- Body Authorization Paragraph -->
-      <div class="auth-paragraph mb-4">
-        <strong>M/s {{ permitData.applicant_name || permitData.applicantName || permitData.supplier_company_name || 'Licensee' }}</strong> of 
-        <span>{{ permitData.source_address || permitData.applicantAddress || 'Gangtok, Sikkim' }}</span> is hereby authorized to import the under-mentioned description and quantity of duty-paid imported foreign liquor from 
-        <strong>{{ permitData.supplier_company_name || permitData.supplierName || 'Distributor/Supplier' }}</strong>, in the state of 
-        <span>{{ permitData.origin || 'Uttarakhand' }}</span>, to their premises at 
-        <span>{{ permitData.destination || 'Gangtok' }}</span>, in the district of 
-        <span>Gangtok</span>, in the state of Sikkim, for the purpose of wholesale.
-      </div>
-
-      <!-- Kind and Quantity Heading -->
-      <div class="table-heading text-center font-weight-bold mb-2">
-        Kind and quantity of imported foreign liquor
-      </div>
-
-      <!-- Liquor Items Table -->
-      <div class="table-container mb-4">
-        <table class="liquor-table">
-          <thead>
-            <tr>
-              <th class="text-center" style="width: 8%;">Sl. No.</th>
-              <th>Brand</th>
-              <th class="text-center" style="width: 15%;">Size</th>
-              <th class="text-center" style="width: 15%;">Cases</th>
-              <th class="text-right pe-3" style="width: 18%;">Bulk Litres</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let item of getLineItems(); let idx = index">
-              <td class="text-center">{{ idx + 1 }}</td>
-              <td>{{ item.brand_name || item.brandName || item.brand }}</td>
-              <td class="text-center">{{ item.size_ml || item.sizeMl || item.size || 750 }} ml</td>
-              <td class="text-center">{{ item.cases }}</td>
-              <td class="text-right pe-3">{{ item.bulk_litres || item.bulkLitres || (item.cases * 9) }}</td>
-            </tr>
-          </tbody>
-          <tfoot>
-            <tr class="total-row fw-bold">
-              <td colspan="3" class="text-right pe-3">Total</td>
-              <td class="text-center">{{ getTotalCases() }}</td>
-              <td class="text-right pe-3">{{ getTotalBulkLitres() }}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-
-      <!-- Stamp and Signature Block -->
-      <div class="signature-seal-block d-flex justify-content-between align-items-end my-5">
-        <!-- Round Seal -->
-        <div class="seal-container">
-          <div class="round-seal">
-            EXCISE DEPT<br>★ GOVT OF SIKKIM ★
+        <!-- Permit Info Row -->
+        <div class="info-row d-flex justify-content-between align-items-center mb-3">
+          <div class="permit-no">
+            Permit Number: <span class="underlined">{{ permitData.reference_no || permitData.referenceNo || 'CIV/839' }}</span>
+          </div>
+          <div class="permit-date">
+            Date: <span>{{ (permitData.submitted_at || permitData.created_at || currentDate) | date:'dd/MM/yyyy' }}</span>
           </div>
         </div>
 
-        <!-- Signature -->
-        <div class="signature-container text-center">
-          <div class="script-sig">Excise Officer</div>
-          <div class="sig-title">Excise Officer</div>
-          <div class="sig-subtitle">Commissioner</div>
-          <div class="sig-dept">Excise Department</div>
-          <div class="sig-gov">Government of Sikkim</div>
+        <!-- Body Authorization Paragraph -->
+        <div class="auth-paragraph mb-3">
+          <strong>M/s {{ permitData.applicant_name || permitData.applicantName || permitData.supplier_company_name || 'Licensee' }}</strong> of 
+          <span>{{ permitData.source_address || permitData.applicantAddress || 'Gangtok, Sikkim' }}</span> is hereby authorized to import the under-mentioned description and quantity of duty-paid imported foreign liquor from 
+          <strong>{{ permitData.supplier_company_name || permitData.supplierName || 'Distributor/Supplier' }}</strong>, in the state of 
+          <span>{{ permitData.origin || 'Uttarakhand' }}</span>, to their premises at 
+          <span>{{ permitData.destination || 'Gangtok' }}</span>, in the district of 
+          <span>Gangtok</span>, in the state of Sikkim, for the purpose of wholesale.
+        </div>
+
+        <!-- Kind and Quantity Heading -->
+        <div class="table-heading text-center font-weight-bold mb-2">
+          Kind and quantity of imported foreign liquor
+        </div>
+
+        <!-- Liquor Items Table -->
+        <div class="table-container mb-3">
+          <table class="liquor-table">
+            <thead>
+              <tr>
+                <th class="text-center" style="width: 10%;">Sl. No.</th>
+                <th class="text-start ps-3">Brand</th>
+                <th class="text-center" style="width: 15%;">Size</th>
+                <th class="text-center" style="width: 15%;">Cases</th>
+                <th class="text-end pe-3" style="width: 20%;">Bulk Litres</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of getLineItems(); let idx = index">
+                <td class="text-center">{{ idx + 1 }}</td>
+                <td class="text-start ps-3 fw-semibold">{{ item.brand_name || item.brandName || item.brand }}</td>
+                <td class="text-center">{{ item.size_ml || item.sizeMl || item.size || 750 }} ml</td>
+                <td class="text-center">{{ getItemCases(item) }}</td>
+                <td class="text-end pe-3">{{ getItemBulkLitres(item) | number:'1.2-2' }}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="total-row fw-bold">
+                <td colspan="3" class="text-end pe-3">Total</td>
+                <td class="text-center">{{ getTotalCases() }}</td>
+                <td class="text-end pe-3">{{ getTotalBulkLitres() | number:'1.2-2' }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- Commissioner Signature Block (Seal Removed, Commissioner E-Sign Added) -->
+        <div class="signature-block d-flex justify-content-end align-items-end my-3 pt-1">
+          <div class="signature-container text-center" style="min-width: 210px;">
+            <div style="height: 48px; margin-bottom: 2px;">
+              <img src="assets/EC_Sign_1.png" alt="Commissioner Signature" class="signature-image" style="max-height: 46px; object-fit: contain;" />
+            </div>
+            <div class="sig-title" style="font-weight: 800; font-size: 13px; color: #0f172a; text-transform: uppercase;">COMMISSIONER</div>
+            <div class="sig-dept" style="font-weight: 700; font-size: 11.5px; color: #0f172a; text-transform: uppercase; text-decoration: underline;">EXCISE DEPARTMENT</div>
+            <div class="sig-gov" style="font-size: 11px; color: #334155;">Government of Sikkim</div>
+          </div>
         </div>
       </div>
 
-      <!-- Security Hash -->
-      <div class="hash-text mb-3">
-        Hash: {{ getPermitHash() }}
-      </div>
-
-      <!-- Conditions Section -->
-      <div class="conditions-section border-top pt-3">
+      <!-- Conditions Section (Pinned to Bottom) -->
+      <div class="conditions-section border-top pt-2 mt-auto">
         <div class="conditions-title mb-1">CONDITIONS</div>
         <ol class="conditions-list">
           <li>The above said consignment of Indian Made Foreign Liquor shall be conveyed by rail or road to its destination via <strong>{{ permitData.route_details || permitData.routeDetails || 'Siliguri - NH10A - Gangtok - Sikkim' }}</strong>.</li>

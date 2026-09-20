@@ -52,13 +52,23 @@ $border-color: #333333;
 .permit-page {
   max-width: 210mm;
   min-height: 297mm;
+  height: 297mm;
   margin: 0 auto 40px auto;
-  background: white;
-  padding: 40px;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+  background-color: #ffffff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='330' height='160' viewBox='0 0 330 160'%3E%3Ctext x='6' y='72' font-family='Arial, sans-serif' font-size='34' font-weight='700' letter-spacing='2' fill='%2316583A' fill-opacity='0.055'%3ESIKKIM EXCISE%3C/text%3E%3Ctext x='6' y='142' font-family='Arial, sans-serif' font-size='34' font-weight='700' letter-spacing='2' fill='%2316583A' fill-opacity='0.055'%3ESIKKIM EXCISE%3C/text%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-position: top center;
+  background-size: 330px 160px;
+  padding: 30px 36px 20px 36px;
+  border: 2px solid $primary-blue;
+  border-radius: 4px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
   position: relative;
   box-sizing: border-box;
   page-break-after: always;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 
   &:last-child {
     margin-bottom: 20px;
@@ -70,27 +80,33 @@ $border-color: #333333;
   z-index: 1;
   color: $text-dark;
   font-family: 'Times New Roman', Times, serif;
-  background: white;
+  background: transparent;
+  flex: 1 1 auto;
   height: 100%;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   line-height: 1.5;
+
+  .permit-body-content {
+    flex: 1 0 auto;
+  }
 
   .bill-type {
     position: absolute;
-    top: -10px;
+    top: -12px;
     right: 0;
-    font-weight: bold;
+    font-weight: 800;
     font-size: 13px;
     letter-spacing: 1.5px;
-    color: #444;
+    color: #222;
     text-transform: uppercase;
   }
 
   .header {
     .dept-title {
       font-size: 22px;
-      font-weight: bold;
+      font-weight: 800;
       letter-spacing: 1.5px;
       color: $primary-blue;
       text-transform: uppercase;
@@ -98,8 +114,11 @@ $border-color: #333333;
 
     .state-title {
       font-size: 14px;
-      font-weight: bold;
-      color: #334155;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      color: $primary-blue;
+      text-transform: uppercase;
+      margin-top: 2px;
     }
   }
 
@@ -108,8 +127,8 @@ $border-color: #333333;
     border-bottom: 2px solid $primary-blue;
 
     .pass-title {
-      font-size: 14px;
-      font-weight: bold;
+      font-size: 13.5px;
+      font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       color: $primary-blue;
@@ -119,6 +138,7 @@ $border-color: #333333;
   .info-row {
     font-size: 13px;
     font-weight: bold;
+    margin-bottom: 14px;
 
     .underlined {
       text-decoration: underline;
@@ -126,32 +146,33 @@ $border-color: #333333;
   }
 
   .auth-paragraph {
-    font-size: 13px;
-    line-height: 1.65;
+    font-size: 13.5px;
+    line-height: 1.7;
     text-align: justify;
+    margin-bottom: 18px;
   }
 
   .table-heading {
     font-size: 13px;
     font-weight: bold;
     text-decoration: underline;
+    margin-bottom: 8px;
   }
 
   .liquor-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 12px;
-    margin-top: 5px;
+    font-size: 12.5px;
+    margin-bottom: 18px;
 
     th, td {
-      border: 1px solid $border-color;
+      border: 1.2px solid #000;
       padding: 6px 10px;
     }
 
     th {
-      background-color: #f8fafc;
+      background-color: #f1f5f9;
       font-weight: bold;
-      text-align: center;
     }
 
     tfoot {
@@ -162,51 +183,47 @@ $border-color: #333333;
     }
   }
 
-  .signature-seal-block {
-    .round-seal {
-      width: 95px;
-      height: 95px;
-      border: 2px dashed $primary-blue;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: $primary-blue;
-      font-size: 10px;
-      font-weight: bold;
-      text-transform: uppercase;
-      transform: rotate(-8deg);
-      text-align: center;
-    }
+  .signature-block {
+    margin-top: 18px;
+    margin-bottom: 14px;
+    .signature-container {
+      line-height: 1.35;
 
-    .script-sig {
-      font-family: 'Brush Script MT', cursive;
-      font-size: 24px;
-      color: $primary-blue;
-      margin-bottom: 2px;
-    }
+      .signature-image {
+        max-height: 48px;
+        width: auto;
+        object-fit: contain;
+        display: block;
+        margin: 0 auto 3px auto;
+      }
 
-    .sig-title {
-      font-weight: bold;
-      font-size: 13px;
-    }
+      .sig-title {
+        font-weight: 800;
+        font-size: 13px;
+        color: #0f172a;
+        letter-spacing: 0.4px;
+      }
 
-    .sig-subtitle {
-      font-weight: bold;
-      font-size: 12px;
-      color: #444;
-    }
+      .sig-dept {
+        font-weight: 700;
+        font-size: 11.5px;
+        color: #0f172a;
+        letter-spacing: 0.3px;
+        margin-top: 1px;
+      }
 
-    .sig-dept, .sig-gov {
-      font-size: 11px;
-      color: #555;
+      .sig-gov {
+        font-size: 11px;
+        color: #334155;
+        margin-top: 1px;
+      }
     }
   }
 
   .hash-text {
-    font-size: 9px;
+    font-size: 9.5px;
     font-family: monospace;
-    color: #888;
+    color: #64748b;
   }
 
   .conditions-section {
@@ -221,18 +238,19 @@ $border-color: #333333;
 
     .conditions-list {
       padding-left: 18px;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       line-height: 1.4;
 
       li {
-        margin-bottom: 3px;
+        margin-bottom: 2.5px;
       }
     }
 
     .statutory-note {
       font-style: italic;
-      color: #64748b;
+      color: #555;
       font-size: 10px;
+      text-align: center;
     }
   }
 }
@@ -253,12 +271,16 @@ $border-color: #333333;
   }
 
   .permit-page {
-    margin: 0;
-    padding: 30px;
+    margin: 0 auto;
+    padding: 24px 28px;
     box-shadow: none;
-    border: none;
-    width: 210mm;
-    min-height: 297mm;
+    border: 2px solid $primary-blue !important;
+    width: 100%;
+    max-width: 198mm;
+    min-height: calc(297mm - 12mm);
+    height: calc(297mm - 12mm);
     page-break-after: always;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }
