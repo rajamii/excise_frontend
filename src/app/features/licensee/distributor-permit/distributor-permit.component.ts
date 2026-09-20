@@ -275,8 +275,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }
     if (this.counts.pending > 0) {
       this.activeCardFilter = 'pending';
-    } else if (this.counts.approved > 0) {
-      this.activeCardFilter = 'approved';
+    } else if (this.counts.underProcess > 0) {
+      this.activeCardFilter = 'under_process';
+    } else if (this.counts.objection > 0) {
+      this.activeCardFilter = 'objection';
     } else {
       this.activeCardFilter = 'all';
     }
@@ -9253,8 +9255,6 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       this.hologramStatusFilter = 'payment';
     } else if (this.hologramCounts.pending > 0) {
       this.hologramStatusFilter = 'pending';
-    } else if (this.hologramCounts.approved > 0) {
-      this.hologramStatusFilter = 'approved';
     } else {
       this.hologramStatusFilter = 'all';
     }
