@@ -2247,6 +2247,13 @@
                             <i class="bi bi-printer me-2"></i>Print Application
                         </button>
 
+                        <!-- Print Certificate: shown for Company Registration & Collaboration when approved -->
+                        <button class="btn btn-success btn-lg application-footer-actions__print" type="button"
+                                *ngIf="(isCompanyRegistration() || isCompanyCollaboration()) && isApprovedApplication()"
+                                (click)="openCompanyCertificate()">
+                            <i class="bi bi-patch-check-fill me-2"></i>Print Certificate
+                        </button>
+
                         <!-- Make Payment: shown for Company Registration or Company Collaboration when awaiting payment -->
                         <button type="button" class="btn-company-make-payment"
                                 *ngIf="(isCompanyRegistration() && isCompanyRegistrationAwaitingPayment()) || (isCompanyCollaboration() && isCompanyCollabAwaitingPayment())"

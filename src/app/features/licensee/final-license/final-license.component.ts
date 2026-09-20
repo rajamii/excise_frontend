@@ -32,8 +32,11 @@ type FinalLicenseTemplateData = {
   financialYear?: string;
   licenseSubTitle?: string;
   // Company Collaboration specific
+  collaborationRefId?: string;
   brandOwnerName?: string;
   brandOwnerCode?: string;
+  brandOwnerCompanyRegId?: string;
+  licenseeCompanyRegId?: string;
   licenseeAddress?: string;
   collaborationFee?: string;
   securityDeposit?: string;
@@ -310,8 +313,11 @@ export class FinalLicenseComponent implements OnDestroy {
           financialYear: String(data?.financialYear || data?.financial_year || current.financialYear || ''),
           licenseSubTitle: String(data?.licenseSubTitle || data?.license_sub_title || ''),
           // Company Collaboration specific
+          collaborationRefId: String(data?.collaborationRefId || data?.collaboration_ref_id || current.collaborationRefId || data?.applicationId || data?.application_id || applicationId),
           brandOwnerName: String(data?.brandOwnerName || data?.brand_owner_name || current.brandOwnerName || ''),
           brandOwnerCode: String(data?.brandOwnerCode || data?.brand_owner_code || current.brandOwnerCode || ''),
+          brandOwnerCompanyRegId: String(data?.brandOwnerCompanyRegId || data?.brand_owner_company_reg_id || current.brandOwnerCompanyRegId || data?.brandOwnerCode || ''),
+          licenseeCompanyRegId: String(data?.licenseeCompanyRegId || data?.licensee_company_reg_id || current.licenseeCompanyRegId || data?.licenseNumber_bottler || data?.licenseNumber || ''),
           licenseeAddress: String(data?.licenseeAddress || data?.licensee_address || current.licenseeAddress || ''),
           collaborationFee: String(data?.collaborationFee || data?.collaboration_fee || current.collaborationFee || ''),
           securityDeposit: String(data?.securityDeposit || data?.security_deposit || current.securityDeposit || ''),

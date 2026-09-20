@@ -41,7 +41,7 @@ export class PrintApplicationComponent {
     return /^\d+$/.test(value.trim());
   }
 
-  private inferApiTypeFromId(applicationId: string): 'new-license' | 'license-renewal' | 'salesman-barman' | 'company-registration' | '' {
+  private inferApiTypeFromId(applicationId: string): 'new-license' | 'license-renewal' | 'salesman-barman' | 'company-registration' | 'company-collaboration' | '' {
     const id = String(applicationId || '').trim().toUpperCase();
     if (!id) return '';
     if (id.startsWith('NLI/')) return 'new-license';
@@ -49,6 +49,9 @@ export class PrintApplicationComponent {
     if (id.startsWith('SBM/')) return 'salesman-barman';
     if (id.startsWith('RSBM/')) return 'license-renewal';
     if (id.startsWith('COMP/')) return 'company-registration';
+    if (id.startsWith('CCOL/')) return 'company-collaboration';
+    if (id.startsWith('RCOL/')) return 'company-collaboration';
+    if (id.startsWith('CC/')) return 'company-collaboration';
     if (id.startsWith('NA/')) return 'new-license';
     if (id.startsWith('LA/')) return 'license-renewal';
     if (id.startsWith('SB/')) return 'salesman-barman';

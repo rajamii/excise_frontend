@@ -3830,6 +3830,20 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         return isFinal;
     }
 
+    openCompanyCertificate(): void {
+        const data: any = this.applicationData;
+        const appId = data?.['application_id'] || data?.['applicationId'] || data?.['id'] || data?.['reference_number'] || data?.['referenceNo'];
+        const type = this.isCompanyCollaboration() ? 'company-collaboration' : 'company-registration';
+        if (!appId) return;
+        void this.router.navigate(['/final-license'], {
+            queryParams: {
+                applicationId: appId,
+                type: type,
+                returnUrl: this.router.url
+            }
+        });
+    }
+
     get canViewAuthorityLetter(): boolean {
         if (this.isLicenseeContext()) {
             return false;

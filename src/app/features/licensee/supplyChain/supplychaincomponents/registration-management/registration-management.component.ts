@@ -15,6 +15,7 @@ import { PrintApplicationComponent } from '../../../licensee-dashboard/applicati
 import { UnifiedDashboardService } from '../../../../../core/services/unified-dashboard.service';
 import { ReadApiCacheInterceptor } from '../../../../../core/interceptors/read-api-cache.interceptor';
 import { SidebarPendingBadgeService } from '../../../../../shared/services/sidebar-pending-badge.service';
+import { UnifiedApplication } from '../../../../../core/models/unified-application.model';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -403,11 +404,11 @@ export class RegistrationManagementComponent implements OnInit {
       return false;
     }
 
-    if (isExplicitlyApproved) {
+    if (isExplicitlyApproved || row?.statusGroup === 'approved') {
       return true;
     }
 
-    return stage === 'approved' || stage === 'company registration: approved';
+    return stage === 'approved' || stage === 'company registration: approved' || stage === 'company collaboration: approved' || stage.includes('approved');
   }
 
   isPaymentSuccess(row: any): boolean {
@@ -421,7 +422,12 @@ export class RegistrationManagementComponent implements OnInit {
       return;
     }
 
-    const type = this.currentSection === 'salesman-barman-registration' ? 'salesman-barman' : 'company-registration';
+    let type: UnifiedApplication['type'] = 'company-registration';
+    if (this.currentSection === 'salesman-barman-registration') {
+      type = 'salesman-barman';
+    } else if (this.currentSection === 'company-collaboration') {
+      type = 'company-collaboration';
+    }
 
     this.unifiedDashboardService.getApplicationDetail(appId, type).subscribe({
       next: (fullApp: any) => {
@@ -797,7 +803,10 @@ export class RegistrationManagementComponent implements OnInit {
           establishmentName: String(item?.brand_owner_name ?? item?.brandOwnerName ?? item?.brand_owner ?? item?.brandOwner ?? 'N/A'),
           currentStage: displayStage,
           currentStageRaw: rawStage,
-          statusGroup: resolvedGroup
+          statusGroup: resolvedGroup,
+          is_approved: Boolean(item?.is_approved || item?.isApproved || resolvedGroup === 'approved'),
+          is_license_fee_paid: Boolean(item?.is_license_fee_paid || item?.is_paid || item?.isLicenseFeePaid),
+          raw: item
         };
       });
     };
@@ -829,6 +838,9 @@ export class RegistrationManagementComponent implements OnInit {
     currentStage: string;
     currentStageRaw: string;
     statusGroup: 'approved' | 'pending' | 'objection' | 'rejected';
+    is_approved?: boolean;
+    is_license_fee_paid?: boolean;
+    raw?: any;
   }> {
     return this.unwrapArrayResponse(items).map((item: any) => {
       const rawStage = String(
@@ -861,7 +873,10 @@ export class RegistrationManagementComponent implements OnInit {
         establishmentName: String(item?.brand_owner_name ?? item?.brandOwnerName ?? item?.brand_owner ?? item?.brandOwner ?? 'N/A'),
         currentStage: displayStage,
         currentStageRaw: rawStage,
-        statusGroup: resolvedGroup
+        statusGroup: resolvedGroup,
+        is_approved: Boolean(item?.is_approved || item?.isApproved || resolvedGroup === 'approved'),
+        is_license_fee_paid: Boolean(item?.is_license_fee_paid || item?.is_paid || item?.isLicenseFeePaid),
+        raw: item
       };
     });
   }

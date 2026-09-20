@@ -116,7 +116,7 @@
       </div>
     </ng-template>
 
-    <!-- Company Collaboration (Form D-11) Certificate -->
+    <!-- Company Collaboration Certificate -->
     <section class="page company-registration-certificate collab-certificate" *ngIf="isCompanyCollaboration">
       <img class="watermark" src="assets/fav-icon.png" alt="" aria-hidden="true" />
 
@@ -126,8 +126,6 @@
           <img class="emblem-img" src="assets/Excise_Logo.png" alt="Excise Logo" />
           <div class="dept">EXCISE DEPARTMENT</div>
           <div class="govt">GOVERNMENT OF SIKKIM</div>
-          <div class="collab-form-title">FORM D-11</div>
-          <div class="collab-form-subtitle">(See Rule 33)</div>
         </div>
         <div class="header-right">
           <ng-container *ngIf="qrCodeUrl(); else qrPlaceholderCollab">
@@ -139,16 +137,31 @@
         </div>
       </header>
 
-      <div class="cert-meta-row" style="display: flex; justify-content: space-between; font-size: 14px; font-family: serif; margin: 18px 0 14px 0; padding: 0 4px;">
-        <div><strong>Collaboration Registration Id:</strong>&nbsp;{{ templateData().licenseNumber || '-' }}</div>
+      <div class="cert-title-container" style="text-align: center; margin-top: 24px; margin-bottom: 18px;">
+        <h2 class="cert-title" style="font-size: 22px; font-weight: bold; font-family: sans-serif; text-decoration: underline; letter-spacing: 1px; color: #0f172a; margin: 0;">CERTIFICATE OF COMPANY COLLABORATION</h2>
+      </div>
+
+      <div class="cert-meta-row" style="display: flex; justify-content: space-between; font-size: 14px; font-family: serif; margin: 12px 0 10px 0; padding: 0 4px;">
+        <div><strong>Company Collaboration Ref ID:</strong>&nbsp;{{ templateData().collaborationRefId || templateData().applicationId || templateData().licenseNumber || '-' }}</div>
         <div><strong>Date:</strong>&nbsp;{{ templateData().generatedOn || '-' }}</div>
+      </div>
+
+      <div class="cert-meta-row" style="display: flex; justify-content: space-between; font-size: 13px; font-family: serif; margin: 0 0 16px 0; padding: 8px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px;">
+        <div><strong>Bottler Company Reg ID:</strong>&nbsp;{{ templateData().licenseeCompanyRegId || templateData().licenseNumber || '-' }}</div>
+        <div><strong>Brand Owner Company Reg ID:</strong>&nbsp;{{ templateData().brandOwnerCompanyRegId || templateData().brandOwnerCode || '-' }}</div>
       </div>
 
       <div class="cert-body-content collab-body" style="padding: 0 4px; margin-bottom: 16px;">
         <p style="font-size: 14px; line-height: 1.9; font-family: serif; text-align: justify;">
           This is to certify that M/s <strong>{{ templateData().brandOwnerName || '-' }}</strong>
+          <span *ngIf="templateData().brandOwnerCompanyRegId || templateData().brandOwnerCode">
+            (Company Registration ID: <strong>{{ templateData().brandOwnerCompanyRegId || templateData().brandOwnerCode }}</strong>)
+          </span>
           is hereby granted permission to bottle the following brands at the factory premises of
           M/s <strong>{{ templateData().licenseeName || '-' }}</strong>
+          <span *ngIf="templateData().licenseeCompanyRegId || templateData().licenseNumber">
+            (Company Registration ID: <strong>{{ templateData().licenseeCompanyRegId || templateData().licenseNumber }}</strong>)
+          </span>
           located at <strong>{{ templateData().licenseeAddress || '-' }}</strong>
           on payment of Collaboration fee of
           Rs <strong>{{ templateData().collaborationFee || '-' }}</strong>
