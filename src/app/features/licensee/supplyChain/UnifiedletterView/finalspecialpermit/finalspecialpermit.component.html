@@ -29,18 +29,18 @@
       <ng-container *ngIf="permitData.permissionDuration === 'per_day'">
         <!-- Official Letter Header -->
         <div class="letter-header">
-          <!-- Row 1: Crest logo left, Sikkim logo right -->
-          <div class="logos-container">
-            <img src="assets/fav-icon-black.png" alt="Sikkim Crest Logo" class="govt-logo">
-            <img src="assets/download.jpg" alt="Sikkim Logo" class="govt-logo">
+          <div class="header-top-grid">
+            <div class="header-left-spacer"></div>
+            <div class="header-center-content">
+              <img src="assets/Excise_Logo.png" alt="Excise Department Sikkim Logo" class="govt-seal">
+              <div class="dept-title">EXCISE DEPARTMENT</div>
+              <div class="dept-subtitle">GOVERNMENT OF SIKKIM</div>
+              <div class="dept-address">EXCISE HEADQUARTERS, M. G. MARG, GANGTOK - 737 101</div>
+            </div>
+            <div class="header-right-qr">
+              <img *ngIf="qrCodeUrl" [src]="qrCodeUrl" alt="QR Code Scanner" class="qr-code-img">
+            </div>
           </div>
-          <!-- Row 2: QR code aligned to the right -->
-          <div class="qr-row" *ngIf="qrCodeUrl">
-            <img [src]="qrCodeUrl" alt="QR Code Scanner" class="qr-code-img">
-          </div>
-          <div class="dept-title">EXCISE DEPARTMENT</div>
-          <div class="dept-subtitle">GOVERNMENT OF SIKKIM</div>
-          <div class="dept-address">EXCISE HEADQUARTERS, M. G. MARG, GANGTOK - 737 101</div>
           <div class="divider-line"></div>
         </div>
 
@@ -101,18 +101,18 @@
       <ng-container *ngIf="permitData.permissionDuration === 'per_annum'">
         <!-- Official Certificate Header -->
         <div class="letter-header">
-          <!-- Row 1: Crest logo left, Sikkim logo right -->
-          <div class="logos-container">
-            <img src="assets/fav-icon-black.png" alt="Sikkim Crest Logo" class="govt-logo">
-            <img src="assets/download.jpg" alt="Sikkim Logo" class="govt-logo">
+          <div class="header-top-grid">
+            <div class="header-left-spacer"></div>
+            <div class="header-center-content">
+              <img src="assets/Excise_Logo.png" alt="Excise Department Sikkim Logo" class="govt-seal">
+              <div class="dept-title">EXCISE DEPARTMENT</div>
+              <div class="dept-subtitle">GOVERNMENT OF SIKKIM</div>
+              <div class="dept-address">EXCISE HEADQUARTERS, M. G. MARG, GANGTOK - 737 101</div>
+            </div>
+            <div class="header-right-qr">
+              <img *ngIf="qrCodeUrl" [src]="qrCodeUrl" alt="QR Code Scanner" class="qr-code-img">
+            </div>
           </div>
-          <!-- Row 2: QR code aligned to the right -->
-          <div class="qr-row" *ngIf="qrCodeUrl">
-            <img [src]="qrCodeUrl" alt="QR Code Scanner" class="qr-code-img">
-          </div>
-          <div class="dept-title">EXCISE DEPARTMENT</div>
-          <div class="dept-subtitle">GOVERNMENT OF SIKKIM</div>
-          <div class="dept-address">EXCISE HEADQUARTERS, M. G. MARG, GANGTOK - 737 101</div>
           <div class="divider-line"></div>
         </div>
 

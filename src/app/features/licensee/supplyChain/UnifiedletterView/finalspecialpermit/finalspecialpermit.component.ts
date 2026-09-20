@@ -234,35 +234,26 @@ export class FinalspecialpermitComponent implements OnInit, OnDestroy {
         }
         @page {
           size: A4;
-          margin: 12mm 10mm;
+          margin: 8mm 8mm;
         }
         * {
           box-sizing: border-box;
         }
-        .final-letter-container {
-          position: relative;
-          padding: 35px 30px;
-          box-sizing: border-box;
-          max-width: 198mm;
-          min-height: 260mm;
-          margin: 0 auto;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          /* No isolation:isolate so watermark z-index:0 sits behind z-index:1 children */
-        }
+        .final-letter-container,
         .final-certificate-container {
           position: relative;
-          padding: 50px 40px;
+          padding: 28px 24px;
           box-sizing: border-box;
-          max-width: 198mm;
-          min-height: 260mm;
+          max-width: 194mm;
+          min-height: 275mm;
           margin: 0 auto;
-          border: 4px double #000;
+          border: 2px solid #1e3a8a;
+          border-radius: 4px;
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          /* No isolation:isolate so watermark z-index:0 sits behind z-index:1 children */
+          overflow: hidden;
+          background: #fff;
         }
         .final-letter-container > *:not(.print-watermark),
         .final-certificate-container > *:not(.print-watermark) {
@@ -280,7 +271,6 @@ export class FinalspecialpermitComponent implements OnInit, OnDestroy {
           user-select: none;
           z-index: 0;
           overflow: hidden;
-          /* No rotation — straight horizontal rows */
         }
         .print-watermark span {
           display: flex !important;
@@ -300,71 +290,75 @@ export class FinalspecialpermitComponent implements OnInit, OnDestroy {
         }
 
         .letter-header {
+          position: relative;
+          z-index: 1;
+          margin-bottom: 16px;
+        }
+        .header-top-grid {
+          display: grid;
+          grid-template-columns: 80px 1fr 80px;
+          align-items: start;
+          gap: 10px;
+          width: 100%;
+        }
+        .header-left-spacer {
+          width: 80px;
+        }
+        .header-center-content {
+          text-align: center;
           display: flex;
           flex-direction: column;
           align-items: center;
-          text-align: center;
-          font-weight: bold;
-          margin-bottom: 35px;
-          position: relative;
-          z-index: 1;
         }
-        .logos-container {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          width: 100%;
-          padding: 0 10px;
-          margin-bottom: 0;
-        }
-        .qr-row {
-          display: flex;
-          justify-content: flex-end;
-          width: 100%;
-          padding: 0 10px;
-          margin-bottom: 8px;
-        }
-        .header-right-logos {
-          display: flex;
-          flex-direction: row;
-          align-items: center;
-          gap: 10px;
-        }
-        .govt-logo {
+        .govt-seal {
           height: 75px;
           width: auto;
+          max-width: 160px;
           object-fit: contain;
+          display: block;
+          margin: 0 auto 6px;
+        }
+        .header-right-qr {
+          display: flex;
+          justify-content: flex-end;
         }
         .qr-code-img {
-          height: 70px;
-          width: 70px;
+          height: 78px;
+          width: 78px;
           object-fit: contain;
-        }
-        .qr-below-logo {
-          height: 75px;
-          width: 75px;
-          object-fit: contain;
+          border: 1px solid #0f172a;
+          padding: 2px;
+          background: #fff;
         }
         .dept-title {
-          font-size: 23px;
-          letter-spacing: 1px;
-          margin: 3px 0;
+          font-size: 21px;
+          font-weight: 800;
+          letter-spacing: 1.2px;
+          color: #1e3a8a;
+          text-transform: uppercase;
+          margin: 2px 0;
         }
         .dept-subtitle {
-          font-size: 18px;
+          font-size: 15px;
+          font-weight: 700;
+          letter-spacing: 0.8px;
+          color: #1e3a8a;
+          text-transform: uppercase;
           margin: 2px 0;
         }
         .dept-address {
-          font-size: 13px;
-          font-weight: normal;
-          margin-top: 5px;
+          font-size: 11.5px;
+          font-weight: 600;
+          margin-top: 3px;
+          color: #334155;
+          letter-spacing: 0.3px;
         }
         .divider-line {
           width: 100%;
-          height: 1px;
-          background-color: #000;
-          margin-top: 5px;
-          margin-bottom: 20px;
+          height: 2px;
+          background-color: #1e3a8a;
+          margin-top: 10px;
+          margin-bottom: 10px;
         }
         .letter-meta {
           display: flex;

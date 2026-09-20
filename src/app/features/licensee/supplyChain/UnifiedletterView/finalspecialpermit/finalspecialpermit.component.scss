@@ -27,15 +27,17 @@
 }
 
 // Letter container styling (similar to A4 page size on screen)
-.final-letter-container {
+.final-letter-container,
+.final-certificate-container {
   background: #fff;
-  border: 1px solid #ddd;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 2px solid #1e3a8a;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   box-sizing: border-box;
   padding: 35px 30px;
   width: 100%;
   max-width: 198mm;
-  min-height: 258mm;
+  min-height: 268mm;
   position: relative;
   overflow: hidden;
   font-family: 'Times New Roman', Times, serif;
@@ -43,6 +45,7 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  margin: 0 auto;
   /* No isolation:isolate — allows watermark z-index:0 to sit behind z-index:1 children */
 
   > *:not(.print-watermark) {
@@ -51,44 +54,17 @@
   }
 
   @media print {
-    border: none !important;
+    border: 2px solid #1e3a8a !important;
+    border-radius: 4px !important;
     box-shadow: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    min-height: 260mm !important;
-  }
-}
-
-// Double border certificate style container
-.final-certificate-container {
-  background: #fff;
-  border: 4px double #000;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  box-sizing: border-box;
-  padding: 50px 40px;
-  width: 100%;
-  max-width: 198mm;
-  min-height: 258mm;
-  position: relative;
-  overflow: hidden;
-  font-family: 'Times New Roman', Times, serif;
-  color: #000;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  /* No isolation:isolate — allows watermark z-index:0 to sit behind z-index:1 children */
-
-  > *:not(.print-watermark) {
-    position: relative;
-    z-index: 1;
-  }
-
-  @media print {
-    box-shadow: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    border: 4px double #000 !important;
-    min-height: 260mm !important;
+    padding: 24px 22px !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+    max-width: 194mm !important;
+    min-height: 275mm !important;
+    box-sizing: border-box !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 }
 
@@ -136,75 +112,83 @@
 .letter-header {
   position: relative;
   z-index: 1;
+  margin-bottom: 20px;
+}
+
+.header-top-grid {
+  display: grid;
+  grid-template-columns: 80px 1fr 80px;
+  align-items: start;
+  gap: 10px;
+  width: 100%;
+}
+
+.header-left-spacer {
+  width: 80px;
+}
+
+.header-center-content {
+  text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  text-align: center;
-  margin-bottom: 25px;
 }
 
-.logos-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  padding: 0 10px;
-  margin-bottom: 0;
-
-  .govt-logo {
-    height: 75px;
-    width: auto;
-    object-fit: contain;
-  }
+.govt-seal {
+  height: 75px;
+  width: auto;
+  max-width: 160px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto 6px;
 }
 
-/* QR code on its own row, pushed to the right */
-.qr-row {
+.header-right-qr {
   display: flex;
   justify-content: flex-end;
-  width: 100%;
-  padding: 0 10px;
-  margin-bottom: 8px;
 
   .qr-code-img {
-    height: 70px;
-    width: 70px;
+    height: 78px;
+    width: 78px;
     object-fit: contain;
+    border: 1px solid #0f172a;
+    padding: 2px;
+    background: #fff;
   }
-}
-
-.qr-code-img {
-  height: 70px;
-  width: 70px;
-  object-fit: contain;
 }
 
 .dept-title {
-  font-size: 22px;
+  font-size: 21px;
   font-weight: 800;
-  letter-spacing: 1px;
-  margin: 3px 0;
+  letter-spacing: 1.2px;
+  color: #1e3a8a;
+  text-transform: uppercase;
+  margin: 2px 0;
 }
 
 .dept-subtitle {
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 700;
+  letter-spacing: 0.8px;
+  color: #1e3a8a;
+  text-transform: uppercase;
   margin: 2px 0;
 }
 
 .dept-address {
-  font-size: 12px;
-  font-weight: 400;
-  margin-top: 4px;
-  color: #333;
+  font-size: 11.5px;
+  font-weight: 600;
+  margin-top: 3px;
+  color: #334155;
+  letter-spacing: 0.3px;
 }
 
 .divider-line {
   width: 100%;
-  height: 1px;
-  background-color: #000;
-  margin-top: 8px;
-  margin-bottom: 5px;
+  height: 2px;
+  background-color: #1e3a8a;
+  margin-top: 12px;
+  margin-bottom: 12px;
 }
 
 // Meta line (No & Date)
