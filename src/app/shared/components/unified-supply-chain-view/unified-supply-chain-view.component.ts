@@ -4106,9 +4106,36 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
               <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
               <style>
                 @page { size: A4 portrait; margin: 8mm; }
-                * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                body { font-family: 'Times New Roman', Times, serif; padding: 20px; background: white; color: #111; font-size: 13px; line-height: 1.6; }
-                .final-letter-paper { border: none !important; box-shadow: none !important; padding: 0 !important; max-width: 100% !important; }
+                * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
+                html, body { 
+                  height: 100%;
+                  margin: 0;
+                  padding: 0;
+                  background: white; 
+                  color: #111; 
+                  font-family: 'Times New Roman', Times, serif; 
+                  font-size: 13.5px; 
+                  line-height: 1.6; 
+                }
+                .final-letter-paper { 
+                  border: 2px solid #1e3a8a !important; 
+                  box-shadow: none !important; 
+                  padding: 24px 30px 18px 30px !important; 
+                  width: 100% !important; 
+                  max-width: 100% !important; 
+                  min-height: calc(297mm - 16mm) !important;
+                  height: calc(297mm - 16mm) !important;
+                  display: flex !important;
+                  flex-direction: column !important;
+                  justify-content: space-between !important;
+                  box-sizing: border-box !important;
+                  border-radius: 0 !important;
+                  background-color: #ffffff !important;
+                  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='330' height='160' viewBox='0 0 330 160'%3E%3Ctext x='6' y='72' font-family='Arial, sans-serif' font-size='34' font-weight='700' letter-spacing='2' fill='%2316583A' fill-opacity='0.055'%3ESIKKIM EXCISE%3C/text%3E%3Ctext x='6' y='142' font-family='Arial, sans-serif' font-size='34' font-weight='700' letter-spacing='2' fill='%2316583A' fill-opacity='0.055'%3ESIKKIM EXCISE%3C/text%3E%3C/svg%3E") !important;
+                  background-repeat: repeat !important;
+                  background-position: top center !important;
+                  background-size: 330px 160px !important;
+                }
               </style>
             </head>
             <body>
@@ -6052,7 +6079,33 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                 cases: pDetail.total_cases ?? pDetail.totalCases ?? pDetail.cases ?? it.cases ?? 1
             }));
         }
-        return [];
+
+        const pCases = Number(pDetail.total_cases ?? pDetail.totalCases ?? pDetail.cases ?? 1);
+        const brandName = pDetail.brand_name || pDetail.brandName || this.applicationData?.['brandName'] || this.applicationData?.['brand_name'] || this.applicationData?.['brand'] || 'IMFL Spirit';
+        const sizeMl = Number(pDetail.size_ml || pDetail.sizeMl || this.applicationData?.['sizeMl'] || this.applicationData?.['size_ml'] || 750);
+        const pieces = Number(pDetail.pieces_per_case || pDetail.piecesPerCase || this.getPiecesPerCase(sizeMl));
+        const importFee = Number(pDetail.total_import_fee ?? pDetail.totalImportFee ?? (pCases * 1400));
+        const addEd = Number(pDetail.total_additional_ed ?? pDetail.totalAdditionalEd ?? (pCases * 350));
+        const edp = Number(pDetail.total_edp ?? pDetail.totalEdp ?? (pCases * 5800));
+        const cess = Number(pDetail.total_education_cess ?? pDetail.totalEducationCess ?? (pCases * 60));
+        const bl = Number(pDetail.total_bulk_litres ?? pDetail.totalBulkLitres ?? ((pCases * sizeMl * pieces) / 1000));
+
+        return [{
+            brand_name: brandName,
+            brandName: brandName,
+            size_ml: sizeMl,
+            sizeMl: sizeMl,
+            cases: pCases,
+            pieces_per_case: pieces,
+            piecesPerCase: pieces,
+            total_edp: edp,
+            total_additional_ed: addEd,
+            total_import: importFee,
+            total_import_fee: importFee,
+            total_education_cess: cess,
+            bulk_litres: bl,
+            total_bulk_litres: bl
+        }];
     }
 
     getPermitTotalCases(pDetail: any, pIdx: number = 0): number {

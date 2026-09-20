@@ -387,36 +387,36 @@
 
                 <!-- ========== REVALIDATED PERMIT ALLOCATION BREAKDOWN CARD ========== -->
                 @if (applicationData['permitWiseDetails'] && applicationData['permitWiseDetails'].length > 0) {
-                <div class="section-card mb-4 border-warning">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="section-title text-warning m-0">
-                            <i class="bi bi-arrow-repeat me-2"></i>
+                <div class="section-card mb-4 border border-warning border-opacity-50 shadow-sm bg-white">
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                        <h5 class="section-title text-warning text-darken-3 m-0 fw-bold d-flex align-items-center">
+                            <i class="bi bi-arrow-repeat me-2 text-warning fs-5"></i>
                             Revalidated Permit Allocation Breakdown
                         </h5>
                         @if (applicationData['revalidatedPermitNumber'] || applicationData.originalPermitNo) {
-                        <span class="badge bg-warning text-dark fs-6">
-                            Permit No: {{ applicationData['revalidatedPermitNumber'] || applicationData.originalPermitNo }}
+                        <span class="badge bg-warning text-dark border border-warning fs-6 px-3 py-1.5 font-monospace shadow-xs">
+                            <i class="bi bi-file-earmark-text me-1"></i>Permit No: {{ applicationData['revalidatedPermitNumber'] || applicationData.originalPermitNo }}
                         </span>
                         }
                     </div>
 
                     @for (permit of applicationData['permitWiseDetails']; track permit.permit_sequence || permit.permitSequence || $index) {
-                    <div class="card mb-3 border shadow-sm">
-                        <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
-                            <span class="fw-bold text-dark">
-                                <i class="bi bi-file-earmark-text me-1 text-warning"></i>
+                    <div class="card mb-3 border border-warning border-opacity-25 shadow-xs rounded-3 overflow-hidden">
+                        <div class="card-header bg-warning bg-opacity-10 d-flex justify-content-between align-items-center py-2.5 px-3 border-bottom border-warning border-opacity-25">
+                            <span class="fw-bold text-dark font-monospace">
+                                <i class="bi bi-shield-check me-1.5 text-warning"></i>
                                 Permit Reference: {{ permit.permit_number || permit.permitNumber || ('Permit #' + (permit.permit_sequence || permit.permitSequence || ($index + 1))) }}
                             </span>
-                            <span class="badge bg-secondary">
-                                Total Cases: {{ permit.total_cases || permit.totalCases }} | BL: {{ permit.total_bulk_litres || permit.totalBulkLitres }} L
+                            <span class="badge bg-warning text-dark border border-warning px-2.5 py-1.5 font-monospace">
+                                Total Cases: {{ getPermitTotalCases(permit, $index) }} | BL: {{ getPermitTotalBulkLitres(permit, $index) | number:'1.2-2' }} L
                             </span>
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
-                                <table class="table table-sm table-striped align-middle m-0">
-                                    <thead class="table-dark">
-                                        <tr>
-                                            <th>#</th>
+                                <table class="table table-bordered table-hover align-middle m-0" style="font-size: 13px;">
+                                    <thead class="table-light text-secondary border-bottom">
+                                        <tr class="text-uppercase" style="font-size: 11.5px; letter-spacing: 0.5px;">
+                                            <th style="width: 45px;" class="text-center">#</th>
                                             <th>Brand Name</th>
                                             <th>Size / Package</th>
                                             <th class="text-center">Cases</th>
@@ -428,32 +428,41 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @for (item of (permit.line_items || permit.lineItems || []); track item.brand_id || item.brandId || $index) {
+                                        @for (item of getPermitLineItems(permit, $index); track $index) {
                                         <tr>
-                                            <td>{{ $index + 1 }}</td>
-                                            <td class="fw-semibold text-primary">{{ item.brand_name || item.brandName || item.brand || 'IMFL Brand' }}</td>
-                                            <td>{{ item.size_ml || item.sizeMl || 750 }} ml ({{ getPiecesPerCase(item.size_ml || item.sizeMl, item.pieces_per_case || item.piecesPerCase || item.bottles_per_case || item.bottlesPerCase) }} pcs/case)</td>
-                                            <td class="text-center fw-bold">{{ item.cases || item.quantity_cases || item.quantityCases || 1 }}</td>
+                                            <td class="text-center text-muted fw-semibold">{{ $index + 1 }}</td>
+                                            <td class="fw-bold text-dark">{{ item.brand_name || item.brandName || item.brand || 'IMFL Brand' }}</td>
+                                            <td class="text-secondary">{{ item.size_ml || item.sizeMl || 750 }} ml ({{ getPiecesPerCase(item.size_ml || item.sizeMl, item.pieces_per_case || item.piecesPerCase || item.bottles_per_case || item.bottlesPerCase) }} pcs/case)</td>
+                                            <td class="text-center fw-bold text-dark">{{ item.cases || item.quantity_cases || item.quantityCases || 1 }}</td>
                                             <td class="text-end fw-bold text-primary">{{ getItemBl(item) | number:'1.2-2' }} BL</td>
-                                            <td class="text-end">{{ getItemEdp(item) | currency:'INR':'symbol':'1.2-2' }}</td>
-                                            <td class="text-end">{{ getItemAddEd(item) | currency:'INR':'symbol':'1.2-2' }}</td>
+                                            <td class="text-end text-dark">{{ getItemEdp(item) | currency:'INR':'symbol':'1.2-2' }}</td>
+                                            <td class="text-end text-dark">{{ getItemAddEd(item) | currency:'INR':'symbol':'1.2-2' }}</td>
                                             <td class="text-end text-success fw-bold">{{ getItemImport(item) | currency:'INR':'symbol':'1.2-2' }}</td>
-                                            <td class="text-end">{{ getItemCess(item) | currency:'INR':'symbol':'1.2-2' }}</td>
+                                            <td class="text-end text-dark">{{ getItemCess(item) | currency:'INR':'symbol':'1.2-2' }}</td>
                                         </tr>
                                         }
                                     </tbody>
                                     <tfoot class="table-light fw-bold">
                                         <tr>
-                                            <td colspan="3" class="text-end">Permit Totals:</td>
-                                            <td class="text-center text-primary">{{ permit.total_cases || permit.totalCases }}</td>
-                                            <td class="text-end text-primary">{{ (permit.total_bulk_litres || permit.totalBulkLitres) | number:'1.2-2' }} BL</td>
-                                            <td class="text-end">{{ getPermitTotalEdp(permit) | currency:'INR':'symbol':'1.2-2' }}</td>
-                                            <td class="text-end">{{ (permit.total_additional_ed || permit.totalAdditionalEd || 0) | currency:'INR':'symbol':'1.2-2' }}</td>
-                                            <td class="text-end text-success">{{ (permit.total_import_fee || permit.totalImportFee || 0) | currency:'INR':'symbol':'1.2-2' }}</td>
-                                            <td class="text-end">{{ getPermitTotalCess(permit) | currency:'INR':'symbol':'1.2-2' }}</td>
+                                            <td colspan="3" class="text-end text-dark">Permit Totals:</td>
+                                            <td class="text-center text-dark fs-7">{{ getPermitTotalCases(permit, $index) }}</td>
+                                            <td class="text-end text-primary fs-7">{{ getPermitTotalBulkLitres(permit, $index) | number:'1.2-2' }} BL</td>
+                                            <td class="text-end text-dark fs-7">{{ getPermitTotalEdp(permit, $index) | currency:'INR':'symbol':'1.2-2' }}</td>
+                                            <td class="text-end text-dark fs-7">{{ getPermitTotalAddEd(permit, $index) | currency:'INR':'symbol':'1.2-2' }}</td>
+                                            <td class="text-end text-success fs-7">{{ getPermitTotalImportFee(permit, $index) | currency:'INR':'symbol':'1.2-2' }}</td>
+                                            <td class="text-end text-dark fs-7">{{ getPermitTotalCess(permit, $index) | currency:'INR':'symbol':'1.2-2' }}</td>
                                         </tr>
                                     </tfoot>
                                 </table>
+                            </div>
+                            <!-- Subtotal Strip -->
+                            <div class="p-2.5 bg-light bg-opacity-50 border-top d-flex flex-wrap gap-2 justify-content-around text-center">
+                                <div><small class="text-muted d-block text-uppercase" style="font-size: 11px;">Total Cases</small><strong class="fs-6 font-monospace">{{ getPermitTotalCases(permit, $index) }}</strong></div>
+                                <div><small class="text-muted d-block text-uppercase" style="font-size: 11px;">Bulk Litres</small><strong class="text-primary fs-6 font-monospace">{{ getPermitTotalBulkLitres(permit, $index) | number:'1.2-2' }} BL</strong></div>
+                                <div><small class="text-muted d-block text-uppercase" style="font-size: 11px;">Excise Duty</small><strong class="text-dark fs-6 font-monospace">{{ getPermitTotalEdp(permit, $index) | currency:'INR':'symbol':'1.2-2' }}</strong></div>
+                                <div><small class="text-muted d-block text-uppercase" style="font-size: 11px;">Add. Excise Duty</small><strong class="text-dark fs-6 font-monospace">{{ getPermitTotalAddEd(permit, $index) | currency:'INR':'symbol':'1.2-2' }}</strong></div>
+                                <div><small class="text-muted d-block text-uppercase" style="font-size: 11px;">Import Pass Fee</small><strong class="text-success fs-6 font-monospace">{{ getPermitTotalImportFee(permit, $index) | currency:'INR':'symbol':'1.2-2' }}</strong></div>
+                                <div><small class="text-muted d-block text-uppercase" style="font-size: 11px;">Education Cess</small><strong class="text-dark fs-6 font-monospace">{{ getPermitTotalCess(permit, $index) | currency:'INR':'symbol':'1.2-2' }}</strong></div>
                             </div>
                         </div>
                     </div>
@@ -2788,82 +2797,77 @@
 
       <!-- Modal Body (Printable Revalidation Letter) -->
       <div class="modal-body p-4 bg-light" style="max-height: 85vh; overflow-y: auto;">
-        <div id="imflRevalidationLetterPrintArea" class="final-letter-paper p-5 bg-white shadow-sm border mx-auto" style="width: 100%; max-width: 750px; font-family: 'Times New Roman', Times, serif; color: #111; line-height: 1.6; position: relative;">
+        <div id="imflRevalidationLetterPrintArea" class="final-letter-paper p-4 p-md-5 mx-auto d-flex flex-column justify-content-between" style="width: 100%; max-width: 780px; min-height: 820px; font-family: 'Times New Roman', Times, serif; color: #111; line-height: 1.6; position: relative; border: 2px solid #1e3a8a !important; border-radius: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); background-color: #ffffff; background-image: url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='330' height='160' viewBox='0 0 330 160'%3E%3Ctext x='6' y='72' font-family='Arial, sans-serif' font-size='34' font-weight='700' letter-spacing='2' fill='%2316583A' fill-opacity='0.055'%3ESIKKIM EXCISE%3C/text%3E%3Ctext x='6' y='142' font-family='Arial, sans-serif' font-size='34' font-weight='700' letter-spacing='2' fill='%2316583A' fill-opacity='0.055'%3ESIKKIM EXCISE%3C/text%3E%3C/svg%3E&quot;); background-repeat: repeat; background-position: top center; background-size: 330px 160px;">
           
-          <!-- Top Header with State Emblem and Logo -->
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <div class="header-seal-left">
-              <img src="assets/emblem_2.jpg" alt="Government Emblem" style="height: 75px; width: auto; object-fit: contain;" />
-            </div>
-            
-            <div class="text-center flex-grow-1 px-2">
+          <div class="letter-body-content flex-grow-1">
+            <!-- Top Header with Central Excise Logo -->
+            <div class="text-center mb-3">
+              <div class="mb-2">
+                <img src="assets/Excise_Logo.png" alt="Excise Department Sikkim Logo" style="height: 65px; width: auto; object-fit: contain; display: inline-block;" />
+              </div>
               <div style="font-size: 22px; font-weight: 800; letter-spacing: 1.5px; color: #1e3a8a; text-transform: uppercase; margin: 0;">
                 EXCISE DEPARTMENT
               </div>
-              <div style="font-size: 15px; font-weight: 700; letter-spacing: 1px; color: #1e3a8a; text-transform: uppercase; margin-top: 4px;">
+              <div style="font-size: 15px; font-weight: 700; letter-spacing: 1px; color: #1e3a8a; text-transform: uppercase; margin-top: 3px;">
                 GOVERNMENT OF SIKKIM
               </div>
             </div>
 
-            <div class="header-seal-right">
-              <img src="assets/fav-icon.png" alt="Sikkim Logo" style="height: 75px; width: auto; object-fit: contain;" />
+            <div style="border-bottom: 2px solid #334155; margin-bottom: 25px;"></div>
+
+            <!-- Dispatch No & Date -->
+            <div class="d-flex justify-content-between align-items-center mb-4 fw-bold" style="font-size: 14px;">
+              <div>No. <span style="text-decoration: underline;">{{ getRevalidationLetterNo() }}</span> / Excise</div>
+              <div>Dated: <span style="text-decoration: underline;">{{ getRevalidationLetterDate() | date: 'dd/MM/yyyy' }}</span></div>
             </div>
-          </div>
 
-          <div style="border-bottom: 2px solid #334155; margin-bottom: 25px;"></div>
-
-          <!-- Dispatch No & Date -->
-          <div class="d-flex justify-content-between align-items-center mb-4 fw-bold" style="font-size: 14px;">
-            <div>No. <span style="text-decoration: underline;">{{ getRevalidationLetterNo() }}</span> / Excise</div>
-            <div>Dated: <span style="text-decoration: underline;">{{ getRevalidationLetterDate() | date: 'dd/MM/yyyy' }}</span></div>
-          </div>
-
-          <!-- To Address Section -->
-          <div class="mb-4" style="font-size: 14px; line-height: 1.6;">
-            <div class="fw-bold mb-1">To,</div>
-            <div class="ps-4">
-              <div class="fw-bold">The Excise Officer-in-Charge,</div>
-              <div class="fw-bold">{{ getRevalidationSupplierName() }},</div>
-              <div style="max-width: 650px;">{{ getRevalidationSupplierAddress() }}</div>
-            </div>
-          </div>
-
-          <!-- Subject Line -->
-          <div class="mb-4" style="font-size: 14px;">
-            <strong>Sub: <u>Revalidation of import permit no. {{ getRevalidationPermitNumbers() }}, all dated: {{ getRevalidationOriginalDate() | date: 'dd.MM.yyyy' }}.</u></strong>
-          </div>
-
-          <!-- Letter Body Paragraph -->
-          <div class="mb-5 text-justify" style="font-size: 14px; line-height: 1.8; text-indent: 45px;">
-            Reference your application letter dated. <strong>{{ getRevalidationRefDate() | date: 'dd.MM.yyyy' }}</strong> forwarded from <strong>M/s {{ getRevalidationApplicantName() }}, {{ getRevalidationApplicantLocation() }}</strong>, this is to inform you that the import permits no <strong>{{ getRevalidationPermitNumbers() }}</strong>, all dated: <strong>{{ getRevalidationOriginalDate() | date: 'dd.MM.yyyy' }}</strong> is hereby revalidated up to <strong>{{ getRevalidationValidUpTo() | date: 'dd.MM.yyyy' }}</strong>.
-          </div>
-
-          <!-- Official Stamp & Commissioner Signature Block -->
-          <div class="d-flex justify-content-between align-items-end my-5 pt-3">
-            <!-- Left: Round Stamp -->
-            <div class="text-center ps-2">
-              <div style="width: 105px; height: 105px; border: 2px dashed #1e3a8a; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #1e3a8a; font-size: 10px; font-weight: bold; text-transform: uppercase; transform: rotate(-5deg); padding: 5px;">
-                <span>Excise Department</span>
-                <span style="font-size: 14px; line-height: 1;">★</span>
-                <span>Govt. of Sikkim</span>
+            <!-- To Address Section -->
+            <div class="mb-4" style="font-size: 14px; line-height: 1.6;">
+              <div class="fw-bold mb-1">To,</div>
+              <div class="ps-4">
+                <div class="fw-bold">The Excise Officer-in-Charge,</div>
+                <div class="fw-bold">{{ getRevalidationSupplierName() }},</div>
+                <div style="max-width: 650px;">{{ getRevalidationSupplierAddress() }}</div>
               </div>
             </div>
 
-            <!-- Right: Signature and Designation -->
-            <div class="text-center pe-2" style="line-height: 1.3;">
-              <div style="height: 48px; margin-bottom: 2px;">
-                <img src="assets/EC_Sign_1.png" alt="Signature" style="max-height: 46px; object-fit: contain;" />
+            <!-- Subject Line -->
+            <div class="mb-4" style="font-size: 14px;">
+              <strong>Sub: <u>Revalidation of import permit no. {{ getRevalidationPermitNumbers() }}, all dated: {{ getRevalidationOriginalDate() | date: 'dd.MM.yyyy' }}.</u></strong>
+            </div>
+
+            <!-- Letter Body Paragraph -->
+            <div class="mb-5 text-justify" style="font-size: 14px; line-height: 1.8; text-indent: 45px;">
+              Reference your application letter dated. <strong>{{ getRevalidationRefDate() | date: 'dd.MM.yyyy' }}</strong> forwarded from <strong>M/s {{ getRevalidationApplicantName() }}, {{ getRevalidationApplicantLocation() }}</strong>, this is to inform you that the import permits no <strong>{{ getRevalidationPermitNumbers() }}</strong>, all dated: <strong>{{ getRevalidationOriginalDate() | date: 'dd.MM.yyyy' }}</strong> is hereby revalidated up to <strong>{{ getRevalidationValidUpTo() | date: 'dd.MM.yyyy' }}</strong>.
+            </div>
+
+            <!-- Official Stamp & Commissioner Signature Block -->
+            <div class="d-flex justify-content-between align-items-end my-5 pt-3">
+              <!-- Left: Round Stamp -->
+              <div class="text-center ps-2">
+                <div style="width: 105px; height: 105px; border: 2px dashed #1e3a8a; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #1e3a8a; font-size: 10px; font-weight: bold; text-transform: uppercase; transform: rotate(-5deg); padding: 5px;">
+                  <span>Excise Department</span>
+                  <span style="font-size: 14px; line-height: 1;">★</span>
+                  <span>Govt. of Sikkim</span>
+                </div>
               </div>
-              <div class="fw-bold" style="font-size: 14px; color: #0f172a;">B. Chhetri (SES)</div>
-              <div class="fw-bold" style="font-size: 13px; color: #0f172a;">Commissioner of Excise</div>
-              <div class="fw-bold" style="font-size: 13px; color: #0f172a; text-decoration: underline;">Excise Headquarters/Gangtok</div>
-              <div style="font-size: 12px; color: #334155;">File no: GOS/71/EX/HQ/2026-27</div>
-              <div style="font-size: 12px; color: #555; margin-top: 2px;">Commissioner<br>Excise Department<br>Government of Sikkim</div>
+
+              <!-- Right: Signature and Designation -->
+              <div class="text-center pe-2" style="line-height: 1.3;">
+                <div style="height: 48px; margin-bottom: 2px;">
+                  <img src="assets/EC_Sign_1.png" alt="Signature" style="max-height: 46px; object-fit: contain;" />
+                </div>
+                <div class="fw-bold" style="font-size: 14px; color: #0f172a;">B. Chhetri (SES)</div>
+                <div class="fw-bold" style="font-size: 13px; color: #0f172a;">Commissioner of Excise</div>
+                <div class="fw-bold" style="font-size: 13px; color: #0f172a; text-decoration: underline;">Excise Headquarters/Gangtok</div>
+                <div style="font-size: 12px; color: #334155;">File no: GOS/71/EX/HQ/2026-27</div>
+                <div style="font-size: 12px; color: #555; margin-top: 2px;">Commissioner<br>Excise Department<br>Government of Sikkim</div>
+              </div>
             </div>
           </div>
 
           <!-- Footer Information -->
-          <div class="border-top pt-3 mt-4 text-center text-muted" style="font-size: 11px; line-height: 1.4;">
+          <div class="border-top pt-3 mt-auto text-center text-muted" style="font-size: 11px; line-height: 1.4;">
             <div>Excise Headquarters, M. G. Marg, Gangtok - 737 101</div>
             <div class="d-flex justify-content-center gap-3 mt-1">
               <span>🌐 excise.sikkim.gov.in</span>
