@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { SupplyChainProfileService } from '../../../../../core/services/supply-chain-profile.service';
 import { HologramDataService, HologramProcurement } from '../../services/hologram-data.service';
 import { RoleService } from '../../../../../core/services/role.service';
+import { AccountService } from '../../../../../core/services/account.service';
 
 /* Use the interface from service, but alias or extend if needed for grid */
 type HologramRow = HologramProcurement & {
@@ -42,6 +43,7 @@ export class HologramprocurementComponent implements OnInit {
   showHologramModal = false;
   selectedHologram: HologramRow | null = null;
   currentUnitName: string | null = null;
+  private currentScopedLicenseId = '';
   isLoading = false;
 
   // Filter properties
@@ -57,6 +59,7 @@ export class HologramprocurementComponent implements OnInit {
 
   private hologramService = inject(HologramDataService);
   private roleService = inject(RoleService);
+  private accountService = inject(AccountService);
 
   constructor(
     private router: Router,
@@ -163,10 +166,8 @@ export class HologramprocurementComponent implements OnInit {
           return item;
         });
 
-        // Filter by Unit Name (Backend handles this via user context, but double check)
-        if (this.currentUnitName) {
-          // Backend already filters by user's licensee profile
-        }
+        // Filter by Unit Name / Scoped License for licensee/OIC users
+        mapped = this.filterByCurrentLicense(mapped);
 
         // Sort by date (newest first)
         mapped.sort((a, b) => new Date(b.date || '').getTime() - new Date(a.date || '').getTime());
@@ -207,6 +208,128 @@ export class HologramprocurementComponent implements OnInit {
 
   private refreshHologramList(): void {
     this.loadHolograms();
+  }
+
+  private resolveCurrentScopedLicenseId(): string {
+    if (typeof window === 'undefined') return '';
+
+    const sources = [
+      sessionStorage.getItem('currentUser'),
+      localStorage.getItem('currentUser'),
+      sessionStorage.getItem('user'),
+      localStorage.getItem('user')
+    ];
+
+    for (const raw of sources) {
+      if (!raw) continue;
+      try {
+        const parsed = JSON.parse(raw);
+        const resolved = this.extractLicenseId(parsed);
+        if (resolved) return resolved;
+      } catch {
+        // Ignore non-JSON payloads
+      }
+    }
+    return '';
+  }
+
+  private extractLicenseId(payload: any): string {
+    if (!payload || typeof payload !== 'object') return '';
+
+    const direct = this.pickFirstNonEmpty(payload, [
+      'license_id', 'licenseId',
+      'licensee_id', 'licenseeId'
+    ]);
+    if (direct) return direct;
+
+    const nestedCandidates = [
+      payload.user,
+      payload.profile,
+      payload.supply_chain_profile,
+      payload.supplyChainProfile,
+      payload.oic_assignment,
+      payload.oicAssignment,
+      payload.assignment
+    ];
+    for (const nested of nestedCandidates) {
+      const nestedId = this.extractLicenseId(nested);
+      if (nestedId) return nestedId;
+    }
+
+    return '';
+  }
+
+  private pickFirstNonEmpty(source: any, keys: string[]): string {
+    for (const key of keys) {
+      const value = source?.[key];
+      const normalized = String(value ?? '').trim();
+      if (normalized) return normalized;
+    }
+    return '';
+  }
+
+  private expandLicenseAliases(licenseId: string): string[] {
+    const normalized = String(licenseId || '').trim();
+    if (!normalized) return [];
+    const aliases = [normalized];
+    if (normalized.startsWith('NLI/')) aliases.push(`NA/${normalized.slice(4)}`);
+    if (normalized.startsWith('NA/')) aliases.push(`NLI/${normalized.slice(3)}`);
+    return aliases;
+  }
+
+  private filterByCurrentLicense<T = any>(rows: T[]): T[] {
+    const user = (this.accountService.getCurrentUser() || this.roleService.getCurrentUser()) as any;
+    const roleName = String(user?.role?.name || localStorage.getItem('role') || '').toLowerCase().trim();
+    const isCommissioner =
+      roleName.includes('commissioner') ||
+      roleName.includes('site_admin') ||
+      roleName.includes('admin') ||
+      roleName.includes('it_cell') ||
+      roleName.includes('itcell') ||
+      roleName.includes('permit');
+    if (isCommissioner) {
+      return rows || [];
+    }
+
+    if (!this.currentScopedLicenseId) {
+      this.currentScopedLicenseId = this.resolveCurrentScopedLicenseId();
+    }
+    const scopedLicense = String(this.currentScopedLicenseId || '').trim();
+    if (!scopedLicense) return rows || [];
+
+    const allowed = new Set(this.expandLicenseAliases(scopedLicense));
+    return (rows || []).filter((row: any) => {
+      const rowLicense =
+        this.pickFirstNonEmpty(row, ['license_id', 'licenseId', 'licensee_id', 'licenseeId']) ||
+        this.pickFirstNonEmpty(row?.supplyChainData, ['license_id', 'licenseId', 'licensee_id', 'licenseeId']) ||
+        row?.licensee?.licensee_id ||
+        row?.license?.license_id;
+
+      if (!rowLicense) {
+        // Match by manufacturing unit name or distillery name if present
+        const rowUnit = String(
+          row?.manufacturingUnit ||
+          row?.manufacturing_unit ||
+          row?.companyName ||
+          row?.licenseeName ||
+          row?.licensee_name ||
+          ''
+        ).trim().toLowerCase();
+        const myUnit = String(
+          this.currentUnitName ||
+          user?.oic_assignment?.establishment_name ||
+          user?.oic_assignment?.manufacturing_unit_name ||
+          user?.manufacturing_unit_name ||
+          user?.establishment_name ||
+          ''
+        ).trim().toLowerCase();
+        if (rowUnit && myUnit && (rowUnit === myUnit || rowUnit.includes(myUnit) || myUnit.includes(rowUnit))) {
+          return true;
+        }
+        return false;
+      }
+      return this.expandLicenseAliases(rowLicense).some((alias) => allowed.has(alias));
+    });
   }
 
   /** True when the current user is a licensee (not an admin). */

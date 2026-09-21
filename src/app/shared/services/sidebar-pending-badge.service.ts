@@ -986,8 +986,46 @@ export class SidebarPendingBadgeService {
     }).length;
   }
 
+  private resolveScopedLicenseId(): string {
+    try {
+      const raw = localStorage.getItem('currentUser') || localStorage.getItem('user') || sessionStorage.getItem('currentUser') || sessionStorage.getItem('user');
+      if (!raw) return '';
+      const parsed = JSON.parse(raw);
+      return String(
+        parsed?.oic_assignment?.licensee_id ||
+        parsed?.oic_assignment?.license?.license_id ||
+        parsed?.licensee_id ||
+        parsed?.license_id ||
+        parsed?.licenseId ||
+        ''
+      ).trim();
+    } catch {
+      return '';
+    }
+  }
+
   private countOicHologramProcurementPending(items: any[]): number {
-    const rows = Array.isArray(items) ? items : [];
+    let rows = Array.isArray(items) ? items : [];
+    const scopedLicense = this.resolveScopedLicenseId();
+    if (scopedLicense) {
+      const allowed = new Set([
+        scopedLicense,
+        scopedLicense.startsWith('NLI/') ? `NA/${scopedLicense.slice(4)}` : (scopedLicense.startsWith('NA/') ? `NLI/${scopedLicense.slice(3)}` : scopedLicense)
+      ]);
+      rows = rows.filter((row: any) => {
+        const rowLic = String(
+          row?.license_id ||
+          row?.licenseId ||
+          row?.licensee_id ||
+          row?.licenseeId ||
+          row?.licensee?.licensee_id ||
+          row?.license?.license_id ||
+          ''
+        ).trim();
+        if (!rowLic) return true;
+        return allowed.has(rowLic) || (rowLic.startsWith('NLI/') && allowed.has(`NA/${rowLic.slice(4)}`)) || (rowLic.startsWith('NA/') && allowed.has(`NLI/${rowLic.slice(3)}`));
+      });
+    }
 
     const hasAnyActions = rows.some((row) => this.extractAllowedActions(row).length > 0);
     if (hasAnyActions) {

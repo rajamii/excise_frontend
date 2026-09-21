@@ -3160,7 +3160,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     const holReqPending = holReq.filter(x => {
       const s = String(x.currentStageName || x.current_stage_name || x.status || '').toLowerCase();
-      return s.includes('pending') || s.includes('under') || s.includes('submitted');
+      const isPending = s.includes('pending') || s.includes('under') || s.includes('submitted');
+      if (!isPending) return false;
+      if (this.isUsageDatePast(x)) return false;
+      return true;
     }).length;
     const holReqApproved = holReq.filter(x => {
       const s = String(x.currentStageName || x.current_stage_name || x.status || '').toLowerCase();
@@ -3168,9 +3171,20 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }).length;
     const holReqRejected = holReq.filter(x => {
       const s = String(x.currentStageName || x.current_stage_name || x.status || '').toLowerCase();
-      return s.includes('rejected') || s.includes('cancelled');
+      if (s.includes('rejected') || s.includes('cancelled')) return true;
+      if (this.isUsageDatePast(x) && (s.includes('pending') || s.includes('under') || s.includes('submitted'))) return true;
+      return false;
     }).length;
     this.supplyChainModuleCounts['hologramRequests'] = { applied: holReq.length, pending: holReqPending, approved: holReqApproved, objection: 0, rejected: holReqRejected };
+  }
+
+  private isUsageDatePast(request: any): boolean {
+    const usageDate = String(request?.usage_date || request?.usageDate || '').trim();
+    if (!usageDate) return false;
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const usageKey = usageDate.slice(0, 10);
+    return usageKey < todayKey;
   }
 
   private resolveOicScopedLicenseId(): string {
@@ -3733,9 +3747,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         rejected += 1;
       } else if (hasDetails || statusToken.includes('cartonassigned') || statusToken.includes('cartoonassigned')) {
         approved += 1;
-      } else {
-        // Stage 80 / Payment Completed or pending OIC arrival update -> PENDING for OIC!
+      } else if (isPaymentDone && !hasDetails) {
+        // Stage 80 / Payment Completed without arrived cartons -> PENDING for OIC carton assignment!
         pending += 1;
+      } else {
+        // Earlier stages (e.g. Submitted, Under IT Cell Review) are not pending OIC action
       }
     }
 
