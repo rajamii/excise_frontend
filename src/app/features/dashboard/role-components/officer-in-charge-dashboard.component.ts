@@ -633,34 +633,28 @@ export class OfficerInChargeDashboardComponent implements OnInit {
   private countOicHologramProcurementPending(rows: any[]): number {
     const items = Array.isArray(rows) ? rows : [];
 
-    const hasAnyActions = items.some((row) => this.extractAllowedActions(row).length > 0);
-    if (hasAnyActions) {
-      const actionable = new Set(['ASSIGN_CARTONS', 'UPDATE_ARRIVAL']);
-      return items.filter((row) => {
-        const actions = this.extractAllowedActions(row);
-        const hasAssignCartons = actions.includes('ASSIGN_CARTONS');
-        const hasUpdateArrival = actions.includes('UPDATE_ARRIVAL');
+    return items.filter((row) => {
+      const actions = this.extractAllowedActions(row);
+      const hasAssignCartons = actions.includes('ASSIGN_CARTONS');
+      const hasUpdateArrival = actions.includes('UPDATE_ARRIVAL');
+
+      const details = row?.carton_details ?? row?.cartoon_details ?? row?.cartonDetails ?? row?.cartoonDetails ?? [];
+      const hasDetails = Array.isArray(details) && details.length > 0;
+
+      if (actions.length > 0) {
         if (!hasAssignCartons && !hasUpdateArrival) return false;
-
-        const details = row?.carton_details ?? row?.cartoon_details ?? row?.cartonDetails ?? row?.cartoonDetails ?? [];
-        const hasDetails = Array.isArray(details) && details.length > 0;
-
         if (hasAssignCartons && !hasDetails) return true;
         if (hasUpdateArrival && hasDetails) return true;
         return false;
-      }).length;
-    }
+      }
 
-    // Fallback when backend doesn't return allowed actions consistently.
-    return items.filter((row) => {
-      const statusToken = this.normalizeStageToken(row?.status);
-      if (!statusToken) return false;
+      // Fallback when allowed_actions is not provided for this row
+      const statusToken = this.normalizeStageToken(row?.status || row?.current_stage_name || row?.currentStageName || '');
+      const stageId = Number(row?.stage_id ?? row?.stageId ?? row?.current_stage ?? row?.currentStage ?? 0);
+      const isPaymentDone = stageId === 80 || (statusToken && statusToken.includes('paymentcompleted')) || String(row?.payment_status || row?.paymentStatus || '').toLowerCase() === 'completed';
 
-      if (statusToken.includes('paymentcompleted')) return false;
-      if (statusToken.includes('cartonassigned') || statusToken.includes('cartoonassigned')) return false;
-      if (statusToken.includes('rejected') || statusToken.includes('reject')) return false;
-
-      return statusToken.includes('approved') || statusToken.includes('pending') || statusToken.includes('under');
+      if (isPaymentDone && !hasDetails) return true;
+      return false;
     }).length;
   }
 
@@ -852,25 +846,68 @@ export class OfficerInChargeDashboardComponent implements OnInit {
   }
 
   private resolveCurrentScopedLicenseId(): string {
-    if (typeof window === 'undefined') return '';
-
-    const sources = [
-      sessionStorage.getItem('currentUser'),
-      localStorage.getItem('currentUser'),
-      sessionStorage.getItem('user'),
-      localStorage.getItem('user')
-    ];
-
-    for (const raw of sources) {
-      if (!raw) continue;
-      try {
-        const parsed = JSON.parse(raw);
-        const resolved = this.extractLicenseId(parsed);
+    try {
+      const user = this.accountService.getCurrentUser() as any;
+      if (user) {
+        const resolved = this.extractLicenseId(user);
         if (resolved) return resolved;
-      } catch {
-        // Ignore non-JSON payloads
       }
-    }
+
+      const sources = [
+        sessionStorage.getItem('currentUser'),
+        localStorage.getItem('currentUser'),
+        sessionStorage.getItem('user'),
+        localStorage.getItem('user')
+      ];
+
+      for (const raw of sources) {
+        if (!raw) continue;
+        try {
+          const parsed = JSON.parse(raw);
+          const resolved = this.extractLicenseId(parsed);
+          if (resolved) return resolved;
+        } catch {
+          // Ignore non-JSON payloads
+        }
+      }
+    } catch {}
+    return '';
+  }
+
+  private resolveEstablishmentName(): string {
+    try {
+      const user = this.accountService.getCurrentUser() as any;
+      if (user) {
+        const est = user.oic_assignment?.establishment_name ||
+          user.oic_assignment?.manufacturing_unit_name ||
+          user.oic_assignment?.licensee_name ||
+          user.manufacturing_unit_name ||
+          user.establishment_name ||
+          user.company_name;
+        if (est) return String(est).trim();
+      }
+
+      const sources = [
+        sessionStorage.getItem('currentUser'),
+        localStorage.getItem('currentUser'),
+        sessionStorage.getItem('user'),
+        localStorage.getItem('user')
+      ];
+      for (const raw of sources) {
+        if (!raw) continue;
+        try {
+          const parsed = JSON.parse(raw);
+          const est = parsed?.oic_assignment?.establishment_name ||
+            parsed?.oic_assignment?.manufacturing_unit_name ||
+            parsed?.oicAssignment?.establishment_name ||
+            parsed?.oicAssignment?.manufacturing_unit_name ||
+            parsed?.manufacturing_unit_name ||
+            parsed?.establishment_name ||
+            parsed?.company_name;
+          if (est) return String(est).trim();
+        } catch {}
+      }
+    } catch {}
     return '';
   }
 
@@ -919,17 +956,41 @@ export class OfficerInChargeDashboardComponent implements OnInit {
   }
 
   private filterByCurrentLicense<T = any>(rows: T[]): T[] {
-    const scopedLicense = String(this.currentScopedLicenseId || '').trim();
-    if (!scopedLicense) return rows || [];
+    const scopedLicense = String(this.currentScopedLicenseId || this.resolveCurrentScopedLicenseId() || '').trim();
+    const myUnit = this.resolveEstablishmentName().trim().toLowerCase();
+    if (!scopedLicense && !myUnit) return rows || [];
 
-    const allowed = new Set(this.expandLicenseAliases(scopedLicense));
+    const allowed = scopedLicense ? new Set(this.expandLicenseAliases(scopedLicense)) : new Set<string>();
     return (rows || []).filter((row: any) => {
-      const rowLicense = this.pickFirstNonEmpty(row, [
-        'license_id', 'licenseId',
-        'licensee_id', 'licenseeId'
-      ]);
-      if (!rowLicense) return false;
-      return this.expandLicenseAliases(rowLicense).some((alias) => allowed.has(alias));
+      const rowLicense =
+        this.pickFirstNonEmpty(row, ['license_id', 'licenseId', 'licensee_id', 'licenseeId']) ||
+        this.pickFirstNonEmpty(row?.supplyChainData, ['license_id', 'licenseId', 'licensee_id', 'licenseeId']) ||
+        (typeof row?.license === 'string' ? row.license : row?.license?.license_id) ||
+        row?.licensee?.licensee_id;
+
+      if (rowLicense && allowed.size > 0) {
+        if (this.expandLicenseAliases(rowLicense).some((alias) => allowed.has(alias))) {
+          return true;
+        }
+      }
+
+      if (myUnit) {
+        const rowUnit = String(
+          row?.manufacturingUnit ||
+          row?.manufacturing_unit ||
+          row?.companyName ||
+          row?.licenseeName ||
+          row?.licensee_name ||
+          row?.supplyChainData?.manufacturingUnit ||
+          row?.supplyChainData?.manufacturing_unit ||
+          ''
+        ).trim().toLowerCase();
+        if (rowUnit && (rowUnit === myUnit || rowUnit.includes(myUnit) || myUnit.includes(rowUnit))) {
+          return true;
+        }
+      }
+
+      return false;
     });
   }
 

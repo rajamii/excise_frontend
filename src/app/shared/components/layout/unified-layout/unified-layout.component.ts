@@ -446,6 +446,13 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         0
       );
     }
+    if (key === 'hologram-register') {
+      return Number(
+        this.pendingBadgeCounts?.['hologram-register'] ||
+        this.pendingBadgeCounts?.['hologram'] ||
+        0
+      );
+    }
     if (key.includes('hologram-procurement:payment') || key.includes('imfl-hologram-procurement:payment')) {
       return Number(
         this.pendingBadgeCounts?.['distributor-permit-hologram-procurement:payment'] ||

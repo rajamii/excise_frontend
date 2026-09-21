@@ -267,8 +267,8 @@ export class HologramdetailsComponent implements OnInit {
       const rowLicense =
         this.pickFirstNonEmpty(row, ['license_id', 'licenseId', 'licensee_id', 'licenseeId']) ||
         this.pickFirstNonEmpty(row?.supplyChainData, ['license_id', 'licenseId', 'licensee_id', 'licenseeId']) ||
-        row?.licensee?.licensee_id ||
-        row?.license?.license_id;
+        (typeof row?.license === 'string' ? row.license : row?.license?.license_id) ||
+        row?.licensee?.licensee_id;
 
       if (!rowLicense) {
         // Match by manufacturing unit name or distillery name if present

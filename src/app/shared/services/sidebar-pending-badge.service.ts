@@ -9,6 +9,8 @@ import { SupplyChainService } from '../../features/licensee/supplyChain/services
 import { HologramDataService } from '../../features/licensee/supplyChain/services/hologram-data.service';
 import { DistributorPermitService } from '../../core/services/distributor-permit.service';
 import { LicenseApplicationService } from '../../core/services/license-application.service';
+import { AccountService } from '../../core/services/account.service';
+import { RoleService } from '../../core/services/role.service';
 import { ReadApiCacheInterceptor } from '../../core/interceptors/read-api-cache.interceptor';
 import { environment } from '../../../environments/environment';
 
@@ -46,7 +48,9 @@ export class SidebarPendingBadgeService {
     private supplyChainService: SupplyChainService,
     private hologramService: HologramDataService,
     private distributorPermitService: DistributorPermitService,
-    private licenseApplicationService: LicenseApplicationService
+    private licenseApplicationService: LicenseApplicationService,
+    private accountService: AccountService,
+    private roleService: RoleService
   ) {
     this.hologramService.requestUpdate$.subscribe(() => {
       console.log('🔄 BADGE SERVICE: Received hologram request update notification, triggering sidebar refresh');
@@ -396,7 +400,7 @@ export class SidebarPendingBadgeService {
         if (mode === 'light') return of(0);
         if (audience === 'licensee') return of(0);
         return forkJoin({
-          requests: this.hologramService.getRequests().pipe(map((items) => this.toArray(items))),
+          requests: this.hologramService.getRequests().pipe(map((items) => this.filterByScopedLicense(this.toArray(items)))),
           dailyRegister: this.hologramService.getDailyRegisterEntries().pipe(map((items) => this.toArray(items)))
         }).pipe(
           map(({ requests, dailyRegister }) => {
@@ -443,7 +447,7 @@ export class SidebarPendingBadgeService {
       case 'oic-hologram-requests':
         if (mode === 'light') return of(0);
         return this.hologramService.getRequests().pipe(
-          map((items) => this.toArray(items)),
+          map((items) => this.filterByScopedLicense(this.toArray(items))),
           map((items) =>
             items.filter((x) => {
               // Match the UI "Pending Review" bucket, not "Under Process".
@@ -988,85 +992,199 @@ export class SidebarPendingBadgeService {
 
   private resolveScopedLicenseId(): string {
     try {
-      const raw = localStorage.getItem('currentUser') || localStorage.getItem('user') || sessionStorage.getItem('currentUser') || sessionStorage.getItem('user');
-      if (!raw) return '';
-      const parsed = JSON.parse(raw);
-      return String(
-        parsed?.oic_assignment?.licensee_id ||
-        parsed?.oic_assignment?.license?.license_id ||
-        parsed?.licensee_id ||
-        parsed?.license_id ||
-        parsed?.licenseId ||
-        ''
-      ).trim();
+      const userFromAccount = this.accountService?.getCurrentUser();
+      const userFromRole = this.roleService?.getCurrentUser();
+      if (userFromAccount) {
+        const resolved = this.extractScopedLicenseIdFromObject(userFromAccount);
+        if (resolved) return resolved;
+      }
+      if (userFromRole) {
+        const resolved = this.extractScopedLicenseIdFromObject(userFromRole);
+        if (resolved) return resolved;
+      }
+      const sources = [
+        sessionStorage.getItem('currentUser'),
+        localStorage.getItem('currentUser'),
+        sessionStorage.getItem('user'),
+        localStorage.getItem('user'),
+        localStorage.getItem('account')
+      ];
+      for (const raw of sources) {
+        if (!raw) continue;
+        const parsed = JSON.parse(raw);
+        const resolved = this.extractScopedLicenseIdFromObject(parsed);
+        if (resolved) return resolved;
+      }
+      return '';
     } catch {
       return '';
     }
   }
 
-  private countOicHologramProcurementPending(items: any[]): number {
-    let rows = Array.isArray(items) ? items : [];
-    const scopedLicense = this.resolveScopedLicenseId();
-    if (scopedLicense) {
-      const allowed = new Set([
-        scopedLicense,
-        scopedLicense.startsWith('NLI/') ? `NA/${scopedLicense.slice(4)}` : (scopedLicense.startsWith('NA/') ? `NLI/${scopedLicense.slice(3)}` : scopedLicense)
-      ]);
-      rows = rows.filter((row: any) => {
-        const rowLic = String(
-          row?.license_id ||
-          row?.licenseId ||
-          row?.licensee_id ||
-          row?.licenseeId ||
-          row?.licensee?.licensee_id ||
-          row?.license?.license_id ||
+  private resolveScopedEstablishmentName(): string {
+    try {
+      const userFromAccount = this.accountService?.getCurrentUser() as any;
+      const userFromRole = this.roleService?.getCurrentUser() as any;
+      const candidates = [
+        userFromAccount?.oic_assignment?.establishment_name,
+        userFromAccount?.oic_assignment?.manufacturing_unit_name,
+        userFromAccount?.oic_assignment?.licensee_name,
+        userFromAccount?.manufacturing_unit_name,
+        userFromAccount?.establishment_name,
+        userFromAccount?.company_name,
+        userFromRole?.oic_assignment?.establishment_name,
+        userFromRole?.oic_assignment?.manufacturing_unit_name,
+        userFromRole?.oic_assignment?.licensee_name,
+        userFromRole?.manufacturing_unit_name,
+        userFromRole?.establishment_name,
+        userFromRole?.company_name
+      ];
+      for (const c of candidates) {
+        const val = String(c || '').trim();
+        if (val) return val;
+      }
+
+      const sources = [
+        sessionStorage.getItem('currentUser'),
+        localStorage.getItem('currentUser'),
+        sessionStorage.getItem('user'),
+        localStorage.getItem('user'),
+        localStorage.getItem('account')
+      ];
+      for (const raw of sources) {
+        if (!raw) continue;
+        const parsed = JSON.parse(raw);
+        const name = String(
+          parsed?.oic_assignment?.establishment_name ||
+          parsed?.oic_assignment?.manufacturing_unit_name ||
+          parsed?.oic_assignment?.licensee_name ||
+          parsed?.oicAssignment?.establishment_name ||
+          parsed?.oicAssignment?.manufacturing_unit_name ||
+          parsed?.oicAssignment?.licensee_name ||
+          parsed?.manufacturing_unit_name ||
+          parsed?.establishment_name ||
+          parsed?.company_name ||
           ''
         ).trim();
-        if (!rowLic) return true;
-        return allowed.has(rowLic) || (rowLic.startsWith('NLI/') && allowed.has(`NA/${rowLic.slice(4)}`)) || (rowLic.startsWith('NA/') && allowed.has(`NLI/${rowLic.slice(3)}`));
-      });
+        if (name) return name;
+      }
+    } catch {}
+    return '';
+  }
+
+  private extractScopedLicenseIdFromObject(payload: any): string {
+    if (!payload || typeof payload !== 'object') return '';
+
+    const direct = this.pickFirstNonEmptyValue(payload, [
+      'license_id', 'licenseId',
+      'licensee_id', 'licenseeId'
+    ]);
+    if (direct) return direct;
+
+    const nestedCandidates = [
+      payload.user,
+      payload.profile,
+      payload.supply_chain_profile,
+      payload.supplyChainProfile,
+      payload.oic_assignment,
+      payload.oicAssignment,
+      payload.assignment
+    ];
+    for (const nested of nestedCandidates) {
+      const nestedId = this.extractScopedLicenseIdFromObject(nested);
+      if (nestedId) return nestedId;
     }
 
-    const hasAnyActions = rows.some((row) => this.extractAllowedActions(row).length > 0);
-    if (hasAnyActions) {
-      const actionable = new Set(['ASSIGN_CARTONS', 'UPDATE_ARRIVAL']);
-      return rows.filter((row) => {
-        const actions = this.extractAllowedActions(row);
-        const hasAssignCartons = actions.includes('ASSIGN_CARTONS');
-        const hasUpdateArrival = actions.includes('UPDATE_ARRIVAL');
-        if (!hasAssignCartons && !hasUpdateArrival) return false;
+    return '';
+  }
 
-        const details = row?.carton_details ?? row?.cartoon_details ?? row?.cartonDetails ?? row?.cartoonDetails ?? [];
-        const hasDetails = Array.isArray(details) && details.length > 0;
-
-        // Align with UI expectations:
-        // - ASSIGN_CARTONS -> pending when cartons are not yet assigned
-        // - UPDATE_ARRIVAL -> pending when cartons exist (arrival update happens after assignment)
-        if (hasAssignCartons && !hasDetails) return true;
-        if (hasUpdateArrival && hasDetails) return true;
-        return false;
-      }).length;
+  private pickFirstNonEmptyValue(source: any, keys: string[]): string {
+    for (const key of keys) {
+      const value = source?.[key];
+      const normalized = String(value ?? '').trim();
+      if (normalized) return normalized;
     }
+    return '';
+  }
 
-    // Fallback when backend doesn't return allowed actions consistently.
+  private expandLicenseAliases(licenseId: string): string[] {
+    const normalized = String(licenseId || '').trim();
+    if (!normalized) return [];
+    const aliases = [normalized];
+    if (normalized.startsWith('NLI/')) aliases.push(`NA/${normalized.slice(4)}`);
+    if (normalized.startsWith('NA/')) aliases.push(`NLI/${normalized.slice(3)}`);
+    return aliases;
+  }
+
+  private filterByScopedLicense<T = any>(rows: T[]): T[] {
+    const scopedLicense = this.resolveScopedLicenseId();
+    const myUnit = this.resolveScopedEstablishmentName().trim().toLowerCase();
+    if (!scopedLicense && !myUnit) return rows || [];
+
+    const allowed = scopedLicense ? new Set(this.expandLicenseAliases(scopedLicense)) : new Set<string>();
+    return (rows || []).filter((row: any) => {
+      const rowLicense =
+        this.pickFirstNonEmptyValue(row, ['license_id', 'licenseId', 'licensee_id', 'licenseeId']) ||
+        this.pickFirstNonEmptyValue((row as any)?.supplyChainData, ['license_id', 'licenseId', 'licensee_id', 'licenseeId']) ||
+        (typeof (row as any)?.license === 'string' ? (row as any).license : (row as any)?.license?.license_id) ||
+        (row as any)?.licensee?.licensee_id;
+
+      if (rowLicense && allowed.size > 0) {
+        if (this.expandLicenseAliases(rowLicense).some((alias) => allowed.has(alias))) {
+          return true;
+        }
+      }
+
+      if (myUnit) {
+        const rowUnit = String(
+          row?.manufacturingUnit ||
+          row?.manufacturing_unit ||
+          row?.companyName ||
+          row?.company_name ||
+          row?.licenseeName ||
+          row?.licensee_name ||
+          (row as any)?.supplyChainData?.manufacturingUnit ||
+          (row as any)?.supplyChainData?.manufacturing_unit ||
+          (row as any)?.supplyChainData?.companyName ||
+          (row as any)?.supplyChainData?.licenseeName ||
+          ''
+        ).trim().toLowerCase();
+        if (rowUnit && (rowUnit === myUnit || rowUnit.includes(myUnit) || myUnit.includes(rowUnit))) {
+          return true;
+        }
+      }
+
+      return false;
+    });
+  }
+
+  private countOicHologramProcurementPending(items: any[]): number {
+    const rows = this.filterByScopedLicense(Array.isArray(items) ? items : []);
+
     return rows.filter((row) => {
-      const statusToken = this.normalizeStageToken(row?.status);
-      const stageId = Number(row?.stage_id ?? row?.stageId ?? row?.current_stage ?? row?.currentStage ?? 0);
-      const isPaymentDone = stageId === 80 || (statusToken && statusToken.includes('paymentcompleted')) || String(row?.payment_status || row?.paymentStatus || '').toLowerCase() === 'completed';
+      const actions = this.extractAllowedActions(row);
+      const hasAssignCartons = actions.includes('ASSIGN_CARTONS');
+      const hasUpdateArrival = actions.includes('UPDATE_ARRIVAL');
 
       const details = row?.carton_details ?? row?.cartoon_details ?? row?.cartonDetails ?? row?.cartoonDetails ?? [];
       const hasDetails = Array.isArray(details) && details.length > 0;
 
-      // Stage 80 / Payment Completed without arrived cartons IS pending OIC update arrival action!
+      if (actions.length > 0) {
+        if (!hasAssignCartons && !hasUpdateArrival) return false;
+        if (hasAssignCartons && !hasDetails) return true;
+        if (hasUpdateArrival && hasDetails) return true;
+        return false;
+      }
+
+      // Fallback when allowed_actions is not provided for this row
+      const statusToken = this.normalizeStageToken(row?.status || row?.current_stage_name || row?.currentStageName || '');
+      const stageId = Number(row?.stage_id ?? row?.stageId ?? row?.current_stage ?? row?.currentStage ?? 0);
+      const isPaymentDone = stageId === 80 || (statusToken && statusToken.includes('paymentcompleted')) || String(row?.payment_status || row?.paymentStatus || '').toLowerCase() === 'completed';
+
+      // Stage 80 / Payment Completed without arrived cartons IS pending OIC update arrival action
       if (isPaymentDone && !hasDetails) return true;
 
-      // Completed / arrived or rejected.
-      if (isPaymentDone && hasDetails) return false;
-      if (statusToken.includes('cartonassigned') || statusToken.includes('cartoonassigned')) return false;
-      if (statusToken.includes('rejected') || statusToken.includes('reject')) return false;
-
-      // Pending-ish: waiting for OIC procurement register work.
-      return statusToken.includes('approved') || statusToken.includes('pending') || statusToken.includes('under');
+      return false;
     }).length;
   }
 
