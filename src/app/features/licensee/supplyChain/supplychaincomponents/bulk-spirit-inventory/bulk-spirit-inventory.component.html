@@ -1,10 +1,10 @@
 <div class="bulk-spirit-inventory-page">
-  <!-- Premium Branded Header Banner -->
+  <!-- Premium Branded Header Banner with Unique Distinctive Background -->
   <div class="header-banner shadow-sm mb-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
       <div class="d-flex align-items-center gap-3">
-        <button type="button" class="btn btn-glass-back" (click)="goBackToRequisition()">
-          <i class="bi bi-arrow-left me-1"></i> Back to Requisitions
+        <button type="button" class="btn btn-glass-back-icon" (click)="goBackToRequisition()" title="Back to Requisitions" aria-label="Back to Requisitions">
+          <i class="bi bi-arrow-left fs-5"></i>
         </button>
         <div class="d-flex align-items-center gap-3">
           <div class="banner-icon-badge">
@@ -20,74 +20,119 @@
         <button type="button" class="btn btn-glass-usage" (click)="goToUsage()">
           <i class="bi bi-box-arrow-up-right me-1"></i> Bulk Spirit Usage
         </button>
-        <button type="button" class="btn btn-glass-refresh" (click)="loadData()" [disabled]="loading">
-          <i class="bi bi-arrow-clockwise me-1" [class.spin]="loading"></i> Refresh
+        <button type="button" class="btn btn-glass-refresh-icon" (click)="loadData()" [disabled]="loading" title="Refresh Inventory Records" aria-label="Refresh">
+          <i class="bi bi-arrow-clockwise fs-5" [class.spin]="loading"></i>
         </button>
       </div>
     </div>
   </div>
 
-  <!-- Real-Time Stock Balance Cards Grid -->
+  <!-- Live Stock Month Filter Bar -->
+  <div class="card border-0 shadow-sm rounded-4 p-3 mb-3 bg-white live-stock-filter-bar">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+      <div class="d-flex align-items-center gap-2">
+        <span class="filter-indicator-dot"></span>
+        <span class="fw-bold text-dark fs-6">Stock Summary & Balances</span>
+        <span *ngIf="liveStockMonthFilter" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1">
+          <i class="bi bi-calendar-check me-1"></i> {{ getSelectedMonthLabel() }}
+        </span>
+        <span *ngIf="!liveStockMonthFilter" class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+          <i class="bi bi-infinity me-1"></i> All Months (Cumulative)
+        </span>
+      </div>
+
+      <div class="d-flex align-items-center gap-2">
+        <label class="form-label fw-bold text-secondary mb-0 small text-nowrap">
+          <i class="bi bi-funnel me-1"></i> Filter by Month:
+        </label>
+        <select class="form-select form-select-sm fw-semibold month-dropdown" [(ngModel)]="liveStockMonthFilter" (ngModelChange)="applyLiveStockMonthFilter()">
+          <option value="">All Months (Cumulative)</option>
+          <option *ngFor="let m of liveStockAvailableMonths" [value]="m.value">{{ m.label }}</option>
+        </select>
+        <button *ngIf="liveStockMonthFilter" type="button" class="btn btn-sm btn-outline-secondary px-2" (click)="clearLiveStockMonthFilter()" title="Show All Months">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Real-Time Stock Balance Cards Grid (5 Cards) -->
   <div class="row g-3 mb-4">
-    <div class="col-xl-3 col-md-6">
-      <div class="metric-card card border-0 shadow-sm rounded-4 p-3 bg-white">
+    <div class="col-xl col-md-6 col-sm-6">
+      <div class="metric-card card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
         <div class="d-flex align-items-center">
           <div class="metric-icon-box bg-primary bg-opacity-10 text-primary me-3">
-            <i class="bi bi-truck fs-3"></i>
+            <i class="bi bi-truck fs-4"></i>
           </div>
           <div>
-            <span class="text-uppercase fw-semibold text-muted tracking-wide" style="font-size: 0.75rem;">Total Arrived Stock</span>
-            <h3 class="mb-0 fw-bold text-dark mt-1">
+            <span class="text-uppercase fw-semibold text-muted tracking-wide" style="font-size: 0.72rem;">Total Arrived</span>
+            <h4 class="mb-0 fw-bold text-dark mt-1">
               {{ (liveInventory.totalArrivedBl || 0) | number:'1.2-2' }} <small class="fs-6 fw-normal text-muted">BL</small>
-            </h3>
+            </h4>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="col-xl-3 col-md-6">
-      <div class="metric-card card border-0 shadow-sm rounded-4 p-3 bg-white">
+    <div class="col-xl col-md-6 col-sm-6">
+      <div class="metric-card card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
         <div class="d-flex align-items-center">
-          <div class="metric-icon-box bg-success bg-opacity-10 text-success me-3">
-            <i class="bi bi-check-circle-fill fs-3"></i>
+          <div class="metric-icon-box bg-info bg-opacity-10 text-info me-3">
+            <i class="bi bi-check-circle-fill fs-4"></i>
           </div>
           <div>
-            <span class="text-uppercase fw-semibold text-muted tracking-wide" style="font-size: 0.75rem;">Approved Used Stock</span>
-            <h3 class="mb-0 fw-bold text-dark mt-1">
+            <span class="text-uppercase fw-semibold text-muted tracking-wide" style="font-size: 0.72rem;">Approved Used</span>
+            <h4 class="mb-0 fw-bold text-dark mt-1">
               {{ (liveInventory.totalUsedBl || 0) | number:'1.2-2' }} <small class="fs-6 fw-normal text-muted">BL</small>
-            </h3>
+            </h4>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="col-xl-3 col-md-6">
-      <div class="metric-card card border-0 shadow-sm rounded-4 p-3 bg-white">
+    <div class="col-xl col-md-6 col-sm-6">
+      <div class="metric-card card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
         <div class="d-flex align-items-center">
           <div class="metric-icon-box bg-warning bg-opacity-10 text-warning me-3">
-            <i class="bi bi-hourglass-split fs-3"></i>
+            <i class="bi bi-hourglass-split fs-4"></i>
           </div>
           <div>
-            <span class="text-uppercase fw-semibold text-muted tracking-wide" style="font-size: 0.75rem;">In-Flight (Pending OIC)</span>
-            <h3 class="mb-0 fw-bold text-dark mt-1">
+            <span class="text-uppercase fw-semibold text-muted tracking-wide" style="font-size: 0.72rem;">In-Flight (Pending)</span>
+            <h4 class="mb-0 fw-bold text-dark mt-1">
               {{ (liveInventory.totalPendingBl || 0) | number:'1.2-2' }} <small class="fs-6 fw-normal text-muted">BL</small>
-            </h3>
+            </h4>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="col-xl-3 col-md-6">
-      <div class="metric-card card border-0 shadow-sm rounded-4 p-3 text-white" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
+    <div class="col-xl col-md-6 col-sm-6">
+      <div class="metric-card card border-0 shadow-sm rounded-4 p-3 bg-white h-100 border-start border-danger border-3">
         <div class="d-flex align-items-center">
-          <div class="metric-icon-box bg-white bg-opacity-25 text-white me-3">
-            <i class="bi bi-droplet-fill fs-3"></i>
+          <div class="metric-icon-box bg-danger bg-opacity-10 text-danger me-3">
+            <i class="bi bi-arrow-down-right-circle-fill fs-4"></i>
           </div>
           <div>
-            <span class="text-uppercase fw-semibold text-white-50 tracking-wide" style="font-size: 0.75rem;">Net Live Available Stock</span>
-            <h3 class="mb-0 fw-bold text-white mt-1">
+            <span class="text-uppercase fw-semibold text-danger tracking-wide" style="font-size: 0.72rem;">Lost BL (Transit Loss)</span>
+            <h4 class="mb-0 fw-bold text-danger mt-1">
+              {{ (liveInventory.totalLostBl || 0) | number:'1.2-2' }} <small class="fs-6 fw-normal text-muted">BL</small>
+            </h4>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl col-md-6 col-sm-12">
+      <div class="metric-card card border-0 shadow-sm rounded-4 p-3 text-white h-100" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
+        <div class="d-flex align-items-center">
+          <div class="metric-icon-box bg-white bg-opacity-25 text-white me-3">
+            <i class="bi bi-droplet-fill fs-4"></i>
+          </div>
+          <div>
+            <span class="text-uppercase fw-semibold text-white-50 tracking-wide" style="font-size: 0.72rem;">Net Live Available Stock</span>
+            <h4 class="mb-0 fw-bold text-white mt-1">
               {{ (liveInventory.totalAvailableBl || 0) | number:'1.2-2' }} <small class="fs-6 fw-normal text-white-50">BL</small>
-            </h3>
+            </h4>
           </div>
         </div>
       </div>
@@ -152,7 +197,7 @@
           <i class="bi bi-boxes text-primary me-2 fs-5"></i>
           <div>
             <h5 class="mb-0 fw-bold text-dark">Live Bulk Spirit Stock Balances</h5>
-            <small class="text-muted">Real-time breakdown of arrived, used, pending, and net available Bulk Liters (BL)</small>
+            <small class="text-muted">Real-time breakdown of arrived, loss, used, pending, and net available Bulk Liters (BL)</small>
           </div>
         </div>
         <div class="d-flex align-items-center gap-2">
@@ -170,6 +215,7 @@
               <th class="ps-4">#</th>
               <th>Bulk Spirit Type</th>
               <th>Total Arrived (BL)</th>
+              <th class="text-danger-emphasis">Lost BL (Transit Loss)</th>
               <th>Approved Used (BL)</th>
               <th>Pending Approval (BL)</th>
               <th>Live Available Stock (BL)</th>
@@ -188,6 +234,12 @@
               </td>
               <td>
                 <span class="fw-semibold text-secondary">{{ item.totalArrivedBl | number:'1.2-2' }} BL</span>
+              </td>
+              <td>
+                <span *ngIf="item.totalLostBl > 0" class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 fw-bold" title="Difference between requested and arrived BL">
+                  <i class="bi bi-arrow-down-right me-1"></i>-{{ item.totalLostBl | number:'1.2-2' }} BL
+                </span>
+                <span *ngIf="item.totalLostBl === 0" class="text-muted">0.00 BL</span>
               </td>
               <td>
                 <span class="text-muted">{{ item.totalApprovedUsageBl | number:'1.2-2' }} BL</span>
@@ -224,10 +276,10 @@
               </td>
             </tr>
             <tr *ngIf="filteredSpiritItems.length === 0 && !loading">
-              <td colspan="8" class="text-center py-5 text-muted">
+              <td colspan="9" class="text-center py-5 text-muted">
                 <i class="bi bi-inbox fs-1 d-block mb-2 text-muted"></i>
                 <h6 class="fw-bold text-secondary">No Bulk Spirit Types found</h6>
-                <p class="text-muted small mb-0">No matching spirit type was found for your search query.</p>
+                <p class="text-muted small mb-0">No matching spirit type was found for your search or month filter.</p>
               </td>
             </tr>
           </tbody>
@@ -240,43 +292,55 @@
   <!-- VIEW 2: TANKER ARRIVAL ENTRIES & HISTORY -->
   <!-- ========================================================================= -->
   <div *ngIf="activeView === 'arrival-entries'">
-    <!-- Filter Card -->
-    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white filter-card">
-      <div class="row g-3 align-items-end">
-        <div class="col-md-3">
-          <label class="form-label fw-semibold text-secondary small">
-            <i class="bi bi-search me-1"></i> Quick Search
-          </label>
-          <input type="text" class="form-control" [(ngModel)]="arrivalSearchTerm" (input)="applyArrivalFilters()" placeholder="Ref no, distillery, spirit type, tanker...">
+    <!-- Compact Elegant Filter Strip -->
+    <div class="card border-0 shadow-sm rounded-4 p-3 mb-3 bg-white arrival-filter-strip">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <!-- Quick Search -->
+        <div class="d-flex align-items-center flex-grow-1" style="max-width: 340px;">
+          <div class="input-group input-group-sm">
+            <span class="input-group-text bg-light border-end-0 text-muted">
+              <i class="bi bi-search"></i>
+            </span>
+            <input type="text" class="form-control border-start-0 ps-0" [(ngModel)]="arrivalSearchTerm" (input)="applyArrivalFilters()" placeholder="Search ref, distillery, spirit type...">
+          </div>
         </div>
-        <div class="col-md-3">
-          <label class="form-label fw-semibold text-secondary small">
-            <i class="bi bi-calendar-event me-1"></i> Date Filter
-          </label>
-          <input type="date" class="form-control" [(ngModel)]="dateFilter" (change)="applyArrivalFilters()">
-        </div>
-        <div class="col-md-3">
-          <label class="form-label fw-semibold text-secondary small">
-            <i class="bi bi-calendar3 me-1"></i> Month Filter
-          </label>
-          <input type="month" class="form-control" [(ngModel)]="monthFilter" (change)="applyArrivalFilters()">
-        </div>
-        <div class="col-md-3 d-flex gap-2">
-          <button type="button" class="btn btn-outline-secondary w-100" (click)="clearArrivalFilters()">
-            <i class="bi bi-x-circle me-1"></i> Clear Filters
+
+        <!-- Date, Month, and Clear Buttons -->
+        <div class="d-flex flex-wrap align-items-center gap-2.5">
+          <div class="d-flex align-items-center gap-1">
+            <label class="text-secondary small fw-semibold mb-0 text-nowrap">
+              <i class="bi bi-calendar-event me-1 text-muted"></i> Date:
+            </label>
+            <input type="date" class="form-control form-control-sm" style="width: 140px;" [(ngModel)]="dateFilter" (change)="applyArrivalFilters()">
+          </div>
+
+          <div class="d-flex align-items-center gap-1">
+            <label class="text-secondary small fw-semibold mb-0 text-nowrap">
+              <i class="bi bi-calendar3 me-1 text-muted"></i> Month:
+            </label>
+            <input type="month" class="form-control form-control-sm" style="width: 140px;" [(ngModel)]="monthFilter" (change)="applyArrivalFilters()">
+          </div>
+
+          <button *ngIf="arrivalSearchTerm || dateFilter || monthFilter" type="button" class="btn btn-sm btn-outline-secondary px-2.5 ms-1" (click)="clearArrivalFilters()" title="Clear Filters">
+            <i class="bi bi-x-circle me-1"></i> Clear
           </button>
         </div>
       </div>
     </div>
 
     <!-- Monthly BL Summary Table -->
-    <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden" *ngIf="getMonthlyRows().length > 0">
+    <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden monthly-summary-card" *ngIf="getMonthlyRows().length > 0">
       <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
         <div class="d-flex align-items-center">
-          <i class="bi bi-calendar2-month text-primary me-2 fs-5"></i>
-          <h5 class="mb-0 fw-bold text-dark">Monthly BL Summary</h5>
+          <div class="summary-header-icon me-2">
+            <i class="bi bi-calendar3 text-primary"></i>
+          </div>
+          <div>
+            <h6 class="mb-0 fw-bold text-dark">Monthly BL Summary</h6>
+            <small class="text-muted">Aggregated tanker arrival volumes grouped by month</small>
+          </div>
         </div>
-        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1">
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1 fw-semibold">
           {{ getMonthlyRows().length }} Month(s)
         </span>
       </div>
@@ -284,24 +348,38 @@
         <table class="table table-hover align-middle mb-0 summary-table">
           <thead>
             <tr>
-              <th class="ps-4"><i class="bi bi-calendar me-1"></i> Month</th>
-              <th><i class="bi bi-list-ol me-1"></i> Total Entries</th>
+              <th class="ps-4"><i class="bi bi-calendar3 me-1"></i> Month</th>
+              <th><i class="bi bi-card-checklist me-1"></i> Total Entries</th>
               <th><i class="bi bi-truck me-1"></i> Total Tankers</th>
-              <th class="pe-4"><i class="bi bi-droplet-fill me-1"></i> Total Bulk Liter (BL)</th>
+              <th class="text-end text-danger-emphasis"><i class="bi bi-arrow-down-right me-1"></i> Lost BL (Loss)</th>
+              <th class="pe-4 text-end"><i class="bi bi-droplet-half me-1"></i> Total Bulk Liter (BL)</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let row of getMonthlyRows()">
-              <td class="ps-4 fw-semibold text-dark">{{ row.monthLabel }}</td>
-              <td>
-                <span class="badge bg-light text-dark border px-2 py-1">{{ row.entries }} entry(s)</span>
+              <td class="ps-4">
+                <span class="fw-bold text-dark">{{ row.monthLabel }}</span>
               </td>
               <td>
-                <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">
+                <span class="badge bg-light text-secondary border px-2 py-1 fw-medium">
+                  {{ row.entries }} entry(s)
+                </span>
+              </td>
+              <td>
+                <span class="badge bg-blue-light text-primary border border-primary-subtle px-2 py-1 fw-medium">
                   <i class="bi bi-truck me-1"></i>{{ row.totalTankers }} Tanker(s)
                 </span>
               </td>
-              <td class="pe-4 fw-bold text-success fs-6">{{ row.totalBulkLiter | number:'1.2-2' }} BL</td>
+              <td class="text-end">
+                <span *ngIf="row.totalLostBl > 0" class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold px-2.5 py-1">
+                  -{{ row.totalLostBl | number:'1.2-2' }} BL
+                </span>
+                <span *ngIf="!row.totalLostBl || row.totalLostBl === 0" class="text-muted small">0.00 BL</span>
+              </td>
+              <td class="pe-4 text-end">
+                <span class="fw-bold text-success fs-6">{{ row.totalBulkLiter | number:'1.2-2' }}</span>
+                <span class="text-muted small ms-1 fw-semibold">BL</span>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -329,6 +407,7 @@
               <th>Tankers</th>
               <th>Requested Qty</th>
               <th>Received Qty (BL)</th>
+              <th class="text-danger-emphasis">Lost BL</th>
               <th>Tanker Details</th>
               <th>Status</th>
               <th class="pe-4 text-end">Action</th>
@@ -343,6 +422,9 @@
               <td>
                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold fs-6 px-3 py-1">
                   {{ row.referenceNo }}
+                </span>
+                <span *ngIf="row.permitNumbersStr" class="badge bg-info-subtle text-info border border-info-subtle ms-1 fw-semibold" title="Permit Number(s)">
+                  <i class="bi bi-file-earmark-text me-1"></i>Permit #{{ row.permitNumbersStr }}
                 </span>
                 <span class="badge bg-warning text-dark ms-1" *ngIf="row.editedByOic" title="Edited by OIC">OIC Edited</span>
               </td>
@@ -365,6 +447,12 @@
                 <span class="badge bg-success-subtle text-success border border-success-subtle fs-6 fw-bold px-3 py-1">
                   {{ row.totalBulkLiter | number:'1.2-2' }} BL
                 </span>
+              </td>
+              <td>
+                <span *ngIf="row.lostBulkLiter > 0" class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold px-2 py-1">
+                  <i class="bi bi-arrow-down-right me-1"></i>-{{ row.lostBulkLiter | number:'1.2-2' }} BL
+                </span>
+                <span *ngIf="!row.lostBulkLiter || row.lostBulkLiter === 0" class="text-muted small">0.00 BL</span>
               </td>
               <td>
                 <div class="d-flex flex-column gap-1">
@@ -552,7 +640,7 @@
           <i class="bi bi-clock-history text-primary me-2 fs-5"></i>
           <div>
             <h5 class="mb-0 fw-bold text-dark">BL Transaction Ledger & Factory Movement History</h5>
-            <small class="text-muted">Chronological audit trail of tanker arrivals, production usage requests, and approvals</small>
+        
           </div>
         </div>
         <span class="badge bg-primary text-white rounded-pill px-3 py-2">
@@ -568,6 +656,7 @@
               <th>Date & Time</th>
               <th>Movement Type</th>
               <th>Reference No</th>
+              <th>Permit No</th>
               <th>Spirit Type</th>
               <th>Factory / Distillery</th>
               <th>Quantity (BL)</th>
@@ -596,6 +685,12 @@
                 <span class="badge bg-light text-dark border fw-bold fs-6 px-3 py-1">
                   {{ item.referenceNo }}
                 </span>
+              </td>
+              <td>
+                <span *ngIf="item.permitNumbersStr" class="badge bg-info-subtle text-info border border-info-subtle fw-semibold px-2.5 py-1">
+                  <i class="bi bi-file-earmark-text me-1"></i>#{{ item.permitNumbersStr }}
+                </span>
+                <span *ngIf="!item.permitNumbersStr" class="text-muted small">-</span>
               </td>
               <td>
                 <strong class="text-dark">{{ item.bulkSpiritType }}</strong>
@@ -629,7 +724,7 @@
               </td>
             </tr>
             <tr *ngIf="filteredHistoryRows.length === 0 && !loading">
-              <td colspan="10" class="text-center py-5 text-muted">
+              <td colspan="11" class="text-center py-5 text-muted">
                 <i class="bi bi-clock-history fs-1 d-block mb-2 text-muted"></i>
                 <h6 class="fw-bold text-secondary">No BL History records found</h6>
                 <p class="text-muted small mb-0">Try changing the filters above to view other transactions.</p>
@@ -787,9 +882,22 @@
               <p class="fw-semibold text-dark mb-0">{{ selectedArrivalItem.arrivalDate ? (selectedArrivalItem.arrivalDate | date:'dd-MMM-yyyy') : '-' }}</p>
             </div>
 
-            <div class="col-md-6">
-              <label class="text-muted small text-uppercase fw-semibold">Received Total Quantity</label>
-              <p class="fw-bold text-success fs-5 mb-0">{{ selectedArrivalItem.totalBulkLiter | number:'1.2-2' }} BL</p>
+            <div class="col-md-4">
+              <label class="text-muted small text-uppercase fw-semibold">Requested Quantity</label>
+              <p class="fw-bold text-primary fs-6 mb-0">{{ (selectedArrivalItem.requestedTotalQuantity || 0) | number:'1.2-2' }} BL</p>
+            </div>
+
+            <div class="col-md-4">
+              <label class="text-muted small text-uppercase fw-semibold">Received Quantity</label>
+              <p class="fw-bold text-success fs-6 mb-0">{{ selectedArrivalItem.totalBulkLiter | number:'1.2-2' }} BL</p>
+            </div>
+
+            <div class="col-md-4">
+              <label class="text-muted small text-uppercase fw-semibold">Lost BL (Transit Loss)</label>
+              <p class="fw-bold fs-6 mb-0" [ngClass]="(selectedArrivalItem.lostBulkLiter || 0) > 0 ? 'text-danger' : 'text-muted'">
+                <span *ngIf="(selectedArrivalItem.lostBulkLiter || 0) > 0">-{{ selectedArrivalItem.lostBulkLiter | number:'1.2-2' }} BL</span>
+                <span *ngIf="!(selectedArrivalItem.lostBulkLiter > 0)">0.00 BL</span>
+              </p>
             </div>
 
             <div class="col-12">

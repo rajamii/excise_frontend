@@ -5,21 +5,35 @@
 }
 
 .header-banner {
-  background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%);
-  border-radius: 1rem;
+  background: linear-gradient(135deg, #091a28 0%, #0d3446 35%, #134e5e 70%, #1e3b52 100%);
+  border-radius: 1.25rem;
   padding: 1.5rem 2rem;
   color: #ffffff;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 10px 30px -8px rgba(13, 52, 70, 0.45), 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 85% 15%, rgba(45, 212, 191, 0.16) 0%, transparent 45%),
+                radial-gradient(circle at 15% 85%, rgba(245, 158, 11, 0.12) 0%, transparent 45%);
+    pointer-events: none;
+  }
 
   &::after {
     content: '';
     position: absolute;
     top: -50%;
-    right: -10%;
-    width: 300px;
-    height: 300px;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
+    right: -8%;
+    width: 340px;
+    height: 340px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, transparent 70%);
     border-radius: 50%;
     pointer-events: none;
   }
@@ -28,15 +42,16 @@
 .banner-icon-badge {
   width: 52px;
   height: 52px;
-  border-radius: 12px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.75rem;
   color: #f59e0b;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .banner-title {
@@ -48,52 +63,93 @@
 
 .banner-subtitle {
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.85);
 }
 
-.btn-glass-back {
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+.btn-glass-back-icon,
+.btn-glass-refresh-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   color: #ffffff;
-  font-weight: 500;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(10px);
+  padding: 0;
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.25);
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.28);
     color: #ffffff;
-    transform: translateX(-2px);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 }
 
 .btn-glass-usage {
-  background: rgba(245, 158, 11, 0.25);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.3) 0%, rgba(217, 119, 6, 0.25) 100%);
   border: 1px solid rgba(245, 158, 11, 0.5);
-  color: #fef3c7;
+  color: #fffbeb;
   font-weight: 600;
   padding: 0.55rem 1.15rem;
-  border-radius: 0.5rem;
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
   transition: all 0.2s ease;
 
   &:hover {
-    background: rgba(245, 158, 11, 0.4);
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.45) 0%, rgba(217, 119, 6, 0.4) 100%);
     color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3);
   }
 }
 
-.btn-glass-refresh {
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #ffffff;
-  font-weight: 600;
-  padding: 0.55rem 1.25rem;
-  border-radius: 0.5rem;
+.live-stock-filter-bar {
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.filter-indicator-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+  display: inline-block;
+  animation: pulse-dot 2s infinite ease-in-out;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.25); opacity: 0.75; }
+}
+
+.month-dropdown {
+  min-width: 220px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  color: #1e293b;
+  background-color: #f8fafc;
+  cursor: pointer;
   transition: all 0.2s ease;
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.3);
-    color: #ffffff;
+  &:focus {
+    border-color: #0d3446;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(13, 52, 70, 0.15);
   }
 }
 
@@ -147,9 +203,9 @@
   }
 }
 
-.filter-card {
-  border: 1px solid #bfdbfe !important;
-  background: #eff6ff !important;
+.arrival-filter-strip {
+  border: 1px solid #e2e8f0 !important;
+  background: #ffffff !important;
 }
 
 .custom-table {
@@ -172,22 +228,60 @@
 }
 
 .summary-table {
+  border-collapse: separate;
+  border-spacing: 0;
+
   thead th {
-    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-    color: #ffffff;
-    font-weight: 600;
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 700;
     text-transform: uppercase;
     font-size: 0.75rem;
-    letter-spacing: 0.05em;
-    padding: 1rem 0.75rem;
-    border-bottom: 2px solid #1d4ed8;
+    letter-spacing: 0.04em;
+    padding: 0.85rem 1rem;
+    border-top: none;
+    border-bottom: 1px solid #e2e8f0;
+
+    i {
+      color: #94a3b8;
+    }
   }
 
   tbody td {
-    padding: 1rem 0.75rem;
-    font-size: 0.9rem;
+    padding: 0.9rem 1rem;
+    font-size: 0.88rem;
     border-bottom: 1px solid #f1f5f9;
+    color: #1e293b;
+    vertical-align: middle;
   }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  tbody tr:hover {
+    background-color: #f8fafc;
+  }
+}
+
+.monthly-summary-card {
+  border: 1px solid #e2e8f0 !important;
+  background: #ffffff;
+}
+
+.summary-header-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(37, 99, 235, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+}
+
+.bg-blue-light {
+  background-color: #eff6ff !important;
 }
 
 .table-light-highlight {

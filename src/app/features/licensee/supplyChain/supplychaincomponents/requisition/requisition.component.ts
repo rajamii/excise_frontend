@@ -2010,6 +2010,32 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     return null;
   }
 
+  getArrivalViewLostBulkLiterForPermit(row: any): number {
+    const expected = this.getArrivalViewExpectedBulkLiterForPermit(row?.permit_no);
+    if (expected === null || expected === undefined) {
+      return 0;
+    }
+    const entered = Number(row?.bulk_liter || 0);
+    return Math.max(0, expected - entered);
+  }
+
+  getArrivalLostBulkLiter(): number {
+    const allowed = this.getArrivalAllowedBulkLiter() || 0;
+    const entered = this.getArrivalTotalBulkLiter() || 0;
+    return Math.max(0, allowed - entered);
+  }
+
+  getArrivalPermitDraftLostBulkLiter(): number {
+    const permitNo = String(this.selectedArrivalPermitNo || '').trim();
+    if (!permitNo) {
+      return this.getArrivalLostBulkLiter();
+    }
+    const expected = this.getArrivalExpectedBulkLiterForPermit(permitNo);
+    if (expected == null || expected <= 0) return 0;
+    const entered = this.getArrivalPermitDraftTotalBulkLiter() || 0;
+    return Math.max(0, expected - entered);
+  }
+
   // Permit-wise arrival helpers
   private buildDefaultArrivalPermitDraftEntries(): TankerArrivalEntry[] {
     return [{ tanker_no: '', bulk_liter: null }];
