@@ -653,8 +653,8 @@
               <mat-icon>menu</mat-icon>
             </button>
 
-            <!-- Compact, Modern Status Capsule -->
-            <div class="top-status-capsule">
+            <!-- Compact, Modern Status Capsule (Shown only on main Dashboard home tab) -->
+            <div class="top-status-capsule" *ngIf="isDashboardHomeActive()">
               <!-- Greeting Chip -->
               <div class="status-greeting-pill">
                 <mat-icon class="status-icon greeting-icon">{{ greetingIcon }}</mat-icon>
