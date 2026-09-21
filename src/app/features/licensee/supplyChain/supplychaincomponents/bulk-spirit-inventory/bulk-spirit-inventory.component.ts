@@ -117,8 +117,12 @@ export class BulkSpiritInventoryComponent implements OnInit {
   };
   spiritSearchTerm = '';
   filteredSpiritItems: LiveSpiritTypeStockItem[] = [];
+  liveStockFilterMode: 'ALL' | 'DAY' | 'MONTH' | 'YEAR' = 'ALL';
+  liveStockDayFilter = '';
   liveStockMonthFilter = '';
+  liveStockYearFilter = '';
   liveStockAvailableMonths: Array<{ value: string; label: string }> = [];
+  liveStockAvailableYears: string[] = [];
   rawBackendSummary: any = null;
   rawUsagesList: BulkSpiritUsageRecord[] = [];
 
@@ -225,11 +229,11 @@ export class BulkSpiritInventoryComponent implements OnInit {
         }
         this.distinctSpiritTypes = Array.from(typesSet).sort();
 
-        // 4. Populate available months for filter
-        this.populateLiveStockMonths(this.allArrivalRows, this.rawUsagesList);
+        // 4. Populate available time filters (Day, Month, Year)
+        this.populateLiveStockTimeFilters(this.allArrivalRows, this.rawUsagesList);
 
         // 5. Apply live stock filter (computes liveInventory with losses)
-        this.applyLiveStockMonthFilter();
+        this.applyLiveStockFilter();
 
         // 6. Build Unified BL History Ledger
         this.buildHistoryLedger(this.allArrivalRows, this.rawUsagesList);
@@ -243,22 +247,24 @@ export class BulkSpiritInventoryComponent implements OnInit {
     });
   }
 
-  private populateLiveStockMonths(arrivals: ArrivalDetailsRow[], usages: BulkSpiritUsageRecord[]): void {
+  populateLiveStockTimeFilters(arrivals: ArrivalDetailsRow[], usages: BulkSpiritUsageRecord[]): void {
     const monthMap = new Map<string, string>();
-    
-    // Always include current month
+    const yearSet = new Set<string>();
+
     const now = new Date();
-    const curYear = now.getFullYear();
+    const curYear = String(now.getFullYear());
     const curMonth = String(now.getMonth() + 1).padStart(2, '0');
     const curYm = `${curYear}-${curMonth}`;
     const curLabel = now.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
     monthMap.set(curYm, curLabel);
+    yearSet.add(curYear);
 
     arrivals.forEach(a => {
       const tokens = this.extractDateTokens(a.arrivalDate || a.submittedAt || '');
       if (tokens.ym) {
         const parts = tokens.ym.split('-');
         if (parts.length === 2) {
+          yearSet.add(parts[0]);
           const d = new Date(Number(parts[0]), Number(parts[1]) - 1, 1);
           if (!isNaN(d.getTime())) {
             monthMap.set(tokens.ym, d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }));
@@ -272,6 +278,7 @@ export class BulkSpiritInventoryComponent implements OnInit {
       if (tokens.ym) {
         const parts = tokens.ym.split('-');
         if (parts.length === 2) {
+          yearSet.add(parts[0]);
           const d = new Date(Number(parts[0]), Number(parts[1]) - 1, 1);
           if (!isNaN(d.getTime())) {
             monthMap.set(tokens.ym, d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }));
@@ -283,33 +290,113 @@ export class BulkSpiritInventoryComponent implements OnInit {
     this.liveStockAvailableMonths = Array.from(monthMap.entries())
       .map(([value, label]) => ({ value, label }))
       .sort((a, b) => b.value.localeCompare(a.value));
+
+    this.liveStockAvailableYears = Array.from(yearSet).sort((a, b) => b.localeCompare(a));
   }
 
-  getSelectedMonthLabel(): string {
-    if (!this.liveStockMonthFilter) return 'All Months';
-    const found = this.liveStockAvailableMonths.find(m => m.value === this.liveStockMonthFilter);
-    return found ? found.label : this.liveStockMonthFilter;
+  setLiveStockFilterMode(mode: 'ALL' | 'DAY' | 'MONTH' | 'YEAR'): void {
+    this.liveStockFilterMode = mode;
+    this.applyLiveStockFilter();
   }
 
-  clearLiveStockMonthFilter(): void {
+  onLiveStockDayChange(): void {
+    if (this.liveStockDayFilter) {
+      this.liveStockMonthFilter = '';
+      this.liveStockYearFilter = '';
+      this.liveStockFilterMode = 'DAY';
+    } else {
+      this.liveStockFilterMode = 'ALL';
+    }
+    this.applyLiveStockFilter();
+  }
+
+  onLiveStockMonthChange(): void {
+    if (this.liveStockMonthFilter) {
+      this.liveStockDayFilter = '';
+      this.liveStockYearFilter = '';
+      this.liveStockFilterMode = 'MONTH';
+    } else {
+      this.liveStockFilterMode = 'ALL';
+    }
+    this.applyLiveStockFilter();
+  }
+
+  onLiveStockYearChange(): void {
+    if (this.liveStockYearFilter) {
+      this.liveStockDayFilter = '';
+      this.liveStockMonthFilter = '';
+      this.liveStockFilterMode = 'YEAR';
+    } else {
+      this.liveStockFilterMode = 'ALL';
+    }
+    this.applyLiveStockFilter();
+  }
+
+  onLiveStockFilterModeChange(event: any): void {
+    const val = (event?.target?.value || this.liveStockFilterMode) as 'ALL' | 'DAY' | 'MONTH' | 'YEAR';
+    this.liveStockFilterMode = val;
+    if (val === 'ALL') {
+      this.liveStockDayFilter = '';
+      this.liveStockMonthFilter = '';
+      this.liveStockYearFilter = '';
+    }
+    this.applyLiveStockFilter();
+  }
+
+  clearLiveStockFilter(): void {
+    this.liveStockFilterMode = 'ALL';
+    this.liveStockDayFilter = '';
     this.liveStockMonthFilter = '';
-    this.applyLiveStockMonthFilter();
+    this.liveStockYearFilter = '';
+    this.spiritSearchTerm = '';
+    this.applyLiveStockFilter();
   }
 
-  applyLiveStockMonthFilter(): void {
-    const selectedMonth = (this.liveStockMonthFilter || '').trim();
+  getActiveLiveStockFilterLabel(): string {
+    if (this.liveStockFilterMode === 'DAY' && this.liveStockDayFilter) {
+      const d = new Date(this.liveStockDayFilter);
+      return !isNaN(d.getTime()) ? d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : this.liveStockDayFilter;
+    }
+    if (this.liveStockFilterMode === 'MONTH' && this.liveStockMonthFilter) {
+      const found = this.liveStockAvailableMonths.find(m => m.value === this.liveStockMonthFilter);
+      return found ? found.label : this.liveStockMonthFilter;
+    }
+    if (this.liveStockFilterMode === 'YEAR' && this.liveStockYearFilter) {
+      return `Year ${this.liveStockYearFilter}`;
+    }
+    return 'All Time (Cumulative)';
+  }
 
+  applyLiveStockFilter(): void {
     let targetArrivals = this.allArrivalRows;
     let targetUsages = this.rawUsagesList;
 
-    if (selectedMonth) {
+    if (this.liveStockFilterMode === 'DAY' && this.liveStockDayFilter) {
       targetArrivals = this.allArrivalRows.filter(a => {
         const tokens = this.extractDateTokens(a.arrivalDate || a.submittedAt || '');
-        return tokens.ym === selectedMonth;
+        return tokens.ymd === this.liveStockDayFilter;
       });
       targetUsages = this.rawUsagesList.filter(u => {
         const tokens = this.extractDateTokens(u.created_at || u.updated_at || '');
-        return tokens.ym === selectedMonth;
+        return tokens.ymd === this.liveStockDayFilter;
+      });
+    } else if (this.liveStockFilterMode === 'MONTH' && this.liveStockMonthFilter) {
+      targetArrivals = this.allArrivalRows.filter(a => {
+        const tokens = this.extractDateTokens(a.arrivalDate || a.submittedAt || '');
+        return tokens.ym === this.liveStockMonthFilter;
+      });
+      targetUsages = this.rawUsagesList.filter(u => {
+        const tokens = this.extractDateTokens(u.created_at || u.updated_at || '');
+        return tokens.ym === this.liveStockMonthFilter;
+      });
+    } else if (this.liveStockFilterMode === 'YEAR' && this.liveStockYearFilter) {
+      targetArrivals = this.allArrivalRows.filter(a => {
+        const tokens = this.extractDateTokens(a.arrivalDate || a.submittedAt || '');
+        return tokens.ym.startsWith(this.liveStockYearFilter);
+      });
+      targetUsages = this.rawUsagesList.filter(u => {
+        const tokens = this.extractDateTokens(u.created_at || u.updated_at || '');
+        return tokens.ym.startsWith(this.liveStockYearFilter);
       });
     }
 
@@ -409,7 +496,9 @@ export class BulkSpiritInventoryComponent implements OnInit {
       return a.bulkSpiritType.localeCompare(b.bulkSpiritType);
     });
 
-    if (!selectedMonth && this.rawBackendSummary) {
+    const isFiltered = this.liveStockFilterMode !== 'ALL' && (!!this.liveStockDayFilter || !!this.liveStockMonthFilter || !!this.liveStockYearFilter);
+
+    if (!isFiltered && this.rawBackendSummary) {
       this.liveInventory = {
         items,
         totalArrivedBl: Number((this.rawBackendSummary?.totalArrivedBl ?? this.rawBackendSummary?.total_arrived_bl) || sumArrived),

@@ -27,35 +27,6 @@
     </div>
   </div>
 
-  <!-- Live Stock Month Filter Bar -->
-  <div class="card border-0 shadow-sm rounded-4 p-3 mb-3 bg-white live-stock-filter-bar">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
-      <div class="d-flex align-items-center gap-2">
-        <span class="filter-indicator-dot"></span>
-        <span class="fw-bold text-dark fs-6">Stock Summary & Balances</span>
-        <span *ngIf="liveStockMonthFilter" class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1">
-          <i class="bi bi-calendar-check me-1"></i> {{ getSelectedMonthLabel() }}
-        </span>
-        <span *ngIf="!liveStockMonthFilter" class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
-          <i class="bi bi-infinity me-1"></i> All Months (Cumulative)
-        </span>
-      </div>
-
-      <div class="d-flex align-items-center gap-2">
-        <label class="form-label fw-bold text-secondary mb-0 small text-nowrap">
-          <i class="bi bi-funnel me-1"></i> Filter by Month:
-        </label>
-        <select class="form-select form-select-sm fw-semibold month-dropdown" [(ngModel)]="liveStockMonthFilter" (ngModelChange)="applyLiveStockMonthFilter()">
-          <option value="">All Months (Cumulative)</option>
-          <option *ngFor="let m of liveStockAvailableMonths" [value]="m.value">{{ m.label }}</option>
-        </select>
-        <button *ngIf="liveStockMonthFilter" type="button" class="btn btn-sm btn-outline-secondary px-2" (click)="clearLiveStockMonthFilter()" title="Show All Months">
-          <i class="bi bi-x-lg"></i>
-        </button>
-      </div>
-    </div>
-  </div>
-
   <!-- Real-Time Stock Balance Cards Grid (5 Cards) -->
   <div class="row g-3 mb-4">
     <div class="col-xl col-md-6 col-sm-6">
@@ -191,6 +162,75 @@
   <!-- VIEW 1: LIVE INVENTORY BY BULK SPIRIT TYPE -->
   <!-- ========================================================================= -->
   <div *ngIf="activeView === 'live-inventory'">
+    <!-- Live Stock Time Filter Strip (Separate Day, Month, Year & Search) -->
+    <div class="card border-0 shadow-sm rounded-4 p-3 mb-3 custom-filter-toolbar live-stock-filter-strip">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <!-- Left: Separate Date, Month, Year Filters -->
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <span class="text-secondary fw-semibold small d-flex align-items-center me-1">
+            <i class="bi bi-funnel-fill text-primary me-1"></i> Filters:
+          </span>
+
+          <!-- 1. Day / Date Filter -->
+          <div class="input-group input-group-sm" style="width: auto;">
+            <span class="input-group-text bg-white text-secondary">
+              <i class="bi bi-calendar-date me-1 text-primary"></i> Date
+            </span>
+            <input type="date" class="form-control form-control-sm bg-white"
+              [(ngModel)]="liveStockDayFilter"
+              (change)="onLiveStockDayChange()"
+              title="Filter stock by specific day"
+              style="width: 140px;">
+          </div>
+
+          <!-- 2. Month Filter Dropdown -->
+          <div class="input-group input-group-sm" style="width: auto;">
+            <span class="input-group-text bg-white text-secondary">
+              <i class="bi bi-calendar-month me-1 text-primary"></i> Month
+            </span>
+            <select class="form-select form-select-sm bg-white"
+              [(ngModel)]="liveStockMonthFilter"
+              (change)="onLiveStockMonthChange()"
+              title="Filter stock by month"
+              style="min-width: 165px;">
+              <option value="">All Months...</option>
+              <option *ngFor="let m of liveStockAvailableMonths" [value]="m.value">{{ m.label }}</option>
+            </select>
+          </div>
+
+          <!-- 3. Year Filter Dropdown -->
+          <div class="input-group input-group-sm" style="width: auto;">
+            <span class="input-group-text bg-white text-secondary">
+              <i class="bi bi-calendar3 me-1 text-primary"></i> Year
+            </span>
+            <select class="form-select form-select-sm bg-white"
+              [(ngModel)]="liveStockYearFilter"
+              (change)="onLiveStockYearChange()"
+              title="Filter stock by year"
+              style="min-width: 125px;">
+              <option value="">All Years...</option>
+              <option *ngFor="let y of liveStockAvailableYears" [value]="y">{{ y }}</option>
+            </select>
+          </div>
+
+          <!-- Reset / Clear Button -->
+          <button *ngIf="liveStockDayFilter || liveStockMonthFilter || liveStockYearFilter"
+            type="button" class="btn btn-outline-danger btn-sm px-2.5"
+            (click)="clearLiveStockFilter()" title="Clear time filter (Show All Time)">
+            <i class="bi bi-x-circle me-1"></i> Reset
+          </button>
+        </div>
+
+        <!-- Right: Current Filter Status Badge -->
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge bg-white text-dark border px-3 py-2 fw-medium shadow-sm d-flex align-items-center">
+            <i class="bi bi-clock-history me-1 text-primary"></i>
+            Active View:&nbsp;<strong class="text-primary">{{ getActiveLiveStockFilterLabel() }}</strong>
+          </span>
+        </div>
+      </div>
+    </div>
+
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
       <div class="card-header bg-white border-bottom py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
         <div class="d-flex align-items-center">
@@ -292,37 +332,37 @@
   <!-- VIEW 2: TANKER ARRIVAL ENTRIES & HISTORY -->
   <!-- ========================================================================= -->
   <div *ngIf="activeView === 'arrival-entries'">
-    <!-- Compact Elegant Filter Strip -->
-    <div class="card border-0 shadow-sm rounded-4 p-3 mb-3 bg-white arrival-filter-strip">
+    <!-- Compact Highlighted Filter Strip -->
+    <div class="card border-0 shadow-sm rounded-4 p-3 mb-3 custom-filter-toolbar arrival-filter-strip">
       <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
         <!-- Quick Search -->
         <div class="d-flex align-items-center flex-grow-1" style="max-width: 340px;">
           <div class="input-group input-group-sm">
-            <span class="input-group-text bg-light border-end-0 text-muted">
+            <span class="input-group-text bg-white border-end-0 text-muted">
               <i class="bi bi-search"></i>
             </span>
-            <input type="text" class="form-control border-start-0 ps-0" [(ngModel)]="arrivalSearchTerm" (input)="applyArrivalFilters()" placeholder="Search ref, distillery, spirit type...">
+            <input type="text" class="form-control border-start-0 ps-0 bg-white" [(ngModel)]="arrivalSearchTerm" (input)="applyArrivalFilters()" placeholder="Search ref, distillery, spirit type...">
           </div>
         </div>
 
         <!-- Date, Month, and Clear Buttons -->
-        <div class="d-flex flex-wrap align-items-center gap-2.5">
-          <div class="d-flex align-items-center gap-1">
-            <label class="text-secondary small fw-semibold mb-0 text-nowrap">
-              <i class="bi bi-calendar-event me-1 text-muted"></i> Date:
-            </label>
-            <input type="date" class="form-control form-control-sm" style="width: 140px;" [(ngModel)]="dateFilter" (change)="applyArrivalFilters()">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <div class="input-group input-group-sm" style="width: auto;">
+            <span class="input-group-text bg-white text-secondary">
+              <i class="bi bi-calendar-event me-1 text-primary"></i> Date
+            </span>
+            <input type="date" class="form-control form-control-sm bg-white" style="width: 145px;" [(ngModel)]="dateFilter" (change)="applyArrivalFilters()">
           </div>
 
-          <div class="d-flex align-items-center gap-1">
-            <label class="text-secondary small fw-semibold mb-0 text-nowrap">
-              <i class="bi bi-calendar3 me-1 text-muted"></i> Month:
-            </label>
-            <input type="month" class="form-control form-control-sm" style="width: 140px;" [(ngModel)]="monthFilter" (change)="applyArrivalFilters()">
+          <div class="input-group input-group-sm" style="width: auto;">
+            <span class="input-group-text bg-white text-secondary">
+              <i class="bi bi-calendar3 me-1 text-primary"></i> Month
+            </span>
+            <input type="month" class="form-control form-control-sm bg-white" style="width: 145px;" [(ngModel)]="monthFilter" (change)="applyArrivalFilters()">
           </div>
 
-          <button *ngIf="arrivalSearchTerm || dateFilter || monthFilter" type="button" class="btn btn-sm btn-outline-secondary px-2.5 ms-1" (click)="clearArrivalFilters()" title="Clear Filters">
-            <i class="bi bi-x-circle me-1"></i> Clear
+          <button *ngIf="arrivalSearchTerm || dateFilter || monthFilter" type="button" class="btn btn-sm btn-outline-danger px-2.5 ms-1" (click)="clearArrivalFilters()" title="Clear Filters">
+            <i class="bi bi-x-circle me-1"></i> Reset
           </button>
         </div>
       </div>
@@ -511,7 +551,7 @@
     <!-- History Summary Cards -->
     <div class="row g-3 mb-4">
       <div class="col-lg-3 col-sm-6">
-        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-start border-4 border-success">
+        <div class="card border-0 shadow-sm rounded-4 p-3 history-inflow-card border-start border-4 border-success">
           <div class="d-flex align-items-center justify-content-between">
             <div>
               <span class="text-uppercase text-muted fw-semibold" style="font-size: 0.72rem;">Total Inflow (Arrivals)</span>
@@ -527,7 +567,7 @@
       </div>
 
       <div class="col-lg-3 col-sm-6">
-        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-start border-4 border-primary">
+        <div class="card border-0 shadow-sm rounded-4 p-3 history-outflow-card border-start border-4 border-primary">
           <div class="d-flex align-items-center justify-content-between">
             <div>
               <span class="text-uppercase text-muted fw-semibold" style="font-size: 0.72rem;">Total Outflow (Approved Used)</span>
@@ -543,7 +583,7 @@
       </div>
 
       <div class="col-lg-3 col-sm-6">
-        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-start border-4 border-warning">
+        <div class="card border-0 shadow-sm rounded-4 p-3 history-pending-card border-start border-4 border-warning">
           <div class="d-flex align-items-center justify-content-between">
             <div>
               <span class="text-uppercase text-muted fw-semibold" style="font-size: 0.72rem;">Pending Usage (In-Flight)</span>
@@ -559,7 +599,7 @@
       </div>
 
       <div class="col-lg-3 col-sm-6">
-        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-start border-4 border-info">
+        <div class="card border-0 shadow-sm rounded-4 p-3 history-ledger-card border-start border-4 border-info">
           <div class="d-flex align-items-center justify-content-between">
             <div>
               <span class="text-uppercase text-muted fw-semibold" style="font-size: 0.72rem;">Total Ledger Records</span>
@@ -575,59 +615,56 @@
       </div>
     </div>
 
-    <!-- Multi-Filter Card -->
-    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white filter-card">
-      <div class="row g-3 align-items-end">
-        <div class="col-xl-3 col-md-6">
-          <label class="form-label fw-semibold text-secondary small">
-            <i class="bi bi-search me-1"></i> Search Movement
-          </label>
-          <input type="text" class="form-control" [(ngModel)]="historySearchTerm" (input)="applyHistoryFilters()" placeholder="Ref #, spirit, factory, purpose, tanker...">
+    <!-- Compact Highlighted BL History Filter Strip -->
+    <div class="card border-0 shadow-sm rounded-4 p-3 mb-4 custom-filter-toolbar history-filter-strip">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <!-- Search input -->
+        <div class="input-group input-group-sm flex-grow-1" style="max-width: 280px; min-width: 200px;">
+          <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+          <input type="text" class="form-control border-start-0 bg-white" [(ngModel)]="historySearchTerm" (input)="applyHistoryFilters()" placeholder="Search movement, ref #, spirit...">
         </div>
 
-        <div class="col-xl-2 col-md-3 col-sm-6">
-          <label class="form-label fw-semibold text-secondary small">
-            <i class="bi bi-funnel me-1"></i> Movement Type
-          </label>
-          <select class="form-select" [(ngModel)]="historyTypeFilter" (change)="applyHistoryFilters()">
-            <option value="ALL">All Movements</option>
-            <option value="ARRIVAL">Stock In (Tanker Arrival)</option>
-            <option value="USAGE">Stock Out (Spirit Usage)</option>
-          </select>
-        </div>
+        <!-- Filter Selects -->
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <!-- Movement Type -->
+          <div class="input-group input-group-sm" style="width: auto;">
+            <span class="input-group-text bg-white text-secondary"><i class="bi bi-funnel me-1 text-primary"></i>Type</span>
+            <select class="form-select form-select-sm bg-white" [(ngModel)]="historyTypeFilter" (change)="applyHistoryFilters()" style="min-width: 140px;">
+              <option value="ALL">All Types</option>
+              <option value="ARRIVAL">Stock In (Arrival)</option>
+              <option value="USAGE">Stock Out (Usage)</option>
+            </select>
+          </div>
 
-        <div class="col-xl-2 col-md-3 col-sm-6">
-          <label class="form-label fw-semibold text-secondary small">
-            <i class="bi bi-droplet me-1"></i> Spirit Type
-          </label>
-          <select class="form-select" [(ngModel)]="historySpiritFilter" (change)="applyHistoryFilters()">
-            <option value="ALL">All Spirit Types</option>
-            <option *ngFor="let st of distinctSpiritTypes" [value]="st">{{ st }}</option>
-          </select>
-        </div>
+          <!-- Spirit Type -->
+          <div class="input-group input-group-sm" style="width: auto;">
+            <span class="input-group-text bg-white text-secondary"><i class="bi bi-droplet me-1 text-primary"></i>Spirit</span>
+            <select class="form-select form-select-sm bg-white" [(ngModel)]="historySpiritFilter" (change)="applyHistoryFilters()" style="min-width: 150px;">
+              <option value="ALL">All Spirits</option>
+              <option *ngFor="let st of distinctSpiritTypes" [value]="st">{{ st }}</option>
+            </select>
+          </div>
 
-        <div class="col-xl-2 col-md-4 col-sm-6">
-          <label class="form-label fw-semibold text-secondary small">
-            <i class="bi bi-check2-circle me-1"></i> Status
-          </label>
-          <select class="form-select" [(ngModel)]="historyStatusFilter" (change)="applyHistoryFilters()">
-            <option value="ALL">All Statuses</option>
-            <option value="APPROVED">Approved / In Stock</option>
-            <option value="PENDING">Pending OIC Approval</option>
-            <option value="REJECTED">Rejected</option>
-          </select>
-        </div>
+          <!-- Status -->
+          <div class="input-group input-group-sm" style="width: auto;">
+            <span class="input-group-text bg-white text-secondary"><i class="bi bi-check2-circle me-1 text-primary"></i>Status</span>
+            <select class="form-select form-select-sm bg-white" [(ngModel)]="historyStatusFilter" (change)="applyHistoryFilters()" style="min-width: 130px;">
+              <option value="ALL">All Statuses</option>
+              <option value="APPROVED">Approved</option>
+              <option value="PENDING">Pending</option>
+              <option value="REJECTED">Rejected</option>
+            </select>
+          </div>
 
-        <div class="col-xl-2 col-md-4 col-sm-6">
-          <label class="form-label fw-semibold text-secondary small">
-            <i class="bi bi-calendar-event me-1"></i> Date Filter
-          </label>
-          <input type="date" class="form-control" [(ngModel)]="historyDateFilter" (change)="applyHistoryFilters()">
-        </div>
+          <!-- Date -->
+          <div class="input-group input-group-sm" style="width: auto;">
+            <span class="input-group-text bg-white text-secondary"><i class="bi bi-calendar-event me-1 text-primary"></i>Date</span>
+            <input type="date" class="form-control form-control-sm bg-white" [(ngModel)]="historyDateFilter" (change)="applyHistoryFilters()" style="max-width: 145px;">
+          </div>
 
-        <div class="col-xl-1 col-md-4 col-sm-12 d-flex">
-          <button type="button" class="btn btn-outline-secondary w-100" (click)="clearHistoryFilters()" title="Reset All Filters">
-            <i class="bi bi-x-circle"></i> Clear
+          <!-- Clear -->
+          <button *ngIf="historySearchTerm || historyTypeFilter !== 'ALL' || historySpiritFilter !== 'ALL' || historyStatusFilter !== 'ALL' || historyDateFilter" type="button" class="btn btn-outline-danger btn-sm px-2.5 py-1" (click)="clearHistoryFilters()" title="Reset All Filters">
+            <i class="bi bi-x-circle me-1"></i> Reset
           </button>
         </div>
       </div>

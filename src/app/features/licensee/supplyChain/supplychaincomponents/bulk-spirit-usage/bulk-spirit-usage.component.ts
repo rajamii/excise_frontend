@@ -64,8 +64,11 @@ export class BulkSpiritUsageComponent implements OnInit {
 
   // Filter Fields
   statusFilter: string = 'ALL';
+  spiritFilter: string = 'ALL';
   searchTerm: string = '';
+  dateFilter: string = '';
   monthFilter: string = '';
+  distinctSpiritTypes: string[] = [];
 
   ngOnInit(): void {
     this.loadData();
@@ -147,6 +150,16 @@ export class BulkSpiritUsageComponent implements OnInit {
           rawRecords = history.data;
         }
         this.usageHistory = rawRecords.map(r => this.normalizeUsageRecord(r));
+
+        const typeSet = new Set<string>();
+        this.inventorySummary.items.forEach(i => {
+          if (i.bulkSpiritType) typeSet.add(i.bulkSpiritType);
+        });
+        this.usageHistory.forEach(u => {
+          if (u.bulk_spirit_type) typeSet.add(u.bulk_spirit_type);
+        });
+        this.distinctSpiritTypes = Array.from(typeSet).sort();
+
         this.applyFilters();
 
         if (this.inventorySummary.items.length > 0) {
@@ -176,8 +189,16 @@ export class BulkSpiritUsageComponent implements OnInit {
         if (this.statusFilter === 'REJECTED' && !st.includes('REJECTED')) return false;
       }
 
+      if (this.spiritFilter !== 'ALL') {
+        if (String(item.bulk_spirit_type || '').toLowerCase() !== this.spiritFilter.toLowerCase()) return false;
+      }
+
+      if (this.dateFilter && item.created_at) {
+        if (!item.created_at.startsWith(this.dateFilter)) return false;
+      }
+
       if (this.monthFilter && item.created_at) {
-        if (item.created_at.slice(0, 7) !== this.monthFilter) return false;
+        if (!item.created_at.startsWith(this.monthFilter)) return false;
       }
 
       if (this.searchTerm) {
@@ -185,11 +206,22 @@ export class BulkSpiritUsageComponent implements OnInit {
         const ref = String(item.reference_no || '').toLowerCase();
         const sp = String(item.bulk_spirit_type || '').toLowerCase();
         const pur = String(item.purpose || '').toLowerCase();
-        if (!ref.includes(q) && !sp.includes(q) && !pur.includes(q)) return false;
+        const rem = String(item.remarks || '').toLowerCase();
+        const rev = String(item.reviewed_by || '').toLowerCase();
+        if (!ref.includes(q) && !sp.includes(q) && !pur.includes(q) && !rem.includes(q) && !rev.includes(q)) return false;
       }
 
       return true;
     });
+  }
+
+  clearFilters(): void {
+    this.statusFilter = 'ALL';
+    this.spiritFilter = 'ALL';
+    this.searchTerm = '';
+    this.dateFilter = '';
+    this.monthFilter = '';
+    this.applyFilters();
   }
 
   getSelectedSpiritAvailableBL(): number {

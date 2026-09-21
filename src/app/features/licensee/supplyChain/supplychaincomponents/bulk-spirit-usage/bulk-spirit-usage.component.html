@@ -3,8 +3,8 @@
   <div class="header-banner shadow-sm mb-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
       <div class="d-flex align-items-center gap-3">
-        <button type="button" class="btn btn-glass-back" (click)="goBackToRequisition()">
-          <i class="bi bi-arrow-left me-1"></i> Back to Requisitions
+        <button type="button" class="btn btn-glass-back-icon" (click)="goBackToRequisition()" title="Back to Requisitions">
+          <i class="bi bi-arrow-left fs-5"></i>
         </button>
         <div class="d-flex align-items-center gap-3">
           <div class="banner-icon-badge">
@@ -17,8 +17,8 @@
         </div>
       </div>
       <div class="banner-actions">
-        <button type="button" class="btn btn-glass-refresh" (click)="loadData()" [disabled]="loading">
-          <i class="bi bi-arrow-clockwise me-1" [class.spin]="loading"></i> Refresh
+        <button type="button" class="btn btn-glass-refresh-icon" (click)="loadData()" [disabled]="loading" title="Refresh Data">
+          <i class="bi bi-arrow-clockwise fs-5" [class.spin]="loading"></i>
         </button>
       </div>
     </div>
@@ -167,16 +167,64 @@
     <div class="card-header bg-white border-bottom py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
       <div class="d-flex align-items-center">
         <i class="bi bi-clock-history text-primary me-2 fs-5"></i>
-        <h5 class="mb-0 fw-bold text-dark">Usage Requests History & Audit</h5>
-      </div>
-      <div class="d-flex align-items-center gap-2">
-        <div class="btn-group" role="group">
-          <button type="button" class="btn btn-sm btn-outline-secondary" [class.active]="statusFilter==='ALL'" (click)="statusFilter='ALL'; applyFilters()">All</button>
-          <button type="button" class="btn btn-sm btn-outline-warning" [class.active]="statusFilter==='PENDING'" (click)="statusFilter='PENDING'; applyFilters()">Pending</button>
-          <button type="button" class="btn btn-sm btn-outline-success" [class.active]="statusFilter==='APPROVED'" (click)="statusFilter='APPROVED'; applyFilters()">Approved</button>
-          <button type="button" class="btn btn-sm btn-outline-danger" [class.active]="statusFilter==='REJECTED'" (click)="statusFilter='REJECTED'; applyFilters()">Rejected</button>
+        <div>
+          <h5 class="mb-0 fw-bold text-dark">Usage Requests History & Audit</h5>
+          <small class="text-muted">Track status, OIC reviews, and audit logs of all bulk spirit withdrawal requests</small>
         </div>
-        <span class="badge bg-secondary rounded-pill px-3 py-2 ms-2">{{ filteredUsageHistory.length }} Records</span>
+      </div>
+      <span class="badge bg-primary rounded-pill px-3 py-2">{{ filteredUsageHistory.length }} Record(s)</span>
+    </div>
+
+    <!-- Filter Strip for History & Audit -->
+    <div class="p-3 border-bottom custom-filter-toolbar usage-filter-strip">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <!-- Search Input -->
+        <div class="input-group input-group-sm flex-grow-1" style="max-width: 280px; min-width: 200px;">
+          <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+          <input type="text" class="form-control border-start-0 bg-white" [(ngModel)]="searchTerm" (input)="applyFilters()" placeholder="Search ref #, spirit, purpose...">
+        </div>
+
+        <!-- Filter Controls -->
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <!-- Spirit Type -->
+          <div class="input-group input-group-sm" style="width: auto;">
+            <span class="input-group-text bg-white text-secondary"><i class="bi bi-droplet me-1 text-primary"></i>Spirit</span>
+            <select class="form-select form-select-sm bg-white" [(ngModel)]="spiritFilter" (change)="applyFilters()" style="min-width: 150px;">
+              <option value="ALL">All Spirit Types</option>
+              <option *ngFor="let st of distinctSpiritTypes" [value]="st">{{ st }}</option>
+            </select>
+          </div>
+
+          <!-- Status Dropdown -->
+          <div class="input-group input-group-sm" style="width: auto;">
+            <span class="input-group-text bg-white text-secondary"><i class="bi bi-check2-circle me-1 text-primary"></i>Status</span>
+            <select class="form-select form-select-sm bg-white" [(ngModel)]="statusFilter" (change)="applyFilters()" style="min-width: 130px;">
+              <option value="ALL">All Statuses</option>
+              <option value="PENDING">Pending</option>
+              <option value="APPROVED">Approved</option>
+              <option value="REJECTED">Rejected</option>
+            </select>
+          </div>
+
+          <!-- Date -->
+          <div class="input-group input-group-sm" style="width: auto;">
+            <span class="input-group-text bg-white text-secondary"><i class="bi bi-calendar-event me-1 text-primary"></i>Date</span>
+            <input type="date" class="form-control form-control-sm bg-white" [(ngModel)]="dateFilter" (change)="applyFilters()" style="max-width: 145px;">
+          </div>
+
+          <!-- Month -->
+          <div class="input-group input-group-sm" style="width: auto;">
+            <span class="input-group-text bg-white text-secondary"><i class="bi bi-calendar3 me-1 text-primary"></i>Month</span>
+            <input type="month" class="form-control form-control-sm bg-white" [(ngModel)]="monthFilter" (change)="applyFilters()" style="max-width: 145px;">
+          </div>
+
+          <!-- Reset / Clear -->
+          <button *ngIf="searchTerm || statusFilter !== 'ALL' || spiritFilter !== 'ALL' || dateFilter || monthFilter"
+            type="button" class="btn btn-outline-danger btn-sm px-2.5 py-1"
+            (click)="clearFilters()" title="Reset All Filters">
+            <i class="bi bi-x-circle me-1"></i> Reset
+          </button>
+        </div>
       </div>
     </div>
     <div class="table-responsive">
