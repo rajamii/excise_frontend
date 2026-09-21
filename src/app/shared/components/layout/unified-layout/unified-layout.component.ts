@@ -21,6 +21,8 @@ import { DashboardConfigService } from '../../../../core/services/dashboard-conf
 import { LicenseMeService } from '../../../../core/services/license-me.service';
 import { environment } from '../../../../../environments/environment';
 import { SidebarPendingBadgeService } from '../../../services/sidebar-pending-badge.service';
+import { UserProfileComponent as LicenseeUserProfileComponent } from '../../../../features/licensee/licensee-home/user-profile/user-profile.component';
+import { UserProfileComponent as AdminUserProfileComponent } from '../../../../features/admin/home/user-profile/user-profile.component';
 import {
   filterRowsForSupplyChainSidebarMenus,
   isLicenseeWalletNavEligible
@@ -750,52 +752,32 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return true;
   }
 
-  // Method to handle the "View Profile" button click - exactly like original
+  // Method to handle the "View Profile" button click - opens the rich profile modal
   viewProfile(): void {
-    console.log('Button Clicked!');
-    // TODO: Import and open UserProfileComponent dialog
-    // const dialogRef = this.dialog.open(UserProfileComponent, {
-    //   width: '500px',
-    // });
+    this.openUserProfile();
   }
 
   // Method to open user profile dialog
   openUserProfile(): void {
-    console.log('User profile clicked!');
-    
-    // Dynamically import the appropriate user profile component based on user role
-    if (this.isLicenseeUser()) {
-      // Import licensee user profile component
-      import('../../../../features/licensee/licensee-home/user-profile/user-profile.component')
-        .then(({ UserProfileComponent }) => {
-          const dialogRef = this.dialog.open(UserProfileComponent, {
-            width: '600px',
-            maxWidth: '90vw',
-            maxHeight: '90vh',
-            panelClass: 'user-profile-dialog'
-          });
-        })
-        .catch(error => {
-          console.error('Error loading licensee user profile component:', error);
-          // Fallback to basic user info display
-          this.showBasicUserInfo();
+    try {
+      if (this.isLicenseeUser()) {
+        this.dialog.open(LicenseeUserProfileComponent, {
+          width: '600px',
+          maxWidth: '90vw',
+          maxHeight: '90vh',
+          panelClass: 'user-profile-dialog'
         });
-    } else {
-      // Import admin user profile component
-      import('../../../../features/admin/home/user-profile/user-profile.component')
-        .then(({ UserProfileComponent }) => {
-          const dialogRef = this.dialog.open(UserProfileComponent, {
-            width: '600px',
-            maxWidth: '90vw',
-            maxHeight: '90vh',
-            panelClass: 'user-profile-dialog'
-          });
-        })
-        .catch(error => {
-          console.error('Error loading admin user profile component:', error);
-          // Fallback to basic user info display
-          this.showBasicUserInfo();
+      } else {
+        this.dialog.open(AdminUserProfileComponent, {
+          width: '600px',
+          maxWidth: '90vw',
+          maxHeight: '90vh',
+          panelClass: 'user-profile-dialog'
         });
+      }
+    } catch (err) {
+      console.error('Error opening user profile dialog:', err);
+      this.showBasicUserInfo();
     }
   }
 
