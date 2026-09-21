@@ -54,6 +54,7 @@ export class RegistrationManagementComponent implements OnInit {
     id: string;
     applicationId: string;
     submittedOn: string;
+    rawDate?: any;
     paymentStatus?: string;
     applicantName: string;
     establishmentName: string;
@@ -680,6 +681,7 @@ export class RegistrationManagementComponent implements OnInit {
     id: string;
     applicationId: string;
     submittedOn: string;
+    rawDate?: any;
     applicantName: string;
     establishmentName: string;
     currentStage: string;
@@ -718,10 +720,13 @@ export class RegistrationManagementComponent implements OnInit {
           hasHistoryFromTxn;
         const hasObjectionUpdate = Boolean(item?.has_objection_update ?? item?.hasObjectionUpdate) || hasUpdateFromTxn;
 
+        const rawCreatedAt = item?.created_at ?? item?.createdAt ?? item?.paymentDate ?? item?.payment_date ?? null;
+
         return {
           id: String(item?.id ?? item?.applicationId ?? item?.application_id ?? ''),
           applicationId: String(item?.applicationId ?? item?.application_id ?? item?.id ?? 'N/A'),
-          submittedOn: this.formatDate(item?.created_at ?? item?.createdAt ?? item?.paymentDate ?? item?.payment_date),
+          submittedOn: this.formatDate(rawCreatedAt),
+          rawDate: rawCreatedAt,
           applicantName: String(item?.memberName ?? item?.member_name ?? 'N/A'),
           establishmentName: String(item?.companyName ?? item?.company_name ?? 'N/A'),
           currentStage: computedStage,
@@ -746,18 +751,21 @@ export class RegistrationManagementComponent implements OnInit {
     ];
 
     const seen = new Set<string>();
-    return merged.filter((row) => {
+    const deduplicated = merged.filter((row) => {
       const key = String(row.applicationId || row.id || '').trim();
       if (!key || seen.has(key)) return false;
       seen.add(key);
       return true;
     });
+
+    return deduplicated.sort((a, b) => this.compareApplicationsDesc(a, b));
   }
 
   private flattenCompanyCollaborationGroupedData(grouped: any): Array<{
     id: string;
     applicationId: string;
     submittedOn: string;
+    rawDate?: any;
     applicantName: string;
     establishmentName: string;
     currentStage: string;
@@ -797,10 +805,13 @@ export class RegistrationManagementComponent implements OnInit {
           displayStage = this.formatStageName(rawStage);
         }
 
+        const rawCreatedAt = item?.created_at ?? item?.createdAt ?? item?.updated_at ?? item?.updatedAt ?? null;
+
         return {
           id: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
           applicationId: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
-          submittedOn: this.formatDate(item?.created_at ?? item?.createdAt ?? item?.updated_at ?? item?.updatedAt),
+          submittedOn: this.formatDate(rawCreatedAt),
+          rawDate: rawCreatedAt,
           applicantName: String(item?.licensee_name ?? item?.licenseeName ?? item?.applicant_name ?? item?.applicantName ?? 'N/A'),
           establishmentName: String(item?.brand_owner_name ?? item?.brandOwnerName ?? item?.brand_owner ?? item?.brandOwner ?? 'N/A'),
           currentStage: displayStage,
@@ -823,18 +834,21 @@ export class RegistrationManagementComponent implements OnInit {
     ];
 
     const seen = new Set<string>();
-    return merged.filter((row) => {
+    const deduplicated = merged.filter((row) => {
       const key = String(row.applicationId || row.id || '').trim();
       if (!key || seen.has(key)) return false;
       seen.add(key);
       return true;
     });
+
+    return deduplicated.sort((a, b) => this.compareApplicationsDesc(a, b));
   }
 
   private flattenCompanyCollaborationListData(items: any): Array<{
     id: string;
     applicationId: string;
     submittedOn: string;
+    rawDate?: any;
     applicantName: string;
     establishmentName: string;
     currentStage: string;
@@ -844,7 +858,7 @@ export class RegistrationManagementComponent implements OnInit {
     is_license_fee_paid?: boolean;
     raw?: any;
   }> {
-    return this.unwrapArrayResponse(items).map((item: any) => {
+    const list = this.unwrapArrayResponse(items).map((item: any) => {
       const rawStage = String(
         item?.current_stage_name ??
         item?.currentStageName ??
@@ -867,10 +881,13 @@ export class RegistrationManagementComponent implements OnInit {
         displayStage = this.formatStageName(rawStage);
       }
 
+      const rawCreatedAt = item?.created_at ?? item?.createdAt ?? item?.updated_at ?? item?.updatedAt ?? null;
+
       return {
         id: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
         applicationId: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
-        submittedOn: this.formatDate(item?.created_at ?? item?.createdAt ?? item?.updated_at ?? item?.updatedAt),
+        submittedOn: this.formatDate(rawCreatedAt),
+        rawDate: rawCreatedAt,
         applicantName: String(item?.licensee_name ?? item?.licenseeName ?? item?.applicant_name ?? item?.applicantName ?? 'N/A'),
         establishmentName: String(item?.brand_owner_name ?? item?.brandOwnerName ?? item?.brand_owner ?? item?.brandOwner ?? 'N/A'),
         currentStage: displayStage,
@@ -881,12 +898,15 @@ export class RegistrationManagementComponent implements OnInit {
         raw: item
       };
     });
+
+    return list.sort((a, b) => this.compareApplicationsDesc(a, b));
   }
 
   private flattenLabelRegistrationGroupedData(grouped: any): Array<{
     id: string;
     applicationId: string;
     submittedOn: string;
+    rawDate?: any;
     applicantName: string;
     establishmentName: string;
     currentStage: string;
@@ -911,25 +931,29 @@ export class RegistrationManagementComponent implements OnInit {
     ];
 
     const seen = new Set<string>();
-    return merged.filter((row) => {
+    const deduplicated = merged.filter((row) => {
       const key = String(row.applicationId || row.id || '').trim();
       if (!key || seen.has(key)) return false;
       seen.add(key);
       return true;
     });
+
+    return deduplicated.sort((a, b) => this.compareApplicationsDesc(a, b));
   }
 
   private flattenLabelRegistrationListData(items: any): Array<{
     id: string;
     applicationId: string;
     submittedOn: string;
+    rawDate?: any;
     applicantName: string;
     establishmentName: string;
     currentStage: string;
     currentStageRaw: string;
     statusGroup: 'approved' | 'pending' | 'objection' | 'rejected';
   }> {
-    return this.unwrapArrayResponse(items).map((item: any) => this.mapLabelRegistrationRow(item));
+    const list = this.unwrapArrayResponse(items).map((item: any) => this.mapLabelRegistrationRow(item));
+    return list.sort((a, b) => this.compareApplicationsDesc(a, b));
   }
 
   private mapLabelRegistrationRow(
@@ -946,11 +970,13 @@ export class RegistrationManagementComponent implements OnInit {
     );
     const licensee = item?.licensee_details ?? item?.licenseeDetails ?? {};
     const product = item?.product_details ?? item?.productDetails ?? {};
+    const rawCreatedAt = item?.created_at ?? item?.createdAt ?? item?.application_date ?? item?.applicationDate ?? null;
 
     return {
       id: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
       applicationId: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
-      submittedOn: this.formatDate(item?.created_at ?? item?.createdAt ?? item?.application_date ?? item?.applicationDate),
+      submittedOn: this.formatDate(rawCreatedAt),
+      rawDate: rawCreatedAt,
       applicantName: String(licensee?.applicantType ?? item?.applicant_name ?? item?.applicantName ?? 'N/A'),
       establishmentName: String(product?.brandName ?? product?.brand_name ?? product?.bottlerName ?? product?.bottler_name ?? 'N/A'),
       currentStage: this.formatStageName(rawStage),
@@ -1015,6 +1041,7 @@ export class RegistrationManagementComponent implements OnInit {
     id: string;
     applicationId: string;
     submittedOn: string;
+    rawDate?: any;
     paymentStatus?: string;
     applicantName: string;
     establishmentName: string;
@@ -1024,6 +1051,7 @@ export class RegistrationManagementComponent implements OnInit {
     statusGroup: 'approved' | 'pending' | 'objection' | 'rejected' | 'awaiting-payment';
     hasObjectionHistory?: boolean;
     hasObjectionUpdate?: boolean;
+    isPrintFeePaid?: boolean;
   }> {
     const mapGroup = (
       items: any[] | undefined,
@@ -1061,10 +1089,13 @@ export class RegistrationManagementComponent implements OnInit {
           finalStatusGroup = 'awaiting-payment';
         }
 
+        const rawCreatedAt = item?.created_at ?? item?.createdAt ?? item?.submitted_on ?? null;
+
         return {
           id: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
           applicationId: String(item?.application_id ?? item?.applicationId ?? item?.id ?? 'N/A'),
-          submittedOn: this.formatDate(item?.created_at ?? item?.createdAt ?? item?.submitted_on),
+          submittedOn: this.formatDate(rawCreatedAt),
+          rawDate: rawCreatedAt,
           paymentStatus: (() => {
             const raw = String(
               item?.application_fee_payment_status_display ??
@@ -1104,12 +1135,14 @@ export class RegistrationManagementComponent implements OnInit {
 
     // Guard against backend bucket overlap by de-duplicating on application id.
     const seen = new Set<string>();
-    return merged.filter((row) => {
+    const deduplicated = merged.filter((row) => {
       const key = String(row.applicationId || row.id || '').trim();
       if (!key || seen.has(key)) return false;
       seen.add(key);
       return true;
     });
+
+    return deduplicated.sort((a, b) => this.compareApplicationsDesc(a, b));
   }
 
   private getSalesmanApplicantName(item: any): string {
@@ -1289,5 +1322,44 @@ export class RegistrationManagementComponent implements OnInit {
     }
 
     return fallback;
+  }
+
+  private compareApplicationsDesc(a: any, b: any): number {
+    const parseTime = (row: any): number => {
+      if (row?.rawDate) {
+        const d = new Date(row.rawDate).getTime();
+        if (!isNaN(d) && d > 0) return d;
+      }
+      if (row?.submittedOn && row.submittedOn !== 'N/A') {
+        const d = new Date(row.submittedOn.replace(/-/g, ' ')).getTime();
+        if (!isNaN(d) && d > 0) return d;
+      }
+      return 0;
+    };
+
+    const timeA = parseTime(a);
+    const timeB = parseTime(b);
+
+    if (timeA > 0 && timeB > 0 && timeA !== timeB) {
+      return timeB - timeA;
+    }
+    if (timeA > 0 && timeB === 0) return -1;
+    if (timeA === 0 && timeB > 0) return 1;
+
+    // Secondary sort: compare applicationId / ID descending (e.g. sequence number 0003 > 0002)
+    const idA = String(a?.applicationId || a?.id || '');
+    const idB = String(b?.applicationId || b?.id || '');
+
+    const matchA = idA.match(/(\d+)$/);
+    const matchB = idB.match(/(\d+)$/);
+    if (matchA && matchB) {
+      const numA = parseInt(matchA[1], 10);
+      const numB = parseInt(matchB[1], 10);
+      if (numA !== numB) {
+        return numB - numA;
+      }
+    }
+
+    return idB.localeCompare(idA);
   }
 }
