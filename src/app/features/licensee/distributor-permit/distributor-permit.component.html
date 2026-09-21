@@ -320,6 +320,24 @@
               </div>
             </div>
           </div>
+
+          <div class="col-xl col-lg-6 col-md-6">
+            <div
+              class="summary-card cancelled-requests summary-card-clickable"
+              role="button"
+              tabindex="0"
+              (click)="onCardFilterClick('cancelled')"
+              (keydown.enter)="onCardFilterClick('cancelled')"
+              (keydown.space)="onCardFilterClick('cancelled')"
+              [class.active]="activeCardFilter === 'cancelled'"
+            >
+              <div class="card-icon"><i class="bi bi-x-octagon"></i></div>
+              <div class="card-content">
+                <h3 class="card-value">{{ counts.cancelled }}</h3>
+                <p class="card-label">Cancelled</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -965,8 +983,8 @@
 
           <div class="dp-empty-state text-center p-5 text-muted" *ngIf="!error && filteredRows.length === 0">
             <i class="bi bi-boxes fs-1 d-block mb-2 text-secondary"></i>
-            <h6 class="fw-bold text-dark">No Applications Awaiting Arrival</h6>
-            <p class="small text-muted m-0">When IMFL requisition payments are completed, they will appear here ready for arrival entry.</p>
+            <h6 class="fw-bold text-dark">{{ activeCardFilter === 'cancelled' ? 'No Cancelled Applications' : 'No Applications Awaiting Arrival' }}</h6>
+            <p class="small text-muted m-0">{{ activeCardFilter === 'cancelled' ? 'There are no cancelled or cancellation-applied permit applications.' : 'When IMFL requisition payments are completed, they will appear here ready for arrival entry.' }}</p>
           </div>
         </div>
       </div>

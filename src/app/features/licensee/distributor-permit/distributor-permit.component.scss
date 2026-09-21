@@ -168,6 +168,19 @@
   }
 }
 
+.cancelled-requests {
+  --accent-start: #e11d48;
+  --accent-end: #f43f5e;
+
+  .card-icon {
+    background: linear-gradient(135deg, #e11d48, #f43f5e);
+  }
+
+  .card-value {
+    color: #e11d48;
+  }
+}
+
 .status-badge,
 .payment-badge {
   display: inline-block;

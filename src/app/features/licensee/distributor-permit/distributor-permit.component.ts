@@ -26,7 +26,7 @@ import { SidebarPendingBadgeService } from '../../../shared/services/sidebar-pen
 import { ImflHologramProcurementService, IMFLHologramProcurementItem, IMFLHologramArrivalItem } from '../../../core/services/imfl-hologram-procurement.service';
 import { RoleService } from '../../../core/services/role.service';
 
-type DistributorPermitStatusFilter = 'all' | 'approved' | 'pending' | 'under_process' | 'objection' | 'rejected';
+type DistributorPermitStatusFilter = 'all' | 'approved' | 'pending' | 'under_process' | 'objection' | 'rejected' | 'cancelled';
 type DistributorPermitStatusGroup = Exclude<DistributorPermitStatusFilter, 'all'>;
 
 interface DistributorPermitRow {
@@ -265,7 +265,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   autoSelectDefaultStatusFilter(): void {
     const statusParam = String(this.route.snapshot.queryParams['status'] || '').toLowerCase();
-    if (['all', 'approved', 'pending', 'under_process', 'objection', 'rejected'].includes(statusParam)) {
+    if (['all', 'approved', 'pending', 'under_process', 'objection', 'rejected', 'cancelled'].includes(statusParam)) {
       this.activeCardFilter = statusParam as DistributorPermitStatusFilter;
       return;
     }
@@ -558,14 +558,20 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const rowObj: any = row;
     const stage = String(rowObj?.['currentStage'] || rowObj?.['status'] || rowObj?.['application']?.['status'] || '').toLowerCase();
     const stageId = Number(rowObj?.['application']?.['current_stage_id'] || rowObj?.['application']?.['currentStageId'] || rowObj?.['current_stage_id'] || 0);
-    if (stage.includes('reject') || stage.includes('cancel') || stageId === 152 || stageId === 166 || rowObj?.['statusGroup'] === 'rejected') {
+
+    if (this.isPermitCancelled(row) || this.isPermitCancellationApplied(row) || stage.includes('cancel')) {
+      return 'cancelled';
+    }
+
+    if (stage.includes('reject') || stageId === 152 || stageId === 166 || rowObj?.['statusGroup'] === 'rejected') {
       return 'rejected';
     }
 
     if (this.activeTab === 'brand-arrival') {
       const brandStatus = this.getBrandArrivalStatusForRow(row);
-      if (brandStatus === 'cancelled' || brandStatus === 'rejected') return 'rejected';
-      if (brandStatus === 'cancellation_applied' || brandStatus === 'revalidation_in_progress') return 'under_process';
+      if (brandStatus === 'cancelled' || brandStatus === 'cancellation_applied') return 'cancelled';
+      if (brandStatus === 'rejected') return 'rejected';
+      if (brandStatus === 'revalidation_in_progress') return 'under_process';
       if (brandStatus === 'approved') return 'approved';
       return 'pending';
     }
@@ -729,19 +735,20 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return this.rows;
   }
 
-  get counts(): { total: number; approved: number; pending: number; underProcess: number; objection: number; rejected: number } {
+  get counts(): { total: number; approved: number; pending: number; underProcess: number; objection: number; rejected: number; cancelled: number } {
     return this.activeTabRows.reduce(
       (acc, row) => {
         acc.total += 1;
-        const stGroup = this.isOicDistributorUser ? this.getOfficerStatusGroup(row) : row.statusGroup;
+        const stGroup = this.isOicDistributorUser ? this.getOfficerStatusGroup(row) : (this.isPermitCancelled(row) || this.isPermitCancellationApplied(row) ? 'cancelled' : row.statusGroup);
         if (stGroup === 'approved') acc.approved += 1;
         else if (stGroup === 'pending') acc.pending += 1;
         else if (stGroup === 'under_process') acc.underProcess += 1;
         else if (stGroup === 'objection') acc.objection += 1;
         else if (stGroup === 'rejected') acc.rejected += 1;
+        else if (stGroup === 'cancelled') acc.cancelled += 1;
         return acc;
       },
-      { total: 0, approved: 0, pending: 0, underProcess: 0, objection: 0, rejected: 0 }
+      { total: 0, approved: 0, pending: 0, underProcess: 0, objection: 0, rejected: 0, cancelled: 0 }
     );
   }
 
@@ -753,8 +760,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const validTo = parsedTo && !Number.isNaN(parsedTo.getTime()) ? parsedTo : null;
 
     return this.activeTabRows.filter((row) => {
-      const stGroup = this.isOicDistributorUser ? this.getOfficerStatusGroup(row) : row.statusGroup;
-      const matchesStatus = this.activeCardFilter === 'all' || stGroup === this.activeCardFilter;
+      const stGroup = this.isOicDistributorUser ? this.getOfficerStatusGroup(row) : (this.isPermitCancelled(row) || this.isPermitCancellationApplied(row) ? 'cancelled' : row.statusGroup);
+      const matchesStatus = this.activeCardFilter === 'all' ||
+        stGroup === this.activeCardFilter ||
+        (this.activeCardFilter === 'cancelled' && (this.isPermitCancelled(row) || this.isPermitCancellationApplied(row) || this.getBrandArrivalStatusForRow(row) === 'cancelled' || this.getBrandArrivalStatusForRow(row) === 'cancellation_applied'));
       const matchesSearch = !q ||
         (row.applicationId || '').toLowerCase().includes(q) ||
         (row.applicantName || '').toLowerCase().includes(q) ||
