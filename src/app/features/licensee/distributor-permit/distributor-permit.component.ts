@@ -285,69 +285,289 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   hasOicSavedBrandArrival(row: any): boolean {
-    const appId = String(row?.applicationId || row?.referenceNo || row?.reference_no || row?.id || '').toLowerCase().trim();
+    if (!row) return false;
+    // A cancelled or cancellation-applied permit cannot be considered as having stock arrival added
+    if (this.isPermitCancelled(row) || this.isPermitCancellationApplied(row)) return false;
+
+    const rowObj: any = row;
+    const appId = String(rowObj?.['permit_number'] || rowObj?.['permitNumber'] || rowObj?.['applicationId'] || rowObj?.['referenceNo'] || rowObj?.['reference_no'] || rowObj?.['id'] || '').toLowerCase().trim();
     if (!appId) return false;
 
-    // 1. Check in brandWarehouseStocks
+    // 1. Check in brandWarehouseStocks (exact permit match)
     if (this.brandWarehouseStocks && this.brandWarehouseStocks.length > 0) {
       const foundInWarehouse = this.brandWarehouseStocks.some((b: any) => {
         const recent = b.recent_entries || b.recentEntries || [];
         const hasRecent = recent.some((e: any) => {
           const pNo = String(e.permit_number || e.permitNumber || '').toLowerCase().trim();
-          return pNo === appId || pNo.startsWith(appId) || pNo.includes(appId) || appId.startsWith(pNo) || appId.includes(pNo);
+          return pNo === appId;
         });
         const latestP = String(b.latest_permit_number || b.latestPermitNumber || '').toLowerCase().trim();
-        return hasRecent || (latestP && (latestP === appId || latestP.startsWith(appId) || latestP.includes(appId) || appId.startsWith(latestP) || appId.includes(latestP)));
+        return hasRecent || (latestP && latestP === appId);
       });
       if (foundInWarehouse) return true;
     }
 
-    // 2. Check in allArrivalsList
+    // 2. Check in allArrivalsList (exact permit match)
     if (this.allArrivalsList && this.allArrivalsList.length > 0) {
       const foundInArrivals = this.allArrivalsList.some((a: any) => {
         const pNo = String(a.permit_number || a.permitNumber || '').toLowerCase().trim();
         const distPermit = String(a.distributor_permit?.reference_no || a.distributor_permit || '').toLowerCase().trim();
-        return (
-          pNo === appId || pNo.startsWith(appId) || pNo.includes(appId) || appId.startsWith(pNo) ||
-          distPermit === appId || distPermit.startsWith(appId) || distPermit.includes(appId) || appId.startsWith(distPermit)
-        );
+        return pNo === appId || distPermit === appId;
       });
       if (foundInArrivals) return true;
     }
 
-    // 3. Check application status
-    const app = row?.application || row;
-    const stage = String(app?.status || row?.currentStage || '').toLowerCase();
-    if (stage.includes('arrival approved') || stage.includes('stock arrival approved') || stage.includes('stock completed')) {
-      return true;
+    // 3. Check in allCasesProcessedList (exact permit match)
+    if (this.allCasesProcessedList && this.allCasesProcessedList.length > 0) {
+      const foundInProcessed = this.allCasesProcessedList.some((c: any) => {
+        const pNo = String(c.permit_number || c.permitNumber || '').toLowerCase().trim();
+        const cAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase().trim();
+        const st = String(c.status || '').toLowerCase().trim();
+        return (st === 'approved' || st === 'completed') && (pNo === appId || cAppRef === appId);
+      });
+      if (foundInProcessed) return true;
     }
 
     return false;
   }
 
-  getBrandArrivalStatusForRow(row: any): DistributorPermitStatusGroup {
-    const stage = String(row?.currentStage || row?.status || row?.application?.status || '').toLowerCase();
-    const stageId = Number(row?.application?.current_stage_id || row?.application?.currentStageId || row?.current_stage_id || 0);
-    if (stage.includes('reject') || stage.includes('cancel') || stageId === 152 || stageId === 166 || row?.statusGroup === 'rejected') {
-      return 'rejected';
+  isPermitCancelled(row: any): boolean {
+    if (!row) return false;
+    const rowObj: any = row;
+    const stage = String(rowObj?.['currentStage'] || rowObj?.['status'] || rowObj?.['application']?.['status'] || '').toLowerCase();
+    const stageId = Number(rowObj?.['application']?.['current_stage_id'] || rowObj?.['application']?.['currentStageId'] || rowObj?.['current_stage_id'] || 0);
+    if (stage.includes('cancel') || stageId === 152 || stageId === 166 || rowObj?.['statusGroup'] === 'rejected') {
+      return true;
+    }
+
+    const pDetail = rowObj?.['application']?.['current_permit_detail'];
+    if (pDetail && (pDetail['isCancelled'] || pDetail['is_cancelled'] || String(pDetail['status'] || '').toUpperCase().includes('CANCEL'))) {
+      return true;
+    }
+
+    const pNum = String(rowObj?.['applicationId'] || rowObj?.['id'] || rowObj?.['referenceNo'] || rowObj?.['distributorPermitRef'] || rowObj?.['permit_number'] || rowObj?.['permitNumber'] || '').toLowerCase().trim();
+    const parentId = String(rowObj?.['parentApplicationId'] || rowObj?.['application']?.['parent_reference_no'] || '').toLowerCase().trim();
+
+    const canApps = (this.applications as any[] || []).filter((a: any) => {
+      const isCan = String(a?.['referenceNo'] || a?.['reference_no'] || a?.['id'] || '').startsWith('IMFLCAN') || a?.['applicationType'] === 'cancellation';
+      return isCan;
+    });
+
+    for (const a of canApps) {
+      const appObj: any = a;
+      const st = String(appObj?.['status'] || appObj?.['currentStage'] || appObj?.['application']?.['status'] || '').toUpperCase();
+      const stId = Number(appObj?.['application']?.['current_stage_id'] || appObj?.['application']?.['currentStageId'] || appObj?.['current_stage_id'] || 0);
+      const isApproved = st.includes('APPROVED') || st.includes('COMPLETED') || stId === 152 || stId === 166 || appObj?.['statusGroup'] === 'approved';
+      if (!isApproved) continue;
+
+      const refTarget = String(appObj?.['application']?.['distributor_permit'] || appObj?.['application']?.['distributorPermit'] || appObj?.['distributor_permit'] || appObj?.['distributorPermitRef'] || '').toLowerCase().trim();
+      const targetNo = String(appObj?.['application']?.['distributor_permit_ref_no'] || appObj?.['distributor_permit_ref_no'] || appObj?.['cancelled_permit_number'] || appObj?.['cancelledPermitNumber'] || appObj?.['application']?.['cancelled_permit_number'] || appObj?.['application']?.['cancelledPermitNumber'] || '').toLowerCase().trim();
+      const remarksText = String(appObj?.['remarks'] || appObj?.['cancellation_reason'] || appObj?.['cancellationReason'] || appObj?.['application']?.['remarks'] || '').toLowerCase().trim();
+      const targetPermits = (appObj?.['application']?.['cancelled_permits'] || appObj?.['cancelled_permits'] || appObj?.['application']?.['cancelledPermits'] || appObj?.['cancelledPermits'] || []);
+
+      if (targetNo && (targetNo === pNum || targetNo.includes(pNum) || pNum.includes(targetNo))) return true;
+      if (Array.isArray(targetPermits) && targetPermits.length > 0) {
+        const matchesPermit = targetPermits.some((tp: any) => {
+          const tpNum = String(tp?.['permitNumber'] || tp?.['permit_number'] || tp || '').toLowerCase().trim();
+          return tpNum === pNum || tpNum.includes(pNum) || pNum.includes(tpNum);
+        });
+        if (matchesPermit) return true;
+      }
+      if (remarksText && remarksText.includes(pNum)) return true;
+      if (!targetNo && (!targetPermits || targetPermits.length === 0)) {
+        if (refTarget && (refTarget === pNum || (parentId && refTarget === parentId))) return true;
+      }
+    }
+
+    return false;
+  }
+
+  isPermitCancellationApplied(row: any): boolean {
+    if (!row) return false;
+    if (this.isPermitCancelled(row)) return false;
+
+    const rowObj: any = row;
+    const stage = String(rowObj?.['currentStage'] || rowObj?.['status'] || rowObj?.['application']?.['status'] || '').toLowerCase();
+    if (stage.includes('cancellation') && (stage.includes('process') || stage.includes('pending') || stage.includes('review') || stage.includes('submitted') || stage.includes('applied'))) {
+      return true;
+    }
+
+    const pDetail = rowObj?.['application']?.['current_permit_detail'];
+    if (pDetail && (pDetail['isUnderCancellation'] || pDetail['is_under_cancellation'] || pDetail['cancellationApplied'])) {
+      return true;
+    }
+
+    const pNum = String(rowObj?.['applicationId'] || rowObj?.['id'] || rowObj?.['referenceNo'] || rowObj?.['distributorPermitRef'] || rowObj?.['permit_number'] || rowObj?.['permitNumber'] || '').toLowerCase().trim();
+    const parentId = String(rowObj?.['parentApplicationId'] || rowObj?.['application']?.['parent_reference_no'] || '').toLowerCase().trim();
+
+    const canApps = (this.applications as any[] || []).filter((a: any) => {
+      const isCan = String(a?.['referenceNo'] || a?.['reference_no'] || a?.['id'] || '').startsWith('IMFLCAN') || a?.['applicationType'] === 'cancellation';
+      return isCan;
+    });
+
+    for (const a of canApps) {
+      const appObj: any = a;
+      const st = String(appObj?.['status'] || appObj?.['currentStage'] || appObj?.['application']?.['status'] || '').toUpperCase();
+      const isApproved = st.includes('APPROVED') || st.includes('COMPLETED') || appObj?.['statusGroup'] === 'approved';
+      const isRejected = st.includes('REJECTED') || appObj?.['statusGroup'] === 'rejected';
+      if (isApproved || isRejected) continue;
+
+      const refTarget = String(appObj?.['application']?.['distributor_permit'] || appObj?.['application']?.['distributorPermit'] || appObj?.['distributor_permit'] || appObj?.['distributorPermitRef'] || '').toLowerCase().trim();
+      const targetNo = String(appObj?.['application']?.['distributor_permit_ref_no'] || appObj?.['distributor_permit_ref_no'] || appObj?.['cancelled_permit_number'] || appObj?.['cancelledPermitNumber'] || appObj?.['application']?.['cancelled_permit_number'] || appObj?.['application']?.['cancelledPermitNumber'] || '').toLowerCase().trim();
+      const remarksText = String(appObj?.['remarks'] || appObj?.['cancellation_reason'] || appObj?.['cancellationReason'] || appObj?.['application']?.['remarks'] || '').toLowerCase().trim();
+      const targetPermits = (appObj?.['application']?.['cancelled_permits'] || appObj?.['cancelled_permits'] || appObj?.['application']?.['cancelledPermits'] || appObj?.['cancelledPermits'] || []);
+
+      if (targetNo && (targetNo === pNum || targetNo.includes(pNum) || pNum.includes(targetNo))) return true;
+      if (Array.isArray(targetPermits) && targetPermits.length > 0) {
+        const matchesPermit = targetPermits.some((tp: any) => {
+          const tpNum = String(tp?.['permitNumber'] || tp?.['permit_number'] || tp || '').toLowerCase().trim();
+          return tpNum === pNum || tpNum.includes(pNum) || pNum.includes(tpNum);
+        });
+        if (matchesPermit) return true;
+      }
+      if (remarksText && remarksText.includes(pNum)) return true;
+      if (!targetNo && (!targetPermits || targetPermits.length === 0)) {
+        if (refTarget && (refTarget === pNum || (parentId && refTarget === parentId))) return true;
+      }
+    }
+
+    return false;
+  }
+
+  isPermitRevalidationInProgress(row: any): boolean {
+    if (!row) return false;
+    if (this.isPermitCancelled(row) || this.isPermitCancellationApplied(row)) return false;
+
+    const rowObj: any = row;
+    const pDetail = rowObj?.['application']?.['current_permit_detail'];
+    if (pDetail && (pDetail['isUnderRevalidation'] || pDetail['is_under_revalidation'])) {
+      return true;
+    }
+
+    const pNum = String(rowObj?.['applicationId'] || rowObj?.['id'] || rowObj?.['referenceNo'] || rowObj?.['distributorPermitRef'] || rowObj?.['permit_number'] || rowObj?.['permitNumber'] || '').toLowerCase().trim();
+    const parentId = String(rowObj?.['parentApplicationId'] || rowObj?.['application']?.['parent_reference_no'] || '').toLowerCase().trim();
+
+    const revApps = (this.applications as any[] || []).filter((a: any) => {
+      const isRev = String(a?.['referenceNo'] || a?.['reference_no'] || a?.['id'] || '').startsWith('IMFLREV') || a?.['applicationType'] === 'revalidation';
+      return isRev;
+    });
+
+    for (const a of revApps) {
+      const appObj: any = a;
+      const st = String(appObj?.['status'] || appObj?.['currentStage'] || appObj?.['application']?.['status'] || '').toUpperCase();
+      const isApproved = st.includes('APPROVED') || st.includes('COMPLETED') || appObj?.['statusGroup'] === 'approved';
+      const isRejected = st.includes('REJECTED') || appObj?.['statusGroup'] === 'rejected';
+      if (isApproved || isRejected) continue;
+
+      const refTarget = String(appObj?.['application']?.['distributor_permit'] || appObj?.['application']?.['distributorPermit'] || appObj?.['distributor_permit'] || appObj?.['distributorPermitRef'] || '').toLowerCase().trim();
+      const targetNo = String(appObj?.['application']?.['distributor_permit_ref_no'] || appObj?.['distributor_permit_ref_no'] || appObj?.['revalidated_permit_number'] || appObj?.['revalidatedPermitNumber'] || appObj?.['application']?.['revalidated_permit_number'] || appObj?.['application']?.['revalidatedPermitNumber'] || '').toLowerCase().trim();
+      const remarksText = String(appObj?.['remarks'] || appObj?.['revalidation_reason'] || appObj?.['revalidationReason'] || appObj?.['application']?.['remarks'] || '').toLowerCase().trim();
+      const targetPermits = (appObj?.['application']?.['revalidated_permits'] || appObj?.['revalidated_permits'] || appObj?.['application']?.['revalidatedPermits'] || appObj?.['revalidatedPermits'] || []);
+
+      if (targetNo && (targetNo === pNum || targetNo.includes(pNum) || pNum.includes(targetNo))) return true;
+      if (Array.isArray(targetPermits) && targetPermits.length > 0) {
+        const matchesPermit = targetPermits.some((tp: any) => {
+          const tpNum = String(tp?.['permitNumber'] || tp?.['permit_number'] || tp || '').toLowerCase().trim();
+          return tpNum === pNum || tpNum.includes(pNum) || pNum.includes(tpNum);
+        });
+        if (matchesPermit) return true;
+      }
+      if (remarksText && remarksText.includes(pNum)) return true;
+      if (!targetNo && (!targetPermits || targetPermits.length === 0)) {
+        if (refTarget && (refTarget === pNum || (parentId && refTarget === parentId))) return true;
+      }
+    }
+
+    return false;
+  }
+
+  isPermitRevalidatedAndValid(row: any): boolean {
+    if (!row) return false;
+    if (this.isPermitCancelled(row) || this.isPermitCancellationApplied(row)) return false;
+
+    const rowObj: any = row;
+    const pDetail = rowObj?.['application']?.['current_permit_detail'];
+    if (pDetail && (pDetail['isRevalidated'] || pDetail['is_revalidated'] || String(pDetail['status'] || '').toUpperCase().includes('REVALIDAT'))) {
+      return true;
+    }
+
+    const pNum = String(rowObj?.['applicationId'] || rowObj?.['id'] || rowObj?.['referenceNo'] || rowObj?.['distributorPermitRef'] || rowObj?.['permit_number'] || rowObj?.['permitNumber'] || '').toLowerCase().trim();
+    const parentId = String(rowObj?.['parentApplicationId'] || rowObj?.['application']?.['parent_reference_no'] || '').toLowerCase().trim();
+
+    const revApps = (this.applications as any[] || []).filter((a: any) => {
+      const isRev = String(a?.['referenceNo'] || a?.['reference_no'] || a?.['id'] || '').startsWith('IMFLREV') || a?.['applicationType'] === 'revalidation';
+      return isRev;
+    });
+
+    for (const a of revApps) {
+      const appObj: any = a;
+      const st = String(appObj?.['status'] || appObj?.['currentStage'] || appObj?.['application']?.['status'] || '').toUpperCase();
+      const isApproved = st.includes('APPROVED') || st.includes('COMPLETED') || appObj?.['statusGroup'] === 'approved';
+      if (!isApproved) continue;
+
+      const refTarget = String(appObj?.['application']?.['distributor_permit'] || appObj?.['application']?.['distributorPermit'] || appObj?.['distributor_permit'] || appObj?.['distributorPermitRef'] || '').toLowerCase().trim();
+      const targetNo = String(appObj?.['application']?.['distributor_permit_ref_no'] || appObj?.['distributor_permit_ref_no'] || appObj?.['revalidated_permit_number'] || appObj?.['revalidatedPermitNumber'] || appObj?.['application']?.['revalidated_permit_number'] || appObj?.['application']?.['revalidatedPermitNumber'] || '').toLowerCase().trim();
+      const remarksText = String(appObj?.['remarks'] || appObj?.['revalidation_reason'] || appObj?.['revalidationReason'] || appObj?.['application']?.['remarks'] || '').toLowerCase().trim();
+      const targetPermits = (appObj?.['application']?.['revalidated_permits'] || appObj?.['revalidated_permits'] || appObj?.['application']?.['revalidatedPermits'] || appObj?.['revalidatedPermits'] || []);
+
+      if (targetNo && (targetNo === pNum || targetNo.includes(pNum) || pNum.includes(targetNo))) return true;
+      if (Array.isArray(targetPermits) && targetPermits.length > 0) {
+        const matchesPermit = targetPermits.some((tp: any) => {
+          const tpNum = String(tp?.['permitNumber'] || tp?.['permit_number'] || tp || '').toLowerCase().trim();
+          return tpNum === pNum || tpNum.includes(pNum) || pNum.includes(tpNum);
+        });
+        if (matchesPermit) return true;
+      }
+      if (remarksText && remarksText.includes(pNum)) return true;
+      if (!targetNo && (!targetPermits || targetPermits.length === 0)) {
+        if (refTarget && (refTarget === pNum || (parentId && refTarget === parentId))) return true;
+      }
+    }
+
+    return false;
+  }
+
+  getBrandArrivalStatusForRow(row: any): string {
+    if (this.isPermitCancelled(row)) {
+      return 'cancelled';
+    }
+
+    if (this.isPermitCancellationApplied(row)) {
+      return 'cancellation_applied';
+    }
+
+    if (this.isPermitRevalidationInProgress(row)) {
+      return 'revalidation_in_progress';
     }
 
     if (this.hasOicSavedBrandArrival(row)) {
       return 'approved';
     }
 
+    const rowObj: any = row;
+    const stage = String(rowObj?.['currentStage'] || rowObj?.['status'] || rowObj?.['application']?.['status'] || '').toLowerCase();
+    const stageId = Number(rowObj?.['application']?.['current_stage_id'] || rowObj?.['application']?.['currentStageId'] || rowObj?.['current_stage_id'] || 0);
+    if (stage.includes('reject') || stageId === 152 || stageId === 166 || rowObj?.['statusGroup'] === 'rejected') {
+      return 'rejected';
+    }
+
     return 'pending';
   }
 
   getOfficerStatusGroup(row: DistributorPermitRow | any): DistributorPermitStatusGroup {
-    const stage = String(row?.currentStage || row?.status || row?.application?.status || '').toLowerCase();
-    const stageId = Number(row?.application?.current_stage_id || row?.application?.currentStageId || row?.current_stage_id || 0);
-    if (stage.includes('reject') || stage.includes('cancel') || stageId === 152 || stageId === 166 || row?.statusGroup === 'rejected') {
+    const rowObj: any = row;
+    const stage = String(rowObj?.['currentStage'] || rowObj?.['status'] || rowObj?.['application']?.['status'] || '').toLowerCase();
+    const stageId = Number(rowObj?.['application']?.['current_stage_id'] || rowObj?.['application']?.['currentStageId'] || rowObj?.['current_stage_id'] || 0);
+    if (stage.includes('reject') || stage.includes('cancel') || stageId === 152 || stageId === 166 || rowObj?.['statusGroup'] === 'rejected') {
       return 'rejected';
     }
 
     if (this.activeTab === 'brand-arrival') {
-      return this.getBrandArrivalStatusForRow(row);
+      const brandStatus = this.getBrandArrivalStatusForRow(row);
+      if (brandStatus === 'cancelled' || brandStatus === 'rejected') return 'rejected';
+      if (brandStatus === 'cancellation_applied' || brandStatus === 'revalidation_in_progress') return 'under_process';
+      if (brandStatus === 'approved') return 'approved';
+      return 'pending';
     }
 
     const arrivalStatus = this.getArrivalStatusForRow(row);
@@ -3707,7 +3927,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           return isSinglePermit && cAppRef === appIdLower;
         });
 
-        const isArrivalApproved = Boolean(approvedArrival || approvedCaseProc.length > 0);
+        const isWarehouseStocked = this.hasOicSavedBrandArrival({ applicationId: pNum, referenceNo: pNum, permit_number: pNum }) || this.hasOicSavedBrandArrival(p);
+        const isArrivalApproved = Boolean(approvedArrival || approvedCaseProc.length > 0 || isWarehouseStocked);
 
         const pendingArrival = (this.allCasesProcessedList || []).find((c: any) => {
           const pNo = String(c.permit_number || c.permitNumber || '').toLowerCase().trim();
@@ -3746,7 +3967,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
         let label = `${pNum} (${cases} Cases)`;
         if (isArrivalApproved) {
-          label += ' - (Stock Arrival Approved - Cannot Cancel)';
+          label += ' - (OIC has updated stock in Arrival - Cannot Cancel)';
         } else if (pendingArrival) {
           label += ' - (Stock Arrival Awaiting OIC Approval)';
         } else if (isCancelled) {
@@ -3784,7 +4005,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         return st === 'approved' && cAppRef === appIdLower;
       });
 
-      const isArrivalApproved = Boolean(approvedArrival || approvedCaseProc.length > 0);
+      const isWarehouseStocked = this.hasOicSavedBrandArrival(row) || this.hasOicSavedBrandArrival({ applicationId: appId, referenceNo: appId });
+      const isArrivalApproved = Boolean(approvedArrival || approvedCaseProc.length > 0 || isWarehouseStocked);
 
       const pendingArrival = (this.allCasesProcessedList || []).find((c: any) => {
         const pAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase();
@@ -3794,7 +4016,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       const isUnderProcess = Boolean(pendingArrival || isArrivalApproved);
       let label = `${appId} - Single Permit`;
       if (isArrivalApproved) {
-        label += ' - (Stock Arrival Approved - Cannot Cancel)';
+        label += ' - (OIC has updated stock in Arrival - Cannot Cancel)';
       } else if (pendingArrival) {
         label += ' - (Stock Arrival Awaiting OIC Approval)';
       } else {

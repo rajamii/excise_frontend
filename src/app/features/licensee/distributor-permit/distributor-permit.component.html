@@ -827,9 +827,23 @@
                 <tr *ngFor="let row of filteredRows; let i = index; trackBy: trackByRow" (click)="onViewDetails(row)">
                   <td>{{ (pageIndex * pageSize) + i + 1 }}</td>
                   <td class="fw-semibold">
-                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 font-monospace px-2 py-1 fs-7">
-                      <i class="bi bi-file-earmark-text me-1"></i>{{ row.applicationId }}
-                    </span>
+                    <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                      <span class="badge font-monospace px-2 py-1 fs-7" style="background-color: #eff6ff !important; color: #1d4ed8 !important; border: 1px solid #bfdbfe !important; font-weight: 600;">
+                        <i class="bi bi-file-earmark-text me-1"></i>{{ row.applicationId }}
+                      </span>
+                      <span *ngIf="isPermitCancelled(row)" class="badge font-monospace px-2 py-0.5" style="background-color: #fef2f2 !important; color: #dc2626 !important; border: 1px solid #fca5a5 !important; font-size: 11px; font-weight: 600;">
+                        <i class="bi bi-x-circle me-1"></i>Cancelled
+                      </span>
+                      <span *ngIf="!isPermitCancelled(row) && isPermitCancellationApplied(row)" class="badge font-monospace px-2 py-0.5" style="background-color: #fff1f2 !important; color: #e11d48 !important; border: 1px solid #fecdd3 !important; font-size: 11px; font-weight: 600;">
+                        <i class="bi bi-hourglass-split me-1"></i>Cancellation Applied
+                      </span>
+                      <span *ngIf="!isPermitCancelled(row) && !isPermitCancellationApplied(row) && isPermitRevalidationInProgress(row)" class="badge font-monospace px-2 py-0.5" style="background-color: #f0f9ff !important; color: #0284c7 !important; border: 1px solid #bae6fd !important; font-size: 11px; font-weight: 600;">
+                        <i class="bi bi-arrow-repeat me-1"></i>Revalidation in Progress
+                      </span>
+                      <span *ngIf="!isPermitCancelled(row) && !isPermitCancellationApplied(row) && !isPermitRevalidationInProgress(row) && isPermitRevalidatedAndValid(row)" class="badge font-monospace px-2 py-0.5" style="background-color: #f0fdf4 !important; color: #16a34a !important; border: 1px solid #bbf7d0 !important; font-size: 11px; font-weight: 600;">
+                        <i class="bi bi-arrow-repeat me-1"></i>Revalidated
+                      </span>
+                    </div>
                   </td>
                   <td>
                     <span class="badge bg-slate-100 text-slate-800 border font-monospace px-2 py-1">
@@ -837,7 +851,7 @@
                     </span>
                   </td>
                   <td>
-                    <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 font-monospace px-2 py-1" style="color: #0284c7 !important;">
+                    <span class="badge font-monospace px-2 py-1" style="background-color: #f0f9ff !important; color: #0284c7 !important; border: 1px solid #bae6fd !important; font-weight: 600;">
                       <i class="bi bi-upc-scan me-1"></i>{{ getAssignedHologramRangeSummary(row) }}
                     </span>
                   </td>
@@ -848,20 +862,34 @@
                     <span class="fw-bold text-dark">{{ row.cases | number }} Cases</span>
                   </td>
                   <td>
-                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">
+                    <span class="badge px-2 py-1" style="background-color: #f0fdf4 !important; color: #16a34a !important; border: 1px solid #bbf7d0 !important; font-weight: 600;">
                       <i class="bi bi-check-circle-fill me-1"></i>PAID
                     </span>
                   </td>
                   <td>
-                    <span *ngIf="getBrandArrivalStatusForRow(row) === 'approved'" class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">
-                      <i class="bi bi-check2-all me-1"></i>Arrival Verified
-                    </span>
-                    <span *ngIf="getBrandArrivalStatusForRow(row) === 'pending'" class="badge bg-warning bg-opacity-15 text-warning border border-warning border-opacity-25 px-2 py-1" style="color: #d97706 !important;">
-                      <i class="bi bi-clock-history me-1"></i>Pending OIC Update
-                    </span>
-                    <span *ngIf="getBrandArrivalStatusForRow(row) === 'rejected'" class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2 py-1">
-                      <i class="bi bi-x-circle me-1"></i>Rejected
-                    </span>
+                    <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                      <span *ngIf="getBrandArrivalStatusForRow(row) === 'cancelled'" class="badge px-2 py-1" style="background-color: #fef2f2 !important; color: #dc2626 !important; border: 1px solid #fca5a5 !important; font-weight: 600;">
+                        <i class="bi bi-x-circle me-1"></i>Cancelled
+                      </span>
+                      <span *ngIf="getBrandArrivalStatusForRow(row) === 'cancellation_applied'" class="badge px-2 py-1" style="background-color: #fff1f2 !important; color: #e11d48 !important; border: 1px solid #fecdd3 !important; font-weight: 600;">
+                        <i class="bi bi-hourglass-split me-1"></i>Cancellation Applied
+                      </span>
+                      <span *ngIf="getBrandArrivalStatusForRow(row) === 'revalidation_in_progress'" class="badge px-2 py-1" style="background-color: #f0f9ff !important; color: #0284c7 !important; border: 1px solid #bae6fd !important; font-weight: 600;">
+                        <i class="bi bi-arrow-repeat me-1"></i>Revalidation in Progress
+                      </span>
+                      <span *ngIf="getBrandArrivalStatusForRow(row) === 'approved'" class="badge px-2 py-1" style="background-color: #f0fdf4 !important; color: #16a34a !important; border: 1px solid #bbf7d0 !important; font-weight: 600;">
+                        <i class="bi bi-check2-all me-1"></i>Arrival Verified
+                      </span>
+                      <span *ngIf="getBrandArrivalStatusForRow(row) === 'pending'" class="badge px-2 py-1" style="background-color: #fffbeb !important; color: #d97706 !important; border: 1px solid #fde68a !important; font-weight: 600;">
+                        <i class="bi bi-clock-history me-1"></i>Pending OIC Update
+                      </span>
+                      <span *ngIf="getBrandArrivalStatusForRow(row) === 'rejected'" class="badge px-2 py-1" style="background-color: #fef2f2 !important; color: #dc2626 !important; border: 1px solid #fca5a5 !important; font-weight: 600;">
+                        <i class="bi bi-x-circle me-1"></i>Rejected
+                      </span>
+                      <span *ngIf="!isPermitCancelled(row) && !isPermitCancellationApplied(row) && isPermitRevalidatedAndValid(row)" class="badge px-2 py-0.5" style="background-color: #f0fdf4 !important; color: #16a34a !important; border: 1px solid #bbf7d0 !important; font-size: 10.5px; font-weight: 600;">
+                        <i class="bi bi-arrow-repeat me-1"></i>Revalidated
+                      </span>
+                    </div>
                   </td>
                   <td class="dp-action-cell" (click)="$event.stopPropagation()">
                     <div class="d-flex align-items-center gap-2">
@@ -878,10 +906,42 @@
                         <span>Update Brands Arrival</span>
                       </button>
 
+                      <button
+                        *ngIf="getBrandArrivalStatusForRow(row) === 'cancellation_applied'"
+                        disabled
+                        class="btn btn-sm disabled d-flex align-items-center gap-1 px-3 py-1.5"
+                        type="button"
+                        title="Cancellation is under process - Cannot update arrival for cancelled / cancellation-applied permit"
+                        style="background: #e2e8f0; color: #64748b; border: 1px solid #cbd5e1; font-size: 12px; border-radius: 6px; font-weight: 600; opacity: 0.85; cursor: not-allowed;"
+                      >
+                        <i class="bi bi-hourglass-split"></i>
+                        <span>Cancellation Applied</span>
+                      </button>
+
+                      <button
+                        *ngIf="getBrandArrivalStatusForRow(row) === 'revalidation_in_progress'"
+                        disabled
+                        class="btn btn-sm disabled d-flex align-items-center gap-1 px-3 py-1.5"
+                        type="button"
+                        title="Revalidation is under process - Cannot update arrival until revalidation is completed"
+                        style="background: #e2e8f0; color: #64748b; border: 1px solid #cbd5e1; font-size: 12px; border-radius: 6px; font-weight: 600; opacity: 0.85; cursor: not-allowed;"
+                      >
+                        <i class="bi bi-arrow-repeat"></i>
+                        <span>Revalidation In Progress</span>
+                      </button>
+
+                      <span
+                        *ngIf="getBrandArrivalStatusForRow(row) === 'cancelled'"
+                        class="badge font-monospace px-2.5 py-1.5 fw-semibold d-inline-flex align-items-center gap-1"
+                        style="background-color: #fef2f2 !important; color: #dc2626 !important; border: 1px solid #fca5a5 !important; font-size: 11.5px;"
+                      >
+                        <i class="bi bi-x-circle"></i> Permit Cancelled
+                      </span>
+
                       <span
                         *ngIf="getBrandArrivalStatusForRow(row) === 'approved'"
-                        class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1.5 fw-semibold font-monospace d-inline-flex align-items-center gap-1"
-                        style="font-size: 11.5px;"
+                        class="badge font-monospace px-2.5 py-1.5 fw-semibold d-inline-flex align-items-center gap-1"
+                        style="background-color: #f0fdf4 !important; color: #16a34a !important; border: 1px solid #bbf7d0 !important; font-size: 11.5px;"
                       >
                         <i class="bi bi-check2-circle"></i> Stock Added
                       </span>
@@ -2986,16 +3046,16 @@
                   <span class="badge bg-success" *ngIf="!opt.isUnderProcess && !opt.isCancelled && !opt.isRevalidated && !opt.isArrivalApproved">
                     <i class="bi bi-check-circle me-1"></i> Available
                   </span>
-                  <span class="badge bg-warning text-dark" *ngIf="opt.isUnderProcess">
+                  <span class="badge bg-warning text-dark" *ngIf="opt.isUnderProcess && !opt.isArrivalApproved">
                     <i class="bi bi-hourglass-split me-1"></i> Cancellation Under Process
                   </span>
-                  <span class="badge bg-info text-dark" *ngIf="opt.isRevalidated">
+                  <span class="badge bg-info text-dark" *ngIf="opt.isRevalidated && !opt.isArrivalApproved">
                     <i class="bi bi-arrow-repeat me-1"></i> Revalidation Waiting
                   </span>
                   <span class="badge bg-danger" *ngIf="opt.isArrivalApproved">
-                    <i class="bi bi-lock-fill me-1"></i> Stock Arrival Approved
+                    <i class="bi bi-lock-fill me-1"></i> OIC has updated stock
                   </span>
-                  <span class="badge bg-secondary" *ngIf="opt.isCancelled">
+                  <span class="badge bg-secondary" *ngIf="opt.isCancelled && !opt.isArrivalApproved">
                     <i class="bi bi-x-circle me-1"></i> Cancelled
                   </span>
                 </div>
@@ -3108,7 +3168,7 @@
           <i class="bi bi-exclamation-octagon-fill text-danger fs-3 me-3"></i>
           <div>
             <strong>Permit Cancellation Disabled</strong><br />
-            One or more selected permits cannot be cancelled because a cancellation request is already under process, or the permit is already cancelled / stock arrival approved.
+            One or more selected permits cannot be cancelled because OIC has already updated stock in Update Brands Arrival, or a cancellation request is already under process / permit is cancelled.
           </div>
         </div>
 
