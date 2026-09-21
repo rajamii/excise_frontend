@@ -7,35 +7,6 @@
   <!-- Dashboard Content Wrapper -->
   <div class="dashboard-content">
 
-    <!-- Welcome Banner (shown on dashboard landing) -->
-    <section
-      class="welcome-banner"
-      *ngIf="currentUser && !selectedSupplyChainSection"
-      aria-label="Welcome">
-      <div class="welcome-banner__inner">
-        <div class="welcome-banner__left">
-          <div class="welcome-banner__kicker">{{ greetingText }}</div>
-          <div class="welcome-banner__title">
-            Welcome, <span class="welcome-banner__name">{{ userDisplayName }}</span>
-          </div>
-          <div class="welcome-banner__subtitle">
-            Signed in as <span class="welcome-banner__role">{{ userRoleDisplayName }}</span>
-            <span *ngIf="userDistrictDisplayName" class="welcome-banner__role welcome-banner__role--district" [title]="'Assigned District: ' + userDistrictDisplayName">
-              <mat-icon aria-hidden="true" class="district-badge-icon">place</mat-icon>
-              {{ userDistrictDisplayName }}
-            </span>
-          </div>
-        </div>
-
-        <div class="welcome-banner__right">
-          <div class="welcome-banner__date" aria-label="Today">
-            <mat-icon aria-hidden="true">event</mat-icon>
-            <span>{{ now | date:'fullDate' }}</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <!-- Role-Specific Full Dashboards (when no specific section is selected) -->
     <div *ngIf="shouldShowRoleSpecificDashboard()" class="role-specific-dashboard">
       <!-- Permit Section Dashboard -->

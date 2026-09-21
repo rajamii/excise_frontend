@@ -2255,6 +2255,100 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return this.user?.hasActiveLicense || false;
   }
 
+  get greetingText(): string {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    if (hour < 21) return 'Good evening';
+    return 'Good evening';
+  }
+
+  get greetingIcon(): string {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'wb_sunny';
+    if (hour < 17) return 'wb_sunny';
+    return 'nights_stay';
+  }
+
+  get currentDate(): Date {
+    return new Date();
+  }
+
+  get userRoleDisplayName(): string {
+    const u: any = this.currentUser || this.user || this.accountService?.getCurrentUser() || this.roleService?.getCurrentUser() || {};
+    let roleFromUser =
+      (u?.role?.displayName || '').trim() ||
+      (u?.role?.name || '').trim();
+
+    if (/^Role ID:\s*\d+$/i.test(roleFromUser) || /^Role\s+\d+$/i.test(roleFromUser)) {
+      const backendRoleName =
+        String((this.accountService.getCurrentUser() as any)?.role?.name || '').trim() ||
+        String(localStorage.getItem('role') || '').trim();
+      if (backendRoleName) {
+        roleFromUser = this.humanizeRoleName(backendRoleName);
+      }
+    } else if (roleFromUser) {
+      roleFromUser = this.humanizeRoleName(roleFromUser);
+    }
+
+    if (roleFromUser) {
+      return roleFromUser;
+    }
+    const roleId = Number(u?.roleId || u?.role?.id || 0);
+    if (roleId) {
+      const name = this.roleService.getRoleName(roleId);
+      if (name && name !== 'User') return name;
+    }
+    if (this.isLicenseeUser()) {
+      return 'Licensee';
+    }
+    return 'User';
+  }
+
+  get userDistrictDisplayName(): string {
+    const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
+    if (roleId !== 4 && roleId !== 8) {
+      return '';
+    }
+
+    const districtCodeMap: { [key: string]: string } = {
+      '1': 'Gangtok', '225': 'Gangtok', 'gangtok': 'Gangtok',
+      '2': 'Namchi', '226': 'Namchi', 'namchi': 'Namchi',
+      '3': 'Gyalshing', '227': 'Gyalshing', 'gyalshing': 'Gyalshing', 'geyzing': 'Gyalshing',
+      '4': 'Mangan', '228': 'Mangan', 'mangan': 'Mangan',
+      '5': 'Pakyong', '229': 'Pakyong', 'pakyong': 'Pakyong',
+      '6': 'Soreng', '230': 'Soreng', 'soreng': 'Soreng'
+    };
+
+    const extractName = (d: any): string => {
+      if (d === null || d === undefined) return '';
+      if (typeof d === 'number' || (typeof d === 'string' && /^\d+$/.test(d.trim()))) {
+        const key = String(d).trim();
+        if (districtCodeMap[key]) return districtCodeMap[key];
+      }
+      if (typeof d === 'string') {
+        const trimmed = d.trim();
+        const low = trimmed.toLowerCase();
+        if (districtCodeMap[low]) return districtCodeMap[low];
+        return trimmed;
+      }
+      if (typeof d === 'object') {
+        const name = d.district || d.district_name || d.districtName || d.name || d.district_code || d.districtCode || d.code;
+        if (name) return extractName(name);
+      }
+      return '';
+    };
+
+    const u: any = this.currentUser || this.user || this.accountService?.getCurrentUser() || {};
+    return extractName(u?.district || u?.districtName || u?.assignedDistrict || u?.district_code);
+  }
+
+  private humanizeRoleName(value: string): string {
+    return value
+      .replace(/[_-]+/g, ' ')
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
   // Get role display name for header
   getRoleDisplayName(): string {
     const candidates = [

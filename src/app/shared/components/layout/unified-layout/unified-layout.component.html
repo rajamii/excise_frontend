@@ -647,46 +647,73 @@
       <!-- Top Navigation Bar -->
       <div class="top-nav-bar" [class.top-nav-bar--hidden]="isSidenavOpen">
         <div class="top-nav-content">
-          <!-- Left Section with Hamburger and Logo -->
+          <!-- Left Section with Hamburger and Greeting/Date/Role Status Capsule -->
           <div class="nav-left">
-            <button mat-icon-button class="hamburger-btn" (click)="snavToggle(sidenav)">
+            <button mat-icon-button class="hamburger-btn" (click)="snavToggle(sidenav)" aria-label="Toggle menu" title="Toggle menu">
               <mat-icon>menu</mat-icon>
             </button>
 
-          </div>
+            <!-- Compact, Modern Status Capsule -->
+            <div class="top-status-capsule">
+              <!-- Greeting Chip -->
+              <div class="status-greeting-pill">
+                <mat-icon class="status-icon greeting-icon">{{ greetingIcon }}</mat-icon>
+                <span class="greeting-val">{{ greetingText }}</span>
+              </div>
+              
+              <!-- Date Chip -->
+              <div class="status-date-pill">
+                <mat-icon class="status-icon date-icon">event</mat-icon>
+                <span class="date-val">{{ currentDate | date:'EEE, MMM d, y' }}</span>
+              </div>
 
-           <!-- Right Section with User Info -->
-           <div class="nav-right">
-             <div class="top-user-info" (click)="openUserProfile()">
-              <button
-                *ngIf="isLicenseeUser() && selectedLicenseDisplay"
-                type="button"
-                class="top-license-chip"
-                (click)="$event.stopPropagation(); openLicenseNumbersPopup()"
-                title="View license numbers"
-              >
-                <mat-icon class="chip-icon">badge</mat-icon>
-                <span class="chip-text">{{ selectedLicenseDisplay }}</span>
-                <mat-icon class="chip-caret">expand_more</mat-icon>
-              </button>
-              <button
-                *ngIf="isLicenseeUser()"
-                type="button"
-                class="top-my-licenses-btn"
-                (click)="$event.stopPropagation(); openMyLicensesDialog()"
-                title="Go to My Licenses"
-              >
-                <mat-icon class="my-lic-icon">assignment</mat-icon>
-                <span class="my-lic-text">My Licenses</span>
-              </button>
-                <div class="top-user-avatar">
-                  <span class="top-avatar-letter">{{ (userName || 'L').charAt(0).toUpperCase() }}</span>
-                </div>
-                <div class="top-user-details">
-                  <span class="top-user-name">{{ userName || 'License User' }}</span>
-                </div>
+              <!-- Role Chip -->
+              <div class="status-role-pill">
+                <span class="role-caption">Signed in as</span>
+                <span class="role-tag">
+                  <mat-icon class="role-icon">verified_user</mat-icon>
+                  {{ userRoleDisplayName }}
+                </span>
+                <span *ngIf="userDistrictDisplayName" class="district-tag" [title]="'District: ' + userDistrictDisplayName">
+                  <mat-icon class="district-icon">place</mat-icon>
+                  {{ userDistrictDisplayName }}
+                </span>
               </div>
             </div>
+          </div>
+
+          <!-- Right Section with License dropdown, My Licenses & User Profile Box -->
+          <div class="nav-right">
+            <button
+              *ngIf="isLicenseeUser() && selectedLicenseDisplay"
+              type="button"
+              class="top-license-chip"
+              (click)="openLicenseNumbersPopup()"
+              title="View license numbers"
+            >
+              <mat-icon class="chip-icon">badge</mat-icon>
+              <span class="chip-text">{{ selectedLicenseDisplay }}</span>
+              <mat-icon class="chip-caret">expand_more</mat-icon>
+            </button>
+            <button
+              *ngIf="isLicenseeUser()"
+              type="button"
+              class="top-my-licenses-btn"
+              (click)="openMyLicensesDialog()"
+              title="Go to My Licenses"
+            >
+              <mat-icon class="my-lic-icon">assignment</mat-icon>
+              <span class="my-lic-text">My Licenses</span>
+            </button>
+            <div class="top-user-pill" (click)="openUserProfile()" role="button" tabindex="0" title="View Profile">
+              <div class="top-user-avatar">
+                <span class="top-avatar-letter">{{ (userName || 'L').charAt(0).toUpperCase() }}</span>
+              </div>
+              <div class="top-user-details">
+                <span class="top-user-name">{{ userName || 'License User' }}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
