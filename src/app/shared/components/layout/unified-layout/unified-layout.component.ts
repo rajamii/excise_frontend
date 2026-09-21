@@ -1576,24 +1576,65 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         continue;
       }
 
+      const licId = toText(row?.license_id || row?.licenseId || '');
+      const srcObjId = toText(row?.source_object_id || row?.sourceObjectId || '');
+      const sourceType = toText(row?.source_type || row?.sourceType || '').toLowerCase();
+      const appType = toText(row?.application_type || row?.applicationType || '');
+      const appTypeLower = appType.toLowerCase();
       const sbRole = toText(row?.salesman_barman_role || row?.salesmanBarmanRole);
       const category = toText(row?.license_category || row?.licenseCategory);
       const subCategory = toText(row?.license_sub_category || row?.licenseSubCategory);
-      const appType = toText(row?.application_type || row?.applicationType);
-      const labelParts = [category, subCategory].filter(Boolean);
-      let label = labelParts.length ? labelParts.join(' • ') : (appType || 'License');
-      
-      if (sbRole) {
-        label = `${label} • ${sbRole}`;
+
+      let label = '';
+      let groupKey = '';
+
+      if (
+        sourceType === 'company_registration' ||
+        appTypeLower === 'company registration' ||
+        appTypeLower === 'company_registration' ||
+        licId.startsWith('CR/') ||
+        licId.startsWith('CRF/') ||
+        licId.startsWith('CR-') ||
+        srcObjId.startsWith('CR/') ||
+        srcObjId.startsWith('CREG')
+      ) {
+        label = 'Company Registration';
+        groupKey = `company_registration__${toText(row?.license_sub_category_id || row?.licenseSubCategoryId || '')}`;
+      } else if (
+        sourceType === 'company_collaboration' ||
+        appTypeLower === 'company collaboration' ||
+        appTypeLower === 'company_collaboration' ||
+        licId.startsWith('CC/') ||
+        licId.startsWith('CCF/') ||
+        licId.startsWith('CC-') ||
+        licId.startsWith('CCOL/') ||
+        srcObjId.startsWith('CC/') ||
+        srcObjId.startsWith('CCOL')
+      ) {
+        label = 'Company Collaboration';
+        groupKey = `company_collaboration__${toText(row?.license_sub_category_id || row?.licenseSubCategoryId || '')}`;
+      } else if (
+        sourceType === 'salesman_barman' ||
+        appTypeLower.includes('salesman') ||
+        appTypeLower.includes('barman') ||
+        licId.startsWith('SB/') ||
+        licId.startsWith('SBF/') ||
+        licId.startsWith('SB-') ||
+        sbRole
+      ) {
+        label = sbRole ? `Salesman/Barman • ${sbRole}` : 'Salesman/Barman';
+        groupKey = `salesman_barman__${sbRole}__${toText(row?.license_sub_category_id || row?.licenseSubCategoryId || '')}`;
+      } else {
+        const labelParts = [category, subCategory].filter(Boolean);
+        label = labelParts.length ? labelParts.join(' • ') : (appType || 'License');
+        groupKey = `${label}__${toText(row?.license_sub_category_id || row?.licenseSubCategoryId || '')}__${appType}`;
       }
 
-      const key = `${label}__${toText(row?.license_sub_category_id || row?.licenseSubCategoryId || '')}__${appType}`;
-
-      const existing = byKey.get(key);
+      const existing = byKey.get(groupKey);
       if (existing) {
         existing.items.push(row);
       } else {
-        byKey.set(key, { key, label, items: [row] });
+        byKey.set(groupKey, { key: groupKey, label, items: [row] });
       }
     }
 
