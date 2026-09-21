@@ -331,9 +331,11 @@
               (keydown.space)="onCardFilterClick('cancelled')"
               [class.active]="activeCardFilter === 'cancelled'"
             >
-              <div class="card-icon"><i class="bi bi-x-octagon"></i></div>
+              <div class="card-icon" style="background: linear-gradient(135deg, #e11d48, #f43f5e) !important; color: #ffffff !important; box-shadow: 0 4px 12px rgba(225, 29, 72, 0.3) !important;">
+                <i class="bi bi-x-octagon-fill" style="color: #ffffff !important; font-size: 1.3rem;"></i>
+              </div>
               <div class="card-content">
-                <h3 class="card-value">{{ counts.cancelled }}</h3>
+                <h3 class="card-value" style="color: #e11d48 !important;">{{ counts.cancelled }}</h3>
                 <p class="card-label">Cancelled</p>
               </div>
             </div>

@@ -2116,3 +2116,19 @@ app-unified-action-buttons button[mat-icon-button][color="accent"]:hover,
   will-change: transform, opacity;
 }
 
+.summary-card.cancelled-requests,
+.cancelled-requests {
+  --accent-start: #e11d48;
+  --accent-end: #f43f5e;
+
+  .card-icon {
+    background: linear-gradient(135deg, #e11d48, #f43f5e) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 10px rgba(225, 29, 72, 0.25) !important;
+  }
+
+  .card-value {
+    color: #e11d48 !important;
+  }
+}
+
