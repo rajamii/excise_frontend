@@ -254,13 +254,15 @@ export class RegistrationManagementComponent implements OnInit {
   }
 
   viewApplication(row: { id: string; applicationId: string }): void {
+    const sourceParam = this.isLicenseeUser() ? 'licensee' : 'officer-in-charge';
+
     if (this.currentSection === 'salesman-barman-registration') {
       this.router.navigate(['/supply-chain-view'], {
         queryParams: {
           type: 'salesman-barman-registration',
           id: row.id || row.applicationId,
           ref: row.applicationId,
-          source: 'licensee'
+          source: sourceParam
         }
       });
       return;
@@ -272,7 +274,7 @@ export class RegistrationManagementComponent implements OnInit {
           type: 'company-collaboration',
           id: row.id || row.applicationId,
           ref: row.applicationId,
-          source: 'licensee'
+          source: sourceParam
         }
       });
       return;
@@ -284,7 +286,7 @@ export class RegistrationManagementComponent implements OnInit {
           type: 'label-registration',
           id: row.id || row.applicationId,
           ref: row.applicationId,
-          source: 'licensee'
+          source: sourceParam
         }
       });
       return;
@@ -295,7 +297,7 @@ export class RegistrationManagementComponent implements OnInit {
         type: 'company-registration',
         id: row.id || row.applicationId,
         ref: row.applicationId,
-        source: 'licensee'
+        source: sourceParam
       }
     });
   }

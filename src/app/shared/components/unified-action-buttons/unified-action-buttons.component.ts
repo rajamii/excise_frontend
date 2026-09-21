@@ -195,7 +195,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
 
     const roleId = String(localStorage.getItem('role_id') ?? '').trim();
     if (roleId) {
-      const officerRoleIds = new Set(['5', '6', '7', '9', '10', '12']);
+      const officerRoleIds = new Set(['1', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '14', '15']);
       return !officerRoleIds.has(roleId);
     }
 
@@ -207,7 +207,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       if (jwtRole) return isLicenseeRole(jwtRole);
       const jwtRoleId = String(payload?.role_id ?? payload?.roleId ?? payload?.roleid ?? '').trim();
       if (jwtRoleId) {
-        const officerRoleIds = new Set(['5', '6', '7', '9', '10', '12']);
+        const officerRoleIds = new Set(['1', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '14', '15']);
         return !officerRoleIds.has(jwtRoleId);
       }
     } catch {

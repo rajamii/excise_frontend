@@ -2065,7 +2065,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
 
     getUserContext(): UserContext {
         // Priority 1: Check authenticated user's actual role directly
-        if (this.roleService.hasRole(10) || this.roleService.hasRole(11) || this.roleService.hasRole(12) || this.roleService.hasRole(1) || this.roleService.hasRole(3) || this.roleService.hasRole(9)) {
+        if (this.roleService.hasRole(10) || this.roleService.hasRole(11) || this.roleService.hasRole(12) || this.roleService.hasRole(1) || this.roleService.hasRole(3) || this.roleService.hasRole(9) || this.roleService.hasRole(8)) {
             return USER_CONTEXTS.COMMISSIONER;
         }
         if (this.roleService.hasRole(5)) {
@@ -2074,13 +2074,16 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         if (this.roleService.hasRole(6)) {
             return USER_CONTEXTS.IT_CELL;
         }
-        if (this.isOicUser() || this.roleService.hasRole(7) || this.roleService.hasRole(4)) {
+        if (this.isOicUser() || this.roleService.hasRole(7) || this.roleService.hasRole(4) || this.roleService.hasRole(14) || this.roleService.hasRole(15)) {
             return USER_CONTEXTS.OFFICER_IN_CHARGE;
         }
 
         const source = this.route.snapshot.queryParamMap.get('source');
         const isOfficer = this.roleService.hasRole(8) ||
                           this.roleService.hasRole(14) ||
+                          this.roleService.hasRole(15) ||
+                          this.roleService.hasRole(4) ||
+                          this.roleService.hasRole(7) ||
                           this.isOicUser();
 
         if (!isOfficer) {
@@ -4675,6 +4678,27 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
             return;
         }
 
+        if (source === 'single-window' || source === 'single-window-detail') {
+            this.router.navigate(['/dashboard'], { queryParams: { section: 'single-window' } });
+            return;
+        }
+
+        // Registration modules (salesman-barman, company-registration, company-collaboration, label, new-license, renewal, special-permit)
+        // Always return to their respective section on the dashboard for all users
+        const registrationModuleTypes = [
+            'salesman-barman-registration',
+            'company-registration',
+            'company-collaboration',
+            'label-registration',
+            'new-license',
+            'license-renewal',
+            'special-permit'
+        ];
+        if (registrationModuleTypes.includes(String(this.applicationType || '').toLowerCase())) {
+            this.router.navigate(['/dashboard'], { queryParams: { section: this.applicationType } });
+            return;
+        }
+
         if (source === 'commissioner-dashboard' || source === 'commissioner') {
             const appTypeStr = String(this.applicationType || '');
             if (this.applicationType === 'hologram') {
@@ -4701,11 +4725,6 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
 
         if (source === 'oic' || (source === 'officer-in-charge' && this.applicationType !== 'transit')) {
             this.router.navigate(['/officer-dashboard/oic']);
-            return;
-        }
-
-        if (source === 'single-window' || source === 'single-window-detail') {
-            this.router.navigate(['/dashboard'], { queryParams: { section: 'single-window' } });
             return;
         }
 
