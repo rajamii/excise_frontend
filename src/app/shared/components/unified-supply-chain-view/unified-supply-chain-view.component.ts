@@ -2136,6 +2136,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                 this.openCompanyCollabPaymentConfirmationModal(event.item);
                 return;
             }
+            if (this.isSalesmanBarmanRegistration() || this.applicationType === 'salesman-barman-registration') {
+                this.openSalesmanBarmanPaymentConfirmationModal(event.item);
+                return;
+            }
             if (this.isImflRequisition()) {
                 if (action === 'FORCE_PAY') {
                     this.executeDirectForcePay(event.item);
@@ -3563,7 +3567,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
 
     getExcludeActionsForDetailView(): string[] {
         const base = ['VIEW'];
-        if (this.isCompanyRegistration() || this.isCompanyCollaboration()) {
+        if (this.isCompanyRegistration() || this.isCompanyCollaboration() || this.isSalesmanBarmanRegistration()) {
             base.push('MAKE_PAYMENT', 'PAY');
         }
         if (this.isCompanyCollaboration()) {
@@ -3603,7 +3607,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                 let actions = (rawAllowedActions as string[])
                     .map(a => String(a || '').toUpperCase().trim())
                     .filter(a => !!a && a !== 'VIEW');
-                if (this.isCompanyRegistration() || this.isCompanyCollaboration()) {
+                if (this.isCompanyRegistration() || this.isCompanyCollaboration() || this.isSalesmanBarmanRegistration()) {
                     actions = actions.filter(a => a !== 'MAKE_PAYMENT' && a !== 'PAY');
                 }
                 if (this.isCompanyCollaboration()) {
@@ -3618,8 +3622,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                     return Array.from(new Set(actions));
                 }
             }
-            if (this.isCompanyRegistration() || this.isCompanyCollaboration()) {
-                if (this.isCompanyRegistrationAwaitingPayment() || this.isCompanyCollabAwaitingPayment()) {
+            if (this.isCompanyRegistration() || this.isCompanyCollaboration() || this.isSalesmanBarmanRegistration()) {
+                if (this.isCompanyRegistrationAwaitingPayment() || this.isCompanyCollabAwaitingPayment() || this.isSalesmanBarmanAwaitingPayment()) {
                     return [];
                 }
             }
@@ -4618,7 +4622,27 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
             (stageName.includes('awaiting') && stageName.includes('payment'));
     }
     isLabelRegistration(): boolean { return this.applicationType === 'label-registration'; }
-    isSalesmanBarmanRegistration(): boolean { return this.applicationType === 'salesman-barman-registration'; }
+    isSalesmanBarmanRegistration(): boolean { return this.applicationType === 'salesman-barman-registration' || (this.applicationType as any) === 'salesman-barman'; }
+    isSalesmanBarmanAwaitingPayment(): boolean {
+        if (!this.isSalesmanBarmanRegistration() || !this.applicationData) return false;
+        const stageName = String(
+            this.applicationData['current_stage_name'] ??
+            this.applicationData['currentStageName'] ??
+            this.applicationData['current_stage'] ??
+            this.applicationData.status ??
+            ''
+        ).toLowerCase();
+        const stageId = Number(
+            (this.applicationData as any)?.current_stage?.id ||
+            (this.applicationData as any)?.current_stage_id ||
+            (this.applicationData as any)?.currentStage ||
+            0
+        );
+        return stageId === 104 ||
+            stageName.includes('awaiting_payment') ||
+            stageName.includes('awaiting payment') ||
+            (stageName.includes('awaiting') && stageName.includes('payment'));
+    }
     getValidUpToDate(): Date | null {
         if (!this.applicationData) return null;
         const rawDate = 
@@ -6007,6 +6031,114 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     getCompanyRegistrationModalCompanyName(): string {
         const app = this.companyRegistrationPaymentApplicationToProcess || this.applicationData;
         return app?.company_name || app?.companyName || app?.distilleryName || 'Not specified';
+    }
+
+    // ── Salesman/Barman Registration Payment Confirmation Modal ─────────────────────────
+    showSalesmanBarmanPaymentConfirmationModal = false;
+    salesmanBarmanPaymentApplicationToProcess: any = null;
+    isSalesmanBarmanPaymentAgreed = false;
+    isSubmittingSalesmanBarmanPayment = false;
+    salesmanBarmanLicenseFeeCurrentBalance = 0;
+    salesmanBarmanFeeAmount = 500;
+
+    get totalSalesmanBarmanPayableAmount(): number {
+        return this.salesmanBarmanFeeAmount || 500;
+    }
+
+    get isSalesmanBarmanPaymentBalanceInsufficient(): boolean {
+        return (this.salesmanBarmanLicenseFeeCurrentBalance || 0) < this.totalSalesmanBarmanPayableAmount;
+    }
+
+    openSalesmanBarmanPaymentConfirmationModal(item?: any): void {
+        const app = item || this.applicationData;
+        if (!app) return;
+        this.salesmanBarmanPaymentApplicationToProcess = app;
+        this.isSalesmanBarmanPaymentAgreed = false;
+        this.isSubmittingSalesmanBarmanPayment = false;
+
+        const fee = Number(
+            app.payment_amount ??
+            app.paymentAmount ??
+            app.fee ??
+            (this.applicationData as any)?.payment_amount ??
+            (this.applicationData as any)?.paymentAmount ??
+            0
+        );
+
+        if (fee > 0) {
+            this.salesmanBarmanFeeAmount = fee;
+            this.loadLiveLicenseFeeWalletBalance((lfBal) => {
+                this.salesmanBarmanLicenseFeeCurrentBalance = lfBal;
+                this.showSalesmanBarmanPaymentConfirmationModal = true;
+                this.cdr.detectChanges();
+            });
+        } else {
+            this.paymentIntegrationService.getPaymentModule('012').subscribe({
+                next: (res: any) => {
+                    const fetchedFee = Number(res?.license_fee ?? res?.licenseFee ?? res?.licenseFeeAmount ?? res?.amount ?? 500);
+                    this.salesmanBarmanFeeAmount = fetchedFee > 0 ? fetchedFee : 500;
+                    this.loadLiveLicenseFeeWalletBalance((lfBal) => {
+                        this.salesmanBarmanLicenseFeeCurrentBalance = lfBal;
+                        this.showSalesmanBarmanPaymentConfirmationModal = true;
+                        this.cdr.detectChanges();
+                    });
+                },
+                error: () => {
+                    this.salesmanBarmanFeeAmount = 500;
+                    this.loadLiveLicenseFeeWalletBalance((lfBal) => {
+                        this.salesmanBarmanLicenseFeeCurrentBalance = lfBal;
+                        this.showSalesmanBarmanPaymentConfirmationModal = true;
+                        this.cdr.detectChanges();
+                    });
+                }
+            });
+        }
+    }
+
+    closeSalesmanBarmanPaymentConfirmationModal(): void {
+        this.showSalesmanBarmanPaymentConfirmationModal = false;
+        this.salesmanBarmanPaymentApplicationToProcess = null;
+        this.isSalesmanBarmanPaymentAgreed = false;
+        this.isSubmittingSalesmanBarmanPayment = false;
+        this.cdr.detectChanges();
+    }
+
+    confirmExecuteSalesmanBarmanPayment(): void {
+        const app = this.salesmanBarmanPaymentApplicationToProcess || this.applicationData;
+        if (!app || this.isSalesmanBarmanPaymentBalanceInsufficient || this.isSubmittingSalesmanBarmanPayment) {
+            return;
+        }
+
+        this.isSubmittingSalesmanBarmanPayment = true;
+        const appId = app.application_id || app.applicationId || app.referenceNo || app.reference_no || app.id || this.getWorkflowApplicationId(app);
+
+        this.salesmanBarmanRegistrationService.payRegistrationLicenseFee(appId).subscribe({
+            next: (res) => {
+                this.isSubmittingSalesmanBarmanPayment = false;
+                this.showSalesmanBarmanPaymentConfirmationModal = false;
+                this.snackBar.open(res?.message || res?.detail || 'Salesman/Barman registration fee paid successfully. Application is now approved.', 'Close', { duration: 4000 });
+                this.sidebarPendingBadgeService.triggerRefresh();
+                const currentRef = app.referenceNo || app.reference_no || appId;
+                this.loadApplicationData(currentRef, appId);
+                this.cdr.detectChanges();
+            },
+            error: (err) => {
+                this.isSubmittingSalesmanBarmanPayment = false;
+                this.snackBar.open(err?.error?.detail || err?.error?.message || 'Failed to complete payment for Salesman/Barman Registration', 'Close', { duration: 4000 });
+                this.cdr.detectChanges();
+            }
+        });
+    }
+
+    getSalesmanBarmanModalAppId(): string {
+        const app = this.salesmanBarmanPaymentApplicationToProcess || this.applicationData;
+        return app?.application_id || app?.applicationId || app?.referenceNo || app?.reference_no || app?.id || 'SBM/1101/2026-27/0001';
+    }
+
+    getSalesmanBarmanModalApplicantName(): string {
+        const app = this.salesmanBarmanPaymentApplicationToProcess || this.applicationData;
+        const names = [app?.firstName, app?.middleName, app?.lastName].filter(Boolean).join(' ').trim();
+        return names || app?.applicant_name || app?.applicantName || app?.applicant_full_name || app?.applicantFullName || 'Not specified';
     }
 
     getPiecesPerCase(size: any, bpc?: any): number {

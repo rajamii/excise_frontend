@@ -925,9 +925,7 @@ private getTransitRejectSummary(): {
   private executeAction(button: ActionButtonConfig): void {
     switch (button.action) {
       case 'MAKE_PAYMENT':
-        if (this.itemType === 'salesman-barman-registration') {
-          this.handleSalesmanBarmanMakePaymentAction();
-        } else if (this.itemType === 'company-registration' || this.itemType === 'company-collaboration') {
+        if (this.itemType === 'salesman-barman-registration' || this.itemType === 'company-registration' || this.itemType === 'company-collaboration') {
           // Emit actionClicked for PAY so parent components like unified-supply-chain-view open the dedicated modal
           this.actionClicked.emit({ action: 'PAY', item: this.item });
         } else {
