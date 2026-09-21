@@ -666,7 +666,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         return (sourceCounts as any)[status] || 0;
       }
       if (this.selectedChartModule === 'all') {
-        const oicModules = ['transit', 'bldetails', 'distributor-permit-hologram-procurement', 'hologram', 'hologramRequests'];
+        const oicModules = ['transit', 'bldetails', 'hologram', 'hologramRequests'];
         return oicModules.reduce((sum, m) => sum + ((this.supplyChainModuleCounts[m] as any)?.[status] || 0), 0);
       }
       const sourceCounts = this.supplyChainModuleCounts[this.selectedChartModule] || { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
