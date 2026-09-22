@@ -587,9 +587,13 @@
                      }}
                   </option>
                 </select>
-                <div class="text-muted small mt-1" *ngIf="selectedArrivalPermitNo">
-                  Expected for permit {{ selectedArrivalPermitNo }}:
-                  <strong>{{ (getArrivalExpectedBulkLiterForPermit(selectedArrivalPermitNo) || 0) | number:'1.2-2' }}</strong>
+                <div class="mt-2" *ngIf="selectedArrivalPermitNo">
+                  <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-3"
+                       style="background-color: #eff6ff; border: 1.5px solid #bfdbfe; color: #1e40af; font-size: 13px;">
+                    <i class="bi bi-info-circle-fill text-primary"></i>
+                    <span>Expected for Permit <strong>{{ selectedArrivalPermitNo }}</strong>: <strong class="badge bg-primary fs-6 px-2 py-1">{{ (getArrivalExpectedBulkLiterForPermit(selectedArrivalPermitNo) || 0) | number:'1.2-2' }} BL</strong></span>
+                    <span class="text-muted small">(Max allowed)</span>
+                  </div>
                 </div>
                 <div class="text-muted small mt-1" *ngIf="selectedArrivalPermitNo && isArrivalPermitLocked(selectedArrivalPermitNo)">
                   Status:
@@ -603,7 +607,7 @@
                             ? 'Cancelled'
                         : (isArrivalPermitRevalidated(selectedArrivalPermitNo)
                             ? 'Revalidated'
-                            : 'Submitted to OIC (Pending)')))
+                        : 'Submitted to OIC (Pending)')))
                     }}
                   </strong>
                 </div>
@@ -645,10 +649,11 @@
                       <input
                         type="number"
                         class="form-control form-control-sm liter-input"
+                        [class.is-invalid]="isArrivalPermitDraftOverfilled()"
                         min="0.01"
                         step="0.01"
                         [(ngModel)]="row.bulk_liter"
-                        (ngModelChange)="markArrivalPermitDirty()"
+                        (ngModelChange)="onArrivalPermitBulkLiterChange(row, i)"
                         [disabled]="isArrivalPermitLocked(selectedArrivalPermitNo)"
                         placeholder="Enter bulk liter">
                     </td>
@@ -665,12 +670,15 @@
 
             <div class="text-muted small mt-2" *ngIf="selectedArrivalPermitNo">
               Expected: <strong class="text-primary">{{ (getArrivalExpectedBulkLiterForPermit(selectedArrivalPermitNo) || 0) | number:'1.2-2' }} BL</strong> |
-              Entered: <strong class="text-success">{{ getArrivalPermitDraftTotalBulkLiter() | number:'1.2-2' }} BL</strong>
-              <span *ngIf="getArrivalPermitDraftLostBulkLiter() > 0" class="ms-2 badge bg-danger-subtle text-danger border border-danger-subtle fw-bold">
+              Entered: <strong [class.text-success]="!isArrivalPermitDraftOverfilled()" [class.text-danger]="isArrivalPermitDraftOverfilled()">{{ getArrivalPermitDraftTotalBulkLiter() | number:'1.2-2' }} BL</strong>
+              <span *ngIf="isArrivalPermitDraftOverfilled()" class="ms-2 badge bg-danger text-white fw-bold">
+                Exceeds by +{{ getArrivalPermitDraftOverfilledAmount() | number:'1.2-2' }} BL
+              </span>
+              <span *ngIf="!isArrivalPermitDraftOverfilled() && getArrivalPermitDraftLostBulkLiter() > 0" class="ms-2 badge bg-danger-subtle text-danger border border-danger-subtle fw-bold">
                 Transit Loss: -{{ getArrivalPermitDraftLostBulkLiter() | number:'1.2-2' }} BL
               </span>
-              <span *ngIf="isArrivalPermitSaved(selectedArrivalPermitNo)" class="ms-2 text-success fw-semibold"><i class="bi bi-check2-circle me-1"></i>Saved</span>
-              <span *ngIf="!isArrivalPermitSaved(selectedArrivalPermitNo) && isArrivalPermitDraftUnderfilled()" class="ms-2 badge bg-warning text-dark">
+              <span *ngIf="isArrivalPermitSaved(selectedArrivalPermitNo) && !isArrivalPermitDraftOverfilled()" class="ms-2 text-success fw-semibold"><i class="bi bi-check2-circle me-1"></i>Saved</span>
+              <span *ngIf="!isArrivalPermitSaved(selectedArrivalPermitNo) && !isArrivalPermitDraftOverfilled() && isArrivalPermitDraftUnderfilled()" class="ms-2 badge bg-warning text-dark">
                 Less than expected
               </span>
             </div>
@@ -700,8 +708,10 @@
                         type="number"
                         class="form-control form-control-sm liter-input"
                         min="0.01"
+                        [max]="getArrivalAllowedBulkLiter() || 999999"
                         step="0.01"
                         [(ngModel)]="row.bulk_liter"
+                        (ngModelChange)="onArrivalTankerWiseBulkLiterChange(row, i)"
                         placeholder="Enter bulk liter">
                     </td>
                   </tr>
