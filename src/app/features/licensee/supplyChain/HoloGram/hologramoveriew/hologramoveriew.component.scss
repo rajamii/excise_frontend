@@ -2195,3 +2195,34 @@ Details Modal Styling
     }
   }
 }
+
+// ── Hologram Loss & Wastage Modal ──────────────────────────────
+.loss-details-modal {
+  .modal-dialog.modal-xl {
+    max-width: 95%;
+    margin: 1.5rem auto;
+  }
+
+  .modal-content {
+    border-radius: 16px;
+    box-shadow: 0 25px 50px -12px rgba(220, 38, 38, 0.25);
+  }
+
+  .loss-items-container {
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+    &::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 6px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: #f87171;
+      border-radius: 6px;
+      &:hover {
+        background: #ef4444;
+      }
+    }
+  }
+}
+
