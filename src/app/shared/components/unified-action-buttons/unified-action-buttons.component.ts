@@ -65,7 +65,7 @@ export interface ActionButtonConfig {
     <div class="action-buttons-container" [class.table-mode]="displayMode === 'table'">
       <!-- DETAILED VIEW MODE: Primary Action Buttons for all users -->
       <ng-container *ngIf="displayMode === 'detailed'">
-        <ng-container *ngFor="let button of getPrimaryActionButtons()">
+        <ng-container *ngFor="let button of primaryActionButtons">
           <button 
             mat-raised-button 
             type="button"
@@ -82,7 +82,7 @@ export interface ActionButtonConfig {
       </ng-container>
 
       <!-- TABLE MODE: All buttons as icons OR DETAILED MODE: Secondary Action Buttons -->
-      <ng-container *ngFor="let button of getDisplayButtons()">
+      <ng-container *ngFor="let button of displayButtons">
         <button
           mat-icon-button
           type="button"
@@ -171,6 +171,9 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
 
   @Output() actionClicked = new EventEmitter<{ action: string, item: ActionItem }>();
 
+  public primaryActionButtons: ActionButtonConfig[] = [];
+  public displayButtons: ActionButtonConfig[] = [];
+
   private availableActionConfigs: ActionButtonConfig[] = [];
   private isLoading = false;
 
@@ -225,8 +228,42 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['item'] || changes['itemType']) {
       this.availableActionConfigs = [];
+      this.updateComputedButtons();
       this.isLoading = false;
       this.loadAllActionConfigs();
+    } else if (changes['includeActions'] || changes['excludeActions'] || changes['context'] || changes['displayMode']) {
+      this.updateComputedButtons();
+    }
+  }
+
+  public updateComputedButtons(): void {
+    const filtered = this.ensureAdminNewLicenseDetailsButton(this.getFilteredConfigs());
+    const primaryActions = [
+      'APPROVE',
+      'FORWARD',
+      'RAISE_OBJECTION',
+      'REJECT',
+      'VIEW_REMARK',
+      'REQUEST_CANCELLATION',
+      'UPDATE_ARRIVAL',
+      'REQUEST_REVALIDATION',
+      'PAY',
+      'MAKE_PAYMENT',
+      'SUBMIT',
+      'REVERT'
+    ];
+    this.primaryActionButtons = filtered.filter(config =>
+      primaryActions.includes(config.action)
+    );
+
+    if (this.displayMode === 'detailed') {
+      // In detailed mode, show secondary actions as icons (excluding PRINT)
+      this.displayButtons = filtered
+        .filter(config => config.action !== 'PRINT')
+        .filter(config => !this.primaryActionButtons.some(primary => primary.action === config.action));
+    } else {
+      // In table mode, show all available actions as icons (excluding PRINT)
+      this.displayButtons = filtered.filter(config => config.action !== 'PRINT');
     }
   }
 
@@ -264,7 +301,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       }
       this.availableActionConfigs = this.normalizeActionConfigs(actions.map((act: string) => ({ action: act })));
       this.isLoading = false;
-      console.log('UNIFIED BUTTONS: Using item.allowedActions:', this.availableActionConfigs);
+      this.updateComputedButtons();
       return;
     }
 
@@ -283,7 +320,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       }
       this.availableActionConfigs = this.normalizeActionConfigs(configs);
       this.isLoading = false;
-      console.log('UNIFIED BUTTONS: Using pre-loaded configs from parent:', this.availableActionConfigs);
+      this.updateComputedButtons();
       return;
     }
 
@@ -321,7 +358,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
         }
         this.availableActionConfigs = normalized;
         this.isLoading = false;
-        console.log('UNIFIED BUTTONS: Loaded backend configs:', this.availableActionConfigs);
+        this.updateComputedButtons();
       },
       error: (error) => {
         console.error('UNIFIED BUTTONS: Error loading backend configs:', error);
@@ -330,6 +367,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
           ? this.getRequisitionFallbackActionConfigs()
           : [];
         this.isLoading = false;
+        this.updateComputedButtons();
       }
     });
   }
@@ -399,55 +437,15 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
   }
 
   getDisplayButtons(): ActionButtonConfig[] {
-    const filtered = this.ensureAdminNewLicenseDetailsButton(this.getFilteredConfigs());
-    if (this.displayMode === 'detailed') {
-      // In detailed mode, show secondary actions as icons (excluding PRINT)
-      return filtered
-        .filter(config => config.action !== 'PRINT')
-        .filter(config => !this.getPrimaryActionButtons().some(primary => primary.action === config.action));
-    }
-    // In table mode, show all available actions as icons (excluding PRINT)
-    return filtered.filter(config => config.action !== 'PRINT');
+    return this.displayButtons;
   }
 
   getPrimaryActionButtons(): ActionButtonConfig[] {
-    const primaryActions = [
-      'APPROVE',
-      'FORWARD',
-      'RAISE_OBJECTION',
-      'REJECT',
-      'VIEW_REMARK',
-      'REQUEST_CANCELLATION',
-      'UPDATE_ARRIVAL',
-      'REQUEST_REVALIDATION',
-      'PAY',
-      'MAKE_PAYMENT',
-      'SUBMIT',
-      'REVERT'
-    ];
-    return this.getFilteredConfigs().filter(config =>
-      primaryActions.includes(config.action)
-    );
+    return this.primaryActionButtons;
   }
 
   getSecondaryActionButtons(): ActionButtonConfig[] {
-    const primaryActions = [
-      'APPROVE',
-      'FORWARD',
-      'RAISE_OBJECTION',
-      'REJECT',
-      'VIEW_REMARK',
-      'REQUEST_CANCELLATION',
-      'UPDATE_ARRIVAL',
-      'REQUEST_REVALIDATION',
-      'PAY',
-      'FORCE_PAY',
-      'SUBMIT',
-      'REVERT'
-    ];
-    return this.getFilteredConfigs().filter(config =>
-      !primaryActions.includes(config.action)
-    );
+    return this.displayButtons;
   }
 
   private ensureAdminNewLicenseDetailsButton(configs: ActionButtonConfig[]): ActionButtonConfig[] {
@@ -1718,14 +1716,6 @@ private getTransitRejectSummary(): {
     let include = this.normalizeActionList(this.includeActions);
     const exclude = this.normalizeActionList(this.excludeActions);
 
-    console.log('🔧 UNIFIED BUTTONS: getFilteredConfigs ->', {
-      includeActions: this.includeActions,
-      normalizedInclude: include,
-      excludeActions: this.excludeActions,
-      normalizedExclude: exclude,
-      availableActionConfigs: this.availableActionConfigs
-    });
-
     let result = [...this.availableActionConfigs];
 
     const stageNameForRemark = String(
@@ -2029,7 +2019,6 @@ private getTransitRejectSummary(): {
       ? deduped.filter(config => !exclude.includes(this.normalizeActionName(config.action)))
       : deduped;
 
-    console.log('🔧 UNIFIED BUTTONS: Final filtered configs:', finalConfigs);
     return finalConfigs;
   }
 

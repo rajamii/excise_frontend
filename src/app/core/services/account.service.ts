@@ -108,7 +108,6 @@ export class AccountService {
   }
 
   getUserProfileSync(): Account | null {
-    console.log('🔍 getUserProfileSync called, returning:', this.userIdentity);
     return this.userIdentity;
   }
 
