@@ -27,7 +27,7 @@ $warn-text:     #92400e;
   box-sizing: border-box;
 }
 
-// ── Auth page wrapper & Deep Forest Green backdrop ────
+// ── Auth page wrapper & Midnight Slate-Teal Backdrop ─────
 .auth-page {
   position: relative;
   display: flex;
@@ -37,7 +37,7 @@ $warn-text:     #92400e;
   width: 100%;
   padding: 32px 20px;
   box-sizing: border-box;
-  background: #0c3830;
+  background: #0d1e26;
   overflow-x: hidden;
 }
 
@@ -52,10 +52,10 @@ $warn-text:     #92400e;
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(ellipse at 85% 15%, rgba(20, 184, 166, 0.22) 0%, transparent 55%),
-      radial-gradient(ellipse at 15% 85%, rgba(251, 191, 36, 0.14) 0%, transparent 60%),
-      radial-gradient(ellipse at 50% 50%, rgba(13, 148, 136, 0.15) 0%, transparent 70%),
-      linear-gradient(135deg, #092e27 0%, #0d3830 50%, #06231d 100%);
+      radial-gradient(ellipse at 50% 0%, rgba(20, 184, 166, 0.15) 0%, transparent 65%),
+      radial-gradient(ellipse at 85% 100%, rgba(14, 165, 233, 0.12) 0%, transparent 60%),
+      radial-gradient(ellipse at 15% 100%, rgba(251, 191, 36, 0.08) 0%, transparent 55%),
+      linear-gradient(145deg, #09171e 0%, #0d232c 45%, #0f2d34 100%);
   }
 
   .backdrop-lines {
@@ -63,7 +63,7 @@ $warn-text:     #92400e;
     inset: 0;
     width: 100%;
     height: 100%;
-    opacity: 0.9;
+    opacity: 1;
   }
 }
 
@@ -72,7 +72,8 @@ $warn-text:     #92400e;
   perspective: 1500px;
   width: 1060px;
   max-width: 96vw;
-  min-height: 680px;
+  height: 680px;
+  max-height: calc(100vh - 48px);
   position: relative;
   z-index: 5;
   margin: auto;
@@ -96,15 +97,15 @@ $warn-text:     #92400e;
   position: absolute;
   inset: 0;
   width: 100%;
-  min-height: 680px;
+  height: 100%;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   border-radius: 28px;
   background: #ffffff;
   box-shadow:
-    0 32px 80px rgba(0, 0, 0, 0.45),
-    0 4px 20px rgba(0, 0, 0, 0.20),
-    0 0 0 1px rgba(255, 255, 255, 0.12);
+    0 32px 80px -10px rgba(0, 0, 0, 0.45),
+    0 12px 28px -5px rgba(0, 0, 0, 0.20),
+    0 0 0 1px rgba(255, 255, 255, 0.15);
   overflow: hidden;
 }
 
@@ -122,7 +123,7 @@ $warn-text:     #92400e;
   display: grid;
   grid-template-columns: 1.08fr 0.92fr;
   width: 100%;
-  min-height: 680px;
+  height: 100%;
 }
 
 // ══════════════════════════════════════════════════════
@@ -136,11 +137,26 @@ $warn-text:     #92400e;
   flex-direction: column;
   background: #ffffff;
   box-sizing: border-box;
+  height: 100%;
+  max-height: 100%;
   overflow-y: auto;
-  max-height: 85vh;
+  overscroll-behavior: contain;
 
-  &::-webkit-scrollbar { width: 4px; }
-  &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 6px;
+    &:hover {
+      background: #94a3b8;
+    }
+  }
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
 }
 
 .back-home-btn {
@@ -558,8 +574,8 @@ form {
 
 .auth-art-side {
   position: relative;
-  background: linear-gradient(165deg, #f4fbf8 0%, #fafdff 45%, #f7fdfa 100%);
-  border-left: 1px solid rgba(15, 118, 110, 0.08);
+  background: linear-gradient(165deg, #f8fafc 0%, #f0fdf9 50%, #e6f7f2 100%);
+  border-left: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -567,13 +583,13 @@ form {
   box-sizing: border-box;
   overflow: hidden;
 
-  // Subtle ambient corner glow
+  // Soft subtle ambient mint glow
   &::before {
     content: '';
     position: absolute;
     top: 0; right: 0;
     width: 260px; height: 260px;
-    background: radial-gradient(circle, rgba(20, 184, 166, 0.12) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(20, 184, 166, 0.08) 0%, transparent 70%);
     pointer-events: none;
   }
 }
@@ -766,12 +782,13 @@ form {
   .auth-container {
     width: 100%;
     max-width: 540px;
-    min-height: auto;
+    height: 640px;
+    max-height: calc(100vh - 32px);
   }
 
   .auth-split-layout {
     grid-template-columns: 1fr;
-    min-height: auto;
+    height: 100%;
   }
 
   .auth-art-side {
@@ -780,11 +797,11 @@ form {
 
   .auth-form-side {
     padding: 34px 28px 24px;
-    max-height: none;
+    height: 100%;
   }
 
   .card-face {
-    min-height: auto;
+    height: 100%;
   }
 }
 
