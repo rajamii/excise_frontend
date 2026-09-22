@@ -4743,12 +4743,43 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         }
 
         if (source === 'permit-section' || source === 'permit_section') {
-            this.router.navigate(['/officer-dashboard/permit-section']);
+            const appTypeStr = String(this.applicationType || '');
+            if (this.applicationType === 'hologram') {
+                this.router.navigate(['/dashboard'], { queryParams: { section: 'hologram' } });
+            } else if (this.applicationType === 'requisition' || appTypeStr === 'bulk-spirit') {
+                this.router.navigate(['/dashboard'], { queryParams: { section: 'requisition' } });
+            } else if (this.applicationType === 'revalidation') {
+                this.router.navigate(['/dashboard'], { queryParams: { section: 'revalidation' } });
+            } else if (this.applicationType === 'cancellation') {
+                this.router.navigate(['/dashboard'], { queryParams: { section: 'cancellation' } });
+            } else if (appTypeStr.startsWith('imfl-') || appTypeStr === 'distributor-permit') {
+                const tab = appTypeStr === 'imfl-revalidation' ? 'revalidation' : (appTypeStr === 'imfl-cancellation' ? 'cancellation' : 'requisition');
+                this.router.navigate(['/dashboard'], { queryParams: { section: 'distributor-permit', tab: tab } });
+            } else if (this.applicationType === 'transit') {
+                this.router.navigate(['/dashboard'], { queryParams: { section: 'transit' } });
+            } else if (this.applicationType) {
+                this.router.navigate(['/dashboard'], { queryParams: { section: this.applicationType } });
+            } else {
+                this.router.navigate(['/dashboard']);
+            }
             return;
         }
 
         if (source === 'oic' || (source === 'officer-in-charge' && this.applicationType !== 'transit')) {
-            this.router.navigate(['/officer-dashboard/oic']);
+            const appTypeStr = String(this.applicationType || '');
+            if (this.applicationType === 'hologram') {
+                this.router.navigate(['/dashboard'], { queryParams: { section: 'oic-hologram-requests' } });
+            } else if (this.applicationType === 'transit') {
+                this.router.navigate(['/dashboard'], { queryParams: { section: 'transit-applications' } });
+            } else if (appTypeStr === 'bl-details') {
+                this.router.navigate(['/dashboard'], { queryParams: { section: 'bl-details' } });
+            } else if (appTypeStr.startsWith('imfl-') || appTypeStr === 'distributor-permit') {
+                this.router.navigate(['/dashboard'], { queryParams: { section: 'distributor-permit' } });
+            } else if (this.applicationType) {
+                this.router.navigate(['/dashboard'], { queryParams: { section: this.applicationType } });
+            } else {
+                this.router.navigate(['/dashboard']);
+            }
             return;
         }
 
