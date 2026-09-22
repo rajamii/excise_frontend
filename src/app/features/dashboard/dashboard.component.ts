@@ -1046,6 +1046,20 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.supplyChainPendingCounts['hologram'] = oicCounts.pending;
         } else {
           let items: any[] = Array.isArray(hol) ? hol : [];
+          if (this.isLicenseeUser()) {
+            items = this.filterByLicenseeScopedLicense(items);
+          }
+          const month = this.selectedChartMonth !== '' ? Number(this.selectedChartMonth) : undefined;
+          const year  = this.selectedChartYear  !== '' ? Number(this.selectedChartYear)  : undefined;
+          if (month !== undefined || year !== undefined) {
+            items = items.filter((item: any) => {
+              const d = new Date(item?.date || item?.created_at || item?.submissionDate || '');
+              if (isNaN(d.getTime())) return false;
+              if (month !== undefined && (d.getMonth() + 1) !== month) return false;
+              if (year  !== undefined && d.getFullYear() !== year)         return false;
+              return true;
+            });
+          }
           let pending: number;
           if (isITCell) {
             pending = items.filter(item => {
@@ -3242,6 +3256,61 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       const rowLicense = row?.license_id || row?.licenseId || row?.licensee_id || row?.licenseeId;
       if (!rowLicense) return false;
       return this.expandOicLicenseAliases(rowLicense).some((alias) => allowed.has(alias));
+    });
+  }
+
+  private filterByLicenseeScopedLicense(rows: any[]): any[] {
+    const user = (this.accountService?.getCurrentUser() || this.roleService?.getCurrentUser() || this.currentUser) as any;
+    const scopedLicense = this.resolveOicScopedLicenseId();
+    const allowed = new Set(this.expandOicLicenseAliases(scopedLicense));
+
+    const myUnit = String(
+      user?.manufacturing_unit_name ||
+      user?.establishment_name ||
+      user?.oic_assignment?.establishment_name ||
+      user?.oic_assignment?.manufacturing_unit_name ||
+      ''
+    ).trim().toLowerCase();
+
+    const myUsername = String(user?.username || '').trim().toLowerCase();
+    const myUserId = user?.id;
+
+    return (rows || []).filter((row: any) => {
+      // 1. Match by user ID or username
+      const rowUserId = row?.licensee?.user?.id || row?.licensee?.user_id || row?.user_id || row?.applicant_id;
+      const rowUsername = String(row?.licensee?.user?.username || row?.applicant?.username || row?.username || '').trim().toLowerCase();
+      if (myUserId && rowUserId && String(myUserId) === String(rowUserId)) {
+        return true;
+      }
+      if (myUsername && rowUsername && myUsername === rowUsername) {
+        return true;
+      }
+
+      // 2. Match by license ID
+      const rowLicense = row?.license_id || row?.licenseId || row?.licensee_id || row?.licenseeId ||
+        (typeof row?.license === 'string' ? row.license : row?.license?.license_id) ||
+        row?.licensee?.licensee_id;
+      if (rowLicense && scopedLicense) {
+        if (this.expandOicLicenseAliases(rowLicense).some(alias => allowed.has(alias))) {
+          return true;
+        }
+      }
+
+      // 3. Match by unit name
+      const rowUnit = String(
+        row?.manufacturingUnit ||
+        row?.manufacturing_unit ||
+        row?.companyName ||
+        row?.licenseeName ||
+        row?.licensee_name ||
+        row?.licensee?.manufacturing_unit_name ||
+        ''
+      ).trim().toLowerCase();
+      if (rowUnit && myUnit && (rowUnit === myUnit || rowUnit.includes(myUnit) || myUnit.includes(rowUnit))) {
+        return true;
+      }
+
+      return false;
     });
   }
 
