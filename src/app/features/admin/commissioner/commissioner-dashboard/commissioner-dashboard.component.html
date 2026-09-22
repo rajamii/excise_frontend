@@ -18,6 +18,9 @@
                 <button class="btn btn-light bg-success btn-sm text-white">
                   Commissioner
                 </button>
+                <button class="btn btn-sm btn-primary text-white" (click)="viewBulkSpiritOverview()">
+                  <i class="bi bi-droplet-half me-1"></i> Bulk Spirit Overview
+                </button>
                 <button class="btn btn-sm bg-success text-white" (click)="viewReports()">
                   <i class="bi bi-graph-up me-1"></i> View Reports
                 </button>
@@ -57,6 +60,12 @@
       <div class="bg-white border-bottom" *ngIf="!embeddedHologramOnly">
         <div class="container-fluid">
           <ul class="nav nav-tabs border-0">
+            <li class="nav-item">
+              <button class="nav-link" [class.active]="activeTab === 'bulk-spirit'"
+                (click)="setActiveTab('bulk-spirit')">
+                <i class="bi bi-droplet-half me-2"></i> BULK SPIRIT OVERVIEW
+              </button>
+            </li>
             <li class="nav-item">
               <button class="nav-link" [class.active]="activeTab === 'requisition'"
                 (click)="setActiveTab('requisition')">
@@ -98,6 +107,11 @@
       <div class="bg-white">
         <div class="container-fluid p-3">
           <div class="table-responsive">
+
+            <!-- Bulk Spirit Overview Tab Content -->
+            @if (activeTab === "bulk-spirit") {
+            <app-secretary-bulk-spirit></app-secretary-bulk-spirit>
+            }
 
             <!-- Requisition Tab Content -->
             @if (activeTab === "requisition") {

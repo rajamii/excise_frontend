@@ -14,6 +14,7 @@ import { CancellationComponent } from "../../../licensee/supplyChain/supplychain
 import { PaymentSlipsViewComponent } from "../payment-slips-view/payment-slips-view.component";
 import { HologramDetailsViewComponent } from "../hologram-details-view/hologram-details-view.component";
 import { HologramDataService } from "../../../licensee/supplyChain/services/hologram-data.service";
+import { SecretaryBulkSpiritComponent } from "../../../secretary/components/secretary-bulk-spirit/secretary-bulk-spirit.component";
 
 
 export interface CommissionerTableData {
@@ -81,7 +82,7 @@ export interface CommissionerTableData {
 @Component({
   selector: "app-commissioner-dashboard",
   standalone: true,
-  imports: [CommonModule, FormsModule, DailyhologramrecordregisterComponent, RequisitionComponent, CancellationComponent, PaymentSlipsViewComponent, HologramDetailsViewComponent],
+  imports: [CommonModule, FormsModule, DailyhologramrecordregisterComponent, RequisitionComponent, CancellationComponent, PaymentSlipsViewComponent, HologramDetailsViewComponent, SecretaryBulkSpiritComponent],
   templateUrl: "./commissioner-dashboard.component.html",
   styleUrls: ["./commissioner-dashboard.component.scss"],
 })
@@ -410,6 +411,10 @@ export class CommissionerDashboardComponent implements OnInit {
 
   viewDailyRegister(): void {
     this.setActiveTab('daily-register');
+  }
+
+  viewBulkSpiritOverview(): void {
+    this.setActiveTab('bulk-spirit');
   }
 
   setActiveTab(tab: string): void {

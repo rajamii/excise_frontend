@@ -112,7 +112,6 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     showOnlyForOic?: boolean;
     showOnlyForCommissioner?: boolean;
   }> = [
-    { section: 'secretary-bulk-spirit', label: 'Bulk Spirit Overview', icon: 'water_drop' },
     { section: 'new-license', label: 'New License', icon: 'add_business', hideForSiteAdmin: true, hideForPermitSection: true, hideForItCell: true, hideForOic: true },
     { section: 'license-renewal', label: 'License Renewal', icon: 'autorenew', hideForSiteAdmin: true, hideForPermitSection: true, hideForItCell: true, hideForOic: true },
     { section: 'requisition', label: 'Requisition', icon: 'description', group: 'Bulk Spirit' },
@@ -136,6 +135,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     { section: 'company-registration', label: 'Company Registration', icon: 'apartment' },
     { section: 'company-collaboration', label: 'Company Collaboration', icon: 'groups', hideForSiteAdmin: true },
     { section: 'special-permit', label: 'Dry Day Permit', icon: 'assignment_turned_in', hideForSiteAdmin: true, hideForPermitSection: true, hideForItCell: true, hideForOic: true },
+    { section: 'secretary-bulk-spirit', label: 'Bulk Spirit Overview', icon: 'water_drop' },
     { section: 'secretary-timeline', label: 'License Timeline Tracker', icon: 'timeline' },
     { section: 'commissioner-monthly-view-details', label: 'Monthly View Details', icon: 'calendar_month', hideForOic: true },
     { section: 'secretary-revenue', label: 'Revenue', icon: 'payments' },
@@ -708,7 +708,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       }
       return false;
     }
-    if (this.isCommissionerUser() && (item.section === 'secretary-revenue' || item.section === 'secretary-timeline' || item.section === 'single-window' || item.section === 'payment-transactions')) {
+    if (this.isCommissionerUser() && (item.section === 'secretary-bulk-spirit' || item.section === 'secretary-revenue' || item.section === 'secretary-timeline' || item.section === 'single-window' || item.section === 'payment-transactions')) {
       return true;
     }
     if (this.isItCellUser() && item.section === 'secretary-timeline') {
@@ -2086,6 +2086,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return roleId === 4 || roleId === 10;
     }
 
+    if (section === 'secretary-bulk-spirit') {
+      return this.isSecretaryUser() || this.isCommissionerUser();
+    }
+
     if (section === 'secretary-revenue') {
       if (this.isJointCommissionerUser() || this.isItCellUser() || this.isPermitSectionUser() || this.isDistrictUser() || this.isSiteEnquiryOfficer()) return false;
       return this.isSecretaryUser() || this.isCommissionerUser();
@@ -2321,7 +2325,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return '';
     };
 
-    const u: any = this.currentUser || this.user || this.accountService?.getCurrentUser() || {};
+    const u: any = this.currentUser || this.user || (this.accountService ? this.accountService.getCurrentUser() : null) || {};
     return extractName(u?.district || u?.districtName || u?.assignedDistrict || u?.district_code);
   }
 
@@ -2333,14 +2337,16 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
   // Get role display name for header
   getRoleDisplayName(): string {
-    const candidates = [
-      this.user?.role?.name,
-      this.user?.role?.displayName,
-      this.currentUser?.role?.name,
-      this.currentUser?.role?.displayName
+    const uRole: any = this.user?.role;
+    const cRole: any = this.currentUser?.role;
+    const candidates: (string | undefined)[] = [
+      uRole?.name,
+      uRole?.displayName,
+      cRole?.name,
+      cRole?.displayName
     ];
 
-    const roleName = candidates.find((v) => !!v && !String(v).startsWith('Role ID:'));
+    const roleName = candidates.find((v) => typeof v === 'string' && v.trim().length > 0 && !v.startsWith('Role ID:'));
     return roleName || 'User';
   }
 }
