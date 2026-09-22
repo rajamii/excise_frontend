@@ -892,8 +892,34 @@ $warn-text:     #92400e;
   transform-style: preserve-3d;
   transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
   
+  .card-front {
+    z-index: 2;
+    transform: rotateY(0deg);
+    pointer-events: auto;
+    visibility: visible;
+  }
+
+  .card-back {
+    z-index: 1;
+    transform: rotateY(180deg);
+    pointer-events: none;
+    visibility: hidden;
+  }
+
   &.flipped {
     transform: rotateY(180deg);
+
+    .card-front {
+      z-index: 1;
+      pointer-events: none;
+      visibility: hidden;
+    }
+
+    .card-back {
+      z-index: 2;
+      pointer-events: auto;
+      visibility: visible;
+    }
   }
 }
 
@@ -914,15 +940,6 @@ $warn-text:     #92400e;
   overflow: hidden;
 }
 
-.card-front {
-  z-index: 2;
-  transform: rotateY(0deg);
-}
-
-.card-back {
-  transform: rotateY(180deg);
-}
-
 .panel-inner {
   height: 100%;
   padding: 52px 42px 24px;
@@ -930,9 +947,28 @@ $warn-text:     #92400e;
   flex-direction: column;
   gap: 0;
   overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
   box-sizing: border-box;
-  &::-webkit-scrollbar { width: 4px; }
-  &::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(15, 118, 110, 0.25);
+    border-radius: 6px;
+    &:hover {
+      background: rgba(15, 118, 110, 0.5);
+    }
+  }
 }
 
 .back-home-btn {
