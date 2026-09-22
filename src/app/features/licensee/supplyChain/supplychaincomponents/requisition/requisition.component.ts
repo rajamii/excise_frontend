@@ -2176,7 +2176,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
     const invalid = normalized.find((x) => !x.tanker_no || !Number.isFinite(x.bulk_liter) || x.bulk_liter <= 0);
     if (invalid) {
-      return { ok: false, message: `Please enter valid tanker number and bulk liter for tanker row ${invalid.row}.` };
+      return { ok: false, message: `Please enter valid tanker/vehicle number and bulk liter for tanker row ${invalid.row}.` };
     }
 
     const sum = normalized.reduce((s, x) => s + x.bulk_liter, 0);
@@ -2303,7 +2303,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
           const tankerNo = String(r?.tanker_no || '').trim();
           const liters = Number(r?.bulk_liter ?? 0);
           if (!tankerNo || !Number.isFinite(liters) || liters <= 0) {
-            return { ok: false, message: `Please enter valid tanker number and bulk liter for permit ${permitNo} row ${idx + 1}.` };
+            return { ok: false, message: `Please enter valid tanker/vehicle number and bulk liter for permit ${permitNo} row ${idx + 1}.` };
           }
           flattened.push({ permit_no: permitNo, tanker_no: tankerNo, bulk_liter: liters });
         }
@@ -2325,7 +2325,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
     const invalidRow = normalizedRows.find((row) => !row.tanker_no || !Number.isFinite(row.bulk_liter) || row.bulk_liter <= 0);
     if (invalidRow) {
-      return { ok: false, message: `Please enter valid tanker number and bulk liter for row ${invalidRow.row}.` };
+      return { ok: false, message: `Please enter valid tanker/vehicle number and bulk liter for row ${invalidRow.row}.` };
     }
 
     return {
