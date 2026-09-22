@@ -152,6 +152,10 @@ export class HeaderComponent implements OnInit {
   }
 
   home(): void {
-    this.router.navigate(['/']);
+    if (this.isLoggedIn || this.accountService.isAuthenticated() || !!localStorage.getItem('access')) {
+      this.router.navigate(['/dashboard']);
+    } else {
+      this.router.navigate(['/']);
+    }
   }
 }
