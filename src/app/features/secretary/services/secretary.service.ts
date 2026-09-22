@@ -17,6 +17,27 @@ export interface BrandStock {
   status?: string;
 }
 
+export interface BLHistoryItem {
+  id?: string;
+  entry_type?: 'ARRIVAL' | 'USAGE';
+  direction?: 'IN' | 'OUT';
+  date?: string;
+  reference_no?: string;
+  permit_numbers_str?: string;
+  bulk_spirit_type?: string;
+  source_or_distillery?: string;
+  destination_purpose?: string;
+  quantity?: number;
+  lost_bl?: number;
+  tanker_count?: number;
+  tanker_details?: Array<{ permit_no?: string; tanker_no?: string; bulk_liter?: number }>;
+  status?: string;
+  submitted_by?: string;
+  reviewed_by?: string;
+  reviewed_at?: string;
+  remarks?: string;
+}
+
 export interface ManufacturingFactory {
   id?: string;
   establishment_name?: string;
@@ -32,6 +53,10 @@ export interface ManufacturingFactory {
   status?: string;
   is_approved?: boolean;
   stock_bl?: number;
+  total_arrivals_bl?: number;
+  total_usages_bl?: number;
+  total_pending_usages_bl?: number;
+  total_lost_bl?: number;
   total_requisitions_count?: number;
   total_bl_requested?: number;
   pending_requisitions_count?: number;
@@ -39,6 +64,7 @@ export interface ManufacturingFactory {
   active_transit_permits_count?: number;
   dispatched_bl?: number;
   brand_stocks?: Array<BrandStock>;
+  bl_history?: Array<BLHistoryItem>;
 }
 
 export interface SecretaryBulkSpiritSummary {

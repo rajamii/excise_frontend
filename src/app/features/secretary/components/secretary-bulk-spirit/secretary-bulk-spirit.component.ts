@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { SecretaryService, ManufacturingFactory, SecretaryBulkSpiritSummary, BrandStock } from '../../services/secretary.service';
+import { SecretaryService, ManufacturingFactory, SecretaryBulkSpiritSummary, BrandStock, BLHistoryItem } from '../../services/secretary.service';
 
 @Component({
   selector: 'app-secretary-bulk-spirit',
@@ -25,11 +25,20 @@ export class SecretaryBulkSpiritComponent implements OnInit {
   // View state: 'register' = row-wise register table, 'detail' = full dynamic detail page
   currentView: 'register' | 'detail' = 'register';
   selectedFactory: ManufacturingFactory | null = null;
-  detailActiveTab: 'overview' | 'tanks' | 'stocks' | 'requisitions' | 'transits' | 'directives' = 'overview';
+  detailActiveTab: 'overview' | 'tanks' | 'stocks' | 'bl_history' | 'requisitions' | 'transits' | 'directives' = 'overview';
 
   // Stocks & Brands tab filters
   brandSearchFilter = '';
   brandSizeFilter: 'all' | '750' | '375' | '180' | '650' | '500' | '330' = 'all';
+
+  // BL History tab filters & pagination
+  blHistorySearch = '';
+  blHistoryTypeFilter: 'ALL' | 'ARRIVAL' | 'USAGE' = 'ALL';
+  blHistorySpiritFilter = 'ALL';
+  blHistoryStatusFilter = 'ALL';
+  blHistoryPage = 1;
+  blHistoryPageSize = 10;
+  selectedBlHistoryItem: BLHistoryItem | null = null;
 
   summary: SecretaryBulkSpiritSummary = {
     total_units: 0,
@@ -221,6 +230,12 @@ export class SecretaryBulkSpiritComponent implements OnInit {
     this.detailActiveTab = 'overview';
     this.brandSearchFilter = '';
     this.brandSizeFilter = 'all';
+    this.blHistorySearch = '';
+    this.blHistoryTypeFilter = 'ALL';
+    this.blHistorySpiritFilter = 'ALL';
+    this.blHistoryStatusFilter = 'ALL';
+    this.blHistoryPage = 1;
+    this.selectedBlHistoryItem = null;
     this.directiveRemarks = '';
     this.directiveSavedSuccess = false;
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -232,8 +247,152 @@ export class SecretaryBulkSpiritComponent implements OnInit {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  setDetailTab(tab: 'overview' | 'tanks' | 'stocks' | 'requisitions' | 'transits' | 'directives'): void {
+  setDetailTab(tab: 'overview' | 'tanks' | 'stocks' | 'bl_history' | 'requisitions' | 'transits' | 'directives'): void {
     this.detailActiveTab = tab;
+    if (tab === 'bl_history') {
+      this.blHistoryPage = 1;
+    }
+  }
+
+  // BL History helpers & calculations
+  getFilteredBlHistory(): BLHistoryItem[] {
+    if (!this.selectedFactory || !this.selectedFactory.bl_history) return [];
+    const q = (this.blHistorySearch || '').trim().toLowerCase();
+    const typeF = this.blHistoryTypeFilter;
+    const spiritF = this.blHistorySpiritFilter;
+    const statF = this.blHistoryStatusFilter;
+
+    return this.selectedFactory.bl_history.filter(item => {
+      const matchSearch = !q ||
+        (item.reference_no || '').toLowerCase().includes(q) ||
+        (item.bulk_spirit_type || '').toLowerCase().includes(q) ||
+        (item.source_or_distillery || '').toLowerCase().includes(q) ||
+        (item.destination_purpose || '').toLowerCase().includes(q) ||
+        (item.permit_numbers_str || '').toLowerCase().includes(q) ||
+        (item.reviewed_by || '').toLowerCase().includes(q) ||
+        (item.remarks || '').toLowerCase().includes(q);
+
+      const matchType = typeF === 'ALL' || item.entry_type === typeF;
+      const matchSpirit = spiritF === 'ALL' || (item.bulk_spirit_type || '').toLowerCase() === spiritF.toLowerCase();
+      const matchStatus = statF === 'ALL' || (item.status || '').toUpperCase().includes(statF.toUpperCase());
+
+      return matchSearch && matchType && matchSpirit && matchStatus;
+    });
+  }
+
+  get paginatedBlHistory(): BLHistoryItem[] {
+    const list = this.getFilteredBlHistory();
+    const start = (this.blHistoryPage - 1) * this.blHistoryPageSize;
+    return list.slice(start, start + this.blHistoryPageSize);
+  }
+
+  get blHistoryTotalPages(): number {
+    return Math.ceil(this.getFilteredBlHistory().length / this.blHistoryPageSize) || 1;
+  }
+
+  get blHistoryPageNumbers(): number[] {
+    return Array.from({ length: this.blHistoryTotalPages }, (_, i) => i + 1);
+  }
+
+  get blHistoryStartIndex(): number {
+    if (this.getFilteredBlHistory().length === 0) return 0;
+    return (this.blHistoryPage - 1) * this.blHistoryPageSize + 1;
+  }
+
+  get blHistoryEndIndex(): number {
+    return Math.min(this.blHistoryPage * this.blHistoryPageSize, this.getFilteredBlHistory().length);
+  }
+
+  setBlHistoryPage(page: number): void {
+    if (page >= 1 && page <= this.blHistoryTotalPages) {
+      this.blHistoryPage = page;
+      this.cdr.detectChanges();
+    }
+  }
+
+  onBlHistoryPageSizeChange(): void {
+    this.blHistoryPage = 1;
+    this.cdr.detectChanges();
+  }
+
+  openBlItemDetails(item: BLHistoryItem): void {
+    this.selectedBlHistoryItem = item;
+  }
+
+  closeBlItemDetails(): void {
+    this.selectedBlHistoryItem = null;
+  }
+
+  getTotalInflowBL(): number {
+    if (!this.selectedFactory?.bl_history) return this.selectedFactory?.total_arrivals_bl || 0;
+    return this.selectedFactory.bl_history
+      .filter(e => e.entry_type === 'ARRIVAL' && (e.status || '').toUpperCase() === 'APPROVED')
+      .reduce((acc, e) => acc + (e.quantity || 0), 0);
+  }
+
+  getTotalUsageBL(): number {
+    if (!this.selectedFactory?.bl_history) return this.selectedFactory?.total_usages_bl || 0;
+    return this.selectedFactory.bl_history
+      .filter(e => e.entry_type === 'USAGE' && (e.status || '').toUpperCase().includes('APPROV'))
+      .reduce((acc, e) => acc + (e.quantity || 0), 0);
+  }
+
+  getTotalPendingUsageBL(): number {
+    if (!this.selectedFactory?.bl_history) return this.selectedFactory?.total_pending_usages_bl || 0;
+    return this.selectedFactory.bl_history
+      .filter(e => e.entry_type === 'USAGE' && (e.status || '').toUpperCase().includes('PEND'))
+      .reduce((acc, e) => acc + (e.quantity || 0), 0);
+  }
+
+  getTotalLossBL(): number {
+    if (!this.selectedFactory?.bl_history) return this.selectedFactory?.total_lost_bl || 0;
+    return this.selectedFactory.bl_history
+      .reduce((acc, e) => acc + (e.lost_bl || 0), 0);
+  }
+
+  getAvailableBalanceBL(): number {
+    const inflow = this.getTotalInflowBL();
+    const usage = this.getTotalUsageBL();
+    return Math.max(0, inflow - usage);
+  }
+
+  getDistinctSpiritTypesForFactory(): string[] {
+    if (!this.selectedFactory?.bl_history) return [];
+    const set = new Set<string>();
+    this.selectedFactory.bl_history.forEach(e => {
+      if (e.bulk_spirit_type) set.add(e.bulk_spirit_type.trim());
+    });
+    return Array.from(set).sort();
+  }
+
+  exportBlHistoryCSV(): void {
+    const list = this.getFilteredBlHistory();
+    if (!list || list.length === 0) return;
+
+    const headers = ['Date', 'Reference No', 'Type', 'Bulk Spirit Type', 'Quantity (BL)', 'Loss (BL)', 'Status', 'Permit Details', 'Source / Distillery', 'Destination / Purpose', 'Reviewed By', 'Remarks'];
+    const rows = list.map(item => [
+      `"${item.date || ''}"`,
+      `"${item.reference_no || ''}"`,
+      `"${item.entry_type === 'ARRIVAL' ? 'Tanker Arrival (Stock In)' : 'Production Usage (Stock Out)'}"`,
+      `"${item.bulk_spirit_type || ''}"`,
+      `"${item.quantity || 0}"`,
+      `"${item.lost_bl || 0}"`,
+      `"${item.status || ''}"`,
+      `"${item.permit_numbers_str || ''}"`,
+      `"${item.source_or_distillery || ''}"`,
+      `"${item.destination_purpose || ''}"`,
+      `"${item.reviewed_by || ''}"`,
+      `"${(item.remarks || '').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `BL_History_${(this.selectedFactory?.establishment_name || 'Factory').replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 
   // Stocks & Brands helpers
@@ -360,13 +519,17 @@ export class SecretaryBulkSpiritComponent implements OnInit {
     const rawLicNo = String(raw.license_number || raw.licenseNumber || raw.existing_license_no || raw.id || 'LIC/EXCISE/2026').trim();
     const licNo = rawLicNo.length > 2 ? rawLicNo : `LIC/${raw.id || '2026'}`;
 
-    const stockBL = Number(raw.stock_bl ?? raw.stockBl ?? (normSubCat === 'Distillery' ? 150000 : 95000));
-    const totalBlReq = Number(raw.total_bl_requested ?? raw.totalBlRequested ?? (normSubCat === 'Distillery' ? 25000 : 12000));
-    const dispatchedBL = Number(raw.dispatched_bl ?? raw.dispatchedBl ?? (normSubCat === 'Distillery' ? 15000 : 8000));
-    const reqCount = Number(raw.total_requisitions_count ?? raw.totalRequisitionsCount ?? (normSubCat === 'Distillery' ? 4 : 2));
+    const stockBL = Number(raw.stock_bl ?? raw.stockBl ?? 0);
+    const totalBlReq = Number(raw.total_bl_requested ?? raw.totalBlRequested ?? 0);
+    const dispatchedBL = Number(raw.dispatched_bl ?? raw.dispatchedBl ?? 0);
+    const reqCount = Number(raw.total_requisitions_count ?? raw.totalRequisitionsCount ?? 0);
     const pendingReqs = Number(raw.pending_requisitions_count ?? raw.pendingRequisitionsCount ?? 0);
-    const approvedReqs = Number(raw.approved_requisitions_count ?? raw.approvedRequisitionsCount ?? (normSubCat === 'Distillery' ? 3 : 2));
-    const activeTransits = Number(raw.active_transit_permits_count ?? raw.activeTransitPermitsCount ?? (normSubCat === 'Distillery' ? 2 : 1));
+    const approvedReqs = Number(raw.approved_requisitions_count ?? raw.approvedRequisitionsCount ?? 0);
+    const activeTransits = Number(raw.active_transit_permits_count ?? raw.activeTransitPermitsCount ?? 0);
+    const totalArrivalsBL = Number(raw.total_arrivals_bl ?? raw.totalArrivalsBl ?? 0);
+    const totalUsagesBL = Number(raw.total_usages_bl ?? raw.totalUsagesBl ?? 0);
+    const totalPendingUsagesBL = Number(raw.total_pending_usages_bl ?? raw.totalPendingUsagesBl ?? 0);
+    const totalLostBL = Number(raw.total_lost_bl ?? raw.totalLostBl ?? 0);
 
     const rawBrandStocks = Array.isArray(raw.brand_stocks || raw.brandStocks) && (raw.brand_stocks || raw.brandStocks).length > 0
       ? (raw.brand_stocks || raw.brandStocks)
@@ -382,6 +545,10 @@ export class SecretaryBulkSpiritComponent implements OnInit {
       this.normalizeBrandStock(bs, estName, normSubCat, idx)
     );
 
+    const blHistoryList: BLHistoryItem[] = Array.isArray(raw.bl_history || raw.blHistory)
+      ? (raw.bl_history || raw.blHistory)
+      : [];
+
     return {
       id: raw.id || raw.application_id || 'NLI/1101/2026-27/0001',
       establishment_name: estName,
@@ -396,14 +563,19 @@ export class SecretaryBulkSpiritComponent implements OnInit {
       email: raw.email || 'factory@excise.gov.in',
       status: (raw.is_approved || raw.isApproved) ? 'Active' : (raw.status || 'Under Review'),
       is_approved: Boolean(raw.is_approved || raw.isApproved),
-      stock_bl: stockBL > 0 ? stockBL : (normSubCat === 'Distillery' ? 150000 : 95000),
+      stock_bl: stockBL,
+      total_arrivals_bl: totalArrivalsBL,
+      total_usages_bl: totalUsagesBL,
+      total_pending_usages_bl: totalPendingUsagesBL,
+      total_lost_bl: totalLostBL,
       total_requisitions_count: reqCount,
-      total_bl_requested: totalBlReq > 0 ? totalBlReq : (normSubCat === 'Distillery' ? 25000 : 12000),
+      total_bl_requested: totalBlReq,
       pending_requisitions_count: pendingReqs,
       approved_requisitions_count: approvedReqs,
       active_transit_permits_count: activeTransits,
-      dispatched_bl: dispatchedBL > 0 ? dispatchedBL : (normSubCat === 'Distillery' ? 15000 : 8000),
-      brand_stocks: brandStocksList
+      dispatched_bl: dispatchedBL,
+      brand_stocks: brandStocksList,
+      bl_history: blHistoryList
     };
   }
 
@@ -411,6 +583,6 @@ export class SecretaryBulkSpiritComponent implements OnInit {
     const val = bl || 0;
     const maxCapacity = 250000;
     const pct = Math.round((val / maxCapacity) * 100);
-    return Math.min(Math.max(pct, 15), 100);
+    return Math.min(Math.max(pct, 10), 100);
   }
 }
