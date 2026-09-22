@@ -80,6 +80,25 @@ export interface TransitItem {
   created_at?: string;
 }
 
+export interface HologramLossItem {
+  id?: number;
+  reference_no?: string;
+  usage_date?: string;
+  carton_number?: string;
+  hologram_type?: string;
+  brand_name?: string;
+  bottle_size?: string;
+  wastage_qty?: number;
+  wastage_from?: string;
+  wastage_to?: string;
+  serial_range?: string;
+  damage_reason?: string;
+  approval_status?: string;
+  approved_by?: string;
+  approved_at?: string;
+  rejection_reason?: string;
+}
+
 export interface ManufacturingFactory {
   id?: string;
   establishment_name?: string;
@@ -110,6 +129,8 @@ export interface ManufacturingFactory {
   bl_history?: Array<BLHistoryItem>;
   requisitions?: Array<RequisitionItem>;
   transits?: Array<TransitItem>;
+  hologram_losses?: Array<HologramLossItem>;
+  total_hologram_losses_count?: number;
 }
 
 export interface SecretaryBulkSpiritSummary {

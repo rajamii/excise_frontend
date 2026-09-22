@@ -12,7 +12,8 @@ import {
   BLHistoryItem,
   StorageTankItem,
   RequisitionItem,
-  TransitItem
+  TransitItem,
+  HologramLossItem
 } from '../../services/secretary.service';
 
 @Component({
@@ -36,9 +37,17 @@ export class SecretaryBulkSpiritComponent implements OnInit {
   selectedFactory: ManufacturingFactory | null = null;
   detailActiveTab: 'overview' | 'tanks' | 'stocks' | 'bl_history' | 'requisitions' | 'transits' | 'directives' = 'overview';
 
-  // Stocks & Brands tab filters
+  // Storage Tanks tab filters & pagination
+  tankSearch = '';
+  tankPage = 1;
+  tankPageSize = 10;
+
+  // Stocks & Brands sub-views & pagination: 'inventory' = Finished Goods, 'losses' = Hologram Loss Ledger
+  stockSubView: 'inventory' | 'losses' = 'inventory';
   brandSearchFilter = '';
   brandSizeFilter: 'all' | '750' | '375' | '180' | '650' | '500' | '330' = 'all';
+  brandPage = 1;
+  brandPageSize = 10;
 
   // BL History tab filters & pagination
   blHistorySearch = '';
@@ -49,13 +58,25 @@ export class SecretaryBulkSpiritComponent implements OnInit {
   blHistoryPageSize = 10;
   selectedBlHistoryItem: BLHistoryItem | null = null;
 
-  // Requisitions & Permits tab filters
+  // Requisitions & Permits tab filters & pagination
   reqSearchFilter = '';
   reqStatusFilter = 'ALL';
+  reqPage = 1;
+  reqPageSize = 10;
 
-  // Active Transits tab filters
+  // Active Transits tab filters & pagination
   transitSearchFilter = '';
   transitStatusFilter = 'ALL';
+  transitPage = 1;
+  transitPageSize = 10;
+
+  // Hologram Loss Inspection View & Modal State
+  showHologramLossModal = false;
+  hologramLossSearch = '';
+  hologramLossStatusFilter = 'ALL';
+  hologramLossPage = 1;
+  hologramLossPageSize = 10;
+  selectedHologramLossItem: HologramLossItem | null = null;
 
   summary: SecretaryBulkSpiritSummary = {
     total_units: 0,
@@ -253,8 +274,12 @@ export class SecretaryBulkSpiritComponent implements OnInit {
     this.selectedFactory = factory;
     this.currentView = 'detail';
     this.detailActiveTab = 'overview';
+    this.tankSearch = '';
+    this.tankPage = 1;
+    this.stockSubView = 'inventory';
     this.brandSearchFilter = '';
     this.brandSizeFilter = 'all';
+    this.brandPage = 1;
     this.blHistorySearch = '';
     this.blHistoryTypeFilter = 'ALL';
     this.blHistorySpiritFilter = 'ALL';
@@ -262,9 +287,16 @@ export class SecretaryBulkSpiritComponent implements OnInit {
     this.blHistoryPage = 1;
     this.reqSearchFilter = '';
     this.reqStatusFilter = 'ALL';
+    this.reqPage = 1;
     this.transitSearchFilter = '';
     this.transitStatusFilter = 'ALL';
+    this.transitPage = 1;
     this.selectedBlHistoryItem = null;
+    this.showHologramLossModal = false;
+    this.hologramLossSearch = '';
+    this.hologramLossStatusFilter = 'ALL';
+    this.hologramLossPage = 1;
+    this.selectedHologramLossItem = null;
     this.directiveRemarks = '';
     this.directiveSavedSuccess = false;
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -273,17 +305,82 @@ export class SecretaryBulkSpiritComponent implements OnInit {
   backToRegister(): void {
     this.currentView = 'register';
     this.selectedFactory = null;
+    this.showHologramLossModal = false;
+    this.stockSubView = 'inventory';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   setDetailTab(tab: 'overview' | 'tanks' | 'stocks' | 'bl_history' | 'requisitions' | 'transits' | 'directives'): void {
     this.detailActiveTab = tab;
-    if (tab === 'bl_history') {
-      this.blHistoryPage = 1;
+    if (tab === 'tanks') this.tankPage = 1;
+    if (tab === 'stocks') {
+      this.brandPage = 1;
+      this.stockSubView = 'inventory';
+    }
+    if (tab === 'bl_history') this.blHistoryPage = 1;
+    if (tab === 'requisitions') this.reqPage = 1;
+    if (tab === 'transits') this.transitPage = 1;
+  }
+
+  setStockSubView(view: 'inventory' | 'losses'): void {
+    this.stockSubView = view;
+    if (view === 'losses') {
+      this.hologramLossPage = 1;
+      this.hologramLossSearch = '';
+      this.hologramLossStatusFilter = 'ALL';
+    } else {
+      this.brandPage = 1;
+    }
+    this.cdr.detectChanges();
+  }
+
+  // Tank helpers & pagination
+  getFilteredTanks(): StorageTankItem[] {
+    if (!this.selectedFactory || !this.selectedFactory.storage_tanks) return [];
+    const q = (this.tankSearch || '').trim().toLowerCase();
+    if (!q) return this.selectedFactory.storage_tanks;
+    return this.selectedFactory.storage_tanks.filter(t =>
+      (t.tank_id || '').toLowerCase().includes(q) ||
+      (t.spirit_type || '').toLowerCase().includes(q) ||
+      (t.status || '').toLowerCase().includes(q)
+    );
+  }
+
+  get paginatedTanks(): StorageTankItem[] {
+    const list = this.getFilteredTanks();
+    const start = (this.tankPage - 1) * this.tankPageSize;
+    return list.slice(start, start + this.tankPageSize);
+  }
+
+  get tankTotalPages(): number {
+    return Math.ceil(this.getFilteredTanks().length / this.tankPageSize) || 1;
+  }
+
+  get tankPageNumbers(): number[] {
+    return Array.from({ length: this.tankTotalPages }, (_, i) => i + 1);
+  }
+
+  get tankStartIndex(): number {
+    if (this.getFilteredTanks().length === 0) return 0;
+    return (this.tankPage - 1) * this.tankPageSize + 1;
+  }
+
+  get tankEndIndex(): number {
+    return Math.min(this.tankPage * this.tankPageSize, this.getFilteredTanks().length);
+  }
+
+  setTankPage(page: number): void {
+    if (page >= 1 && page <= this.tankTotalPages) {
+      this.tankPage = page;
+      this.cdr.detectChanges();
     }
   }
 
-  // Tank helpers
+  onTankPageSizeChange(): void {
+    this.tankPage = 1;
+    this.cdr.detectChanges();
+  }
+
   getTotalTankCapacity(): number {
     if (!this.selectedFactory?.storage_tanks || this.selectedFactory.storage_tanks.length === 0) return 100000;
     return this.selectedFactory.storage_tanks.reduce((acc, t) => acc + (t.capacity_bl || 0), 0);
@@ -440,7 +537,7 @@ export class SecretaryBulkSpiritComponent implements OnInit {
     document.body.removeChild(link);
   }
 
-  // Stocks & Brands helpers
+  // Stocks & Brands helpers & pagination
   getFilteredBrandStocks(): BrandStock[] {
     if (!this.selectedFactory || !this.selectedFactory.brand_stocks) return [];
     const q = (this.brandSearchFilter || '').trim().toLowerCase();
@@ -458,6 +555,41 @@ export class SecretaryBulkSpiritComponent implements OnInit {
     });
   }
 
+  get paginatedBrandStocks(): BrandStock[] {
+    const list = this.getFilteredBrandStocks();
+    const start = (this.brandPage - 1) * this.brandPageSize;
+    return list.slice(start, start + this.brandPageSize);
+  }
+
+  get brandTotalPages(): number {
+    return Math.ceil(this.getFilteredBrandStocks().length / this.brandPageSize) || 1;
+  }
+
+  get brandPageNumbers(): number[] {
+    return Array.from({ length: this.brandTotalPages }, (_, i) => i + 1);
+  }
+
+  get brandStartIndex(): number {
+    if (this.getFilteredBrandStocks().length === 0) return 0;
+    return (this.brandPage - 1) * this.brandPageSize + 1;
+  }
+
+  get brandEndIndex(): number {
+    return Math.min(this.brandPage * this.brandPageSize, this.getFilteredBrandStocks().length);
+  }
+
+  setBrandPage(page: number): void {
+    if (page >= 1 && page <= this.brandTotalPages) {
+      this.brandPage = page;
+      this.cdr.detectChanges();
+    }
+  }
+
+  onBrandPageSizeChange(): void {
+    this.brandPage = 1;
+    this.cdr.detectChanges();
+  }
+
   getTotalBrandCases(): number {
     return this.getFilteredBrandStocks().reduce((acc, bs) => acc + (bs.cases_stock || 0), 0);
   }
@@ -470,7 +602,7 @@ export class SecretaryBulkSpiritComponent implements OnInit {
     return this.getFilteredBrandStocks().reduce((acc, bs) => acc + (bs.total_bl || 0), 0);
   }
 
-  // Requisitions & Permits helpers
+  // Requisitions & Permits helpers & pagination
   getFilteredRequisitions(): RequisitionItem[] {
     if (!this.selectedFactory?.requisitions) return [];
     const q = (this.reqSearchFilter || '').trim().toLowerCase();
@@ -490,7 +622,42 @@ export class SecretaryBulkSpiritComponent implements OnInit {
     });
   }
 
-  // Active Transits helpers
+  get paginatedRequisitions(): RequisitionItem[] {
+    const list = this.getFilteredRequisitions();
+    const start = (this.reqPage - 1) * this.reqPageSize;
+    return list.slice(start, start + this.reqPageSize);
+  }
+
+  get reqTotalPages(): number {
+    return Math.ceil(this.getFilteredRequisitions().length / this.reqPageSize) || 1;
+  }
+
+  get reqPageNumbers(): number[] {
+    return Array.from({ length: this.reqTotalPages }, (_, i) => i + 1);
+  }
+
+  get reqStartIndex(): number {
+    if (this.getFilteredRequisitions().length === 0) return 0;
+    return (this.reqPage - 1) * this.reqPageSize + 1;
+  }
+
+  get reqEndIndex(): number {
+    return Math.min(this.reqPage * this.reqPageSize, this.getFilteredRequisitions().length);
+  }
+
+  setReqPage(page: number): void {
+    if (page >= 1 && page <= this.reqTotalPages) {
+      this.reqPage = page;
+      this.cdr.detectChanges();
+    }
+  }
+
+  onReqPageSizeChange(): void {
+    this.reqPage = 1;
+    this.cdr.detectChanges();
+  }
+
+  // Active Transits helpers & pagination
   getFilteredTransits(): TransitItem[] {
     if (!this.selectedFactory?.transits) return [];
     const q = (this.transitSearchFilter || '').trim().toLowerCase();
@@ -508,6 +675,160 @@ export class SecretaryBulkSpiritComponent implements OnInit {
       const matchStatus = sf === 'ALL' || (t.status || '').toUpperCase().includes(sf.toUpperCase());
       return matchSearch && matchStatus;
     });
+  }
+
+  get paginatedTransits(): TransitItem[] {
+    const list = this.getFilteredTransits();
+    const start = (this.transitPage - 1) * this.transitPageSize;
+    return list.slice(start, start + this.transitPageSize);
+  }
+
+  get transitTotalPages(): number {
+    return Math.ceil(this.getFilteredTransits().length / this.transitPageSize) || 1;
+  }
+
+  get transitPageNumbers(): number[] {
+    return Array.from({ length: this.transitTotalPages }, (_, i) => i + 1);
+  }
+
+  get transitStartIndex(): number {
+    if (this.getFilteredTransits().length === 0) return 0;
+    return (this.transitPage - 1) * this.transitPageSize + 1;
+  }
+
+  get transitEndIndex(): number {
+    return Math.min(this.transitPage * this.transitPageSize, this.getFilteredTransits().length);
+  }
+
+  setTransitPage(page: number): void {
+    if (page >= 1 && page <= this.transitTotalPages) {
+      this.transitPage = page;
+      this.cdr.detectChanges();
+    }
+  }
+
+  onTransitPageSizeChange(): void {
+    this.transitPage = 1;
+    this.cdr.detectChanges();
+  }
+
+  // Hologram Loss Inspection View & Modal Helpers
+  openHologramLossModal(): void {
+    this.hologramLossSearch = '';
+    this.hologramLossStatusFilter = 'ALL';
+    this.hologramLossPage = 1;
+    this.selectedHologramLossItem = null;
+    this.showHologramLossModal = true;
+  }
+
+  closeHologramLossModal(): void {
+    this.showHologramLossModal = false;
+    this.selectedHologramLossItem = null;
+  }
+
+  openHologramLossDetails(item: HologramLossItem): void {
+    this.selectedHologramLossItem = item;
+  }
+
+  closeHologramLossDetails(): void {
+    this.selectedHologramLossItem = null;
+  }
+
+  getFilteredHologramLosses(): HologramLossItem[] {
+    if (!this.selectedFactory || !this.selectedFactory.hologram_losses) return [];
+    const q = (this.hologramLossSearch || '').trim().toLowerCase();
+    const sf = this.hologramLossStatusFilter;
+
+    return this.selectedFactory.hologram_losses.filter(item => {
+      const matchSearch = !q ||
+        (item.reference_no || '').toLowerCase().includes(q) ||
+        (item.brand_name || '').toLowerCase().includes(q) ||
+        (item.carton_number || '').toLowerCase().includes(q) ||
+        (item.serial_range || '').toLowerCase().includes(q) ||
+        (item.damage_reason || '').toLowerCase().includes(q) ||
+        (item.approved_by || '').toLowerCase().includes(q);
+
+      const matchStatus = sf === 'ALL' || (item.approval_status || '').toUpperCase().includes(sf.toUpperCase());
+      return matchSearch && matchStatus;
+    });
+  }
+
+  get paginatedHologramLosses(): HologramLossItem[] {
+    const list = this.getFilteredHologramLosses();
+    const start = (this.hologramLossPage - 1) * this.hologramLossPageSize;
+    return list.slice(start, start + this.hologramLossPageSize);
+  }
+
+  get hologramLossTotalPages(): number {
+    return Math.ceil(this.getFilteredHologramLosses().length / this.hologramLossPageSize) || 1;
+  }
+
+  get hologramLossPageNumbers(): number[] {
+    return Array.from({ length: this.hologramLossTotalPages }, (_, i) => i + 1);
+  }
+
+  get hologramLossStartIndex(): number {
+    if (this.getFilteredHologramLosses().length === 0) return 0;
+    return (this.hologramLossPage - 1) * this.hologramLossPageSize + 1;
+  }
+
+  get hologramLossEndIndex(): number {
+    return Math.min(this.hologramLossPage * this.hologramLossPageSize, this.getFilteredHologramLosses().length);
+  }
+
+  setHologramLossPage(page: number): void {
+    if (page >= 1 && page <= this.hologramLossTotalPages) {
+      this.hologramLossPage = page;
+      this.cdr.detectChanges();
+    }
+  }
+
+  onHologramLossPageSizeChange(): void {
+    this.hologramLossPage = 1;
+    this.cdr.detectChanges();
+  }
+
+  getTotalHologramLossQuantity(): number {
+    if (!this.selectedFactory?.hologram_losses) return 0;
+    return this.selectedFactory.hologram_losses.reduce((acc, hl) => acc + (hl.wastage_qty || 0), 0);
+  }
+
+  getDistinctImpactedBrandsCount(): number {
+    if (!this.selectedFactory?.hologram_losses) return 0;
+    const brands = new Set<string>();
+    this.selectedFactory.hologram_losses.forEach(hl => {
+      if (hl.brand_name) brands.add(hl.brand_name.trim());
+    });
+    return brands.size;
+  }
+
+  exportHologramLossCSV(): void {
+    const list = this.getFilteredHologramLosses();
+    if (!list || list.length === 0) return;
+
+    const headers = ['Date', 'Reference No', 'Brand Name', 'Pack Size', 'Carton No', 'Hologram Type', 'Wastage Qty', 'Serial Range', 'Damage Reason', 'Approval Status', 'Approved By'];
+    const rows = list.map(item => [
+      `"${item.usage_date || ''}"`,
+      `"${item.reference_no || ''}"`,
+      `"${item.brand_name || ''}"`,
+      `"${item.bottle_size || ''}"`,
+      `"${item.carton_number || ''}"`,
+      `"${item.hologram_type || ''}"`,
+      `"${item.wastage_qty || 0}"`,
+      `"${item.serial_range || ''}"`,
+      `"${(item.damage_reason || '').replace(/"/g, '""')}"`,
+      `"${item.approval_status || ''}"`,
+      `"${item.approved_by || ''}"`
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `Hologram_Losses_${(this.selectedFactory?.establishment_name || 'Factory').replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 
   saveDirective(): void {
@@ -684,6 +1005,27 @@ export class SecretaryBulkSpiritComponent implements OnInit {
     };
   }
 
+  private normalizeHologramLoss(raw: any): HologramLossItem {
+    return {
+      id: raw.id,
+      reference_no: raw.reference_no || raw.referenceNo || raw.ref_no || raw.refNo || '-',
+      usage_date: raw.usage_date || raw.usageDate || raw.submission_date || raw.submissionDate || raw.date || '',
+      carton_number: raw.carton_number || raw.cartonNumber || raw.cartoon_number || raw.cartoonNumber || '-',
+      hologram_type: raw.hologram_type || raw.hologramType || 'LOCAL',
+      brand_name: raw.brand_name || raw.brandName || raw.brand_details || raw.brandDetails || raw.brand || 'Registered Brand',
+      bottle_size: raw.bottle_size || raw.bottleSize || raw.pack_size_ml || raw.packSizeMl || '-',
+      wastage_qty: Number(raw.wastage_qty ?? raw.wastageQty ?? raw.damaged_qty ?? raw.damagedQty ?? 0),
+      wastage_from: raw.wastage_from || raw.wastageFrom || raw.from_serial || raw.fromSerial || '-',
+      wastage_to: raw.wastage_to || raw.wastageTo || raw.to_serial || raw.toSerial || '-',
+      serial_range: raw.serial_range || raw.serialRange || '-',
+      damage_reason: raw.damage_reason || raw.damageReason || raw.reason || 'Damaged during high-speed bottling/labeling line run',
+      approval_status: String(raw.approval_status || raw.approvalStatus || raw.status || 'PENDING').toUpperCase(),
+      approved_by: raw.approved_by || raw.approvedBy || raw.approved_by_display_name || raw.approvedByDisplayName || '-',
+      approved_at: raw.approved_at || raw.approvedAt || null,
+      rejection_reason: raw.rejection_reason || raw.rejectionReason || ''
+    };
+  }
+
   private normalizeFactory(raw: any): ManufacturingFactory {
     const estName = String(raw.establishment_name || raw.establishmentName || raw.company_name || raw.companyName || raw.applicant_name || raw.applicantName || 'Manufacturing Unit').trim();
     const compName = String(raw.company_name || raw.companyName || estName).trim();
@@ -733,6 +1075,11 @@ export class SecretaryBulkSpiritComponent implements OnInit {
       : [];
     const transitsList: TransitItem[] = rawTransits.map((tr: any) => this.normalizeTransit(tr));
 
+    const rawLosses = Array.isArray(raw.hologram_losses || raw.hologramLosses)
+      ? (raw.hologram_losses || raw.hologramLosses)
+      : [];
+    const hologramLossesList: HologramLossItem[] = rawLosses.map((hl: any) => this.normalizeHologramLoss(hl));
+
     return {
       id: raw.id || raw.application_id || raw.applicationId || 'NLI/1101/2026-27/0001',
       establishment_name: estName,
@@ -762,7 +1109,9 @@ export class SecretaryBulkSpiritComponent implements OnInit {
       brand_stocks: brandStocksList,
       bl_history: blHistoryList,
       requisitions: reqsList,
-      transits: transitsList
+      transits: transitsList,
+      hologram_losses: hologramLossesList,
+      total_hologram_losses_count: Number(raw.total_hologram_losses_count ?? raw.totalHologramLossesCount ?? hologramLossesList.reduce((acc, hl) => acc + (hl.wastage_qty || 0), 0))
     };
   }
 
