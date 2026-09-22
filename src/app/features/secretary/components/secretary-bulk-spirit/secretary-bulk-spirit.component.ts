@@ -4,7 +4,16 @@ import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { SecretaryService, ManufacturingFactory, SecretaryBulkSpiritSummary, BrandStock, BLHistoryItem } from '../../services/secretary.service';
+import {
+  SecretaryService,
+  ManufacturingFactory,
+  SecretaryBulkSpiritSummary,
+  BrandStock,
+  BLHistoryItem,
+  StorageTankItem,
+  RequisitionItem,
+  TransitItem
+} from '../../services/secretary.service';
 
 @Component({
   selector: 'app-secretary-bulk-spirit',
@@ -39,6 +48,14 @@ export class SecretaryBulkSpiritComponent implements OnInit {
   blHistoryPage = 1;
   blHistoryPageSize = 10;
   selectedBlHistoryItem: BLHistoryItem | null = null;
+
+  // Requisitions & Permits tab filters
+  reqSearchFilter = '';
+  reqStatusFilter = 'ALL';
+
+  // Active Transits tab filters
+  transitSearchFilter = '';
+  transitStatusFilter = 'ALL';
 
   summary: SecretaryBulkSpiritSummary = {
     total_units: 0,
@@ -123,6 +140,14 @@ export class SecretaryBulkSpiritComponent implements OnInit {
         this.factories = rawList.map((f: any) => this.normalizeFactory(f));
         this.recalculateSummary();
         this.applyFiltersAndSort();
+
+        if (this.selectedFactory) {
+          const updated = this.factories.find(f => f.id === this.selectedFactory?.id || f.establishment_name === this.selectedFactory?.establishment_name);
+          if (updated) {
+            this.selectedFactory = updated;
+          }
+        }
+
         this.isLoading = false;
         this.cdr.detectChanges();
       },
@@ -235,6 +260,10 @@ export class SecretaryBulkSpiritComponent implements OnInit {
     this.blHistorySpiritFilter = 'ALL';
     this.blHistoryStatusFilter = 'ALL';
     this.blHistoryPage = 1;
+    this.reqSearchFilter = '';
+    this.reqStatusFilter = 'ALL';
+    this.transitSearchFilter = '';
+    this.transitStatusFilter = 'ALL';
     this.selectedBlHistoryItem = null;
     this.directiveRemarks = '';
     this.directiveSavedSuccess = false;
@@ -252,6 +281,22 @@ export class SecretaryBulkSpiritComponent implements OnInit {
     if (tab === 'bl_history') {
       this.blHistoryPage = 1;
     }
+  }
+
+  // Tank helpers
+  getTotalTankCapacity(): number {
+    if (!this.selectedFactory?.storage_tanks || this.selectedFactory.storage_tanks.length === 0) return 100000;
+    return this.selectedFactory.storage_tanks.reduce((acc, t) => acc + (t.capacity_bl || 0), 0);
+  }
+
+  getTotalTankLiveStock(): number {
+    if (!this.selectedFactory?.storage_tanks || this.selectedFactory.storage_tanks.length === 0) return this.selectedFactory?.stock_bl || 0;
+    return this.selectedFactory.storage_tanks.reduce((acc, t) => acc + (t.current_volume_bl || 0), 0);
+  }
+
+  getActiveTanksCount(): number {
+    if (!this.selectedFactory?.storage_tanks) return 0;
+    return this.selectedFactory.storage_tanks.filter(t => (t.current_volume_bl || 0) > 0).length;
   }
 
   // BL History helpers & calculations
@@ -425,6 +470,46 @@ export class SecretaryBulkSpiritComponent implements OnInit {
     return this.getFilteredBrandStocks().reduce((acc, bs) => acc + (bs.total_bl || 0), 0);
   }
 
+  // Requisitions & Permits helpers
+  getFilteredRequisitions(): RequisitionItem[] {
+    if (!this.selectedFactory?.requisitions) return [];
+    const q = (this.reqSearchFilter || '').trim().toLowerCase();
+    const sf = this.reqStatusFilter;
+
+    return this.selectedFactory.requisitions.filter(r => {
+      const matchSearch = !q ||
+        (r.reference_no || '').toLowerCase().includes(q) ||
+        (r.bulk_spirit_type || '').toLowerCase().includes(q) ||
+        (r.check_post_name || '').toLowerCase().includes(q) ||
+        (r.purpose_name || '').toLowerCase().includes(q) ||
+        (r.lifted_from || '').toLowerCase().includes(q) ||
+        (r.permits_number || '').toLowerCase().includes(q);
+
+      const matchStatus = sf === 'ALL' || (r.status || '').toUpperCase().includes(sf.toUpperCase());
+      return matchSearch && matchStatus;
+    });
+  }
+
+  // Active Transits helpers
+  getFilteredTransits(): TransitItem[] {
+    if (!this.selectedFactory?.transits) return [];
+    const q = (this.transitSearchFilter || '').trim().toLowerCase();
+    const sf = this.transitStatusFilter;
+
+    return this.selectedFactory.transits.filter(t => {
+      const matchSearch = !q ||
+        (t.transit_pass_no || '').toLowerCase().includes(q) ||
+        (t.vehicle_no || '').toLowerCase().includes(q) ||
+        (t.driver_name || '').toLowerCase().includes(q) ||
+        (t.transporter_name || '').toLowerCase().includes(q) ||
+        (t.destination || '').toLowerCase().includes(q) ||
+        (t.brand || '').toLowerCase().includes(q);
+
+      const matchStatus = sf === 'ALL' || (t.status || '').toUpperCase().includes(sf.toUpperCase());
+      return matchSearch && matchStatus;
+    });
+  }
+
   saveDirective(): void {
     if (!this.directiveRemarks.trim()) return;
     this.directiveSavedSuccess = true;
@@ -437,6 +522,107 @@ export class SecretaryBulkSpiritComponent implements OnInit {
     return (val || 0).toLocaleString('en-IN');
   }
 
+  formatDate(val?: string): string {
+    if (!val || val === '-') return '-';
+    try {
+      const d = new Date(val);
+      if (isNaN(d.getTime())) return val;
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch {
+      return val;
+    }
+  }
+
+  formatTime(val?: string): string {
+    if (!val || val === '-') return '';
+    try {
+      const d = new Date(val);
+      if (isNaN(d.getTime())) return '';
+      return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    } catch {
+      return '';
+    }
+  }
+
+  private normalizeStorageTank(raw: any): StorageTankItem {
+    const curVol = Number(raw.current_volume_bl ?? raw.currentVolumeBl ?? 0);
+    const cap = Number(raw.capacity_bl ?? raw.capacityBl ?? (curVol <= 50000 ? 50000 : curVol * 1.5));
+    const fillPct = cap > 0 ? Number(raw.fill_percentage ?? raw.fillPercentage ?? Math.round((curVol / cap) * 100)) : 0;
+    return {
+      tank_id: raw.tank_id || raw.tankId || 'TNK-01',
+      spirit_type: raw.spirit_type || raw.spiritType || 'Mature Malt Spirit',
+      capacity_bl: cap,
+      current_volume_bl: curVol,
+      fill_percentage: fillPct,
+      status: raw.status || (curVol > 0 ? 'Active / Operational' : 'Standby / Empty'),
+      total_inflow_bl: Number(raw.total_inflow_bl ?? raw.totalInflowBl ?? curVol),
+      total_outflow_bl: Number(raw.total_outflow_bl ?? raw.totalOutflowBl ?? 0),
+      total_loss_bl: Number(raw.total_loss_bl ?? raw.totalLossBl ?? 0)
+    };
+  }
+
+  private normalizeBLHistory(raw: any): BLHistoryItem {
+    const eType = String(raw.entry_type || raw.entryType || 'ARRIVAL').toUpperCase() as 'ARRIVAL' | 'USAGE';
+    return {
+      id: String(raw.id || ''),
+      entry_type: eType,
+      direction: raw.direction || (eType === 'ARRIVAL' ? 'IN' : 'OUT'),
+      date: raw.date || raw.submitted_at || raw.submittedAt || raw.created_at || raw.createdAt || '',
+      reference_no: raw.reference_no || raw.referenceNo || raw.ref_no || raw.refNo || '-',
+      permit_numbers_str: raw.permit_numbers_str || raw.permitNumbersStr || raw.permits || '-',
+      bulk_spirit_type: raw.bulk_spirit_type || raw.bulkSpiritType || 'Mature Malt Spirit',
+      source_or_distillery: raw.source_or_distillery || raw.sourceOrDistillery || raw.distillery_name || raw.distilleryName || '-',
+      destination_purpose: raw.destination_purpose || raw.destinationPurpose || raw.purpose || '-',
+      quantity: Number(raw.quantity ?? raw.total_bulk_liter ?? raw.totalBulkLiter ?? 0),
+      lost_bl: Number(raw.lost_bl ?? raw.lostBl ?? 0),
+      tanker_count: Number(raw.tanker_count ?? raw.tankerCount ?? 0),
+      tanker_details: (raw.tanker_details || raw.tankerDetails || []).map((t: any) => ({
+        permit_no: t.permit_no || t.permitNo || '-',
+        tanker_no: t.tanker_no || t.tankerNo || 'Tanker',
+        bulk_liter: Number(t.bulk_liter ?? t.bulkLiter ?? 0)
+      })),
+      status: String(raw.status || raw.approval_status || raw.approvalStatus || 'APPROVED').toUpperCase(),
+      submitted_by: raw.submitted_by || raw.submittedBy || 'Factory Gate Logistics',
+      reviewed_by: raw.reviewed_by || raw.reviewedBy || '',
+      reviewed_at: raw.reviewed_at || raw.reviewedAt || null,
+      remarks: raw.remarks || raw.review_remarks || raw.reviewRemarks || raw.rejection_reason || raw.rejectionReason || ''
+    };
+  }
+
+  private normalizeRequisition(raw: any): RequisitionItem {
+    return {
+      id: raw.id,
+      reference_no: raw.reference_no || raw.referenceNo || raw.our_ref_no || raw.ourRefNo || `REQ/${raw.id}/EXCISE`,
+      requisition_date: raw.requisition_date || raw.requisitionDate || raw.date || '',
+      bulk_spirit_type: raw.bulk_spirit_type || raw.bulkSpiritType || 'Mature Malt Spirit',
+      total_bl: Number(raw.total_bl ?? raw.totalBl ?? raw.totalbl ?? 0),
+      dispatched_bl: Number(raw.dispatched_bl ?? raw.dispatchedBl ?? 0),
+      check_post_name: raw.check_post_name || raw.checkPostName || 'Rangpo Checkpost',
+      status: raw.status || 'Pending',
+      purpose_name: raw.purpose_name || raw.purposeName || 'Production / Blending',
+      lifted_from: raw.lifted_from || raw.liftedFrom || raw.lifted_from_distillery_name || raw.liftedFromDistilleryName || '-',
+      permits_number: raw.permits_number || raw.permitsNumber || raw.details_permits_number || raw.detailsPermitsNumber || '-',
+      valid_up_to: raw.valid_up_to || raw.validUpTo || '-'
+    };
+  }
+
+  private normalizeTransit(raw: any): TransitItem {
+    return {
+      id: String(raw.id || ''),
+      transit_pass_no: raw.transit_pass_no || raw.transitPassNo || raw.bill_no || raw.billNo || `TRP/${raw.id}/EXCISE`,
+      vehicle_no: raw.vehicle_no || raw.vehicleNo || raw.vehicle_number || raw.vehicleNumber || 'Tanker / Truck',
+      driver_name: raw.driver_name || raw.driverName || 'Authorized Driver',
+      transporter_name: raw.transporter_name || raw.transporterName || '-',
+      destination: raw.destination || raw.to_location || raw.toLocation || raw.sole_distributor_name || raw.soleDistributorName || 'Wholesale Depot',
+      brand: raw.brand || 'Consignment Material',
+      cases: Number(raw.cases ?? 0),
+      dispatched_volume_bl: Number(raw.dispatched_volume_bl ?? raw.dispatchedVolumeBl ?? 0),
+      expiry_date: raw.expiry_date || raw.expiryDate || raw.date || '-',
+      status: raw.status || 'In Transit',
+      created_at: raw.created_at || raw.createdAt || ''
+    };
+  }
+
   private normalizeBrandStock(rawBs: any, estName: string, subCat: string, idx: number): BrandStock {
     const isBrewery = (subCat || '').toLowerCase().includes('brew');
     const brandName = String(
@@ -444,7 +630,7 @@ export class SecretaryBulkSpiritComponent implements OnInit {
     ).trim();
 
     const liquorType = String(
-      rawBs.liquor_type || rawBs.liquorType || rawBs.type || (isBrewery ? 'Beer' : 'IMFL Whisky')
+      rawBs.liquor_type || rawBs.liquorType || rawBs.type || (isBrewery ? 'Beer' : 'IMFL Spirit')
     ).trim();
 
     const sizeMl = Number(
@@ -459,12 +645,9 @@ export class SecretaryBulkSpiritComponent implements OnInit {
       else bpc = 12;
     }
 
-    let cases = Number(
+    const cases = Number(
       rawBs.cases_stock ?? rawBs.casesStock ?? rawBs.current_stock ?? rawBs.cases ?? 0
     );
-    if (!cases || cases <= 0) {
-      cases = isBrewery ? (4000 + idx * 1200) : (3000 + idx * 1500);
-    }
 
     let totBottles = Number(rawBs.total_bottles ?? rawBs.totalBottles ?? 0);
     if (!totBottles || totBottles <= 0) {
@@ -484,15 +667,7 @@ export class SecretaryBulkSpiritComponent implements OnInit {
       rawBs.alcohol_strength || rawBs.alcoholStrength || (isBrewery ? '8.0% v/v' : '42.8% v/v')
     ).trim();
 
-    let mrp = Number(rawBs.mrp_per_bottle ?? rawBs.mrpPerBottle ?? 0);
-    if (!mrp || mrp <= 0) {
-      if (sizeMl === 750) mrp = 920;
-      else if (sizeMl === 375) mrp = 470;
-      else if (sizeMl === 180) mrp = 240;
-      else if (sizeMl === 650) mrp = 180;
-      else if (sizeMl === 500) mrp = 150;
-      else mrp = 110;
-    }
+    const mrp = Number(rawBs.mrp_per_bottle ?? rawBs.mrpPerBottle ?? 0);
 
     return {
       brand_name: brandName,
@@ -505,7 +680,7 @@ export class SecretaryBulkSpiritComponent implements OnInit {
       edp_code: edp,
       alcohol_strength: strength,
       mrp_per_bottle: mrp,
-      status: cases > 500 ? 'In Stock' : 'Low Stock'
+      status: cases > 0 ? 'In Stock' : 'Zero Stock'
     };
   }
 
@@ -515,8 +690,8 @@ export class SecretaryBulkSpiritComponent implements OnInit {
     const appName = String(raw.applicant_name || raw.applicantName || 'Authorized Licensee').trim();
     const subCat = String(raw.sub_category || raw.subCategory || raw.subcategory || 'Distillery').trim();
     const normSubCat = subCat.toLowerCase().includes('brew') ? 'Brewery' : 'Distillery';
-    const dist = String(raw.district || raw.site_district || 'Gangtok').trim();
-    const rawLicNo = String(raw.license_number || raw.licenseNumber || raw.existing_license_no || raw.id || 'LIC/EXCISE/2026').trim();
+    const dist = String(raw.district || raw.site_district || raw.siteDistrict || 'Gangtok').trim();
+    const rawLicNo = String(raw.license_number || raw.licenseNumber || raw.existing_license_no || raw.existingLicenseNo || raw.id || 'LIC/EXCISE/2026').trim();
     const licNo = rawLicNo.length > 2 ? rawLicNo : `LIC/${raw.id || '2026'}`;
 
     const stockBL = Number(raw.stock_bl ?? raw.stockBl ?? 0);
@@ -531,26 +706,35 @@ export class SecretaryBulkSpiritComponent implements OnInit {
     const totalPendingUsagesBL = Number(raw.total_pending_usages_bl ?? raw.totalPendingUsagesBl ?? 0);
     const totalLostBL = Number(raw.total_lost_bl ?? raw.totalLostBl ?? 0);
 
-    const rawBrandStocks = Array.isArray(raw.brand_stocks || raw.brandStocks) && (raw.brand_stocks || raw.brandStocks).length > 0
+    const rawBrandStocks = Array.isArray(raw.brand_stocks || raw.brandStocks)
       ? (raw.brand_stocks || raw.brandStocks)
-      : [
-          { brand_name: `${estName} Supreme Reserve Whisky`, liquor_type: 'IMFL Whisky', pack_size_ml: 750, bottles_per_case: 12, cases_stock: 5400, total_bottles: 64800, total_bl: 48600.0, edp_code: 'EDP/DIS/750/001', alcohol_strength: '42.8% v/v', mrp_per_bottle: 920.0, status: 'In Stock' },
-          { brand_name: `${estName} Supreme Reserve Whisky`, liquor_type: 'IMFL Whisky', pack_size_ml: 375, bottles_per_case: 24, cases_stock: 3200, total_bottles: 76800, total_bl: 28800.0, edp_code: 'EDP/DIS/375/002', alcohol_strength: '42.8% v/v', mrp_per_bottle: 470.0, status: 'In Stock' },
-          { brand_name: `${estName} Supreme Reserve Whisky`, liquor_type: 'IMFL Whisky', pack_size_ml: 180, bottles_per_case: 48, cases_stock: 4800, total_bottles: 230400, total_bl: 41472.0, edp_code: 'EDP/DIS/180/003', alcohol_strength: '42.8% v/v', mrp_per_bottle: 240.0, status: 'In Stock' },
-          { brand_name: `${estName} Himalayan Dry Gin`, liquor_type: 'IMFL Gin', pack_size_ml: 750, bottles_per_case: 12, cases_stock: 2100, total_bottles: 25200, total_bl: 18900.0, edp_code: 'EDP/DIS/750/004', alcohol_strength: '42.8% v/v', mrp_per_bottle: 880.0, status: 'In Stock' },
-          { brand_name: `${estName} Millennium XXX Rum`, liquor_type: 'IMFL Rum', pack_size_ml: 750, bottles_per_case: 12, cases_stock: 3600, total_bottles: 43200, total_bl: 32400.0, edp_code: 'EDP/DIS/750/005', alcohol_strength: '42.8% v/v', mrp_per_bottle: 750.0, status: 'In Stock' }
-        ];
-
+      : [];
     const brandStocksList: BrandStock[] = rawBrandStocks.map((bs: any, idx: number) =>
       this.normalizeBrandStock(bs, estName, normSubCat, idx)
     );
 
-    const blHistoryList: BLHistoryItem[] = Array.isArray(raw.bl_history || raw.blHistory)
+    const rawBlHistory = Array.isArray(raw.bl_history || raw.blHistory)
       ? (raw.bl_history || raw.blHistory)
       : [];
+    const blHistoryList: BLHistoryItem[] = rawBlHistory.map((h: any) => this.normalizeBLHistory(h));
+
+    const rawTanks = Array.isArray(raw.storage_tanks || raw.storageTanks)
+      ? (raw.storage_tanks || raw.storageTanks)
+      : [];
+    const storageTanksList: StorageTankItem[] = rawTanks.map((t: any) => this.normalizeStorageTank(t));
+
+    const rawReqs = Array.isArray(raw.requisitions || raw.requisitionList)
+      ? (raw.requisitions || raw.requisitionList)
+      : [];
+    const reqsList: RequisitionItem[] = rawReqs.map((r: any) => this.normalizeRequisition(r));
+
+    const rawTransits = Array.isArray(raw.transits || raw.transitList)
+      ? (raw.transits || raw.transitList)
+      : [];
+    const transitsList: TransitItem[] = rawTransits.map((tr: any) => this.normalizeTransit(tr));
 
     return {
-      id: raw.id || raw.application_id || 'NLI/1101/2026-27/0001',
+      id: raw.id || raw.application_id || raw.applicationId || 'NLI/1101/2026-27/0001',
       establishment_name: estName,
       applicant_name: appName,
       company_name: compName,
@@ -559,8 +743,8 @@ export class SecretaryBulkSpiritComponent implements OnInit {
       sub_category: normSubCat,
       district: dist,
       business_address: raw.business_address || raw.businessAddress || `${dist}, Sikkim`,
-      mobile_number: raw.mobile_number || raw.mobileNumber || '9800001234',
-      email: raw.email || 'factory@excise.gov.in',
+      mobile_number: raw.mobile_number || raw.mobileNumber || raw.company_phone_number || raw.companyPhoneNumber || '9800001234',
+      email: raw.email || raw.company_email || raw.companyEmail || 'factory@excise.gov.in',
       status: (raw.is_approved || raw.isApproved) ? 'Active' : (raw.status || 'Under Review'),
       is_approved: Boolean(raw.is_approved || raw.isApproved),
       stock_bl: stockBL,
@@ -572,10 +756,13 @@ export class SecretaryBulkSpiritComponent implements OnInit {
       total_bl_requested: totalBlReq,
       pending_requisitions_count: pendingReqs,
       approved_requisitions_count: approvedReqs,
-      active_transit_permits_count: activeTransits,
+      active_transit_permits_count: transitsList.length || activeTransits,
       dispatched_bl: dispatchedBL,
+      storage_tanks: storageTanksList,
       brand_stocks: brandStocksList,
-      bl_history: blHistoryList
+      bl_history: blHistoryList,
+      requisitions: reqsList,
+      transits: transitsList
     };
   }
 

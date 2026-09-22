@@ -38,6 +38,48 @@ export interface BLHistoryItem {
   remarks?: string;
 }
 
+export interface StorageTankItem {
+  tank_id?: string;
+  spirit_type?: string;
+  capacity_bl?: number;
+  current_volume_bl?: number;
+  fill_percentage?: number;
+  status?: string;
+  total_inflow_bl?: number;
+  total_outflow_bl?: number;
+  total_loss_bl?: number;
+}
+
+export interface RequisitionItem {
+  id?: number;
+  reference_no?: string;
+  requisition_date?: string;
+  bulk_spirit_type?: string;
+  total_bl?: number;
+  dispatched_bl?: number;
+  check_post_name?: string;
+  status?: string;
+  purpose_name?: string;
+  lifted_from?: string;
+  permits_number?: string;
+  valid_up_to?: string;
+}
+
+export interface TransitItem {
+  id?: string;
+  transit_pass_no?: string;
+  vehicle_no?: string;
+  driver_name?: string;
+  transporter_name?: string;
+  destination?: string;
+  brand?: string;
+  cases?: number;
+  dispatched_volume_bl?: number;
+  expiry_date?: string;
+  status?: string;
+  created_at?: string;
+}
+
 export interface ManufacturingFactory {
   id?: string;
   establishment_name?: string;
@@ -63,8 +105,11 @@ export interface ManufacturingFactory {
   approved_requisitions_count?: number;
   active_transit_permits_count?: number;
   dispatched_bl?: number;
+  storage_tanks?: Array<StorageTankItem>;
   brand_stocks?: Array<BrandStock>;
   bl_history?: Array<BLHistoryItem>;
+  requisitions?: Array<RequisitionItem>;
+  transits?: Array<TransitItem>;
 }
 
 export interface SecretaryBulkSpiritSummary {
