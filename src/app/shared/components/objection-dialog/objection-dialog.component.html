@@ -1,63 +1,223 @@
-<h2 mat-dialog-title class="dialog-title">
-  <mat-icon class="title-icon">warning_amber</mat-icon>
-  <span>{{ data.title || 'Raise Objection' }}</span>
-</h2>
-
-<mat-dialog-content class="dialog-content-container">
-  <div class="header-hint">
-    <mat-icon class="info-icon">info_outline</mat-icon>
-    <span>Select the fields containing errors and add specific remarks for the applicant.</span>
+<div class="objection-dialog-wrapper">
+  <!-- Dialog Header -->
+  <div class="dialog-header">
+    <div class="header-left">
+      <div class="header-icon-box">
+        <mat-icon class="header-icon">warning_amber</mat-icon>
+      </div>
+      <div class="header-text-group">
+        <h2 class="dialog-title">{{ data.title || 'Raise Objection' }}</h2>
+        <p class="dialog-subtitle">Categorize, select specific application fields requiring correction, and provide clear remarks.</p>
+      </div>
+    </div>
+    
+    @if (totalSelectedCount > 0) {
+      <div class="selected-pill-badge animate-pop">
+        <mat-icon>checklist_rtl</mat-icon>
+        <span>{{ totalSelectedCount }} {{ totalSelectedCount === 1 ? 'Field' : 'Fields' }} Selected</span>
+      </div>
+    }
   </div>
 
-  @if (candidates.length) {
-    <div class="cards-list">
-      @for (c of candidates; track c.field; let i = $index) {
-        <div class="candidate-card" [class.active]="rowGroup(i).get('selected')?.value" [formGroup]="rowGroup(i)">
-          <div class="card-main">
-            <div class="card-selection">
-              <mat-checkbox formControlName="selected" color="warn"></mat-checkbox>
-            </div>
-            
-            <div class="card-details">
-              <span class="field-badge">{{ c.label }}</span>
-              <div class="current-val-wrap">
-                <span class="val-label">Current Value:</span>
-                <span class="val-text">{{ c.value }}</span>
-                @if (isFilePath(c.value)) {
-                  <button
-                    mat-button
-                    color="primary"
-                    type="button"
-                    class="doc-preview-button"
-                    (click)="openPreview(c.value)"
-                  >
-                    <mat-icon>visibility</mat-icon>
-                    Preview
-                  </button>
-                }
-              </div>
-            </div>
-          </div>
-
-          <div class="card-remarks-wrapper" [class.show]="rowGroup(i).get('selected')?.value">
-            <div class="remarks-box-inner">
-              <mat-form-field appearance="outline" class="remarks-field">
-                <mat-label>Specify Objection Remarks</mat-label>
-                <input matInput formControlName="remarks" placeholder="Explain the issue with this field..." />
-                <mat-icon matSuffix class="remarks-icon">edit_note</mat-icon>
-              </mat-form-field>
-            </div>
-          </div>
-        </div>
+  <!-- Search & Navigation Toolbar -->
+  <div class="dialog-toolbar">
+    <!-- Search Bar -->
+    <div class="search-box">
+      <mat-icon class="search-icon">search</mat-icon>
+      <input 
+        type="text" 
+        class="search-input" 
+        placeholder="Search by field name, value, or section..." 
+        [(ngModel)]="searchQuery" 
+      />
+      @if (searchQuery) {
+        <button mat-icon-button type="button" class="clear-search-btn" (click)="clearSearch()" matTooltip="Clear Search">
+          <mat-icon>close</mat-icon>
+        </button>
       }
     </div>
-  }
-</mat-dialog-content>
 
-<mat-dialog-actions align="end" class="dialog-actions">
-  <button mat-button type="button" class="btn-cancel" (click)="onCancel()">Cancel</button>
-  <button mat-raised-button color="warn" type="button" class="btn-submit" (click)="onSubmit()" [disabled]="!canSubmit">
-    <mat-icon>send</mat-icon>
-    <span>Raise Objection</span>
-  </button>
-</mat-dialog-actions>
+    <!-- Section Filter Chips / Navigation -->
+    <div class="section-pills-bar">
+      @for (sec of sectionsSummary; track sec.id) {
+        <button 
+          type="button" 
+          class="section-pill-btn" 
+          [class.active]="activeSectionFilter === sec.id"
+          (click)="setSectionFilter(sec.id)">
+          <mat-icon class="pill-icon">{{ sec.icon }}</mat-icon>
+          <span class="pill-label">{{ sec.name }}</span>
+          <span class="pill-count">{{ sec.count }}</span>
+          @if (sec.selectedCount > 0) {
+            <span class="pill-selected-count" matTooltip="{{ sec.selectedCount }} selected in this section">
+              {{ sec.selectedCount }}
+            </span>
+          }
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Main Scrollable Dialog Content -->
+  <mat-dialog-content class="dialog-content-container">
+    @if (groupedCandidates.length > 0) {
+      <div class="sections-container">
+        @for (group of groupedCandidates; track group.id) {
+          <div class="section-group-card">
+            <!-- Section Header -->
+            <div class="section-group-header" (click)="toggleSection(group)">
+              <div class="section-header-left">
+                <mat-icon class="group-icon">{{ group.icon }}</mat-icon>
+                <span class="group-title">{{ group.name }}</span>
+                <span class="group-count-badge">{{ group.candidates.length }} {{ group.candidates.length === 1 ? 'field' : 'fields' }}</span>
+                
+                @if (group.selectedCount > 0) {
+                  <span class="group-selected-badge">
+                    <mat-icon>check_circle</mat-icon>
+                    {{ group.selectedCount }} selected
+                  </span>
+                }
+              </div>
+
+              <div class="section-header-right" (click)="$event.stopPropagation()">
+                <button 
+                  type="button" 
+                  mat-button 
+                  class="select-all-btn" 
+                  (click)="toggleSelectAllInGroup(group, !isGroupAllSelected(group))">
+                  <mat-icon>{{ isGroupAllSelected(group) ? 'deselect' : 'select_all' }}</mat-icon>
+                  <span>{{ isGroupAllSelected(group) ? 'Deselect All' : 'Select All' }}</span>
+                </button>
+
+                <button 
+                  type="button" 
+                  mat-icon-button 
+                  class="toggle-expand-btn" 
+                  (click)="toggleSection(group)" 
+                  [matTooltip]="group.isExpanded ? 'Collapse section' : 'Expand section'">
+                  <mat-icon>{{ group.isExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+                </button>
+              </div>
+            </div>
+
+            <!-- Section Content Fields -->
+            @if (group.isExpanded) {
+              <div class="section-fields-list">
+                @for (c of group.candidates; track c.field) {
+                  <div 
+                    class="candidate-card" 
+                    [class.active]="rowGroup(c.originalIndex).get('selected')?.value" 
+                    [formGroup]="rowGroup(c.originalIndex)">
+                    <div class="card-main">
+                      <div class="card-selection">
+                        <mat-checkbox 
+                          formControlName="selected" 
+                          color="warn"
+                          (change)="onCheckboxChange(c.originalIndex)">
+                        </mat-checkbox>
+                      </div>
+                      
+                      <div class="card-details">
+                        <div class="card-meta-row">
+                          <span class="field-badge">{{ c.label }}</span>
+                          @if (c.isUpload) {
+                            <span class="upload-badge">
+                              <mat-icon>attachment</mat-icon>
+                              Uploaded Document
+                            </span>
+                          }
+                        </div>
+
+                        <div class="current-val-wrap">
+                          <span class="val-label">Current Value:</span>
+                          <span class="val-text" [class.file-val]="c.isUpload">{{ c.value }}</span>
+                          
+                          @if (c.isUpload) {
+                            <button
+                              mat-button
+                              color="primary"
+                              type="button"
+                              class="doc-preview-button"
+                              (click)="openPreview(c.value)"
+                            >
+                              <mat-icon>visibility</mat-icon>
+                              Preview Document
+                            </button>
+                          }
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Slide-down Objection Remarks Box -->
+                    <div class="card-remarks-wrapper" [class.show]="rowGroup(c.originalIndex).get('selected')?.value">
+                      <div class="remarks-box-inner">
+                        <mat-form-field appearance="outline" class="remarks-field">
+                          <mat-label>Specify Objection Remarks for Applicant</mat-label>
+                          <input 
+                            matInput 
+                            formControlName="remarks" 
+                            [placeholder]="'Explain why ' + c.label + ' is incorrect or needs correction...'"
+                            (input)="onRemarksInput(c.originalIndex)" 
+                          />
+                          <mat-icon matSuffix class="remarks-icon">edit_note</mat-icon>
+                        </mat-form-field>
+                        
+                        @if (rowGroup(c.originalIndex).get('selected')?.value && !rowGroup(c.originalIndex).get('remarks')?.value?.trim()) {
+                          <div class="remark-warning">
+                            <mat-icon>error_outline</mat-icon>
+                            <span>Please enter the objection reason to proceed.</span>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="empty-search-state">
+        <mat-icon class="empty-icon">search_off</mat-icon>
+        <h4 class="empty-title">No Matching Fields Found</h4>
+        <p class="empty-desc">No application fields match "<strong>{{ searchQuery }}</strong>" in the selected section.</p>
+        <button mat-flat-button color="primary" type="button" class="reset-search-btn" (click)="clearSearch()">
+          <mat-icon>restart_alt</mat-icon>
+          Clear Search
+        </button>
+      </div>
+    }
+  </mat-dialog-content>
+
+  <!-- Dialog Footer Actions -->
+  <mat-dialog-actions align="end" class="dialog-actions">
+    <div class="footer-summary">
+      @if (totalSelectedCount > 0) {
+        <span class="selection-status-text">
+          <mat-icon class="status-icon success">check_circle</mat-icon>
+          <strong>{{ totalSelectedCount }}</strong> {{ totalSelectedCount === 1 ? 'objection' : 'objections' }} configured
+        </span>
+      } @else {
+        <span class="selection-status-text muted">
+          <mat-icon class="status-icon">info</mat-icon>
+          Select one or more fields to raise objections
+        </span>
+      }
+    </div>
+
+    <div class="action-buttons-group">
+      <button mat-button type="button" class="btn-cancel" (click)="onCancel()">Cancel</button>
+      <button 
+        mat-raised-button 
+        color="warn" 
+        type="button" 
+        class="btn-submit" 
+        (click)="onSubmit()" 
+        [disabled]="!canSubmit">
+        <mat-icon>send</mat-icon>
+        <span>Raise {{ totalSelectedCount > 0 ? '(' + totalSelectedCount + ')' : '' }} Objection</span>
+      </button>
+    </div>
+  </mat-dialog-actions>
+</div>
