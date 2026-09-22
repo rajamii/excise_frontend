@@ -3827,14 +3827,71 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     isApprovedApplication(): boolean {
         const stage = String(this.applicationData?.['status'] || this.applicationData?.['current_stage']?.['name'] || this.applicationData?.['currentStage'] || '').toLowerCase();
         const stageId = Number(this.applicationData?.['current_stage_id'] || this.applicationData?.['currentStageId'] || (this.applicationData?.['current_stage'] as any)?.['id'] || 0);
-        if (stage.includes('reject') || stage.includes('cancel') || stageId === 152 || stageId === 159 || stageId === 166) {
+        if (stage.includes('reject') || stage.includes('cancel') || stageId === 152 || stageId === 159 || stageId === 166 || stageId === 35 || stageId === 30) {
             return false;
         }
-        if (stageId === 151 || stageId === 158 || stageId === 165 || stage.includes('approved')) {
+        // Intermediate 1st-approval stages (awaiting licensee payment) are NOT final approved
+        if (stageId === 29 || stageId === 154) {
+            return false;
+        }
+        const stageClean = stage.replace(/[^a-z0-9]/g, '');
+        if (stageClean === 'approvedcommissioner' || stageClean === 'approvedbycommissioner' || stageClean === 'commissionerapproved' || stageClean === 'awaitingpayment') {
+            return false;
+        }
+        if (stageId === 151 || stageId === 158 || stageId === 165 || stageId === 34) {
             return true;
         }
         const isFinal = Boolean(this.applicationData?.['current_stage_is_final'] || this.applicationData?.['currentStageIsFinal'] || (this.applicationData?.['current_stage'] as any)?.['is_final']);
-        return isFinal;
+        if (isFinal) {
+            return true;
+        }
+        if (stageClean === 'approved' || stageClean === 'rq09') {
+            return true;
+        }
+        return false;
+    }
+
+    canViewPaymentSlip(): boolean {
+        if (!this.isRequisition()) {
+            return false;
+        }
+        const stage = String(this.applicationData?.['status'] || this.applicationData?.['current_stage']?.['name'] || this.applicationData?.['currentStage'] || '').toLowerCase();
+        const stageId = Number(this.applicationData?.['current_stage_id'] || this.applicationData?.['currentStageId'] || (this.applicationData?.['current_stage'] as any)?.['id'] || 0);
+        const stageClean = stage.replace(/[^a-z0-9]/g, '');
+
+        if (stage.includes('reject') || stage.includes('cancel') || stageId === 152 || stageId === 159 || stageId === 166 || stageId === 35 || stageId === 30) {
+            return false;
+        }
+
+        // Before payment is submitted: Stage 25-29 (ENA), Stage 154 (IMFL), or initial stages
+        if (stageId === 25 || stageId === 26 || stageId === 27 || stageId === 28 || stageId === 29 || stageId === 154) {
+            return false;
+        }
+        if (stageClean === 'pending' || stageClean === 'forwardedcommissioner' || stageClean === 'forwardedtocommissioner' || stageClean === 'approvedcommissioner' || stageClean === 'approvedbycommissioner' || stageClean === 'awaitingpayment') {
+            return false;
+        }
+
+        // Post-payment stages (Forwarded PaySLip OIC/Permit Section/Commissioner, or Final Approved)
+        if (stageId === 31 || stageId === 32 || stageId === 33 || stageId === 34 || stageId === 151 || stageId === 155 || stageId === 156 || stageId === 157 || stageId === 158 || stageId === 165) {
+            return true;
+        }
+        if (stageClean.includes('payslip') || stageClean.includes('payment') || stageClean.includes('paid')) {
+            return true;
+        }
+
+        // Explicit payment details present
+        if (this.applicationData?.['payment_id'] || this.applicationData?.['paymentId'] || this.applicationData?.['payment_date'] || this.applicationData?.['paymentDate'] || this.applicationData?.['challan_no'] || this.applicationData?.['transaction_id']) {
+            return true;
+        }
+
+        return this.isApprovedApplication();
+    }
+
+    canViewPermitSlip(): boolean {
+        if (!this.isRequisition() || this.isLicenseeContext() || this.isImflRequisition()) {
+            return false;
+        }
+        return this.isApprovedApplication();
     }
 
     openCompanyCertificate(): void {
