@@ -85,7 +85,7 @@
             <h3 class="mb-0 fw-bold text-white mt-1">
               {{ (inventorySummary.totalAvailableBl || 0) | number:'1.2-2' }} <small class="fs-6 fw-normal text-white-50">BL</small>
             </h3>
-          </div>
+          </div
         </div>
       </div>
     </div>
@@ -105,18 +105,39 @@
   </div>
 
   <!-- Create New Usage Request Card -->
-  <div class="card border-0 shadow-sm rounded-4 mb-4" style="background: #ffffff; border: 1px solid #e2e8f0 !important;">
-    <div class="card-header bg-white border-bottom py-3 px-4">
+  <div class="card border-0 shadow-sm rounded-4 mb-4" [class.locked-usage-card]="hasPendingRequest" style="background: #ffffff; border: 1px solid #e2e8f0 !important;">
+    <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
       <div class="d-flex align-items-center">
-        <i class="bi bi-plus-circle-fill text-primary me-2 fs-5"></i>
+        <i class="bi me-2 fs-5" [ngClass]="hasPendingRequest ? 'bi-lock-fill text-warning' : 'bi-plus-circle-fill text-primary'"></i>
         <h5 class="mb-0 fw-bold text-dark">Submit New Bulk Spirit Usage Request</h5>
       </div>
+      <span *ngIf="hasPendingRequest" class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-1.5 rounded-pill fw-semibold">
+        <i class="bi bi-lock-fill me-1"></i> Form Locked
+      </span>
     </div>
     <div class="card-body p-4">
-      <div class="row g-3">
+
+      <!-- Prominent Yellow Alert when a Request is Pending -->
+      <div *ngIf="hasPendingRequest" class="alert alert-warning border border-warning d-flex align-items-start rounded-3 mb-4 p-3 shadow-sm" style="background-color: #fefce8; border-color: #fde047 !important;">
+        <div class="d-flex align-items-center justify-content-center bg-warning bg-opacity-25 rounded-circle p-2 me-3 flex-shrink-0" style="width: 42px; height: 42px; margin-top: 2px;">
+          <i class="bi bi-hourglass-split fs-4 text-warning-emphasis"></i>
+        </div>
+        <div class="text-dark flex-grow-1">
+          <div class="fw-bold fs-6 text-warning-emphasis mb-1">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i> Previous Request Pending Verification
+          </div>
+          <div style="font-size: 0.92rem; line-height: 1.55; color: #713f12;">
+            You can submit the next Bulk Spirit Usage request only after ref no.
+            <strong class="text-dark bg-white px-2 py-0.5 rounded border border-warning-subtle font-monospace fw-bold">{{ pendingUsageRequest?.reference_no }}</strong>
+            is verified (approved or rejected) by the Officer-In-Charge (OIC).
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-3" [class.form-locked-state]="hasPendingRequest">
         <div class="col-lg-3 col-md-6">
           <label class="form-label fw-semibold text-secondary small">Bulk Spirit Type <span class="text-danger">*</span></label>
-          <select class="form-select" [(ngModel)]="selectedSpiritType">
+          <select class="form-select" [(ngModel)]="selectedSpiritType" [disabled]="hasPendingRequest">
             <option value="" disabled>-- Select Spirit Type --</option>
             <option *ngFor="let item of inventorySummary.items" [value]="item.bulkSpiritType">
               {{ item.bulkSpiritType }} (Avail: {{ item.availableBl | number:'1.2-2' }} BL)
@@ -131,8 +152,8 @@
 
         <div class="col-lg-3 col-md-6">
           <label class="form-label fw-semibold text-secondary small">Quantity in Bulk Liters (BL) <span class="text-danger">*</span></label>
-          <input type="number" class="form-control" [(ngModel)]="requestedQuantity" placeholder="e.g. 500.00" min="0.01" [max]="getSelectedAvailableBL()">
-          <div class="mt-2" *ngIf="requestedQuantity && requestedQuantity > getSelectedAvailableBL()">
+          <input type="number" class="form-control" [(ngModel)]="requestedQuantity" placeholder="e.g. 500.00" min="0.01" [max]="getSelectedAvailableBL()" [disabled]="hasPendingRequest">
+          <div class="mt-2" *ngIf="requestedQuantity && requestedQuantity > getSelectedAvailableBL() && !hasPendingRequest">
             <small class="text-danger fw-semibold d-block">
               <i class="bi bi-exclamation-triangle-fill me-1"></i> Exceeds stock ({{ getSelectedAvailableBL() | number:'1.2-2' }} BL)
             </small>
@@ -141,21 +162,22 @@
 
         <div class="col-lg-3 col-md-6">
           <label class="form-label fw-semibold text-secondary small">Purpose of Usage</label>
-          <input type="text" class="form-control" [(ngModel)]="purpose" placeholder="e.g. Production / Blending">
+          <input type="text" class="form-control" [(ngModel)]="purpose" placeholder="e.g. Production / Blending" [disabled]="hasPendingRequest">
         </div>
 
         <div class="col-lg-3 col-md-6">
           <label class="form-label fw-semibold text-secondary small">Remarks / Batch Notes</label>
-          <input type="text" class="form-control" [(ngModel)]="remarks" placeholder="Optional remarks">
+          <input type="text" class="form-control" [(ngModel)]="remarks" placeholder="Optional remarks" [disabled]="hasPendingRequest">
         </div>
 
         <div class="col-12 d-flex justify-content-end mt-3">
-          <button type="button" class="btn btn-primary px-4 py-2 fw-semibold shadow-sm"
-            [disabled]="!isFormValid() || submitting"
+          <button type="button" class="btn px-4 py-2 fw-semibold shadow-sm"
+            [ngClass]="hasPendingRequest ? 'btn-secondary opacity-75' : 'btn-primary'"
+            [disabled]="!isFormValid() || submitting || hasPendingRequest"
             (click)="submitUsage()">
             <span *ngIf="submitting" class="spinner-border spinner-border-sm me-2"></span>
-            <i *ngIf="!submitting" class="bi bi-send-fill me-2"></i>
-            Submit Usage Request
+            <i *ngIf="!submitting" [class]="hasPendingRequest ? 'bi bi-lock-fill me-2' : 'bi bi-send-fill me-2'"></i>
+            {{ hasPendingRequest ? 'Submission Locked (Pending OIC)' : 'Submit Usage Request' }}
           </button>
         </div>
       </div>

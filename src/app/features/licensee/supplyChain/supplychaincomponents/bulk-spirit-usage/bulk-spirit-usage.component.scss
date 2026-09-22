@@ -169,6 +169,29 @@
   }
 }
 
+.locked-usage-card {
+  border: 1px solid #fef08a !important;
+  box-shadow: 0 4px 16px rgba(234, 179, 8, 0.08) !important;
+  background: #fcfcfc !important;
+
+  .card-header {
+    background: #fffbeb !important;
+    border-bottom-color: #fef08a !important;
+  }
+}
+
+.form-locked-state {
+  opacity: 0.65;
+  filter: grayscale(15%);
+
+  .form-control,
+  .form-select {
+    background-color: #f8fafc !important;
+    cursor: not-allowed;
+    border-color: #e2e8f0 !important;
+  }
+}
+
 .spin {
   display: inline-block;
   animation: spin 1s infinite linear;
