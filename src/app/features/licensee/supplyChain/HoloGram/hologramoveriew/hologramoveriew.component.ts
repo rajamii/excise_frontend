@@ -149,6 +149,23 @@ interface HistoryBrandDetail {
   qtyLeftover: number | null;
 }
 
+export interface HologramLossRecord {
+  id?: string | number;
+  cartonNumber: string;
+  hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE' | string;
+  fromSerial: string;
+  toSerial: string;
+  count: number;
+  damageDate: string;
+  referenceNo: string;
+  brandName: string;
+  bottleSize?: string;
+  damageReason: string;
+  reportedBy: string;
+  productionLine?: string;
+  rawEntry?: any;
+}
+
 interface ChartFilters {
   specificDate: string;
   month: string;
@@ -199,6 +216,32 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
   private requestUpdateSubscription?: Subscription;
   private dailyRegisterUpdateSubscription?: Subscription;
 
+  // Loss & Wastage Details Modal
+  showLossDetailsModal: boolean = false;
+  lossRecords: HologramLossRecord[] = [];
+  filteredLossRecords: HologramLossRecord[] = [];
+  lossFilters: {
+    search: string;
+    brand: string;
+    type: string;
+    carton: string;
+    month: string;
+    dateFrom: string;
+    dateTo: string;
+  } = {
+    search: '',
+    brand: 'ALL',
+    type: 'ALL',
+    carton: 'ALL',
+    month: '',
+    dateFrom: '',
+    dateTo: ''
+  };
+  lossTablePage: number = 1;
+  lossTablePageSize: number = 10;
+  lossPageSizeOptions: number[] = [5, 10, 25, 50];
+  distinctLossBrands: string[] = [];
+  distinctLossCartons: string[] = [];
 
   // Serial Details Modal
   showSerialDetailsModal: boolean = false;
@@ -439,6 +482,10 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
 
   setActiveTab(tab: string) {
     this.activeTab = tab;
+    if (tab === 'damaged' || tab === 'loss') {
+      this.extractAllLossRecords();
+      this.applyLossFilters();
+    }
   }
 
   goBack() {
@@ -1321,6 +1368,311 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     this.serialViewMode = 'all';
     this.currentSerialPage = 1;
     this.clearSerialFilters();
+  }
+
+  // ── Loss & Wastage Details In-Page Tab & Audit Methods ──────────────────────────────
+  openLossDetailsModal(): void {
+    console.log('🔍 Opening loss & wastage details tab in page');
+    this.setActiveTab('damaged');
+    setTimeout(() => {
+      const element = document.getElementById('hologramTabsNav');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 50);
+  }
+
+  closeLossDetailsModal(): void {
+    this.showLossDetailsModal = false;
+  }
+
+  extractAllLossRecords(): void {
+    const recordsMap = new Map<string, HologramLossRecord>();
+
+    // 1. Extract from all rolls serialRanges / generated serial ranges
+    for (const roll of this.rollsData) {
+      const generated = this.generateSerialNumbersData({
+        id: roll.id,
+        cartoonNumber: roll.cartoonNumber,
+        type: roll.type,
+        availableRange: roll.available_range || `${roll.fromSerial} - ${roll.toSerial}`,
+        availableCount: roll.availableCount,
+        nextSerial: roll.fromSerial,
+        percentage: 0,
+        status: roll.status as any
+      });
+
+      const ranges = generated?.serialRanges || [];
+      for (const range of ranges) {
+        if (range.status === 'DAMAGED' || (range.count > 0 && (range.damageReason || range.damageDate))) {
+          const key = `${roll.cartoonNumber}_${range.fromSerial}_${range.toSerial}`;
+          if (!recordsMap.has(key)) {
+            const officer = range.updatedBy || range.reportedBy || this.getRangeUpdatedBy(range) || roll.receivedBy || 'OIC Officer';
+            recordsMap.set(key, {
+              cartonNumber: roll.cartoonNumber,
+              hologramType: roll.type,
+              fromSerial: range.fromSerial,
+              toSerial: range.toSerial,
+              count: range.count || 1,
+              damageDate: range.damageDate || range.usedDate || roll.receivedDate,
+              referenceNo: range.referenceNo || 'N/A',
+              brandName: this.sanitizeBrandName(range.brandDetails || range.productionLine || 'N/A') || 'N/A',
+              bottleSize: range.bottleSize || '',
+              damageReason: range.damageReason || range.description || 'Damaged during production',
+              reportedBy: officer,
+              productionLine: range.productionLine
+            });
+          }
+        }
+      }
+
+      // Check roll usageHistory
+      if (Array.isArray(roll.usageHistory)) {
+        for (const u of roll.usageHistory) {
+          if (u.type === 'WASTAGE' || u.type === 'DAMAGED' || (u.quantity > 0 && u.damageReason)) {
+            const fromSerial = u.wastageFromSerial || u.fromSerial || '';
+            const toSerial = u.wastageToSerial || u.toSerial || '';
+            if (fromSerial && toSerial) {
+              const key = `${roll.cartoonNumber}_${fromSerial}_${toSerial}`;
+              if (!recordsMap.has(key)) {
+                recordsMap.set(key, {
+                  cartonNumber: u.cartoonNumber || roll.cartoonNumber,
+                  hologramType: u.hologramType || roll.type,
+                  fromSerial,
+                  toSerial,
+                  count: u.wastageQuantity || u.quantity || u.count || 1,
+                  damageDate: u.date || u.damageDate || u.approvedAt || roll.receivedDate,
+                  referenceNo: u.referenceNo || 'N/A',
+                  brandName: this.sanitizeBrandName(u.brandName || 'N/A') || 'N/A',
+                  bottleSize: u.bottleSize || '',
+                  damageReason: u.damageReason || u.reason || 'Damaged during production',
+                  reportedBy: u.approvedBy || u.officerName || roll.receivedBy || 'OIC Officer'
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 2. Extract from saved daily register entries
+    const savedEntries: any[] = Array.isArray(this.savedDailyRegisterEntries) ? this.savedDailyRegisterEntries : [];
+    for (const entry of savedEntries) {
+      const carton = entry.cartoon_number || entry.cartoonNumber || entry.roll_range || entry.rollRange || 'N/A';
+      const ref = entry.reference_no || entry.referenceNo || 'N/A';
+      const brand = this.sanitizeBrandName(entry.brand_details || entry.brandDetails || 'N/A') || 'N/A';
+      const date = entry.usage_date || entry.submission_date || entry.date || '';
+      const officer = this.pickDisplayOfficer(
+        entry.approved_by_name,
+        entry.approvedByName,
+        entry.updated_by_name,
+        entry.updatedByName,
+        entry.created_by_name,
+        entry.createdByName,
+        entry.approved_by,
+        entry.updated_by,
+        entry.created_by
+      ) || 'OIC Officer';
+      const hType = entry.hologram_type || entry.hologramType || 'LOCAL';
+
+      const wastageRanges = this.parseRangeArrayField(entry.wastage_ranges || entry.wastageRanges);
+      for (const wr of wastageRanges) {
+        const fromSerial = this.normalizeSerialValue(wr?.fromSerial ?? wr?.from_serial ?? wr?.from ?? '');
+        const toSerial = this.normalizeSerialValue(wr?.toSerial ?? wr?.to_serial ?? wr?.to ?? '');
+        const count = Number(wr?.count ?? wr?.quantity ?? 1) || 1;
+        const reason = wr?.damageReason || wr?.damage_reason || wr?.reason || entry.damage_reason || 'Damaged during production';
+
+        if (fromSerial && toSerial) {
+          const key = `${carton}_${fromSerial}_${toSerial}`;
+          if (!recordsMap.has(key)) {
+            recordsMap.set(key, {
+              cartonNumber: carton,
+              hologramType: hType,
+              fromSerial,
+              toSerial,
+              count,
+              damageDate: date,
+              referenceNo: ref,
+              brandName: brand,
+              bottleSize: entry.bottle_size || entry.bottleSize || '',
+              damageReason: reason,
+              reportedBy: officer
+            });
+          }
+        }
+      }
+
+      // Single wastage from/to
+      const singleFrom = this.normalizeSerialValue(entry.wastage_from || entry.wastageFrom || '');
+      const singleTo = this.normalizeSerialValue(entry.wastage_to || entry.wastageTo || '');
+      const singleQty = Number(entry.wastage_quantity || entry.wastageQuantity || 0);
+      if (singleFrom && singleTo && singleQty > 0) {
+        const key = `${carton}_${singleFrom}_${singleTo}`;
+        if (!recordsMap.has(key)) {
+          recordsMap.set(key, {
+            cartonNumber: carton,
+            hologramType: hType,
+            fromSerial: singleFrom,
+            toSerial: singleTo,
+            count: singleQty,
+            damageDate: date,
+            referenceNo: ref,
+            brandName: brand,
+            bottleSize: entry.bottle_size || entry.bottleSize || '',
+            damageReason: entry.damage_reason || entry.damageReason || 'Damaged during production',
+            reportedBy: officer
+          });
+        }
+      }
+    }
+
+    this.lossRecords = Array.from(recordsMap.values()).sort((a, b) => {
+      const timeA = a.damageDate ? new Date(a.damageDate).getTime() : 0;
+      const timeB = b.damageDate ? new Date(b.damageDate).getTime() : 0;
+      return timeB - timeA;
+    });
+
+    // Populate distinct filter lists
+    const brandSet = new Set<string>();
+    const cartonSet = new Set<string>();
+    this.lossRecords.forEach(r => {
+      if (r.brandName && r.brandName !== 'N/A') brandSet.add(r.brandName);
+      if (r.cartonNumber && r.cartonNumber !== 'N/A') cartonSet.add(r.cartonNumber);
+    });
+    this.distinctLossBrands = Array.from(brandSet).sort();
+    this.distinctLossCartons = Array.from(cartonSet).sort();
+
+    console.log('✅ Extracted Loss Records:', this.lossRecords.length, this.lossRecords);
+  }
+
+  applyLossFilters(): void {
+    const q = (this.lossFilters.search || '').trim().toLowerCase();
+    const brandFilter = this.lossFilters.brand;
+    const typeFilter = this.lossFilters.type;
+    const cartonFilter = this.lossFilters.carton;
+    const monthFilter = this.lossFilters.month;
+    const fromDate = this.lossFilters.dateFrom;
+    const toDate = this.lossFilters.dateTo;
+
+    this.filteredLossRecords = this.lossRecords.filter(item => {
+      if (brandFilter !== 'ALL' && item.brandName.toLowerCase() !== brandFilter.toLowerCase()) {
+        return false;
+      }
+      if (typeFilter !== 'ALL' && String(item.hologramType || '').toUpperCase() !== typeFilter) {
+        return false;
+      }
+      if (cartonFilter !== 'ALL' && item.cartonNumber !== cartonFilter) {
+        return false;
+      }
+      if (monthFilter && item.damageDate) {
+        const itemMonth = item.damageDate.substring(0, 7);
+        if (itemMonth !== monthFilter) return false;
+      }
+      if (fromDate && item.damageDate && item.damageDate < fromDate) {
+        return false;
+      }
+      if (toDate && item.damageDate && item.damageDate > toDate) {
+        return false;
+      }
+      if (q) {
+        const matchesBrand = (item.brandName || '').toLowerCase().includes(q);
+        const matchesRef = (item.referenceNo || '').toLowerCase().includes(q);
+        const matchesCarton = (item.cartonNumber || '').toLowerCase().includes(q);
+        const matchesReason = (item.damageReason || '').toLowerCase().includes(q);
+        const matchesOfficer = (item.reportedBy || '').toLowerCase().includes(q);
+        const matchesSerial = (item.fromSerial || '').toLowerCase().includes(q) || (item.toSerial || '').toLowerCase().includes(q);
+        if (!matchesBrand && !matchesRef && !matchesCarton && !matchesReason && !matchesOfficer && !matchesSerial) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    this.lossTablePage = 1;
+  }
+
+  clearLossFilters(): void {
+    this.lossFilters = {
+      search: '',
+      brand: 'ALL',
+      type: 'ALL',
+      carton: 'ALL',
+      month: '',
+      dateFrom: '',
+      dateTo: ''
+    };
+    this.applyLossFilters();
+  }
+
+  getLossTotalUnits(): number {
+    return this.filteredLossRecords.reduce((sum, r) => sum + r.count, 0);
+  }
+
+  getLossDistinctBrandsCount(): number {
+    const brands = new Set(this.filteredLossRecords.map(r => r.brandName).filter(b => b && b !== 'N/A'));
+    return brands.size;
+  }
+
+  getLossDistinctCartonsCount(): number {
+    const cartons = new Set(this.filteredLossRecords.map(r => r.cartonNumber).filter(c => c && c !== 'N/A'));
+    return cartons.size;
+  }
+
+  getLossTableRows(): HologramLossRecord[] {
+    const startIndex = (this.lossTablePage - 1) * this.lossTablePageSize;
+    return this.filteredLossRecords.slice(startIndex, startIndex + this.lossTablePageSize);
+  }
+
+  getLossTableTotalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredLossRecords.length / this.lossTablePageSize));
+  }
+
+  setLossTablePage(page: number): void {
+    if (page >= 1 && page <= this.getLossTableTotalPages()) {
+      this.lossTablePage = page;
+    }
+  }
+
+  onLossTablePageSizeChange(): void {
+    this.lossTablePage = 1;
+  }
+
+  getLossTablePaginationLabel(): string {
+    const total = this.filteredLossRecords.length;
+    if (total === 0) return '0 of 0';
+    const start = (this.lossTablePage - 1) * this.lossTablePageSize + 1;
+    const end = Math.min(this.lossTablePage * this.lossTablePageSize, total);
+    return `${start}-${end} of ${total}`;
+  }
+
+  exportLossRecordsCSV(): void {
+    if (!this.filteredLossRecords || this.filteredLossRecords.length === 0) {
+      alert('No loss records available to export.');
+      return;
+    }
+    const headers = ['Sl No', 'Date', 'Carton Number', 'Hologram Type', 'From Serial', 'To Serial', 'Quantity', 'Reference No', 'Brand Name', 'Bottle Size', 'Damage Reason', 'Reported By (OIC)'];
+    const rows = this.filteredLossRecords.map((r, i) => [
+      i + 1,
+      r.damageDate || 'N/A',
+      `"${r.cartonNumber || ''}"`,
+      r.hologramType || '',
+      `"${r.fromSerial || ''}"`,
+      `"${r.toSerial || ''}"`,
+      r.count || 0,
+      `"${r.referenceNo || ''}"`,
+      `"${r.brandName || ''}"`,
+      `"${r.bottleSize || ''}"`,
+      `"${(r.damageReason || '').replace(/"/g, '""')}"`,
+      `"${r.reportedBy || ''}"`
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `Hologram_Loss_Damage_Report_${new Date().toISOString().substring(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 
   clearSerialFilters(): void {

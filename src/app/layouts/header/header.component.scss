@@ -59,6 +59,9 @@ nav {
     min-width: 0;      // allow text to shrink
     flex: 1;
     overflow: hidden;
+    cursor: pointer;
+    text-decoration: none;
+    user-select: none;
 }
 
 .header-logo {

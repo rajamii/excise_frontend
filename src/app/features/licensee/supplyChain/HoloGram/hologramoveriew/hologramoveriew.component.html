@@ -80,13 +80,20 @@
         </div>
 
         <div class="col-xl-3 col-lg-6">
-          <div class="summary-card damaged-holograms">
+          <div class="summary-card damaged-holograms" role="button" tabindex="0" (click)="openLossDetailsModal()" (keydown.enter)="openLossDetailsModal()" style="cursor: pointer;" title="Click to view complete loss and damage breakdown">
             <div class="card-icon">
               <i class="bi bi-exclamation-triangle"></i>
             </div>
             <div class="card-content">
-              <h3 class="card-value">{{ getTotalDamagedWastage() | number }}</h3>
-              <p class="card-label">Damaged/Wastage</p>
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <h3 class="card-value">{{ getTotalDamagedWastage() | number }}</h3>
+                  <p class="card-label">Damaged/Wastage</p>
+                </div>
+                <button class="btn btn-sm btn-outline-danger mt-1 px-2.5 py-1 rounded-pill shadow-xs" (click)="$event.stopPropagation(); openLossDetailsModal()" title="View Loss Details">
+                  <i class="bi bi-eye me-1"></i>View Details
+                </button>
+              </div>
               <small class="card-change negative">{{ getPercentage(getTotalDamagedWastage(), getTotalHolograms()) |
                 number:'1.1-1' }}% of total</small>
             </div>
@@ -229,7 +236,7 @@
       <div class="row g-4 mt-2">
         <div class="col-12">
           <!-- Tabs Navigation -->
-          <ul class="nav nav-tabs mb-4">
+          <ul class="nav nav-tabs mb-4" id="hologramTabsNav">
             <li class="nav-item">
               <button class="nav-link" [class.active]="activeTab === 'rolls'" (click)="setActiveTab('rolls')">
                 <i class="bi bi-collection me-1"></i>Rolls
@@ -249,6 +256,14 @@
             <li class="nav-item">
               <button class="nav-link" [class.active]="activeTab === 'history'" (click)="setActiveTab('history')">
                 <i class="bi bi-clock-history me-1"></i>Issued History
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link text-danger" [class.active]="activeTab === 'damaged'" (click)="setActiveTab('damaged')">
+                <i class="bi bi-exclamation-triangle-fill me-1 text-danger"></i>Damaged / Loss Details
+                <span class="badge bg-danger ms-1.5 rounded-pill px-2" *ngIf="getTotalDamagedWastage() > 0">
+                  {{ getTotalDamagedWastage() | number }}
+                </span>
               </button>
             </li>
           </ul>
@@ -1085,8 +1100,241 @@
             </div>
             }
 
+            <!-- Damaged / Loss Details Tab -->
+            @if (activeTab === 'damaged') {
+            <div class="analytics-card">
+              <div class="card-header bg-white border-bottom py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div class="d-flex align-items-center">
+                  <div class="d-flex align-items-center justify-content-center bg-danger bg-opacity-10 text-danger rounded-3 p-2 me-3" style="width: 44px; height: 44px;">
+                    <i class="bi bi-exclamation-octagon-fill fs-4"></i>
+                  </div>
+                  <div>
+                    <h5 class="card-title mb-0 fw-bold text-dark">
+                      Damaged & Wastage Holograms Audit Log
+                    </h5>
+                    <small class="text-muted">Detailed register of damaged units, hologram ranges, cartons, and OIC verified loss reasons</small>
+                  </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <button type="button" class="btn btn-outline-danger btn-sm px-3" (click)="exportLossRecordsCSV()" [disabled]="filteredLossRecords.length === 0">
+                    <i class="bi bi-file-earmark-spreadsheet me-1"></i>Export CSV
+                  </button>
+                  <span class="badge bg-danger rounded-pill px-3 py-2 fs-7">{{ filteredLossRecords.length }} Incident(s)</span>
+                </div>
+              </div>
+              <div class="card-body p-4">
 
-          </div>
+                <!-- Summary Cards for Loss -->
+                <div class="row g-3 mb-4">
+                  <div class="col-xl-3 col-sm-6">
+                    <div class="avail-stat-card avail-defence">
+                      <div class="avail-stat-icon" style="background: linear-gradient(135deg, #ef4444, #dc2626);"><i class="bi bi-exclamation-octagon-fill"></i></div>
+                      <div class="avail-stat-content">
+                        <div class="avail-stat-value text-danger">{{ getLossTotalUnits() | number }}</div>
+                        <div class="avail-stat-label text-danger">Total Holograms Lost</div>
+                        <div class="avail-stat-sub">Across all cartons</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-xl-3 col-sm-6">
+                    <div class="avail-stat-card avail-defence">
+                      <div class="avail-stat-icon"><i class="bi bi-card-checklist"></i></div>
+                      <div class="avail-stat-content">
+                        <div class="avail-stat-value">{{ filteredLossRecords.length | number }}</div>
+                        <div class="avail-stat-label">Loss Incidents</div>
+                        <div class="avail-stat-sub">Reported by OIC</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-xl-3 col-sm-6">
+                    <div class="avail-stat-card avail-local">
+                      <div class="avail-stat-icon"><i class="bi bi-tag-fill"></i></div>
+                      <div class="avail-stat-content">
+                        <div class="avail-stat-value">{{ getLossDistinctBrandsCount() | number }}</div>
+                        <div class="avail-stat-label">Brands Affected</div>
+                        <div class="avail-stat-sub">Associated brands</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-xl-3 col-sm-6">
+                    <div class="avail-stat-card avail-total">
+                      <div class="avail-stat-icon"><i class="bi bi-box-seam-fill"></i></div>
+                      <div class="avail-stat-content">
+                        <div class="avail-stat-value">{{ getLossDistinctCartonsCount() | number }}</div>
+                        <div class="avail-stat-label">Cartons Affected</div>
+                        <div class="avail-stat-sub">Active cartons</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Loss Filter Bar -->
+                <div class="avail-filter-bar mb-3">
+                  <div class="avail-filter-label">
+                    <i class="bi bi-funnel-fill me-1 text-danger"></i>
+                    <span>Filters</span>
+                  </div>
+                  <div class="avail-filter-controls">
+                    <div class="avail-filter-item">
+                      <label class="avail-filter-label-text">Search</label>
+                      <input type="text" class="form-control form-control-sm avail-filter-input" [(ngModel)]="lossFilters.search" (input)="applyLossFilters()" placeholder="Brand, ref, carton...">
+                    </div>
+                    <div class="avail-filter-item">
+                      <label class="avail-filter-label-text">Brand</label>
+                      <select class="form-select form-select-sm avail-filter-select" [(ngModel)]="lossFilters.brand" (change)="applyLossFilters()">
+                        <option value="ALL">All Brands</option>
+                        <option *ngFor="let b of distinctLossBrands" [value]="b">{{ b }}</option>
+                      </select>
+                    </div>
+                    <div class="avail-filter-item">
+                      <label class="avail-filter-label-text">Carton Number</label>
+                      <select class="form-select form-select-sm avail-filter-select" [(ngModel)]="lossFilters.carton" (change)="applyLossFilters()">
+                        <option value="ALL">All Cartons</option>
+                        <option *ngFor="let c of distinctLossCartons" [value]="c">{{ c }}</option>
+                      </select>
+                    </div>
+                    <div class="avail-filter-item">
+                      <label class="avail-filter-label-text">Type</label>
+                      <select class="form-select form-select-sm avail-filter-select" [(ngModel)]="lossFilters.type" (change)="applyLossFilters()">
+                        <option value="ALL">All Types</option>
+                        <option value="LOCAL">Local</option>
+                        <option value="EXPORT">Export</option>
+                        <option value="DEFENCE">Defence</option>
+                      </select>
+                    </div>
+                    <div class="avail-filter-item">
+                      <label class="avail-filter-label-text">Month</label>
+                      <select class="form-select form-select-sm avail-filter-select" [(ngModel)]="lossFilters.month" (change)="applyLossFilters()">
+                        <option value="">All Months</option>
+                        <option *ngFor="let month of months" [value]="month.value">{{ month.label }}</option>
+                      </select>
+                    </div>
+                    <div class="avail-filter-item">
+                      <label class="avail-filter-label-text">Date From</label>
+                      <input type="date" class="form-control form-control-sm avail-filter-input" [(ngModel)]="lossFilters.dateFrom" (change)="applyLossFilters()">
+                    </div>
+                    <div class="avail-filter-item">
+                      <label class="avail-filter-label-text">Date To</label>
+                      <input type="date" class="form-control form-control-sm avail-filter-input" [(ngModel)]="lossFilters.dateTo" (change)="applyLossFilters()">
+                    </div>
+                    <div class="avail-filter-item avail-filter-clear">
+                      <button class="btn btn-sm avail-clear-btn" (click)="clearLossFilters()">
+                        <i class="bi bi-x-circle me-1"></i>Clear
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Pagination Top Bar -->
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                  <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted fw-bold">Rows per page</small>
+                    <select class="form-select form-select-sm w-auto page-size-select" [(ngModel)]="lossTablePageSize"
+                      (change)="onLossTablePageSizeChange()">
+                      <option *ngFor="let size of lossPageSizeOptions" [ngValue]="size">{{ size }}</option>
+                    </select>
+                  </div>
+                  <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted">{{ getLossTablePaginationLabel() }}</small>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setLossTablePage(1)"
+                      [disabled]="lossTablePage <= 1" title="First page">First</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setLossTablePage(lossTablePage - 1)"
+                      [disabled]="lossTablePage <= 1">Prev</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setLossTablePage(lossTablePage + 1)"
+                      [disabled]="lossTablePage >= getLossTableTotalPages()">Next</button>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="setLossTablePage(getLossTableTotalPages())"
+                      [disabled]="lossTablePage >= getLossTableTotalPages()" title="Last page">Last</button>
+                  </div>
+                </div>
+
+                <!-- Main Loss Table -->
+                <div class="table-responsive">
+                  <table class="table table-hover table-bordered align-middle mb-0">
+                    <thead class="table-danger">
+                      <tr>
+                        <th class="ps-3" style="width: 50px;">#</th>
+                        <th style="min-width: 130px;">Date Reported</th>
+                        <th style="min-width: 140px;">Request Ref</th>
+                        <th style="min-width: 120px;">Carton Number</th>
+                        <th style="min-width: 80px;">Type</th>
+                        <th style="min-width: 150px;">Hologram Range</th>
+                        <th class="text-end" style="min-width: 110px;">Loss Qty</th>
+                        <th style="min-width: 200px;">Brand Name & Size</th>
+                        <th style="min-width: 220px;">Reason for Loss</th>
+                        <th class="pe-3" style="min-width: 160px;">Reported By (OIC)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (record of getLossTableRows(); track record.fromSerial + '_' + record.toSerial; let i = $index) {
+                      <tr>
+                        <td class="ps-3 text-muted fw-semibold">{{ (lossTablePage - 1) * lossTablePageSize + i + 1 }}</td>
+                        <td>
+                          <div class="fw-semibold text-dark">
+                            <i class="bi bi-calendar-event text-danger me-1"></i>
+                            {{ record.damageDate | date:'dd-MMM-yyyy' }}
+                          </div>
+                          <small class="text-muted" *ngIf="record.damageDate">{{ record.damageDate | date:'EEEE' }}</small>
+                        </td>
+                        <td>
+                          <span class="badge bg-light text-primary border border-primary-subtle font-monospace fw-bold fs-7 px-2.5 py-1">
+                            {{ record.referenceNo || '-' }}
+                          </span>
+                        </td>
+                        <td>
+                          <span class="font-monospace fw-bold text-dark">
+                            {{ record.cartonNumber }}
+                          </span>
+                        </td>
+                        <td>
+                          <span class="badge" [class]="getTypeClass(record.hologramType)">
+                            {{ record.hologramType }}
+                          </span>
+                        </td>
+                        <td>
+                          <div class="font-monospace fw-bold text-danger">
+                            {{ record.fromSerial }} <span class="text-muted mx-1">to</span> {{ record.toSerial }}
+                          </div>
+                        </td>
+                        <td class="text-end">
+                          <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1 fs-6 fw-bold">
+                            {{ record.count | number }} units
+                          </span>
+                        </td>
+                        <td>
+                          <div class="fw-bold text-success">{{ record.brandName }}</div>
+                          <small class="text-muted" *ngIf="record.bottleSize">
+                            <i class="bi bi-cup me-1"></i>Bottle Size: <strong>{{ record.bottleSize }}</strong>
+                          </small>
+                        </td>
+                        <td>
+                          <div class="d-flex align-items-start">
+                            <i class="bi bi-exclamation-triangle-fill text-danger me-1.5 mt-0.5 flex-shrink-0"></i>
+                            <span class="fw-semibold text-dark">{{ record.damageReason }}</span>
+                          </div>
+                        </td>
+                        <td class="pe-3">
+                          <div class="d-flex align-items-center">
+                            <i class="bi bi-person-badge text-secondary me-1.5 flex-shrink-0"></i>
+                            <span class="text-secondary fw-semibold">{{ record.reportedBy }}</span>
+                          </div>
+                        </td>
+                      </tr>
+                      } @empty {
+                      <tr>
+                        <td colspan="10" class="text-center text-muted py-5">
+                          <i class="bi bi-check-circle-fill display-4 text-success d-block mb-3"></i>
+                          <h6 class="fw-bold text-dark">No Loss or Damaged Hologram Records Found</h6>
+                          <small class="text-muted">Any damaged or wasted holograms submitted by the OIC will appear in this audit log.</small>
+                        </td>
+                      </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+
+              </div>
+            </div>
+            }
         </div>
       </div>
 

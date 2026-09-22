@@ -2020,8 +2020,21 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   getArrivalLostBulkLiter(): number {
+    if (this.arrivalPermitNumbers.length > 0) {
+      let totalLoss = 0;
+      for (const permitNo of Object.keys(this.arrivalSavedEntriesByPermit)) {
+        const expected = this.getArrivalExpectedBulkLiterForPermit(permitNo) || 0;
+        const rows = this.arrivalSavedEntriesByPermit[permitNo] || [];
+        const entered = rows.reduce((s, r) => s + (Number(r?.bulk_liter) || 0), 0);
+        if (entered > 0 && expected > entered) {
+          totalLoss += (expected - entered);
+        }
+      }
+      return Math.max(0, totalLoss);
+    }
     const allowed = this.getArrivalAllowedBulkLiter() || 0;
     const entered = this.getArrivalTotalBulkLiter() || 0;
+    if (entered <= 0) return 0;
     return Math.max(0, allowed - entered);
   }
 
@@ -2033,6 +2046,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     const expected = this.getArrivalExpectedBulkLiterForPermit(permitNo);
     if (expected == null || expected <= 0) return 0;
     const entered = this.getArrivalPermitDraftTotalBulkLiter() || 0;
+    if (entered <= 0) return 0;
     return Math.max(0, expected - entered);
   }
 
@@ -2114,6 +2128,46 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     this.arrivalPermitRevisionByPermit[permitNo] = (this.arrivalPermitRevisionByPermit[permitNo] || 0) + 1;
   }
 
+  onArrivalPermitBulkLiterChange(row: any, index: number): void {
+    this.markArrivalPermitDirty();
+    const permitNo = String(this.selectedArrivalPermitNo || '').trim();
+    const expected = this.getArrivalExpectedBulkLiterForPermit(permitNo);
+    const entered = this.getArrivalPermitDraftTotalBulkLiter();
+    if (expected != null && entered - expected > 0.0001) {
+      this.arrivalErrorMessage = `Entered bulk liter (${entered.toFixed(2)} BL) exceeds expected amount (${expected.toFixed(2)} BL) for Permit ${permitNo}. You can enter less than or equal to expected, but not more.`;
+    } else {
+      this.arrivalErrorMessage = '';
+    }
+  }
+
+  onArrivalTankerWiseBulkLiterChange(row: any, index: number): void {
+    const maxTotal = this.getArrivalAllowedBulkLiter();
+    const entered = this.getArrivalTotalBulkLiter();
+    if (maxTotal > 0 && entered - maxTotal > 0.0001) {
+      this.arrivalErrorMessage = `Entered total bulk liter (${entered.toFixed(2)} BL) exceeds requested total quantity (${maxTotal.toFixed(2)} BL). Please reduce the quantity.`;
+    } else {
+      this.arrivalErrorMessage = '';
+    }
+  }
+
+  isArrivalPermitDraftOverfilled(): boolean {
+    const permitNo = String(this.selectedArrivalPermitNo || '').trim();
+    if (!permitNo) return false;
+    const expected = this.getArrivalExpectedBulkLiterForPermit(permitNo);
+    if (expected == null || expected <= 0) return false;
+    const entered = this.getArrivalPermitDraftTotalBulkLiter();
+    return entered - expected > 0.0001;
+  }
+
+  getArrivalPermitDraftOverfilledAmount(): number {
+    const permitNo = String(this.selectedArrivalPermitNo || '').trim();
+    if (!permitNo) return 0;
+    const expected = this.getArrivalExpectedBulkLiterForPermit(permitNo);
+    if (expected == null || expected <= 0) return 0;
+    const entered = this.getArrivalPermitDraftTotalBulkLiter();
+    return Math.max(0, entered - expected);
+  }
+
   addArrivalPermitTankerRow(): void {
     if (this.isArrivalPermitLocked(this.selectedArrivalPermitNo)) return;
     this.arrivalPermitDraftEntries.push({ permit_no: this.selectedArrivalPermitNo, tanker_no: '', bulk_liter: null });
@@ -2145,8 +2199,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     const expected = this.getArrivalExpectedBulkLiterForPermit(permitNo);
     if (expected == null || expected <= 0) return false;
     const entered = this.getArrivalPermitDraftTotalBulkLiter();
-    // Underfilled means strictly less than expected (after rounding tolerance).
-    return expected - entered > 0.0001;
+    // Underfilled means entered is positive (> 0) and strictly less than expected
+    return entered > 0 && (expected - entered > 0.0001);
   }
 
   isArrivalPermitSaved(permitNo: string): boolean {
@@ -2176,12 +2230,12 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
     const invalid = normalized.find((x) => !x.tanker_no || !Number.isFinite(x.bulk_liter) || x.bulk_liter <= 0);
     if (invalid) {
-      return { ok: false, message: `Please enter valid tanker number and bulk liter for tanker row ${invalid.row}.` };
+      return { ok: false, message: `Please enter valid tanker/vehicle number and bulk liter for tanker row ${invalid.row}.` };
     }
 
     const sum = normalized.reduce((s, x) => s + x.bulk_liter, 0);
     if (sum - expected > 0.0001) {
-      return { ok: false, message: `Total bulk liter for permit ${permitNo} cannot exceed ${expected.toFixed(2)}.` };
+      return { ok: false, message: `Entered bulk liter (${sum.toFixed(2)} BL) exceeds expected amount (${expected.toFixed(2)} BL) for Permit ${permitNo}. You can enter less, but not more than expected.` };
     }
 
     return { ok: true, message: '' };
@@ -2191,6 +2245,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     if (this.isArrivalSaving) return false;
     if (this.arrivalPermitNumbers.length === 0) return false;
     if (this.isArrivalPermitLocked(this.selectedArrivalPermitNo)) return false;
+    if (this.isArrivalPermitDraftOverfilled()) return false;
     return this.isArrivalPermitDraftValid().ok;
   }
 
@@ -2303,7 +2358,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
           const tankerNo = String(r?.tanker_no || '').trim();
           const liters = Number(r?.bulk_liter ?? 0);
           if (!tankerNo || !Number.isFinite(liters) || liters <= 0) {
-            return { ok: false, message: `Please enter valid tanker number and bulk liter for permit ${permitNo} row ${idx + 1}.` };
+            return { ok: false, message: `Please enter valid tanker/vehicle number and bulk liter for permit ${permitNo} row ${idx + 1}.` };
           }
           flattened.push({ permit_no: permitNo, tanker_no: tankerNo, bulk_liter: liters });
         }
@@ -2325,7 +2380,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
     const invalidRow = normalizedRows.find((row) => !row.tanker_no || !Number.isFinite(row.bulk_liter) || row.bulk_liter <= 0);
     if (invalidRow) {
-      return { ok: false, message: `Please enter valid tanker number and bulk liter for row ${invalidRow.row}.` };
+      return { ok: false, message: `Please enter valid tanker/vehicle number and bulk liter for row ${invalidRow.row}.` };
     }
 
     return {

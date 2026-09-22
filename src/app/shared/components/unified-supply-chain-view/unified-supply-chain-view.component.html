@@ -2270,16 +2270,16 @@
                             <i class="bi bi-credit-card-2-front-fill me-2"></i>Make Payment
                         </button>
 
-                        <!-- View Payment Slip: shown for requisition after final approval (all roles) -->
+                        <!-- View Payment Slip: shown for requisition after payment is made -->
                         <button class="btn btn-warning btn-lg application-footer-actions__print" type="button"
-                                *ngIf="isRequisition() && isApprovedApplication()"
+                                *ngIf="canViewPaymentSlip()"
                                 (click)="openPaymentSlipView()">
                             <i class="bi bi-receipt me-2"></i>View Payment Slip
                         </button>
 
                         <!-- View Permit Slip: shown for ENA bulk spirit requisition after final approval (commissioner & permit-section only) -->
                         <button class="btn btn-success btn-lg application-footer-actions__print" type="button"
-                                *ngIf="isRequisition() && isApprovedApplication() && !isLicenseeContext() && !isImflRequisition()"
+                                *ngIf="canViewPermitSlip()"
                                 (click)="openPermitSlipView()">
                             <i class="bi bi-file-earmark-text me-2"></i>View Permit Slip
                         </button>

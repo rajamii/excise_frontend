@@ -3,9 +3,9 @@
     <div class="container-fluid">
 
       <!-- Logo + Title -->
-      <a class="navbar-brand logo">
+      <a class="navbar-brand logo" (click)="home()" role="button" tabindex="0" (keyup.enter)="home()">
         <div class="header-logo">
-          <img class="logo-img" src="assets/icons/fav-icon.png" (click)="home()" alt="SEMS Logo" />
+          <img class="logo-img" src="assets/icons/fav-icon.png" alt="SEMS Logo" />
         </div>
         <div class="header-text">
           <span class="navbar-title">Sikkim Excise Management System (SEMS)</span>

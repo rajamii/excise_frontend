@@ -238,6 +238,16 @@ export class BulkSpiritUsageComponent implements OnInit {
     return this.getSelectedSpiritAvailableBL();
   }
 
+  get pendingUsageRequest(): BulkSpiritUsageRecord | undefined {
+    return this.usageHistory.find(item => 
+      String(item.status || '').toLowerCase().includes('pending')
+    );
+  }
+
+  get hasPendingRequest(): boolean {
+    return !!this.pendingUsageRequest;
+  }
+
   isQuantityValid(): boolean {
     const qty = Number(this.requestedQuantity || 0);
     const available = this.getSelectedSpiritAvailableBL();
@@ -245,11 +255,11 @@ export class BulkSpiritUsageComponent implements OnInit {
   }
 
   isFormValid(): boolean {
-    return this.isQuantityValid();
+    return !this.hasPendingRequest && this.isQuantityValid();
   }
 
   submitUsage(): void {
-    if (!this.isQuantityValid()) return;
+    if (!this.isFormValid()) return;
 
     this.submitting = true;
     this.errorMessage = '';
@@ -275,7 +285,8 @@ export class BulkSpiritUsageComponent implements OnInit {
       },
       error: (err: any) => {
         this.submitting = false;
-        const msg = err?.error?.quantity || err?.error?.bulkSpiritType || err?.error?.bulk_spirit_type || err?.error?.message || err?.message || 'Failed to submit usage request.';
+        const errObj = err?.error;
+        const msg = errObj?.non_field_errors || errObj?.detail || errObj?.quantity || errObj?.bulkSpiritType || errObj?.bulk_spirit_type || errObj?.message || err?.message || 'Failed to submit usage request.';
         this.errorMessage = Array.isArray(msg) ? msg.join(' ') : String(msg);
       }
     });

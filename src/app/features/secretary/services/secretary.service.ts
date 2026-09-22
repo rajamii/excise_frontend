@@ -17,6 +17,88 @@ export interface BrandStock {
   status?: string;
 }
 
+export interface BLHistoryItem {
+  id?: string;
+  entry_type?: 'ARRIVAL' | 'USAGE';
+  direction?: 'IN' | 'OUT';
+  date?: string;
+  reference_no?: string;
+  permit_numbers_str?: string;
+  bulk_spirit_type?: string;
+  source_or_distillery?: string;
+  destination_purpose?: string;
+  quantity?: number;
+  lost_bl?: number;
+  tanker_count?: number;
+  tanker_details?: Array<{ permit_no?: string; tanker_no?: string; bulk_liter?: number }>;
+  status?: string;
+  submitted_by?: string;
+  reviewed_by?: string;
+  reviewed_at?: string;
+  remarks?: string;
+}
+
+export interface StorageTankItem {
+  tank_id?: string;
+  spirit_type?: string;
+  capacity_bl?: number;
+  current_volume_bl?: number;
+  fill_percentage?: number;
+  status?: string;
+  total_inflow_bl?: number;
+  total_outflow_bl?: number;
+  total_loss_bl?: number;
+}
+
+export interface RequisitionItem {
+  id?: number;
+  reference_no?: string;
+  requisition_date?: string;
+  bulk_spirit_type?: string;
+  total_bl?: number;
+  dispatched_bl?: number;
+  check_post_name?: string;
+  status?: string;
+  purpose_name?: string;
+  lifted_from?: string;
+  permits_number?: string;
+  valid_up_to?: string;
+}
+
+export interface TransitItem {
+  id?: string;
+  transit_pass_no?: string;
+  vehicle_no?: string;
+  driver_name?: string;
+  transporter_name?: string;
+  destination?: string;
+  brand?: string;
+  cases?: number;
+  dispatched_volume_bl?: number;
+  expiry_date?: string;
+  status?: string;
+  created_at?: string;
+}
+
+export interface HologramLossItem {
+  id?: number;
+  reference_no?: string;
+  usage_date?: string;
+  carton_number?: string;
+  hologram_type?: string;
+  brand_name?: string;
+  bottle_size?: string;
+  wastage_qty?: number;
+  wastage_from?: string;
+  wastage_to?: string;
+  serial_range?: string;
+  damage_reason?: string;
+  approval_status?: string;
+  approved_by?: string;
+  approved_at?: string;
+  rejection_reason?: string;
+}
+
 export interface ManufacturingFactory {
   id?: string;
   establishment_name?: string;
@@ -32,13 +114,23 @@ export interface ManufacturingFactory {
   status?: string;
   is_approved?: boolean;
   stock_bl?: number;
+  total_arrivals_bl?: number;
+  total_usages_bl?: number;
+  total_pending_usages_bl?: number;
+  total_lost_bl?: number;
   total_requisitions_count?: number;
   total_bl_requested?: number;
   pending_requisitions_count?: number;
   approved_requisitions_count?: number;
   active_transit_permits_count?: number;
   dispatched_bl?: number;
+  storage_tanks?: Array<StorageTankItem>;
   brand_stocks?: Array<BrandStock>;
+  bl_history?: Array<BLHistoryItem>;
+  requisitions?: Array<RequisitionItem>;
+  transits?: Array<TransitItem>;
+  hologram_losses?: Array<HologramLossItem>;
+  total_hologram_losses_count?: number;
 }
 
 export interface SecretaryBulkSpiritSummary {

@@ -283,6 +283,7 @@ export class HologramprocurementComponent implements OnInit {
     const isCommissioner =
       roleName.includes('commissioner') ||
       roleName.includes('site_admin') ||
+      roleName.includes('site admin') ||
       roleName.includes('admin') ||
       roleName.includes('it_cell') ||
       roleName.includes('itcell') ||
@@ -295,40 +296,60 @@ export class HologramprocurementComponent implements OnInit {
       this.currentScopedLicenseId = this.resolveCurrentScopedLicenseId();
     }
     const scopedLicense = String(this.currentScopedLicenseId || '').trim();
-    if (!scopedLicense) return rows || [];
-
     const allowed = new Set(this.expandLicenseAliases(scopedLicense));
+
+    const myUnit = String(
+      this.currentUnitName ||
+      user?.oic_assignment?.establishment_name ||
+      user?.oic_assignment?.manufacturing_unit_name ||
+      user?.manufacturing_unit_name ||
+      user?.establishment_name ||
+      ''
+    ).trim().toLowerCase();
+
+    const myUsername = String(user?.username || '').trim().toLowerCase();
+    const myUserId = user?.id;
+
     return (rows || []).filter((row: any) => {
+      // 1. Match by direct user ID or username
+      const rowUserId = row?.licensee?.user?.id || row?.licensee?.user_id || row?.user_id || row?.applicant_id;
+      const rowUsername = String(row?.licensee?.user?.username || row?.applicant?.username || row?.username || '').trim().toLowerCase();
+      if (myUserId && rowUserId && String(myUserId) === String(rowUserId)) {
+        return true;
+      }
+      if (myUsername && rowUsername && myUsername === rowUsername) {
+        return true;
+      }
+
+      // 2. Match by license ID
       const rowLicense =
         this.pickFirstNonEmpty(row, ['license_id', 'licenseId', 'licensee_id', 'licenseeId']) ||
         this.pickFirstNonEmpty(row?.supplyChainData, ['license_id', 'licenseId', 'licensee_id', 'licenseeId']) ||
         (typeof row?.license === 'string' ? row.license : row?.license?.license_id) ||
         row?.licensee?.licensee_id;
 
-      if (!rowLicense) {
-        // Match by manufacturing unit name or distillery name if present
-        const rowUnit = String(
-          row?.manufacturingUnit ||
-          row?.manufacturing_unit ||
-          row?.companyName ||
-          row?.licenseeName ||
-          row?.licensee_name ||
-          ''
-        ).trim().toLowerCase();
-        const myUnit = String(
-          this.currentUnitName ||
-          user?.oic_assignment?.establishment_name ||
-          user?.oic_assignment?.manufacturing_unit_name ||
-          user?.manufacturing_unit_name ||
-          user?.establishment_name ||
-          ''
-        ).trim().toLowerCase();
-        if (rowUnit && myUnit && (rowUnit === myUnit || rowUnit.includes(myUnit) || myUnit.includes(rowUnit))) {
+      if (rowLicense && scopedLicense) {
+        if (this.expandLicenseAliases(rowLicense).some((alias) => allowed.has(alias))) {
           return true;
         }
-        return false;
       }
-      return this.expandLicenseAliases(rowLicense).some((alias) => allowed.has(alias));
+
+      // 3. Match by unit name
+      const rowUnit = String(
+        row?.manufacturingUnit ||
+        row?.manufacturing_unit ||
+        row?.companyName ||
+        row?.licenseeName ||
+        row?.licensee_name ||
+        row?.licensee?.manufacturing_unit_name ||
+        ''
+      ).trim().toLowerCase();
+
+      if (rowUnit && myUnit && (rowUnit === myUnit || rowUnit.includes(myUnit) || myUnit.includes(rowUnit))) {
+        return true;
+      }
+
+      return false;
     });
   }
 

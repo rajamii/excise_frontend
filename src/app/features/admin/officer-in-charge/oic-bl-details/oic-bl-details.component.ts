@@ -434,7 +434,7 @@ interface BlDetailRow {
                   <thead>
                     <tr>
                       <th>#</th>
-                      <th>Tanker Number</th>
+                      <th>Tanker/Vehicle Number</th>
                       <th class="text-end">Expected BL</th>
                       <th>Bulk Liter</th>
                       <th *ngIf="detailsEditMode" class="text-end">Edit</th>
@@ -445,7 +445,7 @@ interface BlDetailRow {
                       <tr *ngFor="let draftIndex of detailsVisibleDraftPermitIndices; let i = index">
                         <td>{{ i + 1 }}</td>
                         <td>
-                          <input class="details-input" [(ngModel)]="detailsDraft!.tankerDetails[draftIndex].tanker_no" placeholder="Tanker no" />
+                          <input class="details-input" [(ngModel)]="detailsDraft!.tankerDetails[draftIndex].tanker_no" placeholder="Tanker/Vehicle no" />
                         </td>
                         <td class="text-end">
                           {{ getExpectedBulkLiterForPermit(details, detailsSelectedPermitNo) | number:'1.2-2' }}
@@ -478,7 +478,7 @@ interface BlDetailRow {
                     <thead>
                       <tr>
                         <th>#</th>
-                        <th>Tanker Number</th>
+                        <th>Tanker/Vehicle Number</th>
                         <th>Bulk Liter</th>
                         <th *ngIf="detailsEditMode" class="text-end">Edit</th>
                       </tr>
@@ -491,7 +491,7 @@ interface BlDetailRow {
                             {{ item.tanker_no || '-' }}
                           </ng-container>
                           <ng-template #editTankerNo2>
-                            <input class="details-input" [(ngModel)]="detailsDraft!.tankerDetails[i].tanker_no" placeholder="Tanker no" />
+                            <input class="details-input" [(ngModel)]="detailsDraft!.tankerDetails[i].tanker_no" placeholder="Tanker/Vehicle no" />
                           </ng-template>
                         </td>
                         <td>

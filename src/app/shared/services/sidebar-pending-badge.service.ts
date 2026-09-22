@@ -374,6 +374,7 @@ export class SidebarPendingBadgeService {
         if (audience === 'licensee') {
           return this.hologramService.getProcurements().pipe(
             map((items) => this.toArray(items)),
+            map((items) => this.filterByScopedLicense(items)),
             map((items) => this.countHologramPendingReview(items))
           );
         }
