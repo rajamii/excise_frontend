@@ -243,8 +243,13 @@ export class SupplyChainService {
       .pipe(map((response: any) => response.results || response || []));
   }
 
-  getRevalidationData(): Observable<any[]> {
-    return this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/`).pipe(
+  getRevalidationData(forceRefresh = false): Observable<any[]> {
+    const cacheKey = 'revalidations:list';
+    if (forceRefresh) {
+      this.invalidateCache(cacheKey);
+    }
+
+    return this.getCachedOrFetch(cacheKey, () => this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/`).pipe(
       map((response: any) => {
         if (Array.isArray(response)) {
           return response;
@@ -257,7 +262,7 @@ export class SupplyChainService {
         console.error('getRevalidationData error', error);
         return of([]);
       })
-    );
+    ));
   }
 
   getRevalidationDetail(id: string): Observable<any> {
@@ -339,8 +344,13 @@ export class SupplyChainService {
     );
   }
 
-  getCancellations(): Observable<any[]> {
-    return this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/?_t=${Date.now()}`).pipe(
+  getCancellations(forceRefresh = false): Observable<any[]> {
+    const cacheKey = 'cancellations:list';
+    if (forceRefresh) {
+      this.invalidateCache(cacheKey);
+    }
+
+    return this.getCachedOrFetch(cacheKey, () => this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/`).pipe(
       map((response: any) => {
         if (Array.isArray(response)) return response;
         if (response?.results) return response.results;
@@ -350,11 +360,11 @@ export class SupplyChainService {
         console.error('getCancellations error', error);
         return of([]);
       })
-    );
+    ));
   }
 
-  getCancellationData(): Observable<any[]> {
-    return this.getCancellations();
+  getCancellationData(forceRefresh = false): Observable<any[]> {
+    return this.getCancellations(forceRefresh);
   }
 
   getCancellationDetail(id: string): Observable<any> {
@@ -431,9 +441,14 @@ export class SupplyChainService {
   getTransitPermits(billNo?: string, forceRefresh = false): Observable<any[]> {
     const rawBill = String(billNo || '').trim();
     let url = `${environment.apiBaseUrl}/transactional/supply_chain/transit-permits/`;
+    const cacheKey = `transit-permits:${rawBill || 'all'}`;
+    if (forceRefresh) {
+      this.invalidateCache(cacheKey);
+    }
+
     if (rawBill) {
-      url += `?bill_no=${encodeURIComponent(rawBill)}&_t=${Date.now()}`;
-      return this.http.get<any[]>(url).pipe(
+      const params = new HttpParams().set('bill_no', rawBill);
+      return this.getCachedOrFetch(cacheKey, () => this.http.get<any[]>(url, { params }).pipe(
         map((response: any) => {
           if (Array.isArray(response)) return response;
           if (response?.results) return response.results;
@@ -441,8 +456,8 @@ export class SupplyChainService {
         }),
         catchError((error) => {
           console.error('getTransitPermits error, trying public endpoint fallback', error);
-          const publicUrl = `${environment.apiBaseUrl}/transactional/supply_chain/transit-permits/public/?bill_no=${encodeURIComponent(rawBill)}&_t=${Date.now()}`;
-          return this.http.get<any[]>(publicUrl).pipe(
+          const publicUrl = `${environment.apiBaseUrl}/transactional/supply_chain/transit-permits/public/`;
+          return this.http.get<any[]>(publicUrl, { params }).pipe(
             map((resp: any) => {
               if (Array.isArray(resp)) return resp;
               if (resp?.results) return resp.results;
@@ -451,10 +466,11 @@ export class SupplyChainService {
             catchError(() => of([]))
           );
         })
-      );
+      ));
     }
 
-    return this.http.get<any[]>(`${url}?_t=${Date.now()}`).pipe(
+    const requestUrl = forceRefresh ? `${url}?_t=${Date.now()}` : url;
+    return this.getCachedOrFetch(cacheKey, () => this.http.get<any[]>(requestUrl).pipe(
       map((response: any) => {
         if (Array.isArray(response)) return response;
         if (response?.results) return response.results;
@@ -464,7 +480,7 @@ export class SupplyChainService {
         console.error('getTransitPermits error', error);
         return of([]);
       })
-    );
+    ));
   }
 
   submitTransitPermit(payload: any): Observable<any> {

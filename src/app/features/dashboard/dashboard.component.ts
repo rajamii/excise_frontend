@@ -773,7 +773,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   public loadSupplyChainModuleStats(
     prefetched?: { hologram?: any[]; requisition?: any[]; revalidation?: any[]; cancellation?: any[]; transit?: any[] },
-    onComplete?: () => void
+    onComplete?: () => void,
+    forceRefresh = false
   ): void {
     const isAdminOrOfficer = [1, 3, 5, 6, 7, 9, 10, 11, 12].includes(Number(this.currentUser?.roleId || 0));
     if (!this.isLicenseeUser() && !this.isDistributorUser() && !isAdminOrOfficer) {
@@ -794,8 +795,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Distributor OIC only processes Distributor Permit Requisition and Brand Arrival
     if (this.isDistributorOic()) {
-      const distReq$ = this.distributorPermitService.getDashboardCounts('requisition').pipe(catchError(() => of(null)));
-      const distArr$ = this.distributorPermitService.getDashboardCounts('brand-arrival').pipe(catchError(() => of(null)));
+      const distReq$ = this.distributorPermitService.getDashboardCounts('requisition', forceRefresh).pipe(catchError(() => of(null)));
+      const distArr$ = this.distributorPermitService.getDashboardCounts('brand-arrival', forceRefresh).pipe(catchError(() => of(null)));
 
       forkJoin({ distReq: distReq$, distArr: distArr$ })
         .pipe(
@@ -846,23 +847,23 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     const rev$ = prefetched?.revalidation
       ? of(prefetched.revalidation)
-      : this.supplyChainService.getRevalidationData().pipe(catchError(() => of([])));
+      : this.supplyChainService.getRevalidationData(forceRefresh).pipe(catchError(() => of([])));
 
     const can$ = prefetched?.cancellation
       ? of(prefetched.cancellation)
-      : this.supplyChainService.getCancellationData().pipe(catchError(() => of([])));
+      : this.supplyChainService.getCancellationData(forceRefresh).pipe(catchError(() => of([])));
 
     const tra$ = (skipTransit)
       ? (prefetched?.transit ? of(prefetched.transit) : of([] as any[]))
       : prefetched?.transit
         ? of(prefetched.transit)
-        : this.supplyChainService.getTransitPermits().pipe(catchError(() => of([])));
+        : this.supplyChainService.getTransitPermits(undefined, forceRefresh).pipe(catchError(() => of([])));
 
     const hol$ = isPermitSection
       ? of([] as any[])
       : prefetched?.hologram
         ? of(prefetched.hologram)
-        : this.hologramService.getProcurements().pipe(catchError(() => of([])));
+        : this.hologramService.getProcurements(forceRefresh).pipe(catchError(() => of([])));
 
     // Company registration — only for Permit Section
     const comp$ = isPermitSection
@@ -883,24 +884,24 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       : of([] as any[]);
 
     const holReq$ = isOIC
-      ? this.hologramService.getRequests().pipe(catchError(() => of([])))
+      ? this.hologramService.getRequests(forceRefresh).pipe(catchError(() => of([])))
       : of([] as any[]);
 
     const shouldLoadDistributorPermitCounts = this.isDistributorUser() || isAdminOrOfficer || isITCell || isCommissioner;
     const distReq$ = shouldLoadDistributorPermitCounts
-      ? this.distributorPermitService.getDashboardCounts('requisition', true).pipe(catchError(() => of(null)))
+      ? this.distributorPermitService.getDashboardCounts('requisition', forceRefresh).pipe(catchError(() => of(null)))
       : of(null as any);
     const distRev$ = shouldLoadDistributorPermitCounts
-      ? this.distributorPermitService.getDashboardCounts('revalidation', true).pipe(catchError(() => of(null)))
+      ? this.distributorPermitService.getDashboardCounts('revalidation', forceRefresh).pipe(catchError(() => of(null)))
       : of(null as any);
     const distCan$ = shouldLoadDistributorPermitCounts
-      ? this.distributorPermitService.getDashboardCounts('cancellation', true).pipe(catchError(() => of(null)))
+      ? this.distributorPermitService.getDashboardCounts('cancellation', forceRefresh).pipe(catchError(() => of(null)))
       : of(null as any);
     const distArr$ = shouldLoadDistributorPermitCounts
-      ? this.distributorPermitService.getDashboardCounts('brand-arrival', true).pipe(catchError(() => of(null)))
+      ? this.distributorPermitService.getDashboardCounts('brand-arrival', forceRefresh).pipe(catchError(() => of(null)))
       : of(null as any);
     const distHolo$ = shouldLoadDistributorPermitCounts
-      ? this.distributorPermitService.getDashboardCounts('hologram-procurement', true).pipe(catchError(() => of(null)))
+      ? this.distributorPermitService.getDashboardCounts('hologram-procurement', forceRefresh).pipe(catchError(() => of(null)))
       : of(null as any);
 
     forkJoin({ req: req$, rev: rev$, can: can$, tra: tra$, hol: hol$, comp: comp$, collab: collab$, bld: bld$, holReq: holReq$, distReq: distReq$, distRev: distRev$, distCan: distCan$, distArr: distArr$, distHolo: distHolo$ })
@@ -2304,11 +2305,27 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.loadUserActivities();
         }
 
-        // Refresh dashboard data smoothly using cached stats when navigating back or switching sections
+        // Sidebar section changes only update the query param; keep dashboard stats in memory
+        // instead of re-running the dashboard loader for every tab switch.
         if (this.dashboardInitLoadHandled) {
-          this.loadDashboardData(false);
+          this.refreshDashboardAfterSectionNavigation();
         }
       });
+  }
+
+  private refreshDashboardAfterSectionNavigation(): void {
+    if (this.dashboardLoadInFlight) {
+      return;
+    }
+
+    if (this.supplyChainModuleStatsLoaded) {
+      this.updateSingleWindowChart();
+      this.isLoading = false;
+      this.isChartLoading = false;
+      return;
+    }
+
+    this.loadDashboardData(false);
   }
 
   get activitySectionTitle(): string {
@@ -3360,7 +3377,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       this.isChartLoading = false;
       this.isLoading = false;
       this.applicationsLoaded = true;
-      this.loadSupplyChainModuleStats();
+      this.loadSupplyChainModuleStats(undefined, undefined, forceRefresh);
       return;
     }
 
@@ -3463,7 +3480,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.refreshOicActionPendingCount();
           this.loadSupplyChainModuleStats(undefined, () => {
             this.isChartLoading = false;
-          });
+          }, forceRefresh);
           this.updateSingleWindowChart();
           this.dashboardLoadInFlight = false;
         },
@@ -3650,7 +3667,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.refreshOicActionPendingCount();
           // Pass the already-fetched hologram data so loadSupplyChainModuleStats
           // does not re-fetch it, eliminating a duplicate /hologram/procurement/ call.
-          this.loadSupplyChainModuleStats({ hologram: result.hologramProcurements || [] });
+          this.loadSupplyChainModuleStats({ hologram: result.hologramProcurements || [] }, undefined, forceRefresh);
           this.updateSingleWindowChart();
           this.dashboardLoadInFlight = false;
         },
@@ -3670,7 +3687,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     if (this.isDistributorOic()) {
       this.applicationsLoaded = true;
-      this.loadSupplyChainModuleStats();
+      this.loadSupplyChainModuleStats(undefined, undefined, forceRefresh);
       return;
     }
 
@@ -3754,7 +3771,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             rejected: filteredApplications.rejected
           });
 
-          this.loadSupplyChainModuleStats({ hologram: result.hologramProcurements || [] });
+          this.loadSupplyChainModuleStats({ hologram: result.hologramProcurements || [] }, undefined, forceRefresh);
           this.updateSingleWindowChart();
         },
         error: (error) => {

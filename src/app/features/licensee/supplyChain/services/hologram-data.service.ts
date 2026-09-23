@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, BehaviorSubject, map, forkJoin, of, catchError, finalize, shareReplay, tap } from 'rxjs';
+import { Observable, BehaviorSubject, Subject, map, forkJoin, of, catchError, finalize, shareReplay, tap } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 import { secureRandomToken } from '../../../../core/utils/secure-random';
 
@@ -205,19 +205,19 @@ export class HologramDataService {
   public dailyEntries$ = this.dailyEntriesSubject.asObservable();
 
   // Subject for notifying when hologram arrivals are updated
-  private arrivalUpdateSubject = new BehaviorSubject<void>(undefined);
+  private arrivalUpdateSubject = new Subject<void>();
   public arrivalUpdate$ = this.arrivalUpdateSubject.asObservable();
 
   // Subject for notifying when hologram requests are updated (allocation, approval, etc.)
-  private requestUpdateSubject = new BehaviorSubject<void>(undefined);
+  private requestUpdateSubject = new Subject<void>();
   public requestUpdate$ = this.requestUpdateSubject.asObservable();
 
   // Subject for notifying when daily register entries are updated (save, approve, etc.)
-  private dailyRegisterUpdateSubject = new BehaviorSubject<void>(undefined);
+  private dailyRegisterUpdateSubject = new Subject<void>();
   public dailyRegisterUpdate$ = this.dailyRegisterUpdateSubject.asObservable();
 
   // Subject for notifying when monthly statement needs to be refreshed
-  private monthlyStatementUpdateSubject = new BehaviorSubject<void>(undefined);
+  private monthlyStatementUpdateSubject = new Subject<void>();
   public monthlyStatementUpdate$ = this.monthlyStatementUpdateSubject.asObservable();
 
   private readonly APPROVED_ENTRIES_KEY = 'approvedHologramEntries';
@@ -288,7 +288,13 @@ export class HologramDataService {
   // --- Procurement APIs ---
 
   getProcurements(force = false): Observable<HologramProcurement[]> {
-    return this.http.get<HologramProcurement[]>(`${this.apiUrl}/procurement/`);
+    const cacheKey = 'procurements:list';
+    if (force) {
+      this.invalidateCache(cacheKey);
+    }
+    return this.getCachedOrFetch(cacheKey, () =>
+      this.http.get<HologramProcurement[]>(`${this.apiUrl}/procurement/`)
+    );
   }
 
   createProcurement(data: HologramProcurement): Observable<HologramProcurement> {
@@ -334,7 +340,13 @@ export class HologramDataService {
   // --- Request APIs ---
 
   getRequests(force = false): Observable<HologramRequest[]> {
-    return this.http.get<HologramRequest[]>(`${this.apiUrl}/request/`);
+    const cacheKey = 'requests:list';
+    if (force) {
+      this.invalidateCache(cacheKey);
+    }
+    return this.getCachedOrFetch(cacheKey, () =>
+      this.http.get<HologramRequest[]>(`${this.apiUrl}/request/`)
+    );
   }
 
   createRequest(data: HologramRequest): Observable<HologramRequest> {
