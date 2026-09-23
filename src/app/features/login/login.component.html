@@ -62,6 +62,19 @@
 
           <div class="panel-logo-greeting">
             <img src="assets/icons/fav-icon-black.png" alt="Sikkim Excise" class="panel-logo-img" />
+            <div class="mountain-divider">
+              <svg class="mountain-divider-svg" viewBox="0 0 160 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 16 L45 6 L70 13 L95 2 L120 12 L150 16" stroke="url(#dividerGradFront)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="95" cy="2" r="2.5" fill="#f59e0b"/>
+                <defs>
+                  <linearGradient id="dividerGradFront" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stop-color="#0f766e" stop-opacity="0.1"/>
+                    <stop offset="50%" stop-color="#0f766e" stop-opacity="0.9"/>
+                    <stop offset="100%" stop-color="#0f766e" stop-opacity="0.1"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
             <h2 class="greeting-text">Hello!</h2>
           </div>
 
@@ -288,90 +301,131 @@
               </div>
             </div>
 
-            <!-- Architectural Building Line Art Illustration -->
+            <!-- Floating Sikkim Excise Emblem in Sky -->
+            <div class="mountain-emblem-crest">
+              <div class="crest-halo">
+                <img src="assets/images/sikkim-excise-logo.png" alt="Sikkim State Excise Emblem" class="mountain-crest-img" />
+              </div>
+            </div>
+
+            <!-- Sikkim Himalayan Mountain Landscape Footer Illustration -->
             <div class="art-illustration-wrap" aria-hidden="true">
-              <svg class="govt-buildings-svg" viewBox="0 0 520 420" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <!-- Background soft glow circles -->
-                <circle cx="280" cy="210" r="140" fill="rgba(15, 118, 110, 0.04)" />
-                <circle cx="280" cy="210" r="100" stroke="rgba(15, 118, 110, 0.09)" stroke-width="1.5" stroke-dasharray="4 4" />
+              <svg class="sikkim-mountains-svg" viewBox="0 0 520 380" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="skySunGlowFront" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#fef3c7" stop-opacity="0.85"/>
+                    <stop offset="50%" stop-color="#ccfbf1" stop-opacity="0.4"/>
+                    <stop offset="100%" stop-color="#f0fdfa" stop-opacity="0"/>
+                  </linearGradient>
+                  <linearGradient id="peakSnowLightFront" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#ffffff"/>
+                    <stop offset="100%" stop-color="#e0f2fe"/>
+                  </linearGradient>
+                  <linearGradient id="peakSnowShadeFront" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#cffafe"/>
+                    <stop offset="100%" stop-color="#99f6e4"/>
+                  </linearGradient>
+                  <linearGradient id="midSlopeLeftFront" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#5eead4"/>
+                    <stop offset="100%" stop-color="#14b8a6"/>
+                  </linearGradient>
+                  <linearGradient id="midSlopeRightFront" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#0d9488"/>
+                    <stop offset="100%" stop-color="#0f766e"/>
+                  </linearGradient>
+                </defs>
 
-                <!-- Far Left Angled building -->
-                <path d="M40 390 L90 310 L130 340 L130 420 L40 420 Z" fill="#ccfbf1" stroke="#0f4c40" stroke-width="2.4" stroke-linejoin="round"/>
-                <line x1="55" y1="385" x2="85" y2="335" stroke="#0f4c40" stroke-width="1.8" />
-                <line x1="65" y1="400" x2="95" y2="350" stroke="#0f4c40" stroke-width="1.8" />
-                <line x1="75" y1="415" x2="105" y2="365" stroke="#0f4c40" stroke-width="1.8" />
+                <!-- Ambient Morning Sun / Dawn Glow (Himalayan Sunrise) -->
+                <circle cx="260" cy="130" r="115" fill="url(#skySunGlowFront)"/>
+                <circle cx="260" cy="130" r="82" stroke="rgba(251, 191, 36, 0.35)" stroke-width="1.5" stroke-dasharray="6 6"/>
+                <circle cx="260" cy="130" r="52" fill="rgba(254, 243, 199, 0.6)"/>
+                <circle cx="260" cy="130" r="34" fill="#fef08a" opacity="0.75"/>
 
-                <!-- Back Mid Building (Stepped roof) -->
-                <path d="M80 250 L170 170 L240 210 L240 420 L80 420 Z" fill="#e0f2fe" stroke="#0f4c40" stroke-width="2.4" stroke-linejoin="round"/>
-                <line x1="95" y1="270" x2="155" y2="215" stroke="#0f4c40" stroke-width="2" />
-                <line x1="100" y1="295" x2="160" y2="240" stroke="#0f4c40" stroke-width="2" />
-                <line x1="105" y1="320" x2="165" y2="265" stroke="#0f4c40" stroke-width="2" />
-                <line x1="110" y1="345" x2="170" y2="290" stroke="#0f4c40" stroke-width="2" />
-                <line x1="115" y1="370" x2="175" y2="315" stroke="#0f4c40" stroke-width="2" />
+                <!-- High Altitude Geospatial Guide Lines -->
+                <path d="M50 200 Q260 145 470 200" stroke="rgba(15, 118, 110, 0.14)" stroke-width="1.2" stroke-dasharray="4 4"/>
+                <path d="M80 160 Q260 110 440 160" stroke="rgba(15, 118, 110, 0.09)" stroke-width="1" stroke-dasharray="3 3"/>
 
-                <!-- Left Perspective Tower -->
-                <path d="M130 420 L170 180 L240 140 L280 420 Z" fill="#f0fdfa" stroke="#0f4c40" stroke-width="2.4" stroke-linejoin="round"/>
-                <path d="M170 180 L210 420" stroke="#0f4c40" stroke-width="2" />
-                <line x1="220" y1="180" x2="260" y2="220" stroke="#0f4c40" stroke-width="2"/>
-                <line x1="225" y1="210" x2="265" y2="250" stroke="#0f4c40" stroke-width="2"/>
-                <line x1="230" y1="240" x2="270" y2="280" stroke="#0f4c40" stroke-width="2"/>
-                <line x1="235" y1="270" x2="275" y2="310" stroke="#0f4c40" stroke-width="2"/>
-                <line x1="240" y1="300" x2="278" y2="338" stroke="#0f4c40" stroke-width="2"/>
-                <line x1="245" y1="330" x2="280" y2="365" stroke="#0f4c40" stroke-width="2"/>
+                <!-- ── DISTANT BACKGROUND PEAKS (Mount Kanchenjunga Range) ── -->
+                <polygon points="40,380 130,165 220,380" fill="#e0f2fe" opacity="0.75"/>
+                <polygon points="130,165 220,380 130,380" fill="#bae6fd" opacity="0.85"/>
 
-                <!-- Middle Center Main Tall Government Tower -->
-                <path d="M260 420 L260 110 L310 70 L355 95 L355 420 Z" fill="#ffffff" stroke="#0f4c40" stroke-width="2.5" stroke-linejoin="round"/>
-                <path d="M310 70 L310 420" stroke="#0f4c40" stroke-width="2.5" />
-                <g stroke="#0f4c40" stroke-width="2" stroke-linecap="round">
-                  <line x1="275" y1="130" x2="275" y2="400" stroke-dasharray="6 8" />
-                  <line x1="287" y1="130" x2="287" y2="400" stroke-dasharray="6 8" />
-                  <line x1="298" y1="130" x2="298" y2="400" stroke-dasharray="6 8" />
-                  <line x1="324" y1="115" x2="324" y2="400" stroke-dasharray="6 8" />
-                  <line x1="340" y1="125" x2="340" y2="400" stroke-dasharray="6 8" />
+                <polygon points="305,380 400,150 495,380" fill="#e0f2fe" opacity="0.75"/>
+                <polygon points="400,150 495,380 400,380" fill="#bae6fd" opacity="0.85"/>
+
+                <!-- ── MAIN CENTRAL HIMALAYAN SUMMIT (Kanchenjunga Massif) ── -->
+                <polygon points="110,380 260,60 260,380" fill="url(#peakSnowLightFront)"/>
+                <polygon points="260,60 415,380 260,380" fill="url(#peakSnowShadeFront)"/>
+                <polyline points="260,60 258,150 262,240 260,380" stroke="#0f766e" stroke-width="2.4" stroke-linecap="round"/>
+                
+                <!-- Snow-cap Facet Details -->
+                <polygon points="260,60 215,125 260,140" fill="#ffffff"/>
+                <polygon points="215,125 170,190 235,200 258,150" fill="#f0fdfa"/>
+                <polygon points="170,190 125,270 205,280 235,200" fill="#ccfbf1"/>
+                
+                <polygon points="260,60 305,130 260,140" fill="#a5f3fc"/>
+                <polygon points="305,130 350,200 285,210 258,150" fill="#67e8f9"/>
+                <polygon points="350,200 395,280 315,290 285,210" fill="#22d3ee"/>
+
+                <!-- ── MIDGROUND ALPINE RIDGES ── -->
+                <polygon points="10,380 120,190 245,380" fill="url(#midSlopeLeftFront)" opacity="0.92"/>
+                <polygon points="120,190 245,380 155,380" fill="url(#midSlopeRightFront)" opacity="0.75"/>
+                <polyline points="120,190 140,270 155,380" stroke="#0f4c40" stroke-width="2.2"/>
+                <polygon points="120,190 95,230 124,235 140,215" fill="#ffffff"/>
+
+                <polygon points="265,380 375,175 490,380" fill="url(#midSlopeLeftFront)" opacity="0.88"/>
+                <polygon points="375,175 490,380 405,380" fill="url(#midSlopeRightFront)" opacity="0.78"/>
+                <polyline points="375,175 390,260 405,380" stroke="#0f4c40" stroke-width="2.2"/>
+                <polygon points="375,175 350,215 380,222 397,202" fill="#ffffff"/>
+
+                <!-- ── LOWER FOOTHILLS & FORESTS ── -->
+                <path d="M0,380 L0,300 Q85,260 185,310 L265,380 Z" fill="#14b8a6" stroke="#0f4c40" stroke-width="2"/>
+                <path d="M0,325 Q75,295 155,335" stroke="#0f4c40" stroke-width="1.5" stroke-dasharray="5 7"/>
+
+                <path d="M245,380 L325,295 Q425,260 520,305 L520,380 Z" fill="#0f766e" stroke="#0f4c40" stroke-width="2"/>
+                <path d="M345,325 Q435,290 520,325" stroke="#042f2e" stroke-width="1.5" stroke-dasharray="5 7"/>
+
+                <!-- Foreground Slope -->
+                <path d="M0,380 L0,335 Q130,300 260,340 Q390,310 520,345 L520,380 Z" fill="#0f4c40" stroke="#042f2e" stroke-width="2.4"/>
+
+                <!-- ── SIKKIM ALPINE PINE TREES ── -->
+                <g class="pine-tree">
+                  <line x1="70" y1="320" x2="70" y2="380" stroke="#042f2e" stroke-width="2.5" stroke-linecap="round"/>
+                  <polygon points="70,275 53,310 87,310" fill="#0d9488" stroke="#042f2e" stroke-width="1.8"/>
+                  <polygon points="70,295 47,335 93,335" fill="#0f766e" stroke="#042f2e" stroke-width="1.8"/>
+                  <polygon points="70,315 43,355 97,355" fill="#115e59" stroke="#042f2e" stroke-width="1.8"/>
                 </g>
 
-                <!-- Front Accent Block (Warm peach/gold) -->
-                <path d="M210 420 L210 320 L270 280 L305 305 L305 420 Z" fill="#ffedd5" stroke="#0f4c40" stroke-width="2.4" stroke-linejoin="round"/>
-                <path d="M270 280 L270 420" stroke="#0f4c40" stroke-width="2" />
-                <g stroke="#0f4c40" stroke-width="2">
-                  <line x1="220" y1="340" x2="260" y2="315" />
-                  <line x1="220" y1="360" x2="260" y2="335" />
-                  <line x1="220" y1="380" x2="260" y2="355" />
-                  <line x1="220" y1="400" x2="260" y2="375" />
+                <g class="pine-tree">
+                  <line x1="115" y1="335" x2="115" y2="380" stroke="#042f2e" stroke-width="2" stroke-linecap="round"/>
+                  <polygon points="115,295 102,322 128,322" fill="#14b8a6" stroke="#042f2e" stroke-width="1.5"/>
+                  <polygon points="115,310 97,340 133,340" fill="#0d9488" stroke="#042f2e" stroke-width="1.5"/>
+                  <polygon points="115,328 93,358 137,358" fill="#0f766e" stroke="#042f2e" stroke-width="1.5"/>
                 </g>
 
-                <!-- Right Tower -->
-                <path d="M355 420 L355 180 L420 220 L450 420 Z" fill="#f0fdf4" stroke="#0f4c40" stroke-width="2.4" stroke-linejoin="round"/>
-                <path d="M420 220 L420 420" stroke="#0f4c40" stroke-width="2" />
-                <g stroke="#0f4c40" stroke-width="2" stroke-linecap="round">
-                  <line x1="375" y1="210" x2="375" y2="400" stroke-dasharray="5 7" />
-                  <line x1="395" y1="220" x2="395" y2="400" stroke-dasharray="5 7" />
-                  <line x1="410" y1="230" x2="410" y2="400" stroke-dasharray="5 7" />
+                <g class="pine-tree">
+                  <line x1="225" y1="345" x2="225" y2="380" stroke="#042f2e" stroke-width="2.2" stroke-linecap="round"/>
+                  <polygon points="225,305 210,330 240,330" fill="#2dd4bf" stroke="#042f2e" stroke-width="1.6"/>
+                  <polygon points="225,320 205,348 245,348" fill="#0d9488" stroke="#042f2e" stroke-width="1.6"/>
+                  <polygon points="225,335 200,362 250,362" fill="#0f766e" stroke="#042f2e" stroke-width="1.6"/>
                 </g>
 
-                <!-- Far Right Structure -->
-                <path d="M440 420 L440 280 L495 240 L515 420 Z" fill="#ccfbf1" stroke="#0f4c40" stroke-width="2.4" stroke-linejoin="round"/>
-                <line x1="460" y1="300" x2="460" y2="410" stroke="#0f4c40" stroke-width="1.8" stroke-dasharray="4 6" />
-                <line x1="480" y1="310" x2="480" y2="410" stroke="#0f4c40" stroke-width="1.8" stroke-dasharray="4 6" />
-
-                <!-- Stylized Trees -->
-                <g class="building-tree">
-                  <line x1="90" y1="390" x2="90" y2="420" stroke="#0f4c40" stroke-width="2.4" stroke-linecap="round"/>
-                  <path d="M90 345 C75 345 65 360 65 378 C65 395 77 405 90 405 C103 405 115 395 115 378 C115 360 105 345 90 345 Z" fill="#ffffff" stroke="#0f4c40" stroke-width="2.4"/>
-                  <path d="M90 365 L90 395 M90 378 L80 370 M90 385 L100 377" stroke="#0f4c40" stroke-width="1.8" stroke-linecap="round"/>
+                <g class="pine-tree">
+                  <line x1="430" y1="315" x2="430" y2="380" stroke="#042f2e" stroke-width="2.5" stroke-linecap="round"/>
+                  <polygon points="430,265 411,302 449,302" fill="#0d9488" stroke="#042f2e" stroke-width="1.8"/>
+                  <polygon points="430,285 405,328 455,328" fill="#0f766e" stroke="#042f2e" stroke-width="1.8"/>
+                  <polygon points="430,308 399,352 461,352" fill="#115e59" stroke="#042f2e" stroke-width="1.8"/>
                 </g>
 
-                <g class="building-tree">
-                  <line x1="410" y1="375" x2="410" y2="420" stroke="#0f4c40" stroke-width="2.4" stroke-linecap="round"/>
-                  <path d="M410 325 C390 325 380 345 380 368 C380 390 395 402 410 402 C425 402 440 390 440 368 C440 345 430 325 410 325 Z" fill="#ffffff" stroke="#0f4c40" stroke-width="2.4"/>
-                  <path d="M410 345 L410 395 M410 360 L398 350 M410 370 L422 360" stroke="#0f4c40" stroke-width="1.8" stroke-linecap="round"/>
+                <g class="pine-tree">
+                  <line x1="475" y1="330" x2="475" y2="380" stroke="#042f2e" stroke-width="2" stroke-linecap="round"/>
+                  <polygon points="475,290 461,318 489,318" fill="#14b8a6" stroke="#042f2e" stroke-width="1.5"/>
+                  <polygon points="475,308 455,338 495,338" fill="#0d9488" stroke="#042f2e" stroke-width="1.5"/>
+                  <polygon points="475,326 450,356 500,356" fill="#0f766e" stroke="#042f2e" stroke-width="1.5"/>
                 </g>
 
-                <g class="building-tree">
-                  <line x1="465" y1="385" x2="465" y2="420" stroke="#0f4c40" stroke-width="2.4" stroke-linecap="round"/>
-                  <path d="M465 345 C450 345 440 360 440 378 C440 395 452 405 465 405 C478 405 490 395 490 378 C490 360 480 345 465 345 Z" fill="#ffffff" stroke="#0f4c40" stroke-width="2.4"/>
-                  <path d="M465 365 L465 395 M465 378 L455 370 M465 385 L475 377" stroke="#0f4c40" stroke-width="1.8" stroke-linecap="round"/>
-                </g>
+                <!-- Soaring Eagles -->
+                <path d="M185 110 Q193 104 201 110 Q209 104 217 110 Q201 115 185 110 Z" fill="#0f766e" opacity="0.65"/>
+                <path d="M325 90 Q331 85 337 90 Q343 85 349 90 Q337 94 325 90 Z" fill="#0f766e" opacity="0.5"/>
               </svg>
             </div>
           </div>
@@ -390,6 +444,19 @@
 
           <div class="panel-logo-greeting">
             <img src="assets/icons/fav-icon-black.png" alt="Sikkim Excise" class="panel-logo-img" />
+            <div class="mountain-divider">
+              <svg class="mountain-divider-svg" viewBox="0 0 160 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 16 L45 6 L70 13 L95 2 L120 12 L150 16" stroke="url(#dividerGradBack)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="95" cy="2" r="2.5" fill="#f59e0b"/>
+                <defs>
+                  <linearGradient id="dividerGradBack" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stop-color="#0f766e" stop-opacity="0.1"/>
+                    <stop offset="50%" stop-color="#0f766e" stop-opacity="0.9"/>
+                    <stop offset="100%" stop-color="#0f766e" stop-opacity="0.1"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
             <h2 class="greeting-text">Hello!</h2>
           </div>
 
@@ -631,81 +698,131 @@
               </div>
             </div>
 
-            <!-- Architectural Building Line Art Illustration -->
+            <!-- Floating Sikkim Excise Emblem in Sky -->
+            <div class="mountain-emblem-crest">
+              <div class="crest-halo">
+                <img src="assets/images/sikkim-excise-logo.png" alt="Sikkim State Excise Emblem" class="mountain-crest-img" />
+              </div>
+            </div>
+
+            <!-- Sikkim Himalayan Mountain Landscape Footer Illustration -->
             <div class="art-illustration-wrap" aria-hidden="true">
-              <svg class="govt-buildings-svg" viewBox="0 0 520 420" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="280" cy="210" r="140" fill="rgba(15, 118, 110, 0.04)" />
-                <circle cx="280" cy="210" r="100" stroke="rgba(15, 118, 110, 0.09)" stroke-width="1.5" stroke-dasharray="4 4" />
+              <svg class="sikkim-mountains-svg" viewBox="0 0 520 380" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="skySunGlowBack" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#fef3c7" stop-opacity="0.85"/>
+                    <stop offset="50%" stop-color="#ccfbf1" stop-opacity="0.4"/>
+                    <stop offset="100%" stop-color="#f0fdfa" stop-opacity="0"/>
+                  </linearGradient>
+                  <linearGradient id="peakSnowLightBack" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#ffffff"/>
+                    <stop offset="100%" stop-color="#e0f2fe"/>
+                  </linearGradient>
+                  <linearGradient id="peakSnowShadeBack" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#cffafe"/>
+                    <stop offset="100%" stop-color="#99f6e4"/>
+                  </linearGradient>
+                  <linearGradient id="midSlopeLeftBack" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#5eead4"/>
+                    <stop offset="100%" stop-color="#14b8a6"/>
+                  </linearGradient>
+                  <linearGradient id="midSlopeRightBack" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#0d9488"/>
+                    <stop offset="100%" stop-color="#0f766e"/>
+                  </linearGradient>
+                </defs>
 
-                <path d="M40 390 L90 310 L130 340 L130 420 L40 420 Z" fill="#ccfbf1" stroke="#0f4c40" stroke-width="2.4" stroke-linejoin="round"/>
-                <line x1="55" y1="385" x2="85" y2="335" stroke="#0f4c40" stroke-width="1.8" />
-                <line x1="65" y1="400" x2="95" y2="350" stroke="#0f4c40" stroke-width="1.8" />
-                <line x1="75" y1="415" x2="105" y2="365" stroke="#0f4c40" stroke-width="1.8" />
+                <!-- Ambient Morning Sun / Dawn Glow (Himalayan Sunrise) -->
+                <circle cx="260" cy="130" r="115" fill="url(#skySunGlowBack)"/>
+                <circle cx="260" cy="130" r="82" stroke="rgba(251, 191, 36, 0.35)" stroke-width="1.5" stroke-dasharray="6 6"/>
+                <circle cx="260" cy="130" r="52" fill="rgba(254, 243, 199, 0.6)"/>
+                <circle cx="260" cy="130" r="34" fill="#fef08a" opacity="0.75"/>
 
-                <path d="M80 250 L170 170 L240 210 L240 420 L80 420 Z" fill="#e0f2fe" stroke="#0f4c40" stroke-width="2.4" stroke-linejoin="round"/>
-                <line x1="95" y1="270" x2="155" y2="215" stroke="#0f4c40" stroke-width="2" />
-                <line x1="100" y1="295" x2="160" y2="240" stroke="#0f4c40" stroke-width="2" />
-                <line x1="105" y1="320" x2="165" y2="265" stroke="#0f4c40" stroke-width="2" />
-                <line x1="110" y1="345" x2="170" y2="290" stroke="#0f4c40" stroke-width="2" />
-                <line x1="115" y1="370" x2="175" y2="315" stroke="#0f4c40" stroke-width="2" />
+                <!-- High Altitude Geospatial Guide Lines -->
+                <path d="M50 200 Q260 145 470 200" stroke="rgba(15, 118, 110, 0.14)" stroke-width="1.2" stroke-dasharray="4 4"/>
+                <path d="M80 160 Q260 110 440 160" stroke="rgba(15, 118, 110, 0.09)" stroke-width="1" stroke-dasharray="3 3"/>
 
-                <path d="M130 420 L170 180 L240 140 L280 420 Z" fill="#f0fdfa" stroke="#0f4c40" stroke-width="2.4" stroke-linejoin="round"/>
-                <path d="M170 180 L210 420" stroke="#0f4c40" stroke-width="2" />
-                <line x1="220" y1="180" x2="260" y2="220" stroke="#0f4c40" stroke-width="2"/>
-                <line x1="225" y1="210" x2="265" y2="250" stroke="#0f4c40" stroke-width="2"/>
-                <line x1="230" y1="240" x2="270" y2="280" stroke="#0f4c40" stroke-width="2"/>
-                <line x1="235" y1="270" x2="275" y2="310" stroke="#0f4c40" stroke-width="2"/>
-                <line x1="240" y1="300" x2="278" y2="338" stroke="#0f4c40" stroke-width="2"/>
-                <line x1="245" y1="330" x2="280" y2="365" stroke="#0f4c40" stroke-width="2"/>
+                <!-- ── DISTANT BACKGROUND PEAKS (Mount Kanchenjunga Range) ── -->
+                <polygon points="40,380 130,165 220,380" fill="#e0f2fe" opacity="0.75"/>
+                <polygon points="130,165 220,380 130,380" fill="#bae6fd" opacity="0.85"/>
 
-                <path d="M260 420 L260 110 L310 70 L355 95 L355 420 Z" fill="#ffffff" stroke="#0f4c40" stroke-width="2.5" stroke-linejoin="round"/>
-                <path d="M310 70 L310 420" stroke="#0f4c40" stroke-width="2.5" />
-                <g stroke="#0f4c40" stroke-width="2" stroke-linecap="round">
-                  <line x1="275" y1="130" x2="275" y2="400" stroke-dasharray="6 8" />
-                  <line x1="287" y1="130" x2="287" y2="400" stroke-dasharray="6 8" />
-                  <line x1="298" y1="130" x2="298" y2="400" stroke-dasharray="6 8" />
-                  <line x1="324" y1="115" x2="324" y2="400" stroke-dasharray="6 8" />
-                  <line x1="340" y1="125" x2="340" y2="400" stroke-dasharray="6 8" />
+                <polygon points="305,380 400,150 495,380" fill="#e0f2fe" opacity="0.75"/>
+                <polygon points="400,150 495,380 400,380" fill="#bae6fd" opacity="0.85"/>
+
+                <!-- ── MAIN CENTRAL HIMALAYAN SUMMIT (Kanchenjunga Massif) ── -->
+                <polygon points="110,380 260,60 260,380" fill="url(#peakSnowLightBack)"/>
+                <polygon points="260,60 415,380 260,380" fill="url(#peakSnowShadeBack)"/>
+                <polyline points="260,60 258,150 262,240 260,380" stroke="#0f766e" stroke-width="2.4" stroke-linecap="round"/>
+                
+                <!-- Snow-cap Facet Details -->
+                <polygon points="260,60 215,125 260,140" fill="#ffffff"/>
+                <polygon points="215,125 170,190 235,200 258,150" fill="#f0fdfa"/>
+                <polygon points="170,190 125,270 205,280 235,200" fill="#ccfbf1"/>
+                
+                <polygon points="260,60 305,130 260,140" fill="#a5f3fc"/>
+                <polygon points="305,130 350,200 285,210 258,150" fill="#67e8f9"/>
+                <polygon points="350,200 395,280 315,290 285,210" fill="#22d3ee"/>
+
+                <!-- ── MIDGROUND ALPINE RIDGES ── -->
+                <polygon points="10,380 120,190 245,380" fill="url(#midSlopeLeftBack)" opacity="0.92"/>
+                <polygon points="120,190 245,380 155,380" fill="url(#midSlopeRightBack)" opacity="0.75"/>
+                <polyline points="120,190 140,270 155,380" stroke="#0f4c40" stroke-width="2.2"/>
+                <polygon points="120,190 95,230 124,235 140,215" fill="#ffffff"/>
+
+                <polygon points="265,380 375,175 490,380" fill="url(#midSlopeLeftBack)" opacity="0.88"/>
+                <polygon points="375,175 490,380 405,380" fill="url(#midSlopeRightBack)" opacity="0.78"/>
+                <polyline points="375,175 390,260 405,380" stroke="#0f4c40" stroke-width="2.2"/>
+                <polygon points="375,175 350,215 380,222 397,202" fill="#ffffff"/>
+
+                <!-- ── LOWER FOOTHILLS & FORESTS ── -->
+                <path d="M0,380 L0,300 Q85,260 185,310 L265,380 Z" fill="#14b8a6" stroke="#0f4c40" stroke-width="2"/>
+                <path d="M0,325 Q75,295 155,335" stroke="#0f4c40" stroke-width="1.5" stroke-dasharray="5 7"/>
+
+                <path d="M245,380 L325,295 Q425,260 520,305 L520,380 Z" fill="#0f766e" stroke="#0f4c40" stroke-width="2"/>
+                <path d="M345,325 Q435,290 520,325" stroke="#042f2e" stroke-width="1.5" stroke-dasharray="5 7"/>
+
+                <!-- Foreground Slope -->
+                <path d="M0,380 L0,335 Q130,300 260,340 Q390,310 520,345 L520,380 Z" fill="#0f4c40" stroke="#042f2e" stroke-width="2.4"/>
+
+                <!-- ── SIKKIM ALPINE PINE TREES ── -->
+                <g class="pine-tree">
+                  <line x1="70" y1="320" x2="70" y2="380" stroke="#042f2e" stroke-width="2.5" stroke-linecap="round"/>
+                  <polygon points="70,275 53,310 87,310" fill="#0d9488" stroke="#042f2e" stroke-width="1.8"/>
+                  <polygon points="70,295 47,335 93,335" fill="#0f766e" stroke="#042f2e" stroke-width="1.8"/>
+                  <polygon points="70,315 43,355 97,355" fill="#115e59" stroke="#042f2e" stroke-width="1.8"/>
                 </g>
 
-                <path d="M210 420 L210 320 L270 280 L305 305 L305 420 Z" fill="#ffedd5" stroke="#0f4c40" stroke-width="2.4" stroke-linejoin="round"/>
-                <path d="M270 280 L270 420" stroke="#0f4c40" stroke-width="2" />
-                <g stroke="#0f4c40" stroke-width="2">
-                  <line x1="220" y1="340" x2="260" y2="315" />
-                  <line x1="220" y1="360" x2="260" y2="335" />
-                  <line x1="220" y1="380" x2="260" y2="355" />
-                  <line x1="220" y1="400" x2="260" y2="375" />
+                <g class="pine-tree">
+                  <line x1="115" y1="335" x2="115" y2="380" stroke="#042f2e" stroke-width="2" stroke-linecap="round"/>
+                  <polygon points="115,295 102,322 128,322" fill="#14b8a6" stroke="#042f2e" stroke-width="1.5"/>
+                  <polygon points="115,310 97,340 133,340" fill="#0d9488" stroke="#042f2e" stroke-width="1.5"/>
+                  <polygon points="115,328 93,358 137,358" fill="#0f766e" stroke="#042f2e" stroke-width="1.5"/>
                 </g>
 
-                <path d="M355 420 L355 180 L420 220 L450 420 Z" fill="#f0fdf4" stroke="#0f4c40" stroke-width="2.4" stroke-linejoin="round"/>
-                <path d="M420 220 L420 420" stroke="#0f4c40" stroke-width="2" />
-                <g stroke="#0f4c40" stroke-width="2" stroke-linecap="round">
-                  <line x1="375" y1="210" x2="375" y2="400" stroke-dasharray="5 7" />
-                  <line x1="395" y1="220" x2="395" y2="400" stroke-dasharray="5 7" />
-                  <line x1="410" y1="230" x2="410" y2="400" stroke-dasharray="5 7" />
+                <g class="pine-tree">
+                  <line x1="225" y1="345" x2="225" y2="380" stroke="#042f2e" stroke-width="2.2" stroke-linecap="round"/>
+                  <polygon points="225,305 210,330 240,330" fill="#2dd4bf" stroke="#042f2e" stroke-width="1.6"/>
+                  <polygon points="225,320 205,348 245,348" fill="#0d9488" stroke="#042f2e" stroke-width="1.6"/>
+                  <polygon points="225,335 200,362 250,362" fill="#0f766e" stroke="#042f2e" stroke-width="1.6"/>
                 </g>
 
-                <path d="M440 420 L440 280 L495 240 L515 420 Z" fill="#ccfbf1" stroke="#0f4c40" stroke-width="2.4" stroke-linejoin="round"/>
-                <line x1="460" y1="300" x2="460" y2="410" stroke="#0f4c40" stroke-width="1.8" stroke-dasharray="4 6" />
-                <line x1="480" y1="310" x2="480" y2="410" stroke="#0f4c40" stroke-width="1.8" stroke-dasharray="4 6" />
-
-                <g class="building-tree">
-                  <line x1="90" y1="390" x2="90" y2="420" stroke="#0f4c40" stroke-width="2.4" stroke-linecap="round"/>
-                  <path d="M90 345 C75 345 65 360 65 378 C65 395 77 405 90 405 C103 405 115 395 115 378 C115 360 105 345 90 345 Z" fill="#ffffff" stroke="#0f4c40" stroke-width="2.4"/>
-                  <path d="M90 365 L90 395 M90 378 L80 370 M90 385 L100 377" stroke="#0f4c40" stroke-width="1.8" stroke-linecap="round"/>
+                <g class="pine-tree">
+                  <line x1="430" y1="315" x2="430" y2="380" stroke="#042f2e" stroke-width="2.5" stroke-linecap="round"/>
+                  <polygon points="430,265 411,302 449,302" fill="#0d9488" stroke="#042f2e" stroke-width="1.8"/>
+                  <polygon points="430,285 405,328 455,328" fill="#0f766e" stroke="#042f2e" stroke-width="1.8"/>
+                  <polygon points="430,308 399,352 461,352" fill="#115e59" stroke="#042f2e" stroke-width="1.8"/>
                 </g>
 
-                <g class="building-tree">
-                  <line x1="410" y1="375" x2="410" y2="420" stroke="#0f4c40" stroke-width="2.4" stroke-linecap="round"/>
-                  <path d="M410 325 C390 325 380 345 380 368 C380 390 395 402 410 402 C425 402 440 390 440 368 C440 345 430 325 410 325 Z" fill="#ffffff" stroke="#0f4c40" stroke-width="2.4"/>
-                  <path d="M410 345 L410 395 M410 360 L398 350 M410 370 L422 360" stroke="#0f4c40" stroke-width="1.8" stroke-linecap="round"/>
+                <g class="pine-tree">
+                  <line x1="475" y1="330" x2="475" y2="380" stroke="#042f2e" stroke-width="2" stroke-linecap="round"/>
+                  <polygon points="475,290 461,318 489,318" fill="#14b8a6" stroke="#042f2e" stroke-width="1.5"/>
+                  <polygon points="475,308 455,338 495,338" fill="#0d9488" stroke="#042f2e" stroke-width="1.5"/>
+                  <polygon points="475,326 450,356 500,356" fill="#0f766e" stroke="#042f2e" stroke-width="1.5"/>
                 </g>
 
-                <g class="building-tree">
-                  <line x1="465" y1="385" x2="465" y2="420" stroke="#0f4c40" stroke-width="2.4" stroke-linecap="round"/>
-                  <path d="M465 345 C450 345 440 360 440 378 C440 395 452 405 465 405 C478 405 490 395 490 378 C490 360 480 345 465 345 Z" fill="#ffffff" stroke="#0f4c40" stroke-width="2.4"/>
-                  <path d="M465 365 L465 395 M465 378 L455 370 M465 385 L475 377" stroke="#0f4c40" stroke-width="1.8" stroke-linecap="round"/>
-                </g>
+                <!-- Soaring Eagles -->
+                <path d="M185 110 Q193 104 201 110 Q209 104 217 110 Q201 115 185 110 Z" fill="#0f766e" opacity="0.65"/>
+                <path d="M325 90 Q331 85 337 90 Q343 85 349 90 Q337 94 325 90 Z" fill="#0f766e" opacity="0.5"/>
               </svg>
             </div>
           </div>
