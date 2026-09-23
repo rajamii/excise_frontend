@@ -1,5 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, AfterViewInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
+import { MatPaginator } from '@angular/material/paginator';
+import { MatTableDataSource } from '@angular/material/table';
 import Swal from 'sweetalert2';
 import { MaterialModule } from '../../../../../../shared/material.module';
 import { MasterService } from '../../../../../../core/services/master.service';
@@ -8,16 +12,31 @@ import { ActiveLicense } from '../../../../../../core/models/active-license.mode
 import { EnaDistilleryDetail } from '../../../../../../core/models/ena-distillery.model';
 import { ManageComponent } from '../manage/manage.component';
 
+export interface LicenseOption {
+  id: string;
+  name: string;
+}
+
 @Component({
   selector: 'app-ena-distillery-details-list',
   standalone: true,
-  imports: [MaterialModule],
+  imports: [CommonModule, FormsModule, MaterialModule],
   templateUrl: './list.component.html',
   styleUrl: './list.component.scss',
 })
-export class ListComponent implements OnInit {
-  displayedColumns: string[] = ['distilleryName', 'distilleryState', 'viaRoute', 'licenseeId', 'actions'];
+export class ListComponent implements OnInit, AfterViewInit {
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
+
+  displayedColumns: string[] = ['distilleryName', 'distilleryAddress', 'distilleryState', 'viaRoute', 'licenseeId', 'actions'];
+  dataSource = new MatTableDataSource<EnaDistilleryDetail>([]);
   rows: EnaDistilleryDetail[] = [];
+
+  searchTerm = '';
+  selectedLicenseId = 'ALL';
+  selectedState = 'ALL';
+
+  licenseOptions: LicenseOption[] = [];
+  stateOptions: string[] = [];
 
   private licenseNameMap = new Map<string, string>();
 
@@ -28,20 +47,82 @@ export class ListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.setupFilter();
     this.loadLicenseNames();
     this.loadRows();
+  }
+
+  ngAfterViewInit(): void {
+    this.dataSource.paginator = this.paginator;
+  }
+
+  private setupFilter(): void {
+    this.dataSource.filterPredicate = (item: EnaDistilleryDetail, filter: string) => {
+      const search = this.searchTerm.trim().toLowerCase();
+      const matchesSearch =
+        !search ||
+        (item.distilleryName || '').toLowerCase().includes(search) ||
+        (item.distilleryAddress || '').toLowerCase().includes(search) ||
+        (item.distilleryState || '').toLowerCase().includes(search) ||
+        (item.viaRoute || '').toLowerCase().includes(search) ||
+        (item.licenseeId || '').toLowerCase().includes(search) ||
+        (this.getLicenseName(item.licenseeId) || '').toLowerCase().includes(search);
+
+      let matchesLicense = true;
+      if (this.selectedLicenseId === 'UNASSIGNED') {
+        matchesLicense = !item.licenseeId || item.licenseeId.trim() === '';
+      } else if (this.selectedLicenseId !== 'ALL') {
+        matchesLicense = String(item.licenseeId || '').trim().toLowerCase() === this.selectedLicenseId.trim().toLowerCase();
+      }
+
+      let matchesState = true;
+      if (this.selectedState !== 'ALL') {
+        matchesState = (item.distilleryState || '').trim().toLowerCase() === this.selectedState.trim().toLowerCase();
+      }
+
+      return matchesSearch && matchesLicense && matchesState;
+    };
+  }
+
+  applyFilter(): void {
+    this.dataSource.filter = `${this.searchTerm.trim().toLowerCase()}_${this.selectedLicenseId}_${this.selectedState}_${Date.now()}`;
+    if (this.dataSource.paginator) {
+      this.dataSource.paginator.firstPage();
+    }
+  }
+
+  resetFilters(): void {
+    this.searchTerm = '';
+    this.selectedLicenseId = 'ALL';
+    this.selectedState = 'ALL';
+    this.applyFilter();
   }
 
   private loadLicenseNames(): void {
     this.adminService.getActiveLicenses().subscribe({
       next: (licenses: ActiveLicense[]) => {
         this.licenseNameMap.clear();
-        (Array.isArray(licenses) ? licenses : []).forEach(l => {
+        const rows = Array.isArray(licenses) ? licenses : [];
+        const opts: LicenseOption[] = [];
+
+        rows.forEach((l) => {
           const id = String(l.id || l.licenseeId || '').trim();
-          if (id) this.licenseNameMap.set(id, l.establishmentName || id);
+          const name = String(l.establishmentName || id).trim();
+          if (id) {
+            this.licenseNameMap.set(id, name);
+          }
           const lid = String(l.licenseeId || '').trim();
-          if (lid && lid !== id) this.licenseNameMap.set(lid, l.establishmentName || lid);
+          if (lid && lid !== id) {
+            this.licenseNameMap.set(lid, name);
+          }
+
+          if (id && !opts.some((o) => o.id.toLowerCase() === id.toLowerCase())) {
+            opts.push({ id, name: `${name} (${id})` });
+          }
         });
+
+        opts.sort((a, b) => a.name.localeCompare(b.name));
+        this.licenseOptions = opts;
       },
       error: () => {},
     });
@@ -66,6 +147,30 @@ export class ListComponent implements OnInit {
           createdAt: item?.createdAt ?? item?.created_at,
           updatedAt: item?.updatedAt ?? item?.updated_at,
         }));
+
+        // Sort so the most recently added or updated records appear at the top
+        this.rows.sort((a, b) => {
+          const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+          const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+          if (timeA !== timeB) {
+            return timeB - timeA;
+          }
+          return (Number(b.id) || 0) - (Number(a.id) || 0);
+        });
+
+        this.dataSource.data = this.rows;
+
+        // Extract unique states for dropdown
+        const states = Array.from(
+          new Set(
+            this.rows
+              .map((r) => (r.distilleryState || '').trim())
+              .filter((s) => !!s)
+          )
+        ).sort((a, b) => a.localeCompare(b));
+        this.stateOptions = states;
+
+        this.applyFilter();
       },
       error: () => Swal.fire('Error', 'Failed to load ENA distillery details.', 'error'),
     });
@@ -111,4 +216,3 @@ export class ListComponent implements OnInit {
     });
   }
 }
-

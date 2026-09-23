@@ -568,21 +568,12 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
       };
 
       const key = `${normalized.id}|${normalized.distilleryName.toLowerCase()}`;
-      if (
-        !unique.has(key) &&
-        normalized.distilleryName &&
-        !this.isBreweryName(normalized.distilleryName)
-      ) {
+      if (!unique.has(key) && normalized.distilleryName) {
         unique.set(key, normalized);
       }
     });
 
     return Array.from(unique.values());
-  }
-
-  private isBreweryName(name: string): boolean {
-    const value = String(name || '').toLowerCase();
-    return value.includes('brewery') || value.includes('breweries') || value.includes('beer');
   }
 
   private normalizeName(value: string): string {

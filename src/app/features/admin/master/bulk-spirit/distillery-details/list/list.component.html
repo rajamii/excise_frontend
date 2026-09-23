@@ -1,45 +1,126 @@
 <div class="container-fluid">
-  <mat-card>
+  <mat-card class="master-card">
     <mat-card-header class="page-card-header">
-      <div class="page-title">Lifted From Details</div>
-      <button matButton="filled" (click)="onAdd()">
-        <mat-icon>add</mat-icon> Add
+      <div class="page-title-group">
+        <mat-icon class="header-icon">factory</mat-icon>
+        <span class="page-title">Lifted From Details</span>
+      </div>
+      <button matButton="filled" class="add-btn" (click)="onAdd()">
+        <mat-icon>add</mat-icon> Add Distillery
       </button>
     </mat-card-header>
 
     <mat-card-content>
+      <!-- Filter & Search Toolbar -->
+      <div class="filter-toolbar">
+        <div class="search-box">
+          <mat-icon class="search-icon">search</mat-icon>
+          <input
+            type="text"
+            [(ngModel)]="searchTerm"
+            (input)="applyFilter()"
+            placeholder="Search name, address, state, route, license..."
+          />
+          <button *ngIf="searchTerm" type="button" class="clear-btn" (click)="searchTerm = ''; applyFilter()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="dropdown-filters">
+          <mat-form-field appearance="outline" class="filter-field license-filter" subscriptSizing="dynamic">
+            <mat-label>Assigned License</mat-label>
+            <mat-icon matPrefix class="field-icon">verified</mat-icon>
+            <mat-select
+              [(ngModel)]="selectedLicenseId"
+              (selectionChange)="applyFilter()"
+              panelClass="custom-license-dropdown-panel"
+            >
+              <mat-option value="ALL">
+                <span class="option-bold">All Licenses</span>
+              </mat-option>
+              <mat-option value="UNASSIGNED">
+                <span class="option-unassigned">Unassigned (Not Mapped)</span>
+              </mat-option>
+              <mat-divider></mat-divider>
+              <mat-option *ngFor="let lic of licenseOptions" [value]="lic.id" class="license-mat-option">
+                {{ lic.name }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field state-filter" subscriptSizing="dynamic">
+            <mat-label>State</mat-label>
+            <mat-icon matPrefix class="field-icon">location_on</mat-icon>
+            <mat-select
+              [(ngModel)]="selectedState"
+              (selectionChange)="applyFilter()"
+              panelClass="custom-state-dropdown-panel"
+            >
+              <mat-option value="ALL">All States</mat-option>
+              <mat-divider></mat-divider>
+              <mat-option *ngFor="let st of stateOptions" [value]="st">
+                {{ st }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <button
+            *ngIf="searchTerm || selectedLicenseId !== 'ALL' || selectedState !== 'ALL'"
+            mat-stroked-button
+            class="reset-btn"
+            (click)="resetFilters()"
+            matTooltip="Reset all filters"
+          >
+            <mat-icon>filter_alt_off</mat-icon>
+            Reset
+          </button>
+        </div>
+      </div>
+
       <div class="table-container">
-        <mat-table [dataSource]="rows">
+        <mat-table [dataSource]="dataSource">
 
           <ng-container matColumnDef="distilleryName">
             <mat-header-cell *matHeaderCellDef>Lifted From</mat-header-cell>
-            <mat-cell *matCellDef="let row">{{ row.distilleryName }}</mat-cell>
+            <mat-cell *matCellDef="let row" class="fw-semibold text-primary">
+              <span class="distillery-name-cell">{{ row.distilleryName }}</span>
+            </mat-cell>
+          </ng-container>
+
+          <ng-container matColumnDef="distilleryAddress">
+            <mat-header-cell *matHeaderCellDef>Address</mat-header-cell>
+            <mat-cell *matCellDef="let row">{{ row.distilleryAddress || '—' }}</mat-cell>
           </ng-container>
 
           <ng-container matColumnDef="distilleryState">
             <mat-header-cell *matHeaderCellDef>State</mat-header-cell>
-            <mat-cell *matCellDef="let row">{{ row.distilleryState }}</mat-cell>
+            <mat-cell *matCellDef="let row">
+              <span class="state-badge">{{ row.distilleryState || '—' }}</span>
+            </mat-cell>
           </ng-container>
 
           <ng-container matColumnDef="viaRoute">
             <mat-header-cell *matHeaderCellDef>Route</mat-header-cell>
-            <mat-cell *matCellDef="let row">{{ row.viaRoute || '-' }}</mat-cell>
+            <mat-cell *matCellDef="let row" class="route-cell">{{ row.viaRoute || '—' }}</mat-cell>
           </ng-container>
 
           <ng-container matColumnDef="licenseeId">
             <mat-header-cell *matHeaderCellDef>Assigned License</mat-header-cell>
             <mat-cell *matCellDef="let row" [matTooltip]="row.licenseeId || ''" matTooltipPosition="above">
-              {{ getLicenseName(row.licenseeId) }}
+              <span *ngIf="row.licenseeId" class="license-assigned-badge">
+                {{ getLicenseName(row.licenseeId) }}
+              </span>
+              <span *ngIf="!row.licenseeId" class="unassigned-text">Unassigned</span>
             </mat-cell>
           </ng-container>
 
           <ng-container matColumnDef="actions">
             <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
             <mat-cell *matCellDef="let row">
-              <button matIconButton color="primary" (click)="onEdit(row)">
+              <button matIconButton color="primary" (click)="onEdit(row)" matTooltip="Edit details">
                 <mat-icon>edit</mat-icon>
               </button>
-              <button matIconButton color="warn" (click)="onDelete(row)">
+              <button matIconButton color="warn" (click)="onDelete(row)" matTooltip="Delete record">
                 <mat-icon>delete</mat-icon>
               </button>
             </mat-cell>
@@ -49,9 +130,19 @@
           <mat-row *matRowDef="let row; columns: displayedColumns"></mat-row>
         </mat-table>
 
-        @if (rows.length === 0) {
+        @if (dataSource.data.length === 0) {
           <div class="no-data">No records found.</div>
         }
+
+        @if (dataSource.data.length > 0 && dataSource.filteredData.length === 0) {
+          <div class="no-data">No matching records found for the applied filters.</div>
+        }
+
+        <mat-paginator
+          [pageSizeOptions]="[10, 25, 50, 100]"
+          [pageSize]="10"
+          showFirstLastButtons
+        ></mat-paginator>
       </div>
     </mat-card-content>
   </mat-card>
