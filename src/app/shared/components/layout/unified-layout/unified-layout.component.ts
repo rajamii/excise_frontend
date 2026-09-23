@@ -2291,17 +2291,49 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return 'User';
   }
 
+  isDistrictOrEnquiryRole(): boolean {
+    const roleId = Number(
+      this.currentUser?.roleId ||
+      this.currentUser?.role?.id ||
+      this.user?.roleId ||
+      this.user?.role?.id ||
+      (this.accountService?.getCurrentUser() as any)?.roleId ||
+      (this.accountService?.getCurrentUser() as any)?.role?.id ||
+      (this.roleService?.getCurrentUser() as any)?.roleId ||
+      (this.roleService?.getCurrentUser() as any)?.role?.id ||
+      0
+    );
+    if (roleId === 4 || roleId === 8) return true;
+
+    const roleName = String(
+      this.userRoleDisplayName ||
+      this.currentUser?.role?.name ||
+      this.currentUser?.role?.displayName ||
+      this.user?.role?.name ||
+      (this.accountService?.getCurrentUser() as any)?.role?.name ||
+      (this.roleService?.getCurrentUser() as any)?.role?.name ||
+      localStorage.getItem('role') ||
+      ''
+    ).toLowerCase().trim();
+
+    return (
+      roleName.includes('district') ||
+      roleName.includes('enquiry') ||
+      roleName.includes('sub_enquiry') ||
+      roleName.includes('site_enquiry')
+    );
+  }
+
   get userDistrictDisplayName(): string {
-    const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
-    if (roleId !== 4 && roleId !== 8) {
+    if (!this.isDistrictOrEnquiryRole()) {
       return '';
     }
 
     const districtCodeMap: { [key: string]: string } = {
-      '1': 'Gangtok', '225': 'Gangtok', 'gangtok': 'Gangtok',
-      '2': 'Namchi', '226': 'Namchi', 'namchi': 'Namchi',
-      '3': 'Gyalshing', '227': 'Gyalshing', 'gyalshing': 'Gyalshing', 'geyzing': 'Gyalshing',
-      '4': 'Mangan', '228': 'Mangan', 'mangan': 'Mangan',
+      '1': 'Gangtok', '225': 'Gangtok', 'gangtok': 'Gangtok', 'east': 'Gangtok', 'east sikkim': 'Gangtok',
+      '2': 'Namchi', '226': 'Namchi', 'namchi': 'Namchi', 'south': 'Namchi', 'south sikkim': 'Namchi',
+      '3': 'Gyalshing', '227': 'Gyalshing', 'gyalshing': 'Gyalshing', 'geyzing': 'Gyalshing', 'west': 'Gyalshing', 'west sikkim': 'Gyalshing',
+      '4': 'Mangan', '228': 'Mangan', 'mangan': 'Mangan', 'north': 'Mangan', 'north sikkim': 'Mangan',
       '5': 'Pakyong', '229': 'Pakyong', 'pakyong': 'Pakyong',
       '6': 'Soreng', '230': 'Soreng', 'soreng': 'Soreng'
     };
@@ -2314,19 +2346,80 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       }
       if (typeof d === 'string') {
         const trimmed = d.trim();
+        if (!trimmed) return '';
+        if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+          try {
+            return extractName(JSON.parse(trimmed));
+          } catch {
+            // ignore
+          }
+        }
         const low = trimmed.toLowerCase();
         if (districtCodeMap[low]) return districtCodeMap[low];
-        return trimmed;
+        return trimmed.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
       }
       if (typeof d === 'object') {
-        const name = d.district || d.district_name || d.districtName || d.name || d.district_code || d.districtCode || d.code;
+        const name = d.district || d.district_name || d.districtName || d.name || d.district_code || d.districtCode || d.code || d.excise_district;
         if (name) return extractName(name);
       }
       return '';
     };
 
-    const u: any = this.currentUser || this.user || (this.accountService ? this.accountService.getCurrentUser() : null) || {};
-    return extractName(u?.district || u?.districtName || u?.assignedDistrict || u?.district_code);
+    const accountUser: any = this.accountService?.getCurrentUser() || {};
+    const roleUser: any = this.roleService?.getCurrentUser() || {};
+    const u: any = this.currentUser || this.user || accountUser || roleUser || {};
+
+    let localDist: any = null;
+    let localDistObj: any = null;
+    try {
+      const rawDist = localStorage.getItem('district') || sessionStorage.getItem('district') || localStorage.getItem('user_district');
+      if (rawDist) {
+        try { localDist = JSON.parse(rawDist); } catch { localDist = rawDist; }
+      }
+    } catch {
+      // ignore
+    }
+
+    try {
+      const rawStoredUser = localStorage.getItem('currentUser') || sessionStorage.getItem('currentUser') || localStorage.getItem('user');
+      if (rawStoredUser) {
+        localDistObj = JSON.parse(rawStoredUser);
+      }
+    } catch {
+      // ignore
+    }
+
+    const candidates = [
+      u?.district,
+      u?.districtName,
+      u?.district_name,
+      u?.assignedDistrict,
+      u?.assigned_district,
+      u?.district_code,
+      u?.districtCode,
+      u?.excise_district,
+      u?.profile?.district,
+      u?.profile?.districtName,
+      u?.profile?.district_name,
+      localDist,
+      localDistObj?.district,
+      localDistObj?.districtName,
+      localDistObj?.district_name,
+      localDistObj?.assignedDistrict,
+      localDistObj?.district_code,
+      accountUser?.district,
+      accountUser?.districtName,
+      accountUser?.district_name,
+      roleUser?.district,
+      roleUser?.districtName
+    ];
+
+    for (const cand of candidates) {
+      const resolved = extractName(cand);
+      if (resolved) return resolved;
+    }
+
+    return '';
   }
 
   private humanizeRoleName(value: string): string {

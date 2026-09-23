@@ -2181,17 +2181,47 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  isDistrictOrEnquiryRole(): boolean {
+    const roleId = Number(
+      this.getCurrentRoleId() ||
+      this.currentUser?.roleId ||
+      this.currentUser?.role?.id ||
+      (this.accountService?.getCurrentUser() as any)?.roleId ||
+      (this.accountService?.getCurrentUser() as any)?.role?.id ||
+      (this.roleService?.getCurrentUser() as any)?.roleId ||
+      (this.roleService?.getCurrentUser() as any)?.role?.id ||
+      0
+    );
+    if (roleId === 4 || roleId === 8) return true;
+
+    const roleName = String(
+      this.userRoleDisplayName ||
+      this.currentUser?.role?.name ||
+      this.currentUser?.role?.displayName ||
+      (this.accountService?.getCurrentUser() as any)?.role?.name ||
+      (this.roleService?.getCurrentUser() as any)?.role?.name ||
+      localStorage.getItem('role') ||
+      ''
+    ).toLowerCase().trim();
+
+    return (
+      roleName.includes('district') ||
+      roleName.includes('enquiry') ||
+      roleName.includes('sub_enquiry') ||
+      roleName.includes('site_enquiry')
+    );
+  }
+
   get userDistrictDisplayName(): string {
-    const roleId = this.getCurrentRoleId();
-    if (roleId !== 4 && roleId !== 8) {
+    if (!this.isDistrictOrEnquiryRole()) {
       return '';
     }
 
     const districtCodeMap: { [key: string]: string } = {
-      '1': 'Gangtok', '225': 'Gangtok', 'gangtok': 'Gangtok',
-      '2': 'Namchi', '226': 'Namchi', 'namchi': 'Namchi',
-      '3': 'Gyalshing', '227': 'Gyalshing', 'gyalshing': 'Gyalshing', 'geyzing': 'Gyalshing',
-      '4': 'Mangan', '228': 'Mangan', 'mangan': 'Mangan',
+      '1': 'Gangtok', '225': 'Gangtok', 'gangtok': 'Gangtok', 'east': 'Gangtok', 'east sikkim': 'Gangtok',
+      '2': 'Namchi', '226': 'Namchi', 'namchi': 'Namchi', 'south': 'Namchi', 'south sikkim': 'Namchi',
+      '3': 'Gyalshing', '227': 'Gyalshing', 'gyalshing': 'Gyalshing', 'geyzing': 'Gyalshing', 'west': 'Gyalshing', 'west sikkim': 'Gyalshing',
+      '4': 'Mangan', '228': 'Mangan', 'mangan': 'Mangan', 'north': 'Mangan', 'north sikkim': 'Mangan',
       '5': 'Pakyong', '229': 'Pakyong', 'pakyong': 'Pakyong',
       '6': 'Soreng', '230': 'Soreng', 'soreng': 'Soreng'
     };
@@ -2204,12 +2234,20 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       }
       if (typeof d === 'string') {
         const trimmed = d.trim();
+        if (!trimmed) return '';
+        if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+          try {
+            return extractName(JSON.parse(trimmed));
+          } catch {
+            // ignore
+          }
+        }
         const low = trimmed.toLowerCase();
         if (districtCodeMap[low]) return districtCodeMap[low];
-        return trimmed;
+        return trimmed.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
       }
       if (typeof d === 'object') {
-        const name = d.district || d.district_name || d.districtName || d.name || d.district_code || d.districtCode || d.code;
+        const name = d.district || d.district_name || d.districtName || d.name || d.district_code || d.districtCode || d.code || d.excise_district;
         if (name) return extractName(name);
       }
       return '';
@@ -2223,9 +2261,16 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       (this.currentUser as any)?.districtId,
       (this.currentUser as any)?.district_code,
       (this.currentUser as any)?.districtCode,
+      (this.currentUser as any)?.assignedDistrict,
+      (this.currentUser as any)?.assigned_district,
+      (this.currentUser as any)?.excise_district,
       (this.accountService?.getCurrentUser() as any)?.district,
       (this.accountService?.getCurrentUser() as any)?.district_name,
       (this.accountService?.getCurrentUser() as any)?.districtName,
+      (this.accountService?.getCurrentUser() as any)?.assignedDistrict,
+      (this.accountService?.getCurrentUser() as any)?.district_code,
+      (this.roleService?.getCurrentUser() as any)?.district,
+      (this.roleService?.getCurrentUser() as any)?.districtName,
     ];
 
     for (const cand of candidates) {
@@ -2234,17 +2279,20 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     if (typeof window !== 'undefined') {
-      const storageKeys = ['currentUser', 'user', 'account'];
+      const storageKeys = ['district', 'currentUser', 'user', 'account', 'user_district'];
       for (const key of storageKeys) {
         for (const storage of [sessionStorage, localStorage]) {
           const raw = storage.getItem(key);
           if (!raw) continue;
           try {
             const parsed = JSON.parse(raw);
-            const d = parsed?.district || parsed?.district_name || parsed?.districtName || parsed?.district_id || parsed?.district_code || parsed?.user?.district;
+            const d = parsed?.district || parsed?.district_name || parsed?.districtName || parsed?.district_id || parsed?.district_code || parsed?.user?.district || parsed;
             const resolved = extractName(d);
             if (resolved) return resolved;
-          } catch {}
+          } catch {
+            const resolved = extractName(raw);
+            if (resolved) return resolved;
+          }
         }
       }
     }
