@@ -887,7 +887,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       ? this.hologramService.getRequests(forceRefresh).pipe(catchError(() => of([])))
       : of([] as any[]);
 
-    const shouldLoadDistributorPermitCounts = this.isDistributorUser() || isAdminOrOfficer || isITCell || isCommissioner;
+    const shouldLoadDistributorPermitCounts = this.isDistributorUser() || isAdminOrOfficer || isITCell || isCommissioner || isPermitSection;
     const distReq$ = shouldLoadDistributorPermitCounts
       ? this.distributorPermitService.getDashboardCounts('requisition', forceRefresh).pipe(catchError(() => of(null)))
       : of(null as any);
@@ -1175,8 +1175,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
           this.supplyChainModuleCounts['distributor-permit'] = reqStats;
           this.supplyChainModuleCounts['distributor-permit-requisition'] = reqStats;
+          this.supplyChainModuleCounts['imfl-requisition'] = reqStats;
           this.supplyChainModuleCounts['distributor-permit-revalidation'] = revStats;
+          this.supplyChainModuleCounts['imfl-revalidation'] = revStats;
           this.supplyChainModuleCounts['distributor-permit-cancellation'] = canStats;
+          this.supplyChainModuleCounts['imfl-cancellation'] = canStats;
           this.supplyChainModuleCounts['distributor-permit-brand-arrival'] = arrStats;
           this.supplyChainModuleCounts['distributor-permit-hologram-procurement'] = holoStats;
           this.supplyChainModuleCounts['imfl-hologram-procurement'] = holoStats;

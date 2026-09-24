@@ -71,6 +71,7 @@ export class AccountService {
     // Tokens exist, now check for user data
     const username = localStorage.getItem('username');
     const role = localStorage.getItem('role');
+    const roleId = Number(localStorage.getItem('role_id') || 0);
     const firstName = localStorage.getItem('firstName');
     const lastName = localStorage.getItem('lastName');
     const hasActiveLicense = localStorage.getItem('has_active_license');
@@ -78,6 +79,7 @@ export class AccountService {
     console.log('📦 User data in localStorage:', {
       username,
       role,
+      roleId,
       firstName,
       lastName,
       hasActiveLicense
@@ -91,7 +93,7 @@ export class AccountService {
         hasActiveLicense: hasActiveLicense === 'true',
         role: {
           name: role,
-          id: 0
+          id: roleId
         }
       } as Account;
 

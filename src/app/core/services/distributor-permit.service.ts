@@ -51,19 +51,32 @@ export class DistributorPermitService {
     }
   }
 
+  private getCurrentUserKey(): string {
+    try {
+      const username = localStorage.getItem('username') || '';
+      const roleId = localStorage.getItem('role_id') || '';
+      return `${username}:${roleId}`.trim() || 'anon';
+    } catch {
+      return 'anon';
+    }
+  }
+
   clearCache(): void {
     this.responseCache.clear();
     this.inflightRequests.clear();
   }
 
   getDashboardCounts(tab: 'requisition' | 'revalidation' | 'cancellation' | 'brand-arrival' | 'hologram-procurement' | 'hologram-arrival' = 'requisition', force = false): Observable<any> {
-    const cacheKey = `dashboard-counts:${tab}`;
+    const userKey = this.getCurrentUserKey();
+    const cacheKey = `dashboard-counts:${userKey}:${tab}`;
     if (!force) {
       return this.getCachedOrFetch(cacheKey, () => {
         const params = new HttpParams().set('tab', tab);
         return this.http.get<any>(`${this.baseUrl}/dashboard-counts/`, { params });
       });
     }
+    this.responseCache.delete(cacheKey);
+    this.inflightRequests.delete(cacheKey);
     const params = new HttpParams()
       .set('tab', tab)
       .set('_t', Date.now().toString())

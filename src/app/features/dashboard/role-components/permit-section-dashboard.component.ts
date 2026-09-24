@@ -589,7 +589,16 @@ export class PermitSectionDashboardComponent implements OnInit {
   // Dashboard statistics methods
   getDashboardStatistics() {
     if (this.selectedModule && this.selectedModule !== 'all') {
-      const mc = this.moduleCounts[this.selectedModule];
+      let mc = this.moduleCounts[this.selectedModule];
+      if (!mc && (this.selectedModule === 'imfl-requisition' || this.selectedModule === 'distributor-permit-requisition' || this.selectedModule === 'distributor-permit')) {
+        mc = this.moduleCounts?.['distributor-permit-requisition'] || this.moduleCounts?.['distributor-permit'] || this.moduleCounts?.['imfl-requisition'];
+      }
+      if (!mc && (this.selectedModule === 'imfl-revalidation' || this.selectedModule === 'distributor-permit-revalidation')) {
+        mc = this.moduleCounts?.['distributor-permit-revalidation'] || this.moduleCounts?.['imfl-revalidation'];
+      }
+      if (!mc && (this.selectedModule === 'imfl-cancellation' || this.selectedModule === 'distributor-permit-cancellation')) {
+        mc = this.moduleCounts?.['distributor-permit-cancellation'] || this.moduleCounts?.['imfl-cancellation'];
+      }
       if (mc) {
         const total = (mc.applied || 0) || ((mc.pending || 0) + (mc.approved || 0) + (mc.objection || 0) + (mc.rejected || 0));
         return {

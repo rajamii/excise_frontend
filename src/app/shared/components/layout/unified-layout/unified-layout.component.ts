@@ -248,7 +248,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
         // IMPORTANT: Update the role service with the actual logged-in user
         this.updateRoleServiceWithActualUser(acc);
-        this.refreshSidebarBadges(false, 'light');
+        this.refreshSidebarBadges(true, 'full');
         this.setupInitialSidebarState();
         this.loadLicenseeMenuAccess();
         
@@ -429,16 +429,46 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     const key = String(section || '').trim().toLowerCase();
     const count = Number(this.pendingBadgeCounts?.[key] || 0);
     if (count > 0) return count;
-    if (key === 'imfl-requisition-cases') {
+
+    if (
+      key === 'distributor-permit' ||
+      key === 'imfl-permit' ||
+      key === 'distributor-permit-requisition' ||
+      key === 'imfl-requisition' ||
+      key === 'imfl-requisition-cases'
+    ) {
       return Number(
-        this.pendingBadgeCounts?.['imfl-requisition-cases'] ||
-        this.pendingBadgeCounts?.['imfl-requisition'] ||
-        this.pendingBadgeCounts?.['distributor-permit-requisition'] ||
         this.pendingBadgeCounts?.['distributor-permit'] ||
+        this.pendingBadgeCounts?.['distributor-permit-requisition'] ||
+        this.pendingBadgeCounts?.['imfl-requisition'] ||
+        this.pendingBadgeCounts?.['imfl-requisition-cases'] ||
+        this.pendingBadgeCounts?.['imfl-permit'] ||
         0
       );
     }
-    if (key === 'distributor-permit-brand-arrival' || key === 'brand-arrival') {
+    if (key === 'distributor-permit:payment' || key === 'distributor-permit-requisition:payment' || key === 'imfl-requisition:payment') {
+      return Number(
+        this.pendingBadgeCounts?.['distributor-permit:payment'] ||
+        this.pendingBadgeCounts?.['distributor-permit-requisition:payment'] ||
+        this.pendingBadgeCounts?.['imfl-requisition:payment'] ||
+        0
+      );
+    }
+    if (key === 'distributor-permit-revalidation' || key === 'imfl-revalidation') {
+      return Number(
+        this.pendingBadgeCounts?.['distributor-permit-revalidation'] ||
+        this.pendingBadgeCounts?.['imfl-revalidation'] ||
+        0
+      );
+    }
+    if (key === 'distributor-permit-cancellation' || key === 'imfl-cancellation') {
+      return Number(
+        this.pendingBadgeCounts?.['distributor-permit-cancellation'] ||
+        this.pendingBadgeCounts?.['imfl-cancellation'] ||
+        0
+      );
+    }
+    if (key === 'distributor-permit-brand-arrival' || key === 'brand-arrival' || key === 'imfl-brand-arrival' || key === 'update-brands-arrival') {
       return Number(
         this.pendingBadgeCounts?.['distributor-permit-brand-arrival'] ||
         this.pendingBadgeCounts?.['brand-arrival'] ||
