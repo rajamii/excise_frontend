@@ -73,11 +73,37 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
   get feeNotConfigured(): boolean {
     if (!this.selectedLicense) return false;
     const feeType = this.selectedLicense.dryDayFeeType || this.selectedLicense.dry_day_fee_type;
-    const fee = this.selectedLicense.dryDayFee || this.selectedLicense.dry_day_fee;
-    // Not configured if fee type is missing/null or fee amount is 0/null
+    const fee = this.selectedLicense.dryDayFee ?? this.selectedLicense.dry_day_fee;
+    // Not configured if fee type is missing/null/none or fee amount is missing/0/negative
     const noFeeType = !feeType || feeType === 'none';
-    const noFee = !fee || Number(fee) <= 0;
+    const noFee = fee === null || fee === undefined || Number(fee) <= 0;
     return noFeeType || noFee;
+  }
+
+  get hasExistingAnnualPermit(): boolean {
+    if (!this.selectedLicense) return false;
+    return Boolean(
+      this.selectedLicense.hasExistingAnnualPermit
+      || this.selectedLicense.has_existing_annual_permit
+    );
+  }
+
+  get existingAnnualPermitStatus(): 'approved' | 'under_review' | '' {
+    if (!this.selectedLicense) return '';
+    return (
+      this.selectedLicense.existingAnnualPermitStatus
+      || this.selectedLicense.existing_annual_permit_status
+      || ''
+    );
+  }
+
+  get existingAnnualPermitId(): string {
+    if (!this.selectedLicense) return '';
+    return (
+      this.selectedLicense.existingAnnualPermitId
+      || this.selectedLicense.existing_annual_permit_id
+      || ''
+    );
   }
 
   onLicenseChange(licenseKey: string): void {
@@ -90,6 +116,36 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
   saveAndProceedToPayment(): void {
     this.syncDateValidator();
     this.form.markAllAsTouched();
+
+    if (this.hasExistingAnnualPermit) {
+      const msg = this.existingAnnualPermitStatus === 'approved'
+        ? `You already have an active Annual Dry Day Permit (ID: ${this.existingAnnualPermitId}) for financial year ${this.currentYear}. You will be eligible to apply again in the next financial year.`
+        : `Your Annual Dry Day Permit application (ID: ${this.existingAnnualPermitId}) is currently under review for financial year ${this.currentYear}.`;
+      this.submitError = msg;
+      Swal.fire({
+        icon: 'info',
+        title: this.existingAnnualPermitStatus === 'approved' ? 'Permit Already Active' : 'Application Under Review',
+        text: msg,
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
+    if (this.feeNotConfigured || this.calculatedTotalFee <= 0) {
+      this.submitError = 'Dry Day Permit fee is not configured for your license subcategory. Please contact the Admin.';
+      Swal.fire({
+        icon: 'warning',
+        title: 'Fee Not Configured',
+        text: 'Dry Day Permit fee is not configured for your license subcategory. Please contact the Admin.',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
+    if (this.isPerDayCategory && (!this.form.controls.selectedDates.value || this.form.controls.selectedDates.value.length === 0)) {
+      this.submitError = 'Please select at least one Dry Day date.';
+      return;
+    }
 
     if (this.form.invalid || !this.selectedLicense) {
       return;
@@ -104,7 +160,7 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
       license_id: this.getLicenseId(this.selectedLicense),
       financial_year: this.currentYear,
       permission_duration: this.permissionDuration,
-      selected_dates: raw.selectedDates && raw.selectedDates.length > 0 ? raw.selectedDates : null
+      selected_dates: this.isPerDayCategory && raw.selectedDates && raw.selectedDates.length > 0 ? raw.selectedDates : null
     };
 
     this.specialPermitService
@@ -230,14 +286,18 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
     this.form.patchValue({
       district: this.getDistrictName(license),
       licenseCategory: this.getLicenseCategoryName(license),
-      licenseSubCategory: this.getLicenseSubCategoryName(license)
+      licenseSubCategory: this.getLicenseSubCategoryName(license),
+      selectedDates: []
     });
     this.syncDateValidator();
-    this.loadAllowedDates();
+    if (this.isPerDayCategory) {
+      this.loadAllowedDates();
+    }
   }
 
   get calculatedTotalFee(): number {
-    const base = this.selectedLicense?.dryDayFee || this.selectedLicense?.dry_day_fee || 0;
+    if (this.feeNotConfigured) return 0;
+    const base = this.selectedLicense?.dryDayFee ?? this.selectedLicense?.dry_day_fee ?? 0;
     if (this.isPerDayCategory) {
       const count = this.form.controls.selectedDates.value?.length || 0;
       return Number(base) * count;
@@ -379,7 +439,7 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
   private syncDateValidator(): void {
     const datesControl = this.form.controls.selectedDates;
 
-    if (this.isPerDayCategory || this.allowedDryDayDates.length > 0) {
+    if (this.isPerDayCategory) {
       datesControl.setValidators([Validators.required]);
     } else {
       datesControl.clearValidators();

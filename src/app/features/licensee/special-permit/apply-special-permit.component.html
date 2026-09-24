@@ -63,12 +63,12 @@
               <mat-icon matPrefix>calendar_today</mat-icon>
             </mat-form-field>
 
-            @if (isPerDayCategory || allowedDryDayDates.length) {
+            @if (isPerDayCategory) {
               <div class="field-wide dry-day-section">
                 <div class="dry-day-section__header">
                   <mat-icon class="dry-day-section__icon">event</mat-icon>
                   <span class="dry-day-section__title">Select Dry Day Dates</span>
-                  <span class="dry-day-section__required" *ngIf="isPerDayCategory">*</span>
+                  <span class="dry-day-section__required">*</span>
                   @if (!isLoadingAllowedDates && allowedDryDayDates.length) {
                     <span class="dry-day-section__hint">Click on highlighted dates to select them</span>
                   }
@@ -171,13 +171,13 @@
             <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; color: #475569;">
               <div style="display: flex; justify-content: space-between;">
                 <span>License Subcategory Fee Type:</span>
-                <strong style="color: #0f172a; text-transform: uppercase;">{{ (selectedLicense.dryDayFeeType || selectedLicense.dry_day_fee_type) === 'per_day' ? 'Per Day' : 'Per Annum' }}</strong>
+                <strong style="color: #0f172a; text-transform: uppercase;">{{ isPerDayCategory ? 'Per Day' : 'Per Annum' }}</strong>
               </div>
-              <div style="display: flex; justify-content: space-between;" *ngIf="(selectedLicense.dryDayFeeType || selectedLicense.dry_day_fee_type) === 'per_annum'">
+              <div style="display: flex; justify-content: space-between;" *ngIf="!isPerDayCategory">
                 <span>Location (from application):</span>
                 <strong style="color: #0f172a; text-transform: uppercase;">{{ selectedLicense.isRural !== undefined ? (selectedLicense.isRural ? 'Rural' : 'Urban') : (selectedLicense.is_rural ? 'Rural' : 'Urban') }}</strong>
               </div>
-              <div style="display: flex; justify-content: space-between;" *ngIf="isPerDayCategory || form.controls.selectedDates.value?.length">
+              <div style="display: flex; justify-content: space-between;" *ngIf="isPerDayCategory">
                 <span>Selected Dates Count:</span>
                 <strong style="color: #0f172a;">{{ form.controls.selectedDates.value?.length || 0 }} day(s)</strong>
               </div>
@@ -194,13 +194,28 @@
 
           <p class="form-note">** Data Once Submitted Can not be changed. Please verify all Details before submitting</p>
 
+          <!-- Existing Annual Permit Alert (Active / Under Review) -->
+          @if (selectedLicense && hasExistingAnnualPermit) {
+            <div class="existing-permit-alert" [class.existing-permit-alert--approved]="existingAnnualPermitStatus === 'approved'" [class.existing-permit-alert--review]="existingAnnualPermitStatus === 'under_review'">
+              <mat-icon class="existing-permit-alert__icon">{{ existingAnnualPermitStatus === 'approved' ? 'verified' : 'hourglass_top' }}</mat-icon>
+              <div>
+                <strong>{{ existingAnnualPermitStatus === 'approved' ? 'Active Annual Permit Already Exists' : 'Annual Permit Application Under Review' }}</strong>
+                @if (existingAnnualPermitStatus === 'approved') {
+                  <p>This license already holds an approved Annual Dry Day Permit (Application ID: <strong>{{ existingAnnualPermitId }}</strong>) for the current financial year (<strong>{{ currentYear }}</strong>). You will be eligible to apply for a new permit in the next financial year.</p>
+                } @else {
+                  <p>An Annual Dry Day Permit application (Application ID: <strong>{{ existingAnnualPermitId }}</strong>) for this license is currently under review for financial year <strong>{{ currentYear }}</strong>. You cannot submit another permit application while one is in process.</p>
+                }
+              </div>
+            </div>
+          }
+
           <!-- Fee not configured warning -->
-          @if (selectedLicense && feeNotConfigured) {
+          @if (selectedLicense && !hasExistingAnnualPermit && (feeNotConfigured || calculatedTotalFee <= 0)) {
             <div class="fee-not-configured-alert">
               <mat-icon class="fee-not-configured-alert__icon">error_outline</mat-icon>
               <div>
                 <strong>Fee Not Configured</strong>
-                <p>The Dry Day Permit fee or fee type has not been set up for your license subcategory. Please contact the Site Admin to configure it before applying.</p>
+                <p>The Dry Day Permit fee has not been configured for your license subcategory. Please contact the Admin to configure the fee before applying.</p>
               </div>
             </div>
           }
@@ -208,7 +223,7 @@
           <div class="action-row">
             <button mat-flat-button color="primary" type="button"
                     (click)="saveAndProceedToPayment()"
-                    [disabled]="isSubmitting || form.invalid || feeNotConfigured || (allowedDryDayDates.length > 0 && !form.controls.selectedDates.value?.length)">
+                    [disabled]="isSubmitting || form.invalid || hasExistingAnnualPermit || feeNotConfigured || calculatedTotalFee <= 0 || (isPerDayCategory && !form.controls.selectedDates.value?.length)">
               <mat-icon>send</mat-icon> Save &amp; Submit for Approval
             </button>
           </div>
