@@ -32,9 +32,13 @@ export class SubcategoryDialogComponent implements OnInit {
   formRuralFee: number | string = '';
   formUrbanFee: number | string = '';
   formNonFee: number | string = '';
+  formAllowCompanyRegistration: boolean = true;
+  formAllowCompanyCollaboration: boolean = true;
+  formAllowSalesmanBarman: boolean = true;
+  formAllowLabelRegistration: boolean = true;
   isSaving = false;
 
-  displayedColumns = ['sno', 'description', 'dryDay', 'fees', 'status', 'actions'];
+  displayedColumns = ['sno', 'description', 'modules', 'dryDay', 'fees', 'status', 'actions'];
   fixedFees: any[] = [];
 
   get isDryDayPermittedCategory(): boolean {
@@ -54,11 +58,62 @@ export class SubcategoryDialogComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.isDryDayPermittedCategory) {
-      this.displayedColumns = ['sno', 'description', 'dryDay', 'fees', 'status', 'actions'];
+      this.displayedColumns = ['sno', 'description', 'modules', 'dryDay', 'fees', 'status', 'actions'];
     } else {
-      this.displayedColumns = ['sno', 'description', 'status', 'actions'];
+      this.displayedColumns = ['sno', 'description', 'modules', 'status', 'actions'];
     }
     this.loadSubcategories();
+  }
+
+  isCompanyRegAllowed(sub: LicenseSubcategory): boolean {
+    return sub.allowCompanyRegistration !== false && sub.allow_company_registration !== false;
+  }
+
+  isCompanyCollabAllowed(sub: LicenseSubcategory): boolean {
+    return sub.allowCompanyCollaboration !== false && sub.allow_company_collaboration !== false;
+  }
+
+  isSalesmanBarmanAllowed(sub: LicenseSubcategory): boolean {
+    return sub.allowSalesmanBarman !== false && sub.allow_salesman_barman !== false;
+  }
+
+  isLabelRegAllowed(sub: LicenseSubcategory): boolean {
+    return sub.allowLabelRegistration !== false && sub.allow_label_registration !== false;
+  }
+
+  toggleSubcategoryModule(sub: LicenseSubcategory, module: 'company' | 'collaboration' | 'salesman' | 'label', event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    if (!sub.id) return;
+    const currentCompany = this.isCompanyRegAllowed(sub);
+    const currentCollab = this.isCompanyCollabAllowed(sub);
+    const currentSalesman = this.isSalesmanBarmanAllowed(sub);
+    const currentLabel = this.isLabelRegAllowed(sub);
+
+    const payload: any = {
+      allowCompanyRegistration: module === 'company' ? !currentCompany : currentCompany,
+      allowCompanyCollaboration: module === 'collaboration' ? !currentCollab : currentCollab,
+      allowSalesmanBarman: module === 'salesman' ? !currentSalesman : currentSalesman,
+      allowLabelRegistration: module === 'label' ? !currentLabel : currentLabel
+    };
+
+    this.adminService.updateLicenseSubcategory(sub.id, payload).subscribe({
+      next: (res: any) => {
+        sub.allowCompanyRegistration = payload.allowCompanyRegistration;
+        sub.allow_company_registration = payload.allowCompanyRegistration;
+        sub.allowCompanyCollaboration = payload.allowCompanyCollaboration;
+        sub.allow_company_collaboration = payload.allowCompanyCollaboration;
+        sub.allowSalesmanBarman = payload.allowSalesmanBarman;
+        sub.allow_salesman_barman = payload.allowSalesmanBarman;
+        sub.allowLabelRegistration = payload.allowLabelRegistration;
+        sub.allow_label_registration = payload.allowLabelRegistration;
+      },
+      error: (err: any) => {
+        console.error('Failed to toggle module', err);
+        Swal.fire('Error', 'Failed to update module access.', 'error');
+      }
+    });
   }
 
   loadSubcategories(): void {
@@ -174,6 +229,10 @@ export class SubcategoryDialogComponent implements OnInit {
     this.formRuralFee = '';
     this.formUrbanFee = '';
     this.formNonFee = '';
+    this.formAllowCompanyRegistration = true;
+    this.formAllowCompanyCollaboration = true;
+    this.formAllowSalesmanBarman = true;
+    this.formAllowLabelRegistration = true;
   }
 
   cancelForm(): void {
@@ -184,6 +243,10 @@ export class SubcategoryDialogComponent implements OnInit {
     this.formRuralFee = '';
     this.formUrbanFee = '';
     this.formNonFee = '';
+    this.formAllowCompanyRegistration = true;
+    this.formAllowCompanyCollaboration = true;
+    this.formAllowSalesmanBarman = true;
+    this.formAllowLabelRegistration = true;
   }
 
   saveNew(): void {
@@ -192,7 +255,11 @@ export class SubcategoryDialogComponent implements OnInit {
     const payload = {
       description: this.formDescription.trim(),
       category: this.category.id,
-      dryDayFeeType: this.formDryDayFeeType
+      dryDayFeeType: this.formDryDayFeeType,
+      allowCompanyRegistration: this.formAllowCompanyRegistration,
+      allowCompanyCollaboration: this.formAllowCompanyCollaboration,
+      allowSalesmanBarman: this.formAllowSalesmanBarman,
+      allowLabelRegistration: this.formAllowLabelRegistration
     };
     this.adminService.addLicenseSubcategory(payload as any).subscribe({
       next: (createdSub: any) => {
@@ -243,6 +310,10 @@ export class SubcategoryDialogComponent implements OnInit {
     this.formRuralFee = this.getFeeValueForMode(sub, 'rural');
     this.formUrbanFee = this.getFeeValueForMode(sub, 'urban');
     this.formNonFee = this.getFeeValueForMode(sub, 'non');
+    this.formAllowCompanyRegistration = this.isCompanyRegAllowed(sub);
+    this.formAllowCompanyCollaboration = this.isCompanyCollabAllowed(sub);
+    this.formAllowSalesmanBarman = this.isSalesmanBarmanAllowed(sub);
+    this.formAllowLabelRegistration = this.isLabelRegAllowed(sub);
   }
 
   cancelEdit(): void {
@@ -341,7 +412,11 @@ export class SubcategoryDialogComponent implements OnInit {
     this.isSaving = true;
 
     const payload: any = {
-      dryDayFeeType: this.formDryDayFeeType ?? null
+      dryDayFeeType: this.formDryDayFeeType ?? null,
+      allowCompanyRegistration: this.formAllowCompanyRegistration,
+      allowCompanyCollaboration: this.formAllowCompanyCollaboration,
+      allowSalesmanBarman: this.formAllowSalesmanBarman,
+      allowLabelRegistration: this.formAllowLabelRegistration
     };
 
     const originalDesc = sub.description || '';

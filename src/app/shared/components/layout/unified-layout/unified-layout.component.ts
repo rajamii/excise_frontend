@@ -79,6 +79,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   showManufacturingWalletNav = false;
   showSpecialPermitMenu = false;
   showDistributorPermitMenu = false;
+  showCompanyRegistrationNav = true;
+  showCompanyCollaborationNav = true;
+  showSalesmanBarmanRegistrationNav = true;
+  showLabelRegistrationNav = true;
 
   myLicenses: any[] = [];
   selectedLicenseGroupKey = '';
@@ -1298,11 +1302,13 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     forkJoin({
       licenses: this.licenseMeService.getMyLicenses().pipe(catchError(() => of([]))),
       categories: this.http.get<any>(`${environment.apiBaseUrl}/masters/core/license-categories/`).pipe(catchError(() => of([]))),
+      subcategories: this.http.get<any>(`${environment.apiBaseUrl}/masters/core/license-subcategories/`).pipe(catchError(() => of([]))),
       newLicensesGrouped: this.http.get<any>(`${environment.apiBaseUrl}/transactional/new_license_application/list-by-status/`).pipe(catchError(() => of({})))
     }).subscribe({
-      next: ({ licenses, categories, newLicensesGrouped }) => {
+      next: ({ licenses, categories, subcategories, newLicensesGrouped }) => {
         const licenseRows = Array.isArray(licenses) ? licenses : [];
         const categoryRows = Array.isArray(categories) ? categories : (Array.isArray((categories as any)?.results) ? (categories as any).results : []);
+        const subcategoryRows = Array.isArray(subcategories) ? subcategories : (Array.isArray((subcategories as any)?.results) ? (subcategories as any).results : []);
         
         const newLicenseApps: any[] = [];
         if (newLicensesGrouped && typeof newLicensesGrouped === 'object') {
@@ -1318,13 +1324,13 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         this.ensureSelectedLicenseGroup();
 
         const combinedRows = [...licenseRows, ...newLicenseApps];
-        this.applySubtypeMenuRules(combinedRows, categoryRows);
+        this.applySubtypeMenuRules(combinedRows, categoryRows, subcategoryRows);
       },
       error: () => {
         this.myLicenses = [];
         this.latestApplicationRows = [];
         this.selectedLicenseGroupKey = '';
-        this.applySubtypeMenuRules([], []);
+        this.applySubtypeMenuRules([], [], []);
       }
     });
   }
@@ -1666,7 +1672,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       .replaceAll("'", '&#39;');
   }
 
-  private applySubtypeMenuRules(rows: any[], categoryMasters?: any[]): void {
+  private applySubtypeMenuRules(rows: any[], categoryMasters?: any[], subcategoryMasters?: any[]): void {
     const hasDistilleryAny = rows.some((item) => this.isDistillery(item));
     const hasBreweryAny = rows.some((item) => this.isBrewery(item));
     const menuRows = filterRowsForSupplyChainSidebarMenus(rows);
@@ -1713,6 +1719,42 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       this.showDistributorPermitMenu = this.hasActiveValidDistributorLicense(rows, distributorCategorySet);
     }
 
+    // Resolve module access flags based on user's active subcategories
+    if (rows && rows.length > 0 && Array.isArray(subcategoryMasters) && subcategoryMasters.length > 0) {
+      const userSubcategories: any[] = [];
+      rows.forEach((row) => {
+        const subId = this.extractSubCategoryId(row);
+        const subName = this.extractSubCategoryName(row);
+        const matched = subcategoryMasters.find((s: any) => {
+          if (subId && Number(s.id) === subId) return true;
+          if (subName && String(s.description || '').trim().toLowerCase() === subName) return true;
+          return false;
+        });
+        if (matched) {
+          userSubcategories.push(matched);
+        } else if (row?.license_sub_category && typeof row.license_sub_category === 'object') {
+          userSubcategories.push(row.license_sub_category);
+        }
+      });
+
+      if (userSubcategories.length > 0) {
+        this.showCompanyRegistrationNav = userSubcategories.some((s: any) => s.allowCompanyRegistration !== false && s.allow_company_registration !== false);
+        this.showCompanyCollaborationNav = userSubcategories.some((s: any) => s.allowCompanyCollaboration !== false && s.allow_company_collaboration !== false);
+        this.showSalesmanBarmanRegistrationNav = userSubcategories.some((s: any) => s.allowSalesmanBarman !== false && s.allow_salesman_barman !== false);
+        this.showLabelRegistrationNav = userSubcategories.some((s: any) => s.allowLabelRegistration !== false && s.allow_label_registration !== false);
+      } else {
+        this.showCompanyRegistrationNav = true;
+        this.showCompanyCollaborationNav = true;
+        this.showSalesmanBarmanRegistrationNav = true;
+        this.showLabelRegistrationNav = true;
+      }
+    } else {
+      this.showCompanyRegistrationNav = true;
+      this.showCompanyCollaborationNav = true;
+      this.showSalesmanBarmanRegistrationNav = true;
+      this.showLabelRegistrationNav = true;
+    }
+
     console.log('Resolved menu flags:', {
       hasDistillery,
       hasBrewery,
@@ -1720,7 +1762,11 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       showBreweryOrDistilleryMenus: this.showBreweryOrDistilleryMenus,
       showManufacturingWalletNav: this.showManufacturingWalletNav,
       showSpecialPermitMenu: this.showSpecialPermitMenu,
-      showDistributorPermitMenu: this.showDistributorPermitMenu
+      showDistributorPermitMenu: this.showDistributorPermitMenu,
+      showCompanyRegistrationNav: this.showCompanyRegistrationNav,
+      showCompanyCollaborationNav: this.showCompanyCollaborationNav,
+      showSalesmanBarmanRegistrationNav: this.showSalesmanBarmanRegistrationNav,
+      showLabelRegistrationNav: this.showLabelRegistrationNav
     });
 
     if (rows.length > 0) {

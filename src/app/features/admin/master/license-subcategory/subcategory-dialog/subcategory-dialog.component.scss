@@ -581,3 +581,296 @@
     color: #fda4af !important;
   }
 }
+
+// ─── Module Access Box in Add Form ────────────────────────────────────
+.scd-modules-box {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #334155;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 10px;
+
+    mat-icon {
+      font-size: 16px;
+      height: 16px;
+      width: 16px;
+      color: #1C2B78;
+    }
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+  }
+}
+
+.scd-module-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #1C2B78;
+  }
+
+  .scd-module-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: #64748b;
+    transition: color 0.15s ease;
+  }
+
+  .scd-module-text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .scd-module-name {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #1e293b;
+    line-height: 1.2;
+  }
+
+  .scd-module-subtext {
+    font-size: 0.68rem;
+    color: #64748b;
+  }
+
+  &:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+  }
+
+  &--checked {
+    background: #eff6ff;
+    border-color: #93c5fd;
+
+    .scd-module-icon {
+      color: #1d4ed8;
+    }
+
+    .scd-module-name {
+      color: #1e40af;
+      font-weight: 700;
+    }
+  }
+}
+
+// ─── Module Access Badges in Table ─────────────────────────────────────
+.scd-modules-col {
+  min-width: 290px;
+  max-width: 340px;
+}
+
+// ─── View Mode: Pill Grid ───
+.scd-modules-pill-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 5px;
+  width: 100%;
+  padding: 4px 0;
+}
+
+.scd-service-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  outline: none;
+  background: #f8fafc;
+  width: 100%;
+  text-align: left;
+
+  &__icon {
+    font-size: 14px !important;
+    width: 14px !important;
+    height: 14px !important;
+    line-height: 14px !important;
+    flex-shrink: 0;
+
+    &--company { color: #2563eb; }
+    &--collab  { color: #4f46e5; }
+    &--staff   { color: #0d9488; }
+    &--label   { color: #d97706; }
+  }
+
+  &__label {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+  }
+
+  &__state-icon {
+    font-size: 13px !important;
+    width: 13px !important;
+    height: 13px !important;
+    line-height: 13px !important;
+    flex-shrink: 0;
+  }
+
+  &--active {
+    background: #f0fdf4;
+    color: #166534;
+    border-color: #bbf7d0;
+
+    .scd-service-pill__state-icon {
+      color: #16a34a;
+    }
+
+    &:hover {
+      background: #dcfce7;
+      border-color: #86efac;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(22, 163, 74, 0.12);
+    }
+  }
+
+  &--inactive {
+    background: #f8fafc;
+    color: #94a3b8;
+    border-color: #e2e8f0;
+    opacity: 0.75;
+
+    .scd-service-pill__icon {
+      color: #94a3b8 !important;
+    }
+
+    .scd-service-pill__state-icon {
+      color: #cbd5e1;
+    }
+
+    &:hover {
+      opacity: 1;
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+      color: #64748b;
+      transform: translateY(-1px);
+    }
+  }
+}
+
+// ─── Inline Edit Mode: Choice Cards Grid ───
+.scd-inline-modules-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 5px;
+  width: 100%;
+  padding: 4px 0;
+}
+
+.scd-choice-card {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+  position: relative;
+
+  .scd-choice-chk {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    accent-color: #1C2B78;
+    margin: 0;
+    flex-shrink: 0;
+  }
+
+  .scd-choice-icon {
+    font-size: 14px !important;
+    width: 14px !important;
+    height: 14px !important;
+    line-height: 14px !important;
+    flex-shrink: 0;
+    color: #64748b;
+
+    &--company { color: #2563eb; }
+    &--collab  { color: #4f46e5; }
+    &--staff   { color: #0d9488; }
+    &--label   { color: #d97706; }
+  }
+
+  .scd-choice-content {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .scd-choice-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #334155;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .scd-choice-status {
+    font-size: 0.62rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  &:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+  }
+
+  &--active {
+    background: #eff6ff;
+    border-color: #3b82f6;
+
+    .scd-choice-title {
+      color: #1d4ed8;
+    }
+
+    .scd-choice-status {
+      color: #2563eb;
+      font-weight: 700;
+    }
+  }
+}
+
+

@@ -72,6 +72,48 @@
           </mat-form-field>
         </div>
       }
+
+      <!-- Service Module Access Checkboxes -->
+      <div class="scd-modules-box">
+        <div class="scd-modules-box__title">
+          <mat-icon>tune</mat-icon> Enabled Services / Modules for Licensees
+        </div>
+        <div class="scd-modules-box__grid">
+          <label class="scd-module-checkbox" [class.scd-module-checkbox--checked]="formAllowCompanyRegistration">
+            <input type="checkbox" [(ngModel)]="formAllowCompanyRegistration" />
+            <mat-icon class="scd-module-icon">apartment</mat-icon>
+            <div class="scd-module-text">
+              <span class="scd-module-name">Company Registration</span>
+              <span class="scd-module-subtext">Enable Company Registration tab</span>
+            </div>
+          </label>
+          <label class="scd-module-checkbox" [class.scd-module-checkbox--checked]="formAllowCompanyCollaboration">
+            <input type="checkbox" [(ngModel)]="formAllowCompanyCollaboration" />
+            <mat-icon class="scd-module-icon">groups</mat-icon>
+            <div class="scd-module-text">
+              <span class="scd-module-name">Company Collaboration</span>
+              <span class="scd-module-subtext">Enable Collaboration tab</span>
+            </div>
+          </label>
+          <label class="scd-module-checkbox" [class.scd-module-checkbox--checked]="formAllowSalesmanBarman">
+            <input type="checkbox" [(ngModel)]="formAllowSalesmanBarman" />
+            <mat-icon class="scd-module-icon">badge</mat-icon>
+            <div class="scd-module-text">
+              <span class="scd-module-name">Sale/Barman</span>
+              <span class="scd-module-subtext">Enable Salesman/Barman tab</span>
+            </div>
+          </label>
+          <label class="scd-module-checkbox" [class.scd-module-checkbox--checked]="formAllowLabelRegistration">
+            <input type="checkbox" [(ngModel)]="formAllowLabelRegistration" />
+            <mat-icon class="scd-module-icon">label</mat-icon>
+            <div class="scd-module-text">
+              <span class="scd-module-name">Label Registration</span>
+              <span class="scd-module-subtext">Enable Label Registration tab</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
       <div class="scd-add-form__actions">
         <button mat-stroked-button (click)="cancelForm()" class="scd-btn-cancel">Cancel</button>
         <button mat-flat-button color="primary" (click)="saveNew()"
@@ -116,6 +158,98 @@
                      autofocus />
             } @else {
               <span class="scd-desc-text">{{ row.description }}</span>
+            }
+          </mat-cell>
+        </ng-container>
+
+        <!-- Service Modules Column -->
+        <ng-container matColumnDef="modules">
+          <mat-header-cell *matHeaderCellDef class="scd-modules-col">Enabled Services / Tabs</mat-header-cell>
+          <mat-cell *matCellDef="let row" class="scd-modules-col">
+            @if (editingId === row.id) {
+              <div class="scd-inline-modules-grid">
+                <label class="scd-choice-card" [class.scd-choice-card--active]="formAllowCompanyRegistration" title="Toggle Company Registration">
+                  <input type="checkbox" [(ngModel)]="formAllowCompanyRegistration" class="scd-choice-chk" />
+                  <mat-icon class="scd-choice-icon scd-choice-icon--company">apartment</mat-icon>
+                  <div class="scd-choice-content">
+                    <span class="scd-choice-title">Company</span>
+                    <span class="scd-choice-status">{{ formAllowCompanyRegistration ? 'Active' : 'Off' }}</span>
+                  </div>
+                </label>
+
+                <label class="scd-choice-card" [class.scd-choice-card--active]="formAllowCompanyCollaboration" title="Toggle Company Collaboration">
+                  <input type="checkbox" [(ngModel)]="formAllowCompanyCollaboration" class="scd-choice-chk" />
+                  <mat-icon class="scd-choice-icon scd-choice-icon--collab">groups</mat-icon>
+                  <div class="scd-choice-content">
+                    <span class="scd-choice-title">Collab</span>
+                    <span class="scd-choice-status">{{ formAllowCompanyCollaboration ? 'Active' : 'Off' }}</span>
+                  </div>
+                </label>
+
+                <label class="scd-choice-card" [class.scd-choice-card--active]="formAllowSalesmanBarman" title="Toggle Sale/Barman Registration">
+                  <input type="checkbox" [(ngModel)]="formAllowSalesmanBarman" class="scd-choice-chk" />
+                  <mat-icon class="scd-choice-icon scd-choice-icon--staff">badge</mat-icon>
+                  <div class="scd-choice-content">
+                    <span class="scd-choice-title">Sale/Barman</span>
+                    <span class="scd-choice-status">{{ formAllowSalesmanBarman ? 'Active' : 'Off' }}</span>
+                  </div>
+                </label>
+
+                <label class="scd-choice-card" [class.scd-choice-card--active]="formAllowLabelRegistration" title="Toggle Label Registration">
+                  <input type="checkbox" [(ngModel)]="formAllowLabelRegistration" class="scd-choice-chk" />
+                  <mat-icon class="scd-choice-icon scd-choice-icon--label">label</mat-icon>
+                  <div class="scd-choice-content">
+                    <span class="scd-choice-title">Label</span>
+                    <span class="scd-choice-status">{{ formAllowLabelRegistration ? 'Active' : 'Off' }}</span>
+                  </div>
+                </label>
+              </div>
+            } @else {
+              <div class="scd-modules-pill-grid">
+                <button type="button"
+                        class="scd-service-pill"
+                        [class.scd-service-pill--active]="isCompanyRegAllowed(row)"
+                        [class.scd-service-pill--inactive]="!isCompanyRegAllowed(row)"
+                        (click)="toggleSubcategoryModule(row, 'company', $event)"
+                        [title]="isCompanyRegAllowed(row) ? 'Company Registration: Active (Click to disable)' : 'Company Registration: Inactive (Click to enable)'">
+                  <mat-icon class="scd-service-pill__icon scd-service-pill__icon--company">apartment</mat-icon>
+                  <span class="scd-service-pill__label">Company</span>
+                  <mat-icon class="scd-service-pill__state-icon">{{ isCompanyRegAllowed(row) ? 'check_circle' : 'cancel' }}</mat-icon>
+                </button>
+
+                <button type="button"
+                        class="scd-service-pill"
+                        [class.scd-service-pill--active]="isCompanyCollabAllowed(row)"
+                        [class.scd-service-pill--inactive]="!isCompanyCollabAllowed(row)"
+                        (click)="toggleSubcategoryModule(row, 'collaboration', $event)"
+                        [title]="isCompanyCollabAllowed(row) ? 'Company Collaboration: Active (Click to disable)' : 'Company Collaboration: Inactive (Click to enable)'">
+                  <mat-icon class="scd-service-pill__icon scd-service-pill__icon--collab">groups</mat-icon>
+                  <span class="scd-service-pill__label">Collab</span>
+                  <mat-icon class="scd-service-pill__state-icon">{{ isCompanyCollabAllowed(row) ? 'check_circle' : 'cancel' }}</mat-icon>
+                </button>
+
+                <button type="button"
+                        class="scd-service-pill"
+                        [class.scd-service-pill--active]="isSalesmanBarmanAllowed(row)"
+                        [class.scd-service-pill--inactive]="!isSalesmanBarmanAllowed(row)"
+                        (click)="toggleSubcategoryModule(row, 'salesman', $event)"
+                        [title]="isSalesmanBarmanAllowed(row) ? 'Sale/Barman Registration: Active (Click to disable)' : 'Sale/Barman Registration: Inactive (Click to enable)'">
+                  <mat-icon class="scd-service-pill__icon scd-service-pill__icon--staff">badge</mat-icon>
+                  <span class="scd-service-pill__label">Sale/Barman</span>
+                  <mat-icon class="scd-service-pill__state-icon">{{ isSalesmanBarmanAllowed(row) ? 'check_circle' : 'cancel' }}</mat-icon>
+                </button>
+
+                <button type="button"
+                        class="scd-service-pill"
+                        [class.scd-service-pill--active]="isLabelRegAllowed(row)"
+                        [class.scd-service-pill--inactive]="!isLabelRegAllowed(row)"
+                        (click)="toggleSubcategoryModule(row, 'label', $event)"
+                        [title]="isLabelRegAllowed(row) ? 'Label Registration: Active (Click to disable)' : 'Label Registration: Inactive (Click to enable)'">
+                  <mat-icon class="scd-service-pill__icon scd-service-pill__icon--label">label</mat-icon>
+                  <span class="scd-service-pill__label">Label</span>
+                  <mat-icon class="scd-service-pill__state-icon">{{ isLabelRegAllowed(row) ? 'check_circle' : 'cancel' }}</mat-icon>
+                </button>
+              </div>
             }
           </mat-cell>
         </ng-container>
