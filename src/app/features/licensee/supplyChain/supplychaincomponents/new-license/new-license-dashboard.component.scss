@@ -498,6 +498,26 @@ tr.row-needs-action {
     .fee-status-label { color: #92400e; }
   }
 
+  // ── Expired (Auto-rejected) state ─── soft red
+  &--expired {
+    background: #fee2e2;
+    border-color: #fca5a5;
+
+    .fee-status-icon { color: #dc2626; }
+    .fee-status-value { color: #991b1b; }
+    .fee-status-label { color: #991b1b; }
+  }
+
+  // ── Cancelled / Rejected state ─── soft slate gray
+  &--cancelled {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+
+    .fee-status-icon { color: #64748b; }
+    .fee-status-value { color: #475569; }
+    .fee-status-label { color: #64748b; }
+  }
+
   .fee-status-icon {
     font-size: 15px;
     line-height: 1;

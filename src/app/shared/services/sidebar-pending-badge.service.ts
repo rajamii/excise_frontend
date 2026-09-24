@@ -519,6 +519,9 @@ export class SidebarPendingBadgeService {
         item?.status ??
         ''
     ).toLowerCase();
+    if (stage.includes('reject') || stage.includes('cancel') || stage.includes('no action')) {
+      return false;
+    }
     const normalized = stage.replace(/[^a-z0-9]/g, '');
     return normalized === 'awaitingpayment' || (normalized.includes('awaiting') && normalized.includes('payment'));
   }

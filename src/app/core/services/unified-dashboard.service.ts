@@ -585,8 +585,12 @@ export class UnifiedDashboardService {
         
         const isAwaitingPayment = (app: UnifiedApplication): boolean => {
           const stage = String(app.currentStage || '').toLowerCase();
+          const stageName = String(app.currentStageName || '').toLowerCase();
+          if (stage.includes('reject') || stage.includes('cancel') || stageName.includes('reject') || stageName.includes('cancel')) {
+            return false;
+          }
           const stageId = app.raw?.current_stage_id || app.raw?.currentStageId;
-          const isAwaitingByName = stage === 'awaiting_payment' || stage.includes('awaiting') || stage === 'awaiting payment';
+          const isAwaitingByName = stage === 'awaiting_payment' || (stage.includes('awaiting') && stage.includes('payment')) || stage === 'awaiting payment';
           const isAwaitingById = 
             stageId === 23 || stageId === 31 || stageId === 109 || stageId === 119 || stageId === 122 || stageId === 12 ||
             Number(stageId) === 23 || Number(stageId) === 31 || Number(stageId) === 109 || Number(stageId) === 119 || Number(stageId) === 122 || Number(stageId) === 12;

@@ -1333,10 +1333,12 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
     this.http.post<any>(`${this.apiBase}/${encoded}/trigger-timer-expiration/`, {}).subscribe({
       next: (res) => {
         console.log(`[Timer Expired] Auto-rejection executed for ${applicationId}:`, res);
+        this.sidebarPendingBadgeService.triggerRefresh();
         this.loadData();
       },
       error: (err) => {
         console.error(`[Timer Expired] Failed to trigger auto-rejection for ${applicationId}:`, err);
+        this.sidebarPendingBadgeService.triggerRefresh();
         setTimeout(() => this.loadData(), 1500);
       }
     });
