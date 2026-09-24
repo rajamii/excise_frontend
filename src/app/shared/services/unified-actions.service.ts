@@ -951,6 +951,7 @@ export class UnifiedActionsService {
         this.router.navigate(['/dashboard'], {
           queryParams: {
             section: 'wallet',
+            walletView: 'others',
             tab: 'license_fee',
             id: applicationId,
             type: 'special-permit',

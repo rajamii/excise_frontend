@@ -202,6 +202,7 @@ export class ApplySpecialPermitComponent implements OnInit, OnDestroy {
     this.router.navigate(['/dashboard'], {
       queryParams: {
         section: 'wallet',
+        walletView: 'others',
         tab: 'license_fee',
         id: this.applicationId,
         type: 'special-permit',

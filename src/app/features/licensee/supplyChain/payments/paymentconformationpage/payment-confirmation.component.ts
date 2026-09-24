@@ -193,6 +193,7 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
   set walletViewMode(mode: WalletViewMode) {
     if (mode && this._walletViewMode !== mode) {
       this._walletViewMode = mode;
+      this.walletViewModeChange.emit(mode);
       this.ensureActiveTabAllowed();
     }
   }
@@ -368,9 +369,11 @@ export class PaymentConfirmationComponent implements OnInit, AfterViewInit, OnDe
         requestedTab === 'security_deposit' ||
         source === 'new-license' ||
         source === 'license-renewal' ||
+        source === 'special-permit' ||
         type === 'new-license' ||
         type === 'license-renewal' ||
-        ((source.includes('license') || type.includes('license') || requestedTab.includes('license')) && action === 'pay');
+        type === 'special-permit' ||
+        ((source.includes('license') || type.includes('license') || requestedTab.includes('license') || source.includes('permit') || type.includes('permit')) && action === 'pay');
 
       if (viewParam === 'others' || isLicenseFeeAction) {
         this.walletViewMode = 'others';
@@ -882,21 +885,27 @@ private initializeWalletContextAndLoadData(): void {
       requestedTab === 'security_deposit' ||
       requestedSource === 'new-license' ||
       requestedSource === 'license-renewal' ||
+      requestedSource === 'special-permit' ||
       requestedType === 'new-license' ||
       requestedType === 'license-renewal' ||
-      ((requestedSource.includes('license') || requestedType.includes('license') || requestedTab.includes('license')) && requestedAction === 'pay') ||
+      requestedType === 'special-permit' ||
+      ((requestedSource.includes('license') || requestedType.includes('license') || requestedTab.includes('license') || requestedSource.includes('permit') || requestedType.includes('permit')) && requestedAction === 'pay') ||
       requestedView === 'others';
 
-    if ((!isFullWalletModule || isLicenseFeeAction) && this.walletViewMode !== 'others' && requestedView !== 'wallets') {
+    if (requestedView === 'wallets') {
+      this.walletViewMode = 'wallets';
+    } else if (requestedView === 'others' || isLicenseFeeAction || !isFullWalletModule) {
       this.walletViewMode = 'others';
       const currentView = String(this.route.snapshot?.queryParams?.['walletView'] || '').trim().toLowerCase();
-      if (currentView !== 'others') {
+      if (currentView !== 'others' && isLicenseFeeAction) {
         this.router.navigate([], {
           relativeTo: this.route,
           queryParams: { walletView: 'others' },
           queryParamsHandling: 'merge'
         });
       }
+    } else {
+      this.walletViewMode = 'wallets';
     }
 
     this.ensureActiveTabAllowed();
@@ -2171,7 +2180,14 @@ private initializeWalletContextAndLoadData(): void {
 
     const ctx = this.pendingWalletPaymentContext;
     if (!ctx) return;
-    if (!this.isLicenseFeeWorkflowPaymentType(ctx.itemType)) return;
+    const isNewLicOrRenewal = ctx.itemType === 'new-license' || ctx.itemType === 'license-renewal'
+      || String(ctx.referenceNo || '').toUpperCase().startsWith('NA/')
+      || String(ctx.referenceNo || '').toUpperCase().startsWith('NLI/')
+      || String(ctx.referenceNo || '').toUpperCase().startsWith('NLA/')
+      || String(ctx.referenceNo || '').toUpperCase().startsWith('LIC/')
+      || String(ctx.referenceNo || '').toUpperCase().startsWith('LRA/')
+      || String(ctx.referenceNo || '').toUpperCase().startsWith('RCR/');
+    if (!isNewLicOrRenewal) return;
     if (!this.pendingNewLicenseApplicationId) {
       this.pendingNewLicenseApplicationId = String(ctx.id || '').trim();
     }
@@ -2243,14 +2259,14 @@ private initializeWalletContextAndLoadData(): void {
     if (normalized === 'cancellation') return 'cancellation';
     if (normalized === 'transit' || normalized === 'transit-permit') return 'transit';
     if (normalized === 'hologram' || normalized === 'hologram-request') return 'hologram';
-    if (normalized === 'license_fee' || normalized === 'licensefee' || normalized === 'new-license' || normalized === 'company-collaboration' || normalized === 'company_collaboration') return 'license_fee';
+    if (normalized === 'license_fee' || normalized === 'licensefee' || normalized === 'new-license' || normalized === 'license-renewal' || normalized === 'company-collaboration' || normalized === 'company_collaboration' || normalized === 'special-permit' || normalized === 'special_permit') return 'license_fee';
     if (normalized === 'security_deposit' || normalized === 'securitydeposit') return 'security_deposit';
     return null;
   }
 
   private isLicenseFeeWorkflowPaymentType(value: any): boolean {
     const normalized = String(value || '').trim().toLowerCase();
-    return normalized === 'new-license' || normalized === 'license-renewal' || normalized === 'company-collaboration';
+    return normalized === 'new-license' || normalized === 'license-renewal' || normalized === 'company-collaboration' || normalized === 'special-permit' || normalized === 'special_permit';
   }
 
   private normalizeApplicationReference(value: any): string {
@@ -2346,7 +2362,9 @@ private initializeWalletContextAndLoadData(): void {
     }
 
     // New license / renewal flow: amount can be missing/0 in deep-link; we will resolve from backend.
-    if (this.isLicenseFeeWorkflowPaymentType(type)) {
+    const isNewLicOrRenewal = type === 'new-license' || type === 'license-renewal'
+      || referenceNo.startsWith('NA/') || referenceNo.startsWith('NLI/') || referenceNo.startsWith('NLA/') || referenceNo.startsWith('LIC/') || referenceNo.startsWith('LRA/') || referenceNo.startsWith('RCR/');
+    if (isNewLicOrRenewal) {
       this.pendingNewLicenseApplicationId = id;
       this.pendingNewLicenseReferenceNo = referenceNo;
       if (securityAmount > 0) {
@@ -2360,6 +2378,15 @@ private initializeWalletContextAndLoadData(): void {
           sessionStorage.setItem('pendingNewLicenseSecurityFeeAmount', String(securityAmount));
         }
       }
+    } else {
+      if (this.isBrowser) {
+        sessionStorage.removeItem('pendingNewLicenseApplicationId');
+        sessionStorage.removeItem('pendingNewLicenseReferenceNo');
+        sessionStorage.removeItem('pendingNewLicenseSecurityFeeAmount');
+      }
+      this.pendingNewLicenseApplicationId = '';
+      this.pendingNewLicenseReferenceNo = '';
+      this.pendingNewLicenseSecurityFeeAmount = 0;
     }
 
     this.pendingWalletPaymentContext = {
@@ -2373,6 +2400,13 @@ private initializeWalletContextAndLoadData(): void {
     this.hasHandledPendingWalletPayment = false;
     this.setActiveTab(tab);
     this.persistPendingPaymentContextToStorage();
+
+    if (this.walletDataLoaded && !this.hasHandledPendingWalletPayment) {
+      const appType = this.getPendingApplicationType();
+      if (appType !== 'new-license' && appType !== 'company-collaboration') {
+        setTimeout(() => this.openPendingWalletPaymentConfirmation(), 0);
+      }
+    }
   }
 
   private shouldPreservePendingLicensePaymentContext(): boolean {
@@ -2504,7 +2538,10 @@ private initializeWalletContextAndLoadData(): void {
     if (!refNo) return false;
 
     const refNoUpper = String(refNo).trim().toUpperCase();
-    const isNewLicense = !refNoUpper.startsWith('LRA/') && !refNoUpper.startsWith('RCR/') && !refNoUpper.startsWith('RCOL/') && !refNoUpper.startsWith('RSBM/');
+    if (refNoUpper.startsWith('DP/') || refNoUpper.startsWith('SBM/') || refNoUpper.startsWith('CCOL/') || refNoUpper.startsWith('TP/') || refNoUpper.startsWith('LRA/') || refNoUpper.startsWith('RCR/') || refNoUpper.startsWith('RCOL/') || refNoUpper.startsWith('RSBM/')) {
+      return false;
+    }
+    const isNewLicense = refNoUpper.startsWith('NA/') || refNoUpper.startsWith('NLI/') || refNoUpper.startsWith('NLA/') || refNoUpper.startsWith('LIC/');
     if (!isNewLicense) return false;
 
     const licensePaid = this.isFeePaid('license_fee', refNo);
@@ -2558,6 +2595,9 @@ private initializeWalletContextAndLoadData(): void {
     if (!tab) return '-';
     const type = String(this.pendingWalletPaymentContext?.itemType || '').toLowerCase();
     const refNo = String(this.pendingWalletPaymentContext?.referenceNo || '').toUpperCase();
+    if (type === 'special-permit' || type === 'special_permit' || refNo.startsWith('DP/')) {
+      return 'Dry Day Permit Fee';
+    }
     if (type === 'company-collaboration' || refNo.startsWith('CCOL/')) {
       return tab === 'security_deposit' ? 'com col security paid' : 'Company Collaboration Fee';
     }
@@ -2586,7 +2626,10 @@ private initializeWalletContextAndLoadData(): void {
     return Math.max(0, required - available);
   }
 
-  openPendingWalletPaymentConfirmation(): void {
+  openPendingWalletPaymentConfirmation(force: boolean = false): void {
+    if (force) {
+      this.hasHandledPendingWalletPayment = false;
+    }
     if (!this.walletDataLoaded || this.hasHandledPendingWalletPayment || this.isHandlingPendingWalletPayment) {
       return;
     }
@@ -2637,8 +2680,9 @@ private initializeWalletContextAndLoadData(): void {
     this.continueOpenPendingWalletPaymentConfirmation(context);
   }
 
-  getPendingApplicationType(): 'company-collaboration' | 'new-license' | 'license-renewal' | 'other' {
+  getPendingApplicationType(): 'company-collaboration' | 'new-license' | 'license-renewal' | 'special-permit' | 'other' {
     const ref = String(this.pendingNewLicenseRef || '').toUpperCase();
+    if (ref.startsWith('DP/')) return 'special-permit';
     if (ref.startsWith('CCOL/')) return 'company-collaboration';
     if (ref.startsWith('NLI/') || ref.startsWith('NLA/') || ref.startsWith('NA/') || ref.startsWith('LIC/')) return 'new-license';
     if (ref.startsWith('LRA/') || ref.startsWith('RCR/') || ref.startsWith('RCOL/') || ref.startsWith('RSBM/')) return 'license-renewal';
@@ -2647,6 +2691,9 @@ private initializeWalletContextAndLoadData(): void {
       const ctxType = String(this.pendingWalletPaymentContext.itemType || '').toLowerCase();
       const ctxRef = String(this.pendingWalletPaymentContext.referenceNo || '').toUpperCase();
 
+      if (ctxType === 'special-permit' || ctxType === 'special_permit' || ctxRef.startsWith('DP/')) {
+        return 'special-permit';
+      }
       if (ctxType === 'company-collaboration' || ctxRef.startsWith('CCOL/')) {
         return 'company-collaboration';
       }
@@ -2725,6 +2772,31 @@ private initializeWalletContextAndLoadData(): void {
     const deductionAmount = Number(context.amount || 0);
     const currentBalance = this.getAvailableBalanceForModuleTab(context.tab);
     if (deductionAmount <= 0) {
+      if (String(context.itemType || '').trim().toLowerCase() === 'special-permit' || String(context.itemType || '').trim().toLowerCase() === 'special_permit' || String(context.referenceNo || '').toUpperCase().startsWith('DP/')) {
+        const appId = String(context.id || context.referenceNo || '').trim();
+        this.specialPermitService.getSpecialPermitDetail(appId).pipe(
+          timeout(15000),
+          catchError(() => of(null))
+        ).subscribe((res: any) => {
+          const permitAmount = Number(
+            res?.payment_amount ??
+            res?.paymentAmount ??
+            res?.fee_amount ??
+            res?.feeAmount ??
+            res?.amount ??
+            0
+          );
+          if (permitAmount > 0) {
+            this.pendingWalletPaymentContext = { ...context, amount: permitAmount };
+            this.persistPendingPaymentContextToStorage();
+            setTimeout(() => this.openPendingWalletPaymentConfirmation(), 0);
+            return;
+          }
+          Swal.fire('Fee Not Available', 'Payment amount is not available for this special permit.', 'error');
+          this.resetPendingPaymentAttemptState();
+        });
+        return;
+      }
       if (String(context.itemType || '').trim().toLowerCase() === 'company-collaboration' || String(context.referenceNo || '').toUpperCase().startsWith('CCOL/')) {
         const resolvedAmount = 25000;
         this.pendingWalletPaymentContext = { ...context, amount: resolvedAmount };
@@ -2764,7 +2836,7 @@ private initializeWalletContextAndLoadData(): void {
     }
 
     this.pendingWalletPaymentPreview = {
-      moduleLabel: this.getModuleLabelForTab(context.tab),
+      moduleLabel: this.getPendingPaymentModuleLabel(),
       walletLabel: this.getWalletLabelForModuleTab(context.tab),
       referenceNo: context.referenceNo || '-',
       currentBalance,
@@ -2774,6 +2846,7 @@ private initializeWalletContextAndLoadData(): void {
     };
     this.pendingWalletPaymentDeclarationAccepted = false;
     this.showPendingWalletConfirmationModal = true;
+    this.cdr.detectChanges();
   }
 
 
@@ -2781,6 +2854,9 @@ private initializeWalletContextAndLoadData(): void {
     this.showPendingWalletConfirmationModal = false;
     this.pendingWalletPaymentDeclarationAccepted = false;
     this.pendingWalletPaymentPreview = null;
+    this.hasHandledPendingWalletPayment = true;
+    this.isHandlingPendingWalletPayment = false;
+    this.cdr.detectChanges();
   }
 
   canConfirmPendingWalletPayment(): boolean {
@@ -2868,9 +2944,42 @@ private initializeWalletContextAndLoadData(): void {
                          || String(refNo || '').trim().toUpperCase().startsWith('RCR/');
           const isCollab = String(context.itemType || '').trim().toLowerCase() === 'company-collaboration'
                         || String(refNo || '').trim().toUpperCase().startsWith('CCOL/');
+          const isSpecialPermit = String(context.itemType || '').trim().toLowerCase() === 'special-permit'
+                               || String(context.itemType || '').trim().toLowerCase() === 'special_permit'
+                               || String(refNo || '').trim().toUpperCase().startsWith('DP/');
 
           if (context.tab === 'license_fee') {
             // After paying license fee, chain to security deposit if it hasn't been paid yet.
+            if (isSpecialPermit) {
+              const permitId = String(context.id || context.referenceNo || refNo || '').trim();
+              this.pendingWalletPaymentContext = null;
+              this.clearPendingPaymentContextFromStorage();
+              this.hasHandledPendingWalletPayment = false;
+              this.isHandlingPendingWalletPayment = false;
+              Swal.fire({
+                icon: 'success',
+                title: 'Permit Fee Paid Successfully!',
+                text: 'Dry Day Permit fee payment was successful.',
+                showCancelButton: true,
+                confirmButtonText: '<i class="bi bi-printer me-1"></i> Print Permit',
+                cancelButtonText: 'Stay on Wallet'
+              }).then((result) => {
+                this.refreshWalletData();
+                this.finishPendingWalletPaymentHandling();
+                if (result.isConfirmed && permitId) {
+                  this.router.navigate(['/unified-letter-view/special-permit'], {
+                    queryParams: {
+                      id: permitId,
+                      ref: permitId,
+                      type: 'special-permit',
+                      source: 'licensee'
+                    }
+                  });
+                }
+              });
+              return;
+            }
+
             if (isCollab) {
               this.pendingWalletPaymentContext = null;
               this.clearPendingPaymentContextFromStorage();
@@ -3091,9 +3200,18 @@ private initializeWalletContextAndLoadData(): void {
       const storedAppId = sessionStorage.getItem('pendingNewLicenseApplicationId');
       const storedRefNo = sessionStorage.getItem('pendingNewLicenseReferenceNo');
       const storedSecAmount = sessionStorage.getItem('pendingNewLicenseSecurityFeeAmount');
-      if (storedAppId) this.pendingNewLicenseApplicationId = storedAppId;
-      if (storedRefNo) this.pendingNewLicenseReferenceNo = storedRefNo;
-      if (storedSecAmount) this.pendingNewLicenseSecurityFeeAmount = Number(storedSecAmount) || 0;
+      if (storedRefNo && (storedRefNo.startsWith('DP/') || storedRefNo.startsWith('SBM/') || storedRefNo.startsWith('CCOL/') || storedRefNo.startsWith('TP/'))) {
+        sessionStorage.removeItem('pendingNewLicenseApplicationId');
+        sessionStorage.removeItem('pendingNewLicenseReferenceNo');
+        sessionStorage.removeItem('pendingNewLicenseSecurityFeeAmount');
+        this.pendingNewLicenseApplicationId = '';
+        this.pendingNewLicenseReferenceNo = '';
+        this.pendingNewLicenseSecurityFeeAmount = 0;
+      } else {
+        if (storedAppId) this.pendingNewLicenseApplicationId = storedAppId;
+        if (storedRefNo) this.pendingNewLicenseReferenceNo = storedRefNo;
+        if (storedSecAmount) this.pendingNewLicenseSecurityFeeAmount = Number(storedSecAmount) || 0;
+      }
 
       const raw = sessionStorage.getItem(this.pendingPaymentStorageKey);
       if (!raw) return;
@@ -3299,7 +3417,11 @@ private initializeWalletContextAndLoadData(): void {
     this.clearPendingHologramDeepLinkRef();
 
     const refNo = this.pendingNewLicenseReferenceNo;
+    const isSpecialPermit = String(this.pendingWalletPaymentContext?.itemType || '').trim().toLowerCase() === 'special-permit'
+                         || String(this.pendingWalletPaymentContext?.itemType || '').trim().toLowerCase() === 'special_permit'
+                         || String(refNo || '').trim().toUpperCase().startsWith('DP/');
     const isUnfinishedLicensePayment =
+      !isSpecialPermit &&
       refNo &&
       this.pendingWalletPaymentContext &&
       this.isLicenseFeeWorkflowPaymentType(this.pendingWalletPaymentContext.itemType) &&
@@ -4746,7 +4868,16 @@ private initializeWalletContextAndLoadData(): void {
     this.ensureActiveTabAllowed();
     this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { walletView: mode },
+      queryParams: {
+        walletView: mode,
+        action: null,
+        id: null,
+        amount: null,
+        ref: null,
+        referenceNo: null,
+        type: null,
+        source: null
+      },
       queryParamsHandling: 'merge'
     });
   }

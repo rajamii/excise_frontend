@@ -2678,11 +2678,17 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.selectedSupplyChainSection !== 'wallet') {
       return 'wallets';
     }
+    const value = String(params?.walletView || '').trim().toLowerCase();
+    if (value === 'others') return 'others';
+    if (value === 'wallets') return 'wallets';
+    const tab = String(params?.tab || '').trim().toLowerCase();
+    if (tab === 'license_fee' || tab === 'security_deposit') return 'others';
+    const type = String(params?.type || '').trim().toLowerCase();
+    if (type === 'special-permit' || type === 'new-license' || type === 'license-renewal') return 'others';
     if (this.isLicenseeUser() && this.licenseeMenuAccessResolved && !this.showBreweryOrDistilleryWalletViews) {
       return 'others';
     }
-    const value = String(params?.walletView || '').trim().toLowerCase();
-    return value === 'others' ? 'others' : 'wallets';
+    return 'wallets';
   }
 
   private readDistributorPermitMode(params: any): 'list' | 'apply' {
@@ -2741,7 +2747,16 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.walletViewMode = mode;
     this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { walletView: mode },
+      queryParams: {
+        walletView: mode,
+        action: null,
+        id: null,
+        amount: null,
+        ref: null,
+        referenceNo: null,
+        type: null,
+        source: null
+      },
       queryParamsHandling: 'merge'
     });
   }

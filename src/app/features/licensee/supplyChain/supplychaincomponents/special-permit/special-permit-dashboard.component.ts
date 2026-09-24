@@ -135,6 +135,7 @@ export class SpecialPermitDashboardComponent implements OnInit {
     this.router.navigate(['/dashboard'], {
       queryParams: {
         section: 'wallet',
+        walletView: 'others',
         tab: 'license_fee',
         id: row.applicationId,
         type: 'special-permit',
