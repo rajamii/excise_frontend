@@ -6928,6 +6928,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }
 
     const rawApp = row.application || row;
+    const isArrivalDone = this.hasOicSavedBrandArrival(row) || this.getBrandArrivalStatusForRow(row) === 'approved';
+    if (isArrivalDone) {
+      return null;
+    }
+
     const now = new Date();
     const validUpToStr = rawApp?.valid_up_to || rawApp?.validUpTo || row?.application?.valid_up_to || '';
     const validUpToDate = validUpToStr ? new Date(validUpToStr) : null;
@@ -7178,6 +7183,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     label: string;
     isUnderProcess: boolean;
     isCancelled: boolean;
+    isArrivalApproved?: boolean;
     detail: any;
   }> = [];
   selectedPermitDetailForRevalidation: any = null;
@@ -7265,6 +7271,24 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         const cases = Number(p.total_cases || p.totalCases || 0);
         const pNumLower = pNum.toLowerCase().trim();
 
+        // Check if OIC has already received or approved physical stock arrival for this permit
+        const approvedArrival = (this.allArrivalsList || []).find((a: any) => {
+          const aPNo = String(a.permit_number || a.permitNumber || '').toLowerCase().trim();
+          const aAppRef = String(a.distributor_permit?.reference_no || a.distributor_permit || '').toLowerCase().trim();
+          return aPNo === pNumLower || aAppRef === pNumLower || aAppRef === appIdLower;
+        });
+
+        const approvedCaseProc = (this.allCasesProcessedList || []).filter((c: any) => {
+          const cPNo = String(c.permit_number || c.permitNumber || '').toLowerCase().trim();
+          const cAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase().trim();
+          const st = String(c.status || '').toLowerCase().trim();
+          if (st !== 'approved' && st !== 'completed') return false;
+          return cPNo === pNumLower || cAppRef === pNumLower || cAppRef === appIdLower;
+        });
+
+        const isWarehouseStocked = this.hasOicSavedBrandArrival({ applicationId: pNum, referenceNo: pNum, permit_number: pNum }) || this.hasOicSavedBrandArrival(p);
+        const isArrivalApproved = Boolean(approvedArrival || approvedCaseProc.length > 0 || isWarehouseStocked);
+
         const existingForPermitRev = existingRevalidations.find((revApp: any) => {
           const revNo = String(revApp.revalidatedPermitNumber || revApp.revalidated_permit_number || revApp.application?.revalidated_permit_number || revApp.application?.revalidatedPermitNumber || revApp.distributor_permit || '').toLowerCase().trim();
           const reasonText = String(revApp.revalidationReason || revApp.revalidation_reason || revApp.application?.revalidation_reason || revApp.remarks || revApp.application?.remarks || '').toLowerCase().trim();
@@ -7299,6 +7323,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         let isUnderProcess = false;
         let underProcessReason = '';
 
+        if (isArrivalApproved) {
+          isUnderProcess = true;
+          underProcessReason = 'OIC has updated arrival - Please update arrival';
+        }
+
         if (existingForPermitCan) {
           const st = String(existingForPermitCan['status'] || existingForPermitCan['currentStage'] || '').toUpperCase();
           if (st.includes('APPROVED') || st.includes('COMPLETED')) {
@@ -7317,13 +7346,15 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           }
         }
 
-        if (!isCancelled && !isUnderProcess) {
+        if (!isCancelled && !isUnderProcess && !isArrivalApproved) {
           unActionedPermits.push(p);
           totalUnActionedCases += cases;
         }
 
         let label = `${pNum} (${cases} Cases)`;
-        if (isCancelled) {
+        if (isArrivalApproved) {
+          label += ' - (OIC has updated arrival - Please update arrival)';
+        } else if (isCancelled) {
           label += ' - (Cancelled)';
         } else if (isUnderProcess && underProcessReason) {
           label += ` - (${underProcessReason})`;
@@ -7333,8 +7364,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           permitNumber: pNum,
           totalCases: cases,
           label,
-          isUnderProcess,
+          isUnderProcess: isUnderProcess || isArrivalApproved,
           isCancelled,
+          isArrivalApproved,
           detail: p
         });
       });
@@ -7346,10 +7378,25 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           label: `All Expired Permits (${unActionedPermits.length} Permits - ${totalUnActionedCases} Cases)`,
           isUnderProcess: false,
           isCancelled: false,
+          isArrivalApproved: false,
           detail: unActionedPermits
         });
       }
     } else {
+      const approvedArrival = (this.allArrivalsList || []).find((a: any) => {
+        const aAppRef = String(a.distributor_permit?.reference_no || a.distributor_permit || '').toLowerCase().trim();
+        return aAppRef === appIdLower;
+      });
+
+      const approvedCaseProc = (this.allCasesProcessedList || []).filter((c: any) => {
+        const cAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase().trim();
+        const st = String(c.status || '').toLowerCase().trim();
+        return (st === 'approved' || st === 'completed') && cAppRef === appIdLower;
+      });
+
+      const isWarehouseStocked = this.hasOicSavedBrandArrival(row) || this.hasOicSavedBrandArrival({ applicationId: appId, referenceNo: appId });
+      const isArrivalApproved = Boolean(approvedArrival || approvedCaseProc.length > 0 || isWarehouseStocked);
+
       const fallbackDetail = {
         permit_number: appId,
         permitNumber: appId,
@@ -7360,17 +7407,50 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         total_additional_ed: Number(rawApp?.total_additional_ed || 0),
         line_items: rawApp?.line_items || rawApp?.lineItems || []
       };
+
+      let label = `${appId} (${fallbackDetail.totalCases || 0} Cases)`;
+      if (isArrivalApproved) {
+        label += ' - (OIC has updated arrival - Please update arrival)';
+      }
+
       this.availablePermitOptionsForRevalidation.push({
         permitNumber: appId,
         totalCases: Number(fallbackDetail.totalCases || 0),
-        label: `${appId} (${fallbackDetail.totalCases || 0} Cases)`,
-        isUnderProcess: false,
+        label,
+        isUnderProcess: isArrivalApproved,
         isCancelled: false,
+        isArrivalApproved,
         detail: fallbackDetail
       });
     }
 
-    const firstAvailable = this.availablePermitOptionsForRevalidation.find(opt => !opt.isCancelled && !opt.isUnderProcess);
+    // If ALL permits have already arrived / updated by OIC, inform user and do not allow revalidation
+    const nonArrivedOptions = this.availablePermitOptionsForRevalidation.filter(opt => opt.permitNumber !== 'ALL' && !opt.isArrivalApproved);
+    if (this.availablePermitOptionsForRevalidation.length > 0 && nonArrivedOptions.length === 0) {
+      Swal.fire({
+        icon: 'info',
+        title: 'Arrival Already Updated by OIC',
+        html: `
+          <div style="text-align: left; font-size: 13.5px; line-height: 1.6;">
+            <p>Physical stock arrival for permit <strong>${appId}</strong> has already been received and updated by OIC in <em>Update Brands Arrival</em>.</p>
+            <p style="color: #1d4ed8; font-weight: 600; margin-bottom: 0;">
+              <i class="bi bi-info-circle me-1"></i> Revalidation is not permitted as the goods have already arrived. Please update arrival in the <strong>Arrival Register</strong>.
+            </p>
+          </div>
+        `,
+        confirmButtonText: 'Open Arrival Register',
+        confirmButtonColor: '#0284c7',
+        showCancelButton: true,
+        cancelButtonText: 'Close'
+      }).then((res) => {
+        if (res.isConfirmed) {
+          this.openArrivalsRegisterModal();
+        }
+      });
+      return;
+    }
+
+    const firstAvailable = this.availablePermitOptionsForRevalidation.find(opt => !opt.isCancelled && !opt.isUnderProcess && !opt.isArrivalApproved);
     this.selectedPermitNumberForRevalidation = firstAvailable ? firstAvailable.permitNumber : (this.availablePermitOptionsForRevalidation[0]?.permitNumber || appId);
     this.onPermitSelectionChangeForRevalidation();
 
@@ -7380,6 +7460,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   onPermitSelectionChangeForRevalidation(): void {
     const opt = this.availablePermitOptionsForRevalidation.find(o => o.permitNumber === this.selectedPermitNumberForRevalidation);
     this.selectedPermitDetailForRevalidation = opt ? opt.detail : null;
+  }
+
+  getSelectedRevalidationPermitOption(): any {
+    return this.availablePermitOptionsForRevalidation.find(o => o.permitNumber === this.selectedPermitNumberForRevalidation) || null;
   }
 
   getSelectedRevalidationPermitsList(): any[] {
@@ -7472,10 +7556,13 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   isCurrentPermitDisabledForRevalidation(): boolean {
     const opt = this.availablePermitOptionsForRevalidation.find(o => o.permitNumber === this.selectedPermitNumberForRevalidation);
     if (!opt) return false;
-    if (this.revalidationTargetRow?.isActivatedSchedule) {
-      return Boolean(opt.isCancelled);
+    if (opt.isArrivalApproved) {
+      return true;
     }
-    return Boolean(opt.isUnderProcess || opt.isCancelled);
+    if (this.revalidationTargetRow?.isActivatedSchedule) {
+      return Boolean(opt.isCancelled || opt.isArrivalApproved);
+    }
+    return Boolean(opt.isUnderProcess || opt.isCancelled || opt.isArrivalApproved);
   }
 
   closeRevalidationModal(): void {
@@ -7495,7 +7582,16 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }
     const isActivatedSchedule = Boolean(this.revalidationTargetRow.isActivatedSchedule);
     const selectedOpt = this.availablePermitOptionsForRevalidation.find(o => o.permitNumber === this.selectedPermitNumberForRevalidation);
-    if (selectedOpt && (selectedOpt.isCancelled || (!isActivatedSchedule && selectedOpt.isUnderProcess))) {
+    if (selectedOpt && (selectedOpt.isCancelled || selectedOpt.isArrivalApproved || (!isActivatedSchedule && selectedOpt.isUnderProcess))) {
+      if (selectedOpt.isArrivalApproved) {
+        Swal.fire({
+          icon: 'info',
+          title: 'Arrival Already Updated by OIC',
+          text: `OIC has already updated physical stock arrival for permit ${this.selectedPermitNumberForRevalidation}. Revalidation is not permitted. Please complete the arrival update in the Arrival Register.`,
+          confirmButtonColor: '#0284c7'
+        });
+        return;
+      }
       alert(`Permit ${this.selectedPermitNumberForRevalidation} is ${selectedOpt.isCancelled ? 'cancelled' : 'already under process for revalidation'}.`);
       return;
     }

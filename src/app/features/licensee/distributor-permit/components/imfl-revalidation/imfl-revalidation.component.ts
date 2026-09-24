@@ -64,6 +64,24 @@ export class ImflRevalidationComponent implements OnInit {
   }
 
   openRevalidationModal(app: any): void {
+    const raw = app?.application || app;
+    const isArrivalDone = Boolean(
+      raw?.isArrivalApproved ||
+      raw?.is_arrival_approved ||
+      app?.isArrivalApproved ||
+      app?.is_arrival_approved ||
+      String(app?.status || raw?.status || '').toLowerCase().includes('arrival')
+    );
+    if (isArrivalDone) {
+      void Swal.fire({
+        icon: 'info',
+        title: 'Arrival Already Updated by OIC',
+        text: `Physical stock for permit ${app.referenceNo || app.applicationId} has already arrived and been updated by OIC. Revalidation is not permitted.`,
+        confirmButtonColor: '#0284c7'
+      });
+      return;
+    }
+
     this.selectedApp = app;
     Swal.fire({
       title: 'Apply IMFL Permit Revalidation',
