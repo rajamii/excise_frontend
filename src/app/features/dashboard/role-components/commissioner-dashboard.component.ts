@@ -1249,7 +1249,9 @@ export class CommissionerDashboardComponent implements OnInit {
           // Status-based fallback
           const t = String(item?.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
           const isFinal = (t.includes('approved') && t.includes('commissioner')) ||
+                           t.includes('paymentcompleted') ||
                            t.includes('cartoonassigned') || t.includes('cartonassigned') ||
+                           t.includes('issued') || t.includes('completed') ||
                            t.includes('rejected') || t.includes('cancelled');
           const hasReachedCommissioner = t.includes('forwardedtocommissioner') ||
                                           (t.includes('forwarded') && t.includes('commissioner'));
@@ -1508,9 +1510,14 @@ export class CommissionerDashboardComponent implements OnInit {
     value: 'ALL' | 'UNDER_PROCESS' | 'APPROVED' | 'REJECTED'
   ): boolean {
     if (value === 'ALL') return true;
-    const s = String(status || '').toLowerCase();
-    const isApproved = s.includes('approved') || s.includes('cartoon assigned') || s.includes('carton assigned');
-    const isRejected = s.includes('rejected');
+    const s = String(status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const isApproved = s.includes('approved') ||
+                       s.includes('paymentcompleted') ||
+                       s.includes('cartoonassigned') ||
+                       s.includes('cartonassigned') ||
+                       s.includes('issued') ||
+                       s.includes('completed');
+    const isRejected = s.includes('rejected') || s.includes('cancelled') || s.includes('cancel');
     if (value === 'APPROVED') return isApproved;
     if (value === 'REJECTED') return isRejected;
     return !isApproved && !isRejected;
@@ -1766,10 +1773,17 @@ export class CommissionerDashboardComponent implements OnInit {
 
   // Utility methods
   getStatusClass(status: string): string {
-    const statusLower = status.toLowerCase();
-    if (statusLower.includes('approved') || statusLower.includes('cartoon assigned') || statusLower.includes('carton assigned')) return 'bg-success';
-    if (statusLower.includes('rejected')) return 'bg-danger';
-    if (statusLower.includes('pending') || statusLower.includes('forwarded')) return 'bg-warning';
+    const statusLower = String(status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (
+      statusLower.includes('approved') ||
+      statusLower.includes('paymentcompleted') ||
+      statusLower.includes('cartoonassigned') ||
+      statusLower.includes('cartonassigned') ||
+      statusLower.includes('issued') ||
+      statusLower.includes('completed')
+    ) return 'bg-success';
+    if (statusLower.includes('rejected') || statusLower.includes('cancelled')) return 'bg-danger';
+    if (statusLower.includes('pending') || statusLower.includes('forwarded') || statusLower.includes('submitted')) return 'bg-warning';
     return 'bg-secondary';
   }
 

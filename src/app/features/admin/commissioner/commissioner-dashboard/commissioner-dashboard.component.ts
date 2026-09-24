@@ -1043,6 +1043,7 @@ export class CommissionerDashboardComponent implements OnInit {
     return status.includes('approved') ||
       status.includes('issued') ||
       status.includes('paymentcompleted') ||
+      status.includes('completed') ||
       status.includes('cartoonassigned') ||
       status.includes('cartonassigned');
   }
