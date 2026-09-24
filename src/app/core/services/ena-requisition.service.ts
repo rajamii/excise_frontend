@@ -85,8 +85,25 @@ export class EnaRequisitionService {
       .pipe(catchError(this.handleError));
   }
 
-  getRequisitions(): Observable<any> {
-    return this.getCachedOrFetch('requisitions:list', () =>
+  private getUserCacheKeyPrefix(): string {
+    try {
+      const raw = localStorage.getItem('account') || localStorage.getItem('currentUser') || localStorage.getItem('user');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return String(parsed?.id || parsed?.username || parsed?.email || 'anon').trim();
+      }
+    } catch {}
+    return 'anon';
+  }
+
+  getRequisitions(force = false): Observable<any> {
+    const userKey = this.getUserCacheKeyPrefix();
+    const cacheKey = `requisitions:list:${userKey}`;
+    if (force) {
+      this.invalidateCache(cacheKey);
+      this.invalidateCache('requisitions:list');
+    }
+    return this.getCachedOrFetch(cacheKey, () =>
       this.http
         .get(this.apiUrl, this.httpOptions)
         .pipe(catchError(this.handleError))

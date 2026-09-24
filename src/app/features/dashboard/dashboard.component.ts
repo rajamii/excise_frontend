@@ -1047,9 +1047,6 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.supplyChainPendingCounts['hologram'] = oicCounts.pending;
         } else {
           let items: any[] = Array.isArray(hol) ? hol : [];
-          if (this.isLicenseeUser()) {
-            items = this.filterByLicenseeScopedLicense(items);
-          }
           const month = this.selectedChartMonth !== '' ? Number(this.selectedChartMonth) : undefined;
           const year  = this.selectedChartYear  !== '' ? Number(this.selectedChartYear)  : undefined;
           if (month !== undefined || year !== undefined) {
@@ -2955,10 +2952,18 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     if (this.isLicenseeUser()) {
       const licModules = ['requisition', 'revalidation', 'cancellation', 'transit', 'hologram', 'distributor-permit-hologram-procurement'];
-      return licModules.reduce((sum, m) => sum + (this.supplyChainModuleCounts[m]?.awaitingPayment || 0), 0);
+      return licModules.reduce((sum, m) => {
+        const badgePayment = Number(this.supplyChainPendingCounts?.[`${m}:payment`] || 0);
+        const modulePayment = Number(this.supplyChainModuleCounts[m]?.awaitingPayment || 0);
+        return sum + Math.max(badgePayment, modulePayment);
+      }, 0);
     }
-    return (this.supplyChainModuleCounts['requisition']?.awaitingPayment || 0) +
-           (this.supplyChainModuleCounts['hologram']?.awaitingPayment || 0) +
+    const reqBadgePayment = Number(this.supplyChainPendingCounts?.['requisition:payment'] || 0);
+    const reqModulePayment = Number(this.supplyChainModuleCounts['requisition']?.awaitingPayment || 0);
+    const holoBadgePayment = Number(this.supplyChainPendingCounts?.['hologram:payment'] || 0);
+    const holoModulePayment = Number(this.supplyChainModuleCounts['hologram']?.awaitingPayment || 0);
+    return Math.max(reqBadgePayment, reqModulePayment) +
+           Math.max(holoBadgePayment, holoModulePayment) +
            (this.supplyChainModuleCounts['distributor-permit-hologram-procurement']?.awaitingPayment || 0);
   }
 
@@ -3408,6 +3413,20 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       )
       .subscribe((counts) => {
         this.supplyChainPendingCounts = counts || {};
+        if (counts) {
+          if (!this.supplyChainModuleCounts['hologram']) {
+            this.supplyChainModuleCounts['hologram'] = { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0, awaitingPayment: 0 };
+          }
+          if (counts['hologram:payment'] !== undefined) {
+            this.supplyChainModuleCounts['hologram'].awaitingPayment = Number(counts['hologram:payment'] || 0);
+          }
+          if (!this.supplyChainModuleCounts['requisition']) {
+            this.supplyChainModuleCounts['requisition'] = { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0, awaitingPayment: 0 };
+          }
+          if (counts['requisition:payment'] !== undefined) {
+            this.supplyChainModuleCounts['requisition'].awaitingPayment = Number(counts['requisition:payment'] || 0);
+          }
+        }
         this.updateSingleWindowChart();
       });
   }
@@ -3540,7 +3559,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             rejected: res.total.rejected || 0,
             awaitingPayment: res.total.awaitingPayment || 0
           };
-          this.refreshOicActionPendingCount();
+          this.refreshOicActionPendingCount(forceRefresh);
+          this.refreshSupplyChainPendingCounts(forceRefresh);
           this.loadSupplyChainModuleStats(undefined, () => {
             this.isChartLoading = false;
           }, forceRefresh);
@@ -3567,16 +3587,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     forkJoin({
       applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus(forceRefresh, this.dashboardConfig),
       hologramProcurements: (this.isLicenseeUser() || this.isOicUser())
-        ? (
-            !forceRefresh && this.licenseeHologramProcurementsCache
-              ? of(this.licenseeHologramProcurementsCache)
-              : this.hologramService.getProcurements().pipe(
-                  tap((rows) => {
-                    this.licenseeHologramProcurementsCache = Array.isArray(rows) ? rows : [];
-                  }),
-                  catchError(() => of([]))
-                )
-          )
+        ? this.hologramService.getProcurements(forceRefresh).pipe(catchError(() => of([])))
         : of([])
     })
       .pipe(finalize(() => {
@@ -3727,7 +3738,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             rejected: filteredApplications.rejected
           });
 
-          this.refreshOicActionPendingCount();
+          this.refreshOicActionPendingCount(forceRefresh);
+          this.refreshSupplyChainPendingCounts(forceRefresh);
           // Pass the already-fetched hologram data so loadSupplyChainModuleStats
           // does not re-fetch it, eliminating a duplicate /hologram/procurement/ call.
           this.loadSupplyChainModuleStats({ hologram: result.hologramProcurements || [] }, undefined, forceRefresh);
@@ -3759,16 +3771,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     forkJoin({
       applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus(forceRefresh, this.dashboardConfig),
       hologramProcurements: (this.isLicenseeUser() || this.isOicUser())
-        ? (
-            !forceRefresh && this.licenseeHologramProcurementsCache
-              ? of(this.licenseeHologramProcurementsCache)
-              : this.hologramService.getProcurements().pipe(
-                  tap((rows) => {
-                    this.licenseeHologramProcurementsCache = Array.isArray(rows) ? rows : [];
-                  }),
-                  catchError(() => of([]))
-                )
-          )
+        ? this.hologramService.getProcurements(forceRefresh).pipe(catchError(() => of([])))
         : of([])
     })
       .pipe(finalize(() => { this.applicationsLoading = false; }))
@@ -5116,42 +5119,51 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   getAwaitingPaymentBreakdownText(): string {
     if (this.selectedChartModule === 'requisition') {
-      return 'Requisition';
+      return 'ENA Requisition';
     }
     if (this.selectedChartModule === 'hologram') {
-      return 'Hologram';
+      return 'Hologram Procurement';
     }
 
     const parts: string[] = [];
     if (this.awaitingPaymentBreakdown.newLicense > 0) {
-      parts.push('New License');
+      parts.push(`New License (${this.awaitingPaymentBreakdown.newLicense})`);
     }
     if (this.awaitingPaymentBreakdown.licenseRenewal > 0) {
-      parts.push('Renewal');
+      parts.push(`Renewal (${this.awaitingPaymentBreakdown.licenseRenewal})`);
     }
     if (this.awaitingPaymentBreakdown.salesmanBarman > 0) {
-      parts.push('Salesman/Barman');
+      parts.push(`Salesman/Barman (${this.awaitingPaymentBreakdown.salesmanBarman})`);
     }
     if (this.awaitingPaymentBreakdown.companyRegistration > 0) {
-      parts.push('Company Reg');
+      parts.push(`Company Reg (${this.awaitingPaymentBreakdown.companyRegistration})`);
     }
     if (this.awaitingPaymentBreakdown.companyCollaboration > 0) {
-      parts.push('Company Collab');
+      parts.push(`Company Collab (${this.awaitingPaymentBreakdown.companyCollaboration})`);
     }
     if ((this.awaitingPaymentBreakdown as any).specialPermit > 0) {
-      parts.push('Dry Day Permit');
+      parts.push(`Dry Day Permit (${(this.awaitingPaymentBreakdown as any).specialPermit})`);
     }
 
     // Add supply chain modules awaiting payment to the "All Modules" list
     if (this.selectedChartModule === 'all') {
-      if ((this.supplyChainModuleCounts['requisition']?.awaitingPayment || 0) > 0) {
-        parts.push('Requisition');
+      const reqAwaiting = Math.max(
+        Number(this.supplyChainModuleCounts['requisition']?.awaitingPayment || 0),
+        Number(this.supplyChainPendingCounts?.['requisition:payment'] || 0)
+      );
+      if (reqAwaiting > 0) {
+        parts.push(`ENA Requisition (${reqAwaiting})`);
       }
-      if ((this.supplyChainModuleCounts['distributor-permit-requisition']?.awaitingPayment || 0) > 0) {
-        parts.push('IMFL Requisition');
+      const distReqAwaiting = Number(this.supplyChainModuleCounts['distributor-permit-requisition']?.awaitingPayment || 0);
+      if (distReqAwaiting > 0) {
+        parts.push(`IMFL Requisition (${distReqAwaiting})`);
       }
-      if ((this.supplyChainModuleCounts['hologram']?.awaitingPayment || 0) > 0) {
-        parts.push('Hologram');
+      const holoAwaiting = Math.max(
+        Number(this.supplyChainModuleCounts['hologram']?.awaitingPayment || 0),
+        Number(this.supplyChainPendingCounts?.['hologram:payment'] || 0)
+      );
+      if (holoAwaiting > 0) {
+        parts.push(`Hologram Procurement (${holoAwaiting})`);
       }
     }
 

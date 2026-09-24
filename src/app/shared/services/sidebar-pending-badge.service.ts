@@ -135,7 +135,7 @@ export class SidebarPendingBadgeService {
         // Share a single HTTP fetch via shareReplay(1) so the two derived tasks don't
         // each fire their own request.
         if (audience === 'licensee' && section === 'requisition') {
-          const reqs$ = this.enaRequisitionService.getRequisitions().pipe(
+          const reqs$ = this.enaRequisitionService.getRequisitions(force).pipe(
             map((response) => this.toArray(response)),
             shareReplay(1),
             catchError(() => of([] as any[]))
@@ -146,7 +146,7 @@ export class SidebarPendingBadgeService {
             catchError(() => of(0))
           );
         } else if (audience === 'licensee' && section === 'hologram') {
-          const holos$ = this.hologramService.getProcurements().pipe(
+          const holos$ = this.hologramService.getProcurements(force).pipe(
             map((items) => this.toArray(items)),
             shareReplay(1),
             catchError(() => of([] as any[]))
@@ -985,12 +985,21 @@ export class SidebarPendingBadgeService {
         return false;
       }
 
+      // Check allowedActions
+      const actions: string[] = item?.allowedActions ?? item?.allowed_actions ?? [];
+      if (Array.isArray(actions) && actions.some((a: string) => a.toUpperCase() === 'PAY')) {
+        return true;
+      }
+
       // Match by stage ID (most reliable)
       const stageId = Number(item?.current_stage ?? item?.currentStage ?? item?.stage_id ?? item?.stageId ?? -1);
-      if (stageId === 78) return true;
+      if (stageId === 78 || stageId === 79) return true;
 
       // Fallback: match by status/stage name
-      return combined.includes('approvedbycommissioner') || combined.includes('commissionerapproved');
+      return combined.includes('approvedbycommissioner') ||
+             combined.includes('commissionerapproved') ||
+             combined.includes('approvedforpayment') ||
+             combined.includes('awaitingpayment');
     }).length;
   }
 
@@ -1123,10 +1132,25 @@ export class SidebarPendingBadgeService {
   private filterByScopedLicense<T = any>(rows: T[]): T[] {
     const scopedLicense = this.resolveScopedLicenseId();
     const myUnit = this.resolveScopedEstablishmentName().trim().toLowerCase();
-    if (!scopedLicense && !myUnit) return rows || [];
+    const user = (this.accountService?.getCurrentUser() || this.roleService?.getCurrentUser()) as any;
+    const myUsername = String(user?.username || '').trim().toLowerCase();
+    const myUserId = user?.id;
+
+    if (!scopedLicense && !myUnit && !myUsername && !myUserId) return rows || [];
 
     const allowed = scopedLicense ? new Set(this.expandLicenseAliases(scopedLicense)) : new Set<string>();
     return (rows || []).filter((row: any) => {
+      // 1. Match by user ID or username
+      const rowUserId = row?.licensee?.user?.id || row?.licensee?.user_id || row?.user_id || row?.applicant_id || row?.applicant?.id;
+      const rowUsername = String(row?.licensee?.user?.username || row?.applicant?.username || row?.username || '').trim().toLowerCase();
+      if (myUserId && rowUserId && String(myUserId) === String(rowUserId)) {
+        return true;
+      }
+      if (myUsername && rowUsername && myUsername === rowUsername) {
+        return true;
+      }
+
+      // 2. Match by license
       const rowLicense =
         this.pickFirstNonEmptyValue(row, ['license_id', 'licenseId', 'licensee_id', 'licenseeId']) ||
         this.pickFirstNonEmptyValue((row as any)?.supplyChainData, ['license_id', 'licenseId', 'licensee_id', 'licenseeId']) ||
@@ -1139,6 +1163,7 @@ export class SidebarPendingBadgeService {
         }
       }
 
+      // 3. Match by unit name
       if (myUnit) {
         const rowUnit = String(
           row?.manufacturingUnit ||

@@ -53,6 +53,18 @@
         </div>
       </div>
     </div>
+    <div class="col" *ngIf="getHologramStatusCount('AWAITING_PAYMENT') > 0">
+      <div class="summary-card awaiting-payment-requests summary-card-clickable" role="button" tabindex="0"
+        (click)="onSummaryCardClick('AWAITING_PAYMENT')" [class.active]="activeSummaryFilter === 'AWAITING_PAYMENT'">
+        <div class="card-icon">
+          <i class="bi bi-credit-card"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getHologramStatusCount('AWAITING_PAYMENT') }}</h3>
+          <p class="card-label">Awaiting Payment</p>
+        </div>
+      </div>
+    </div>
     <div class="col">
       <div class="summary-card rejected-requests summary-card-clickable" role="button" tabindex="0"
         (click)="onSummaryCardClick('REJECTED')" [class.active]="activeSummaryFilter === 'REJECTED'">

@@ -43,8 +43,23 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     licenseRenewal: 0,
     salesmanBarman: 0,
     companyRegistration: 0,
-    specialPermit: 0
+    specialPermit: 0,
+    hologram: 0,
+    requisition: 0
   };
+
+  get totalAwaitingPayment(): number {
+    return (this.dashboardCounts?.awaitingPayment || 0) +
+      (this.awaitingPaymentBreakdown?.hologram || 0) +
+      (this.awaitingPaymentBreakdown?.requisition || 0);
+  }
+
+  get totalPending(): number {
+    return (this.dashboardCounts?.pending || 0) +
+      this.totalAwaitingPayment +
+      this.getSupplyChainPendingCount('hologram') +
+      this.getSupplyChainPendingCount('requisition');
+  }
 
   isLoading = false;
 
@@ -273,9 +288,22 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (counts) => {
           this.supplyChainPendingCounts = counts || {};
+          this.awaitingPaymentBreakdown = {
+            ...this.awaitingPaymentBreakdown,
+            hologram: Number(this.supplyChainPendingCounts?.['hologram:payment'] || 0),
+            requisition: Number(this.supplyChainPendingCounts?.['requisition:payment'] || 0)
+          };
+          try {
+            this.cdr.detectChanges();
+          } catch (e) {}
         },
         error: () => {
           this.supplyChainPendingCounts = {};
+          this.awaitingPaymentBreakdown = {
+            ...this.awaitingPaymentBreakdown,
+            hologram: 0,
+            requisition: 0
+          };
         }
       });
   }
@@ -360,7 +388,9 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
             licenseRenewal: filteredApplications.awaitingPayment.filter(app => app.type === 'license-renewal').length,
             salesmanBarman: filteredApplications.awaitingPayment.filter(app => app.type === 'salesman-barman').length,
             companyRegistration: filteredApplications.awaitingPayment.filter(app => app.type === 'company-registration').length,
-            specialPermit: filteredApplications.awaitingPayment.filter(app => app.type === 'special-permit').length
+            specialPermit: filteredApplications.awaitingPayment.filter(app => app.type === 'special-permit').length,
+            hologram: Number(this.supplyChainPendingCounts?.['hologram:payment'] || this.awaitingPaymentBreakdown?.hologram || 0),
+            requisition: Number(this.supplyChainPendingCounts?.['requisition:payment'] || this.awaitingPaymentBreakdown?.requisition || 0)
           };
 
           // console.log(`📊 Dashboard Counts - Applied: ${this.dashboardCounts.applied} (${approvedWithRenewal.length} renewals), Pending: ${this.dashboardCounts.pending}, Awaiting Payment: ${this.dashboardCounts.awaitingPayment}, Approved: ${this.dashboardCounts.approved}, Rejected: ${this.dashboardCounts.rejected}`);
@@ -611,6 +641,12 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     }
     if (this.awaitingPaymentBreakdown.specialPermit > 0) {
       parts.push(`Dry Day Permit (${this.awaitingPaymentBreakdown.specialPermit})`);
+    }
+    if (this.awaitingPaymentBreakdown.hologram > 0) {
+      parts.push(`Hologram Procurement (${this.awaitingPaymentBreakdown.hologram})`);
+    }
+    if (this.awaitingPaymentBreakdown.requisition > 0) {
+      parts.push(`ENA Requisition (${this.awaitingPaymentBreakdown.requisition})`);
     }
     return parts.length > 0 ? parts.join(', ') : 'Fees pending';
   }

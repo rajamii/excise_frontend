@@ -356,6 +356,19 @@
         color: #7c3aed;
       }
     }
+
+    &.awaiting-payment-requests {
+      --summary-accent-start: #ff9800;
+      --summary-accent-end: #f57c00;
+
+      .card-icon {
+        background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+      }
+
+      .card-value {
+        color: #f57c00;
+      }
+    }
   }
 }
 

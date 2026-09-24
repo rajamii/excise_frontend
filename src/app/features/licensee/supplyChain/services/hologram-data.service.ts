@@ -273,6 +273,17 @@ export class HologramDataService {
     return request$;
   }
 
+  private getUserCacheKeyPrefix(): string {
+    try {
+      const raw = localStorage.getItem('account') || localStorage.getItem('currentUser') || localStorage.getItem('user');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return String(parsed?.id || parsed?.username || parsed?.email || 'anon').trim();
+      }
+    } catch {}
+    return 'anon';
+  }
+
   public clearCache(): void {
     this.responseCache.clear();
     this.inflightRequests.clear();
@@ -288,9 +299,11 @@ export class HologramDataService {
   // --- Procurement APIs ---
 
   getProcurements(force = false): Observable<HologramProcurement[]> {
-    const cacheKey = 'procurements:list';
+    const userKey = this.getUserCacheKeyPrefix();
+    const cacheKey = `procurements:list:${userKey}`;
     if (force) {
       this.invalidateCache(cacheKey);
+      this.invalidateCache('procurements:list');
     }
     return this.getCachedOrFetch(cacheKey, () =>
       this.http.get<HologramProcurement[]>(`${this.apiUrl}/procurement/`)
@@ -340,9 +353,11 @@ export class HologramDataService {
   // --- Request APIs ---
 
   getRequests(force = false): Observable<HologramRequest[]> {
-    const cacheKey = 'requests:list';
+    const userKey = this.getUserCacheKeyPrefix();
+    const cacheKey = `requests:list:${userKey}`;
     if (force) {
       this.invalidateCache(cacheKey);
+      this.invalidateCache('requests:list');
     }
     return this.getCachedOrFetch(cacheKey, () =>
       this.http.get<HologramRequest[]>(`${this.apiUrl}/request/`)

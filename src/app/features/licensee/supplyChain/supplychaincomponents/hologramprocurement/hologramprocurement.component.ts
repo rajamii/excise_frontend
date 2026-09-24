@@ -452,6 +452,9 @@ export class HologramprocurementComponent implements OnInit {
       if (filter === 'edited') {
         return this.isEditedByCommissionerLike(item);
       }
+      if (filter === 'awaitingpayment' || filter === 'payment') {
+        return this.isApprovedByCommissioner(item);
+      }
       if (filter === 'approved') {
         return this.isApprovedLikeStatus(item);
       }
@@ -508,6 +511,9 @@ export class HologramprocurementComponent implements OnInit {
     if (filter === 'edited') {
       return this.summaryHologramData.filter(item => this.isEditedByCommissionerLike(item)).length;
     }
+    if (filter === 'awaitingpayment' || filter === 'payment') {
+      return this.summaryHologramData.filter(item => this.isApprovedByCommissioner(item)).length;
+    }
     if (filter === 'approved') {
       return this.summaryHologramData.filter(item => this.isApprovedLikeStatus(item)).length;
     }
@@ -547,7 +553,7 @@ export class HologramprocurementComponent implements OnInit {
 
   private syncActiveSummaryFilter(): void {
     const normalized = this.normalizeStageToken(this.hologramStatusFilter);
-    if (['pending', 'submitted', 'underprocess', 'edited', 'approved'].includes(normalized)) {
+    if (['pending', 'submitted', 'underprocess', 'edited', 'approved', 'awaitingpayment', 'payment'].includes(normalized)) {
       this.activeSummaryFilter = this.hologramStatusFilter;
       return;
     }
@@ -762,16 +768,27 @@ export class HologramprocurementComponent implements OnInit {
   isApprovedByCommissioner(item: HologramRow): boolean {
     if (!this.roleService.isLicenseeRole()) return false;
 
+    const paymentStatus = String((item as any).paymentStatus || (item as any).payment_status || '').toLowerCase();
+    const isPaid = paymentStatus === 'completed' || paymentStatus === 'success' || item.paymentCompleted === true;
+    const paymentDetails = (item as any).paymentDetails || (item as any).payment_details || {};
+    const hasPaidDetails = Boolean(paymentDetails?.paid_at || paymentDetails?.transaction_id || String(paymentDetails?.status || '').toLowerCase() === 'completed');
+    if (isPaid || hasPaidDetails) return false;
+
+    const actions: string[] = item.allowedActions || item.allowed_actions || [];
+    if (Array.isArray(actions) && actions.some(a => String(a).toUpperCase() === 'PAY')) {
+      return true;
+    }
+
     // Match by stage ID (most reliable)
     const stageId = Number((item as any).current_stage ?? (item as any).currentStage ?? (item as any).stage_id ?? -1);
-    if (stageId === 78) return true;
+    if (stageId === 78 || stageId === 79) return true;
 
     const status = String(item.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     // Exclude post-payment stages — payment already done
-    if (status.includes('paymentcompleted') || status.includes('cartoonassigned') || status.includes('cartonassigned')) {
+    if (status.includes('paymentcompleted') || status.includes('cartoonassigned') || status.includes('cartonassigned') || status.includes('paymentdone')) {
       return false;
     }
-    return status.includes('approvedbycommissioner') || status.includes('commissionerapproved');
+    return status.includes('approvedbycommissioner') || status.includes('commissionerapproved') || status.includes('approvedforpayment') || status.includes('awaitingpayment');
   }
 
   navigateToWalletRecharge(item: HologramRow, event?: Event): void {
