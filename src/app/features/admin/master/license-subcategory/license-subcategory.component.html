@@ -40,8 +40,11 @@
             <ng-container matColumnDef="specialPermit">
               <mat-header-cell *matHeaderCellDef class="permit-col">Dry Day Permit</mat-header-cell>
               <mat-cell *matCellDef="let item" class="permit-col">
-                <span class="status-badge" [class.status-badge--active]="item.isSpecialPermitAllowed"
-                      [class.status-badge--inactive]="!item.isSpecialPermitAllowed">
+                <span class="status-badge" style="cursor: pointer;"
+                      [class.status-badge--active]="item.isSpecialPermitAllowed"
+                      [class.status-badge--inactive]="!item.isSpecialPermitAllowed"
+                      (click)="toggleSpecialPermit(item, $event)"
+                      [title]="item.isSpecialPermitAllowed ? 'Dry Day Permit: Active (Click to deactivate)' : 'Dry Day Permit: Inactive (Click to activate)'">
                   <span class="status-dot"></span>
                   {{ item.isSpecialPermitAllowed ? 'Active' : 'Inactive' }}
                 </span>

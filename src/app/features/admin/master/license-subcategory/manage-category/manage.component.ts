@@ -47,6 +47,7 @@ export class ManageComponent implements OnInit {
       request.subscribe({
         next: () => {
           Swal.fire('Success', this.isEditMode ? 'Category updated!' : 'Category added!', 'success');
+          try { window.dispatchEvent(new CustomEvent('licensee-menu-access-refresh')); } catch {}
           this.dialogRef.close(true);
         },
         error: () => Swal.fire('Error', 'Failed to save license category.', 'error')

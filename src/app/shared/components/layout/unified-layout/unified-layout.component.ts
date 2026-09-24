@@ -79,10 +79,13 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   showManufacturingWalletNav = false;
   showSpecialPermitMenu = false;
   showDistributorPermitMenu = false;
-  showCompanyRegistrationNav = true;
-  showCompanyCollaborationNav = true;
-  showSalesmanBarmanRegistrationNav = true;
-  showLabelRegistrationNav = true;
+  showCompanyRegistrationNav = false;
+  showCompanyCollaborationNav = false;
+  showSalesmanBarmanRegistrationNav = false;
+  showLabelRegistrationNav = false;
+
+  cachedCategories: any[] = [];
+  cachedSubcategories: any[] = [];
 
   myLicenses: any[] = [];
   selectedLicenseGroupKey = '';
@@ -195,7 +198,15 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       .subscribe(() => {
         console.log('🔄 UNIFIED LAYOUT: Refreshing sidebar badges due to triggerRefresh');
         this.refreshSidebarBadges(true, 'full');
+        this.loadLicenseeMenuAccess(true);
       });
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('licensee-menu-access-refresh', () => {
+        console.log('🔄 UNIFIED LAYOUT: Refreshing menu access due to subcategory toggle');
+        this.loadLicenseeMenuAccess(true);
+      });
+    }
   }
 
   ngAfterViewInit() {
@@ -1277,39 +1288,41 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       || roleId === 16;
   }
 
-  private loadLicenseeMenuAccess(): void {
+  private loadLicenseeMenuAccess(forceRefresh: boolean = false): void {
     // This visibility rule is only for licensee menus.
     if (!this.isLicenseeUser()) {
       this.showDistilleryMenus = false;
       this.showBreweryOrDistilleryMenus = false;
       this.hasBreweryOrDistilleryWalletViews = false;
       this.showManufacturingWalletNav = false;
+      this.showCompanyRegistrationNav = false;
+      this.showCompanyCollaborationNav = false;
+      this.showSalesmanBarmanRegistrationNav = false;
+      this.showLabelRegistrationNav = false;
       return;
     }
 
-    // Default for new users: keep only base menu options visible.
-    this.showDistilleryMenus = false;
-    this.showBreweryOrDistilleryMenus = false;
-    this.hasBreweryOrDistilleryWalletViews = false;
-    this.showManufacturingWalletNav = false;
-
     const key = String(this.currentUser?.username || this.user?.username || this.user?.login || '').trim() || null;
-    if (key && this.lastMenuAccessUserKey === key && this.myLicenses.length) {
+    if (!forceRefresh && key && this.lastMenuAccessUserKey === key && this.cachedSubcategories.length > 0 && this.myLicenses.length > 0) {
       return;
     }
     this.lastMenuAccessUserKey = key;
 
+    const timestamp = Date.now();
     forkJoin({
       licenses: this.licenseMeService.getMyLicenses().pipe(catchError(() => of([]))),
-      categories: this.http.get<any>(`${environment.apiBaseUrl}/masters/core/license-categories/`).pipe(catchError(() => of([]))),
-      subcategories: this.http.get<any>(`${environment.apiBaseUrl}/masters/core/license-subcategories/`).pipe(catchError(() => of([]))),
-      newLicensesGrouped: this.http.get<any>(`${environment.apiBaseUrl}/transactional/new_license_application/list-by-status/`).pipe(catchError(() => of({})))
+      categories: this.http.get<any>(`${environment.apiBaseUrl}/masters/core/license-categories/?_t=${timestamp}`).pipe(catchError(() => of([]))),
+      subcategories: this.http.get<any>(`${environment.apiBaseUrl}/masters/core/license-subcategories/?_t=${timestamp}`).pipe(catchError(() => of([]))),
+      newLicensesGrouped: this.http.get<any>(`${environment.apiBaseUrl}/transactional/new_license_application/list-by-status/?_t=${timestamp}`).pipe(catchError(() => of({})))
     }).subscribe({
       next: ({ licenses, categories, subcategories, newLicensesGrouped }) => {
         const licenseRows = Array.isArray(licenses) ? licenses : [];
         const categoryRows = Array.isArray(categories) ? categories : (Array.isArray((categories as any)?.results) ? (categories as any).results : []);
         const subcategoryRows = Array.isArray(subcategories) ? subcategories : (Array.isArray((subcategories as any)?.results) ? (subcategories as any).results : []);
         
+        this.cachedCategories = categoryRows;
+        this.cachedSubcategories = subcategoryRows;
+
         const newLicenseApps: any[] = [];
         if (newLicensesGrouped && typeof newLicensesGrouped === 'object') {
           Object.values(newLicensesGrouped).forEach((val) => {
@@ -1330,7 +1343,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         this.myLicenses = [];
         this.latestApplicationRows = [];
         this.selectedLicenseGroupKey = '';
-        this.applySubtypeMenuRules([], [], []);
+        this.applySubtypeMenuRules([], this.cachedCategories, this.cachedSubcategories);
       }
     });
   }
@@ -1374,7 +1387,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         const licenseRows = Array.isArray(licenses) ? licenses : [];
         this.myLicenses = licenseRows;
         this.ensureSelectedLicenseGroup();
-        this.applySubtypeMenuRules([...licenseRows, ...this.latestApplicationRows]);
+        this.applySubtypeMenuRules([...licenseRows, ...this.latestApplicationRows], this.cachedCategories, this.cachedSubcategories);
 
         const groups = this.getLicenseGroups();
         if (groups.length === 0) {
@@ -1686,11 +1699,14 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
     const userRoleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
 
+    const catMasters = (Array.isArray(categoryMasters) && categoryMasters.length > 0) ? categoryMasters : this.cachedCategories;
+    const subMasters = (Array.isArray(subcategoryMasters) && subcategoryMasters.length > 0) ? subcategoryMasters : this.cachedSubcategories;
+
     const distributorCategorySet = new Set<string>();
     const specialPermitCategorySet = new Set<string>();
 
-    if (Array.isArray(categoryMasters)) {
-      categoryMasters.forEach((cat: any) => {
+    if (Array.isArray(catMasters)) {
+      catMasters.forEach((cat: any) => {
         const cId = String(cat.id || '').trim();
         const cName = String(cat.licenseCategory || cat.license_category || '').trim().toLowerCase();
         if (cat.isDistributorUser || cat.is_distributor_user) {
@@ -1704,13 +1720,22 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       });
     }
 
-    this.showSpecialPermitMenu = [4, 10].includes(userRoleId) || rows.some((row) => {
-      const isSpecFromRow = row?.isSpecialPermitAllowed === true || row?.is_special_permit_allowed === true;
-      const catObj = row?.license_category ?? row?.licenseCategory;
-      const catVal = String(catObj || '').trim().toLowerCase();
-      const catIdVal = String(row?.license_category_id || row?.licenseCategoryId || (catObj && typeof catObj === 'object' ? catObj.id : '') || '').trim();
-      return isSpecFromRow || specialPermitCategorySet.has(catVal) || specialPermitCategorySet.has(catIdVal);
-    });
+    // Resolve Dry Day Permit (Special Permit) menu flag:
+    // Only available if user is Officer/Admin (roles 4, 10) OR if the licensee holds an active valid license whose category has isSpecialPermitAllowed enabled in master
+    const validActiveRows = rows.filter((row) => this.isValidActiveLicenseRow(row));
+
+    const isOfficerOrAdminSpecial = [4, 10].includes(userRoleId);
+    if (isOfficerOrAdminSpecial) {
+      this.showSpecialPermitMenu = true;
+    } else {
+      this.showSpecialPermitMenu = validActiveRows.some((row) => {
+        const matchedCat = this.matchCategoryMaster(row, catMasters);
+        if (matchedCat) {
+          return matchedCat.isSpecialPermitAllowed === true || matchedCat.is_special_permit_allowed === true;
+        }
+        return false;
+      });
+    }
 
     const isOfficerOrAdmin = [4, 5, 10, 15].includes(userRoleId);
     if (isOfficerOrAdmin) {
@@ -1719,40 +1744,40 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       this.showDistributorPermitMenu = this.hasActiveValidDistributorLicense(rows, distributorCategorySet);
     }
 
-    // Resolve module access flags based on user's active subcategories
-    if (rows && rows.length > 0 && Array.isArray(subcategoryMasters) && subcategoryMasters.length > 0) {
+    // Resolve module access flags based ONLY on user's active, approved, non-expired subcategories
+    if (validActiveRows.length > 0 && Array.isArray(subMasters) && subMasters.length > 0) {
       const userSubcategories: any[] = [];
-      rows.forEach((row) => {
-        const subId = this.extractSubCategoryId(row);
-        const subName = this.extractSubCategoryName(row);
-        const matched = subcategoryMasters.find((s: any) => {
-          if (subId && Number(s.id) === subId) return true;
-          if (subName && String(s.description || '').trim().toLowerCase() === subName) return true;
-          return false;
-        });
+      validActiveRows.forEach((row) => {
+        const matched = this.matchSubcategoryMaster(row, subMasters);
         if (matched) {
           userSubcategories.push(matched);
-        } else if (row?.license_sub_category && typeof row.license_sub_category === 'object') {
-          userSubcategories.push(row.license_sub_category);
         }
       });
 
       if (userSubcategories.length > 0) {
-        this.showCompanyRegistrationNav = userSubcategories.some((s: any) => s.allowCompanyRegistration !== false && s.allow_company_registration !== false);
-        this.showCompanyCollaborationNav = userSubcategories.some((s: any) => s.allowCompanyCollaboration !== false && s.allow_company_collaboration !== false);
-        this.showSalesmanBarmanRegistrationNav = userSubcategories.some((s: any) => s.allowSalesmanBarman !== false && s.allow_salesman_barman !== false);
-        this.showLabelRegistrationNav = userSubcategories.some((s: any) => s.allowLabelRegistration !== false && s.allow_label_registration !== false);
+        this.showCompanyRegistrationNav = userSubcategories.some((s: any) =>
+          s.allowCompanyRegistration === true || s.allow_company_registration === true
+        );
+        this.showCompanyCollaborationNav = userSubcategories.some((s: any) =>
+          s.allowCompanyCollaboration === true || s.allow_company_collaboration === true
+        );
+        this.showSalesmanBarmanRegistrationNav = userSubcategories.some((s: any) =>
+          s.allowSalesmanBarman === true || s.allow_salesman_barman === true
+        );
+        this.showLabelRegistrationNav = userSubcategories.some((s: any) =>
+          s.allowLabelRegistration === true || s.allow_label_registration === true
+        );
       } else {
-        this.showCompanyRegistrationNav = true;
-        this.showCompanyCollaborationNav = true;
-        this.showSalesmanBarmanRegistrationNav = true;
-        this.showLabelRegistrationNav = true;
+        this.showCompanyRegistrationNav = false;
+        this.showCompanyCollaborationNav = false;
+        this.showSalesmanBarmanRegistrationNav = false;
+        this.showLabelRegistrationNav = false;
       }
     } else {
-      this.showCompanyRegistrationNav = true;
-      this.showCompanyCollaborationNav = true;
-      this.showSalesmanBarmanRegistrationNav = true;
-      this.showLabelRegistrationNav = true;
+      this.showCompanyRegistrationNav = false;
+      this.showCompanyCollaborationNav = false;
+      this.showSalesmanBarmanRegistrationNav = false;
+      this.showLabelRegistrationNav = false;
     }
 
     console.log('Resolved menu flags:', {
@@ -1916,8 +1941,169 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       item?.licenseSubCategoryName ??
       (typeof nested === 'object'
         ? (nested?.description ?? nested?.name ?? nested?.label ?? '')
-        : nested ?? '');
-    return String(raw ?? '').toLowerCase();
+        : (typeof nested === 'string' ? nested : ''));
+    return String(raw ?? '').trim().toLowerCase();
+  }
+
+  private matchCategoryMaster(row: any, categoryMasters: any[]): any | null {
+    if (!row || !Array.isArray(categoryMasters) || categoryMasters.length === 0) return null;
+
+    const catObj = row?.license_category ?? row?.licenseCategory;
+    const catIdRaw =
+      row?.license_category_id ??
+      row?.licenseCategoryId ??
+      (catObj && typeof catObj === 'object' ? catObj.id : null) ??
+      (typeof catObj === 'number' ? catObj : null);
+
+    const catId = Number(catIdRaw);
+    if (Number.isFinite(catId) && catId > 0) {
+      const found = categoryMasters.find((c: any) => Number(c.id) === catId);
+      if (found) return found;
+    }
+
+    const catNameRaw =
+      row?.license_category_name ??
+      row?.licenseCategoryName ??
+      (catObj && typeof catObj === 'object' ? (catObj.license_category || catObj.licenseCategory || catObj.name) : null) ??
+      (typeof catObj === 'string' ? catObj : null);
+
+    const catName = String(catNameRaw || '').trim().toLowerCase();
+    if (catName) {
+      const found = categoryMasters.find((c: any) =>
+        String(c.licenseCategory || c.license_category || c.name || '').trim().toLowerCase() === catName
+      );
+      if (found) return found;
+    }
+
+    return null;
+  }
+
+  private matchSubcategoryMaster(row: any, subcategoryMasters: any[]): any | null {
+    if (!row || !Array.isArray(subcategoryMasters) || subcategoryMasters.length === 0) return null;
+
+    const subId = this.extractSubCategoryId(row);
+    if (subId > 0) {
+      const found = subcategoryMasters.find((s: any) => Number(s.id) === subId);
+      if (found) return found;
+    }
+
+    const subName = this.extractSubCategoryName(row);
+    if (subName) {
+      const found = subcategoryMasters.find((s: any) =>
+        String(s.description || s.name || '').trim().toLowerCase() === subName
+      );
+      if (found) return found;
+    }
+
+    return null;
+  }
+
+  private parseDateToTimestamp(raw: any): number | null {
+    if (!raw) return null;
+    if (raw instanceof Date) return isNaN(raw.getTime()) ? null : raw.getTime();
+    if (typeof raw === 'number') return raw;
+    if (typeof raw !== 'string') return null;
+
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+
+    // Format: YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      const d = new Date(trimmed + 'T23:59:59.999');
+      return isNaN(d.getTime()) ? null : d.getTime();
+    }
+
+    // Format: DD-MM-YYYY or DD/MM/YYYY
+    const dmyMatch = /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/.exec(trimmed);
+    if (dmyMatch) {
+      const day = Number(dmyMatch[1]);
+      const month = Number(dmyMatch[2]) - 1;
+      const year = Number(dmyMatch[3]);
+      const d = new Date(year, month, day, 23, 59, 59, 999);
+      return isNaN(d.getTime()) ? null : d.getTime();
+    }
+
+    const parsed = new Date(trimmed).getTime();
+    return isNaN(parsed) ? null : parsed;
+  }
+
+  private isValidActiveLicenseRow(item: any): boolean {
+    if (!item) return false;
+
+    // 1. Explicit boolean checks
+    const isActive = item?.is_active ?? item?.isActive;
+    if (isActive === false) return false;
+
+    const isValidNow = item?.is_valid_now ?? item?.isValidNow;
+    if (isValidNow === false) return false;
+
+    const canAccess = item?.can_access_supply_chain ?? item?.canAccessSupplyChain;
+    if (canAccess === false) return false;
+
+    const isRejected = item?.is_rejected ?? item?.isRejected;
+    if (isRejected === true) return false;
+
+    // 2. Workflow Stage & Status string checks
+    const stage = String(
+      item?.current_stage_name ??
+      item?.currentStageName ??
+      item?.current_stage ??
+      item?.currentStage ??
+      item?.status ??
+      item?.statusGroup ??
+      item?.status_group ??
+      ''
+    ).toLowerCase();
+
+    if (
+      stage.includes('reject') ||
+      stage.includes('cancel') ||
+      stage.includes('expire') ||
+      stage.includes('objection') ||
+      stage.includes('draft')
+    ) {
+      return false;
+    }
+
+    // 3. Expiry Date checks
+    const rawExpiry =
+      item?.valid_upto ??
+      item?.validUpto ??
+      item?.valid_up_to ??
+      item?.validUpTo ??
+      item?.valid_to ??
+      item?.validTo ??
+      item?.expiry_date ??
+      item?.expiryDate ??
+      item?.valid_until ??
+      item?.validUntil ??
+      item?.license_expiry_date ??
+      item?.licenseExpiryDate;
+
+    const expiryTimestamp = this.parseDateToTimestamp(rawExpiry);
+    if (expiryTimestamp !== null && expiryTimestamp < Date.now()) {
+      return false;
+    }
+
+    // 4. For applications (not yet issued with a license_id):
+    const hasLic = !!(item?.license_id ?? item?.licenseId);
+    if (!hasLic) {
+      const isApproved =
+        item?.is_approved === true ||
+        item?.isApproved === true ||
+        stage.includes('approved');
+
+      if (!isApproved) {
+        return false;
+      }
+
+      const isFeePaid = item?.is_license_fee_paid ?? item?.isLicenseFeePaid;
+      if (isFeePaid === false) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   private triggerUiRefresh(): void {

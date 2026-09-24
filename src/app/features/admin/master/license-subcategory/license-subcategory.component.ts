@@ -104,10 +104,29 @@ export class LicenseSubcategoryComponent implements OnInit {
           next: () => {
             Swal.fire('Done!', `Category ${action.toLowerCase()}d.`, 'success');
             this.loadCategories();
+            try { window.dispatchEvent(new CustomEvent('licensee-menu-access-refresh')); } catch {}
           },
           error: () => Swal.fire('Error', `Failed to ${action.toLowerCase()} category.`, 'error')
         });
       }
+    });
+  }
+
+  toggleSpecialPermit(category: LicenseCategory, event?: Event): void {
+    if (event) event.stopPropagation();
+    if (!category.id) return;
+    const current = category.isSpecialPermitAllowed === true;
+    const payload: any = {
+      licenseCategory: category.licenseCategory,
+      isSpecialPermitAllowed: !current,
+      isDistributorUser: category.isDistributorUser
+    };
+    this.adminService.updateLicenseCategory(category.id, payload).subscribe({
+      next: () => {
+        category.isSpecialPermitAllowed = !current;
+        try { window.dispatchEvent(new CustomEvent('licensee-menu-access-refresh')); } catch {}
+      },
+      error: () => Swal.fire('Error', 'Failed to update Dry Day Permit setting.', 'error')
     });
   }
 

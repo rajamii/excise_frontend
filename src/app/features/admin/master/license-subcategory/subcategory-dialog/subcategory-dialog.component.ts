@@ -66,19 +66,19 @@ export class SubcategoryDialogComponent implements OnInit {
   }
 
   isCompanyRegAllowed(sub: LicenseSubcategory): boolean {
-    return sub.allowCompanyRegistration !== false && sub.allow_company_registration !== false;
+    return sub.allowCompanyRegistration === true || sub.allow_company_registration === true;
   }
 
   isCompanyCollabAllowed(sub: LicenseSubcategory): boolean {
-    return sub.allowCompanyCollaboration !== false && sub.allow_company_collaboration !== false;
+    return sub.allowCompanyCollaboration === true || sub.allow_company_collaboration === true;
   }
 
   isSalesmanBarmanAllowed(sub: LicenseSubcategory): boolean {
-    return sub.allowSalesmanBarman !== false && sub.allow_salesman_barman !== false;
+    return sub.allowSalesmanBarman === true || sub.allow_salesman_barman === true;
   }
 
   isLabelRegAllowed(sub: LicenseSubcategory): boolean {
-    return sub.allowLabelRegistration !== false && sub.allow_label_registration !== false;
+    return sub.allowLabelRegistration === true || sub.allow_label_registration === true;
   }
 
   toggleSubcategoryModule(sub: LicenseSubcategory, module: 'company' | 'collaboration' | 'salesman' | 'label', event?: Event): void {
@@ -108,6 +108,9 @@ export class SubcategoryDialogComponent implements OnInit {
         sub.allow_salesman_barman = payload.allowSalesmanBarman;
         sub.allowLabelRegistration = payload.allowLabelRegistration;
         sub.allow_label_registration = payload.allowLabelRegistration;
+        try {
+          window.dispatchEvent(new CustomEvent('licensee-menu-access-refresh'));
+        } catch {}
       },
       error: (err: any) => {
         console.error('Failed to toggle module', err);
@@ -268,6 +271,7 @@ export class SubcategoryDialogComponent implements OnInit {
             this.isSaving = false;
             this.cancelForm();
             this.loadSubcategories();
+            try { window.dispatchEvent(new CustomEvent('licensee-menu-access-refresh')); } catch {}
           });
         } else {
           this.masterService.getLicenseSubcategories().subscribe({
@@ -278,17 +282,20 @@ export class SubcategoryDialogComponent implements OnInit {
                   this.isSaving = false;
                   this.cancelForm();
                   this.loadSubcategories();
+                  try { window.dispatchEvent(new CustomEvent('licensee-menu-access-refresh')); } catch {}
                 });
               } else {
                 this.isSaving = false;
                 this.cancelForm();
                 this.loadSubcategories();
+                try { window.dispatchEvent(new CustomEvent('licensee-menu-access-refresh')); } catch {}
               }
             },
             error: () => {
               this.isSaving = false;
               this.cancelForm();
               this.loadSubcategories();
+              try { window.dispatchEvent(new CustomEvent('licensee-menu-access-refresh')); } catch {}
             }
           });
         }
@@ -430,6 +437,7 @@ export class SubcategoryDialogComponent implements OnInit {
           this.isSaving = false;
           this.cancelEdit();
           this.loadSubcategories();
+          try { window.dispatchEvent(new CustomEvent('licensee-menu-access-refresh')); } catch {}
         }).catch(() => {
           this.isSaving = false;
         });

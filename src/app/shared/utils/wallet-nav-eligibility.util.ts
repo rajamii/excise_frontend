@@ -213,13 +213,58 @@ export function filterRowsForSupplyChainSidebarMenus(rows: any[]): any[] {
       return false;
     }
 
+    const isRejected = item?.is_rejected ?? item?.isRejected;
+    if (isRejected === true) {
+      return false;
+    }
+
+    const stage = str(
+      item?.current_stage_name ??
+      item?.currentStageName ??
+      item?.current_stage ??
+      item?.currentStage ??
+      item?.status ??
+      item?.statusGroup ??
+      item?.status_group ??
+      ''
+    ).toLowerCase();
+
+    if (stage.includes('reject') || stage.includes('cancel') || stage.includes('expire')) {
+      return false;
+    }
+
+    // Expiry date check
+    const rawExpiry =
+      item?.valid_upto ??
+      item?.validUpto ??
+      item?.valid_up_to ??
+      item?.validUpTo ??
+      item?.valid_to ??
+      item?.validTo ??
+      item?.expiry_date ??
+      item?.expiryDate ??
+      item?.valid_until ??
+      item?.validUntil;
+
+    if (rawExpiry) {
+      const exp = new Date(rawExpiry).getTime();
+      if (!isNaN(exp) && exp > 0) {
+        const isDateOnly = typeof rawExpiry === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rawExpiry.trim());
+        const effectiveExpiry = isDateOnly ? new Date(rawExpiry + 'T23:59:59.999').getTime() : exp;
+        if (effectiveExpiry < Date.now()) {
+          return false;
+        }
+      }
+    }
+
     // If backend provides validity hints for issued licenses, honor them so menus
     // are hidden automatically when license expires or becomes inactive.
     const hasLic = !!(item?.license_id ?? item?.licenseId);
     if (hasLic) {
       const canAccess = item?.can_access_supply_chain ?? item?.canAccessSupplyChain;
       const isValidNow = item?.is_valid_now ?? item?.isValidNow;
-      if (canAccess === false || isValidNow === false) {
+      const isActive = item?.is_active ?? item?.isActive;
+      if (canAccess === false || isValidNow === false || isActive === false) {
         return false;
       }
     }
