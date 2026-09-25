@@ -262,11 +262,11 @@ export class UnifiedDashboardService {
       map((results) =>
         results.reduce(
           (acc, cur) => {
-            const curApplied = (cur.applied != null && cur.applied > 0)
+            const curApplied = (cur.applied != null)
               ? cur.applied
-              : (cur as any).total != null && (cur as any).total > 0
+              : (cur as any).total != null
                 ? (cur as any).total
-                : ((cur.pending || 0) + (cur.approved || 0) + (cur.objection || 0) + (cur.rejected || 0) + ((cur as any).awaitingPayment || (cur as any).awaiting_payment || 0));
+                : ((cur.pending || 0) + (cur.approved || 0) + (cur.objection || 0) + (cur.rejected || 0));
             return {
               applied: (acc.applied || 0) + curApplied,
               pending: (acc.pending || 0) + (cur.pending || 0),
@@ -343,9 +343,9 @@ export class UnifiedDashboardService {
       map((res) => {
         const getApplied = (c: DashboardCount) => {
           if (!c) return 0;
-          if (c.applied != null && c.applied > 0) return c.applied;
-          if ((c as any).total != null && (c as any).total > 0) return (c as any).total;
-          return (c.pending || 0) + (c.approved || 0) + (c.objection || 0) + (c.rejected || 0) + ((c as any).awaitingPayment || (c as any).awaiting_payment || 0);
+          if (c.applied != null) return c.applied;
+          if ((c as any).total != null) return (c as any).total;
+          return (c.pending || 0) + (c.approved || 0) + (c.objection || 0) + (c.rejected || 0);
         };
 
         if (res.newLicense) res.newLicense.applied = getApplied(res.newLicense);

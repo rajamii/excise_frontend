@@ -387,8 +387,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         : (this.dashboardCounts.pending || 0) +
           (this.dashboardCounts.approved || 0) +
           (this.dashboardCounts.objection || 0) +
-          (this.dashboardCounts.rejected || 0) +
-          (this.dashboardCounts.awaitingPayment || 0);
+          (this.dashboardCounts.rejected || 0);
     }
 
     const scModules = [
@@ -401,7 +400,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       const counts = this.supplyChainModuleCounts[moduleName];
       if (!counts) return 0;
       if (counts?.applied !== undefined && counts.applied !== null) return Number(counts.applied || 0);
-      return Number((counts?.pending || 0) + (counts?.approved || 0) + (counts?.objection || 0) + (counts?.rejected || 0) + ((counts as any)?.awaitingPayment || 0));
+      return Number((counts?.pending || 0) + (counts?.approved || 0) + (counts?.objection || 0) + (counts?.rejected || 0));
     }
 
     let sourceCounts: DashboardCount = { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
@@ -437,8 +436,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     return (sourceCounts.pending || 0) +
            (sourceCounts.approved || 0) +
            (sourceCounts.objection || 0) +
-           (sourceCounts.rejected || 0) +
-           ((sourceCounts as any).awaitingPayment || 0);
+           (sourceCounts.rejected || 0);
   }
 
   updateSingleWindowChart(): void {
@@ -3728,7 +3726,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             const getAppCount = (item: any) => {
               if (!item) return 0;
               if (item.applied != null && item.applied > 0) return item.applied;
-              return (item.pending || 0) + (item.approved || 0) + (item.objection || 0) + (item.rejected || 0) + (item.awaitingPayment || (item as any)?.awaiting_payment || 0);
+              return (item.pending || 0) + (item.approved || 0) + (item.objection || 0) + (item.rejected || 0);
             };
 
             res.total = {
