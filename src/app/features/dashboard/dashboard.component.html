@@ -426,9 +426,10 @@
                     </td>
 
                     <td class="act-td-forwarded">
-                      <div class="act-user-tag" *ngIf="(log?.toStageUsername || log?.to_stage_username); else dash" [title]="'Forwarded to: ' + (log?.toStageUsername || log?.to_stage_username)">
+                      <div class="act-user-tag" *ngIf="(log?.toStageUsername || log?.to_stage_username || log?.toStageFullName || log?.to_stage_full_name || log?.forwardingId || log?.forwarding_id || log?.toStageUserId || log?.to_stage_user_id); else dash"
+                           [title]="'Forwarding ID: ' + (log?.forwardingId || log?.forwarding_id || log?.toStageUserId || log?.to_stage_user_id || '—') + ' | ' + (log?.forwardedToName || log?.forwarded_to_name || log?.toStageFullName || log?.to_stage_full_name || '—') + ' (' + (log?.toStageUsername ? ('@' + log.toStageUsername) : (log?.to_stage_username ? ('@' + log.to_stage_username) : '—')) + ')'">
                         <mat-icon>person</mat-icon>
-                        <span>{{ log?.toStageUsername || log?.to_stage_username }}</span>
+                        <span>{{ log?.forwardedToName || log?.forwarded_to_name || log?.toStageFullName || log?.to_stage_full_name || log?.toStageUsername || log?.to_stage_username }}</span>
                       </div>
                     </td>
 
@@ -584,9 +585,17 @@
                         <span class="oa-label">To Stage Name:</span>
                         <span class="oa-value oa-value--bold">{{ selectedActionLogDetail?.toStageName || selectedActionLogDetail?.to_stage_name }}</span>
                       </div>
-                      <div class="oa-detail-row" *ngIf="selectedActionLogDetail?.toStageUsername || selectedActionLogDetail?.to_stage_username">
+                      <div class="oa-detail-row" *ngIf="selectedActionLogDetail?.forwardingId || selectedActionLogDetail?.forwarding_id || selectedActionLogDetail?.toStageUserId || selectedActionLogDetail?.to_stage_user_id || selectedActionLogDetail?.forwardedToId || selectedActionLogDetail?.forwarded_to_id">
+                        <span class="oa-label">Forwarding ID:</span>
+                        <span class="oa-value"><code>{{ selectedActionLogDetail?.forwardingId || selectedActionLogDetail?.forwarding_id || selectedActionLogDetail?.toStageUserId || selectedActionLogDetail?.to_stage_user_id || selectedActionLogDetail?.forwardedToId || selectedActionLogDetail?.forwarded_to_id }}</code></span>
+                      </div>
+                      <div class="oa-detail-row" *ngIf="selectedActionLogDetail?.toStageFullName || selectedActionLogDetail?.to_stage_full_name || selectedActionLogDetail?.forwardedToName || selectedActionLogDetail?.forwarded_to_name">
+                        <span class="oa-label">Forwarded To Name:</span>
+                        <span class="oa-value oa-value--bold">{{ selectedActionLogDetail?.forwardedToName || selectedActionLogDetail?.forwarded_to_name || selectedActionLogDetail?.toStageFullName || selectedActionLogDetail?.to_stage_full_name }}</span>
+                      </div>
+                      <div class="oa-detail-row" *ngIf="selectedActionLogDetail?.toStageUsername || selectedActionLogDetail?.to_stage_username || selectedActionLogDetail?.forwardedToUsername || selectedActionLogDetail?.forwarded_to_username">
                         <span class="oa-label">Forwarded To Username:</span>
-                        <span class="oa-value oa-value--bold act-user-highlight">{{ '@' + (selectedActionLogDetail?.toStageUsername || selectedActionLogDetail?.to_stage_username) }}</span>
+                        <span class="oa-value oa-value--bold act-user-highlight">{{ '@' + (selectedActionLogDetail?.forwardedToUsername || selectedActionLogDetail?.forwarded_to_username || selectedActionLogDetail?.toStageUsername || selectedActionLogDetail?.to_stage_username) }}</span>
                       </div>
                     </div>
 
