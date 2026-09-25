@@ -1,4 +1,4 @@
-import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
+import { Injectable, Inject, PLATFORM_ID, Injector } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Account } from '../models/account.model';
@@ -8,6 +8,18 @@ import { TokenUtil } from '../../shared/utils/token.util';
 import { Router } from '@angular/router';
 import { RoleService } from './role.service';
 import { ReadApiCacheInterceptor } from '../interceptors/read-api-cache.interceptor';
+import { UnifiedDashboardService } from './unified-dashboard.service';
+import { LicenseApplicationService } from './license-application.service';
+import { CompanyRegistrationService } from './company-registration.service';
+import { LabelRegistrationService } from './label-registration.service';
+import { SpecialPermitService } from './special-permit.service';
+import { UserService } from './user.service';
+import { CompanyCollaborationService } from './company-collaboration.service';
+import { DistributorPermitService } from './distributor-permit.service';
+import { EnaRequisitionService } from './ena-requisition.service';
+import { SidebarPendingBadgeService } from '../../shared/services/sidebar-pending-badge.service';
+import { SupplyChainService } from '../../features/licensee/supplyChain/services/supplychain.service';
+import { HologramDataService } from '../../features/licensee/supplyChain/services/hologram-data.service';
 
 @Injectable({
   providedIn: 'root',
@@ -30,6 +42,7 @@ export class AccountService {
     private http: HttpClient,
     private roleService: RoleService,
     private router: Router,
+    private injector: Injector,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
     console.log('🔧 AccountService constructor called');
@@ -196,11 +209,17 @@ export class AccountService {
   }
 
   authenticate(identity: Account | null): void {
+    const prevUsername = this.userIdentity?.username;
+    const nextUsername = identity?.username;
     console.log('🔐 authenticate called with:', identity);
     this.userIdentity = identity;
     this.authenticationState.next(this.userIdentity);
     if (!identity) {
       this.accountCache$ = null;
+      this.clearAllServiceCaches();
+    } else if (prevUsername && nextUsername && prevUsername !== nextUsername) {
+      this.accountCache$ = null;
+      this.clearAllServiceCaches();
     }
   }
 
@@ -251,6 +270,73 @@ export class AccountService {
     });
   }
 
+  public clearAllServiceCaches(): void {
+    console.log('🧹 AccountService: Clearing all domain and dashboard caches');
+    try {
+      ReadApiCacheInterceptor.clearCache();
+    } catch (e) {}
+
+    try {
+      const unifiedDashboard = this.injector.get(UnifiedDashboardService, null);
+      unifiedDashboard?.clearCache();
+    } catch (e) {}
+
+    try {
+      const licenseApp = this.injector.get(LicenseApplicationService, null);
+      licenseApp?.clearCache();
+    } catch (e) {}
+
+    try {
+      const companyReg = this.injector.get(CompanyRegistrationService, null);
+      companyReg?.clearCache();
+    } catch (e) {}
+
+    try {
+      const labelReg = this.injector.get(LabelRegistrationService, null);
+      labelReg?.clearCache();
+    } catch (e) {}
+
+    try {
+      const specialPermit = this.injector.get(SpecialPermitService, null);
+      specialPermit?.clearCache();
+    } catch (e) {}
+
+    try {
+      const userService = this.injector.get(UserService, null);
+      userService?.clearCache();
+    } catch (e) {}
+
+    try {
+      const companyCollab = this.injector.get(CompanyCollaborationService, null);
+      companyCollab?.clearCache();
+    } catch (e) {}
+
+    try {
+      const distributorPermit = this.injector.get(DistributorPermitService, null);
+      distributorPermit?.clearCache();
+    } catch (e) {}
+
+    try {
+      const sidebarBadge = this.injector.get(SidebarPendingBadgeService, null);
+      sidebarBadge?.triggerRefresh();
+    } catch (e) {}
+
+    try {
+      const supplyChain = this.injector.get(SupplyChainService, null);
+      supplyChain?.clearCache();
+    } catch (e) {}
+
+    try {
+      const hologram = this.injector.get(HologramDataService, null);
+      hologram?.clearCache();
+    } catch (e) {}
+
+    try {
+      const enaRequisition = this.injector.get(EnaRequisitionService, null);
+      enaRequisition?.clearCache();
+    } catch (e) {}
+  }
+
   clearAppData(): void {
     console.log('🗑️ clearAppData called');
 
@@ -260,7 +346,7 @@ export class AccountService {
     }
 
     this.roleService.clearCurrentUser();
-    ReadApiCacheInterceptor.clearCache();
+    this.clearAllServiceCaches();
 
     if (isPlatformBrowser(this.platformId)) {
       // Preserve certain keys across logout

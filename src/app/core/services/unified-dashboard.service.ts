@@ -92,7 +92,6 @@ export class UnifiedDashboardService {
   }
 
   constructor(private http: HttpClient, private accountService: AccountService) {
-    
     this.accountService.getAuthenticationState().subscribe((account) => {
       const nextKey = account?.username ? String(account.username) : null;
       if (nextKey !== this.cacheUserKey) {
@@ -100,6 +99,26 @@ export class UnifiedDashboardService {
         this.clearUnifiedAppsCache();
       }
     });
+  }
+
+  private getCurrentUserKey(): string {
+    try {
+      const username = this.accountService.getUserProfileSync()?.username;
+      if (username) return String(username).trim();
+      const raw = localStorage.getItem('username') || localStorage.getItem('currentUser');
+      if (raw) {
+        if (raw.startsWith('{')) {
+          const parsed = JSON.parse(raw);
+          return String(parsed?.username || parsed?.id || 'anon').trim();
+        }
+        return String(raw).trim();
+      }
+    } catch {}
+    return 'anon';
+  }
+
+  public clearCache(): void {
+    this.clearUnifiedAppsCache();
   }
 
   public clearUnifiedAppsCache(): void {
@@ -143,8 +162,9 @@ export class UnifiedDashboardService {
   }
 
     getUnifiedDashboardCounts(config?: DashboardConfig, forceRefresh = false): Observable<DashboardCount> {
+    const userKey = this.getCurrentUserKey();
     const enabledTypes = Array.from(new Set([...this.inferEnabledTypesFromConfig(config), 'license-renewal', 'company-registration', 'company-collaboration', 'salesman-barman', 'new-license', 'special-permit', 'label-registration']));
-    const cacheKey = enabledTypes.slice().sort().join('|');
+    const cacheKey = `user:${userKey}:${enabledTypes.slice().sort().join('|')}`;
     if (!forceRefresh && this.unifiedCountsCache$ && this.unifiedCountsCacheKey === cacheKey) {
       return this.unifiedCountsCache$;
     }
@@ -274,8 +294,9 @@ export class UnifiedDashboardService {
     specialPermit: DashboardCount;
     labelRegistration?: DashboardCount;
   }> {
+    const userKey = this.getCurrentUserKey();
     const enabledTypes = Array.from(new Set([...this.inferEnabledTypesFromConfig(config), 'license-renewal', 'company-registration', 'company-collaboration', 'salesman-barman', 'new-license', 'special-permit', 'label-registration']));
-    const cacheKey = [
+    const cacheKey = `user:${userKey}::` + [
       enabledTypes.slice().sort().join('|'),
       `month:${month ?? 'all'}`,
       `year:${year ?? 'all'}`
@@ -382,7 +403,8 @@ export class UnifiedDashboardService {
     if (excludeSpecialPermit) {
       enabledTypes = enabledTypes.filter(t => t !== 'special-permit');
     }
-    const cacheKey = enabledTypes.slice().sort().join('|') + `|excludeSP:${excludeSpecialPermit}`;
+    const userKey = this.getCurrentUserKey();
+    const cacheKey = `user:${userKey}::` + enabledTypes.slice().sort().join('|') + `|excludeSP:${excludeSpecialPermit}`;
 
     if (!forceRefresh && this.unifiedAppsCache$ && this.unifiedAppsCacheKey === cacheKey) {
       return this.unifiedAppsCache$;

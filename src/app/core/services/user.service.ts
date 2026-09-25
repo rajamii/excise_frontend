@@ -18,34 +18,61 @@ export class UserService {
 
   constructor(private http: HttpClient) { }
 
+  private getCurrentUserKey(): string {
+    try {
+      const username = localStorage.getItem('username');
+      if (username) return username.trim();
+      const raw = localStorage.getItem('currentUser') || localStorage.getItem('user');
+      if (raw) {
+        if (raw.startsWith('{')) {
+          const parsed = JSON.parse(raw);
+          return String(parsed?.username || parsed?.id || 'anon').trim();
+        }
+        return String(raw).trim();
+      }
+    } catch {}
+    return 'anon';
+  }
+
+  public clearCache(): void {
+    this.responseCache.clear();
+    this.inflightRequests.clear();
+  }
+
   private getCachedOrFetch<T>(key: string, requestFactory: () => Observable<T>): Observable<T> {
-    const cachedEntry = this.responseCache.get(key);
+    const userKey = this.getCurrentUserKey();
+    const fullKey = `user:${userKey}:${key}`;
+    const cachedEntry = this.responseCache.get(fullKey);
     const now = Date.now();
     if (cachedEntry && now - cachedEntry.fetchedAt < this.cacheTtlMs) {
       return of(cachedEntry.value as T);
     }
 
-    const inflightRequest = this.inflightRequests.get(key);
+    const inflightRequest = this.inflightRequests.get(fullKey);
     if (inflightRequest) {
       return inflightRequest as Observable<T>;
     }
 
     const request$ = requestFactory().pipe(
       tap((value) => {
-        this.responseCache.set(key, { value, fetchedAt: Date.now() });
+        this.responseCache.set(fullKey, { value, fetchedAt: Date.now() });
       }),
       finalize(() => {
-        this.inflightRequests.delete(key);
+        this.inflightRequests.delete(fullKey);
       }),
       shareReplay(1)
     );
 
-    this.inflightRequests.set(key, request$ as Observable<unknown>);
+    this.inflightRequests.set(fullKey, request$ as Observable<unknown>);
     return request$;
   }
 
   private invalidateCache(...keys: string[]): void {
+    const userKey = this.getCurrentUserKey();
     for (const key of keys) {
+      const fullKey = `user:${userKey}:${key}`;
+      this.responseCache.delete(fullKey);
+      this.inflightRequests.delete(fullKey);
       this.responseCache.delete(key);
       this.inflightRequests.delete(key);
     }
