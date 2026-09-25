@@ -1473,6 +1473,26 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   customStats: any[] = [];
   quickActions: any[] = [];
 
+  // Officer Activity Sub-tabs ('action-logs' | 'login-activity')
+  activityTab: 'action-logs' | 'login-activity' = 'action-logs';
+
+  // Admin Audit Log State ('action-logs')
+  adminActionLogs: any[] = [];
+  adminActionLogsLoading = false;
+  adminActionLogsError: string | null = null;
+  adminActionFilterModule = '';
+  adminActionFilterAction = '';
+  adminActionFilterMonth = '';
+  adminActionFilterDate = '';
+  adminActionSearchTerm = '';
+  adminActionPage = 1;
+  adminActionPageSize = 10;
+  adminActionTotalCount = 0;
+  adminActionTotalPages = 1;
+  adminActionModulesList: string[] = [];
+  adminActionTypesList: string[] = [];
+  selectedActionLogDetail: any = null;
+
   // User activity log (Officer Activity / License Activity)
   userActivities: any[] = [];
   userActivityLoading = false;
@@ -2326,6 +2346,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       this.tryRedirectHologramOverview();
     }
 
+    if (this.selectedSupplyChainSection === 'officer-activity') {
+      this.refreshCurrentActivityTab();
+    }
+
     // Subscribe to query parameter changes
     this.route.queryParams
       .pipe(skip(1), takeUntil(this.destroy$))
@@ -2350,7 +2374,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         }
 
         if (this.selectedSupplyChainSection === 'officer-activity') {
-          this.loadUserActivities();
+          this.refreshCurrentActivityTab();
         }
 
         // Sidebar section changes only update the query param; keep dashboard stats in memory
@@ -2378,6 +2402,177 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   get activitySectionTitle(): string {
     return this.isLicenseeUser() ? 'License Activity' : 'Officer Activity';
+  }
+
+  setActivityTab(tab: 'action-logs' | 'login-activity'): void {
+    this.activityTab = tab;
+    if (tab === 'action-logs') {
+      if (!this.adminActionLogs.length && !this.adminActionLogsLoading) {
+        this.loadAdminActionLogs();
+        this.loadAdminActionMetadata();
+      }
+    } else if (tab === 'login-activity') {
+      if (!this.userActivities.length && !this.userActivityLoading) {
+        this.loadUserActivities();
+      }
+    }
+  }
+
+  refreshCurrentActivityTab(): void {
+    if (this.activityTab === 'action-logs') {
+      this.loadAdminActionLogs();
+      this.loadAdminActionMetadata();
+    } else {
+      this.loadUserActivities();
+    }
+  }
+
+  loadAdminActionMetadata(): void {
+    this.http.get<any>(`${environment.apiBaseUrl}/transactional/logs/admin-logs/modules/`)
+      .pipe(catchError(() => of([])))
+      .subscribe((res: any) => {
+        if (Array.isArray(res)) {
+          this.adminActionModulesList = res;
+        } else if (res && Array.isArray(res.modules)) {
+          this.adminActionModulesList = res.modules;
+        }
+      });
+
+    this.http.get<any>(`${environment.apiBaseUrl}/transactional/logs/admin-logs/actions/`)
+      .pipe(catchError(() => of([])))
+      .subscribe((res: any) => {
+        if (Array.isArray(res)) {
+          this.adminActionTypesList = res;
+        } else if (res && Array.isArray(res.actions)) {
+          this.adminActionTypesList = res.actions;
+        }
+      });
+  }
+
+  loadAdminActionLogs(): void {
+    this.adminActionLogsLoading = true;
+    this.adminActionLogsError = null;
+
+    let params = new HttpParams()
+      .set('page', String(this.adminActionPage))
+      .set('page_size', String(this.adminActionPageSize));
+
+    const mod = String(this.adminActionFilterModule || '').trim();
+    if (mod) params = params.set('module_name', mod);
+
+    const act = String(this.adminActionFilterAction || '').trim();
+    if (act) params = params.set('action', act);
+
+    const month = String(this.adminActionFilterMonth || '').trim();
+    if (month) params = params.set('month', month);
+
+    const dt = String(this.adminActionFilterDate || '').trim();
+    if (dt) params = params.set('date', dt);
+
+    const q = String(this.adminActionSearchTerm || '').trim();
+    if (q) params = params.set('search', q);
+
+    this.http.get<any>(`${environment.apiBaseUrl}/transactional/logs/admin-logs/`, { params })
+      .pipe(
+        finalize(() => (this.adminActionLogsLoading = false)),
+        catchError((err) => {
+          this.adminActionLogsError = err?.error?.detail || 'Failed to load action audit logs.';
+          this.adminActionLogs = [];
+          this.adminActionTotalCount = 0;
+          this.adminActionTotalPages = 1;
+          return of({ count: 0, results: [], total_pages: 1 });
+        })
+      )
+      .subscribe((res: any) => {
+        if (res && Array.isArray(res.results)) {
+          this.adminActionLogs = res.results;
+          this.adminActionTotalCount = Number(res.count) || 0;
+          this.adminActionTotalPages = Number(res.totalPages || res.total_pages) || Math.max(1, Math.ceil(this.adminActionTotalCount / this.adminActionPageSize));
+        } else if (Array.isArray(res)) {
+          this.adminActionLogs = res;
+          this.adminActionTotalCount = res.length;
+          this.adminActionTotalPages = Math.max(1, Math.ceil(this.adminActionTotalCount / this.adminActionPageSize));
+        } else {
+          this.adminActionLogs = [];
+          this.adminActionTotalCount = 0;
+          this.adminActionTotalPages = 1;
+        }
+      });
+  }
+
+  clearAdminActionFilters(): void {
+    this.adminActionFilterModule = '';
+    this.adminActionFilterAction = '';
+    this.adminActionFilterMonth = '';
+    this.adminActionFilterDate = '';
+    this.adminActionSearchTerm = '';
+    this.adminActionPage = 1;
+    this.loadAdminActionLogs();
+  }
+
+  onAdminActionSearchChange(): void {
+    this.adminActionPage = 1;
+    this.loadAdminActionLogs();
+  }
+
+  adminActionGoToPage(page: number): void {
+    if (page < 1 || page > this.adminActionTotalPages) return;
+    this.adminActionPage = page;
+    this.loadAdminActionLogs();
+  }
+
+  onAdminActionPageSizeChange(): void {
+    this.adminActionPage = 1;
+    this.loadAdminActionLogs();
+  }
+
+  get adminActionPageNumbers(): number[] {
+    const total = this.adminActionTotalPages;
+    const current = this.adminActionPage;
+    const delta = 2;
+    const pages: number[] = [];
+    for (let i = Math.max(1, current - delta); i <= Math.min(total, current + delta); i++) {
+      pages.push(i);
+    }
+    return pages;
+  }
+
+  getAdminActionBadgeClass(action: string | undefined): string {
+    const a = String(action || '').toUpperCase().trim();
+    if (a.includes('APPROVE')) return 'act-badge--approve';
+    if (a.includes('REJECT')) return 'act-badge--reject';
+    if (a.includes('REVERT')) return 'act-badge--revert';
+    if (a.includes('FORWARD')) return 'act-badge--forward';
+    if (a.includes('OBJECTION') && !a.includes('RESOLVE')) return 'act-badge--objection';
+    if (a.includes('RESOLVE')) return 'act-badge--resolve';
+    if (a.includes('VERIFY') || a.includes('RECOMMEND')) return 'act-badge--verify';
+    if (a.includes('CANCEL')) return 'act-badge--cancel';
+    if (a.includes('UPDATE') || a.includes('EDIT')) return 'act-badge--update';
+    if (a.includes('APPLY') || a.includes('CREATE') || a.includes('SUBMIT')) return 'act-badge--create';
+    return 'act-badge--default';
+  }
+
+  getAdminActionIcon(action: string | undefined): string {
+    const a = String(action || '').toUpperCase().trim();
+    if (a.includes('APPROVE')) return 'check_circle';
+    if (a.includes('REJECT')) return 'cancel';
+    if (a.includes('REVERT')) return 'undo';
+    if (a.includes('FORWARD')) return 'arrow_forward';
+    if (a.includes('OBJECTION') && !a.includes('RESOLVE')) return 'report_problem';
+    if (a.includes('RESOLVE')) return 'task_alt';
+    if (a.includes('VERIFY') || a.includes('RECOMMEND')) return 'verified';
+    if (a.includes('CANCEL')) return 'block';
+    if (a.includes('UPDATE') || a.includes('EDIT')) return 'edit_note';
+    if (a.includes('APPLY') || a.includes('CREATE') || a.includes('SUBMIT')) return 'add_circle';
+    return 'touch_app';
+  }
+
+  viewActionLogDetail(log: any): void {
+    this.selectedActionLogDetail = log;
+  }
+
+  closeActionLogDetail(): void {
+    this.selectedActionLogDetail = null;
   }
 
   loadUserActivities(): void {
