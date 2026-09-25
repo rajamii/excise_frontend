@@ -2575,6 +2575,45 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.selectedActionLogDetail = null;
   }
 
+  getForwardedRecipients(log: any): Array<{ id?: string; username?: string; fullName?: string; full_name?: string; role?: string }> {
+    if (!log) return [];
+    const list = log.forwardedRecipients || log.forwarded_recipients;
+    if (Array.isArray(list) && list.length) {
+      return list.map((r: any) => ({
+        id: String(r.id || ''),
+        username: r.username || '',
+        fullName: r.fullName || r.full_name || '',
+        role: r.role || ''
+      }));
+    }
+    const unameStr = String(log.toStageUsername || log.to_stage_username || '').trim();
+    const idStr = String(log.forwardingId || log.forwarding_id || log.toStageUserId || log.to_stage_user_id || '').trim();
+    const nameStr = String(log.forwardedToName || log.forwarded_to_name || log.toStageFullName || log.to_stage_full_name || '').trim();
+    if (unameStr || idStr || nameStr) {
+      const unames = unameStr ? unameStr.split(',').map(s => s.trim()).filter(Boolean) : [];
+      const ids = idStr ? idStr.split(',').map(s => s.trim()).filter(Boolean) : [];
+      const names = nameStr ? nameStr.split(',').map(s => s.trim()).filter(Boolean) : [];
+      const maxLen = Math.max(unames.length, ids.length, names.length, 1);
+      const res = [];
+      for (let i = 0; i < maxLen; i++) {
+        res.push({
+          id: ids[i] || ids[0] || '',
+          username: unames[i] || unames[0] || '',
+          fullName: names[i] || names[0] || unames[i] || '',
+          role: ''
+        });
+      }
+      return res;
+    }
+    return [];
+  }
+
+  getForwardedTooltip(log: any): string {
+    const list = this.getForwardedRecipients(log);
+    if (!list.length) return '';
+    return list.map(r => `[ID: ${r.id || '—'}] ${r.fullName || r.username} (@${r.username})${r.role ? ' - ' + r.role : ''}`).join('\n');
+  }
+
   loadUserActivities(): void {
     if (!this.currentUser) {
       return;

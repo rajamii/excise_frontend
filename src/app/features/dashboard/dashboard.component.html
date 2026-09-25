@@ -426,11 +426,24 @@
                     </td>
 
                     <td class="act-td-forwarded">
-                      <div class="act-user-tag" *ngIf="(log?.toStageUsername || log?.to_stage_username || log?.toStageFullName || log?.to_stage_full_name || log?.forwardingId || log?.forwarding_id || log?.toStageUserId || log?.to_stage_user_id); else dash"
-                           [title]="'Forwarding ID: ' + (log?.forwardingId || log?.forwarding_id || log?.toStageUserId || log?.to_stage_user_id || '—') + ' | ' + (log?.forwardedToName || log?.forwarded_to_name || log?.toStageFullName || log?.to_stage_full_name || '—') + ' (' + (log?.toStageUsername ? ('@' + log.toStageUsername) : (log?.to_stage_username ? ('@' + log.to_stage_username) : '—')) + ')'">
-                        <mat-icon>person</mat-icon>
-                        <span>{{ log?.forwardedToName || log?.forwarded_to_name || log?.toStageFullName || log?.to_stage_full_name || log?.toStageUsername || log?.to_stage_username }}</span>
-                      </div>
+                      <ng-container *ngIf="getForwardedRecipients(log).length > 0; else singleForwardCell">
+                        <div class="act-recipients-stack" [title]="getForwardedTooltip(log)">
+                          <div class="act-user-tag act-user-tag--multi" *ngFor="let rec of getForwardedRecipients(log)">
+                            <mat-icon>person</mat-icon>
+                            <span class="act-user-tag__text">
+                              <strong *ngIf="rec.id" class="act-rec-id">#{{ rec.id }}</strong>
+                              {{ rec.fullName || rec.username }}
+                            </span>
+                          </div>
+                        </div>
+                      </ng-container>
+                      <ng-template #singleForwardCell>
+                        <div class="act-user-tag" *ngIf="(log?.toStageUsername || log?.to_stage_username || log?.toStageFullName || log?.to_stage_full_name || log?.forwardingId || log?.forwarding_id || log?.toStageUserId || log?.to_stage_user_id); else dash"
+                             [title]="'Forwarding ID: ' + (log?.forwardingId || log?.forwarding_id || log?.toStageUserId || log?.to_stage_user_id || '—') + ' | ' + (log?.forwardedToName || log?.forwarded_to_name || log?.toStageFullName || log?.to_stage_full_name || '—') + ' (' + (log?.toStageUsername ? ('@' + log.toStageUsername) : (log?.to_stage_username ? ('@' + log.to_stage_username) : '—')) + ')'">
+                          <mat-icon>person</mat-icon>
+                          <span>{{ log?.forwardedToName || log?.forwarded_to_name || log?.toStageFullName || log?.to_stage_full_name || log?.toStageUsername || log?.to_stage_username }}</span>
+                        </div>
+                      </ng-template>
                     </td>
 
                     <td class="act-td-remarks">
@@ -585,18 +598,48 @@
                         <span class="oa-label">To Stage Name:</span>
                         <span class="oa-value oa-value--bold">{{ selectedActionLogDetail?.toStageName || selectedActionLogDetail?.to_stage_name }}</span>
                       </div>
-                      <div class="oa-detail-row" *ngIf="selectedActionLogDetail?.forwardingId || selectedActionLogDetail?.forwarding_id || selectedActionLogDetail?.toStageUserId || selectedActionLogDetail?.to_stage_user_id || selectedActionLogDetail?.forwardedToId || selectedActionLogDetail?.forwarded_to_id">
-                        <span class="oa-label">Forwarding ID:</span>
-                        <span class="oa-value"><code>{{ selectedActionLogDetail?.forwardingId || selectedActionLogDetail?.forwarding_id || selectedActionLogDetail?.toStageUserId || selectedActionLogDetail?.to_stage_user_id || selectedActionLogDetail?.forwardedToId || selectedActionLogDetail?.forwarded_to_id }}</code></span>
+
+                      <!-- Multi-Admin Recipient Roster -->
+                      <div class="oa-recipients-box" *ngIf="getForwardedRecipients(selectedActionLogDetail).length > 0; else singleAdminModalBlock">
+                        <div class="oa-recipients-title">
+                          <mat-icon>group</mat-icon>
+                          <span>Forwarded / Eligible Admins ({{ getForwardedRecipients(selectedActionLogDetail).length }}):</span>
+                        </div>
+                        <div class="oa-recipients-list">
+                          <div class="oa-recipient-card" *ngFor="let rec of getForwardedRecipients(selectedActionLogDetail)">
+                            <div class="oa-recipient-card__header">
+                              <mat-icon class="oa-recipient-icon">person</mat-icon>
+                              <span class="oa-recipient-name">{{ rec.fullName || rec.username }}</span>
+                              <span class="oa-recipient-role" *ngIf="rec.role">{{ rec.role }}</span>
+                            </div>
+                            <div class="oa-recipient-card__details">
+                              <span class="oa-recipient-id" *ngIf="rec.id">
+                                <span class="oa-sub-label">Forwarding ID:</span>
+                                <code>{{ rec.id }}</code>
+                              </span>
+                              <span class="oa-recipient-username" *ngIf="rec.username">
+                                <span class="oa-sub-label">Username:</span>
+                                <strong class="act-user-highlight">{{ '@' + rec.username }}</strong>
+                              </span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div class="oa-detail-row" *ngIf="selectedActionLogDetail?.toStageFullName || selectedActionLogDetail?.to_stage_full_name || selectedActionLogDetail?.forwardedToName || selectedActionLogDetail?.forwarded_to_name">
-                        <span class="oa-label">Forwarded To Name:</span>
-                        <span class="oa-value oa-value--bold">{{ selectedActionLogDetail?.forwardedToName || selectedActionLogDetail?.forwarded_to_name || selectedActionLogDetail?.toStageFullName || selectedActionLogDetail?.to_stage_full_name }}</span>
-                      </div>
-                      <div class="oa-detail-row" *ngIf="selectedActionLogDetail?.toStageUsername || selectedActionLogDetail?.to_stage_username || selectedActionLogDetail?.forwardedToUsername || selectedActionLogDetail?.forwarded_to_username">
-                        <span class="oa-label">Forwarded To Username:</span>
-                        <span class="oa-value oa-value--bold act-user-highlight">{{ '@' + (selectedActionLogDetail?.forwardedToUsername || selectedActionLogDetail?.forwarded_to_username || selectedActionLogDetail?.toStageUsername || selectedActionLogDetail?.to_stage_username) }}</span>
-                      </div>
+
+                      <ng-template #singleAdminModalBlock>
+                        <div class="oa-detail-row" *ngIf="selectedActionLogDetail?.forwardingId || selectedActionLogDetail?.forwarding_id || selectedActionLogDetail?.toStageUserId || selectedActionLogDetail?.to_stage_user_id || selectedActionLogDetail?.forwardedToId || selectedActionLogDetail?.forwarded_to_id">
+                          <span class="oa-label">Forwarding ID:</span>
+                          <span class="oa-value"><code>{{ selectedActionLogDetail?.forwardingId || selectedActionLogDetail?.forwarding_id || selectedActionLogDetail?.toStageUserId || selectedActionLogDetail?.to_stage_user_id || selectedActionLogDetail?.forwardedToId || selectedActionLogDetail?.forwarded_to_id }}</code></span>
+                        </div>
+                        <div class="oa-detail-row" *ngIf="selectedActionLogDetail?.toStageFullName || selectedActionLogDetail?.to_stage_full_name || selectedActionLogDetail?.forwardedToName || selectedActionLogDetail?.forwarded_to_name">
+                          <span class="oa-label">Forwarded To Name:</span>
+                          <span class="oa-value oa-value--bold">{{ selectedActionLogDetail?.forwardedToName || selectedActionLogDetail?.forwarded_to_name || selectedActionLogDetail?.toStageFullName || selectedActionLogDetail?.to_stage_full_name }}</span>
+                        </div>
+                        <div class="oa-detail-row" *ngIf="selectedActionLogDetail?.toStageUsername || selectedActionLogDetail?.to_stage_username || selectedActionLogDetail?.forwardedToUsername || selectedActionLogDetail?.forwarded_to_username">
+                          <span class="oa-label">Forwarded To Username:</span>
+                          <span class="oa-value oa-value--bold act-user-highlight">{{ '@' + (selectedActionLogDetail?.forwardedToUsername || selectedActionLogDetail?.forwarded_to_username || selectedActionLogDetail?.toStageUsername || selectedActionLogDetail?.to_stage_username) }}</span>
+                        </div>
+                      </ng-template>
                     </div>
 
                     <!-- Revert Details (if applicable) -->
