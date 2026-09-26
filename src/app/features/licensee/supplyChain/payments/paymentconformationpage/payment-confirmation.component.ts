@@ -3032,15 +3032,27 @@ private initializeWalletContextAndLoadData(): void {
 
             const nextAmount = this.pendingNewLicenseLicenseFeeAmount || this.getRequiredLicenseFeeAmount() || 0;
             if (!licensePaid && nextAmount > 0) {
-              this.pendingWalletPaymentContext = {
+              const chainedContext: PendingWalletPaymentContext = {
                 ...context,
                 tab: 'license_fee',
-                amount: nextAmount
+                amount: nextAmount,
+                referenceNo: refNo
               };
-              this.hasHandledPendingWalletPayment = false;
+              this.pendingWalletPaymentContext = chainedContext;
+              this.hasHandledPendingWalletPayment = true;
               this.isHandlingPendingWalletPayment = false;
               this.setActiveTab('license_fee');
               this.persistPendingPaymentContextToStorage();
+              Swal.fire({
+                icon: 'success',
+                title: 'Security Deposit Paid!',
+                text: 'Security deposit payment was successful. Now pay the license fee by Clicking on ADD MONEY Button on License Fee Wallet and complete the application successfully.',
+                confirmButtonText: 'OK'
+              }).then(() => {
+                this.hasHandledPendingWalletPayment = false;
+                this.refreshWalletData();
+                this.resetPendingPaymentAttemptState();
+              });
               return;
             }
           }
@@ -3065,12 +3077,17 @@ private initializeWalletContextAndLoadData(): void {
           }
         }
         this.refreshWalletData();
+        const bothPaid = this.pendingNewLicenseIsLicenseFeePaid && this.pendingNewLicenseIsSecurityFeePaid;
         Swal.fire({
           icon: 'success',
           title: 'Payment Successful',
-          text: `${this.getModuleLabelForTab(context.tab)} payment completed successfully.`
+          text: bothPaid
+            ? 'Both License Fee and Security Deposit have been paid successfully. Application is approved and activated.'
+            : `${this.getModuleLabelForTab(context.tab)} payment completed successfully.`,
+          confirmButtonText: 'OK'
+        }).then(() => {
+          this.maybeForceRefreshAfterNewLicenseApproval(context);
         });
-        this.maybeForceRefreshAfterNewLicenseApproval(context);
         this.finishPendingWalletPaymentHandling();
       },
       error: (err) => {
@@ -3100,47 +3117,22 @@ private initializeWalletContextAndLoadData(): void {
 
     const typeToken = String(context?.itemType || '').trim().toLowerCase();
     const refToken = String(context?.referenceNo || '').trim().toUpperCase();
-    const isNewLicense = typeToken.includes('new-license') || refToken.startsWith('NLI/');
+    const isNewLicense = typeToken.includes('new-license') || refToken.startsWith('NLI/') || refToken.startsWith('NA/') || refToken.startsWith('NLA/') || refToken.startsWith('LIC/') || Boolean(this.pendingNewLicenseReferenceNo || this.pendingNewLicenseApplicationId);
     const isRenewal = typeToken.includes('license-renewal') || refToken.startsWith('LRA/') || refToken.startsWith('RSBM/') || refToken.startsWith('RCR/');
     if (!isNewLicense && !isRenewal) return;
 
-    const applicationId = String(this.pendingNewLicenseApplicationId || context?.id || '').trim();
-    if (!applicationId) return;
+    // Trigger sidebar badge & dashboard cache refresh immediately
+    this.sidebarBadgeService.triggerRefresh();
+    this.unifiedDashboardService.clearUnifiedAppsCache();
 
-    const guardKey = `${isRenewal ? 'license_renewal' : 'new_license'}_force_refresh_after_approval_${applicationId}`;
-    try {
-      if (sessionStorage.getItem(guardKey) === '1') return;
-    } catch {
-      // ignore storage errors
-    }
-
-    const detail$ = isRenewal
-      ? this.licenseApplicationService.getLicenseRenewalApplicationById(applicationId)
-      : this.licenseApplicationService.getNewLicenseApplicationById(applicationId);
-
-    detail$.pipe(
-      timeout(15000),
-      catchError(() => of(null))
-    ).subscribe((app: any) => {
-      if (!app) return;
-      const isApproved = Boolean(app?.is_approved ?? app?.isApproved ?? app?.is_approved_flag ?? false);
-      if (!isApproved) return;
-
+    // Auto-reload so that licensee dashboard tabs (category/sub-category driven) and manufacturing wallets re-evaluate immediately.
+    setTimeout(() => {
       try {
-        sessionStorage.setItem(guardKey, '1');
+        window.location.reload();
       } catch {
-        // ignore storage errors
+        // ignore
       }
-
-      // Hard reload so that licensee dashboard tabs (category/sub-category driven) re-evaluate immediately.
-      setTimeout(() => {
-        try {
-          window.location.reload();
-        } catch {
-          // ignore
-        }
-      }, 300);
-    });
+    }, 400);
   }
 
   private addOptimisticPaymentHistoryRow(context: PendingWalletPaymentContext): void {
@@ -3959,6 +3951,13 @@ private initializeWalletContextAndLoadData(): void {
               this.refreshWalletData();
               this.sidebarBadgeService.triggerRefresh();
               this.unifiedDashboardService.clearUnifiedAppsCache();
+              setTimeout(() => {
+                try {
+                  window.location.reload();
+                } catch {
+                  // ignore
+                }
+              }, 400);
             });
           } else {
             Swal.fire({

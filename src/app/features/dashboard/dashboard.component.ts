@@ -1582,6 +1582,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       )
       .subscribe(() => {
         console.log('🔄 DashboardComponent: Reloading dashboard data due to refresh notification');
+        this.loadLicenseeMenuAccess();
         this.loadDashboardData(true);
       });
   }
