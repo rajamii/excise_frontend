@@ -73,28 +73,91 @@ function normalizeStageToken(raw: unknown): string {
  * Workflow stage gate for Wallet navigation.
  *
  * Wallet becomes available when the application reaches:
- * - `awaiting_payment` (Awaiting License Fee Payment), OR
- * - commissioner approval / final approved stage.
+ * - `awaiting_payment` (Awaiting License Fee / Security Deposit Payment after Commissioner approval), OR
+ * - commissioner approval / final approved stage / active license.
+ *
+ * Pre-approval applications (draft, applied, submitted, under review, pending officer review, objection before commissioner approval)
+ * do NOT show the Wallet tab because wallets are created category & subcategory wise upon Commissioner approval.
  */
 export function isWalletEnabledStage(item: any): boolean {
   if (!item) {
     return false;
   }
-  return true;
+
+  // 1. If an active/issued license ID exists, wallet is enabled
+  const licId = str(item?.license_id ?? item?.licenseId ?? '');
+  if (licId) {
+    return true;
+  }
+
+  // 2. Check if explicitly marked approved
+  if (item?.is_approved === true || item?.isApproved === true) {
+    return true;
+  }
+
+  // 3. Check status group
+  const statusGroup = normalizeStageToken(
+    item?.status_group ??
+    item?.statusGroup ??
+    item?.status ??
+    ''
+  );
+  if (statusGroup === 'awaitingpayment' || statusGroup === 'approved' || statusGroup === 'issued' || statusGroup === 'active') {
+    return true;
+  }
+
+  // 4. Check stage name / stage code
+  const stage = str(
+    item?.current_stage_name ??
+    item?.currentStageName ??
+    item?.current_stage ??
+    item?.currentStage ??
+    item?.stage_name ??
+    item?.stageName ??
+    item?.stage_code ??
+    item?.stageCode ??
+    ''
+  ).toLowerCase();
+
+  const normalized = stage.replace(/[^a-z0-9]/g, '');
+
+  if (
+    normalized.includes('awaitingpayment') ||
+    (normalized.includes('awaiting') && normalized.includes('payment')) ||
+    normalized.includes('licensefeepayment') ||
+    normalized.includes('securitydeposit') ||
+    normalized.includes('approved') ||
+    normalized.includes('licenseissued') ||
+    normalized.includes('active')
+  ) {
+    return true;
+  }
+
+  // 5. Check if any fee paid flags are true
+  if (
+    item?.is_license_fee_paid === true ||
+    item?.isLicenseFeePaid === true ||
+    item?.is_security_fee_paid === true ||
+    item?.isSecurityFeePaid === true
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 /**
- * Show Payment & Wallet when:
- * - User is a licensee, or
+ * Show Payment & Wallet only when:
  * - A license exists (`license_id`), or
- * - An application exists (even if rejected, terminated, awaiting payment, or approved)
- *   so licensees can always inspect their wallet balances, recharge history, and security deposit deductions.
+ * - An application has reached Commissioner approval (`awaiting_payment` / `approved`).
+ *
+ * Brand new users without applications or with pending/under-review applications will NOT see the Wallet tab.
  */
 export function isLicenseeWalletNavEligible(item: any): boolean {
   if (!item) {
     return false;
   }
-  return true;
+  return isWalletEnabledStage(item);
 }
 
 /**

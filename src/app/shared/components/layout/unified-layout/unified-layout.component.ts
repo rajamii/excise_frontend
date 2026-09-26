@@ -1895,8 +1895,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private computeWalletNavVisible(rows: any[]): boolean {
-    if (this.isLicenseeUser()) {
-      return true;
+    if (!this.isLicenseeUser()) {
+      return false;
     }
 
     const list = Array.isArray(rows) ? rows : [];
@@ -1933,21 +1933,27 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private isDistillery(item: any): boolean {
+    const modType = String(item?.module_type ?? item?.moduleType ?? '').trim().toLowerCase();
+    if (modType === 'distillery') return true;
+
     const subCategoryId = this.extractSubCategoryId(item);
-    if (subCategoryId === 2) {
+    if ([2, 6, 7, 8].includes(subCategoryId)) {
       return true;
     }
     const name = this.extractSubCategoryName(item);
-    return name.includes('distiller');
+    return name.includes('distill') || name.includes('bottling') || name.includes('blending') || name.includes('potable') || name.includes('grain');
   }
 
   private isBrewery(item: any): boolean {
+    const modType = String(item?.module_type ?? item?.moduleType ?? '').trim().toLowerCase();
+    if (modType === 'brewery') return true;
+
     const subCategoryId = this.extractSubCategoryId(item);
-    if (subCategoryId === 1) {
+    if ([1, 24].includes(subCategoryId)) {
       return true;
     }
     const name = this.extractSubCategoryName(item);
-    return name.includes('brew');
+    return name.includes('brew') || name.includes('beer');
   }
 
   private extractSubCategoryId(item: any): number {

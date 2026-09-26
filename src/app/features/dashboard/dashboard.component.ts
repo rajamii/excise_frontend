@@ -3138,6 +3138,20 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (licRows.some((item: any) => this.isDistillery(item) || this.isBrewery(item) || this.isDistributorItem(item))) {
       return true;
     }
+    const allAppRows = [
+      ...(this.pendingDataSource?.data || []),
+      ...(this.approvedDataSource?.data || []),
+      ...(this.objectionDataSource?.data || []),
+      ...(this.appliedDataSource?.data || []),
+      ...(this.rejectedDataSource?.data || []),
+      ...(this.dashboardData?.applications?.awaitingPayment || []),
+      ...(this.dashboardData?.applications?.pending || []),
+      ...(this.dashboardData?.applications?.applied || []),
+      ...(this.dashboardData?.applications?.approved || [])
+    ];
+    if (allAppRows.some((item: any) => this.isDistillery(item) || this.isBrewery(item) || this.isDistributorItem(item))) {
+      return true;
+    }
     return false;
   }
 
@@ -4188,6 +4202,23 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             rejected: filteredApplications.rejected
           });
 
+          const allApps = [
+            ...(filteredApplications.applied || []),
+            ...(filteredApplications.pending || []),
+            ...(filteredApplications.awaitingPayment || []),
+            ...(filteredApplications.approved || []),
+            ...(filteredApplications.objection || []),
+            ...(filteredApplications.rejected || [])
+          ];
+          const hasMfgAnywhere = allApps.some((item: any) => this.isDistillery(item) || this.isBrewery(item) || this.isDistributorItem(item));
+          if (hasMfgAnywhere) {
+            this.showBreweryOrDistilleryWalletViews = true;
+          }
+          const hasWalletEligible = this.computeWalletNavVisible([...this.myLicenses, ...allApps]);
+          if (hasWalletEligible) {
+            this.showManufacturingWalletNav = true;
+          }
+
           this.refreshOicActionPendingCount(forceRefresh);
           this.refreshSupplyChainPendingCounts(forceRefresh);
           // Pass the already-fetched hologram data so loadSupplyChainModuleStats
@@ -4286,6 +4317,23 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             approved: approvedWithoutRenewal,
             rejected: filteredApplications.rejected
           });
+
+          const allApps = [
+            ...(filteredApplications.applied || []),
+            ...(filteredApplications.pending || []),
+            ...(filteredApplications.awaitingPayment || []),
+            ...(filteredApplications.approved || []),
+            ...(filteredApplications.objection || []),
+            ...(filteredApplications.rejected || [])
+          ];
+          const hasMfgAnywhere = allApps.some((item: any) => this.isDistillery(item) || this.isBrewery(item) || this.isDistributorItem(item));
+          if (hasMfgAnywhere) {
+            this.showBreweryOrDistilleryWalletViews = true;
+          }
+          const hasWalletEligible = this.computeWalletNavVisible([...this.myLicenses, ...allApps]);
+          if (hasWalletEligible) {
+            this.showManufacturingWalletNav = true;
+          }
 
           this.loadSupplyChainModuleStats({ hologram: result.hologramProcurements || [] }, undefined, forceRefresh);
           this.updateSingleWindowChart();
@@ -4572,6 +4620,16 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     if (this.selectedSupplyChainSection === 'wallet') {
+      if (this.isLicenseeUser() && this.licenseeMenuAccessResolved && !this.showManufacturingWalletNav) {
+        this.selectedSupplyChainSection = null;
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { section: null, tab: null, source: null, walletView: null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true
+        });
+        return;
+      }
       return;
     }
   }
@@ -4592,7 +4650,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.showDistilleryMenus = false;
     this.showBreweryOrDistilleryMenus = false;
     this.showBreweryOrDistilleryWalletViews = false;
-    this.showManufacturingWalletNav = true;
+    this.showManufacturingWalletNav = false;
 
     // Keep login fast: derive initial menu visibility only from licenses.
     this.walletEligibilityResolved = true;
@@ -4614,7 +4672,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           const hasBreweryAnywhere = licenseRows.some((item) => this.isBrewery(item));
           const isDist = this.isDistributorUser() || licenseRows.some((item) => this.isDistributorItem(item));
           this.showBreweryOrDistilleryWalletViews = hasDistilleryAnywhere || hasBreweryAnywhere || isDist;
-          this.showManufacturingWalletNav = true;
+          this.showManufacturingWalletNav = this.computeWalletNavVisible(licenseRows);
           this.licenseeMenuAccessResolved = true;
           this.enforceSectionAccess();
           this.ensureWalletViewParamAllowed(this.route.snapshot.queryParams);
@@ -4627,7 +4685,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.showDistilleryMenus = false;
           this.showBreweryOrDistilleryMenus = false;
           this.showBreweryOrDistilleryWalletViews = this.isDistributorUser();
-          this.showManufacturingWalletNav = true;
+          this.showManufacturingWalletNav = false;
           this.licenseeMenuAccessResolved = true;
           this.enforceSectionAccess();
           this.updateAvailableChartModules();
@@ -4668,8 +4726,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private computeWalletNavVisible(rows: any[]): boolean {
-    if (this.isLicenseeUser()) {
-      return true;
+    if (!this.isLicenseeUser()) {
+      return false;
     }
 
     const list = Array.isArray(rows) ? rows : [];
@@ -4705,7 +4763,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
         const srcId = String(item?.source_object_id ?? item?.sourceObjectId ?? '').trim();
         const srcApp = srcId ? appsById.get(srcId) : undefined;
-        if (srcApp && isLicenseeWalletNavEligible(srcApp)) {
+        if (srcApp) {
+          if (isLicenseeWalletNavEligible(srcApp)) {
+            return true;
+          }
+        } else if (isLicenseeWalletNavEligible(item)) {
           return true;
         }
       }
@@ -4715,15 +4777,21 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private isDistillery(item: any): boolean {
+    const modType = String(item?.module_type ?? item?.moduleType ?? '').trim().toLowerCase();
+    if (modType === 'distillery') return true;
+
     const subCategoryId = this.extractSubCategoryId(item);
     if ([2, 6, 7, 8].includes(subCategoryId)) {
       return true;
     }
     const name = this.extractSubCategoryName(item);
-    return name.includes('distill') || name.includes('bottling') || name.includes('blending');
+    return name.includes('distill') || name.includes('bottling') || name.includes('blending') || name.includes('potable') || name.includes('grain');
   }
 
   private isBrewery(item: any): boolean {
+    const modType = String(item?.module_type ?? item?.moduleType ?? '').trim().toLowerCase();
+    if (modType === 'brewery') return true;
+
     const subCategoryId = this.extractSubCategoryId(item);
     if ([1, 24].includes(subCategoryId)) {
       return true;
@@ -4733,6 +4801,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private isDistributorItem(item: any): boolean {
+    const modType = String(item?.module_type ?? item?.moduleType ?? '').trim().toLowerCase();
+    if (modType === 'distributor' || modType === 'wholesale') return true;
+
     const subCategoryId = this.extractSubCategoryId(item);
     if (subCategoryId === 31) {
       return true;
@@ -4742,11 +4813,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return true;
     }
     const subName = this.extractSubCategoryName(item);
-    if (subName.includes('distribut')) {
+    if (subName.includes('distribut') || subName.includes('wholesale')) {
       return true;
     }
     const catName = this.extractCategoryName(item);
-    return catName.includes('distribut');
+    return catName.includes('distribut') || catName.includes('wholesale');
   }
 
   private extractCategoryId(item: any): number {
