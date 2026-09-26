@@ -249,39 +249,6 @@
           <!-- TAB 1: ACTION LOGS (Officer Action Audit Trail) -->
           <div *ngIf="activityTab === 'action-logs'" class="oa-tab-pane">
 
-            <!-- Scope Switcher: My Activities vs All Officers -->
-            <div class="act-scope-bar">
-              <div class="act-scope-toggle">
-                <button type="button"
-                        class="act-scope-btn"
-                        [class.act-scope-btn--active]="adminActionScope === 'mine'"
-                        (click)="setAdminActionScope('mine')">
-                  <mat-icon>person</mat-icon>
-                  <span>My Activities</span>
-                  <span class="act-scope-badge" *ngIf="adminActionScope === 'mine'">{{ adminActionTotalCount }}</span>
-                </button>
-                <button type="button"
-                        *ngIf="!isLicenseeUser()"
-                        class="act-scope-btn"
-                        [class.act-scope-btn--active]="adminActionScope === 'all'"
-                        (click)="setAdminActionScope('all')">
-                  <mat-icon>groups</mat-icon>
-                  <span>All Officers</span>
-                  <span class="act-scope-badge" *ngIf="adminActionScope === 'all'">{{ adminActionTotalCount }}</span>
-                </button>
-              </div>
-
-              <div class="act-scope-hint" *ngIf="adminActionScope === 'mine'">
-                <mat-icon>account_circle</mat-icon>
-                <span *ngIf="!isLicenseeUser()">Viewing actions performed by <strong>{{ currentUser?.username || 'You' }}</strong></span>
-                <span *ngIf="isLicenseeUser()">Viewing actions performed by you (<strong>{{ currentUser?.username || 'Licensee' }}</strong>)</span>
-              </div>
-              <div class="act-scope-hint act-scope-hint--all" *ngIf="adminActionScope === 'all'">
-                <mat-icon>public</mat-icon>
-                <span>Viewing actions performed across all excise officers &amp; administrators</span>
-              </div>
-            </div>
-
             <!-- Action Logs Filter Toolbar -->
             <div class="act-filters act-filters--action-logs">
 
@@ -451,8 +418,8 @@
                     <th>Module</th>
                     <th>Target / Record</th>
                     <th>Action</th>
-                    <th *ngIf="!isLicenseeUser()">Stage Progression</th>
-                    <th *ngIf="!isLicenseeUser()">Forwarded To</th>
+                    <th *ngIf="shouldShowStageProgressionColumns()">Stage Progression</th>
+                    <th *ngIf="shouldShowStageProgressionColumns()">Forwarded To</th>
                     <th>Changes &amp; Activity Details</th>
                     <th class="text-center">Details</th>
                   </tr>
@@ -501,8 +468,8 @@
                       </span>
                     </td>
 
-                    <!-- Stage Progression (Visible for all Officers/Admins) -->
-                    <td class="act-td-stages" *ngIf="!isLicenseeUser()">
+                    <!-- Stage Progression (Visible only for Workflow Officers: District, Enquiry, JC, Comm, Permit, IT Cell, etc.) -->
+                    <td class="act-td-stages" *ngIf="shouldShowStageProgressionColumns()">
                       <div class="act-stage-flow" *ngIf="(log?.fromStage || log?.from_stage || log?.toStage || log?.to_stage || log?.toStageName || log?.to_stage_name); else dash">
                         <span class="act-stage-from" *ngIf="log?.fromStage || log?.from_stage">{{ log?.fromStage || log?.from_stage }}</span>
                         <mat-icon class="act-stage-arrow" *ngIf="(log?.fromStage || log?.from_stage) && (log?.toStage || log?.to_stage || log?.toStageName || log?.to_stage_name)">arrow_right_alt</mat-icon>
@@ -512,8 +479,8 @@
                       </div>
                     </td>
 
-                    <!-- Forwarded To (Visible for all Officers/Admins) -->
-                    <td class="act-td-forwarded" *ngIf="!isLicenseeUser()">
+                    <!-- Forwarded To (Visible only for Workflow Officers: District, Enquiry, JC, Comm, Permit, IT Cell, etc.) -->
+                    <td class="act-td-forwarded" *ngIf="shouldShowStageProgressionColumns()">
                       <ng-container *ngIf="getForwardedRecipients(log).length > 0; else singleForwardedBlock">
                         <!-- Multiple recipients -->
                         <div class="act-forwarded-multi" *ngIf="getForwardedRecipients(log).length > 1; else singleItemBlock">

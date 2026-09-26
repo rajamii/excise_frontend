@@ -4383,6 +4383,27 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     return (roleName === 'licensee' || roleName === 'licenseuser') && !roleName.includes('distributor');
   }
 
+  isSiteAdminUser(): boolean {
+    const roleId = this.getCurrentRoleId();
+    if (roleId === 1) return true;
+    const user = this.currentUser || this.accountService?.getCurrentUser();
+    const roleName = String(
+      (user as any)?.role?.name ||
+      (user as any)?.role?.displayName ||
+      (user as any)?.role_name ||
+      this.userRoleDisplayName ||
+      ''
+    ).toLowerCase().replace(/[^a-z0-9]/g, '');
+    return roleName === 'siteadmin' || roleName === 'superadmin' || roleName === 'admin';
+  }
+
+  shouldShowStageProgressionColumns(): boolean {
+    if (this.isLicenseeUser() || this.isSiteAdminUser()) {
+      return false;
+    }
+    return true;
+  }
+
   isDistributorUser(): boolean {
     const user = this.currentUser || this.accountService?.getCurrentUser();
     const roleId = Number((user as any)?.roleId || (user as any)?.role?.id || this.getCurrentRoleId() || 0);
