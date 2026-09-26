@@ -261,6 +261,7 @@
                   <span class="act-scope-badge" *ngIf="adminActionScope === 'mine'">{{ adminActionTotalCount }}</span>
                 </button>
                 <button type="button"
+                        *ngIf="!isLicenseeUser()"
                         class="act-scope-btn"
                         [class.act-scope-btn--active]="adminActionScope === 'all'"
                         (click)="setAdminActionScope('all')">
@@ -272,7 +273,8 @@
 
               <div class="act-scope-hint" *ngIf="adminActionScope === 'mine'">
                 <mat-icon>account_circle</mat-icon>
-                <span>Viewing actions performed by <strong>{{ currentUser?.username || 'You' }}</strong></span>
+                <span *ngIf="!isLicenseeUser()">Viewing actions performed by <strong>{{ currentUser?.username || 'You' }}</strong></span>
+                <span *ngIf="isLicenseeUser()">Viewing actions performed by you (<strong>{{ currentUser?.username || 'Licensee' }}</strong>)</span>
               </div>
               <div class="act-scope-hint act-scope-hint--all" *ngIf="adminActionScope === 'all'">
                 <mat-icon>public</mat-icon>
@@ -360,7 +362,7 @@
               </div>
 
               <!-- Role filter -->
-              <div class="act-filter-field">
+              <div class="act-filter-field" *ngIf="!isLicenseeUser()">
                 <label>Role</label>
                 <select [(ngModel)]="adminActionFilterRole"
                         (ngModelChange)="onAdminActionSearchChange()"
@@ -449,7 +451,8 @@
                     <th>Module</th>
                     <th>Target / Record</th>
                     <th>Action</th>
-                    <th *ngIf="adminActionScope === 'all'">Workflow &amp; Routing</th>
+                    <th *ngIf="!isLicenseeUser()">Stage Progression</th>
+                    <th *ngIf="!isLicenseeUser()">Forwarded To</th>
                     <th>Changes &amp; Activity Details</th>
                     <th class="text-center">Details</th>
                   </tr>
@@ -498,8 +501,8 @@
                       </span>
                     </td>
 
-                    <!-- Workflow & Routing (Only visible when viewing All Officers) -->
-                    <td class="act-td-stages" *ngIf="adminActionScope === 'all'">
+                    <!-- Stage Progression (Visible for all Officers/Admins) -->
+                    <td class="act-td-stages" *ngIf="!isLicenseeUser()">
                       <div class="act-stage-flow" *ngIf="(log?.fromStage || log?.from_stage || log?.toStage || log?.to_stage || log?.toStageName || log?.to_stage_name); else dash">
                         <span class="act-stage-from" *ngIf="log?.fromStage || log?.from_stage">{{ log?.fromStage || log?.from_stage }}</span>
                         <mat-icon class="act-stage-arrow" *ngIf="(log?.fromStage || log?.from_stage) && (log?.toStage || log?.to_stage || log?.toStageName || log?.to_stage_name)">arrow_right_alt</mat-icon>
@@ -507,6 +510,40 @@
                           {{ (log?.toStageName || log?.to_stage_name) ? ((log?.toStageName || log?.to_stage_name) + ' (' + (log?.toStage || log?.to_stage || '') + ')') : (log?.toStage || log?.to_stage) }}
                         </span>
                       </div>
+                    </td>
+
+                    <!-- Forwarded To (Visible for all Officers/Admins) -->
+                    <td class="act-td-forwarded" *ngIf="!isLicenseeUser()">
+                      <ng-container *ngIf="getForwardedRecipients(log).length > 0; else singleForwardedBlock">
+                        <!-- Multiple recipients -->
+                        <div class="act-forwarded-multi" *ngIf="getForwardedRecipients(log).length > 1; else singleItemBlock">
+                          <div class="act-forwarded-pill" [title]="getForwardedTooltip(log)">
+                            <mat-icon>groups</mat-icon>
+                            <span>{{ getForwardedRecipients(log)[0].fullName || getForwardedRecipients(log)[0].username }}</span>
+                            <span class="act-more-tag">+{{ getForwardedRecipients(log).length - 1 }}</span>
+                          </div>
+                        </div>
+                        <!-- Single recipient from list -->
+                        <ng-template #singleItemBlock>
+                          <div class="act-forwarded-tag" [title]="getForwardedTooltip(log)">
+                            <mat-icon>person</mat-icon>
+                            <div class="act-forwarded-meta">
+                              <span class="act-forwarded-name">{{ getForwardedRecipients(log)[0].fullName || getForwardedRecipients(log)[0].username }}</span>
+                              <span class="act-forwarded-role" *ngIf="getForwardedRecipients(log)[0].role">{{ getForwardedRecipients(log)[0].role }}</span>
+                            </div>
+                          </div>
+                        </ng-template>
+                      </ng-container>
+
+                      <ng-template #singleForwardedBlock>
+                        <div class="act-forwarded-tag" *ngIf="log?.toStageUsername || log?.to_stage_username || log?.forwardedToUsername || log?.forwarded_to_username; else dash">
+                          <mat-icon>person</mat-icon>
+                          <div class="act-forwarded-meta">
+                            <span class="act-forwarded-name">{{ log?.toStageFullName || log?.to_stage_full_name || log?.forwardedToName || log?.forwarded_to_name || log?.toStageUsername || log?.to_stage_username }}</span>
+                            <span class="act-forwarded-sub">{{ '@' + (log?.toStageUsername || log?.to_stage_username || log?.forwardedToUsername || log?.forwarded_to_username) }}</span>
+                          </div>
+                        </div>
+                      </ng-template>
                     </td>
 
                     <!-- Activity / Changes Summary Column -->

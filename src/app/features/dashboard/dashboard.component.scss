@@ -2905,6 +2905,82 @@ mat-card-content {
             }
         }
 
+        .act-td-forwarded {
+            white-space: nowrap;
+        }
+
+        .act-forwarded-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 9px;
+            border-radius: 12px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            font-size: 0.76rem;
+            color: #14532d;
+
+            mat-icon {
+                font-size: 0.95rem;
+                width: 0.95rem;
+                height: 0.95rem;
+                color: #16a34a;
+            }
+
+            .act-forwarded-meta {
+                display: flex;
+                flex-direction: column;
+                line-height: 1.2;
+            }
+
+            .act-forwarded-name {
+                font-weight: 700;
+                color: #0f172a;
+            }
+
+            .act-forwarded-role {
+                font-size: 0.68rem;
+                color: #15803d;
+                font-weight: 600;
+            }
+
+            .act-forwarded-sub {
+                font-size: 0.68rem;
+                color: #64748b;
+                font-weight: 500;
+            }
+        }
+
+        .act-forwarded-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 9px;
+            border-radius: 12px;
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
+            font-size: 0.76rem;
+            font-weight: 600;
+            color: #3730a3;
+
+            mat-icon {
+                font-size: 0.95rem;
+                width: 0.95rem;
+                height: 0.95rem;
+                color: #4f46e5;
+            }
+
+            .act-more-tag {
+                background: #4f46e5;
+                color: #fff;
+                font-size: 0.65rem;
+                font-weight: 800;
+                padding: 1px 5px;
+                border-radius: 10px;
+                margin-left: 2px;
+            }
+        }
+
         .act-td-user {
             white-space: nowrap;
         }
