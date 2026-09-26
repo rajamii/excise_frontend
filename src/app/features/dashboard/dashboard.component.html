@@ -535,11 +535,11 @@
                           <div class="act-remarks-text" *ngIf="log?.remarks">{{ log?.remarks }}</div>
                         </div>
 
-                        <!-- Wallet Debit summary -->
-                        <div class="act-summary-card act-summary-card--debit" *ngIf="log?.action === 'WALLET_DEBIT' || (log?.action && log.action.includes('WALLET_DEBIT'))">
+                        <!-- Wallet Debit / Spend summary -->
+                        <div class="act-summary-card act-summary-card--debit" *ngIf="log?.action === 'WALLET_DEBIT' || (log?.action && (log.action.includes('WALLET_DEBIT') || log.action.includes('SPEND') || log.action.includes('DEBIT')))">
                           <div class="act-summary-badge act-summary-badge--debit">
                             <mat-icon>account_balance_wallet</mat-icon>
-                            <span>Wallet Debited &bull; ₹{{ (log?.metadata?.amount || 0) | number:'1.2-2' }}</span>
+                            <span>Wallet Spent &bull; ₹{{ (log?.metadata?.amount || 0) | number:'1.2-2' }}</span>
                           </div>
                           <div class="act-remarks-text" *ngIf="log?.remarks">{{ log?.remarks }}</div>
                         </div>
@@ -590,7 +590,7 @@
                         </div>
 
                         <!-- Fallback Remarks -->
-                        <div *ngIf="log?.action !== 'CREATE' && !hasCreatedFields(log) && log?.action !== 'DELETE' && !hasDeletedFields(log) && log?.action !== 'DEDUCT' && !(log?.action && log.action.includes('TERMINAT')) && log?.action !== 'WALLET_RECHARGE' && !log?.action?.includes('RECHARGE') && log?.action !== 'WALLET_DEBIT' && !log?.action?.includes('WALLET_DEBIT') && !log?.action?.startsWith('PAY_') && log?.action !== 'PAY' && log?.action !== 'APPLY_NEW_LICENSE' && !log?.action?.startsWith('APPLY_')">
+                        <div *ngIf="log?.action !== 'CREATE' && !hasCreatedFields(log) && log?.action !== 'DELETE' && !hasDeletedFields(log) && log?.action !== 'DEDUCT' && !(log?.action && log.action.includes('TERMINAT')) && log?.action !== 'WALLET_RECHARGE' && !log?.action?.includes('RECHARGE') && log?.action !== 'WALLET_DEBIT' && !log?.action?.includes('WALLET_DEBIT') && !log?.action?.includes('SPEND') && !log?.action?.startsWith('PAY_') && log?.action !== 'PAY' && log?.action !== 'APPLY_NEW_LICENSE' && !log?.action?.startsWith('APPLY_')">
                           <span class="act-remarks-text" *ngIf="log?.remarks; else dash" [title]="log?.remarks">
                             {{ log?.remarks }}
                           </span>

@@ -2563,7 +2563,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   getAdminActionBadgeClass(action: string | undefined): string {
     const a = String(action || '').toUpperCase().trim();
     if (a.includes('RECHARGE')) return 'act-badge--recharge';
-    if (a.includes('WALLET_DEBIT') || a.includes('DEBIT')) return 'act-badge--debit';
+    if (a.includes('WALLET_DEBIT') || a.includes('DEBIT') || a.includes('SPEND')) return 'act-badge--debit';
     if (a.includes('PAY') || a.includes('PAYMENT') || a.includes('FEE')) return 'act-badge--payment';
     if (a.includes('DEDUCT') || a.includes('FORFEIT')) return 'act-badge--deduct';
     if (a.includes('TERMINAT')) return 'act-badge--terminate';
@@ -2585,7 +2585,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   getAdminActionIcon(action: string | undefined): string {
     const a = String(action || '').toUpperCase().trim();
     if (a.includes('RECHARGE')) return 'savings';
-    if (a.includes('WALLET_DEBIT') || a.includes('DEBIT')) return 'account_balance_wallet';
+    if (a.includes('WALLET_DEBIT') || a.includes('DEBIT') || a.includes('SPEND')) return 'account_balance_wallet';
     if (a.includes('PAY') || a.includes('PAYMENT') || a.includes('FEE')) return 'payments';
     if (a.includes('DEDUCT') || a.includes('FORFEIT')) return 'price_change';
     if (a.includes('TERMINAT')) return 'block';
