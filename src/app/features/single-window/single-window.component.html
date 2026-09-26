@@ -577,9 +577,25 @@
                       <mat-icon class="cell-icon nla-icon">description</mat-icon>
                       <div class="cell-text">
                         <code class="nla-code">{{ record.application_id }}</code>
-                        <span class="nla-sub" *ngIf="record.issued_license_id && record.current_stage === 'Approved'">
+                        <span class="nla-sub nla-sub--approved" *ngIf="record.current_stage === 'Approved'">
                           <mat-icon style="font-size:12px;width:12px;height:12px;color:#10b981">verified</mat-icon>
                           Approved
+                        </span>
+                        <span class="nla-sub nla-sub--terminated" *ngIf="record.current_stage === 'Terminated'">
+                          <mat-icon style="font-size:12px;width:12px;height:12px;color:#dc2626">cancel</mat-icon>
+                          Terminated
+                        </span>
+                        <span class="nla-sub nla-sub--rejected" *ngIf="record.current_stage === 'Rejected'">
+                          <mat-icon style="font-size:12px;width:12px;height:12px;color:#ef4444">block</mat-icon>
+                          Rejected
+                        </span>
+                        <span class="nla-sub nla-sub--objection" *ngIf="record.current_stage === 'Under Objection' || record.current_stage?.toLowerCase()?.includes('objection')">
+                          <mat-icon style="font-size:12px;width:12px;height:12px;color:#f59e0b">report_problem</mat-icon>
+                          Objection
+                        </span>
+                        <span class="nla-sub nla-sub--payment" *ngIf="record.current_stage === 'Awaiting Payment' || record.current_stage?.toLowerCase()?.includes('payment')">
+                          <mat-icon style="font-size:12px;width:12px;height:12px;color:#3b82f6">payment</mat-icon>
+                          Fee Pending
                         </span>
                       </div>
                     </div>
@@ -600,7 +616,7 @@
                     <div *ngIf="record.issued_license_id" class="license-issued-cell">
                       <code class="license-code">{{ record.issued_license_id }}</code>
                       <span class="status-pill" [ngClass]="record.license_is_active ? 'status-active' : 'status-inactive'">
-                        {{ record.license_is_active ? 'Active' : 'Expired' }}
+                        {{ record.license_is_active ? 'Active' : 'Expired / Inactive' }}
                       </span>
                     </div>
                     <span *ngIf="!record.issued_license_id" class="not-issued-tag">Not Issued</span>
@@ -611,13 +627,29 @@
                     </span>
                   </td>
                   <td>
-                    <span *ngIf="record.current_stage !== 'Approved'" class="pending-role-tag">
-                      <mat-icon style="font-size:13px;width:13px;height:13px">manage_accounts</mat-icon>
-                      {{ record.pending_at }}
-                    </span>
                     <span *ngIf="record.current_stage === 'Approved'" class="approved-badge">
                       <mat-icon style="font-size:13px;width:13px;height:13px">check_circle</mat-icon>
                       Completed
+                    </span>
+                    <span *ngIf="record.current_stage === 'Terminated'" class="terminated-badge">
+                      <mat-icon style="font-size:13px;width:13px;height:13px">cancel</mat-icon>
+                      Terminated
+                    </span>
+                    <span *ngIf="record.current_stage === 'Rejected'" class="rejected-badge">
+                      <mat-icon style="font-size:13px;width:13px;height:13px">block</mat-icon>
+                      Rejected
+                    </span>
+                    <span *ngIf="record.current_stage === 'Under Objection' || record.current_stage?.toLowerCase()?.includes('objection')" class="objection-badge">
+                      <mat-icon style="font-size:13px;width:13px;height:13px">report_problem</mat-icon>
+                      {{ record.pending_at || 'Applicant (Needs Reply)' }}
+                    </span>
+                    <span *ngIf="record.current_stage === 'Awaiting Payment' || record.current_stage?.toLowerCase()?.includes('payment')" class="payment-badge">
+                      <mat-icon style="font-size:13px;width:13px;height:13px">payment</mat-icon>
+                      {{ record.pending_at || 'Applicant (Fees Pending)' }}
+                    </span>
+                    <span *ngIf="record.current_stage !== 'Approved' && record.current_stage !== 'Terminated' && record.current_stage !== 'Rejected' && !record.current_stage?.toLowerCase()?.includes('objection') && !record.current_stage?.toLowerCase()?.includes('payment')" class="pending-role-tag">
+                      <mat-icon style="font-size:13px;width:13px;height:13px">manage_accounts</mat-icon>
+                      {{ record.pending_at }}
                     </span>
                   </td>
                   <td class="date-cell">{{ record.created_at }}</td>

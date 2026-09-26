@@ -269,6 +269,36 @@
       box-shadow: 0 0 14px rgba(239,68,68,0.18);
     }
 
+    &.status-terminated {
+      background: rgba(220,38,38,0.22);
+      color: #fca5a5;
+      border: 1.5px solid rgba(220,38,38,0.55);
+      box-shadow: 0 0 16px rgba(220,38,38,0.28);
+    }
+
+    &.status-rejected {
+      background: rgba(239,68,68,0.18);
+      color: #f87171;
+      border: 1.5px solid rgba(239,68,68,0.45);
+      box-shadow: 0 0 14px rgba(239,68,68,0.2);
+    }
+
+    &.status-objection {
+      background: rgba(245,158,11,0.18);
+      color: #fcd34d;
+      border: 1.5px solid rgba(245,158,11,0.45);
+      box-shadow: 0 0 14px rgba(245,158,11,0.2);
+      &::before { animation: statusPulse 1.4s ease-in-out infinite; }
+    }
+
+    &.status-payment {
+      background: rgba(59,130,246,0.18);
+      color: #93c5fd;
+      border: 1.5px solid rgba(59,130,246,0.45);
+      box-shadow: 0 0 14px rgba(59,130,246,0.2);
+      &::before { animation: statusPulse 1.8s ease-in-out infinite; }
+    }
+
     &.status-pending {
       background: rgba(250,204,21,0.16);
       color: #fde047;
@@ -281,6 +311,12 @@
       background: rgba(100,116,139,0.16);
       color: #cbd5e1;
       border: 1.5px solid rgba(100,116,139,0.3);
+    }
+
+    &.status-deactivated {
+      background: rgba(148,163,184,0.16);
+      color: #94a3b8;
+      border: 1.5px solid rgba(148,163,184,0.3);
     }
   }
 }

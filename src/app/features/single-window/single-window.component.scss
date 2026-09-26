@@ -891,10 +891,15 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
 
-    &.status-active   { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
-    &.status-inactive { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-    &.status-pending  { background: #fffbeb; color: #92400e; border: 1px solid #fef3c7; }
-    &.status-draft    { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
+    &.status-active     { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+    &.status-inactive   { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    &.status-terminated { background: #fee2e2; color: #7f1d1d; border: 1px solid #fca5a5; font-weight: 700; }
+    &.status-rejected   { background: #fff1f2; color: #9f1239; border: 1px solid #fecdd3; }
+    &.status-objection  { background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; }
+    &.status-payment    { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+    &.status-pending    { background: #fffbeb; color: #92400e; border: 1px solid #fef3c7; }
+    &.status-draft      { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
+    &.status-deactivated{ background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
   }
 
   .view-btn {
@@ -1172,10 +1177,15 @@
   letter-spacing: 0.04em;
   display: inline-block;
 
-  &.status-active   { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
-  &.status-inactive { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-  &.status-pending  { background: #fffbeb; color: #92400e; border: 1px solid #fef3c7; }
-  &.status-draft    { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
+  &.status-active     { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+  &.status-inactive   { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+  &.status-terminated { background: #fee2e2; color: #7f1d1d; border: 1px solid #fca5a5; font-weight: 700; }
+  &.status-rejected   { background: #fff1f2; color: #9f1239; border: 1px solid #fecdd3; }
+  &.status-objection  { background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; }
+  &.status-payment    { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+  &.status-pending    { background: #fffbeb; color: #92400e; border: 1px solid #fef3c7; }
+  &.status-draft      { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
+  &.status-deactivated{ background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
 }
 
 /* ── Styled column headers ── */
@@ -1251,8 +1261,13 @@
     gap: 0.2rem;
     font-size: 0.7rem;
     font-weight: 700;
-    color: #047857;
     margin-top: 0.2rem;
+
+    &.nla-sub--approved { color: #047857; }
+    &.nla-sub--terminated { color: #b91c1c; }
+    &.nla-sub--rejected { color: #dc2626; }
+    &.nla-sub--objection { color: #d97706; }
+    &.nla-sub--payment { color: #2563eb; }
   }
 }
 
@@ -1311,6 +1326,63 @@
   border: 1px solid #bbf7d0;
   padding: 0.2rem 0.5rem;
   border-radius: 6px;
+  white-space: nowrap;
+}
+
+.terminated-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #7f1d1d;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.rejected-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #9f1239;
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.objection-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #9a3412;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.payment-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #1e40af;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  white-space: nowrap;
 }
 
 /* ── Track button ── */

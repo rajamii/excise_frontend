@@ -286,13 +286,28 @@ export class SingleWindowDetailComponent implements OnInit, OnDestroy {
   getStatusClass(status: string): string {
     if (!status) return 'status-draft';
     const s = status.toLowerCase();
-    if (s.includes('active') || s.includes('approve') || s.includes('pass') || s.includes('resolve')) {
+    if (s.includes('terminat')) {
+      return 'status-terminated';
+    }
+    if (s.includes('reject')) {
+      return 'status-rejected';
+    }
+    if (s.includes('deactivate')) {
+      return 'status-deactivated';
+    }
+    if (s.includes('objection')) {
+      return 'status-objection';
+    }
+    if (s.includes('payment') || s.includes('awaiting')) {
+      return 'status-payment';
+    }
+    if (s.includes('active') || s.includes('approve') || s.includes('pass') || s.includes('resolve') || s.includes('completed')) {
       return 'status-active';
     }
-    if (s.includes('reject') || s.includes('expire') || s.includes('inactive')) {
+    if (s.includes('expire') || s.includes('inactive')) {
       return 'status-inactive';
     }
-    if (s.includes('objection') || s.includes('pending') || s.includes('submitted')) {
+    if (s.includes('pending') || s.includes('submitted')) {
       return 'status-pending';
     }
     return 'status-draft';
