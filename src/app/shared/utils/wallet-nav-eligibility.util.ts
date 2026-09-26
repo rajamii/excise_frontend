@@ -77,81 +77,24 @@ function normalizeStageToken(raw: unknown): string {
  * - commissioner approval / final approved stage.
  */
 export function isWalletEnabledStage(item: any): boolean {
-  const stageRaw =
-    item?.current_stage_name ??
-      item?.currentStageName ??
-      item?.current_stage ??
-      item?.currentStage ??
-      '';
-  const stage = normalizeStageToken(stageRaw);
-
-  if (!stage || stage.includes('reject')) {
+  if (!item) {
     return false;
   }
-
-  if (stage === 'awaitingpayment') {
-    return true;
-  }
-
-  if (stage.includes('approved')) {
-    return true;
-  }
-
-  // Some deployments store commissioner stage as exactly "Commissioner"/"Commisioner".
-  // Exclude Joint Commissioner (intermediate review).
-  if (stage.includes('joint')) {
-    return false;
-  }
-  const hasCommissionerToken = stage.includes('commissioner') || stage.includes('commisioner');
-  if (!hasCommissionerToken) {
-    return false;
-  }
-  if (stage === 'commissioner' || stage === 'commisioner') {
-    return true;
-  }
-  return stage.includes('approv');
+  return true;
 }
 
 /**
  * Show Payment & Wallet when:
- * - A license has been issued (`license_id`), or
- * - The new-license application is approved / awaiting payment **and** has category + subcategory
- *   from the user's selection (works for Joint Commissioner → Commissioner forward stages), OR
- * - The application/license category has `is_distributor_user` enabled.
+ * - User is a licensee, or
+ * - A license exists (`license_id`), or
+ * - An application exists (even if rejected, terminated, awaiting payment, or approved)
+ *   so licensees can always inspect their wallet balances, recharge history, and security deposit deductions.
  */
 export function isLicenseeWalletNavEligible(item: any): boolean {
-  const hasLicenseId = !!(item?.license_id || item?.licenseId);
-
-  // New-license application fee (module_code=001) must be successful before enabling Wallet navigation
-  // for brand-new applicants who don't yet have an issued license.
-  const feeStatusRaw = str(item?.application_fee_payment_status ?? item?.applicationFeePaymentStatus ?? '');
-  if (feeStatusRaw) {
-    const normalized = feeStatusRaw.trim().toUpperCase();
-    if (normalized !== 'S') {
-      return false;
-    }
-  }
-
-  if (hasLicenseId) {
-    return true;
-  }
-
-  if (!isWalletEnabledStage(item)) {
+  if (!item) {
     return false;
   }
-
-  const catObj = item?.license_category ?? item?.licenseCategory;
-  const isDistributor = !!(
-    item?.is_distributor_user ??
-    item?.isDistributorUser ??
-    (catObj && typeof catObj === 'object' ? (catObj.is_distributor_user ?? catObj.isDistributorUser) : false)
-  );
-
-  if (isDistributor) {
-    return true;
-  }
-
-  return hasLicenseCategoryAndSubcategorySelected(item);
+  return true;
 }
 
 /**

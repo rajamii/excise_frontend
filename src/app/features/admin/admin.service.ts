@@ -609,4 +609,49 @@ export class AdminService {
   updateTimerConfig(payload: { code: string; delay_value: number; delay_unit: string; is_active: boolean }): Observable<any> {
     return this.http.put<any>(`${this.mastersUrl}/timer-config/update/`, payload);
   }
+
+  // ========================== SECURITY DEPOSIT RECORDS ==========================
+  getSecurityDepositRecords(params?: {
+    search?: string;
+    status?: string;
+    from_date?: string;
+    to_date?: string;
+    page?: number;
+    page_size?: number;
+  }): Observable<{
+    stats: {
+      total_deposit_amount: number;
+      total_balance_amount: number;
+      total_deducted_amount: number;
+      total_records_count: number;
+      total_active_count: number;
+      total_deducted_count: number;
+      total_refunded_count: number;
+    };
+    count: number;
+    page: number;
+    page_size: number;
+    total_pages: number;
+    results: any[];
+  }> {
+    let queryParams: string[] = [];
+    if (params) {
+      if (params.search) queryParams.push(`search=${encodeURIComponent(params.search)}`);
+      if (params.status && params.status !== 'all') queryParams.push(`status=${encodeURIComponent(params.status)}`);
+      if (params.from_date) queryParams.push(`from_date=${encodeURIComponent(params.from_date)}`);
+      if (params.to_date) queryParams.push(`to_date=${encodeURIComponent(params.to_date)}`);
+      if (params.page) queryParams.push(`page=${params.page}`);
+      if (params.page_size) queryParams.push(`page_size=${params.page_size}`);
+    }
+    const qStr = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
+    return this.http.get<any>(`${this.baseUrl}/transactional/payment/security-deposit-records/${qStr}`);
+  }
+
+  deductSecurityDeposit(id: number, payload: { deduct_amount?: number; remarks: string; action_type?: string }): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/transactional/payment/security-deposit-records/${id}/deduct/`, payload);
+  }
+
+  refundSecurityDeposit(id: number, payload: { refund_amount?: number; remarks: string }): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/transactional/payment/security-deposit-records/${id}/refund/`, payload);
+  }
 }

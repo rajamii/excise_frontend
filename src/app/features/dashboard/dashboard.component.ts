@@ -4335,29 +4335,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
-    if (this.selectedSupplyChainSection !== 'wallet') {
-      return;
-    }
-    if (!this.isLicenseeUser()) {
-      return;
-    }
-    if (!this.licenseeMenuAccessResolved) {
-      return;
-    }
-    if (!this.walletEligibilityResolved) {
-      this.ensureLicenseeWalletEligibilityLoaded();
-      return;
-    }
-    // Wallet becomes visible once the source application reaches `awaiting_payment`
-    // (Awaiting License Fee Payment) or final approval.
-    if (!this.showManufacturingWalletNav) {
-      this.selectedSupplyChainSection = null;
-      this.router.navigate([], {
-        relativeTo: this.route,
-        queryParams: { section: null, tab: null, source: null },
-        queryParamsHandling: 'merge',
-        replaceUrl: true
-      });
+    if (this.selectedSupplyChainSection === 'wallet') {
       return;
     }
   }
@@ -4378,11 +4356,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.showDistilleryMenus = false;
     this.showBreweryOrDistilleryMenus = false;
     this.showBreweryOrDistilleryWalletViews = false;
-    this.showManufacturingWalletNav = false;
+    this.showManufacturingWalletNav = true;
 
     // Keep login fast: derive initial menu visibility only from licenses.
-    // Wallet eligibility and application-derived menus are computed lazily when the user opens wallet.
-    this.walletEligibilityResolved = false;
+    this.walletEligibilityResolved = true;
     this.walletEligibilityLoading = false;
     this.licenseMeService
       .getMyLicenses()
@@ -4396,7 +4373,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.showDistilleryMenus = hasDistillery;
           this.showBreweryOrDistilleryMenus = hasDistillery || hasBrewery;
           this.showBreweryOrDistilleryWalletViews = hasDistillery || hasBrewery;
-          this.showManufacturingWalletNav = false;
+          this.showManufacturingWalletNav = true;
           this.licenseeMenuAccessResolved = true;
           this.enforceSectionAccess();
           this.ensureWalletViewParamAllowed(this.route.snapshot.queryParams);
@@ -4409,7 +4386,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.showDistilleryMenus = false;
           this.showBreweryOrDistilleryMenus = false;
           this.showBreweryOrDistilleryWalletViews = false;
-          this.showManufacturingWalletNav = false;
+          this.showManufacturingWalletNav = true;
           this.licenseeMenuAccessResolved = true;
           this.enforceSectionAccess();
           this.updateAvailableChartModules();
@@ -4421,38 +4398,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private ensureLicenseeWalletEligibilityLoaded(): void {
     if (!this.isLicenseeUser()) return;
-    if (!this.licenseeMenuAccessResolved) return;
-    if (this.walletEligibilityResolved || this.walletEligibilityLoading) return;
-
-    this.walletEligibilityLoading = true;
-
-    forkJoin({
-      licenses: this.licenseMeService.getMyLicenses(),
-      approvedPayload: this.http.get<any>(`${this.newLicenseApiBase}/list-by-status/`).pipe(catchError(() => of({ approved: [] }))),
-      allApplications: this.http.get<any[]>(`${this.newLicenseApiBase}/list/`).pipe(catchError(() => of([])))
-    }).subscribe({
-      next: ({ licenses, approvedPayload, allApplications }) => {
-        const licenseRows = Array.isArray(licenses) ? licenses : [];
-        const approvedRows = Array.isArray(approvedPayload?.approved) ? approvedPayload.approved : [];
-        const allRows = Array.isArray(allApplications) ? allApplications : [];
-        const approvedFromAll = allRows.filter((item) => this.isApprovedStage(item));
-        const awaitingPaymentFromAll = allRows.filter((item) => this.isAwaitingPaymentStage(item));
-        const combinedRows = [...licenseRows, ...approvedRows, ...approvedFromAll, ...awaitingPaymentFromAll];
-
-        this.showManufacturingWalletNav = this.computeWalletNavVisible(combinedRows);
-        this.walletEligibilityResolved = true;
-        this.walletEligibilityLoading = false;
-
-        this.enforceSectionAccess();
-        this.ensureWalletViewParamAllowed(this.route.snapshot.queryParams);
-      },
-      error: () => {
-        this.showManufacturingWalletNav = false;
-        this.walletEligibilityResolved = true;
-        this.walletEligibilityLoading = false;
-        this.enforceSectionAccess();
-      }
-    });
+    this.showManufacturingWalletNav = true;
+    this.walletEligibilityResolved = true;
+    this.walletEligibilityLoading = false;
   }
 
   private isApprovedStage(item: any): boolean {
@@ -4479,6 +4427,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private computeWalletNavVisible(rows: any[]): boolean {
+    if (this.isLicenseeUser()) {
+      return true;
+    }
+
     const list = Array.isArray(rows) ? rows : [];
 
     const appsById = new Map<string, any>();

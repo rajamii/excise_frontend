@@ -1898,12 +1898,12 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private computeWalletNavVisible(rows: any[]): boolean {
-    const list = Array.isArray(rows) ? rows : [];
+    if (this.isLicenseeUser()) {
+      return true;
+    }
 
+    const list = Array.isArray(rows) ? rows : [];
     for (const item of list) {
-      // Wallet becomes visible for licensees when:
-      // - an issued license exists (license_id), OR
-      // - an application reaches awaiting_payment / approved with required selections.
       if (isLicenseeWalletNavEligible(item)) {
         return true;
       }

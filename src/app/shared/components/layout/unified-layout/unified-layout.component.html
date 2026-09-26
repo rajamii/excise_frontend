@@ -417,7 +417,7 @@
 
               <!-- License Master Data group -->
               <button class="nav-item bulk-spirit-nav-item" (click)="adminLicenseMasterDataExpanded = !adminLicenseMasterDataExpanded"
-                [class.active]="adminLicenseMasterDataExpanded || isAdminRouteActive('/dashboard/admin/license-validity-period') || isAdminRouteActive('/dashboard/admin/license-types') || isAdminRouteActive('/dashboard/admin/license-subcategories') || isAdminRouteActive('/dashboard/admin/additional-charges') || isAdminRouteActive('/dashboard/admin/pachwai-excess') || isAdminRouteActive('/dashboard/admin/fixed-fees') || isAdminRouteActive('/dashboard/admin/license-terms') || isAdminRouteActive('/dashboard/admin/license-titles') || isAdminRouteActive('/dashboard/admin/dry-day-calendar')"
+                [class.active]="adminLicenseMasterDataExpanded || isAdminRouteActive('/dashboard/admin/license-validity-period') || isAdminRouteActive('/dashboard/admin/license-types') || isAdminRouteActive('/dashboard/admin/license-subcategories') || isAdminRouteActive('/dashboard/admin/additional-charges') || isAdminRouteActive('/dashboard/admin/pachwai-excess') || isAdminRouteActive('/dashboard/admin/fixed-fees') || isAdminRouteActive('/dashboard/admin/security-deposit-details') || isAdminRouteActive('/dashboard/admin/license-terms') || isAdminRouteActive('/dashboard/admin/license-titles') || isAdminRouteActive('/dashboard/admin/dry-day-calendar')"
                 [class.group-expanded]="adminLicenseMasterDataExpanded">
                 <mat-icon class="nav-icon">description</mat-icon>
                 <span class="nav-text">License Master Data</span>
@@ -447,6 +447,10 @@
                 <a routerLink="/dashboard/admin/fixed-fees" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
                   <mat-icon class="nav-icon">payments</mat-icon>
                   <span class="nav-text">Service Fees</span>
+                </a>
+                <a routerLink="/dashboard/admin/security-deposit-details" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
+                  <mat-icon class="nav-icon">account_balance_wallet</mat-icon>
+                  <span class="nav-text">Security Amount Details</span>
                 </a>
                 <a routerLink="/dashboard/admin/license-terms" routerLinkActive="active" class="nav-item nav-item--sub" (click)="closeSidenav()">
                   <mat-icon class="nav-icon">gavel</mat-icon>

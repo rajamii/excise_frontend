@@ -161,6 +161,15 @@ const routes: Routes = [
         data: { requiredPermission: 'master.license_categories.view' }
       },
       {
+        path: 'admin/security-deposit-details',
+        loadComponent: () =>
+          import('../admin/master/security-deposit-details/security-deposit-details.component').then(
+            (m) => m.SecurityDepositDetailsComponent
+          ),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: ['site_admin', 'superadmin', 'admin', 'commissioner', 'joint_commissioner', 'oic'] }
+      },
+      {
         path: 'admin/dry-day-calendar',
         loadComponent: () =>
           import('../admin/master/dry-day-calendar/dry-day-calendar.component').then((m) => m.DryDayCalendarComponent),

@@ -1,0 +1,540 @@
+<div class="security-deposit-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="header-icon-box">
+        <mat-icon>account_balance_wallet</mat-icon>
+      </div>
+      <div>
+        <h1 class="page-title">Security Amount Details</h1>
+        <p class="page-subtitle">
+          Monitor licensee security deposits, track retention duration, manage balances, check application status, and enforce forfeiture / penalties.
+        </p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button mat-stroked-button color="primary" (click)="loadRecords()" [disabled]="isLoading" class="refresh-btn">
+        <mat-icon [class.spin-icon]="isLoading">refresh</mat-icon>
+        Refresh Data
+      </button>
+    </div>
+  </div>
+
+  <!-- Summary Statistics Cards -->
+  <div class="stats-grid">
+    <div class="stat-card stat-total-deposit">
+      <div class="stat-icon-wrapper">
+        <mat-icon>payments</mat-icon>
+      </div>
+      <div class="stat-content">
+        <span class="stat-label">Total Security Deposited</span>
+        <span class="stat-value">{{ formatCurrency(stats.total_deposit_amount) }}</span>
+        <span class="stat-desc">{{ stats.total_records_count }} Total Records</span>
+      </div>
+    </div>
+
+    <div class="stat-card stat-balance">
+      <div class="stat-icon-wrapper">
+        <mat-icon>account_balance</mat-icon>
+      </div>
+      <div class="stat-content">
+        <span class="stat-label">Total Active Balance</span>
+        <span class="stat-value">{{ formatCurrency(stats.total_balance_amount) }}</span>
+        <span class="stat-desc">{{ stats.total_active_count }} Active Retentions</span>
+      </div>
+    </div>
+
+    <div class="stat-card stat-deducted">
+      <div class="stat-icon-wrapper">
+        <mat-icon>gavel</mat-icon>
+      </div>
+      <div class="stat-content">
+        <span class="stat-label">Total Deducted / Forfeited</span>
+        <span class="stat-value">{{ formatCurrency(stats.total_deducted_amount) }}</span>
+        <span class="stat-desc">{{ stats.total_deducted_count }} Penalty Cases</span>
+      </div>
+    </div>
+
+    <div class="stat-card stat-refunded">
+      <div class="stat-icon-wrapper">
+        <mat-icon>history</mat-icon>
+      </div>
+      <div class="stat-content">
+        <span class="stat-label">Total Refunded / Released</span>
+        <span class="stat-value">{{ stats.total_refunded_count }}</span>
+        <span class="stat-desc">Returned to Licensees</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter & Search Toolbar -->
+  <div class="filter-toolbar card">
+    <div class="filter-row">
+      <div class="filter-group search-group">
+        <mat-icon class="search-icon">search</mat-icon>
+        <input
+          type="text"
+          class="form-control custom-search-input"
+          placeholder="Search Application ID, License ID, Applicant, Establishment..."
+          [(ngModel)]="searchTerm"
+          (keyup.enter)="onSearch()"
+        />
+        <button *ngIf="searchTerm" mat-icon-button (click)="searchTerm = ''; onSearch()" class="clear-search-btn">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <div class="filter-group status-group">
+        <label class="filter-label">Deposit Status:</label>
+        <select class="form-select custom-select" [(ngModel)]="selectedStatus" (change)="onFilterChange()">
+          <option value="all">All Statuses</option>
+          <option value="PAID">PAID (Active)</option>
+          <option value="DEDUCTED">DEDUCTED (Suspended)</option>
+          <option value="FORFEITED">FORFEITED</option>
+          <option value="REFUNDED">REFUNDED</option>
+          <option value="PARTIALLY_REFUNDED">PARTIALLY REFUNDED</option>
+          <option value="ADJUSTED">ADJUSTED</option>
+        </select>
+      </div>
+
+      <div class="filter-group date-group">
+        <label class="filter-label">From Date:</label>
+        <input type="date" class="form-control custom-date-input" [(ngModel)]="fromDate" (change)="onFilterChange()" />
+      </div>
+
+      <div class="filter-group date-group">
+        <label class="filter-label">To Date:</label>
+        <input type="date" class="form-control custom-date-input" [(ngModel)]="toDate" (change)="onFilterChange()" />
+      </div>
+
+      <div class="filter-buttons">
+        <button mat-flat-button color="primary" (click)="onSearch()" [disabled]="isLoading" class="btn-filter">
+          <mat-icon>filter_list</mat-icon>
+          Apply Filter
+        </button>
+        <button mat-stroked-button (click)="onResetFilters()" class="btn-reset">
+          <mat-icon>restart_alt</mat-icon>
+          Reset
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Records Table Card -->
+  <div class="table-card card">
+    <div class="table-card-header">
+      <div class="header-info">
+        <h2 class="table-title">Licensee Security Deposit Records</h2>
+        <span class="records-count">Showing {{ records.length }} of {{ totalRecords }} records</span>
+      </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div *ngIf="isLoading" class="loading-container">
+      <mat-spinner diameter="44"></mat-spinner>
+      <p class="loading-text">Loading security deposit details...</p>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!isLoading && records.length === 0" class="empty-state">
+      <mat-icon class="empty-icon">account_balance_wallet</mat-icon>
+      <h3>No Security Deposit Records Found</h3>
+      <p>There are no security deposit records matching your current filter criteria.</p>
+      <button mat-flat-button color="primary" (click)="onResetFilters()">Clear Filters</button>
+    </div>
+
+    <!-- Table -->
+    <div *ngIf="!isLoading && records.length > 0" class="table-responsive">
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th class="th-sl">#</th>
+            <th>Licensee &amp; Establishment</th>
+            <th>Application &amp; License ID</th>
+            <th>Application Status</th>
+            <th>Deposit &amp; Balance</th>
+            <th>Retention Duration</th>
+            <th>Payment Date &amp; Txn</th>
+            <th>Deposit Status</th>
+            <th class="th-actions text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of records; let i = index" [class.row-deducted]="item.status === 'DEDUCTED' || item.status === 'FORFEITED'">
+            <!-- SL Number -->
+            <td class="td-sl">{{ (currentPage - 1) * pageSize + (i + 1) }}</td>
+
+            <!-- Licensee Info -->
+            <td class="td-licensee">
+              <div class="licensee-cell">
+                <div class="licensee-name font-semibold">
+                  {{ getApplicantName(item) }}
+                </div>
+                <div class="licensee-meta text-muted">
+                  <span *ngIf="getUsername(item)">👤 {{ getUsername(item) }}</span>
+                  <span *ngIf="getEstablishmentName(item)" class="establishment-tag">
+                    🏢 {{ getEstablishmentName(item) }}
+                  </span>
+                </div>
+              </div>
+            </td>
+
+            <!-- Application & License Info -->
+            <td class="td-app">
+              <div class="app-cell">
+                <div class="app-id">
+                  <span class="badge-app-id">{{ getApplicationId(item) }}</span>
+                </div>
+                <div class="license-id-row" *ngIf="getLicenseId(item)">
+                  <span class="license-tag">📜 {{ getLicenseId(item) }}</span>
+                  <span
+                    class="license-status-badge"
+                    [class.license-active]="item.is_license_active === true || item.isLicenseActive === true"
+                    [class.license-suspended]="item.is_license_active === false || item.isLicenseActive === false"
+                  >
+                    {{ item.license_status_label || item.licenseStatusLabel || (item.is_license_active ? 'Active' : 'Suspended') }}
+                  </span>
+                </div>
+              </div>
+            </td>
+
+            <!-- Application Workflow Status -->
+            <td class="td-app-status">
+              <span class="app-status-badge" [ngClass]="getApplicationBadgeClass(item)">
+                <mat-icon class="icon-tiny">
+                  {{ getApplicationStatus(item).toLowerCase().includes('approve') ? 'check_circle' : (getApplicationStatus(item).toLowerCase().includes('reject') ? 'cancel' : 'pending') }}
+                </mat-icon>
+                {{ getApplicationStatus(item) }}
+              </span>
+            </td>
+
+            <!-- Amount Info -->
+            <td class="td-amount">
+              <div class="amount-cell">
+                <div class="amount-row">
+                  <span class="amount-label">Deposit:</span>
+                  <span class="amount-deposit font-semibold">{{ formatCurrency(getDepositAmount(item)) }}</span>
+                </div>
+                <div class="amount-row" *ngIf="getRefundedAmount(item) > 0">
+                  <span class="amount-label text-danger">Deducted:</span>
+                  <span class="amount-deducted text-danger font-medium">-{{ formatCurrency(getRefundedAmount(item)) }}</span>
+                </div>
+                <div class="amount-row balance-row">
+                  <span class="amount-label">Balance:</span>
+                  <span class="amount-balance font-semibold" [class.text-success]="getBalanceAmount(item) > 0" [class.text-muted]="getBalanceAmount(item) === 0">
+                    {{ formatCurrency(getBalanceAmount(item)) }}
+                  </span>
+                </div>
+              </div>
+            </td>
+
+            <!-- Duration & Dates -->
+            <td class="td-duration">
+              <div class="duration-cell">
+                <div class="duration-days">
+                  <mat-icon class="icon-small">timer</mat-icon>
+                  <span class="font-medium">{{ getDurationDays(item) }}</span>
+                </div>
+                <div class="date-range text-muted" *ngIf="getFromDate(item)">
+                  <span>{{ getFromDate(item) | date: 'dd/MM/yyyy' }}</span>
+                  <span *ngIf="getToDate(item)"> → {{ getToDate(item) | date: 'dd/MM/yyyy' }}</span>
+                </div>
+              </div>
+            </td>
+
+            <!-- Payment Details -->
+            <td class="td-payment">
+              <div class="payment-cell">
+                <div class="payment-date" *ngIf="getPaymentDate(item)">
+                  <mat-icon class="icon-small">calendar_today</mat-icon>
+                  <span>{{ getPaymentDate(item) | date: 'dd MMM yyyy, hh:mm a' }}</span>
+                </div>
+                <div class="txn-id text-muted" *ngIf="getTransactionId(item)">
+                  <span class="txn-code">TXN: {{ getTransactionId(item) }}</span>
+                </div>
+              </div>
+            </td>
+
+            <!-- Deposit Status -->
+            <td class="td-status">
+              <span class="status-badge" [ngClass]="getStatusBadgeClass(item.status)">
+                <span class="status-dot"></span>
+                {{ item.status }}
+              </span>
+            </td>
+
+            <!-- Actions -->
+            <td class="td-actions text-center">
+              <div class="action-buttons">
+                <!-- Deduct Amount Button -->
+                <button
+                  mat-flat-button
+                  color="warn"
+                  class="action-btn btn-deduct"
+                  *ngIf="getBalanceAmount(item) > 0 && item.status !== 'DEDUCTED' && item.status !== 'FORFEITED'"
+                  (click)="openDeductModal(item)"
+                  matTooltip="Deduct security amount / impose penalty and suspend license"
+                >
+                  <mat-icon class="btn-icon">gavel</mat-icon>
+                  Deduct Amount
+                </button>
+
+                <!-- Suspended Indicator -->
+                <span *ngIf="item.status === 'DEDUCTED' || item.status === 'FORFEITED'" class="tag-suspended">
+                  <mat-icon class="icon-small">block</mat-icon>
+                  License Suspended
+                </span>
+
+                <!-- View Details Button -->
+                <button
+                  mat-icon-button
+                  color="primary"
+                  class="action-icon-btn"
+                  (click)="openDetailsModal(item)"
+                  matTooltip="View full details and audit logs"
+                >
+                  <mat-icon>visibility</mat-icon>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination Footer -->
+    <div class="table-pagination" *ngIf="totalPages > 1">
+      <div class="pagination-info">
+        Page {{ currentPage }} of {{ totalPages }} ({{ totalRecords }} total items)
+      </div>
+      <div class="pagination-controls">
+        <button mat-icon-button [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1)">
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+        <button
+          mat-button
+          class="page-num-btn"
+          *ngFor="let p of [].constructor(totalPages); let idx = index"
+          [class.active-page]="currentPage === idx + 1"
+          (click)="onPageChange(idx + 1)"
+        >
+          {{ idx + 1 }}
+        </button>
+        <button mat-icon-button [disabled]="currentPage === totalPages" (click)="onPageChange(currentPage + 1)">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================== DEDUCT / FORFEIT MODAL TEMPLATE ========================== -->
+<ng-template #deductDialogTpl>
+  <div class="dialog-header">
+    <div class="dialog-title-group">
+      <div class="dialog-icon-box warn">
+        <mat-icon>gavel</mat-icon>
+      </div>
+      <div>
+        <h2 class="dialog-title">Deduct Security Deposit &amp; Suspend License</h2>
+        <p class="dialog-subtitle">Action on Application: <b>{{ getApplicationId(selectedRecord) }}</b></p>
+      </div>
+    </div>
+    <button mat-icon-button (click)="closeDialog()" [disabled]="isProcessing">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <div class="dialog-content" *ngIf="selectedRecord">
+    <!-- Warning Banner -->
+    <div class="warning-alert-box">
+      <mat-icon class="alert-icon">warning</mat-icon>
+      <div class="alert-text">
+        <strong>CRITICAL ACTION:</strong> Deducting the security deposit will automatically:
+        <ul>
+          <li><b>Transition application to "Terminated" stage</b> in workflow.</li>
+          <li><b>Suspend the license</b> (<code>is_active = False</code>).</li>
+          <li>Set <b><code>is_security_fee_paid = False</code></b> in <code>NewLicenseApplication</code>.</li>
+          <li>Revoke application approval (<code>is_approved = False</code>).</li>
+          <li>Debit licensee's Security Deposit wallet balance with DR audit entry.</li>
+          <li>Record an immutable entry in <code>AdminLog</code> &amp; workflow transaction history.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Record Summary Grid -->
+    <div class="deposit-summary-card">
+      <div class="summary-item">
+        <span class="label">Licensee Name:</span>
+        <span class="val font-semibold">{{ getApplicantName(selectedRecord) }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="label">Establishment:</span>
+        <span class="val font-semibold">{{ getEstablishmentName(selectedRecord) || 'N/A' }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="label">License ID:</span>
+        <span class="val font-semibold">{{ getLicenseId(selectedRecord) || 'Pending / N/A' }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="label">Application Status:</span>
+        <span class="val font-semibold">{{ getApplicationStatus(selectedRecord) }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="label">Total Deposited:</span>
+        <span class="val">{{ formatCurrency(getDepositAmount(selectedRecord)) }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="label">Currently Available Balance:</span>
+        <span class="val font-bold text-success">{{ formatCurrency(getBalanceAmount(selectedRecord)) }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="label">Deposit Held Since:</span>
+        <span class="val">{{ getFromDate(selectedRecord) ? (getFromDate(selectedRecord) | date: 'dd/MM/yyyy') : (getPaymentDate(selectedRecord) | date: 'dd/MM/yyyy') }} ({{ getDurationDays(selectedRecord) }})</span>
+      </div>
+    </div>
+
+    <!-- Deduction Form -->
+    <div class="form-group mt-3">
+      <label class="input-label">Deduction Amount (₹) <span class="required">*</span></label>
+      <div class="input-prefix-wrapper">
+        <span class="input-prefix">₹</span>
+        <input
+          type="number"
+          class="form-control custom-input"
+          [(ngModel)]="deductAmount"
+          [max]="getBalanceAmount(selectedRecord)"
+          min="1"
+          placeholder="Enter amount to deduct"
+        />
+      </div>
+      <small class="text-muted">Maximum available to deduct: {{ formatCurrency(getBalanceAmount(selectedRecord)) }}</small>
+    </div>
+
+    <div class="form-group mt-3">
+      <label class="input-label">Reason for Deduction / Penalty Remarks <span class="required">*</span></label>
+      <textarea
+        class="form-control custom-textarea"
+        rows="3"
+        [(ngModel)]="deductRemarks"
+        placeholder="Enter official justification (e.g. Excise violation penalty, non-compliance order no. ...)"
+      ></textarea>
+    </div>
+  </div>
+
+  <div class="dialog-actions">
+    <button mat-stroked-button (click)="closeDialog()" [disabled]="isProcessing">Cancel</button>
+    <button mat-flat-button color="warn" (click)="submitDeduction()" [disabled]="isProcessing" class="btn-confirm-deduct">
+      <mat-spinner *ngIf="isProcessing" diameter="20" class="btn-spinner"></mat-spinner>
+      <mat-icon *ngIf="!isProcessing">gavel</mat-icon>
+      Confirm Deduction &amp; Suspend
+    </button>
+  </div>
+</ng-template>
+
+<!-- ========================== VIEW DETAILS MODAL TEMPLATE ========================== -->
+<ng-template #detailsDialogTpl>
+  <div class="dialog-header">
+    <div class="dialog-title-group">
+      <div class="dialog-icon-box primary">
+        <mat-icon>info</mat-icon>
+      </div>
+      <div>
+        <h2 class="dialog-title">Security Deposit Record Details</h2>
+        <p class="dialog-subtitle">Record ID: #{{ selectedRecord?.id }}</p>
+      </div>
+    </div>
+    <button mat-icon-button (click)="closeDialog()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <div class="dialog-content" *ngIf="selectedRecord">
+    <div class="details-grid">
+      <div class="details-section">
+        <h3>Applicant Information</h3>
+        <div class="detail-row">
+          <span class="d-label">Applicant Name:</span>
+          <span class="d-val">{{ getApplicantName(selectedRecord) }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="d-label">Username:</span>
+          <span class="d-val">{{ getUsername(selectedRecord) }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="d-label">Establishment Name:</span>
+          <span class="d-val">{{ getEstablishmentName(selectedRecord) || 'N/A' }}</span>
+        </div>
+      </div>
+
+      <div class="details-section">
+        <h3>License &amp; Application</h3>
+        <div class="detail-row">
+          <span class="d-label">Application ID:</span>
+          <span class="d-val font-semibold">{{ getApplicationId(selectedRecord) }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="d-label">Application Status:</span>
+          <span class="d-val font-semibold">{{ getApplicationStatus(selectedRecord) }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="d-label">License ID:</span>
+          <span class="d-val">{{ getLicenseId(selectedRecord) || 'Not Yet Issued' }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="d-label">License Status:</span>
+          <span class="d-val">{{ selectedRecord.license_status_label || selectedRecord.licenseStatusLabel || 'N/A' }}</span>
+        </div>
+      </div>
+
+      <div class="details-section full-width">
+        <h3>Financial Breakdown</h3>
+        <div class="financial-cards-row">
+          <div class="f-card">
+            <span class="f-label">Original Deposit</span>
+            <span class="f-val">{{ formatCurrency(getDepositAmount(selectedRecord)) }}</span>
+          </div>
+          <div class="f-card">
+            <span class="f-label">Deducted / Refunded</span>
+            <span class="f-val text-danger">{{ formatCurrency(getRefundedAmount(selectedRecord)) }}</span>
+          </div>
+          <div class="f-card">
+            <span class="f-label">Current Balance</span>
+            <span class="f-val text-success font-bold">{{ formatCurrency(getBalanceAmount(selectedRecord)) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="details-section full-width">
+        <h3>Deposit Duration &amp; Timeline</h3>
+        <div class="detail-row" *ngIf="getPaymentDate(selectedRecord)">
+          <span class="d-label">Payment Date:</span>
+          <span class="d-val">{{ getPaymentDate(selectedRecord) | date: 'dd MMMM yyyy, hh:mm a' }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="d-label">Retention Period:</span>
+          <span class="d-val">
+            {{ getFromDate(selectedRecord) ? (getFromDate(selectedRecord) | date: 'dd/MM/yyyy') : (getPaymentDate(selectedRecord) | date: 'dd/MM/yyyy') }}
+            <span *ngIf="getToDate(selectedRecord)"> to {{ getToDate(selectedRecord) | date: 'dd/MM/yyyy' }}</span>
+            ({{ getDurationDays(selectedRecord) }} Kept)
+          </span>
+        </div>
+        <div class="detail-row" *ngIf="getTransactionId(selectedRecord)">
+          <span class="d-label">Transaction ID:</span>
+          <span class="d-val font-mono">{{ getTransactionId(selectedRecord) }}</span>
+        </div>
+      </div>
+
+      <div class="details-section full-width" *ngIf="selectedRecord.remarks">
+        <h3>Audit Log &amp; Remarks</h3>
+        <div class="remarks-box">
+          <pre>{{ selectedRecord.remarks }}</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dialog-actions">
+    <button mat-flat-button color="primary" (click)="closeDialog()">Close</button>
+  </div>
+</ng-template>
