@@ -249,6 +249,37 @@
           <!-- TAB 1: ACTION LOGS (Officer Action Audit Trail) -->
           <div *ngIf="activityTab === 'action-logs'" class="oa-tab-pane">
 
+            <!-- Scope Switcher: My Activities vs All Officers -->
+            <div class="act-scope-bar">
+              <div class="act-scope-toggle">
+                <button type="button"
+                        class="act-scope-btn"
+                        [class.act-scope-btn--active]="adminActionScope === 'mine'"
+                        (click)="setAdminActionScope('mine')">
+                  <mat-icon>person</mat-icon>
+                  <span>My Activities</span>
+                  <span class="act-scope-badge" *ngIf="adminActionScope === 'mine'">{{ adminActionTotalCount }}</span>
+                </button>
+                <button type="button"
+                        class="act-scope-btn"
+                        [class.act-scope-btn--active]="adminActionScope === 'all'"
+                        (click)="setAdminActionScope('all')">
+                  <mat-icon>groups</mat-icon>
+                  <span>All Officers</span>
+                  <span class="act-scope-badge" *ngIf="adminActionScope === 'all'">{{ adminActionTotalCount }}</span>
+                </button>
+              </div>
+
+              <div class="act-scope-hint" *ngIf="adminActionScope === 'mine'">
+                <mat-icon>account_circle</mat-icon>
+                <span>Viewing actions performed by <strong>{{ currentUser?.username || 'You' }}</strong></span>
+              </div>
+              <div class="act-scope-hint act-scope-hint--all" *ngIf="adminActionScope === 'all'">
+                <mat-icon>public</mat-icon>
+                <span>Viewing actions performed across all excise officers &amp; administrators</span>
+              </div>
+            </div>
+
             <!-- Action Logs Filter Toolbar -->
             <div class="act-filters act-filters--action-logs">
 
@@ -381,8 +412,9 @@
                   <tr>
                     <th>#</th>
                     <th>Date &amp; Time</th>
+                    <th>Performed By</th>
                     <th>Module</th>
-                    <th>Application ID</th>
+                    <th>Application / Target ID</th>
                     <th>Action</th>
                     <th>Stage Progression</th>
                     <th>Forwarded To</th>
@@ -397,6 +429,16 @@
                     <td class="act-td-time act-td-time--nowrap">
                       {{ log?.timestamp | date:'dd MMM yyyy' }}<br>
                       <span class="act-time-sub">{{ log?.timestamp | date:'h:mm:ss a' }}</span>
+                    </td>
+
+                    <td class="act-td-user">
+                      <div class="act-user-tag" [title]="'Admin ID: ' + (log?.admin_id || log?.adminId || '—') + ' | ' + (log?.full_name || log?.fullName || log?.username) + ' (' + (log?.role || 'Admin') + ')'">
+                        <mat-icon>admin_panel_settings</mat-icon>
+                        <div class="act-user-meta">
+                          <span class="act-user-name">{{ log?.full_name || log?.fullName || log?.username || 'System' }}</span>
+                          <span class="act-user-role-chip">{{ log?.role || 'Admin' }}</span>
+                        </div>
+                      </div>
                     </td>
 
                     <td class="act-td-module">
@@ -663,6 +705,22 @@
                       <div class="oa-detail-row" *ngIf="selectedActionLogDetail?.revertedToStage || selectedActionLogDetail?.reverted_to_stage">
                         <span class="oa-label">Reverted Target Stage:</span>
                         <span class="oa-value">{{ selectedActionLogDetail?.revertedToStage || selectedActionLogDetail?.reverted_to_stage }}</span>
+                      </div>
+                    </div>
+
+                    <!-- Audit Metadata & Impact (if available) -->
+                    <div class="oa-detail-card oa-detail-card--full oa-detail-card--meta" *ngIf="hasMetadataDetails(selectedActionLogDetail)">
+                      <div class="oa-card-heading">
+                        <mat-icon>dataset</mat-icon>
+                        <h4>Action Audit Metadata &amp; Impact Details</h4>
+                      </div>
+                      <div class="oa-meta-grid">
+                        <div class="oa-meta-item" *ngFor="let item of getMetadataEntries(selectedActionLogDetail)">
+                          <span class="oa-meta-key">{{ item.label }}:</span>
+                          <span class="oa-meta-val" [ngClass]="{'oa-meta-val--bold': item.key.includes('amount') || item.key.includes('balance') || item.key.includes('name') || item.key.includes('id')}">
+                            {{ item.value }}
+                          </span>
+                        </div>
                       </div>
                     </div>
 

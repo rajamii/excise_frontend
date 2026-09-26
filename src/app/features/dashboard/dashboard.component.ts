@@ -1487,6 +1487,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   adminActionPageSize = 10;
   adminActionTotalCount = 0;
   adminActionTotalPages = 1;
+  adminActionScope: 'mine' | 'all' = 'mine';
   adminActionModulesList: string[] = [];
   adminActionTypesList: string[] = [];
   selectedActionLogDetail: any = null;
@@ -2453,7 +2454,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     let params = new HttpParams()
       .set('page', String(this.adminActionPage))
-      .set('page_size', String(this.adminActionPageSize));
+      .set('page_size', String(this.adminActionPageSize))
+      .set('scope', this.adminActionScope || 'mine');
 
     const mod = String(this.adminActionFilterModule || '').trim();
     if (mod) params = params.set('module_name', mod);
@@ -2498,6 +2500,13 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       });
   }
 
+  setAdminActionScope(scope: 'mine' | 'all'): void {
+    if (this.adminActionScope === scope) return;
+    this.adminActionScope = scope;
+    this.adminActionPage = 1;
+    this.loadAdminActionLogs();
+  }
+
   clearAdminActionFilters(): void {
     this.adminActionFilterModule = '';
     this.adminActionFilterAction = '';
@@ -2537,6 +2546,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   getAdminActionBadgeClass(action: string | undefined): string {
     const a = String(action || '').toUpperCase().trim();
+    if (a.includes('DEDUCT') || a.includes('FORFEIT')) return 'act-badge--deduct';
+    if (a.includes('TERMINAT')) return 'act-badge--terminate';
     if (a.includes('APPROVE')) return 'act-badge--approve';
     if (a.includes('REJECT')) return 'act-badge--reject';
     if (a.includes('REVERT')) return 'act-badge--revert';
@@ -2544,14 +2555,18 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (a.includes('OBJECTION') && !a.includes('RESOLVE')) return 'act-badge--objection';
     if (a.includes('RESOLVE')) return 'act-badge--resolve';
     if (a.includes('VERIFY') || a.includes('RECOMMEND')) return 'act-badge--verify';
+    if (a.includes('DELETE') || a.includes('DESTROY')) return 'act-badge--delete';
     if (a.includes('CANCEL')) return 'act-badge--cancel';
     if (a.includes('UPDATE') || a.includes('EDIT')) return 'act-badge--update';
     if (a.includes('APPLY') || a.includes('CREATE') || a.includes('SUBMIT')) return 'act-badge--create';
+    if (a.includes('TOGGLE') || a.includes('ACTIVATE') || a.includes('DEACTIVATE')) return 'act-badge--toggle';
     return 'act-badge--default';
   }
 
   getAdminActionIcon(action: string | undefined): string {
     const a = String(action || '').toUpperCase().trim();
+    if (a.includes('DEDUCT') || a.includes('FORFEIT')) return 'price_change';
+    if (a.includes('TERMINAT')) return 'block';
     if (a.includes('APPROVE')) return 'check_circle';
     if (a.includes('REJECT')) return 'cancel';
     if (a.includes('REVERT')) return 'undo';
@@ -2559,9 +2574,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (a.includes('OBJECTION') && !a.includes('RESOLVE')) return 'report_problem';
     if (a.includes('RESOLVE')) return 'task_alt';
     if (a.includes('VERIFY') || a.includes('RECOMMEND')) return 'verified';
+    if (a.includes('DELETE') || a.includes('DESTROY')) return 'delete';
     if (a.includes('CANCEL')) return 'block';
     if (a.includes('UPDATE') || a.includes('EDIT')) return 'edit_note';
     if (a.includes('APPLY') || a.includes('CREATE') || a.includes('SUBMIT')) return 'add_circle';
+    if (a.includes('TOGGLE') || a.includes('ACTIVATE')) return 'toggle_on';
     return 'touch_app';
   }
 
@@ -2571,6 +2588,44 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   closeActionLogDetail(): void {
     this.selectedActionLogDetail = null;
+  }
+
+  hasMetadataDetails(log: any): boolean {
+    if (!log || !log.metadata) return false;
+    if (typeof log.metadata !== 'object') return false;
+    return Object.keys(log.metadata).length > 0;
+  }
+
+  getMetadataEntries(log: any): Array<{ key: string; label: string; value: any }> {
+    if (!this.hasMetadataDetails(log)) return [];
+    const meta = log.metadata;
+    const labelMap: Record<string, string> = {
+      target_applicant_name: 'Target Licensee Name',
+      target_username: 'Target Licensee Username',
+      target_user_id: 'Target User ID',
+      license_id: 'License ID / Number',
+      application_id: 'Application ID',
+      establishment_name: 'Establishment Name',
+      deducted_amount: 'Deducted Amount (₹)',
+      previous_balance: 'Previous Balance (₹)',
+      remaining_balance: 'Remaining Balance (₹)',
+      action_type: 'Action Sub-Type',
+      license_suspended: 'License Suspended',
+      application_terminated: 'Application Terminated',
+      wallet_debited: 'Wallet Debited',
+      fields_changed: 'Modified Fields',
+      model: 'Data Model',
+      target_name: 'Target Name',
+      reason: 'Reason / Remarks',
+      admin_username: 'Admin Username',
+      admin_role: 'Admin Role'
+    };
+
+    return Object.keys(meta).map(k => ({
+      key: k,
+      label: labelMap[k] || k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+      value: Array.isArray(meta[k]) ? meta[k].join(', ') : meta[k]
+    }));
   }
 
   getForwardedRecipients(log: any): Array<{ id?: string; username?: string; fullName?: string; full_name?: string; role?: string }> {
