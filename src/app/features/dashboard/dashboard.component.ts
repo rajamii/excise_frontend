@@ -382,6 +382,13 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   public getModuleTotal(moduleName: string): number {
     if (moduleName === 'all') {
+      if (this.isLicenseeUser() || this.isDistributorUser()) {
+        return (this.dashboardCounts.pending || 0) +
+               (this.dashboardCounts.approved || 0) +
+               (this.dashboardCounts.objection || 0) +
+               (this.dashboardCounts.rejected || 0) +
+               (this.dashboardCounts.awaitingPayment || 0);
+      }
       return (this.dashboardCounts.applied != null && this.dashboardCounts.applied > 0)
         ? this.dashboardCounts.applied
         : (this.dashboardCounts.pending || 0) +
@@ -428,6 +435,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     if (!sourceCounts) return 0;
+
+    if (this.isLicenseeUser() || this.isDistributorUser()) {
+      return (sourceCounts.pending || 0) +
+             (sourceCounts.approved || 0) +
+             (sourceCounts.objection || 0) +
+             (sourceCounts.rejected || 0) +
+             ((sourceCounts as any).awaitingPayment || (sourceCounts as any)?.awaiting_payment || 0);
+    }
 
     if (sourceCounts.applied != null && sourceCounts.applied > 0) {
       return sourceCounts.applied;
@@ -4003,19 +4018,19 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           const roleId = this.getCurrentRoleId();
           const isDistrictUser = roleId === 4;
           const isScopedOfficer = roleId === 8 || roleId === 9;
-          if (this.isDistributorUser()) {
+          if (this.isDistributorUser() || this.isLicenseeUser()) {
             const allowed = [
               res.newLicense,
               res.renewal,
               res.company,
               res.companyCollaboration,
               res.salesman,
-              res.labelRegistration
-            ];
+              res.labelRegistration,
+              res.specialPermit
+            ].filter(Boolean);
             const getAppCount = (item: any) => {
               if (!item) return 0;
-              if (item.applied != null && item.applied > 0) return item.applied;
-              return (item.pending || 0) + (item.approved || 0) + (item.objection || 0) + (item.rejected || 0);
+              return (item.pending || 0) + (item.approved || 0) + (item.objection || 0) + (item.rejected || 0) + (item.awaitingPayment || (item as any)?.awaiting_payment || 0);
             };
 
             res.total = {
@@ -4211,7 +4226,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
               applied: filteredApplications.applied.filter((app: any) => app.type === typeVal).length,
               pending: pendingBucket.filter((app: any) => app.type === typeVal).length,
               awaitingPayment: filteredApplications.awaitingPayment.filter((app: any) => app.type === typeVal).length,
-              approved: approvedWithoutRenewal.filter((app: any) => app.type === typeVal).length,
+              approved: filteredApplications.approved.filter((app: any) => app.type === typeVal).length,
               objection: filteredApplications.objection.filter((app: any) => app.type === typeVal).length,
               rejected: filteredApplications.rejected.filter((app: any) => app.type === typeVal).length
             };
@@ -4222,7 +4237,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
               applied: filteredApplications.applied.length,
               pending: pendingBucket.length,
               awaitingPayment: filteredApplications.awaitingPayment.length,
-              approved: approvedWithoutRenewal.length,
+              approved: filteredApplications.approved.length,
               objection: filteredApplications.objection.length,
               rejected: filteredApplications.rejected.length
             },
@@ -4240,7 +4255,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             pending: pendingBucket.length,
             awaitingPayment: filteredApplications.awaitingPayment.length,
             objection: filteredApplications.objection.length,
-            approved: approvedWithoutRenewal.length,
+            approved: filteredApplications.approved.length,
             rejected: filteredApplications.rejected.length
           };
 
@@ -4256,12 +4271,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
 
           // Show submitted + pending + awaiting payment together in Pending table.
-          this.checkRenewalEligibility(approvedWithoutRenewal, approvedWithRenewal);
+          this.checkRenewalEligibility(filteredApplications.approved, approvedWithRenewal);
           this.updateDataSources({
             applied: [],
             pending: pendingBucket,
             objection: filteredApplications.objection,
-            approved: approvedWithoutRenewal,
+            approved: filteredApplications.approved,
             rejected: filteredApplications.rejected
           });
 
@@ -4358,7 +4373,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.dashboardCounts = {
             ...this.dashboardCounts,
             awaitingPayment: filteredApplications.awaitingPayment.length,
-            approved: approvedWithoutRenewal.length
+            approved: filteredApplications.approved.length
           };
 
           this.awaitingPaymentBreakdown = {
@@ -4372,12 +4387,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
 
 
-          this.checkRenewalEligibility(approvedWithoutRenewal, approvedWithRenewal);
+          this.checkRenewalEligibility(filteredApplications.approved, approvedWithRenewal);
           this.updateDataSources({
             applied: [],
             pending: pendingBucket,
             objection: filteredApplications.objection,
-            approved: approvedWithoutRenewal,
+            approved: filteredApplications.approved,
             rejected: filteredApplications.rejected
           });
 
