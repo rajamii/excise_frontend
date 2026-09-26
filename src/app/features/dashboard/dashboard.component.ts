@@ -1463,6 +1463,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   private showManufacturingWalletNav = false;
   private walletEligibilityResolved = false;
   private walletEligibilityLoading = false;
+  private myLicenses: any[] = [];
 
   // Professional dashboard enhancements
   previousCounts: DashboardCount = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 };
@@ -3130,7 +3131,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (!this.isLicenseeUser()) {
       return true;
     }
-    return this.showBreweryOrDistilleryWalletViews || this.isDistributorUser();
+    if (this.showBreweryOrDistilleryWalletViews || this.isDistributorUser()) {
+      return true;
+    }
+    const licRows = Array.isArray(this.myLicenses) ? this.myLicenses : [];
+    if (licRows.some((item: any) => this.isDistillery(item) || this.isBrewery(item) || this.isDistributorItem(item))) {
+      return true;
+    }
+    return false;
   }
 
   private readDistributorPermitMode(params: any): 'list' | 'apply' {
@@ -4594,13 +4602,18 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       .subscribe({
         next: (licenses) => {
           const licenseRows = Array.isArray(licenses) ? licenses : [];
+          this.myLicenses = licenseRows;
           const menuRows = filterRowsForSupplyChainSidebarMenus(licenseRows);
-          const hasDistillery = menuRows.some((item) => this.isDistillery(item));
-          const hasBrewery = menuRows.some((item) => this.isBrewery(item));
+          const hasDistilleryMenu = menuRows.some((item) => this.isDistillery(item));
+          const hasBreweryMenu = menuRows.some((item) => this.isBrewery(item));
 
-          this.showDistilleryMenus = hasDistillery;
-          this.showBreweryOrDistilleryMenus = hasDistillery || hasBrewery;
-          this.showBreweryOrDistilleryWalletViews = hasDistillery || hasBrewery;
+          this.showDistilleryMenus = hasDistilleryMenu;
+          this.showBreweryOrDistilleryMenus = hasDistilleryMenu || hasBreweryMenu;
+
+          const hasDistilleryAnywhere = licenseRows.some((item) => this.isDistillery(item));
+          const hasBreweryAnywhere = licenseRows.some((item) => this.isBrewery(item));
+          const isDist = this.isDistributorUser() || licenseRows.some((item) => this.isDistributorItem(item));
+          this.showBreweryOrDistilleryWalletViews = hasDistilleryAnywhere || hasBreweryAnywhere || isDist;
           this.showManufacturingWalletNav = true;
           this.licenseeMenuAccessResolved = true;
           this.enforceSectionAccess();
@@ -4613,7 +4626,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         error: () => {
           this.showDistilleryMenus = false;
           this.showBreweryOrDistilleryMenus = false;
-          this.showBreweryOrDistilleryWalletViews = false;
+          this.showBreweryOrDistilleryWalletViews = this.isDistributorUser();
           this.showManufacturingWalletNav = true;
           this.licenseeMenuAccessResolved = true;
           this.enforceSectionAccess();
@@ -4703,20 +4716,59 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private isDistillery(item: any): boolean {
     const subCategoryId = this.extractSubCategoryId(item);
-    if (subCategoryId === 2) {
+    if ([2, 6, 7, 8].includes(subCategoryId)) {
       return true;
     }
     const name = this.extractSubCategoryName(item);
-    return name.includes('distiller');
+    return name.includes('distill') || name.includes('bottling') || name.includes('blending');
   }
 
   private isBrewery(item: any): boolean {
     const subCategoryId = this.extractSubCategoryId(item);
-    if (subCategoryId === 1) {
+    if ([1, 24].includes(subCategoryId)) {
       return true;
     }
     const name = this.extractSubCategoryName(item);
-    return name.includes('brew');
+    return name.includes('brew') || name.includes('beer');
+  }
+
+  private isDistributorItem(item: any): boolean {
+    const subCategoryId = this.extractSubCategoryId(item);
+    if (subCategoryId === 31) {
+      return true;
+    }
+    const catId = this.extractCategoryId(item);
+    if (catId === 2) {
+      return true;
+    }
+    const subName = this.extractSubCategoryName(item);
+    if (subName.includes('distribut')) {
+      return true;
+    }
+    const catName = this.extractCategoryName(item);
+    return catName.includes('distribut');
+  }
+
+  private extractCategoryId(item: any): number {
+    const nested = item?.license_category ?? item?.licenseCategory;
+    const raw =
+      item?.license_category_id ??
+      item?.licenseCategoryId ??
+      (typeof nested === 'object' ? nested?.id : nested) ??
+      0;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private extractCategoryName(item: any): string {
+    const nested = item?.license_category ?? item?.licenseCategory;
+    const raw =
+      item?.license_category_name ??
+      item?.licenseCategoryName ??
+      (typeof nested === 'object'
+        ? (nested?.license_category ?? nested?.name ?? nested?.description ?? '')
+        : nested ?? '');
+    return String(raw ?? '').toLowerCase();
   }
 
   private extractSubCategoryId(item: any): number {
