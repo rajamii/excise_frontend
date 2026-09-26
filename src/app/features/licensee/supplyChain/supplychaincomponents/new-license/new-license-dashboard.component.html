@@ -148,23 +148,31 @@
             <!-- Fees Payment -->
             <td>
               <div class="fee-status-group">
-                <ng-container *ngIf="isRowRejected(row); else activeFeeStatus">
-                  <div class="fee-status-item" [class.fee-status-item--paid]="row.isLicenseFeePaid" [class.fee-status-item--expired]="!row.isLicenseFeePaid && row.isAutoRejected" [class.fee-status-item--cancelled]="!row.isLicenseFeePaid && !row.isAutoRejected">
+                <ng-container *ngIf="isRowRejected(row) || isRowTerminated(row); else activeFeeStatus">
+                  <div class="fee-status-item"
+                    [class.fee-status-item--terminated]="isRowTerminated(row)"
+                    [class.fee-status-item--paid]="!isRowTerminated(row) && row.isLicenseFeePaid"
+                    [class.fee-status-item--expired]="!isRowTerminated(row) && !row.isLicenseFeePaid && row.isAutoRejected"
+                    [class.fee-status-item--cancelled]="!isRowTerminated(row) && !row.isLicenseFeePaid && !row.isAutoRejected">
                     <span class="fee-status-icon">
-                      <i class="bi" [ngClass]="row.isLicenseFeePaid ? 'bi-check-circle-fill' : (row.isAutoRejected ? 'bi-clock-history' : 'bi-x-circle-fill')"></i>
+                      <i class="bi" [ngClass]="isRowTerminated(row) ? 'bi-x-circle-fill' : (row.isLicenseFeePaid ? 'bi-check-circle-fill' : (row.isAutoRejected ? 'bi-clock-history' : 'bi-x-circle-fill'))"></i>
                     </span>
                     <span class="fee-status-text">
                       <span class="fee-status-label">License Fee</span>
-                      <span class="fee-status-value">{{ row.isLicenseFeePaid ? 'Paid' : (row.isAutoRejected ? 'Expired' : 'Cancelled') }}</span>
+                      <span class="fee-status-value">{{ isRowTerminated(row) ? 'Terminated' : (row.isLicenseFeePaid ? 'Paid' : (row.isAutoRejected ? 'Expired' : 'Cancelled')) }}</span>
                     </span>
                   </div>
-                  <div class="fee-status-item" [class.fee-status-item--paid]="row.isSecurityFeePaid" [class.fee-status-item--expired]="!row.isSecurityFeePaid && row.isAutoRejected" [class.fee-status-item--cancelled]="!row.isSecurityFeePaid && !row.isAutoRejected">
+                  <div class="fee-status-item"
+                    [class.fee-status-item--terminated]="isRowTerminated(row)"
+                    [class.fee-status-item--paid]="!isRowTerminated(row) && row.isSecurityFeePaid"
+                    [class.fee-status-item--expired]="!isRowTerminated(row) && !row.isSecurityFeePaid && row.isAutoRejected"
+                    [class.fee-status-item--cancelled]="!isRowTerminated(row) && !row.isSecurityFeePaid && !row.isAutoRejected">
                     <span class="fee-status-icon">
-                      <i class="bi" [ngClass]="row.isSecurityFeePaid ? 'bi-check-circle-fill' : (row.isAutoRejected ? 'bi-clock-history' : 'bi-x-circle-fill')"></i>
+                      <i class="bi" [ngClass]="isRowTerminated(row) ? 'bi-x-circle-fill' : (row.isSecurityFeePaid ? 'bi-check-circle-fill' : (row.isAutoRejected ? 'bi-clock-history' : 'bi-x-circle-fill'))"></i>
                     </span>
                     <span class="fee-status-text">
                       <span class="fee-status-label">Security Deposit</span>
-                      <span class="fee-status-value">{{ row.isSecurityFeePaid ? 'Paid' : (row.isAutoRejected ? 'Expired' : 'Cancelled') }}</span>
+                      <span class="fee-status-value">{{ isRowTerminated(row) ? 'Terminated' : (row.isSecurityFeePaid ? 'Paid' : (row.isAutoRejected ? 'Expired' : 'Cancelled')) }}</span>
                     </span>
                   </div>
                 </ng-container>
@@ -194,7 +202,7 @@
             <td>
               <div class="d-flex flex-column gap-2 align-items-start">
                 <div>
-                  <span class="status-badge {{ row.statusGroup }}">
+                  <span class="status-badge {{ isRowTerminated(row) ? 'rejected' : row.statusGroup }}">
                     {{ row.currentStage }}
                   </span>
                   <span *ngIf="isLicenseeUser() && row.statusGroup === 'objection'" class="badge bg-warning text-dark ms-2">
@@ -208,11 +216,11 @@
                   </ng-container>
                 </div>
 
-                <!-- Prominent Rejection Note Box for Auto-Rejected and Rejected Applications -->
-                <div *ngIf="row.statusGroup === 'rejected' || isRowRejected(row)" class="rejection-note-box" [class.auto-rejected]="row.isAutoRejected">
+                <!-- Prominent Rejection/Termination Note Box -->
+                <div *ngIf="row.statusGroup === 'rejected' || isRowRejected(row) || isRowTerminated(row)" class="rejection-note-box" [class.auto-rejected]="row.isAutoRejected">
                   <div class="rejection-note-head">
-                    <i class="bi" [ngClass]="row.isAutoRejected ? 'bi-clock-history' : 'bi-x-circle-fill'"></i>
-                    <span>{{ row.isAutoRejected ? 'Auto-Rejected (Timer Expired)' : 'Rejection Reason' }}</span>
+                    <i class="bi" [ngClass]="isRowTerminated(row) ? 'bi-exclamation-octagon-fill' : (row.isAutoRejected ? 'bi-clock-history' : 'bi-x-circle-fill')"></i>
+                    <span>{{ isRowTerminated(row) ? 'License Terminated' : (row.isAutoRejected ? 'Auto-Rejected (Timer Expired)' : 'Rejection Reason') }}</span>
                   </div>
                   <div class="rejection-note-body">
                     {{ row.rejectionReason || getComputedRejectionNote(row) }}

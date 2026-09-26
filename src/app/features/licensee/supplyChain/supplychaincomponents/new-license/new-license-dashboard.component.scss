@@ -498,6 +498,16 @@ tr.row-needs-action {
     .fee-status-label { color: #92400e; }
   }
 
+  // ── Terminated state ─── soft red
+  &--terminated {
+    background: #fee2e2;
+    border-color: #fca5a5;
+
+    .fee-status-icon { color: #dc2626; }
+    .fee-status-value { color: #991b1b; }
+    .fee-status-label { color: #991b1b; }
+  }
+
   // ── Expired (Auto-rejected) state ─── soft red
   &--expired {
     background: #fee2e2;

@@ -4920,10 +4920,11 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         return this.isNewLicense() || this.isSalesmanBarmanRegistration() || this.isCompanyRegistration() || this.isSpecialPermit();
     }
 
-    private simplifyStageForLicensee(stageValue: string, statusValue: string): 'Pending' | 'Awaiting Payment' | 'Approved' | 'Rejected' {
+    private simplifyStageForLicensee(stageValue: string, statusValue: string): 'Pending' | 'Awaiting Payment' | 'Approved' | 'Rejected' | 'Terminated' {
         const raw = `${String(stageValue || '')} ${String(statusValue || '')}`.toLowerCase();
-        if (raw.includes('approve')) return 'Approved';
+        if (raw.includes('terminat') || raw.includes('forfeit') || raw.includes('revoke') || raw.includes('suspend')) return 'Terminated';
         if (raw.includes('reject')) return 'Rejected';
+        if (raw.includes('approve')) return 'Approved';
         if (raw.includes('awaiting') && raw.includes('payment')) return 'Awaiting Payment';
         if (raw.includes('payment')) return 'Awaiting Payment';
         return 'Pending';
@@ -4951,6 +4952,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         }
 
         const simplified = this.getCurrentStatusText().toLowerCase();
+        if (simplified.includes('terminat') || simplified.includes('forfeit') || simplified.includes('revoke') || simplified.includes('suspend')) return 'TERMINATED';
         if (simplified.includes('reject')) return 'REJECTED';
         if (simplified.includes('approve')) return 'APPROVED';
         // Treat "Awaiting Payment" as warning/pending in badge styling.
@@ -4984,14 +4986,17 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     isApplicationRejected(): boolean {
         const status = String(this.applicationData?.status || '').toLowerCase();
         const stage = String(this.applicationData?.currentStageName || (this.applicationData as any)?.current_stage_name || '').toLowerCase();
-        return status.includes('reject') || stage.includes('reject');
+        return status.includes('reject') || stage.includes('reject') || status.includes('terminat') || stage.includes('terminat');
     }
 
     isAutoRejected(): boolean {
         if (!this.applicationData) return false;
         const raw = this.applicationData as any;
-        if (raw.is_auto_rejected || raw.isAutoRejected) return true;
         const stageName = String(raw.currentStageName || raw.current_stage_name || raw.current_stage || '').toLowerCase();
+        if (stageName.includes('terminat') || stageName.includes('forfeit') || stageName.includes('revoke') || stageName.includes('suspend')) {
+            return false;
+        }
+        if (raw.is_auto_rejected || raw.isAutoRejected) return true;
         const stageId = Number(raw.currentStageId || raw.current_stage_id || 0);
         return stageId === 180 || stageId === 166 || (stageName.includes('reject') && (stageName.includes('no action') || stageName.includes('payment') || stageName.includes('objection')));
     }
@@ -4999,20 +5004,28 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     getRejectionReason(): string {
         if (!this.applicationData) return 'Application was rejected.';
         const raw = this.applicationData as any;
+        const stageName = String(raw.currentStageName || raw.current_stage_name || raw.current_stage || '').toLowerCase();
+        const stageId = Number(raw.currentStageId || raw.current_stage_id || 0);
+
+        if (stageName.includes('terminat') || stageName.includes('forfeit') || stageName.includes('revoke') || stageName.includes('suspend')) {
+            const explicit = raw.rejection_reason || raw.rejectionReason || raw.rejection_remarks || raw.rejectionRemarks;
+            if (this.hasText(explicit) && !String(explicit).toLowerCase().includes('auto-reject') && !String(explicit).toLowerCase().includes('payment deadline')) {
+                return String(explicit).trim();
+            }
+            return 'Application and associated license officially terminated by department administration. Security deposit deducted/forfeited.';
+        }
+
         const explicit = raw.rejection_reason || raw.rejectionReason || raw.rejection_remarks || raw.rejectionRemarks || raw.remarks;
         if (this.hasText(explicit)) {
             return String(explicit).trim();
         }
 
-        const stageName = String(raw.currentStageName || raw.current_stage_name || raw.current_stage || '').toLowerCase();
-        const stageId = Number(raw.currentStageId || raw.current_stage_id || 0);
-
         if (stageId === 180 || (stageName.includes('payment') && stageName.includes('reject'))) {
-            return 'Application automatically rejected: The required License Fee and Security Deposit payments were not completed within the configured payment deadline.';
+            return 'Application payment window closed before completing required fee payments.';
         }
 
         if (stageId === 166 || (stageName.includes('objection') && stageName.includes('reject'))) {
-            return 'Application automatically rejected: The applicant did not respond to or resolve the raised objection within the configured time limit.';
+            return 'Application objection response period expired without clarification.';
         }
 
         const rejectedBy = this.getRejectedByDisplayName();

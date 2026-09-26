@@ -167,5 +167,9 @@ export const DANGER_STATUS_KEYWORDS = [
     'REJECTED',
     'INVALID',
     'EXPIRED',
-    'CANCELLED'
+    'CANCELLED',
+    'TERMINATED',
+    'FORFEITED',
+    'REVOKED',
+    'SUSPENDED'
 ] as const;

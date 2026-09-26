@@ -756,7 +756,8 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
         const currentStageRaw = String(item?.current_stage_name || item?.currentStageName || item?.current_stage || '');
         const currentStageId = item?.current_stage_id || item?.currentStageId || item?.current_stage;
         const rawLower = currentStageRaw.toLowerCase();
-        const isRejected = statusGroup === 'rejected' || rawLower.includes('reject');
+        const isTerminated = rawLower.includes('terminat') || rawLower.includes('forfeit') || rawLower.includes('cancel') || rawLower.includes('revoke') || rawLower.includes('suspend');
+        const isRejected = statusGroup === 'rejected' || rawLower.includes('reject') || isTerminated;
 
         const canView = paymentStatus === 'Successful' || feePaid;
         const canPayNow = this.isLicenseeUser() && !feePaid && paymentStatus !== 'Successful' && !isRejected;
@@ -769,7 +770,7 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
         if (this.isLicenseeUser() && !isRejected) {
           const isAwaiting = 
             (rawLower.includes('awaiting') && rawLower.includes('payment')) ||
-            (rawLower.includes('payment') && !rawLower.includes('reject')) ||
+            (rawLower.includes('payment') && !rawLower.includes('reject') && !isTerminated) ||
             canPayNow ||
             currentStageId === 23 ||
             currentStageId === '23';
@@ -795,7 +796,7 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
         );
 
         const applicationId = String(item?.application_id || item?.applicationId || item?.id || 'N/A');
-        const isApproved = Boolean(item?.is_approved ?? item?.isApproved ?? statusGroup === 'approved');
+        const isApproved = Boolean((item?.is_approved ?? item?.isApproved ?? (statusGroup === 'approved')) && !isRejected && !isTerminated);
         const licenseNumber = this.deriveNewLicenseNaNumber(applicationId, item);
 
         const isLicenseFeePaid = Boolean(item?.is_license_fee_paid ?? item?.isLicenseFeePaid ?? item?.is_fee_paid ?? item?.isFeePaid);
@@ -857,7 +858,9 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
         ).trim() || null;
 
         if (!rejectionReason && isRejected) {
-          if (stageId === 180 || (rawLower.includes('payment') && rawLower.includes('reject'))) {
+          if (isTerminated || rawLower.includes('terminat') || rawLower.includes('forfeit')) {
+            rejectionReason = 'Application terminated and security deposit deducted/forfeited.';
+          } else if (stageId === 180 || (rawLower.includes('payment') && rawLower.includes('reject'))) {
             rejectionReason = 'Application automatically rejected: License Fee and Security Deposit payments were not completed within the allowed payment window.';
           } else if (stageId === 166 || (rawLower.includes('objection') && rawLower.includes('reject'))) {
             rejectionReason = 'Application automatically rejected: No action or clarification was submitted on the raised objection within the allowed time limit.';
@@ -945,6 +948,11 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
   }
 
   private computeCurrentStageLabel(item: any, statusGroup: NewLicenseItem['statusGroup'], currentStageRaw: string): string {
+    const rawLower = String(currentStageRaw || '').toLowerCase();
+    if (rawLower.includes('terminat') || rawLower.includes('forfeit') || rawLower.includes('revoke') || rawLower.includes('suspend')) {
+      return 'Terminated';
+    }
+
     if (this.isLicenseeUser()) {
       return this.simplifyStageForLicensee(statusGroup, currentStageRaw);
     }
@@ -1092,18 +1100,22 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
   }
 
   private simplifyStageForLicensee(statusGroup: NewLicenseItem['statusGroup'], stageValue: any): string {
+    const raw = String(stageValue ?? '').toLowerCase();
+    if (raw.includes('terminat') || raw.includes('forfeit') || raw.includes('revoke') || raw.includes('suspend')) return 'Terminated';
+    if (raw.includes('reject')) return 'Rejected';
+    if (statusGroup === 'rejected') {
+      if (raw.includes('terminat') || raw.includes('forfeit') || raw.includes('revoke') || raw.includes('suspend')) return 'Terminated';
+      return 'Rejected';
+    }
     if (statusGroup === 'approved') return 'Approved';
-    if (statusGroup === 'rejected') return 'Rejected';
     if (statusGroup === 'objection') return 'Objection by Admin';
     if (statusGroup === 'awaiting-payment') return 'Awaiting Payment';
 
-    const raw = String(stageValue ?? '').toLowerCase();
     const stageId = Number.parseInt(raw, 10);
     if (Number.isFinite(stageId) && String(stageId) === raw) {
       if (stageId === 23) return 'Awaiting Payment';
     }
     if (raw.includes('approved')) return 'Approved';
-    if (raw.includes('reject')) return 'Rejected';
     if (raw.includes('awaiting') && raw.includes('payment')) return 'Awaiting Payment';
     // Some backends return payment-related stage names without the "awaiting_" prefix.
     if (raw.includes('payment')) return 'Awaiting Payment';
@@ -1344,19 +1356,31 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  isRowTerminated(row: NewLicenseItem): boolean {
+    const raw = String(row?.currentStageRaw || '').toLowerCase();
+    const stage = String(row?.currentStage || '').toLowerCase();
+    return raw.includes('terminat') || stage.includes('terminat') || raw.includes('forfeit') || stage.includes('forfeit') || raw.includes('revoke') || stage.includes('revoke') || raw.includes('suspend') || stage.includes('suspend');
+  }
+
   isRowRejected(row: NewLicenseItem): boolean {
     const raw = String(row?.currentStageRaw || '').toLowerCase();
-    return row?.statusGroup === 'rejected' || raw.includes('reject');
+    const stage = String(row?.currentStage || '').toLowerCase();
+    return row?.statusGroup === 'rejected' || raw.includes('reject') || stage.includes('reject') || this.isRowTerminated(row);
   }
 
   getComputedRejectionNote(row: NewLicenseItem): string {
-    if (row?.rejectionReason) return row.rejectionReason;
+    if (this.isRowTerminated(row)) {
+      return 'Application and associated license officially terminated by department administration. Security deposit deducted/forfeited.';
+    }
+    if (row?.rejectionReason && !row.rejectionReason.toLowerCase().includes('auto-reject') && !row.rejectionReason.toLowerCase().includes('payment deadline')) {
+      return row.rejectionReason;
+    }
     const raw = String(row?.currentStageRaw || '').toLowerCase();
     if (raw.includes('payment')) {
-      return 'Application automatically rejected: Required License Fee and Security Deposit payments were not completed within the allowed payment window.';
+      return 'Payment window closed before completing required fee payments.';
     }
     if (raw.includes('objection')) {
-      return 'Application automatically rejected: No action was submitted on the raised objection within the allowed time limit.';
+      return 'Objection response period expired without clarification.';
     }
     return 'Application was rejected by the department.';
   }
