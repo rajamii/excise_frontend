@@ -1659,10 +1659,22 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const renewedIds = new Set<string>();
     
     [...applied, ...pending, ...awaitingPayment].forEach(app => {
-      if (app.type !== 'license-renewal') {
+      if (!app) return;
+      const appId = String(app.applicationId || app.raw?.application_id || app.application_id || '').trim();
+      const isRenewal = app.type === 'license-renewal' || 
+                        app.type_slug === 'license-renewal' || 
+                        app.application_type === 'renewal' || 
+                        app.raw?.application_type === 'renewal' ||
+                        appId.startsWith('LRA/') ||
+                        appId.startsWith('RCC/') ||
+                        appId.startsWith('RCR/') ||
+                        appId.startsWith('RSBM/') ||
+                        appId.startsWith('RCOL/');
+      
+      if (!isRenewal) {
         return;
       }
-      const raw = app.raw || {};
+      const raw = app.raw || app;
       
       const renewalOfValue = 
         raw.renewalOf || 
@@ -1672,7 +1684,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         raw.old_license_id || 
         raw.oldLicenseId || 
         raw.old_license || 
-        raw.oldLicense;
+        raw.oldLicense ||
+        app.renewalOf ||
+        app.old_license_id ||
+        app.oldLicenseId;
       
       if (renewalOfValue) {
         let licenseIdStr = '';
@@ -1686,11 +1701,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         
         if (licenseIdStr && this.isValidLicenseIdForWarning(licenseIdStr)) {
           renewedIds.add(licenseIdStr);
-          return;
         }
       }
       
-      const licenseValue = raw.license || raw.license_id || raw.issued_license_id || raw.issuedLicenseId;
+      const licenseValue = raw.license || raw.license_id || raw.issued_license_id || raw.issuedLicenseId || app.licenseId || app.license_id;
       if (licenseValue) {
         let licenseIdStr = '';
         if (typeof licenseValue === 'string') {
@@ -1706,18 +1720,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       }
       
-      const appId = app.applicationId || app.raw?.application_id || '';
       if (appId) {
-        let derivedLicenseId = null;
-        if (appId.startsWith('LIC/')) {
-          derivedLicenseId = appId.replace('LIC/', 'LA/');
-        } else if (appId.startsWith('NLI/')) {
-          derivedLicenseId = appId.replace('NLI/', 'NA/');
-        } else if (appId.startsWith('SBM/')) {
-          derivedLicenseId = appId.replace('SBM/', 'SB/');
-        } else if (appId.startsWith('COMP/')) {
-          derivedLicenseId = appId.replace('COMP/', 'CREG/');
-        } else if (appId.startsWith('LRA/')) {
+        if (appId.startsWith('LRA/')) {
           renewedIds.add(appId.replace('LRA/', 'LA/'));
           renewedIds.add(appId.replace('LRA/', 'NA/'));
           renewedIds.add(appId.replace('LRA/', 'CC/1101/'));
@@ -1725,10 +1729,6 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           renewedIds.add(appId.replace('RSBM/', 'SB/'));
         } else if (appId.startsWith('RCOL/')) {
           renewedIds.add(appId.replace('RCOL/', 'CC/1101/'));
-        }
-        
-        if (derivedLicenseId && this.isValidLicenseIdForWarning(derivedLicenseId)) {
-          renewedIds.add(derivedLicenseId);
         }
       }
     });
@@ -1760,11 +1760,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       myLicenses: (this.myLicenses && this.myLicenses.length > 0)
         ? of(this.myLicenses)
         : this.licenseMeService.getMyLicenses(true).pipe(catchError(() => of([]))),
-      unifiedApps: (approvedWithoutRenewal && approvedWithoutRenewal.length > 0)
-        ? of({ approved: approvedWithoutRenewal, applied: [], pending: [], awaitingPayment: [] })
-        : this.unifiedDashboardService.getUnifiedApplicationsByStatus(false, this.dashboardConfig).pipe(
-            catchError(() => of({ approved: [], applied: [], pending: [], awaitingPayment: [] } as any))
-          )
+      unifiedApps: this.unifiedDashboardService.getUnifiedApplicationsByStatus(false, this.dashboardConfig).pipe(
+        catchError(() => of({ approved: [], applied: [], pending: [], awaitingPayment: [] } as any))
+      )
     }).subscribe(({ timer, renewalConfig, myLicenses, unifiedApps }) => {
       let newWarnings: any[] = [];
       let windowMs = Math.max(0, Number((timer as any)?.delay_ms ?? 0) || 0);
@@ -1776,6 +1774,17 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         windowMs = Number(validityDays) * 24 * 60 * 60 * 1000;
       }
 
+      const activeRenewedIds = this.getRenewedLicenseIds(
+        (unifiedApps as any)?.applied || [],
+        (unifiedApps as any)?.pending || [],
+        (unifiedApps as any)?.awaitingPayment || []
+      );
+
+      (approvedWithRenewal || []).forEach(app => {
+        const lid = this.extractLicenseId(app);
+        if (lid) activeRenewedIds.add(lid);
+      });
+
       const appMap = new Map<string, {
         app: any,
         validUpTo: Date | null,
@@ -1784,7 +1793,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         hasActiveRenewal: boolean
       }>();
 
-      const collectApp = (app: any, hasActiveRenewal: boolean) => {
+      const collectApp = (app: any) => {
         if (!app) return;
         if (app.type === 'license-renewal') {
           return;
@@ -1808,6 +1817,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         const licenseId = this.extractLicenseId(app);
         if (!licenseId) return;
 
+        const hasActiveRenewal = activeRenewedIds.has(licenseId);
+
         const existing = appMap.get(licenseId);
         if (!existing || (validUpTo && existing.validUpTo && validUpTo.getTime() > existing.validUpTo.getTime())) {
           appMap.set(licenseId, {
@@ -1826,15 +1837,15 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
       // 1. Collect from direct licenses (myLicenses)
       if (Array.isArray(myLicenses)) {
-        myLicenses.forEach(lic => collectApp(lic, false));
+        myLicenses.forEach(lic => collectApp(lic));
       }
 
       // 2. Collect from approved applications
       const approvedList = (approvedWithoutRenewal && approvedWithoutRenewal.length > 0)
         ? approvedWithoutRenewal
         : ((unifiedApps as any)?.approved || []);
-      approvedList.forEach((app: any) => collectApp(app, false));
-      (approvedWithRenewal || []).forEach((app: any) => collectApp(app, true));
+      approvedList.forEach((app: any) => collectApp(app));
+      (approvedWithRenewal || []).forEach((app: any) => collectApp(app));
 
       const now = Date.now();
 
