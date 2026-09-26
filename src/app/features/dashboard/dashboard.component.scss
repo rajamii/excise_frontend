@@ -2944,9 +2944,149 @@ mat-card-content {
             }
         }
 
+        .act-target-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+
+            .act-appid-code {
+                font-family: 'Consolas', monospace;
+                font-weight: 700;
+                color: #1e293b;
+                font-size: 0.8rem;
+                background: #f1f5f9;
+                padding: 1px 6px;
+                border-radius: 4px;
+                display: inline-block;
+                width: fit-content;
+            }
+
+            .act-target-name {
+                font-size: 0.76rem;
+                font-weight: 600;
+                color: #475569;
+                max-width: 160px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+        }
+
+        .act-td-summary {
+            min-width: 220px;
+            max-width: 380px;
+        }
+
+        .act-diff-pills {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .act-diff-pill {
+            display: inline-flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            font-size: 0.76rem;
+            line-height: 1.3;
+
+            &__field {
+                font-weight: 700;
+                color: #334155;
+            }
+
+            &__old {
+                color: #dc2626;
+                text-decoration: line-through;
+                background: #fee2e2;
+                padding: 0 4px;
+                border-radius: 3px;
+                font-weight: 500;
+                max-width: 100px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            &__arrow {
+                font-size: 0.85rem;
+                width: 0.85rem;
+                height: 0.85rem;
+                color: #64748b;
+            }
+
+            &__new {
+                color: #16a34a;
+                font-weight: 700;
+                background: #dcfce7;
+                padding: 0 4px;
+                border-radius: 3px;
+                max-width: 120px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+        }
+
+        .act-summary-card {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+
+            .act-summary-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                font-size: 0.76rem;
+                font-weight: 700;
+                padding: 2px 8px;
+                border-radius: 10px;
+                width: fit-content;
+
+                mat-icon {
+                    font-size: 0.95rem;
+                    width: 0.95rem;
+                    height: 0.95rem;
+                }
+
+                &--create {
+                    background: #dcfce7;
+                    color: #15803d;
+                    border: 1px solid #bbf7d0;
+                }
+
+                &--delete {
+                    background: #fee2e2;
+                    color: #b91c1c;
+                    border: 1px solid #fecaca;
+                }
+
+                &--deduct {
+                    background: #f3e8ff;
+                    color: #7e22ce;
+                    border: 1px solid #e9d5ff;
+                }
+            }
+
+            .act-summary-desc {
+                font-size: 0.76rem;
+                color: #64748b;
+                line-height: 1.3;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+        }
+
         .act-remarks-text {
             display: block;
-            max-width: 250px;
+            max-width: 300px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -2978,6 +3118,71 @@ mat-card-content {
                 background: #1c2b78;
                 color: #fff;
                 border-color: #1c2b78;
+            }
+        }
+    }
+
+    // ── Diff Table in Detail Modal ───────────────────────────
+    .oa-diff-table-wrap {
+        width: 100%;
+        overflow-x: auto;
+        margin-top: 6px;
+    }
+
+    .oa-diff-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.82rem;
+
+        th {
+            background: #f1f5f9;
+            color: #475569;
+            font-weight: 700;
+            text-align: left;
+            padding: 8px 12px;
+            border-bottom: 2px solid #cbd5e1;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: middle;
+        }
+
+        .oa-diff-td-field {
+            font-weight: 600;
+            color: #0f172a;
+            width: 25%;
+        }
+
+        .oa-diff-td-old {
+            width: 37.5%;
+        }
+
+        .oa-diff-td-new {
+            width: 37.5%;
+        }
+
+        .oa-diff-val {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            word-break: break-word;
+
+            &--old {
+                background: #fee2e2;
+                color: #b91c1c;
+                text-decoration: line-through;
+            }
+
+            &--new {
+                background: #dcfce7;
+                color: #15803d;
+                font-weight: 700;
             }
         }
     }

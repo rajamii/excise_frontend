@@ -414,11 +414,10 @@
                     <th>Date &amp; Time</th>
                     <th>Performed By</th>
                     <th>Module</th>
-                    <th>Application / Target ID</th>
+                    <th>Target / Record</th>
                     <th>Action</th>
-                    <th>Stage Progression</th>
-                    <th>Forwarded To</th>
-                    <th>Remarks</th>
+                    <th *ngIf="adminActionScope === 'all'">Workflow &amp; Routing</th>
+                    <th>Changes &amp; Activity Details</th>
                     <th class="text-center">Details</th>
                   </tr>
                 </thead>
@@ -449,9 +448,14 @@
                     </td>
 
                     <td class="act-td-appid">
-                      <span class="act-appid-code" *ngIf="(log?.applicationId || log?.application_id); else dash" [title]="log?.applicationId || log?.application_id">
-                        {{ log?.applicationId || log?.application_id }}
-                      </span>
+                      <div class="act-target-info">
+                        <span class="act-appid-code" *ngIf="(log?.applicationId || log?.application_id); else dash" [title]="log?.applicationId || log?.application_id">
+                          {{ log?.applicationId || log?.application_id }}
+                        </span>
+                        <span class="act-target-name" *ngIf="log?.metadata?.target_name || log?.metadata?.record_name" [title]="log?.metadata?.target_name || log?.metadata?.record_name">
+                          {{ log?.metadata?.target_name || log?.metadata?.record_name }}
+                        </span>
+                      </div>
                     </td>
 
                     <td class="act-td-badge">
@@ -461,7 +465,8 @@
                       </span>
                     </td>
 
-                    <td class="act-td-stages">
+                    <!-- Workflow & Routing (Only visible when viewing All Officers) -->
+                    <td class="act-td-stages" *ngIf="adminActionScope === 'all'">
                       <div class="act-stage-flow" *ngIf="(log?.fromStage || log?.from_stage || log?.toStage || log?.to_stage || log?.toStageName || log?.to_stage_name); else dash">
                         <span class="act-stage-from" *ngIf="log?.fromStage || log?.from_stage">{{ log?.fromStage || log?.from_stage }}</span>
                         <mat-icon class="act-stage-arrow" *ngIf="(log?.fromStage || log?.from_stage) && (log?.toStage || log?.to_stage || log?.toStageName || log?.to_stage_name)">arrow_right_alt</mat-icon>
@@ -471,31 +476,53 @@
                       </div>
                     </td>
 
-                    <td class="act-td-forwarded">
-                      <ng-container *ngIf="getForwardedRecipients(log).length > 0; else singleForwardCell">
-                        <div class="act-recipients-stack" [title]="getForwardedTooltip(log)">
-                          <div class="act-user-tag act-user-tag--multi" *ngFor="let rec of getForwardedRecipients(log)">
-                            <mat-icon>person</mat-icon>
-                            <span class="act-user-tag__text">
-                              <strong *ngIf="rec.id" class="act-rec-id">#{{ rec.id }}</strong>
-                              {{ rec.fullName || rec.username }}
-                            </span>
-                          </div>
+                    <!-- Activity / Changes Summary Column -->
+                    <td class="act-td-summary">
+                      <!-- Field Diffs (for UPDATE) -->
+                      <div class="act-diff-pills" *ngIf="hasFieldDiffs(log); else nonDiffSummary">
+                        <div class="act-diff-pill" *ngFor="let diff of getFieldDiffs(log)">
+                          <span class="act-diff-pill__field">{{ diff.field }}:</span>
+                          <span class="act-diff-pill__old">{{ diff.from }}</span>
+                          <mat-icon class="act-diff-pill__arrow">arrow_forward</mat-icon>
+                          <span class="act-diff-pill__new">{{ diff.to }}</span>
                         </div>
-                      </ng-container>
-                      <ng-template #singleForwardCell>
-                        <div class="act-user-tag" *ngIf="(log?.toStageUsername || log?.to_stage_username || log?.toStageFullName || log?.to_stage_full_name || log?.forwardingId || log?.forwarding_id || log?.toStageUserId || log?.to_stage_user_id); else dash"
-                             [title]="'Forwarding ID: ' + (log?.forwardingId || log?.forwarding_id || log?.toStageUserId || log?.to_stage_user_id || '—') + ' | ' + (log?.forwardedToName || log?.forwarded_to_name || log?.toStageFullName || log?.to_stage_full_name || '—') + ' (' + (log?.toStageUsername ? ('@' + log.toStageUsername) : (log?.to_stage_username ? ('@' + log.to_stage_username) : '—')) + ')'">
-                          <mat-icon>person</mat-icon>
-                          <span>{{ log?.forwardedToName || log?.forwarded_to_name || log?.toStageFullName || log?.to_stage_full_name || log?.toStageUsername || log?.to_stage_username }}</span>
+                      </div>
+
+                      <ng-template #nonDiffSummary>
+                        <!-- Created Record summary -->
+                        <div class="act-summary-card act-summary-card--create" *ngIf="log?.action === 'CREATE' || hasCreatedFields(log)">
+                          <div class="act-summary-badge act-summary-badge--create">
+                            <mat-icon>add_circle</mat-icon>
+                            <span>Created in <strong>{{ log?.moduleDisplay || log?.module_display || log?.moduleName || log?.module_name }}</strong></span>
+                          </div>
+                          <div class="act-remarks-text" *ngIf="log?.remarks">{{ log?.remarks }}</div>
+                        </div>
+
+                        <!-- Deleted Record summary -->
+                        <div class="act-summary-card act-summary-card--delete" *ngIf="log?.action === 'DELETE' || hasDeletedFields(log)">
+                          <div class="act-summary-badge act-summary-badge--delete">
+                            <mat-icon>delete_forever</mat-icon>
+                            <span>Deleted from <strong>{{ log?.moduleDisplay || log?.module_display || log?.moduleName || log?.module_name }}</strong></span>
+                          </div>
+                          <div class="act-remarks-text" *ngIf="log?.remarks">{{ log?.remarks }}</div>
+                        </div>
+
+                        <!-- Deduct / Terminate summary -->
+                        <div class="act-summary-card act-summary-card--deduct" *ngIf="log?.action === 'DEDUCT' || (log?.action && log.action.includes('TERMINAT'))">
+                          <div class="act-summary-badge act-summary-badge--deduct">
+                            <mat-icon>gavel</mat-icon>
+                            <span>Security Deposit Deducted &bull; Terminated</span>
+                          </div>
+                          <div class="act-remarks-text" *ngIf="log?.remarks">{{ log?.remarks }}</div>
+                        </div>
+
+                        <!-- Fallback Remarks -->
+                        <div *ngIf="log?.action !== 'CREATE' && !hasCreatedFields(log) && log?.action !== 'DELETE' && !hasDeletedFields(log) && log?.action !== 'DEDUCT' && !(log?.action && log.action.includes('TERMINAT'))">
+                          <span class="act-remarks-text" *ngIf="log?.remarks; else dash" [title]="log?.remarks">
+                            {{ log?.remarks }}
+                          </span>
                         </div>
                       </ng-template>
-                    </td>
-
-                    <td class="act-td-remarks">
-                      <span class="act-remarks-text" *ngIf="log?.remarks; else dash" [title]="log?.remarks">
-                        {{ log?.remarks }}
-                      </span>
                     </td>
 
                     <td class="act-td-actions text-center">
@@ -626,8 +653,62 @@
                       </div>
                     </div>
 
-                    <!-- Stage Progression & Forwarding -->
-                    <div class="oa-detail-card">
+                    <!-- Field Changes / Diffs Table (Old vs New) -->
+                    <div class="oa-detail-card oa-detail-card--full oa-detail-card--diffs" *ngIf="hasFieldDiffs(selectedActionLogDetail)">
+                      <div class="oa-card-heading">
+                        <mat-icon>compare_arrows</mat-icon>
+                        <h4>Field Modifications &amp; Changed Values (Old vs New)</h4>
+                      </div>
+                      <div class="oa-diff-table-wrap">
+                        <table class="oa-diff-table">
+                          <thead>
+                            <tr>
+                              <th>Field Name</th>
+                              <th>Previous Value (Before)</th>
+                              <th>Updated Value (After)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr *ngFor="let diff of getFieldDiffs(selectedActionLogDetail)">
+                              <td class="oa-diff-td-field"><strong>{{ diff.field }}</strong></td>
+                              <td class="oa-diff-td-old"><span class="oa-diff-val oa-diff-val--old">{{ diff.from }}</span></td>
+                              <td class="oa-diff-td-new"><span class="oa-diff-val oa-diff-val--new">{{ diff.to }}</span></td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <!-- Initial Created Values (for CREATE) -->
+                    <div class="oa-detail-card oa-detail-card--full oa-detail-card--create" *ngIf="hasCreatedFields(selectedActionLogDetail) && !hasFieldDiffs(selectedActionLogDetail)">
+                      <div class="oa-card-heading">
+                        <mat-icon>add_box</mat-icon>
+                        <h4>Initial Created Values</h4>
+                      </div>
+                      <div class="oa-meta-grid">
+                        <div class="oa-meta-item" *ngFor="let item of getCreatedFields(selectedActionLogDetail)">
+                          <span class="oa-meta-key">{{ item.field }}:</span>
+                          <span class="oa-meta-val oa-meta-val--bold">{{ item.value }}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Deleted Record Snapshot (for DELETE) -->
+                    <div class="oa-detail-card oa-detail-card--full oa-detail-card--delete" *ngIf="hasDeletedFields(selectedActionLogDetail)">
+                      <div class="oa-card-heading">
+                        <mat-icon>delete_sweep</mat-icon>
+                        <h4>Deleted Record Snapshot</h4>
+                      </div>
+                      <div class="oa-meta-grid">
+                        <div class="oa-meta-item" *ngFor="let item of getDeletedFields(selectedActionLogDetail)">
+                          <span class="oa-meta-key">{{ item.field }}:</span>
+                          <span class="oa-meta-val">{{ item.value }}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Stage Progression & Forwarding (Only shown if stage transitions exist) -->
+                    <div class="oa-detail-card" *ngIf="selectedActionLogDetail?.fromStage || selectedActionLogDetail?.from_stage || selectedActionLogDetail?.toStage || selectedActionLogDetail?.to_stage || selectedActionLogDetail?.toStageName || selectedActionLogDetail?.to_stage_name || selectedActionLogDetail?.toStageUsername || selectedActionLogDetail?.to_stage_username">
                       <div class="oa-card-heading">
                         <mat-icon>alt_route</mat-icon>
                         <h4>Stage Transition &amp; Routing</h4>

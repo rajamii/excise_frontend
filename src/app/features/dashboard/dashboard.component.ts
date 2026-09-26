@@ -2596,9 +2596,126 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     return Object.keys(log.metadata).length > 0;
   }
 
+  hasFieldDiffs(log: any): boolean {
+    if (!log) return false;
+    const diffs = log?.metadata?.field_diffs;
+    if (Array.isArray(diffs) && diffs.length > 0) return true;
+    if (log?.metadata?.old_values && log?.metadata?.new_values && typeof log.metadata.new_values === 'object') {
+      const hasDiff = Object.keys(log.metadata.new_values).some(
+        k => log.metadata.old_values[k] !== undefined && String(log.metadata.old_values[k]) !== String(log.metadata.new_values[k])
+      );
+      if (hasDiff) return true;
+    }
+    if (log.remarks && typeof log.remarks === 'string' && (log.remarks.includes('→') || log.remarks.includes('->') || log.remarks.includes(' from '))) {
+      return this.parseDiffsFromRemarks(log.remarks).length > 0;
+    }
+    return false;
+  }
+
+  getFieldDiffs(log: any): Array<{ field: string; field_name?: string; from: any; to: any }> {
+    if (!log) return [];
+    const meta = log.metadata || {};
+
+    // 1. Direct structured field diff array
+    if (Array.isArray(meta.field_diffs) && meta.field_diffs.length > 0) {
+      return meta.field_diffs.map((d: any) => ({
+        field: d.field || d.field_name || 'Field',
+        field_name: d.field_name || d.field,
+        from: d.from !== undefined && d.from !== null && d.from !== '' ? d.from : '—',
+        to: d.to !== undefined && d.to !== null && d.to !== '' ? d.to : '—'
+      }));
+    }
+
+    // 2. Old values vs New values dictionaries
+    if (meta.old_values && meta.new_values && typeof meta.new_values === 'object') {
+      const diffs: any[] = [];
+      const oldV = meta.old_values;
+      const newV = meta.new_values;
+      Object.keys(newV).forEach(k => {
+        if (oldV[k] !== undefined && String(oldV[k] || '') !== String(newV[k] || '')) {
+          diffs.push({
+            field: k.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
+            field_name: k,
+            from: oldV[k] !== undefined && oldV[k] !== null && oldV[k] !== '' ? String(oldV[k]) : '—',
+            to: newV[k] !== undefined && newV[k] !== null && newV[k] !== '' ? String(newV[k]) : '—'
+          });
+        }
+      });
+      if (diffs.length > 0) return diffs;
+    }
+
+    // 3. Fallback: parse from remarks text
+    if (log.remarks && typeof log.remarks === 'string') {
+      return this.parseDiffsFromRemarks(log.remarks);
+    }
+
+    return [];
+  }
+
+  parseDiffsFromRemarks(remarks: string): Array<{ field: string; from: string; to: string }> {
+    if (!remarks || typeof remarks !== 'string') return [];
+    const diffs: Array<{ field: string; from: string; to: string }> = [];
+    const segments = remarks.split(/[;|]/).map(s => s.trim()).filter(Boolean);
+
+    for (const seg of segments) {
+      const arrowMatch = seg.match(/(?:Changed\s+)?([^:]+?):\s*['"]?([^'"→\->]+?)['"]?\s*(?:→|->)\s*['"]?([^'"\r\n]+?)['"]?$/);
+      if (arrowMatch) {
+        diffs.push({
+          field: arrowMatch[1].trim().replace(/\b\w/g, (c: string) => c.toUpperCase()),
+          from: arrowMatch[2].trim(),
+          to: arrowMatch[3].trim()
+        });
+        continue;
+      }
+
+      const fromToMatch = seg.match(/(?:Changed\s+)?([A-Za-z0-9_\s]+?)\s+from\s+['"]?([^'"]+?)['"]?\s+to\s+['"]?([^'"]+?)['"]?$/i);
+      if (fromToMatch) {
+        diffs.push({
+          field: fromToMatch[1].trim().replace(/\b\w/g, (c: string) => c.toUpperCase()),
+          from: fromToMatch[2].trim(),
+          to: fromToMatch[3].trim()
+        });
+      }
+    }
+    return diffs;
+  }
+
+  hasCreatedFields(log: any): boolean {
+    const vals = log?.metadata?.new_values;
+    return !!(vals && typeof vals === 'object' && Object.keys(vals).length > 0);
+  }
+
+  getCreatedFields(log: any): Array<{ field: string; value: any }> {
+    const vals = log?.metadata?.new_values;
+    if (!vals || typeof vals !== 'object') return [];
+    return Object.keys(vals)
+      .filter(k => !['id', 'created_at', 'updated_at', 'created_by', 'updated_by'].includes(k))
+      .map(k => ({
+        field: k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+        value: vals[k] !== undefined && vals[k] !== null && vals[k] !== '' ? String(vals[k]) : '—'
+      }));
+  }
+
+  hasDeletedFields(log: any): boolean {
+    const vals = log?.metadata?.deleted_values;
+    return !!(vals && typeof vals === 'object' && Object.keys(vals).length > 0);
+  }
+
+  getDeletedFields(log: any): Array<{ field: string; value: any }> {
+    const vals = log?.metadata?.deleted_values;
+    if (!vals || typeof vals !== 'object') return [];
+    return Object.keys(vals)
+      .filter(k => !['id', 'created_at', 'updated_at'].includes(k))
+      .map(k => ({
+        field: k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+        value: vals[k] !== undefined && vals[k] !== null && vals[k] !== '' ? String(vals[k]) : '—'
+      }));
+  }
+
   getMetadataEntries(log: any): Array<{ key: string; label: string; value: any }> {
     if (!this.hasMetadataDetails(log)) return [];
     const meta = log.metadata;
+    const skipKeys = ['field_diffs', 'new_values', 'old_values', 'deleted_values', 'fields_changed'];
     const labelMap: Record<string, string> = {
       target_applicant_name: 'Target Licensee Name',
       target_username: 'Target Licensee Username',
@@ -2609,23 +2726,27 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       deducted_amount: 'Deducted Amount (₹)',
       previous_balance: 'Previous Balance (₹)',
       remaining_balance: 'Remaining Balance (₹)',
-      action_type: 'Action Sub-Type',
+      action_type: 'Action Type',
       license_suspended: 'License Suspended',
       application_terminated: 'Application Terminated',
       wallet_debited: 'Wallet Debited',
-      fields_changed: 'Modified Fields',
       model: 'Data Model',
       target_name: 'Target Name',
+      record_id: 'Record Primary Key',
+      record_name: 'Record Identifier',
+      summary: 'Operation Summary',
       reason: 'Reason / Remarks',
       admin_username: 'Admin Username',
       admin_role: 'Admin Role'
     };
 
-    return Object.keys(meta).map(k => ({
-      key: k,
-      label: labelMap[k] || k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-      value: Array.isArray(meta[k]) ? meta[k].join(', ') : meta[k]
-    }));
+    return Object.keys(meta)
+      .filter(k => !skipKeys.includes(k) && typeof meta[k] !== 'object')
+      .map(k => ({
+        key: k,
+        label: labelMap[k] || k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+        value: meta[k]
+      }));
   }
 
   getForwardedRecipients(log: any): Array<{ id?: string; username?: string; fullName?: string; full_name?: string; role?: string }> {
