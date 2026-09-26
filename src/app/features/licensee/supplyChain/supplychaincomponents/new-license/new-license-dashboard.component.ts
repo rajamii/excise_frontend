@@ -17,6 +17,7 @@ import { SidebarPendingBadgeService } from '../../../../../shared/services/sideb
 import { timeout } from 'rxjs';
 import { ResolveObjectionsDialogComponent } from './resolve-objections-dialog/resolve-objections-dialog.component';
 import { ObjectionDetailsDialogComponent } from './objection-details-dialog/objection-details-dialog.component';
+import { ApplicationFeeSlipDialogComponent } from './application-fee-slip-dialog/application-fee-slip-dialog.component';
 
 export interface ActiveCountdownTimer {
   timerType: 'objection' | 'payment';
@@ -54,6 +55,10 @@ interface NewLicenseItem {
   licenseSubCategoryName: string;
   submittedOn: string;
   paymentStatus: string;
+  isApplicationFeePaid?: boolean;
+  applicationFeeTransactionId?: string;
+  applicationFeePaymentDate?: string;
+  modeOfOperation?: string;
   isLicenseFeePaid?: boolean;
   isSecurityFeePaid?: boolean;
   canView: boolean;
@@ -737,6 +742,30 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  openApplicationFeeSlip(row: NewLicenseItem): void {
+    if (!row?.applicationId) return;
+
+    this.dialog.open(ApplicationFeeSlipDialogComponent, {
+      width: '820px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+      panelClass: 'application-fee-slip-dialog-panel',
+      data: {
+        applicationId: row.applicationId,
+        applicantName: row.applicantName,
+        establishmentName: row.establishmentName,
+        licenseCategoryName: row.licenseCategoryName,
+        licenseSubCategoryName: row.licenseSubCategoryName,
+        modeOfOperation: row.modeOfOperation || 'Self',
+        submittedOn: row.submittedOn,
+        paymentStatus: row.paymentStatus || 'Successful',
+        transactionId: row.applicationFeeTransactionId || '',
+        paymentDate: row.applicationFeePaymentDate || '',
+        amount: 500.00
+      }
+    });
+  }
+
   private flattenGroupedData(grouped: GroupedNewLicenseResponse): NewLicenseItem[] {
     const mapGroup = (items: any[] | undefined, statusGroup: NewLicenseItem['statusGroup']): NewLicenseItem[] => {
       if (!Array.isArray(items)) {
@@ -761,6 +790,17 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
 
         const canView = paymentStatus === 'Successful' || feePaid;
         const canPayNow = this.isLicenseeUser() && !feePaid && paymentStatus !== 'Successful' && !isRejected;
+        const isApplicationFeePaid = Boolean(feePaid || paymentStatus === 'Successful');
+        const applicationFeeTransactionId = String(
+          item?.application_fee_transaction_id ||
+          item?.applicationFeeTransactionId ||
+          item?.transaction_id ||
+          item?.transactionId ||
+          ''
+        ).trim();
+        const applicationFeePaymentDate = item?.application_fee_payment_date || item?.applicationFeePaymentDate || null;
+        const modeOfOperation = String(item?.mode_of_operation || item?.modeOfOperation || 'Self');
+
         const paymentDateRaw = item?.application_fee_payment_date || item?.applicationFeePaymentDate;
         const submittedOn = paymentStatus === 'Successful'
           ? this.formatDate(paymentDateRaw || item?.created_at || item?.createdAt || item?.submitted_on)
@@ -881,6 +921,10 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
           licenseSubCategoryName: subCategoryName,
           submittedOn,
           paymentStatus,
+          isApplicationFeePaid,
+          applicationFeeTransactionId,
+          applicationFeePaymentDate,
+          modeOfOperation,
           isLicenseFeePaid,
           isSecurityFeePaid,
           canView,

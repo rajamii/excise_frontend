@@ -1,0 +1,207 @@
+<div class="slip-dialog-container">
+  <!-- Dialog Close Button (Screen only) -->
+  <button type="button" class="btn-close-dialog no-print" (click)="close()" aria-label="Close">
+    <i class="bi bi-x-lg"></i>
+  </button>
+
+  <!-- 4-Border Framed Official Printable Slip Card -->
+  <div class="slip-card-frame" id="printableSlipFrame">
+    <div class="slip-card" id="printableSlipCard">
+      <!-- Watermark of Sikkim Excise (Horizontal Repeating Rows Across Whole Page) -->
+      <div class="watermark-grid" aria-hidden="true">
+        <div class="watermark-row" *ngFor="let r of watermarkRows">
+          <span>SIKKIM EXCISE</span>
+          <span class="dot">•</span>
+          <span>GOVERNMENT OF SIKKIM</span>
+          <span class="dot">•</span>
+          <span>SIKKIM EXCISE</span>
+          <span class="dot">•</span>
+          <span>SEMS</span>
+          <span class="dot">•</span>
+          <span>SIKKIM EXCISE</span>
+        </div>
+      </div>
+
+      <!-- Header with Government Crest / Title -->
+      <div class="slip-header">
+        <div class="gov-crest">
+          <div class="crest-placeholder">
+            <i class="bi bi-bank2"></i>
+          </div>
+        </div>
+        <div class="header-titles">
+          <h3 class="gov-title">GOVERNMENT OF SIKKIM</h3>
+          <h4 class="dept-title">EXCISE DEPARTMENT</h4>
+          <p class="portal-sub">Sikkim Excise Management System (SEMS)</p>
+          <div class="slip-type-badge">
+            <span>E-PAYMENT RECEIPT / APPLICATION CHALLAN</span>
+          </div>
+        </div>
+        <div class="qr-box no-print">
+          <i class="bi bi-qr-code-scan"></i>
+          <span class="qr-caption">SEMS VERIFIED</span>
+        </div>
+      </div>
+
+      <!-- Payment Status Banner -->
+      <div class="payment-status-banner">
+        <div class="status-left">
+          <div class="status-seal">
+            <i class="bi bi-check-circle-fill"></i>
+          </div>
+          <div class="status-meta">
+            <div class="status-title">PAYMENT SUCCESSFUL</div>
+            <div class="status-subtitle">Application Processing Fee Confirmed</div>
+          </div>
+        </div>
+        <div class="status-right">
+          <div class="amount-pill">
+            <span class="currency">₹</span>
+            <span class="num">{{ slipData.amount | number:'1.2-2' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Key Info Grid -->
+      <div class="info-section">
+        <h5 class="section-title">
+          <i class="bi bi-receipt-cutoff me-2"></i>Application & Transaction Details
+        </h5>
+
+        <div class="details-grid">
+          <div class="grid-item">
+            <span class="item-label">Application Reference ID</span>
+            <span class="item-value mono highlight-code">
+              {{ slipData.applicationId }}
+              <button type="button" class="btn-copy no-print" (click)="copyToClipboard(slipData.applicationId, 'appId')" [title]="copiedField === 'appId' ? 'Copied!' : 'Copy Application ID'">
+                <i class="bi" [ngClass]="copiedField === 'appId' ? 'bi-check-lg text-success' : 'bi-copy'"></i>
+              </button>
+            </span>
+          </div>
+
+          <div class="grid-item">
+            <span class="item-label">Transaction Reference (UTR)</span>
+            <span class="item-value mono">
+              {{ slipData.transactionId || 'FORCE-NLI-' + slipData.applicationId }}
+              <button type="button" class="btn-copy no-print" (click)="copyToClipboard(slipData.transactionId || slipData.applicationId, 'txnId')" [title]="copiedField === 'txnId' ? 'Copied!' : 'Copy Transaction ID'">
+                <i class="bi" [ngClass]="copiedField === 'txnId' ? 'bi-check-lg text-success' : 'bi-copy'"></i>
+              </button>
+            </span>
+          </div>
+
+          <div class="grid-item">
+            <span class="item-label">Applicant Name</span>
+            <span class="item-value">{{ slipData.applicantName }}</span>
+          </div>
+
+          <div class="grid-item">
+            <span class="item-label">Establishment Name</span>
+            <span class="item-value">{{ slipData.establishmentName }}</span>
+          </div>
+
+          <div class="grid-item grid-item--full">
+            <span class="item-label">License Category</span>
+            <span class="item-value">
+              <strong>{{ slipData.licenseCategoryName }}</strong>
+              <span *ngIf="slipData.licenseSubCategoryName" class="text-muted ms-1">({{ slipData.licenseSubCategoryName }})</span>
+            </span>
+          </div>
+
+          <div class="grid-item">
+            <span class="item-label">Mode of Operation</span>
+            <span class="item-value">
+              <span class="badge bg-light text-dark border">{{ slipData.modeOfOperation || 'Self' }}</span>
+            </span>
+          </div>
+
+          <div class="grid-item">
+            <span class="item-label">Head Of Account (HOA)</span>
+            <span class="item-value mono">{{ slipData.hoa || '0039-00-800-45-02' }}</span>
+          </div>
+
+          <div class="grid-item">
+            <span class="item-label">Payment Date & Time</span>
+            <span class="item-value">{{ (slipData.paymentDate || slipData.submittedOn) | date:'medium' }}</span>
+          </div>
+
+          <div class="grid-item">
+            <span class="item-label">Payment Mode / Gateway</span>
+            <span class="item-value">BillDesk Online Gateway (NetBanking/UPI/Card)</span>
+          </div>
+
+          <div class="grid-item grid-item--full" *ngIf="slipData.sbmApplicationId">
+            <span class="item-label">Linked Salesman / Barman Application</span>
+            <span class="item-value mono">
+              {{ slipData.sbmApplicationId }}
+              <span class="badge bg-success-subtle text-success border border-success ms-2">Submitted</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fee Breakdown Table -->
+      <div class="fee-table-container">
+        <table class="fee-table">
+          <thead>
+            <tr>
+              <th>Sl.</th>
+              <th>Fee Description</th>
+              <th>Module Code</th>
+              <th>Head of Account</th>
+              <th class="text-end">Amount (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td>
+                <strong>New License Application Processing Fee</strong>
+                <div class="text-muted small">Standard mandatory non-refundable application scrutiny fee</div>
+              </td>
+              <td><code>001</code></td>
+              <td><code>{{ slipData.hoa || '0039-00-800-45-02' }}</code></td>
+              <td class="text-end fw-bold">₹ {{ slipData.amount | number:'1.2-2' }}</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td colspan="4" class="text-end total-label">Total Amount Paid:</td>
+              <td class="text-end total-amount">₹ {{ slipData.amount | number:'1.2-2' }}</td>
+            </tr>
+          </tfoot>
+        </table>
+        <div class="amount-in-words">
+          <strong>Amount in Words:</strong> Rupees Five Hundred Only
+        </div>
+      </div>
+
+      <!-- Official Footer & Stamp -->
+      <div class="slip-footer">
+        <div class="footer-terms">
+          <p class="terms-text">
+            <i class="bi bi-info-circle me-1"></i>
+            This is an electronically generated receipt issued under the authority of the Excise Department, Government of Sikkim.
+            This challan confirms the successful receipt of the application processing fee for departmental scrutiny.
+          </p>
+        </div>
+        <div class="footer-stamp">
+          <div class="digital-seal">
+            <i class="bi bi-shield-check"></i>
+            <span>SEMS VERIFIED</span>
+            <small>GOVT OF SIKKIM</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dialog Action Buttons (No Print) -->
+  <div class="dialog-actions no-print">
+    <button type="button" class="btn btn-primary btn-print" (click)="printSlip()">
+      <i class="bi bi-printer-fill me-1"></i> Print / Download Slip
+    </button>
+    <button type="button" class="btn btn-outline-secondary" (click)="close()">
+      Close
+    </button>
+  </div>
+</div>

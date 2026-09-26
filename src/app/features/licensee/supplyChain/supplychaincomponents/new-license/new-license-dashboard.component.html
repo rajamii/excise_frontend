@@ -127,14 +127,25 @@
             <td>{{ row.submittedOn }}</td>
             <!-- Payment -->
             <td>
-              <span class="badge"
-                [ngClass]="{
-                  'bg-success': row.paymentStatus === 'Successful',
-                  'bg-danger': row.paymentStatus === 'Failed',
-                  'bg-warning text-dark': row.paymentStatus === 'Pending'
-                }">
-                {{ row.paymentStatus }}
-              </span>
+              <div class="d-flex flex-column align-items-start gap-1">
+                <span class="badge"
+                  [ngClass]="{
+                    'bg-success': row.paymentStatus === 'Successful',
+                    'bg-danger': row.paymentStatus === 'Failed',
+                    'bg-warning text-dark': row.paymentStatus === 'Pending'
+                  }">
+                  {{ row.paymentStatus }}
+                </span>
+                <button
+                  *ngIf="row.paymentStatus === 'Successful' || row.isApplicationFeePaid"
+                  type="button"
+                  class="btn btn-sm view-slip-btn d-inline-flex align-items-center gap-1 mt-1"
+                  (click)="openApplicationFeeSlip(row)"
+                  title="View Application Fee Payment Slip (₹500)">
+                  <i class="bi bi-receipt"></i>
+                  <span>View Slip</span>
+                </button>
+              </div>
             </td>
             <!-- License Category -->
             <td>
