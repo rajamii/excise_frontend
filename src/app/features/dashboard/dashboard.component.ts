@@ -4652,47 +4652,63 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.showBreweryOrDistilleryWalletViews = false;
     this.showManufacturingWalletNav = false;
 
-    // Keep login fast: derive initial menu visibility only from licenses.
+    // Keep login fast: derive menu and wallet access from licenses + applications
     this.walletEligibilityResolved = true;
     this.walletEligibilityLoading = false;
-    this.licenseMeService
-      .getMyLicenses()
-      .subscribe({
-        next: (licenses) => {
-          const licenseRows = Array.isArray(licenses) ? licenses : [];
-          this.myLicenses = licenseRows;
-          const menuRows = filterRowsForSupplyChainSidebarMenus(licenseRows);
-          const hasDistilleryMenu = menuRows.some((item) => this.isDistillery(item));
-          const hasBreweryMenu = menuRows.some((item) => this.isBrewery(item));
 
-          this.showDistilleryMenus = hasDistilleryMenu;
-          this.showBreweryOrDistilleryMenus = hasDistilleryMenu || hasBreweryMenu;
+    forkJoin({
+      licenses: this.licenseMeService.getMyLicenses().pipe(catchError(() => of([]))),
+      applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus(false, this.dashboardConfig).pipe(
+        catchError(() => of({ applied: [], pending: [], awaitingPayment: [], approved: [], objection: [], rejected: [] } as any))
+      )
+    }).subscribe({
+      next: ({ licenses, applications }) => {
+        const licenseRows = Array.isArray(licenses) ? licenses : [];
+        this.myLicenses = licenseRows;
 
-          const hasDistilleryAnywhere = licenseRows.some((item) => this.isDistillery(item));
-          const hasBreweryAnywhere = licenseRows.some((item) => this.isBrewery(item));
-          const isDist = this.isDistributorUser() || licenseRows.some((item) => this.isDistributorItem(item));
-          this.showBreweryOrDistilleryWalletViews = hasDistilleryAnywhere || hasBreweryAnywhere || isDist;
-          this.showManufacturingWalletNav = this.computeWalletNavVisible(licenseRows);
-          this.licenseeMenuAccessResolved = true;
-          this.enforceSectionAccess();
-          this.ensureWalletViewParamAllowed(this.route.snapshot.queryParams);
-          this.updateAvailableChartModules();
-          this.checkRenewalEligibility(licenseRows, []);
-          this.dashboardInitLoadHandled = true;
-          this.loadDashboardData();
-        },
-        error: () => {
-          this.showDistilleryMenus = false;
-          this.showBreweryOrDistilleryMenus = false;
-          this.showBreweryOrDistilleryWalletViews = this.isDistributorUser();
-          this.showManufacturingWalletNav = false;
-          this.licenseeMenuAccessResolved = true;
-          this.enforceSectionAccess();
-          this.updateAvailableChartModules();
-          this.dashboardInitLoadHandled = true;
-          this.loadDashboardData();
-        }
-      });
+        const appRows = [
+          ...(applications?.applied || []),
+          ...(applications?.pending || []),
+          ...(applications?.awaitingPayment || []),
+          ...(applications?.approved || []),
+          ...(applications?.objection || []),
+          ...(applications?.rejected || [])
+        ];
+
+        const allRows = [...licenseRows, ...appRows];
+
+        const menuRows = filterRowsForSupplyChainSidebarMenus(licenseRows);
+        const hasDistilleryMenu = menuRows.some((item) => this.isDistillery(item));
+        const hasBreweryMenu = menuRows.some((item) => this.isBrewery(item));
+
+        this.showDistilleryMenus = hasDistilleryMenu;
+        this.showBreweryOrDistilleryMenus = hasDistilleryMenu || hasBreweryMenu;
+
+        const hasDistilleryAnywhere = allRows.some((item) => this.isDistillery(item));
+        const hasBreweryAnywhere = allRows.some((item) => this.isBrewery(item));
+        const isDist = this.isDistributorUser() || allRows.some((item) => this.isDistributorItem(item));
+        this.showBreweryOrDistilleryWalletViews = hasDistilleryAnywhere || hasBreweryAnywhere || isDist;
+        this.showManufacturingWalletNav = this.computeWalletNavVisible(allRows);
+        this.licenseeMenuAccessResolved = true;
+        this.enforceSectionAccess();
+        this.ensureWalletViewParamAllowed(this.route.snapshot.queryParams);
+        this.updateAvailableChartModules();
+        this.checkRenewalEligibility(licenseRows, []);
+        this.dashboardInitLoadHandled = true;
+        this.loadDashboardData();
+      },
+      error: () => {
+        this.showDistilleryMenus = false;
+        this.showBreweryOrDistilleryMenus = false;
+        this.showBreweryOrDistilleryWalletViews = this.isDistributorUser();
+        this.showManufacturingWalletNav = false;
+        this.licenseeMenuAccessResolved = true;
+        this.enforceSectionAccess();
+        this.updateAvailableChartModules();
+        this.dashboardInitLoadHandled = true;
+        this.loadDashboardData();
+      }
+    });
   }
 
   private ensureLicenseeWalletEligibilityLoaded(): void {

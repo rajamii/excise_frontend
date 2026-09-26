@@ -90,36 +90,44 @@ export function isWalletEnabledStage(item: any): boolean {
     return true;
   }
 
-  // 2. Check if explicitly marked approved
+  // 2. Explicit approved flag
   if (item?.is_approved === true || item?.isApproved === true) {
     return true;
   }
 
-  // 3. Check status group
+  // 3. Check status group / status string
   const statusGroup = normalizeStageToken(
     item?.status_group ??
     item?.statusGroup ??
     item?.status ??
+    item?.current_status ??
     ''
   );
-  if (statusGroup === 'awaitingpayment' || statusGroup === 'approved' || statusGroup === 'issued' || statusGroup === 'active') {
+  if (
+    statusGroup === 'awaitingpayment' ||
+    statusGroup === 'approved' ||
+    statusGroup === 'issued' ||
+    statusGroup === 'active' ||
+    statusGroup === 'finalapproved' ||
+    statusGroup === 'paymentpending'
+  ) {
     return true;
   }
 
-  // 4. Check stage name / stage code
-  const stage = str(
-    item?.current_stage_name ??
-    item?.currentStageName ??
-    item?.current_stage ??
-    item?.currentStage ??
-    item?.stage_name ??
-    item?.stageName ??
-    item?.stage_code ??
-    item?.stageCode ??
-    ''
+  // 4. Check stage name / stage code from any property (nested object or string)
+  const stageObj = item?.current_stage ?? item?.currentStage ?? item?.stage;
+  const stageObjName = typeof stageObj === 'object' ? str(stageObj?.name ?? stageObj?.stage_name ?? stageObj?.stageName ?? stageObj?.description ?? '') : '';
+  const stageObjCode = typeof stageObj === 'object' ? str(stageObj?.stage_code ?? stageObj?.stageCode ?? stageObj?.code ?? '') : '';
+
+  const rawStage = (
+    str(item?.current_stage_name ?? item?.currentStageName ?? item?.stage_name ?? item?.stageName ?? '') ||
+    stageObjName ||
+    (typeof stageObj === 'string' ? stageObj : '') ||
+    str(item?.stage_code ?? item?.stageCode ?? '') ||
+    stageObjCode
   ).toLowerCase();
 
-  const normalized = stage.replace(/[^a-z0-9]/g, '');
+  const normalized = rawStage.replace(/[^a-z0-9]/g, '');
 
   if (
     normalized.includes('awaitingpayment') ||
@@ -128,7 +136,10 @@ export function isWalletEnabledStage(item: any): boolean {
     normalized.includes('securitydeposit') ||
     normalized.includes('approved') ||
     normalized.includes('licenseissued') ||
-    normalized.includes('active')
+    normalized.includes('active') ||
+    normalized.includes('stg010') ||
+    normalized.includes('stg011') ||
+    normalized.includes('stg012')
   ) {
     return true;
   }
