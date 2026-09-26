@@ -849,6 +849,27 @@
       .required {
         color: #dc2626;
       }
+
+      .badge-fixed-amount {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        font-weight: 700;
+        color: #475569;
+        background: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        padding: 2px 8px;
+        border-radius: 12px;
+        text-transform: none;
+
+        mat-icon {
+          font-size: 12px;
+          width: 12px;
+          height: 12px;
+          color: #64748b;
+        }
+      }
     }
 
     .input-prefix-wrapper {
@@ -861,20 +882,53 @@
         left: 12px;
         font-weight: 700;
         color: #64748b;
+        z-index: 2;
+      }
+
+      .input-lock-icon {
+        position: absolute;
+        right: 12px;
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: #94a3b8;
+        pointer-events: none;
+      }
+
+      &--disabled {
+        background: #f1f5f9;
+        border-radius: 8px;
       }
 
       .custom-input {
         padding-left: 30px;
+        padding-right: 36px;
         height: 42px;
         border-radius: 8px;
         border: 1px solid #cbd5e1;
-        font-size: 14px;
-        font-weight: 600;
+        font-size: 15px;
+        font-weight: 700;
         width: 100%;
 
         &:focus {
           border-color: #3b82f6;
           box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        &.input--disabled,
+        &:disabled {
+          background-color: #f8fafc;
+          border-color: #cbd5e1;
+          color: #1e293b;
+          cursor: not-allowed;
+          opacity: 0.95;
+          user-select: none;
+          box-shadow: none;
+
+          &:focus {
+            border-color: #cbd5e1;
+            box-shadow: none;
+          }
         }
       }
     }

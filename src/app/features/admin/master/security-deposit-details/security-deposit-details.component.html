@@ -350,14 +350,13 @@
     <div class="warning-alert-box">
       <mat-icon class="alert-icon">warning</mat-icon>
       <div class="alert-text">
-        <strong>CRITICAL ACTION:</strong> Deducting the security deposit will automatically:
+        <strong>IMPORTANT NOTICE:</strong> Deducting the security deposit will permanently terminate and deactivate this license:
         <ul>
-          <li><b>Transition application to "Terminated" stage</b> in workflow.</li>
-          <li><b>Suspend the license</b> (<code>is_active = False</code>).</li>
-          <li>Set <b><code>is_security_fee_paid = False</code></b> in <code>NewLicenseApplication</code>.</li>
-          <li>Revoke application approval (<code>is_approved = False</code>).</li>
-          <li>Debit licensee's Security Deposit wallet balance with DR audit entry.</li>
-          <li>Record an immutable entry in <code>AdminLog</code> &amp; workflow transaction history.</li>
+          <li>The license will be <b>immediately suspended and deactivated</b>.</li>
+          <li>The application status will be <b>officially marked as Terminated</b>.</li>
+          <li>The security deposit will be <b>debited and forfeited from the licensee's account</b>.</li>
+          <li>The licensee will <b>no longer be permitted to operate or transact</b> in the system.</li>
+          <li>An immutable record will be logged in the department audit register.</li>
         </ul>
       </div>
     </div>
@@ -396,19 +395,23 @@
 
     <!-- Deduction Form -->
     <div class="form-group mt-3">
-      <label class="input-label">Deduction Amount (₹) <span class="required">*</span></label>
-      <div class="input-prefix-wrapper">
+      <label class="input-label d-flex align-items-center justify-content-between">
+        <span>Deduction Amount (₹) <span class="required">*</span></span>
+        <span class="badge-fixed-amount"><mat-icon>lock</mat-icon> Non-editable</span>
+      </label>
+      <div class="input-prefix-wrapper input-prefix-wrapper--disabled">
         <span class="input-prefix">₹</span>
         <input
           type="number"
-          class="form-control custom-input"
-          [(ngModel)]="deductAmount"
-          [max]="getBalanceAmount(selectedRecord)"
-          min="1"
-          placeholder="Enter amount to deduct"
+          class="form-control custom-input input--disabled"
+          [ngModel]="deductAmount"
+          [disabled]="true"
+          readonly
+          placeholder="Amount to deduct"
         />
+        <mat-icon class="input-lock-icon">lock</mat-icon>
       </div>
-      <small class="text-muted">Maximum available to deduct: {{ formatCurrency(getBalanceAmount(selectedRecord)) }}</small>
+      <small class="text-muted">Total available security deposit amount to be deducted: {{ formatCurrency(getBalanceAmount(selectedRecord)) }}</small>
     </div>
 
     <div class="form-group mt-3">

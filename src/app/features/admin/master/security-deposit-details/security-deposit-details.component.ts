@@ -281,21 +281,20 @@ export class SecurityDepositDetailsComponent implements OnInit {
       title: 'Confirm Security Amount Deduction',
       html: `
         <div style="text-align: left; font-size: 14px; line-height: 1.6;">
-          <p>Are you sure you want to deduct <b>₹${this.deductAmount.toLocaleString('en-IN')}</b> from this security deposit?</p>
-          <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 10px; margin-top: 10px; border-radius: 4px; color: #856404;">
-            <b>⚠️ Consequence Warning:</b><br/>
-            • The associated license will be <b>SUSPENDED</b> immediately.<br/>
-            • <b>is_security_fee_paid</b> will be set to <b>False</b>.<br/>
-            • Application status will be marked revoked/terminated.<br/>
-            • Licensee's security deposit wallet will be debited.
+          <p>Are you sure you want to deduct and forfeit <b>₹${this.deductAmount.toLocaleString('en-IN')}</b> from this security deposit?</p>
+          <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px; margin-top: 10px; border-radius: 6px; color: #92400e; font-size: 13px;">
+            <b>⚠️ Important Notice:</b><br/>
+            • The associated license will be <b>permanently suspended and deactivated</b>.<br/>
+            • The application status will be <b>officially marked as Terminated</b>.<br/>
+            • The licensee's security deposit balance will be <b>debited and forfeited</b>.
           </div>
         </div>
       `,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Yes, Deduct & Suspend License',
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Yes, Deduct & Terminate License',
       cancelButtonText: 'Cancel',
     }).then((result) => {
       if (result.isConfirmed) {
