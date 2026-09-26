@@ -287,7 +287,7 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
               `,
               showCancelButton: true,
               showConfirmButton: true,
-              confirmButtonText: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px;vertical-align:middle"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Yes, Renew',
+              confirmButtonText: 'Yes, Renew',
               cancelButtonText: 'Cancel',
               customClass: {
                 popup:         'rl-swal-popup',
@@ -297,6 +297,26 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
               },
               buttonsStyling: false,
               focusConfirm: false,
+              showClass: { popup: '' },
+              hideClass: { popup: '' },
+              allowOutsideClick: true,
+              allowEscapeKey: true,
+              didOpen: (popup) => {
+                const cancelBtn = popup.querySelector('.rl-swal-cancel') as HTMLElement;
+                if (cancelBtn) {
+                  cancelBtn.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    Swal.close();
+                  };
+                }
+              },
+              didClose: () => {
+                try {
+                  document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+                  document.documentElement.classList.remove('swal2-shown');
+                } catch {}
+              }
             }).then((result) => {
               if (result.isConfirmed) {
                 this.processRenewal(renewalId!, 'new-license');
@@ -792,6 +812,8 @@ export class MyLicensesComponent implements OnInit, OnDestroy {
               showCancelButton: false,
               allowOutsideClick: true,
               allowEscapeKey: true,
+              showClass: { popup: '' },
+              hideClass: { popup: '' },
               customClass: {
                 popup: 'rl-swal-popup',
               },

@@ -942,67 +942,60 @@ app-unified-action-buttons button[mat-icon-button][color="accent"]:hover,
 // ── SweetAlert2 wrapper ──────────────────────────────────────────
 .rl-swal-popup {
   padding: 0 !important;
-  border-radius: 24px !important;
+  border-radius: 20px !important;
   overflow: hidden !important;
-  box-shadow:
-    0 32px 80px rgba(30, 27, 75, 0.18),
-    0 8px 24px rgba(15, 23, 42, 0.12) !important;
-  width: 620px !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22) !important;
+  width: 580px !important;
   max-width: 96vw !important;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-  animation: rlPopupIn 0.30s cubic-bezier(0.22, 1, 0.36, 1) both !important;
-}
-
-@keyframes rlPopupIn {
-  from { opacity: 0; transform: translateY(14px); }
-  to   { opacity: 1; transform: translateY(0); }
+  animation: none !important;
+  transform: none !important;
 }
 
 .rl-swal-actions {
-  padding: 16px 26px 26px !important;
+  padding: 16px 24px 22px !important;
   gap: 12px !important;
   margin-top: 0 !important;
   position: relative !important;
   z-index: 10 !important;
   background: #ffffff !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 .rl-confirm-btn {
-  border-radius: 12px !important;
-  padding: 12px 26px !important;
+  border-radius: 10px !important;
+  padding: 11px 24px !important;
   font-size: 14px !important;
   font-weight: 700 !important;
   letter-spacing: 0.1px !important;
-  box-shadow: 0 4px 14px rgba(67, 56, 202, 0.28) !important;
-  transition: all 0.2s ease !important;
-  background: linear-gradient(135deg, #3730a3 0%, #4338ca 60%, #4f46e5 100%) !important;
+  color: #ffffff !important;
+  background: #4338ca !important;
   border: none !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
 
   &:hover:not(:disabled) {
-    box-shadow: 0 6px 20px rgba(67, 56, 202, 0.38) !important;
-    transform: translateY(-1px) !important;
-    background: linear-gradient(135deg, #312e81 0%, #3730a3 60%, #4338ca 100%) !important;
+    background: #3730a3 !important;
   }
-  &:active { transform: translateY(0) !important; }
 }
 
 .rl-cancel-btn {
-  border-radius: 12px !important;
-  padding: 12px 26px !important;
+  border-radius: 10px !important;
+  padding: 11px 24px !important;
   font-size: 14px !important;
   font-weight: 600 !important;
   background: #f1f5f9 !important;
   color: #334155 !important;
-  border: 1.5px solid #cbd5e1 !important;
-  box-shadow: none !important;
-  transition: all 0.2s ease !important;
-  opacity: 1 !important;
+  border: 1px solid #cbd5e1 !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
 
   &:hover, &:focus {
     background: #e2e8f0 !important;
     color: #1e293b !important;
     border-color: #94a3b8 !important;
-    opacity: 1 !important;
   }
 }
 
@@ -1657,42 +1650,39 @@ app-unified-action-buttons button[mat-icon-button][color="accent"]:hover,
   display: inline-flex !important;
   align-items: center !important;
   gap: 6px !important;
-  border-radius: 12px !important;
-  padding: 12px 28px !important;
+  border-radius: 10px !important;
+  padding: 11px 24px !important;
   font-size: 14px !important;
   font-weight: 700 !important;
   letter-spacing: 0.1px !important;
   color: #ffffff !important;
-  background: linear-gradient(135deg, #3730a3 0%, #4338ca 60%, #4f46e5 100%) !important;
+  background: #4338ca !important;
   border: none !important;
-  box-shadow: 0 4px 14px rgba(67, 56, 202, 0.30) !important;
-  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
 
   &:hover {
-    box-shadow: 0 6px 20px rgba(67, 56, 202, 0.40) !important;
-    transform: translateY(-1px) !important;
-    filter: brightness(1.07) !important;
+    background: #3730a3 !important;
   }
-  &:active { transform: translateY(0) !important; }
 }
 
 .rl-swal-cancel {
-  border-radius: 12px !important;
-  padding: 12px 28px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  border-radius: 10px !important;
+  padding: 11px 24px !important;
   font-size: 14px !important;
   font-weight: 600 !important;
   color: #334155 !important;
   background: #f1f5f9 !important;
-  border: 1.5px solid #cbd5e1 !important;
-  box-shadow: none !important;
-  transition: all 0.2s ease !important;
-  opacity: 1 !important;
+  border: 1px solid #cbd5e1 !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
 
   &:hover {
     background: #e2e8f0 !important;
     color: #1e293b !important;
     border-color: #94a3b8 !important;
-    opacity: 1 !important;
   }
 }
 
