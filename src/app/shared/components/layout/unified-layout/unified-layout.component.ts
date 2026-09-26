@@ -1716,15 +1716,14 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private applySubtypeMenuRules(rows: any[], categoryMasters?: any[], subcategoryMasters?: any[]): void {
-    const hasDistilleryAny = rows.some((item) => this.isDistillery(item));
-    const hasBreweryAny = rows.some((item) => this.isBrewery(item));
-    const menuRows = filterRowsForSupplyChainSidebarMenus(rows);
+    const validActiveRows = rows.filter((row) => this.isValidActiveLicenseRow(row));
+    const menuRows = filterRowsForSupplyChainSidebarMenus(validActiveRows);
     const hasDistillery = menuRows.some((item) => this.isDistillery(item));
     const hasBrewery = menuRows.some((item) => this.isBrewery(item));
 
     this.showDistilleryMenus = hasDistillery;
     this.showBreweryOrDistilleryMenus = hasDistillery || hasBrewery;
-    this.hasBreweryOrDistilleryWalletViews = hasDistilleryAny || hasBreweryAny;
+    this.hasBreweryOrDistilleryWalletViews = hasDistillery || hasBrewery;
     this.showManufacturingWalletNav = this.computeWalletNavVisible(rows);
 
     const userRoleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
@@ -1752,8 +1751,6 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
     // Resolve Dry Day Permit (Special Permit) menu flag:
     // Only available if user is Officer/Admin (roles 4, 10) OR if the licensee holds an active valid license whose category has isSpecialPermitAllowed enabled in master
-    const validActiveRows = rows.filter((row) => this.isValidActiveLicenseRow(row));
-
     const isOfficerOrAdminSpecial = [4, 10].includes(userRoleId);
     if (isOfficerOrAdminSpecial) {
       this.showSpecialPermitMenu = true;
@@ -2127,8 +2124,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         return false;
       }
 
-      const isFeePaid = item?.is_license_fee_paid ?? item?.isLicenseFeePaid;
-      if (isFeePaid === false) {
+      const isLicenseFeePaid = item?.is_license_fee_paid === true || item?.isLicenseFeePaid === true;
+      const isSecurityFeePaid = item?.is_security_fee_paid === true || item?.isSecurityFeePaid === true;
+      if (!isLicenseFeePaid || !isSecurityFeePaid) {
         return false;
       }
     }

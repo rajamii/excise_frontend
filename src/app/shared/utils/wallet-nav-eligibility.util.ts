@@ -137,27 +137,97 @@ export function isAwaitingLicenseFeePaymentPending(item: any): boolean {
   return applicationRowAwaitingFeeUnpaid(item);
 }
 
+export function parseDateToTimestamp(raw: any): number | null {
+  if (!raw) return null;
+  if (raw instanceof Date) return isNaN(raw.getTime()) ? null : raw.getTime();
+  if (typeof raw === 'number') return raw;
+  if (typeof raw !== 'string') return null;
+
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed === 'N/A' || trimmed === 'null' || trimmed === 'undefined') return null;
+
+  // Format: YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    const d = new Date(trimmed + 'T23:59:59.999');
+    return isNaN(d.getTime()) ? null : d.getTime();
+  }
+
+  // Format: DD-MM-YYYY or DD/MM/YYYY
+  const dmyMatch = /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/.exec(trimmed);
+  if (dmyMatch) {
+    const day = Number(dmyMatch[1]);
+    const month = Number(dmyMatch[2]) - 1;
+    const year = Number(dmyMatch[3]);
+    const d = new Date(year, month, day, 23, 59, 59, 999);
+    return isNaN(d.getTime()) ? null : d.getTime();
+  }
+
+  const parsed = new Date(trimmed).getTime();
+  return isNaN(parsed) ? null : parsed;
+}
+
 /**
- * Rows that may drive distillery/brewery sidebar. Drops awaiting-fee applications and
- * issued licenses linked to those applications (by `source_object_id` ↔ `application_id`).
+ * Rows that may drive distillery/brewery supply chain sidebar (Bulk Spirit, Transit Permit, Hologram, Stock Inventory).
+ * Strictly requires an active, issued license with valid_up_to in the future, fees paid, and not expired or suspended.
  */
 export function filterRowsForSupplyChainSidebarMenus(rows: any[]): any[] {
-  const unpaidAppIds = new Set<string>();
-  for (const r of rows) {
-    if (applicationRowAwaitingFeeUnpaid(r)) {
-      const id = str(r?.application_id ?? r?.applicationId ?? r?.pk ?? '');
-      if (id) {
-        unpaidAppIds.add(id);
+  if (!Array.isArray(rows)) {
+    return [];
+  }
+
+  return rows.filter((item) => {
+    if (!item) {
+      return false;
+    }
+
+    const licId = str(item?.license_id ?? item?.licenseId ?? '');
+    const hasLic = !!licId;
+
+    // 1. Supply chain operational menus (Bulk Spirit, Transit, Hologram) require an issued license
+    if (!hasLic) {
+      const isApproved = item?.is_approved === true || item?.isApproved === true;
+      const isLicenseFeePaid = item?.is_license_fee_paid === true || item?.isLicenseFeePaid === true;
+      const isSecurityFeePaid = item?.is_security_fee_paid === true || item?.isSecurityFeePaid === true;
+      const stage = str(
+        item?.current_stage_name ??
+        item?.currentStageName ??
+        item?.current_stage ??
+        item?.currentStage ??
+        item?.status ??
+        item?.statusGroup ??
+        item?.status_group ??
+        ''
+      ).toLowerCase();
+
+      // Unissued application must be completely approved and fees paid
+      if (!isApproved || !isLicenseFeePaid || !isSecurityFeePaid || !stage.includes('approved')) {
+        return false;
       }
     }
-  }
-  return rows.filter((item) => {
-    if (isAwaitingLicenseFeePaymentPending(item)) {
+
+    // 2. Active status check
+    const isActive = item?.is_active ?? item?.isActive;
+    if (isActive === false) {
+      return false;
+    }
+
+    const isValidNow = item?.is_valid_now ?? item?.isValidNow;
+    if (isValidNow === false) {
+      return false;
+    }
+
+    const canAccess = item?.can_access_supply_chain ?? item?.canAccessSupplyChain;
+    if (canAccess === false) {
       return false;
     }
 
     const isRejected = item?.is_rejected ?? item?.isRejected;
     if (isRejected === true) {
+      return false;
+    }
+
+    const isTerminated = item?.is_terminated ?? item?.isTerminated;
+    if (isTerminated === true) {
       return false;
     }
 
@@ -172,11 +242,30 @@ export function filterRowsForSupplyChainSidebarMenus(rows: any[]): any[] {
       ''
     ).toLowerCase();
 
-    if (stage.includes('reject') || stage.includes('cancel') || stage.includes('expire')) {
+    if (
+      stage.includes('reject') ||
+      stage.includes('terminat') ||
+      stage.includes('cancel') ||
+      stage.includes('expire') ||
+      stage.includes('objection') ||
+      stage.includes('draft') ||
+      stage.includes('awaiting')
+    ) {
       return false;
     }
 
-    // Expiry date check
+    // 3. Fee payment check
+    const licFeePaid = item?.is_license_fee_paid ?? item?.isLicenseFeePaid;
+    if (licFeePaid === false) {
+      return false;
+    }
+
+    const secFeePaid = item?.is_security_fee_paid ?? item?.isSecurityFeePaid;
+    if (secFeePaid === false) {
+      return false;
+    }
+
+    // 4. Expiry date check (valid_up_to / valid_upto)
     const rawExpiry =
       item?.valid_upto ??
       item?.validUpto ??
@@ -187,38 +276,15 @@ export function filterRowsForSupplyChainSidebarMenus(rows: any[]): any[] {
       item?.expiry_date ??
       item?.expiryDate ??
       item?.valid_until ??
-      item?.validUntil;
+      item?.validUntil ??
+      item?.license_expiry_date ??
+      item?.licenseExpiryDate;
 
-    if (rawExpiry) {
-      const exp = new Date(rawExpiry).getTime();
-      if (!isNaN(exp) && exp > 0) {
-        const isDateOnly = typeof rawExpiry === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rawExpiry.trim());
-        const effectiveExpiry = isDateOnly ? new Date(rawExpiry + 'T23:59:59.999').getTime() : exp;
-        if (effectiveExpiry < Date.now()) {
-          return false;
-        }
-      }
+    const expiryTimestamp = parseDateToTimestamp(rawExpiry);
+    if (expiryTimestamp !== null && expiryTimestamp < Date.now()) {
+      return false;
     }
 
-    // If backend provides validity hints for issued licenses, honor them so menus
-    // are hidden automatically when license expires or becomes inactive.
-    const hasLic = !!(item?.license_id ?? item?.licenseId);
-    if (hasLic) {
-      const canAccess = item?.can_access_supply_chain ?? item?.canAccessSupplyChain;
-      const isValidNow = item?.is_valid_now ?? item?.isValidNow;
-      const isActive = item?.is_active ?? item?.isActive;
-      if (canAccess === false || isValidNow === false || isActive === false) {
-        return false;
-      }
-    }
-
-    const licId = item?.license_id ?? item?.licenseId;
-    if (licId) {
-      const src = str(item?.source_object_id ?? item?.sourceObjectId ?? '');
-      if (src && unpaidAppIds.has(src)) {
-        return false;
-      }
-    }
     return true;
   });
 }
