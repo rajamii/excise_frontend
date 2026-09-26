@@ -3622,8 +3622,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                     return Array.from(new Set(actions));
                 }
             }
-            if (this.isCompanyRegistration() || this.isCompanyCollaboration() || this.isSalesmanBarmanRegistration()) {
-                if (this.isCompanyRegistrationAwaitingPayment() || this.isCompanyCollabAwaitingPayment() || this.isSalesmanBarmanAwaitingPayment()) {
+            if (this.isCompanyRegistration() || this.isCompanyCollaboration() || this.isSalesmanBarmanRegistration() || this.isRenewal() || this.isNewLicense()) {
+                if (this.isCompanyRegistrationAwaitingPayment() || this.isCompanyCollabAwaitingPayment() || this.isSalesmanBarmanAwaitingPayment() || this.isLicenseRenewalAwaitingPayment() || this.isNewLicenseAwaitingPayment()) {
                     return [];
                 }
             }
@@ -4699,6 +4699,290 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
             stageName.includes('awaiting_payment') ||
             stageName.includes('awaiting payment') ||
             (stageName.includes('awaiting') && stageName.includes('payment'));
+    }
+
+    isLicenseRenewalAwaitingPayment(): boolean {
+        if (!this.isRenewal() || !this.applicationData) return false;
+        if (!this.isLicenseeContext()) return false;
+        const stageName = String(
+            this.applicationData['current_stage_name'] ??
+            this.applicationData['currentStageName'] ??
+            this.applicationData['current_stage'] ??
+            this.applicationData.status ??
+            ''
+        ).toLowerCase();
+        return stageName.includes('awaiting_payment') ||
+            stageName.includes('awaiting payment') ||
+            (stageName.includes('awaiting') && stageName.includes('payment'));
+    }
+
+    isNewLicenseAwaitingPayment(): boolean {
+        if (!this.isNewLicense() || !this.applicationData) return false;
+        if (!this.isLicenseeContext()) return false;
+        const stageName = String(
+            this.applicationData['current_stage_name'] ??
+            this.applicationData['currentStageName'] ??
+            this.applicationData['current_stage'] ??
+            this.applicationData.status ??
+            ''
+        ).toLowerCase();
+        return stageName.includes('awaiting_payment') ||
+            stageName.includes('awaiting payment') ||
+            (stageName.includes('awaiting') && stageName.includes('payment'));
+    }
+
+    handleMakePaymentClick(): void {
+        if (this.isCompanyRegistration()) {
+            this.openCompanyRegistrationPaymentConfirmationModal();
+        } else if (this.isCompanyCollaboration()) {
+            this.openCompanyCollabPaymentConfirmationModal();
+        } else if (this.isSalesmanBarmanRegistration()) {
+            this.openSalesmanBarmanPaymentConfirmationModal();
+        } else if (this.isRenewal() || this.isNewLicense()) {
+            this.openNewLicenseOrRenewalPaymentModal();
+        }
+    }
+
+    openNewLicenseOrRenewalPaymentModal(): void {
+        const isRenewal = this.isRenewal();
+        const raw: any = this.applicationData || {};
+        const applicationId = String(
+            raw['application_id'] ??
+            raw['applicationId'] ??
+            raw['referenceNo'] ??
+            raw['refNo'] ??
+            raw['id'] ??
+            ''
+        ).trim();
+
+        if (!applicationId) {
+            Swal.fire('Error', 'Application ID is missing for payment.', 'error');
+            return;
+        }
+
+        const toNumber = (val: any): number => {
+            if (val === null || val === undefined || val === '') return 0;
+            const num = Number(val);
+            return Number.isFinite(num) ? num : 0;
+        };
+
+        const formatInr = (val: any): string => {
+            const num = toNumber(val);
+            return num.toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+        };
+
+        const toBool = (val: any): boolean => {
+            if (typeof val === 'boolean') return val;
+            if (typeof val === 'number') return val === 1;
+            if (typeof val === 'string') {
+                const s = val.trim().toLowerCase();
+                return s === 'true' || s === '1' || s === 'yes';
+            }
+            return false;
+        };
+
+        const resolveAmounts = (source: any): { licenseFee: number; securityFee: number; total: number } => {
+            const licenseFee = toNumber(
+                source?.['license_fee_amount'] ??
+                source?.['licenseFeeAmount'] ??
+                source?.['yearly_license_fee'] ??
+                source?.['yearlyLicenseFee'] ??
+                0
+            );
+            const securityFee = isRenewal ? 0 : toNumber(source?.['security_fee_amount'] ?? source?.['securityFeeAmount'] ?? 0);
+            return { licenseFee, securityFee, total: licenseFee + securityFee };
+        };
+
+        const showProceedModal = (amountSource: any) => {
+            const { licenseFee, securityFee, total } = resolveAmounts(amountSource);
+
+            const pachwaiSelected = toBool(amountSource?.pachwai ?? amountSource?.pachwai_flag ?? amountSource?.pachwai_selected);
+            const draughtSelected = toBool(amountSource?.draught_beer ?? amountSource?.draughtBeer ?? amountSource?.draughtbeer);
+            const miniBarSelected = toBool(amountSource?.mini_bar ?? amountSource?.miniBar ?? amountSource?.minibar);
+            const miniBarQty = toNumber(amountSource?.mini_bar_quantity ?? amountSource?.miniBarQuantity ?? amountSource?.minibarquantity ?? 0);
+
+            let pachwaiFee = pachwaiSelected ? 3000 : 0;
+            let draughtFee = draughtSelected ? 5000 : 0;
+            let miniBarFee = miniBarSelected ? (1000 * (miniBarQty || 1)) : 0;
+
+            const rawBreakdown = Array.isArray(amountSource?.additional_charges_breakdown)
+                ? amountSource.additional_charges_breakdown
+                : (amountSource?.additionalChargesBreakdown || []);
+
+            const dynamicBreakdownRows: { label: string; amount: number }[] = [];
+            if (rawBreakdown.length > 0) {
+                rawBreakdown.forEach((item: any) => {
+                    dynamicBreakdownRows.push({
+                        label: item.label || item.code || 'Additional Charge',
+                        amount: toNumber(item.amount || 0)
+                    });
+                });
+            } else {
+                if (pachwaiSelected) dynamicBreakdownRows.push({ label: 'Pachwai (Additional)', amount: pachwaiFee });
+                if (draughtSelected) dynamicBreakdownRows.push({ label: 'Draught Beer (Additional)', amount: draughtFee });
+                if (miniBarSelected) dynamicBreakdownRows.push({ label: `Mini Bar (Additional x${miniBarQty || 1})`, amount: miniBarFee });
+            }
+
+            const additionalTotal = dynamicBreakdownRows.reduce((sum, item) => sum + item.amount, 0);
+            const hasAdditional = dynamicBreakdownRows.length > 0;
+            const baseLicenseFee = toNumber(amountSource?.base_license_fee ?? amountSource?.baseLicenseFee ?? Math.max(0, licenseFee - additionalTotal));
+            const baseSecurityFee = toNumber(amountSource?.base_security_fee ?? amountSource?.baseSecurityFee ?? Math.max(0, securityFee - additionalTotal));
+
+            const feeRow = (label: string, amount: number, accent = false) => `
+                <div style="display:flex; justify-content:space-between; align-items:center;
+                            padding:10px 14px; border-radius:8px; margin-bottom:6px;
+                            background:${accent ? '#f0fdf8' : '#f9fafb'};
+                            border:1px solid ${accent ? '#6ee7c7' : '#e5e7eb'};">
+                  <span style="color:#374151; font-size:14px;">${label}</span>
+                  <span style="font-weight:700; color:${accent ? '#0d6e56' : '#111827'}; font-size:14px;">&#8377;${formatInr(amount)}</span>
+                </div>`;
+
+            const breakdownHtml = hasAdditional
+                ? `
+                  <div style="margin-top:16px; border-radius:10px; border:1px solid #d1fae5; overflow:hidden;">
+                    <div style="background:linear-gradient(135deg,#065f46,#059669); color:#fff; padding:10px 16px; font-size:14px; font-weight:600; letter-spacing:0.5px; display:flex; justify-content:space-between; align-items:center;">
+                      <span>&#9783; Fee Breakup (Itemized)</span>
+                      <span style="font-size:12px; font-weight:400; opacity:0.95;">Total: &#8377;${formatInr(licenseFee)}</span>
+                    </div>
+                    <div style="padding:12px 12px 4px; background:#ffffff;">
+                      ${feeRow('Base License Fee', baseLicenseFee)}
+                      ${dynamicBreakdownRows.map(r => feeRow(r.label, r.amount)).join('')}
+
+                      <!-- Total Row inside Fee Breakup -->
+                      <div style="display:flex; justify-content:space-between; align-items:center;
+                                  padding:11px 14px; border-radius:8px; margin-top:8px; margin-bottom:6px;
+                                  background:#ecfdf5; border:1.5px solid #10b981;">
+                        <span style="color:#065f46; font-size:14px; font-weight:700;">Total Fee Breakup</span>
+                        <span style="font-weight:800; color:#065f46; font-size:16px;">&#8377;${formatInr(licenseFee)}</span>
+                      </div>
+                    </div>
+                    <div style="padding:10px 16px; font-size:12.5px; color:#047857; background:#f0fdf4; border-top:1px dashed #a7f3d0; line-height:1.5;">
+                      &#9432; <b>Fee Calculation Summary:</b><br/>
+                      &bull; Base License Fee (&#8377;${formatInr(baseLicenseFee)}) + Additional Charges (&#8377;${formatInr(additionalTotal)}) = <b>&#8377;${formatInr(licenseFee)} Total Fee Breakup</b>.<br/>
+                      ${securityFee > 0 ? `&bull; The fee breakup total of <b>&#8377;${formatInr(licenseFee)}</b> applies to the <b>License Fee</b> (&#8377;${formatInr(licenseFee)}) and an equal <b>Security Deposit</b> (&#8377;${formatInr(securityFee)}), totaling <b>&#8377;${formatInr(total)} Total Payable</b>.` : ''}
+                    </div>
+                  </div>
+                `
+                : '';
+
+            Swal.fire({
+                title: '',
+                html: `
+                  <div style="font-family:'Segoe UI',sans-serif; text-align:left;">
+
+                    <!-- Header -->
+                    <div style="text-align:center; margin-bottom:20px;">
+                      <div style="display:inline-flex; align-items:center; justify-content:center;
+                                  width:52px; height:52px; border-radius:50%;
+                                  background:linear-gradient(135deg,#065f46,#10b981); margin-bottom:10px;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="white"/>
+                        </svg>
+                      </div>
+                      <div style="font-size:22px; font-weight:700; color:#065f46; line-height:1.2;">Proceed to Pay</div>
+                      <div style="font-size:13px; color:#6b7280; margin-top:4px;">Review your payment summary before proceeding</div>
+                    </div>
+
+                    <!-- Fee Summary -->
+                    <div style="border-radius:10px; border:1px solid #d1fae5; overflow:hidden; margin-bottom:12px;">
+                      <div style="background:#ecfdf5; padding:10px 16px; font-size:12px; font-weight:600;
+                                  color:#065f46; letter-spacing:0.6px; text-transform:uppercase;">
+                        Payment Summary
+                      </div>
+                      <div style="padding:12px 12px 4px; background:#ffffff;">
+                        ${feeRow('License Fee', licenseFee, true)}
+                        ${securityFee > 0 ? feeRow('Security Deposit', securityFee, true) : ''}
+                      </div>
+                      <!-- Total -->
+                      <div style="display:flex; justify-content:space-between; align-items:center;
+                                  padding:14px 16px; background:linear-gradient(135deg,#065f46,#10b981);
+                                  border-top:1px solid #6ee7c7;">
+                        <span style="color:#d1fae5; font-size:15px; font-weight:600;">Total Payable</span>
+                        <span style="color:#ffffff; font-size:20px; font-weight:800;">&#8377;${formatInr(total)}</span>
+                      </div>
+                    </div>
+
+                    ${breakdownHtml}
+
+                    <!-- Info note -->
+                    <div style="margin-top:14px; padding:14px 16px; background:#f0f9ff; border:1px solid #bae6fd;
+                                border-radius:8px; font-size:13px; color:#0369a1; text-align: left; display:flex; flex-direction:column; gap:8px;">
+                      <div style="font-weight: 700; display:flex; gap:8px; align-items:center;">
+                        <span style="font-size:16px;">&#8505;</span>
+                        <span>Important Payment Instructions:</span>
+                      </div>
+                      <ul style="margin: 0; padding-left: 20px; line-height: 1.5; color:#344155;">
+                        <li><b>License Fee:</b> Pay by navigating to the <b>License Fee Wallet</b> tab and clicking <b>Pay Now</b>.</li>
+                        ${!isRenewal ? `
+                        <li style="background: #fffbeb; padding: 8px 12px; border-radius: 6px; border: 1px solid #fde68a; margin-top: 8px; color: #b45309; list-style-type: none; margin-left: -20px;">
+                          &#9888; &nbsp;<b>Security Deposit:</b> Simply <b>recharge/add money</b> to the <b>Security Deposit Wallet</b>. Recharging is sufficient to mark it as paid, and the amount will remain in your wallet as active security balance (it will not be debited).
+                        </li>
+                        ` : ''}
+                      </ul>
+                    </div>
+
+                  </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: '&#10003; &nbsp;Proceed',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#065f46',
+                cancelButtonColor: '#6b7280',
+                customClass: {
+                  popup: 'swal-proceed-popup',
+                  confirmButton: 'swal-proceed-confirm',
+                  cancelButton: 'swal-proceed-cancel'
+                },
+                width: '700px',
+                didOpen: (popup) => {
+                  popup.style.background = 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 40%, #ecfdf5 100%)';
+                  popup.style.boxShadow = '0 24px 60px rgba(5,150,105,0.18), 0 4px 16px rgba(5,150,105,0.10)';
+                }
+            }).then((result) => {
+                if (!result.isConfirmed) return;
+                this.router.navigate(['/dashboard'], {
+                  queryParams: {
+                    section: 'wallet',
+                    action: 'pay',
+                    tab: 'license_fee',
+                    walletView: 'others',
+                    id: applicationId,
+                    type: isRenewal ? 'license-renewal' : 'new-license',
+                    ref: applicationId,
+                    referenceNo: applicationId,
+                    amount: Number.isFinite(licenseFee) && licenseFee > 0 ? licenseFee : undefined,
+                    securityAmount: !isRenewal && Number.isFinite(securityFee) && securityFee > 0 ? securityFee : undefined,
+                    source: isRenewal ? 'license-renewal' : 'new-license'
+                  }
+                });
+            });
+        };
+
+        if (raw?.['license_fee_amount'] || raw?.['licenseFeeAmount'] || raw?.['yearly_license_fee'] || raw?.['yearlyLicenseFee']) {
+            showProceedModal(this.applicationData);
+        } else {
+            Swal.fire({
+                title: 'Loading...',
+                text: 'Fetching fee amounts',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            const detail$ = isRenewal
+                ? this.licenseApplicationService.getLicenseRenewalApplicationById(applicationId)
+                : this.licenseApplicationService.getNewLicenseApplicationById(applicationId);
+
+            detail$.subscribe({
+                next: (detail: any) => {
+                    Swal.close();
+                    showProceedModal(detail || this.applicationData);
+                },
+                error: () => {
+                    Swal.close();
+                    showProceedModal(this.applicationData);
+                }
+            });
+        }
     }
     getValidUpToDate(): Date | null {
         if (!this.applicationData) return null;

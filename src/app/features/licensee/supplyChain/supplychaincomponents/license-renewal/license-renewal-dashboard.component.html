@@ -107,9 +107,21 @@
               </span>
             </td>
             <td>
-              <button *ngIf="row.canView" class="btn btn-link p-0 action-eye" title="View Details" (click)="viewApplication(row)">
-                <i class="bi bi-eye-fill"></i>
-              </button>
+              <div class="d-flex align-items-center gap-2">
+                <button *ngIf="row.canView" class="btn btn-link p-0 action-eye" title="View Details" (click)="viewApplication(row)">
+                  <i class="bi bi-eye-fill"></i>
+                </button>
+                <button
+                  *ngIf="isLicenseeUser() && (row.canPayLicenseFee || row.statusGroup === 'awaiting-payment')"
+                  class="btn btn-sm btn-success fw-bold shadow-sm d-inline-flex align-items-center gap-1"
+                  style="background-color: #0f766e !important; border-color: #0f766e !important; border-radius: 6px; font-size: 0.8rem; padding: 4px 10px;"
+                  title="Make Payment for License Renewal"
+                  (click)="payRenewalFee(row)"
+                >
+                  <i class="bi bi-credit-card"></i>
+                  <span>Make Payment</span>
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
