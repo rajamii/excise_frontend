@@ -2263,9 +2263,9 @@
                             <i class="bi bi-patch-check-fill me-2"></i>Print Certificate
                         </button>
 
-                        <!-- Make Payment: shown for Company Registration, Company Collaboration, Salesman/Barman, License Renewal, or New License when awaiting payment -->
+                        <!-- Make Payment: shown for Company Registration, Company Collaboration, Salesman/Barman, or New License when awaiting payment -->
                         <button type="button" class="btn-company-make-payment"
-                                *ngIf="(isCompanyRegistration() && isCompanyRegistrationAwaitingPayment()) || (isCompanyCollaboration() && isCompanyCollabAwaitingPayment()) || (isSalesmanBarmanRegistration() && isSalesmanBarmanAwaitingPayment()) || (isRenewal() && isLicenseRenewalAwaitingPayment()) || (isNewLicense() && isNewLicenseAwaitingPayment())"
+                                *ngIf="(isCompanyRegistration() && isCompanyRegistrationAwaitingPayment()) || (isCompanyCollaboration() && isCompanyCollabAwaitingPayment()) || (isSalesmanBarmanRegistration() && isSalesmanBarmanAwaitingPayment()) || (isNewLicense() && isNewLicenseAwaitingPayment())"
                                 (click)="handleMakePaymentClick()">
                             <i class="bi bi-credit-card-2-front-fill me-2"></i>Make Payment
                         </button>

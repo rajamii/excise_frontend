@@ -3567,7 +3567,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
 
     getExcludeActionsForDetailView(): string[] {
         const base = ['VIEW'];
-        if (this.isCompanyRegistration() || this.isCompanyCollaboration() || this.isSalesmanBarmanRegistration()) {
+        if (this.isCompanyRegistration() || this.isCompanyCollaboration() || this.isSalesmanBarmanRegistration() || this.isRenewal()) {
             base.push('MAKE_PAYMENT', 'PAY');
         }
         if (this.isCompanyCollaboration()) {
@@ -3607,7 +3607,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                 let actions = (rawAllowedActions as string[])
                     .map(a => String(a || '').toUpperCase().trim())
                     .filter(a => !!a && a !== 'VIEW');
-                if (this.isCompanyRegistration() || this.isCompanyCollaboration() || this.isSalesmanBarmanRegistration()) {
+                if (this.isCompanyRegistration() || this.isCompanyCollaboration() || this.isSalesmanBarmanRegistration() || this.isRenewal()) {
                     actions = actions.filter(a => a !== 'MAKE_PAYMENT' && a !== 'PAY');
                 }
                 if (this.isCompanyCollaboration()) {
