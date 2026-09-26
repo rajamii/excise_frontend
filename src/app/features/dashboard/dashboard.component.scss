@@ -2557,6 +2557,9 @@ mat-card-content {
         &--default { background: #ede9fe; color: #5b21b6; }
 
         // Action Audit Badges
+        &--recharge  { background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-weight: 800; }
+        &--debit     { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
+        &--payment   { background: #e0e7ff; color: #4338ca; border: 1px solid #a5b4fc; }
         &--approve   { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
         &--reject    { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
         &--revert    { background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
@@ -3052,6 +3055,30 @@ mat-card-content {
                     font-size: 0.95rem;
                     width: 0.95rem;
                     height: 0.95rem;
+                }
+
+                &--recharge {
+                    background: #dcfce7;
+                    color: #15803d;
+                    border: 1px solid #86efac;
+                }
+
+                &--debit {
+                    background: #e0f2fe;
+                    color: #0369a1;
+                    border: 1px solid #7dd3fc;
+                }
+
+                &--payment {
+                    background: #e0e7ff;
+                    color: #4338ca;
+                    border: 1px solid #a5b4fc;
+                }
+
+                &--apply {
+                    background: #f0fdf4;
+                    color: #166534;
+                    border: 1px solid #bbf7d0;
                 }
 
                 &--create {

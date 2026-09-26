@@ -1488,6 +1488,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   adminActionTotalCount = 0;
   adminActionTotalPages = 1;
   adminActionScope: 'mine' | 'all' = 'mine';
+  adminActionFilterRole = '';
+  adminActionRolesList: string[] = [];
   adminActionModulesList: string[] = [];
   adminActionTypesList: string[] = [];
   selectedActionLogDetail: any = null;
@@ -2446,6 +2448,16 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.adminActionTypesList = res.actions;
         }
       });
+
+    this.http.get<any>(`${environment.apiBaseUrl}/transactional/logs/admin-logs/roles/`)
+      .pipe(catchError(() => of([])))
+      .subscribe((res: any) => {
+        if (Array.isArray(res)) {
+          this.adminActionRolesList = res;
+        } else if (res && Array.isArray(res.roles)) {
+          this.adminActionRolesList = res.roles;
+        }
+      });
   }
 
   loadAdminActionLogs(): void {
@@ -2462,6 +2474,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     const act = String(this.adminActionFilterAction || '').trim();
     if (act) params = params.set('action', act);
+
+    const role = String(this.adminActionFilterRole || '').trim();
+    if (role) params = params.set('role', role);
 
     const month = String(this.adminActionFilterMonth || '').trim();
     if (month) params = params.set('month', month);
@@ -2510,6 +2525,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   clearAdminActionFilters(): void {
     this.adminActionFilterModule = '';
     this.adminActionFilterAction = '';
+    this.adminActionFilterRole = '';
     this.adminActionFilterMonth = '';
     this.adminActionFilterDate = '';
     this.adminActionSearchTerm = '';
@@ -2546,6 +2562,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   getAdminActionBadgeClass(action: string | undefined): string {
     const a = String(action || '').toUpperCase().trim();
+    if (a.includes('RECHARGE')) return 'act-badge--recharge';
+    if (a.includes('WALLET_DEBIT') || a.includes('DEBIT')) return 'act-badge--debit';
+    if (a.includes('PAY') || a.includes('PAYMENT') || a.includes('FEE')) return 'act-badge--payment';
     if (a.includes('DEDUCT') || a.includes('FORFEIT')) return 'act-badge--deduct';
     if (a.includes('TERMINAT')) return 'act-badge--terminate';
     if (a.includes('APPROVE')) return 'act-badge--approve';
@@ -2565,6 +2584,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   getAdminActionIcon(action: string | undefined): string {
     const a = String(action || '').toUpperCase().trim();
+    if (a.includes('RECHARGE')) return 'savings';
+    if (a.includes('WALLET_DEBIT') || a.includes('DEBIT')) return 'account_balance_wallet';
+    if (a.includes('PAY') || a.includes('PAYMENT') || a.includes('FEE')) return 'payments';
     if (a.includes('DEDUCT') || a.includes('FORFEIT')) return 'price_change';
     if (a.includes('TERMINAT')) return 'block';
     if (a.includes('APPROVE')) return 'check_circle';

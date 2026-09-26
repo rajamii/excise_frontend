@@ -340,6 +340,12 @@
                   </option>
                   <!-- Fallback actions if list is empty -->
                   <ng-container *ngIf="!adminActionTypesList?.length">
+                    <option value="WALLET_RECHARGE">WALLET RECHARGE</option>
+                    <option value="WALLET_DEBIT">WALLET DEBIT</option>
+                    <option value="PAY_APPLICATION_FEE">PAY APPLICATION FEE</option>
+                    <option value="PAY_LICENSE_FEE">PAY LICENSE FEE</option>
+                    <option value="PAY_SECURITY_DEPOSIT">PAY SECURITY DEPOSIT</option>
+                    <option value="APPLY_NEW_LICENSE">APPLY NEW LICENSE</option>
                     <option value="APPROVE">APPROVE</option>
                     <option value="REJECT">REJECT</option>
                     <option value="REVERT">REVERT</option>
@@ -349,6 +355,33 @@
                     <option value="VERIFY">VERIFY</option>
                     <option value="CANCEL">CANCEL</option>
                     <option value="UPDATE">UPDATE</option>
+                  </ng-container>
+                </select>
+              </div>
+
+              <!-- Role filter -->
+              <div class="act-filter-field">
+                <label>Role</label>
+                <select [(ngModel)]="adminActionFilterRole"
+                        (ngModelChange)="onAdminActionSearchChange()"
+                        class="act-filter-select">
+                  <option value="">All Roles</option>
+                  <option *ngFor="let r of adminActionRolesList" [value]="r">
+                    {{ r }}
+                  </option>
+                  <!-- Fallback roles if list is empty -->
+                  <ng-container *ngIf="!adminActionRolesList?.length">
+                    <option value="Licensee">Licensee</option>
+                    <option value="Site Admin">Site Admin</option>
+                    <option value="Commissioner">Commissioner</option>
+                    <option value="Joint commissioner">Joint commissioner</option>
+                    <option value="Deputy Commissioner">Deputy Commissioner</option>
+                    <option value="Offcier-In-Charge">Offcier-In-Charge</option>
+                    <option value="Site Inquiry Officer">Site Inquiry Officer</option>
+                    <option value="Permit Section">Permit Section</option>
+                    <option value="District User">District User</option>
+                    <option value="Single Window">Single Window</option>
+                    <option value="Distributor">Distributor</option>
                   </ng-container>
                 </select>
               </div>
@@ -489,8 +522,44 @@
                       </div>
 
                       <ng-template #nonDiffSummary>
+                        <!-- Wallet Recharge summary -->
+                        <div class="act-summary-card act-summary-card--recharge" *ngIf="log?.action === 'WALLET_RECHARGE' || (log?.action && log.action.includes('RECHARGE'))">
+                          <div class="act-summary-badge act-summary-badge--recharge">
+                            <mat-icon>savings</mat-icon>
+                            <span>Wallet Recharged &bull; ₹{{ (log?.metadata?.amount || log?.metadata?.balance_after || 0) | number:'1.2-2' }}</span>
+                          </div>
+                          <div class="act-remarks-text" *ngIf="log?.remarks">{{ log?.remarks }}</div>
+                        </div>
+
+                        <!-- Wallet Debit summary -->
+                        <div class="act-summary-card act-summary-card--debit" *ngIf="log?.action === 'WALLET_DEBIT' || (log?.action && log.action.includes('WALLET_DEBIT'))">
+                          <div class="act-summary-badge act-summary-badge--debit">
+                            <mat-icon>account_balance_wallet</mat-icon>
+                            <span>Wallet Debited &bull; ₹{{ (log?.metadata?.amount || 0) | number:'1.2-2' }}</span>
+                          </div>
+                          <div class="act-remarks-text" *ngIf="log?.remarks">{{ log?.remarks }}</div>
+                        </div>
+
+                        <!-- Fee / Security Payment summary -->
+                        <div class="act-summary-card act-summary-card--payment" *ngIf="log?.action && (log.action.startsWith('PAY_') || log.action === 'PAY')">
+                          <div class="act-summary-badge act-summary-badge--payment">
+                            <mat-icon>payments</mat-icon>
+                            <span>Payment Completed &bull; ₹{{ (log?.metadata?.amount || log?.metadata?.fee_amount || 0) | number:'1.2-2' }}</span>
+                          </div>
+                          <div class="act-remarks-text" *ngIf="log?.remarks">{{ log?.remarks }}</div>
+                        </div>
+
+                        <!-- Apply Application summary -->
+                        <div class="act-summary-card act-summary-card--apply" *ngIf="log?.action === 'APPLY_NEW_LICENSE' || (log?.action && log.action.startsWith('APPLY_'))">
+                          <div class="act-summary-badge act-summary-badge--apply">
+                            <mat-icon>description</mat-icon>
+                            <span>Application Applied &bull; {{ log?.metadata?.license_category || 'New License' }}</span>
+                          </div>
+                          <div class="act-remarks-text" *ngIf="log?.remarks">{{ log?.remarks }}</div>
+                        </div>
+
                         <!-- Created Record summary -->
-                        <div class="act-summary-card act-summary-card--create" *ngIf="log?.action === 'CREATE' || hasCreatedFields(log)">
+                        <div class="act-summary-card act-summary-card--create" *ngIf="(log?.action === 'CREATE' || hasCreatedFields(log)) && log?.action !== 'APPLY_NEW_LICENSE' && !log?.action?.startsWith('APPLY_')">
                           <div class="act-summary-badge act-summary-badge--create">
                             <mat-icon>add_circle</mat-icon>
                             <span>Created in <strong>{{ log?.moduleDisplay || log?.module_display || log?.moduleName || log?.module_name }}</strong></span>
@@ -517,7 +586,7 @@
                         </div>
 
                         <!-- Fallback Remarks -->
-                        <div *ngIf="log?.action !== 'CREATE' && !hasCreatedFields(log) && log?.action !== 'DELETE' && !hasDeletedFields(log) && log?.action !== 'DEDUCT' && !(log?.action && log.action.includes('TERMINAT'))">
+                        <div *ngIf="log?.action !== 'CREATE' && !hasCreatedFields(log) && log?.action !== 'DELETE' && !hasDeletedFields(log) && log?.action !== 'DEDUCT' && !(log?.action && log.action.includes('TERMINAT')) && log?.action !== 'WALLET_RECHARGE' && !log?.action?.includes('RECHARGE') && log?.action !== 'WALLET_DEBIT' && !log?.action?.includes('WALLET_DEBIT') && !log?.action?.startsWith('PAY_') && log?.action !== 'PAY' && log?.action !== 'APPLY_NEW_LICENSE' && !log?.action?.startsWith('APPLY_')">
                           <span class="act-remarks-text" *ngIf="log?.remarks; else dash" [title]="log?.remarks">
                             {{ log?.remarks }}
                           </span>
