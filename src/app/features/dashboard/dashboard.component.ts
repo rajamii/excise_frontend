@@ -2912,15 +2912,27 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     const value = String(params?.walletView || '').trim().toLowerCase();
     if (value === 'others') return 'others';
-    if (value === 'wallets') return 'wallets';
+    if (value === 'wallets') {
+      if (this.isLicenseeUser() && this.licenseeMenuAccessResolved && !this.canAccessManufacturingWallets()) {
+        return 'others';
+      }
+      return 'wallets';
+    }
     const tab = String(params?.tab || '').trim().toLowerCase();
     if (tab === 'license_fee' || tab === 'security_deposit') return 'others';
     const type = String(params?.type || '').trim().toLowerCase();
     if (type === 'special-permit' || type === 'new-license' || type === 'license-renewal') return 'others';
-    if (this.isLicenseeUser() && this.licenseeMenuAccessResolved && !this.showBreweryOrDistilleryWalletViews) {
+    if (this.isLicenseeUser() && this.licenseeMenuAccessResolved && !this.canAccessManufacturingWallets()) {
       return 'others';
     }
     return 'wallets';
+  }
+
+  canAccessManufacturingWallets(): boolean {
+    if (!this.isLicenseeUser()) {
+      return true;
+    }
+    return this.showBreweryOrDistilleryWalletViews || this.isDistributorUser();
   }
 
   private readDistributorPermitMode(params: any): 'list' | 'apply' {
@@ -2941,12 +2953,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (!this.licenseeMenuAccessResolved) {
       return;
     }
-    if (this.showBreweryOrDistilleryWalletViews) {
+    if (this.canAccessManufacturingWallets()) {
       return;
     }
 
     const raw = String(params?.walletView || '').trim().toLowerCase();
-    if (raw === 'others' || raw === '') {
+    if (raw === 'others') {
       return;
     }
 
@@ -2959,21 +2971,18 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   shouldShowWalletViewToggle(): boolean {
-    if (this.selectedSupplyChainSection !== 'wallet') {
-      return false;
-    }
-    if (!this.isLicenseeUser()) {
-      return true;
-    }
-    if (!this.licenseeMenuAccessResolved) {
-      return false;
-    }
-    return this.showManufacturingWalletNav || this.showBreweryOrDistilleryWalletViews;
+    return this.selectedSupplyChainSection === 'wallet';
   }
 
   setWalletViewMode(mode: 'wallets' | 'others'): void {
-    if (this.isLicenseeUser() && this.licenseeMenuAccessResolved && !this.showBreweryOrDistilleryWalletViews && !this.showManufacturingWalletNav) {
-      mode = 'others';
+    if (mode === 'wallets' && !this.canAccessManufacturingWallets()) {
+      Swal.fire({
+        icon: 'info',
+        title: 'Access Restricted',
+        text: 'Manufacturing Wallets (Excise Duty, Education Cess, Hologram) are only available for Distillery, Brewery, and Distributor licenses.',
+        confirmButtonColor: '#2563eb'
+      });
+      return;
     }
     if (!mode || this.walletViewMode === mode) return;
     this.walletViewMode = mode;
@@ -4975,7 +4984,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   // Open wallet dialog
   openWallet(): void {
     const walletView =
-      this.isLicenseeUser() && this.licenseeMenuAccessResolved && !this.showBreweryOrDistilleryWalletViews
+      this.isLicenseeUser() && this.licenseeMenuAccessResolved && !this.canAccessManufacturingWallets()
         ? 'others'
         : 'wallets';
     this.router.navigate(['/dashboard'], {

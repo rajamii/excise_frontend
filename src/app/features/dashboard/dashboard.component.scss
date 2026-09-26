@@ -1913,17 +1913,44 @@ mat-card-content {
             border-radius: 10px;
             overflow: hidden;
             background: #ffffff;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
         .wallet-view-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
             border-radius: 0;
             padding: 6px 14px;
             font-weight: 600;
             color: #1f2937;
+            transition: all 0.2s ease;
 
             &.active {
                 background: #2563eb;
                 color: #ffffff;
+            }
+
+            &.locked-btn {
+                color: #64748b;
+                background: #f8fafc;
+                cursor: not-allowed;
+
+                &:hover {
+                    background: #f1f5f9;
+                    color: #475569;
+                }
+            }
+
+            .wallet-lock-icon {
+                font-size: 16px;
+                width: 16px;
+                height: 16px;
+                line-height: 16px;
+                color: #dc2626;
+                margin-right: 2px;
+                vertical-align: middle;
             }
         }
     }

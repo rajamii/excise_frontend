@@ -92,16 +92,20 @@
               type="button"
               class="wallet-view-btn"
               [class.active]="walletViewMode === 'wallets'"
-              (click)="setWalletViewMode('wallets')">
-              Wallets
+              [class.locked-btn]="!canAccessManufacturingWallets()"
+              (click)="setWalletViewMode('wallets')"
+              [title]="!canAccessManufacturingWallets() ? 'Manufacturing Wallets (Excise Duty, Education Cess, Hologram) are only available for Distillery, Brewery, and Distributor licenses' : 'Manufacturing Wallets'">
+              <mat-icon *ngIf="!canAccessManufacturingWallets()" class="wallet-lock-icon">lock</mat-icon>
+              <span>Wallets</span>
             </button>
             <button
               mat-button
               type="button"
               class="wallet-view-btn"
               [class.active]="walletViewMode === 'others'"
-              (click)="setWalletViewMode('others')">
-              License
+              (click)="setWalletViewMode('others')"
+              title="License & Security Deposit Wallets">
+              <span>License</span>
             </button>
           </div>
 
