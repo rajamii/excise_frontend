@@ -559,6 +559,22 @@ export class RevalidationComponent implements OnInit {
     });
   }
 
+  /** Opens the revalidation permit slip / approval letter. */
+  openPermitSlip(item: TableData): void {
+    const userType = this.getUserType();
+    const source = userType === 'commissioner' ? 'commissioner-dashboard' : (userType === 'permit-section' ? 'permit-section' : 'licensee-dashboard');
+    const refNo = item.referenceNo || item.id;
+
+    this.router.navigate(["/unified-letter-view/revalidation"], {
+      queryParams: {
+        id: item.id,
+        ref: refNo,
+        refNo: refNo,
+        source: source
+      },
+    });
+  }
+
   // Unified action handler
   onUnifiedAction(event: { action: string, item: any }): void {
     const context = this.getUserContext();
@@ -784,28 +800,14 @@ export class RevalidationComponent implements OnInit {
     
     // For revalidation, show payment slip after submission (₹1000 deduction)
     const hasPayment = this.hasPaymentBeenMade(item);
-    
-    console.log('🔍 getActionIncludeList (revalidation):', {
-      itemId: item.id,
-      refNo: item.referenceNo,
-      status: item.status,
-      hasPayment,
-      allowedActions: item.allowedActions,
-      isCommissioner: this.isCommissioner()
-    });
-    
-    // Show "View Payment Slip" after payment is made (₹1000 deducted)
     if (hasPayment) {
       actions.push('VIEW_PAYMENT_SLIP');
     }
     
-    // Trust backend for VIEW_PERMIT_SLIP action
-    if (item.allowedActions && item.allowedActions.includes('VIEW_PERMIT_SLIP')) {
-      console.log('✅ Backend says show VIEW_PERMIT_SLIP');
+    if (this.canViewPermitSlip(item)) {
       actions.push('VIEW_PERMIT_SLIP');
     }
     
-    console.log('🔍 Final actions array:', actions);
     return Array.from(new Set(actions));
   }
 
@@ -821,44 +823,26 @@ export class RevalidationComponent implements OnInit {
                                    status.includes('submitted') ||
                                    status.includes('pending');
     
-    console.log('🔍 hasPaymentBeenMade check (revalidation):', {
-      status,
-      statusIndicatesPayment,
-      result: statusIndicatesPayment
-    });
-    
     return statusIndicatesPayment;
   }
 
   canViewPermitSlip(item: TableData): boolean {
-    // Only commissioner can view permit slip at final approved stage
-    if (!this.isCommissioner()) {
-      return false;
-    }
-    
-    const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
-    const currentStageIsFinal = item.currentStageIsFinal === true || item.currentStageIsFinal === 'true';
-    
-    // Check if it's at final approved stage
-    // For revalidation, show permit slip when forwarded to commissioner OR approved by commissioner
-    const isApprovedByCommissioner =
-      status.includes('approv') && status.includes('commissioner') && !status.includes('reject');
-    const isForwardedToCommissioner =
-      status.includes('forward') && status.includes('commissioner') && !status.includes('reject');
-    const isFinalApproved = (status.includes('approved') && currentStageIsFinal) ||
-                           isApprovedByCommissioner ||
-                           isForwardedToCommissioner ||
-                           status.includes('finalapproved');
-    
-    console.log('🔍 canViewPermitSlip (revalidation):', {
-      status: item.status,
-      normalizedStatus: status,
-      currentStageIsFinal,
-      isFinalApproved,
-      isCommissioner: this.isCommissioner()
-    });
-    
-    return isFinalApproved;
+    if (!item) return false;
+    const status = this.normalizeToken(item.status);
+    if (status.includes('reject')) return false;
+
+    const isApproved =
+      this.isCommissionerApprovedRevalidation(item) ||
+      status.includes('approved') ||
+      status.includes('approv') ||
+      status.includes('finalapproved') ||
+      status.includes('issued');
+
+    const hasSlipAction =
+      Array.isArray(item.allowedActions) &&
+      (item.allowedActions.includes('VIEW_PERMIT_SLIP') || item.allowedActions.includes('VIEW_SLIP'));
+
+    return isApproved || hasSlipAction;
   }
 
   getRevalidationExtensionRange(item: TableData): string {
