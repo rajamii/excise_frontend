@@ -147,8 +147,14 @@ export class RevalidationComponent implements OnInit {
               this.activeSummaryFilter = statusParam === 'ALL' ? '' : statusParam;
               this.revalidationStatusFilter = statusParam === 'ALL' ? '' : statusParam;
             } else {
-              this.activeSummaryFilter = 'PENDING';
-              this.revalidationStatusFilter = 'PENDING';
+              const pendingCount = Number(this.counts.pending || 0);
+              if (pendingCount > 0) {
+                this.activeSummaryFilter = 'PENDING';
+                this.revalidationStatusFilter = 'PENDING';
+              } else {
+                this.activeSummaryFilter = '';
+                this.revalidationStatusFilter = '';
+              }
             }
             this.currentPage = 1;
             this.fetchRevalidationData();
@@ -158,8 +164,8 @@ export class RevalidationComponent implements OnInit {
       error: () => {
         if (!this.initialFilterApplied) {
           this.initialFilterApplied = true;
-          this.activeSummaryFilter = 'PENDING';
-          this.revalidationStatusFilter = 'PENDING';
+          this.activeSummaryFilter = '';
+          this.revalidationStatusFilter = '';
           this.fetchRevalidationData();
         }
       }
