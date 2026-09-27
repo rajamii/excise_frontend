@@ -103,9 +103,24 @@
               </small>
             </td>
             <td>
-              <span class="status-badge {{ row.statusGroup }}">
-                {{ row.currentStage }}
-              </span>
+              <div class="d-flex flex-column gap-2 align-items-start">
+                <div>
+                  <span class="status-badge {{ (row.isTerminated || row.currentStage === 'TERMINATED') ? 'rejected' : row.statusGroup }}">
+                    {{ row.currentStage }}
+                  </span>
+                </div>
+
+                <!-- Prominent Rejection/Termination Note Box -->
+                <div *ngIf="row.statusGroup === 'rejected' || row.isTerminated || row.currentStage === 'TERMINATED'" class="rejection-note-box">
+                  <div class="rejection-note-head">
+                    <i class="bi" [ngClass]="(row.isTerminated || row.currentStage === 'TERMINATED') ? 'bi-exclamation-octagon-fill' : 'bi-x-circle-fill'"></i>
+                    <span>{{ (row.isTerminated || row.currentStage === 'TERMINATED') ? 'License Terminated' : 'Rejection Reason' }}</span>
+                  </div>
+                  <div class="rejection-note-body">
+                    {{ row.rejectionReason || ((row.isTerminated || row.currentStage === 'TERMINATED') ? 'Application and associated license officially terminated by department administration. Security deposit deducted/forfeited.' : 'Application was rejected.') }}
+                  </div>
+                </div>
+              </div>
             </td>
             <td>
               <div class="d-flex align-items-center gap-2">
@@ -113,7 +128,7 @@
                   <i class="bi bi-eye-fill"></i>
                 </button>
                 <button
-                  *ngIf="isLicenseeUser() && (row.canPayLicenseFee || row.statusGroup === 'awaiting-payment')"
+                  *ngIf="isLicenseeUser() && !row.isTerminated && row.statusGroup !== 'rejected' && (row.canPayLicenseFee || row.statusGroup === 'awaiting-payment')"
                   class="btn btn-sm btn-success fw-bold shadow-sm d-inline-flex align-items-center gap-1"
                   style="background-color: #0f766e !important; border-color: #0f766e !important; border-radius: 6px; font-size: 0.8rem; padding: 4px 10px;"
                   title="Make Payment for License Renewal"

@@ -33,6 +33,8 @@ interface RenewalItem {
   canView: boolean;
   canPayLicenseFee?: boolean;
   rawRow?: any;
+  isTerminated?: boolean;
+  rejectionReason?: string | null;
 }
 
 interface GroupedRenewalResponse {
@@ -250,18 +252,27 @@ export class LicenseRenewalDashboardComponent implements OnInit {
 
     const rawStatusGroup = raw?.status_group || raw?.statusGroup || raw?.status || fallbackStatusGroup || '';
     const stageRawLower = currentStageRaw.toLowerCase();
-    const isTerminated = stageRawLower.includes('terminat') || stageRawLower.includes('forfeit') || stageRawLower.includes('cancel') || stageRawLower.includes('revoke') || stageRawLower.includes('suspend');
+    const isTerminated = Boolean(
+      raw?.is_terminated ||
+      raw?.isTerminated ||
+      stageRawLower.includes('terminat') ||
+      stageRawLower.includes('forfeit') ||
+      stageRawLower.includes('cancel') ||
+      stageRawLower.includes('revoke') ||
+      stageRawLower.includes('suspend')
+    );
     const isRejected = rawStatusGroup === 'rejected' || stageRawLower.includes('reject') || isTerminated;
-    const isApproved = Boolean(raw?.is_approved ?? raw?.isApproved) || stageRawLower.includes('approved') || rawStatusGroup === 'approved';
-    const isObjection = stageRawLower.includes('objection') || rawStatusGroup === 'objection';
+    const isApproved = !isRejected && !isTerminated && (Boolean(raw?.is_approved ?? raw?.isApproved) || stageRawLower.includes('approved') || rawStatusGroup === 'approved');
+    const isObjection = !isRejected && (stageRawLower.includes('objection') || rawStatusGroup === 'objection');
 
-    const isAwaitingPaymentStage = 
+    const isAwaitingPaymentStage = !isRejected && (
       stageRawLower.includes('awaiting payment') || 
       stageRawLower.includes('awaiting_payment') || 
       currentStageId === 119 || 
       currentStageId === '119' ||
       currentStageId === 109 ||
-      currentStageId === '109';
+      currentStageId === '109'
+    );
 
     let finalStatusGroup: RenewalItem['statusGroup'] = 'pending';
     if (isRejected) {
@@ -300,6 +311,15 @@ export class LicenseRenewalDashboardComponent implements OnInit {
       ''
     ).trim();
 
+    const rejectionReason = String(
+      raw?.rejection_reason ||
+      raw?.rejectionReason ||
+      raw?.rejection_remarks ||
+      raw?.rejectionRemarks ||
+      raw?.remarks ||
+      ''
+    ).trim() || (isTerminated ? 'Application and associated license officially terminated by department administration. Security deposit deducted/forfeited.' : null);
+
     return {
       id: appId,
       applicationId: appId,
@@ -308,12 +328,14 @@ export class LicenseRenewalDashboardComponent implements OnInit {
       licenseCategoryName: categoryName,
       licenseSubCategoryName: subCategoryName,
       submittedOn: this.formatDate(raw?.submitted_on || raw?.submittedOn || raw?.submitted_at || raw?.submittedAt || raw?.created_at || raw?.createdAt || raw?.updated_at || raw?.updatedAt),
-      currentStage: this.computeCurrentStageLabel(finalStatusGroup, currentStageRaw),
+      currentStage: this.computeCurrentStageLabel(finalStatusGroup, currentStageRaw, isTerminated),
       currentStageRaw: currentStageRaw || '-',
       statusGroup: finalStatusGroup,
       canView: true,
       canPayLicenseFee: isAwaitingPaymentStage,
-      rawRow: raw
+      rawRow: raw,
+      isTerminated,
+      rejectionReason
     };
   }
 
@@ -546,7 +568,11 @@ export class LicenseRenewalDashboardComponent implements OnInit {
     }
   }
 
-  private computeCurrentStageLabel(statusGroup: RenewalItem['statusGroup'], currentStageRaw: string): string {
+  private computeCurrentStageLabel(statusGroup: RenewalItem['statusGroup'], currentStageRaw: string, isTerminated = false): string {
+    const rawLower = String(currentStageRaw || '').toLowerCase();
+    if (isTerminated || rawLower.includes('terminat') || rawLower.includes('forfeit') || rawLower.includes('revoke') || rawLower.includes('suspend')) {
+      return 'TERMINATED';
+    }
     if (this.isLicenseeUser()) {
       if (statusGroup === 'approved') return 'Approved';
       if (statusGroup === 'rejected') return 'Rejected';
