@@ -40,7 +40,7 @@ interface TableData {
 export class CancellationComponent implements OnInit {
   Math = Math;
   private isBrowser = false;
-  private initialSummaryAutoSelected = false;
+  private initialFilterApplied = false;
 
   // Filter properties for cancellation
   cancellationDateFilter: string = '';
@@ -114,7 +114,6 @@ export class CancellationComponent implements OnInit {
 
     if (this.isBrowser) {
       this.loadCounts();
-      this.loadCancellationData();
     }
   }
 
@@ -130,6 +129,29 @@ export class CancellationComponent implements OnInit {
             underprocess: Number(resp.underprocess || 0)
           };
           this.countsLoaded = true;
+
+          if (!this.initialFilterApplied) {
+            this.initialFilterApplied = true;
+            const statusParam = String(this.route?.snapshot?.queryParams?.['status'] || '').toUpperCase().trim();
+            if (statusParam && ['PENDING', 'UNDER_PROCESS', 'UNDERPROCESS', 'APPROVED', 'REJECTED', 'ALL'].includes(statusParam)) {
+              this.activeSummaryFilter = statusParam === 'ALL' ? '' : statusParam;
+              this.cancellationStatusFilter = statusParam === 'ALL' ? '' : statusParam;
+            } else if (this.counts.pending > 0) {
+              this.activeSummaryFilter = 'PENDING';
+              this.cancellationStatusFilter = 'PENDING';
+            } else {
+              this.activeSummaryFilter = '';
+              this.cancellationStatusFilter = '';
+            }
+            this.currentPage = 1;
+            this.loadCancellationData();
+          }
+        }
+      },
+      error: () => {
+        if (!this.initialFilterApplied) {
+          this.initialFilterApplied = true;
+          this.loadCancellationData();
         }
       }
     });
@@ -140,6 +162,9 @@ export class CancellationComponent implements OnInit {
   }
 
   loadCancellationData() {
+    if (!this.initialFilterApplied) {
+      return;
+    }
     console.log('Loading cancellation data from API...');
     this.isLoading = true;
 
@@ -242,8 +267,8 @@ export class CancellationComponent implements OnInit {
   }
 
   private maybeAutoSelectPendingSummary(): void {
-    if (this.initialSummaryAutoSelected) return;
-    this.initialSummaryAutoSelected = true;
+    if (this.initialFilterApplied) return;
+    this.initialFilterApplied = true;
 
     if (this.cancellationStatusFilter || this.activeSummaryFilter) return;
 

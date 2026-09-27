@@ -1,7 +1,7 @@
 import { Component, OnInit, Inject, PLATFORM_ID, inject } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom, Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
@@ -51,7 +51,7 @@ interface TableData {
 export class RevalidationComponent implements OnInit {
   Math = Math;
   private isBrowser = false;
-  private initialSummaryAutoSelected = false;
+  private initialFilterApplied = false;
 
   // Filter properties for revalidation
   revalidationDateFilter: string = '';
@@ -98,6 +98,7 @@ export class RevalidationComponent implements OnInit {
 
   // Services
   private unifiedActionsService = inject(UnifiedActionsService);
+  private route = inject(ActivatedRoute);
 
   constructor(
     private router: Router,
@@ -122,7 +123,6 @@ export class RevalidationComponent implements OnInit {
     });
 
     this.loadCounts();
-    this.fetchRevalidationData();
   }
 
   loadCounts(): void {
@@ -139,6 +139,29 @@ export class RevalidationComponent implements OnInit {
             invalid: Number(resp.invalid || 0)
           };
           this.countsLoaded = true;
+
+          if (!this.initialFilterApplied) {
+            this.initialFilterApplied = true;
+            const statusParam = String(this.route?.snapshot?.queryParams?.['status'] || '').toUpperCase().trim();
+            if (statusParam && ['PENDING', 'UNDERPROCESS', 'APPROVED', 'REJECTED', 'ALL'].includes(statusParam)) {
+              this.activeSummaryFilter = statusParam === 'ALL' ? '' : statusParam;
+              this.revalidationStatusFilter = statusParam === 'ALL' ? '' : statusParam;
+            } else if (this.counts.pending > 0) {
+              this.activeSummaryFilter = 'PENDING';
+              this.revalidationStatusFilter = 'PENDING';
+            } else {
+              this.activeSummaryFilter = '';
+              this.revalidationStatusFilter = '';
+            }
+            this.currentPage = 1;
+            this.fetchRevalidationData();
+          }
+        }
+      },
+      error: () => {
+        if (!this.initialFilterApplied) {
+          this.initialFilterApplied = true;
+          this.fetchRevalidationData();
         }
       }
     });
@@ -149,6 +172,9 @@ export class RevalidationComponent implements OnInit {
   }
 
   async fetchRevalidationData() {
+    if (!this.initialFilterApplied) {
+      return;
+    }
     try {
       console.log('DEBUG: Fetching revalidation data...');
       this.isLoading = true;
@@ -256,8 +282,8 @@ export class RevalidationComponent implements OnInit {
   }
 
   private maybeAutoSelectPendingSummary(): void {
-    if (this.initialSummaryAutoSelected) return;
-    this.initialSummaryAutoSelected = true;
+    if (this.initialFilterApplied) return;
+    this.initialFilterApplied = true;
 
     if (this.revalidationStatusFilter || this.activeSummaryFilter) return;
 

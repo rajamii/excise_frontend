@@ -253,7 +253,12 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.hologramSearchFilter = '';
     this.dateFromFilter = '';
     this.dateToFilter = '';
-    this.activeCardFilter = 'all';
+    const tabCounts = this.statusCountsByTab[tab];
+    if (tabCounts && tabCounts.pending > 0) {
+      this.activeCardFilter = 'pending';
+    } else {
+      this.activeCardFilter = 'all';
+    }
     this.hologramStatusFilter = 'all';
 
     if (tab === 'hologram-procurement') {
@@ -282,7 +287,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       this.activeCardFilter = statusParam as DistributorPermitStatusFilter;
       return;
     }
-    if (!this.activeCardFilter) {
+    const tabCounts = this.statusCountsByTab[this.activeTab];
+    if (tabCounts && tabCounts.pending > 0) {
+      this.activeCardFilter = 'pending';
+    } else {
       this.activeCardFilter = 'all';
     }
   }

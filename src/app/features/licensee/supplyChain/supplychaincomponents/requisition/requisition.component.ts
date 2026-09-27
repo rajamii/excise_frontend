@@ -111,7 +111,7 @@ interface ArrivalMonthSummaryRow {
 export class RequisitionComponent implements OnInit, OnDestroy {
   Math = Math;
   private isBrowser = false;
-  private initialSummaryAutoSelected = false;
+  private initialFilterApplied = false;
 
   // Services
   public accountService = inject(AccountService);
@@ -281,7 +281,6 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     }
 
     this.loadCounts();
-    this.loadData();
   }
 
   ngOnDestroy(): void {
@@ -362,9 +361,31 @@ export class RequisitionComponent implements OnInit, OnDestroy {
             cancellation: Number(resp.cancellation || 0)
           };
           this.countsLoaded = true;
+
+          if (!this.initialFilterApplied) {
+            this.initialFilterApplied = true;
+            const statusParam = String(this.route.snapshot.queryParams['status'] || '').toUpperCase().trim();
+            if (statusParam && ['PENDING', 'UNDERPROCESS', 'APPROVED', 'REJECTED', 'CANCELLATION', 'ALL'].includes(statusParam)) {
+              this.activeSummaryFilter = statusParam === 'ALL' ? '' : statusParam;
+              this.requisitionStatusFilter = statusParam === 'ALL' ? '' : statusParam;
+            } else if (this.counts.pending > 0) {
+              this.activeSummaryFilter = 'PENDING';
+              this.requisitionStatusFilter = 'PENDING';
+            } else {
+              this.activeSummaryFilter = '';
+              this.requisitionStatusFilter = '';
+            }
+            this.currentPage = 1;
+            this.loadData();
+          }
         }
       },
-      error: () => {}
+      error: () => {
+        if (!this.initialFilterApplied) {
+          this.initialFilterApplied = true;
+          this.loadData();
+        }
+      }
     });
   }
 
@@ -374,6 +395,9 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
   // Load data based on user type
   loadData(): void {
+    if (!this.initialFilterApplied) {
+      return;
+    }
     console.log('DEBUG: Loading requisition data...');
     this.isLoading = true;
 
