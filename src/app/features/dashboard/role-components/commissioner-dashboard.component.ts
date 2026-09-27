@@ -1149,11 +1149,25 @@ export class CommissionerDashboardComponent implements OnInit {
   }
 
   loadRequisitions(): void {
+    this.enaRequisitionService.getDashboardCounts().subscribe({
+      next: (counts: any) => {
+        if (counts) {
+          this.moduleCounts['requisition'] = {
+            applied: Number(counts.applied ?? counts.total ?? 0),
+            pending: Number(counts.pending ?? 0),
+            approved: Number(counts.approved ?? 0),
+            objection: Number(counts.objection ?? 0),
+            rejected: Number(counts.rejected ?? 0)
+          };
+        }
+      },
+      error: () => {}
+    });
     this.enaRequisitionService.getRequisitions().subscribe({
       next: (response: any) => {
         const data = Array.isArray(response) ? response : response?.results || [];
         const requisitions: CommissionerData[] = data
-          .filter((item: any) => this.requiresCommissionerReview(item.status))
+          .filter((item: any) => this.requiresCommissionerReview(item.status) || this.hasApproveOrRejectAction(item))
           .map((item: any) => ({
             id: item.id,
             referenceNo: item.ourRefNo || item.our_ref_no || `REQ-${item.id}`,
