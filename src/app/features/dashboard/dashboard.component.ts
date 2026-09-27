@@ -37,6 +37,7 @@ import { HologramDataService } from '../licensee/supplyChain/services/hologram-d
 import { SidebarPendingBadgeService } from '../../shared/services/sidebar-pending-badge.service';
 import { CompanyRegistrationService } from '../../core/services/company-registration.service';
 import { CompanyCollaborationService } from '../../core/services/company-collaboration.service';
+import { BulkSpiritUsageService } from '../../core/services/bulk-spirit-usage.service';
 import Swal from 'sweetalert2';
 import { environment } from '../../../environments/environment';
 import {
@@ -210,6 +211,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   private bubbles: any[] = [];
 
   private destroy$ = new Subject<void>();
+  private bulkSpiritUsageService = inject(BulkSpiritUsageService);
   private readonly licenseApiBase = `${environment.apiBaseUrl}/masters/license`;
   private readonly newLicenseApiBase = `${environment.apiBaseUrl}/transactional/new_license_application`;
   private dashboardInitLoadHandled = false;
@@ -952,9 +954,24 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       : of(null as any);
 
     const isOIC = this.isOicUser();
-    const bld$ = isOIC
+    const bldArrivals$ = isOIC
       ? this.enaRequisitionService.getRequisitionArrivalDetailsByStatus('ALL').pipe(
           map((res: any) => Array.isArray(res) ? res : (res?.data || res?.results || [])),
+          catchError(() => of([]))
+        )
+      : of([] as any[]);
+    const bldUsage$ = isOIC
+      ? this.bulkSpiritUsageService.getUsageRequests().pipe(
+          map((res: any) => Array.isArray(res) ? res : (res?.data || res?.results || [])),
+          catchError(() => of([]))
+        )
+      : of([] as any[]);
+    const bld$ = isOIC
+      ? forkJoin({ arrivals: bldArrivals$, usage: bldUsage$ }).pipe(
+          map(({ arrivals, usage }) => [
+            ...(Array.isArray(arrivals) ? arrivals : []),
+            ...(Array.isArray(usage) ? usage : [])
+          ]),
           catchError(() => of([]))
         )
       : of([] as any[]);
@@ -3991,14 +4008,79 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     return aliases;
   }
 
+  private resolveEstablishmentName(): string {
+    try {
+      const user = this.accountService?.getCurrentUser() as any;
+      if (user) {
+        const est = user.oic_assignment?.establishment_name ||
+          user.oic_assignment?.manufacturing_unit_name ||
+          user.oic_assignment?.licensee_name ||
+          user.manufacturing_unit_name ||
+          user.establishment_name ||
+          user.company_name;
+        if (est) return String(est).trim();
+      }
+
+      const sources = [
+        sessionStorage.getItem('currentUser'),
+        localStorage.getItem('currentUser'),
+        sessionStorage.getItem('user'),
+        localStorage.getItem('user')
+      ];
+      for (const raw of sources) {
+        if (!raw) continue;
+        try {
+          const parsed = JSON.parse(raw);
+          const est = parsed?.oic_assignment?.establishment_name ||
+            parsed?.oic_assignment?.manufacturing_unit_name ||
+            parsed?.oicAssignment?.establishment_name ||
+            parsed?.oicAssignment?.manufacturing_unit_name ||
+            parsed?.manufacturing_unit_name ||
+            parsed?.establishment_name ||
+            parsed?.company_name;
+          if (est) return String(est).trim();
+        } catch {}
+      }
+    } catch {}
+    return '';
+  }
+
   private filterByOicScopedLicense(rows: any[]): any[] {
     const scopedLicense = this.resolveOicScopedLicenseId();
-    if (!scopedLicense) return rows || [];
-    const allowed = new Set(this.expandOicLicenseAliases(scopedLicense));
+    const myUnit = this.resolveEstablishmentName().trim().toLowerCase();
+    if (!scopedLicense && !myUnit) return rows || [];
+    const allowed = scopedLicense ? new Set(this.expandOicLicenseAliases(scopedLicense)) : new Set<string>();
     return (rows || []).filter((row: any) => {
-      const rowLicense = row?.license_id || row?.licenseId || row?.licensee_id || row?.licenseeId;
-      if (!rowLicense) return false;
-      return this.expandOicLicenseAliases(rowLicense).some((alias) => allowed.has(alias));
+      const rowLicense =
+        row?.license_id || row?.licenseId || row?.licensee_id || row?.licenseeId ||
+        row?.supplyChainData?.license_id || row?.supplyChainData?.licenseId ||
+        (typeof row?.license === 'string' ? row.license : row?.license?.license_id) ||
+        row?.licensee?.licensee_id;
+      if (rowLicense && allowed.size > 0) {
+        if (this.expandOicLicenseAliases(rowLicense).some((alias) => allowed.has(alias))) {
+          return true;
+        }
+      }
+      if (myUnit) {
+        const rowUnit = String(
+          row?.manufacturingUnit ||
+          row?.manufacturing_unit ||
+          row?.companyName ||
+          row?.distilleryName ||
+          row?.distillery_name ||
+          row?.applicantName ||
+          row?.applicant_name ||
+          row?.licenseeName ||
+          row?.licensee_name ||
+          row?.supplyChainData?.manufacturingUnit ||
+          row?.supplyChainData?.manufacturing_unit ||
+          ''
+        ).trim().toLowerCase();
+        if (rowUnit && (rowUnit === myUnit || rowUnit.includes(myUnit) || myUnit.includes(rowUnit))) {
+          return true;
+        }
+      }
+      return false;
     });
   }
 

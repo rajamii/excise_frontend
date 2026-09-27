@@ -2484,12 +2484,16 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
   setMainTab(tab: 'arrivals' | 'usage_requests'): void {
     this.activeMainTab = tab;
     if (tab === 'arrivals') {
-      if (this.reviewStatus === 'PENDING' && this.getCount('PENDING') === 0) {
+      if (this.getCount('PENDING') > 0) {
+        this.reviewStatus = 'PENDING';
+      } else {
         this.reviewStatus = 'ALL';
       }
     } else if (tab === 'usage_requests') {
       this.loadUsageRequests();
-      if (this.usageReviewStatus === 'PENDING' && this.getPendingUsageCount() === 0) {
+      if (this.getPendingUsageCount() > 0) {
+        this.usageReviewStatus = 'PENDING';
+      } else {
         this.usageReviewStatus = 'ALL';
       }
     }
@@ -2696,8 +2700,8 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
         const rows = Array.isArray(response?.data) ? response.data : [];
         this.rows = rows.map((row: any) => this.mapRow(row));
 
+        const pendingArrivals = this.getCount('PENDING');
         if (this.pendingFocusRequested) {
-          const pendingArrivals = this.getCount('PENDING');
           if (pendingArrivals > 0) {
             this.reviewStatus = 'PENDING';
           } else {
@@ -2710,7 +2714,9 @@ export class OicBlDetailsComponent implements OnInit, OnDestroy {
             }
           }
         } else {
-          if (this.reviewStatus === 'PENDING' && this.getCount('PENDING') === 0) {
+          if (pendingArrivals > 0) {
+            this.reviewStatus = 'PENDING';
+          } else {
             this.reviewStatus = 'ALL';
           }
         }

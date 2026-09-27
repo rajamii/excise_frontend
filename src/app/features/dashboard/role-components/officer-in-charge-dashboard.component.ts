@@ -281,6 +281,9 @@ export class OfficerInChargeDashboardComponent implements OnInit {
     REJECTED: 0,
   };
   public hologramProcurementPendingCount = 0;
+  public hologramProcurementAppliedCount = 0;
+  public hologramProcurementApprovedCount = 0;
+  public hologramProcurementRejectedCount = 0;
   public blDetailsPendingCount = 0;
   public dailyEntryPendingCount = 0;
   public imflCasesAppliedCount = 0;
@@ -524,45 +527,6 @@ export class OfficerInChargeDashboardComponent implements OnInit {
       };
     }
 
-    if (this.selectedModule && this.selectedModule !== 'all' && this.moduleCounts[this.selectedModule]) {
-      const counts = this.moduleCounts[this.selectedModule];
-      return {
-        applied: counts.applied || 0,
-        pending: counts.pending || 0,
-        approved: counts.approved || 0,
-        rejected: counts.rejected || 0,
-        dailyEntry: this.dailyEntryPendingCount
-      };
-    }
-
-    if (this.moduleCounts && (this.moduleCounts['transit'] || this.moduleCounts['hologram'] || this.moduleCounts['hologramRequests'] || this.moduleCounts['bldetails'])) {
-      const oicModules = ['transit', 'bldetails', 'hologram', 'hologramRequests'];
-      let applied = 0;
-      let pending = 0;
-      let approved = 0;
-      let rejected = 0;
-      let hasData = false;
-      for (const m of oicModules) {
-        const c = this.moduleCounts[m];
-        if (c) {
-          hasData = true;
-          applied += Number(c.applied || 0);
-          pending += Number(c.pending || 0);
-          approved += Number(c.approved || 0);
-          rejected += Number(c.rejected || 0);
-        }
-      }
-      if (hasData) {
-        return {
-          applied,
-          pending,
-          approved,
-          rejected,
-          dailyEntry: this.dailyEntryPendingCount
-        };
-      }
-    }
-
     const hologramReqPending = (this.hologramRequestCounts.PENDING || 0);
     const hologramReqApproved = (this.hologramRequestCounts.APPROVED || 0);
     const hologramReqRejected = (this.hologramRequestCounts.REJECTED || 0);
@@ -582,12 +546,40 @@ export class OfficerInChargeDashboardComponent implements OnInit {
     const bldRejected = this.blDetailsRejectedCount || 0;
 
     const holProcPending = this.hologramProcurementPendingCount || 0;
+    const holProcApplied = this.hologramProcurementAppliedCount || holProcPending;
+    const holProcApproved = this.hologramProcurementApprovedCount || 0;
+    const holProcRejected = this.hologramProcurementRejectedCount || 0;
+
+    if (this.selectedModule && this.selectedModule !== 'all') {
+      if (this.selectedModule === 'transit') {
+        return { applied: transitApplied, pending: transitPending, approved: transitApproved, rejected: transitRejected, dailyEntry: 0 };
+      }
+      if (this.selectedModule === 'bldetails') {
+        return { applied: bldApplied, pending: bldPending, approved: bldApproved, rejected: bldRejected, dailyEntry: 0 };
+      }
+      if (this.selectedModule === 'hologram') {
+        return { applied: holProcApplied, pending: holProcPending, approved: holProcApproved, rejected: holProcRejected, dailyEntry: 0 };
+      }
+      if (this.selectedModule === 'hologramRequests') {
+        return { applied: hologramReqApplied, pending: hologramReqPending, approved: hologramReqApproved, rejected: hologramReqRejected, dailyEntry: 0 };
+      }
+      if (this.moduleCounts[this.selectedModule]) {
+        const counts = this.moduleCounts[this.selectedModule];
+        return {
+          applied: counts.applied || 0,
+          pending: counts.pending || 0,
+          approved: counts.approved || 0,
+          rejected: counts.rejected || 0,
+          dailyEntry: this.dailyEntryPendingCount
+        };
+      }
+    }
 
     return {
-      applied: transitApplied + hologramReqApplied + bldApplied,
+      applied: transitApplied + hologramReqApplied + bldApplied + holProcApplied,
       pending: transitPending + hologramReqPending + holProcPending + bldPending,
-      approved: transitApproved + hologramReqApproved + bldApproved,
-      rejected: transitRejected + hologramReqRejected + bldRejected,
+      approved: transitApproved + hologramReqApproved + bldApproved + holProcApproved,
+      rejected: transitRejected + hologramReqRejected + bldRejected + holProcRejected,
       dailyEntry: this.dailyEntryPendingCount
     };
   }
@@ -618,10 +610,24 @@ export class OfficerInChargeDashboardComponent implements OnInit {
     this.hologramService.getProcurements().subscribe({
       next: (procurements: any[]) => {
         const scoped = this.filterByCurrentLicense(procurements || []);
-        this.hologramProcurementPendingCount = this.countOicHologramProcurementPending(scoped);
+        const rows = Array.isArray(scoped) ? scoped : [];
+        this.hologramProcurementPendingCount = this.countOicHologramProcurementPending(rows);
+        this.hologramProcurementAppliedCount = rows.length;
+        this.hologramProcurementApprovedCount = rows.filter((r: any) => {
+          const statusToken = this.normalizeStageToken(r?.status || r?.current_stage_name || '');
+          const details = r?.carton_details ?? r?.cartoon_details ?? r?.cartonDetails ?? r?.cartoonDetails ?? [];
+          return (Array.isArray(details) && details.length > 0) || statusToken.includes('cartonassigned') || statusToken.includes('cartoonassigned') || statusToken.includes('approved');
+        }).length;
+        this.hologramProcurementRejectedCount = rows.filter((r: any) => {
+          const statusToken = this.normalizeStageToken(r?.status || r?.current_stage_name || '');
+          return statusToken.includes('reject') || statusToken.includes('cancel');
+        }).length;
       },
       error: () => {
         this.hologramProcurementPendingCount = 0;
+        this.hologramProcurementAppliedCount = 0;
+        this.hologramProcurementApprovedCount = 0;
+        this.hologramProcurementRejectedCount = 0;
       }
     });
   }
@@ -671,7 +677,7 @@ export class OfficerInChargeDashboardComponent implements OnInit {
     forkJoin({ arrivals: arrivals$, usage: usage$ }).subscribe({
       next: ({ arrivals, usage }: any) => {
         const arrivalRows = Array.isArray(arrivals?.data) ? arrivals.data : (Array.isArray(arrivals) ? arrivals : []);
-        const scopedArrivals = this.filterByCurrentLicense(arrivalRows);
+        const scopedArrivals = arrivalRows.length > 0 ? arrivalRows : this.filterByCurrentLicense(arrivalRows);
 
         let usageRows: any[] = [];
         if (Array.isArray(usage)) {
@@ -681,7 +687,7 @@ export class OfficerInChargeDashboardComponent implements OnInit {
         } else if (Array.isArray(usage?.results)) {
           usageRows = usage.results;
         }
-        const scopedUsage = this.filterByCurrentLicense(usageRows);
+        const scopedUsage = usageRows.length > 0 ? usageRows : this.filterByCurrentLicense(usageRows);
 
         const arrPending = scopedArrivals.filter((r: any) => {
           const s = String(r?.approvalStatus || r?.approval_status || r?.review_status || r?.reviewStatus || r?.status || '').toUpperCase();
