@@ -229,16 +229,13 @@ export class LicenseRenewalDashboardComponent implements OnInit {
     const currentStageId = raw?.current_stage_id || raw?.currentStageId || raw?.current_stage;
     const currentStageRaw = String(raw?.current_stage_name || raw?.currentStageName || raw?.current_stage || '').trim();
 
-    const rawStatusGroup = raw?.status_group || raw?.statusGroup || raw?.status || fallbackStatusGroup || 'applied';
-    let finalStatusGroup: RenewalItem['statusGroup'] = 
-      rawStatusGroup === 'approved' ? 'approved' :
-      rawStatusGroup === 'pending' ? 'pending' :
-      rawStatusGroup === 'objection' ? 'objection' :
-      rawStatusGroup === 'rejected' ? 'rejected' :
-      rawStatusGroup === 'awaiting-payment' || rawStatusGroup === 'awaiting_payment' ? 'awaiting-payment' :
-      'applied';
-
+    const rawStatusGroup = raw?.status_group || raw?.statusGroup || raw?.status || fallbackStatusGroup || '';
     const stageRawLower = currentStageRaw.toLowerCase();
+    const isTerminated = stageRawLower.includes('terminat') || stageRawLower.includes('forfeit') || stageRawLower.includes('cancel') || stageRawLower.includes('revoke') || stageRawLower.includes('suspend');
+    const isRejected = rawStatusGroup === 'rejected' || stageRawLower.includes('reject') || isTerminated;
+    const isApproved = Boolean(raw?.is_approved ?? raw?.isApproved) || stageRawLower.includes('approved') || rawStatusGroup === 'approved';
+    const isObjection = stageRawLower.includes('objection') || rawStatusGroup === 'objection';
+
     const isAwaitingPaymentStage = 
       stageRawLower.includes('awaiting payment') || 
       stageRawLower.includes('awaiting_payment') || 
@@ -247,8 +244,19 @@ export class LicenseRenewalDashboardComponent implements OnInit {
       currentStageId === 109 ||
       currentStageId === '109';
 
-    if (this.isLicenseeUser() && isAwaitingPaymentStage) {
+    let finalStatusGroup: RenewalItem['statusGroup'] = 'pending';
+    if (isRejected) {
+      finalStatusGroup = 'rejected';
+    } else if (isApproved) {
+      finalStatusGroup = 'approved';
+    } else if (isObjection) {
+      finalStatusGroup = 'objection';
+    } else if (this.isLicenseeUser() && isAwaitingPaymentStage) {
       finalStatusGroup = 'awaiting-payment';
+    } else if (rawStatusGroup === 'applied' && stageRawLower.includes('initial')) {
+      finalStatusGroup = 'applied';
+    } else {
+      finalStatusGroup = 'pending';
     }
 
     const categoryName = String(

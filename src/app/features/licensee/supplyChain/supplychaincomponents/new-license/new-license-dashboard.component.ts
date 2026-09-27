@@ -770,7 +770,7 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
     const currentStageId = item?.current_stage_id || item?.currentStageId || item?.current_stage;
     const rawLower = currentStageRaw.toLowerCase();
     const isTerminated = rawLower.includes('terminat') || rawLower.includes('forfeit') || rawLower.includes('cancel') || rawLower.includes('revoke') || rawLower.includes('suspend');
-    const isRejected = statusGroup === 'rejected' || rawLower.includes('reject') || isTerminated;
+    const isRejected = rawStatusGroup === 'rejected' || rawLower.includes('reject') || isTerminated;
 
     const canView = paymentStatus === 'Successful' || feePaid;
     const canPayNow = this.isLicenseeUser() && !feePaid && paymentStatus !== 'Successful' && !isRejected;
@@ -790,8 +790,18 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
       ? this.formatDate(paymentDateRaw || item?.created_at || item?.createdAt || item?.submitted_on)
       : this.formatDate(item?.created_at || item?.createdAt || item?.submitted_on);
 
-    let finalStatusGroup: NewLicenseItem['statusGroup'] = isRejected ? 'rejected' : statusGroup;
-    if (this.isLicenseeUser() && !isRejected) {
+    const applicationId = String(item?.application_id || item?.applicationId || item?.id || 'N/A');
+    const isApproved = Boolean((item?.is_approved ?? item?.isApproved ?? rawLower.includes('approved') ?? (rawStatusGroup === 'approved')) && !isRejected && !isTerminated);
+    const licenseNumber = this.deriveNewLicenseNaNumber(applicationId, item);
+
+    let finalStatusGroup: NewLicenseItem['statusGroup'] = 'pending';
+    if (isRejected) {
+      finalStatusGroup = 'rejected';
+    } else if (isApproved) {
+      finalStatusGroup = 'approved';
+    } else if (rawLower.includes('objection') || item?.is_objection_timer_active) {
+      finalStatusGroup = 'objection';
+    } else if (this.isLicenseeUser()) {
       const isAwaiting = 
         (rawLower.includes('awaiting') && rawLower.includes('payment')) ||
         (rawLower.includes('payment') && !rawLower.includes('reject') && !isTerminated) ||
@@ -801,7 +811,13 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
 
       if (isAwaiting) {
         finalStatusGroup = 'awaiting-payment';
+      } else if (rawStatusGroup === 'applied' || rawLower.includes('initial') || !canView) {
+        finalStatusGroup = 'applied';
+      } else {
+        finalStatusGroup = 'pending';
       }
+    } else {
+      finalStatusGroup = (rawStatusGroup === 'applied' && rawLower.includes('initial')) ? 'applied' : 'pending';
     }
 
     // Licensee UX: a failed/unpaid application fee means the application is not submitted to workflow yet.
@@ -818,10 +834,6 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
     const siteEnquiryIsReverted = Boolean(
       (item?.site_enquiry_is_reverted ?? item?.siteEnquiryIsReverted ?? item?.siteEnquiryReverted) || false
     );
-
-    const applicationId = String(item?.application_id || item?.applicationId || item?.id || 'N/A');
-    const isApproved = Boolean((item?.is_approved ?? item?.isApproved ?? (statusGroup === 'approved')) && !isRejected && !isTerminated);
-    const licenseNumber = this.deriveNewLicenseNaNumber(applicationId, item);
 
     const isLicenseFeePaid = Boolean(item?.is_license_fee_paid ?? item?.isLicenseFeePaid ?? item?.is_fee_paid ?? item?.isFeePaid);
     const isSecurityFeePaid = Boolean(item?.is_security_fee_paid ?? item?.isSecurityFeePaid ?? item?.is_security_deposit_paid ?? item?.isSecurityDepositPaid);
