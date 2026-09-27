@@ -1193,8 +1193,8 @@ export class CommissionerDashboardComponent implements OnInit {
   loadRevalidations(): void {
     this.supplyChainService.getRevalidationData().subscribe({
       next: (data: any[]) => {
-        const revalidations: CommissionerData[] = data
-          .filter((item: any) => this.requiresCommissionerReview(item.status))
+        const revalidations: CommissionerData[] = (data || [])
+          .filter((item: any) => this.requiresCommissionerReview(item.status) || this.hasApproveOrRejectAction(item))
           .map((item: any) => ({
             id: item.id,
             referenceNo: item.ourRefNo || item.our_ref_no || `REV-${item.id}`,
@@ -1203,7 +1203,7 @@ export class CommissionerDashboardComponent implements OnInit {
             status: item.status || 'PENDING',
             amount: item.revalidationBrAmount || item.revalidation_br_amount || '0.00',
             type: 'revalidation',
-            allowedActions: item.allowedActions || item.allowed_actions || [],
+            allowedActions: item.allowedActions || item.allowed_actions || this.getDefaultActionsFromStatus(item.status),
             allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
             workflowId: item.workflow || item.workflow_id || item.workflowId,
             currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,

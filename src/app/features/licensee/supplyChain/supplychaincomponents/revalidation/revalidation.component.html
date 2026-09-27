@@ -8,7 +8,7 @@
         <i class="bi bi-list-ul"></i>
       </div>
       <div class="card-content">
-        <h3 class="card-value">{{ countsLoaded ? counts.total : totalCount }}</h3>
+        <h3 class="card-value">{{ getRevalidationStatusCount('TOTAL') }}</h3>
         <p class="card-label">Total Revalidations</p>
       </div>
     </div>
@@ -35,7 +35,7 @@
       </div>
     </div>
 
-    <div *ngIf="isCommissioner() || isPermitSection()" class="summary-card action-required-requests summary-card-clickable" role="button" tabindex="0"
+    <div *ngIf="!isCommissioner() && !isPermitSection()" class="summary-card action-required-requests summary-card-clickable" role="button" tabindex="0"
       (click)="onSummaryCardClick('ACTION_REQUIRED')" [class.active]="activeSummaryFilter === 'ACTION_REQUIRED'">
       <div class="card-icon">
         <i class="bi bi-exclamation-circle"></i>

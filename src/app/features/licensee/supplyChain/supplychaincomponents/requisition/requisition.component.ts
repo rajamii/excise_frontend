@@ -2826,6 +2826,10 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
   canViewPermitSlip(item: TableData): boolean {
     if (!item) return false;
+    // License user should not see permit slip / approval letter
+    if (!this.isAdmin()) {
+      return false;
+    }
     if (this.isCommissioner()) {
       return this.isCommissionerFinalApproved(item);
     }

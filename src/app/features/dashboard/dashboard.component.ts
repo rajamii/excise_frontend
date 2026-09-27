@@ -1054,11 +1054,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         // ── REVALIDATIONS ─────────────────────────────────────────────────────
         {
           const items: any[] = Array.isArray(rev) ? rev : [];
-          const pending = revCounts?.pending !== undefined && revCounts?.pending !== null
-            ? Number(revCounts.pending || 0)
-            : ((isCommissioner || isPermitSection)
-                ? this.sidebarPendingBadgeService.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY'])
-                : this.sidebarPendingBadgeService.countLicenseePendingItems(items));
+          const computedPending = (isCommissioner || isPermitSection)
+            ? this.sidebarPendingBadgeService.countActionableWithStatusFallback(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY'])
+            : this.sidebarPendingBadgeService.countLicenseePendingItems(items);
+          const pending = revCounts?.pending !== undefined && revCounts?.pending !== null && Number(revCounts.pending) > 0
+            ? Number(revCounts.pending)
+            : computedPending;
           const approved = revCounts?.approved !== undefined && revCounts?.approved !== null
             ? Number(revCounts.approved || 0)
             : items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;

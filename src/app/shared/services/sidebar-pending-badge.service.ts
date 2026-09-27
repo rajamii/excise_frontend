@@ -338,7 +338,7 @@ export class SidebarPendingBadgeService {
         }
         return this.supplyChainService.getRevalidationData().pipe(
           map((items) => this.toArray(items)),
-          map((items) => this.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY']))
+          map((items) => this.countActionableWithStatusFallback(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY']))
         );
 
       case 'cancellation':

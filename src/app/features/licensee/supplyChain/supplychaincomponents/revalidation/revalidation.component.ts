@@ -146,12 +146,9 @@ export class RevalidationComponent implements OnInit {
             if (statusParam && ['PENDING', 'UNDERPROCESS', 'APPROVED', 'REJECTED', 'ALL'].includes(statusParam)) {
               this.activeSummaryFilter = statusParam === 'ALL' ? '' : statusParam;
               this.revalidationStatusFilter = statusParam === 'ALL' ? '' : statusParam;
-            } else if (this.counts.pending > 0) {
+            } else {
               this.activeSummaryFilter = 'PENDING';
               this.revalidationStatusFilter = 'PENDING';
-            } else {
-              this.activeSummaryFilter = '';
-              this.revalidationStatusFilter = '';
             }
             this.currentPage = 1;
             this.fetchRevalidationData();
@@ -161,6 +158,8 @@ export class RevalidationComponent implements OnInit {
       error: () => {
         if (!this.initialFilterApplied) {
           this.initialFilterApplied = true;
+          this.activeSummaryFilter = 'PENDING';
+          this.revalidationStatusFilter = 'PENDING';
           this.fetchRevalidationData();
         }
       }
@@ -428,7 +427,7 @@ export class RevalidationComponent implements OnInit {
       const actions: string[] = item?.allowedActions ?? [];
       const hasApprove = Array.isArray(actions) && (actions.includes('APPROVE') || actions.includes('REJECT'));
       if (hasApprove) return true;
-      return statusToken.includes('forwardedtocommissioner') || statusToken === 'pending';
+      return statusToken.includes('commissioner') || statusToken.includes('forward') || statusToken === 'pending' || statusToken.includes('submit');
     }
 
     // For permit section: pending when action is needed right now by permit section
@@ -437,7 +436,7 @@ export class RevalidationComponent implements OnInit {
       const hasAction = Array.isArray(actions) && (actions.includes('APPROVE') || actions.includes('REJECT') ||
              actions.includes('FORWARD') || actions.includes('VERIFY'));
       if (hasAction) return true;
-      return statusToken.includes('permitsection') || statusToken === 'pending';
+      return statusToken.includes('permitsection') || statusToken === 'pending' || statusToken.includes('forward') || statusToken.includes('submit');
     }
 
     if (this.isInvalidLikeStatus(item) || this.isApprovedLikeStatus(item) || this.isActionRequiredLikeStatus(item)) {
@@ -457,20 +456,56 @@ export class RevalidationComponent implements OnInit {
   }
 
   getRevalidationStatusCount(status: string): number {
+    const filter = this.normalizeStageToken(status);
+
+    if (this.isCommissioner() || this.isPermitSection()) {
+      if (filter === 'actionrequired' || filter === 'invalid') {
+        return 0;
+      }
+      if (this.countsLoaded) {
+        if (filter === 'approved') return this.counts.approved;
+        if (filter === 'pending') {
+          const computed = this.summaryRevalidationData.filter(item => this.isPendingLikeStatus(item)).length;
+          return Math.max(this.counts.pending || 0, computed);
+        }
+        if (filter === 'rejected') return this.counts.rejected;
+        if (filter === 'underprocess') return this.counts.underprocess;
+        if (filter === 'total' || filter === 'all') return this.counts.total;
+        return (this.counts as any)[filter] ?? 0;
+      }
+      if (filter === 'pending') {
+        return this.summaryRevalidationData.filter(item => this.isPendingLikeStatus(item)).length;
+      }
+      if (filter === 'approved') {
+        return this.summaryRevalidationData.filter(item => this.isApprovedLikeStatus(item)).length;
+      }
+      if (filter === 'rejected') {
+        return this.summaryRevalidationData.filter(item => this.normalizeStageToken(item.status).includes('reject')).length;
+      }
+      if (filter === 'underprocess') {
+        return this.summaryRevalidationData.filter(item => this.isUnderProcessLikeStatus(item)).length;
+      }
+      if (filter === 'total' || filter === 'all') {
+        return this.summaryRevalidationData.length;
+      }
+    }
+
     if (this.countsLoaded) {
-      const filter = this.normalizeStageToken(status);
       if (filter === 'actionrequired' || filter === 'invalid') {
         return this.counts.invalid || 0;
       }
       if (filter === 'approved') return this.counts.approved;
-      if (filter === 'pending') return this.counts.pending;
+      if (filter === 'pending') {
+        const computed = this.summaryRevalidationData.filter(item => this.isPendingLikeStatus(item)).length;
+        return Math.max(this.counts.pending || 0, computed);
+      }
       if (filter === 'underprocess') return this.counts.underprocess;
       if (filter === 'rejected') return this.counts.rejected;
       if (filter === 'live') return this.counts.live;
       if (filter === 'total' || filter === 'all') return this.counts.total;
       return (this.counts as any)[filter] ?? 0;
     }
-    const filter = this.normalizeStageToken(status);
+
     if (filter === 'actionrequired') {
       return this.summaryRevalidationData.filter(item => this.isActionRequiredLikeStatus(item)).length;
     }
@@ -828,6 +863,10 @@ export class RevalidationComponent implements OnInit {
 
   canViewPermitSlip(item: TableData): boolean {
     if (!item) return false;
+    // License user should not see permit slip / approval letter
+    if (!this.isAdmin()) {
+      return false;
+    }
     const status = this.normalizeToken(item.status);
     if (status.includes('reject')) return false;
 

@@ -1312,6 +1312,10 @@ export class CancellationComponent implements OnInit {
 
   canViewPermitSlip(item: TableData): boolean {
     if (!item) return false;
+    // License user should not see permit slip / approval letter
+    if (!this.isAdmin()) {
+      return false;
+    }
     const status = this.normalizeStatus(item.status || '');
     if (this.isRejectedStatus(status)) {
       return false;
