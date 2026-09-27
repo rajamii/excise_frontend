@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { of, Subject } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged } from 'rxjs/operators';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import Swal from 'sweetalert2';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { RoleService } from '../../../../../core/services/role.service';
@@ -52,9 +52,12 @@ interface GroupedRenewalResponse {
 })
 export class LicenseRenewalDashboardComponent implements OnInit {
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private roleService = inject(RoleService);
   private licenseApplicationService = inject(LicenseApplicationService);
   private sidebarPendingBadgeService = inject(SidebarPendingBadgeService);
+
+  private initialFilterApplied = false;
 
   isLoading = false;
   error: string | null = null;
@@ -94,7 +97,9 @@ export class LicenseRenewalDashboardComponent implements OnInit {
 
   loadData(): void {
     this.loadCounts();
-    this.loadTableData();
+    if (this.initialFilterApplied) {
+      this.loadTableData();
+    }
   }
 
   loadCounts(): void {
@@ -114,6 +119,20 @@ export class LicenseRenewalDashboardComponent implements OnInit {
         rejected: Number(counts?.rejected || 0),
         awaitingPayment: Number((counts as any)?.awaiting_payment || 0)
       };
+
+      if (!this.initialFilterApplied) {
+        this.initialFilterApplied = true;
+        const statusParam = String(this.route.snapshot.queryParams['status'] || '').toLowerCase();
+        if (['applied', 'pending', 'objection', 'approved', 'rejected', 'awaiting-payment'].includes(statusParam)) {
+          this.activeSummaryFilter = statusParam as RenewalItem['statusGroup'];
+        } else if (this.counts.pending > 0) {
+          this.activeSummaryFilter = 'pending';
+        } else {
+          this.activeSummaryFilter = '';
+        }
+        this.pageIndex = 0;
+        this.loadTableData();
+      }
     });
   }
 
