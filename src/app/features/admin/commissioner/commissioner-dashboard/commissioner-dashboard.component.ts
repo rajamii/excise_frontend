@@ -209,13 +209,23 @@ export class CommissionerDashboardComponent implements OnInit {
   ];
 
   // Pagination state per tab
-  pageSizeOptions: number[] = [5, 10, 15];
+  pageSizeOptions: number[] = [5, 10, 15, 25, 50];
+  isHologramLoading = false;
+  hologramServerTotalCount = 0;
+  hologramServerTotalPages = 1;
+  hologramPageSizeOptions = [5, 10, 25, 50];
+  hologramSummaryCounts: { all: number; pending: number; approved: number; rejected: number } = {
+    all: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0
+  };
   pageSizeByTab: Record<string, number> = {
     requisition: 5,
     revalidation: 10,
     cancellation: 5,
     transit: 5,
-    hologram: 5,
+    hologram: 10,
   };
   currentPageByTab: Record<string, number> = {
     requisition: 1,
@@ -289,29 +299,70 @@ export class CommissionerDashboardComponent implements OnInit {
   }
 
   loadHologramApplications(forceRefresh = false): void {
-    this.hologramService.getProcurements(forceRefresh).subscribe({
-      next: (data) => {
-        console.log('Fetched Hologram Procurements for Commissioner:', data);
+    this.isHologramLoading = true;
+    const page = this.currentPageByTab['hologram'] || 1;
+    const pageSize = this.pageSizeByTab['hologram'] || 10;
 
-        const convertedData: CommissionerTableData[] = data.map((item: any) => {
-          let displayStatus = item.status;
+    const queryParams: Record<string, any> = {
+      page: page,
+      page_size: pageSize
+    };
+
+    if (this.selectedHologramFilter && this.selectedHologramFilter !== 'all') {
+      queryParams['status'] = this.selectedHologramFilter;
+    }
+    if (this.hologramSearchIdFilter?.trim()) {
+      queryParams['search'] = this.hologramSearchIdFilter.trim();
+    }
+    if (this.hologramCompanyFilter?.trim()) {
+      queryParams['company'] = this.hologramCompanyFilter.trim();
+    }
+    if (this.hologramDateFilter) {
+      queryParams['date'] = this.hologramDateFilter;
+    }
+    if (this.hologramMonthFilter) {
+      queryParams['month'] = this.hologramMonthFilter;
+    }
+
+    this.hologramService.getProcurements(queryParams, forceRefresh).subscribe({
+      next: (response: any) => {
+        this.isHologramLoading = false;
+        let rawList: any[] = [];
+        if (response && Array.isArray(response.results)) {
+          rawList = response.results;
+          this.hologramServerTotalCount = Number(response.count ?? response.total ?? rawList.length);
+          this.hologramServerTotalPages = Number(response.total_pages ?? Math.max(1, Math.ceil(this.hologramServerTotalCount / pageSize)));
+        } else if (Array.isArray(response)) {
+          rawList = response;
+          this.hologramServerTotalCount = rawList.length;
+          this.hologramServerTotalPages = Math.max(1, Math.ceil(rawList.length / pageSize));
+        }
+
+        if (page > 1 && rawList.length === 0 && (this.hologramServerTotalCount || 0) > 0) {
+          this.currentPageByTab['hologram'] = 1;
+          this.loadHologramApplications(forceRefresh);
+          return;
+        }
+
+        const convertedData: CommissionerTableData[] = rawList.map((item: any) => {
+          let displayStatus = item.status || item.current_stage_name || item.currentStageName;
 
           return {
             id: item.id,
-            referenceNo: item.refNo,
+            referenceNo: item.refNo || item.ref_no,
             submissionDate: item.date,
-            distilleryName: item.licenseeName || item.manufacturingUnit,
+            distilleryName: item.licenseeName || item.distillery_name || item.applicant_name || item.manufacturingUnit || item.manufacturing_unit || 'Distillery',
             status: displayStatus,
             amount: this.calculateHologramAmount({
-              localQtyLakh: Number(item.localQty),
-              exportQtyLakh: Number(item.exportQty),
-              defenceQtyLakh: Number(item.defenceQty)
+              localQtyLakh: Number(item.localQty || item.local_qty || 0),
+              exportQtyLakh: Number(item.exportQty || item.export_qty || 0),
+              defenceQtyLakh: Number(item.defenceQty || item.defence_qty || 0)
             }).toString(),
-            priority: item.status === 'Forwarded to Commissioner' ? 'high' : 'normal',
-            localQtyLakh: Number(item.localQty),
-            exportQtyLakh: Number(item.exportQty),
-            defenceQtyLakh: Number(item.defenceQty),
-            totalQtyLakh: Number(item.localQty) + Number(item.exportQty) + Number(item.defenceQty),
+            priority: (displayStatus === 'Forwarded to Commissioner' || item.current_stage_name === 'Forwarded to Commissioner') ? 'high' : 'normal',
+            localQtyLakh: Number(item.localQty || item.local_qty || 0),
+            exportQtyLakh: Number(item.exportQty || item.export_qty || 0),
+            defenceQtyLakh: Number(item.defenceQty || item.defence_qty || 0),
+            totalQtyLakh: Number(item.localQty || item.local_qty || 0) + Number(item.exportQty || item.export_qty || 0) + Number(item.defenceQty || item.defence_qty || 0),
             hologramType: 'Security Hologram',
             allowedActions: item.allowedActions || item.allowed_actions || [],
             canEditQuantity: this.canCommissionerEditHologram(item),
@@ -323,11 +374,33 @@ export class CommissionerDashboardComponent implements OnInit {
 
         this.hologramData = convertedData;
         this.filteredHologramData = [...this.hologramData];
-        this.applyHologramFilters();
+        this.loadHologramCounts();
       },
       error: (err) => {
+        this.isHologramLoading = false;
         console.error('Error fetching hologram procurements:', err);
       }
+    });
+  }
+
+  loadHologramCounts(): void {
+    const filterParams: Record<string, any> = {};
+    if (this.hologramCompanyFilter?.trim()) filterParams['company'] = this.hologramCompanyFilter.trim();
+    if (this.hologramDateFilter) filterParams['date'] = this.hologramDateFilter;
+    if (this.hologramMonthFilter) filterParams['month'] = this.hologramMonthFilter;
+
+    this.hologramService.getProcurementDashboardCounts(filterParams).subscribe({
+      next: (res) => {
+        if (res) {
+          this.hologramSummaryCounts = {
+            all: Number(res.total || 0),
+            pending: Number(res.pending || 0),
+            approved: Number(res.approved || 0),
+            rejected: Number(res.rejected || 0)
+          };
+        }
+      },
+      error: () => {}
     });
   }
 
@@ -501,16 +574,7 @@ export class CommissionerDashboardComponent implements OnInit {
   }
 
   getHologramSummaryCount(type: 'all' | 'pending' | 'approved' | 'rejected'): number {
-    if (type === 'all') {
-      return this.hologramData.length;
-    }
-
-    return this.hologramData.filter((item) => {
-      if (type === 'pending') return this.isHologramPendingStatus(item);
-      if (type === 'approved') return this.isHologramApprovedStatus(item);
-      if (type === 'rejected') return this.isHologramRejectedStatus(item);
-      return false;
-    }).length;
+    return this.hologramSummaryCounts[type] ?? 0;
   }
 
   getUrgentHologramCount(): number {
@@ -615,12 +679,14 @@ export class CommissionerDashboardComponent implements OnInit {
     this.hologramCompanyFilter = '';
     this.hologramMonthFilter = '';
     this.selectedHologramFilter = 'all';
-    this.applyHologramFilters();
+    this.currentPageByTab['hologram'] = 1;
+    this.loadHologramApplications(true);
   }
 
   setHologramFilter(filterType: 'all' | 'pending' | 'approved' | 'rejected'): void {
     this.selectedHologramFilter = filterType;
-    this.applyHologramFilters();
+    this.currentPageByTab['hologram'] = 1;
+    this.loadHologramApplications(true);
   }
 
   getUniqueHologramCompanies(): string[] {
@@ -629,53 +695,8 @@ export class CommissionerDashboardComponent implements OnInit {
   }
 
   applyHologramFilters(): void {
-    let filtered = [...this.hologramData];
-
-    if (this.selectedHologramFilter && this.selectedHologramFilter !== 'all') {
-      filtered = filtered.filter(item => {
-        if (this.selectedHologramFilter === 'pending') return this.isHologramPendingStatus(item);
-        if (this.selectedHologramFilter === 'approved') return this.isHologramApprovedStatus(item);
-        if (this.selectedHologramFilter === 'rejected') return this.isHologramRejectedStatus(item);
-        return true;
-      });
-    }
-
-    if (this.hologramSearchIdFilter) {
-      const search = this.hologramSearchIdFilter.trim().toLowerCase();
-      filtered = filtered.filter(item => 
-        String(item.referenceNo || '').toLowerCase().includes(search)
-      );
-    }
-
-    if (this.hologramCompanyFilter) {
-      filtered = filtered.filter(item => item.distilleryName === this.hologramCompanyFilter);
-    }
-
-    if (this.hologramMonthFilter) {
-      filtered = filtered.filter(item => {
-        const itemDate = this.parseDate(item.submissionDate);
-        return itemDate.getMonth().toString() === this.hologramMonthFilter;
-      });
-    }
-
-    if (this.hologramDateFilter) {
-      filtered = filtered.filter(item => {
-        const itemDate = this.parseDate(item.submissionDate);
-        const filterDate = new Date(this.hologramDateFilter);
-        return itemDate.toDateString() === filterDate.toDateString();
-      });
-    }
-
-    if (this.hologramStatusFilter) {
-      filtered = filtered.filter(item => item.status === this.hologramStatusFilter);
-    }
-
-    if (this.hologramTypeFilter) {
-      filtered = filtered.filter(item => item.hologramType === this.hologramTypeFilter);
-    }
-
-    this.filteredHologramData = filtered;
-    this.resetPagination('hologram');
+    this.currentPageByTab['hologram'] = 1;
+    this.loadHologramApplications(true);
   }
 
   // Utility method to parse date
@@ -1071,11 +1092,17 @@ export class CommissionerDashboardComponent implements OnInit {
   }
 
   getTotalPages(data: any[], tab: string): number {
+    if (tab === 'hologram') {
+      return this.hologramServerTotalPages || 1;
+    }
     const size = this.getPageSize(tab);
     return Math.max(1, Math.ceil((data?.length || 0) / size));
   }
 
   getPaged<T = any>(data: T[], tab: string): T[] {
+    if (tab === 'hologram') {
+      return (data || []) as T[];
+    }
     const size = this.getPageSize(tab);
     const page = this.getCurrentPage(tab);
     const start = (page - 1) * size;
@@ -1086,6 +1113,9 @@ export class CommissionerDashboardComponent implements OnInit {
     const total = this.getTotalPages(data, tab);
     if (page < 1 || page > total) return;
     this.currentPageByTab[tab] = page;
+    if (tab === 'hologram') {
+      this.loadHologramApplications();
+    }
   }
 
   resetPagination(tab: string): void {
@@ -1097,6 +1127,9 @@ export class CommissionerDashboardComponent implements OnInit {
     if (!s) return;
     this.pageSizeByTab[tab] = s;
     this.currentPageByTab[tab] = 1;
+    if (tab === 'hologram') {
+      this.loadHologramApplications(true);
+    }
   }
 
   // Check if payment is completed for hologram (ALL types with same ref must be paid)

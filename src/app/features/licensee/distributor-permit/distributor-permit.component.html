@@ -123,7 +123,7 @@
               class="summary-card total-application-requests summary-card-clickable"
               role="button"
               tabindex="0"
-              (click)="hologramStatusFilter = 'all'"
+              (click)="onHologramStatusFilterClick('all')"
               [class.active]="hologramStatusFilter === 'all'"
             >
               <div class="card-icon"><i class="bi bi-list-ul"></i></div>
@@ -140,7 +140,7 @@
               class="summary-card approved-requests summary-card-clickable"
               role="button"
               tabindex="0"
-              (click)="hologramStatusFilter = 'approved'"
+              (click)="onHologramStatusFilterClick('approved')"
               [class.active]="hologramStatusFilter === 'approved'"
             >
               <div class="card-icon"><i class="bi bi-check-circle"></i></div>
@@ -157,7 +157,7 @@
               class="summary-card pending-requests summary-card-clickable"
               role="button"
               tabindex="0"
-              (click)="hologramStatusFilter = 'pending'"
+              (click)="onHologramStatusFilterClick('pending')"
               [class.active]="hologramStatusFilter === 'pending'"
             >
               <div class="card-icon"><i class="bi bi-clock-history"></i></div>
@@ -174,7 +174,7 @@
               class="summary-card under-process-requests summary-card-clickable"
               role="button"
               tabindex="0"
-              (click)="hologramStatusFilter = 'payment'"
+              (click)="onHologramStatusFilterClick('payment')"
               [class.active]="hologramStatusFilter === 'payment'"
             >
               <div class="card-icon"><i class="bi bi-wallet2"></i></div>
@@ -191,7 +191,7 @@
               class="summary-card rejected-requests summary-card-clickable"
               role="button"
               tabindex="0"
-              (click)="hologramStatusFilter = 'rejected'"
+              (click)="onHologramStatusFilterClick('rejected')"
               [class.active]="hologramStatusFilter === 'rejected'"
             >
               <div class="card-icon"><i class="bi bi-x-circle"></i></div>
@@ -259,8 +259,8 @@
             </div>
           </div>
 
-          <!-- Under Process Card (Hidden if counts.underProcess === 0) -->
-          <div class="col-xl col-lg-6 col-md-6" *ngIf="counts.underProcess > 0">
+          <!-- Under Process Card -->
+          <div class="col-xl col-lg-6 col-md-6">
             <div
               class="summary-card under-process-requests summary-card-clickable"
               role="button"
@@ -376,13 +376,14 @@
             class="form-control form-control-sm filter-input filter-input--search"
             placeholder="Search by Ref No / Applicant / Establishment"
             [(ngModel)]="hologramSearchFilter"
+            (ngModelChange)="onHologramSearchChange()"
             aria-label="Search by Ref No / Applicant / Establishment"
           />
 
           <button
             class="btn btn-outline-danger btn-sm filter-clear-btn"
             type="button"
-            (click)="hologramSearchFilter = ''; hologramStatusFilter = 'all'"
+            (click)="clearHologramFilters()"
             *ngIf="hologramSearchFilter || hologramStatusFilter !== 'all'"
           >
             <i class="bi bi-x-circle"></i> Clear

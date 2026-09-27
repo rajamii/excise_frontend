@@ -298,7 +298,31 @@ export class HologramDataService {
 
   // --- Procurement APIs ---
 
-  getProcurements(force = false): Observable<HologramProcurement[]> {
+  getProcurements(forceOrParams?: boolean | Record<string, any>, force = false): Observable<any> {
+    let params = new HttpParams();
+
+    if (typeof forceOrParams === 'boolean') {
+      const userKey = this.getUserCacheKeyPrefix();
+      const cacheKey = `procurements:list:${userKey}`;
+      if (forceOrParams) {
+        this.invalidateCache(cacheKey);
+        this.invalidateCache('procurements:list');
+      }
+      return this.getCachedOrFetch(cacheKey, () =>
+        this.http.get<any>(`${this.apiUrl}/procurement/`)
+      );
+    }
+
+    if (forceOrParams && typeof forceOrParams === 'object') {
+      Object.keys(forceOrParams).forEach(k => {
+        const val = forceOrParams[k];
+        if (val !== undefined && val !== null && val !== '') {
+          params = params.set(k, String(val));
+        }
+      });
+      return this.http.get<any>(`${this.apiUrl}/procurement/`, { params });
+    }
+
     const userKey = this.getUserCacheKeyPrefix();
     const cacheKey = `procurements:list:${userKey}`;
     if (force) {
@@ -306,7 +330,23 @@ export class HologramDataService {
       this.invalidateCache('procurements:list');
     }
     return this.getCachedOrFetch(cacheKey, () =>
-      this.http.get<HologramProcurement[]>(`${this.apiUrl}/procurement/`)
+      this.http.get<any>(`${this.apiUrl}/procurement/`)
+    );
+  }
+
+  getProcurementDashboardCounts(queryParams?: Record<string, any>): Observable<{ total: number; pending: number; approved: number; rejected: number }> {
+    let params = new HttpParams();
+    if (queryParams) {
+      Object.keys(queryParams).forEach(k => {
+        const val = queryParams[k];
+        if (val !== undefined && val !== null && val !== '') {
+          params = params.set(k, String(val));
+        }
+      });
+    }
+    return this.http.get<{ total: number; pending: number; approved: number; rejected: number }>(
+      `${this.apiUrl}/procurement/dashboard-counts/`,
+      { params }
     );
   }
 

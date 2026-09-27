@@ -244,8 +244,18 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     if (this.activeTab === tab) return;
     this.activeTab = tab;
     this.pageIndex = 0;
+    this.holoPageIndex = 0;
     this.serverTotalCount = null;
     this.serverTotalPages = null;
+    this.holoServerCount = null;
+    this.holoServerTotalPages = null;
+    this.searchFilter = '';
+    this.hologramSearchFilter = '';
+    this.dateFromFilter = '';
+    this.dateToFilter = '';
+    this.activeCardFilter = 'all';
+    this.hologramStatusFilter = 'all';
+
     if (tab === 'hologram-procurement') {
       this.loadHologramProcurements();
     } else if (tab === 'hologram-arrival') {
@@ -257,11 +267,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     } else {
       this.loadApplications();
     }
-    this.autoSelectDefaultStatusFilter();
     this.cdr.markForCheck();
     this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { tab, ref: null, id: null, mode: null },
+      queryParams: { tab, ref: null, id: null, mode: null, status: null },
       queryParamsHandling: 'merge',
       replaceUrl: true
     });
@@ -273,17 +282,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       this.activeCardFilter = statusParam as DistributorPermitStatusFilter;
       return;
     }
-    if (this.activeTab === 'brand-arrival') {
-      this.activeCardFilter = 'all';
-      return;
-    }
-    if (this.counts.pending > 0) {
-      this.activeCardFilter = 'pending';
-    } else if (this.counts.underProcess > 0) {
-      this.activeCardFilter = 'under_process';
-    } else if (this.counts.objection > 0) {
-      this.activeCardFilter = 'objection';
-    } else {
+    if (!this.activeCardFilter) {
       this.activeCardFilter = 'all';
     }
   }
@@ -739,8 +738,15 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return this.rows;
   }
 
-  get counts(): { total: number; approved: number; pending: number; underProcess: number; objection: number; rejected: number; cancelled: number } {
-    return this.activeTabRows.reduce(
+  statusCountsByTab: Record<string, { total: number; approved: number; pending: number; underProcess: number; objection: number; rejected: number; cancelled: number }> = {
+    requisition: { total: 0, approved: 0, pending: 0, underProcess: 0, objection: 0, rejected: 0, cancelled: 0 },
+    'brand-arrival': { total: 0, approved: 0, pending: 0, underProcess: 0, objection: 0, rejected: 0, cancelled: 0 },
+    revalidation: { total: 0, approved: 0, pending: 0, underProcess: 0, objection: 0, rejected: 0, cancelled: 0 },
+    cancellation: { total: 0, approved: 0, pending: 0, underProcess: 0, objection: 0, rejected: 0, cancelled: 0 }
+  };
+
+  computeTabCounts(rows: DistributorPermitRow[]): { total: number; approved: number; pending: number; underProcess: number; objection: number; rejected: number; cancelled: number } {
+    return (rows || []).reduce(
       (acc, row) => {
         acc.total += 1;
         const stGroup = this.isOicDistributorUser ? this.getOfficerStatusGroup(row) : (this.isPermitCancelled(row) || this.isPermitCancellationApplied(row) ? 'cancelled' : row.statusGroup);
@@ -756,6 +762,18 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     );
   }
 
+  get counts(): { total: number; approved: number; pending: number; underProcess: number; objection: number; rejected: number; cancelled: number } {
+    const cached = this.statusCountsByTab[this.activeTab];
+    if (cached && (cached.total > 0 || cached.approved > 0 || cached.underProcess > 0 || cached.pending > 0)) {
+      return cached;
+    }
+    const res = this.computeTabCounts(this.activeTabRows);
+    if (this.serverTotalCount !== null && this.serverTotalCount !== undefined && this.serverTotalCount > res.total) {
+      res.total = this.serverTotalCount;
+    }
+    return res;
+  }
+
   get filteredRows(): DistributorPermitRow[] {
     const q = this.searchFilter.trim().toLowerCase();
     const parsedFrom = this.dateFromFilter ? this.parseDate(this.dateFromFilter) : null;
@@ -764,8 +782,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const validTo = parsedTo && !Number.isNaN(parsedTo.getTime()) ? parsedTo : null;
 
     return this.activeTabRows.filter((row) => {
+      const isServerFiltered = this.serverTotalCount !== null && this.activeCardFilter !== 'all';
       const stGroup = this.isOicDistributorUser ? this.getOfficerStatusGroup(row) : (this.isPermitCancelled(row) || this.isPermitCancellationApplied(row) ? 'cancelled' : row.statusGroup);
-      const matchesStatus = this.activeCardFilter === 'all' ||
+      const matchesStatus = isServerFiltered ||
+        this.activeCardFilter === 'all' ||
         stGroup === this.activeCardFilter ||
         (this.activeCardFilter === 'cancelled' && (this.isPermitCancelled(row) || this.isPermitCancellationApplied(row) || this.getBrandArrivalStatusForRow(row) === 'cancelled' || this.getBrandArrivalStatusForRow(row) === 'cancellation_applied'));
       const matchesSearch = !q ||
@@ -7958,12 +7978,17 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   onCardFilterClick(filter: DistributorPermitStatusFilter): void {
+    if (this.activeCardFilter === filter) return;
     this.activeCardFilter = filter;
-    this.applyFilters();
+    this.pageIndex = 0;
+    this.loadApplications();
+    this.cdr.markForCheck();
   }
 
   applyFilters(): void {
     this.pageIndex = 0;
+    this.loadApplications();
+    this.cdr.markForCheck();
   }
 
   clearFilters(): void {
@@ -7971,7 +7996,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.searchFilter = '';
     this.dateFromFilter = '';
     this.dateToFilter = '';
-    this.applyFilters();
+    this.pageIndex = 0;
+    this.loadApplications();
+    this.cdr.markForCheck();
   }
 
   addLineItem(): void {
@@ -9667,6 +9694,18 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const revList = Array.isArray(revalidations) ? revalidations : (revalidations?.results || revalidations?.data || []);
     const canList = Array.isArray(cancellations) ? cancellations : (cancellations?.results || cancellations?.data || []);
 
+    if (this.currentPage > 1 && (this.serverTotalCount || 0) > 0) {
+      if (
+        (this.activeTab === 'requisition' && reqList.length === 0) ||
+        (this.activeTab === 'revalidation' && revList.length === 0) ||
+        (this.activeTab === 'cancellation' && canList.length === 0)
+      ) {
+        this.pageIndex = 0;
+        this.loadApplications();
+        return;
+      }
+    }
+
     const mappedRequisitions = reqList.map((req: any) => {
       const refNo = req?.reference_no || req?.referenceNo || '';
       const dateVal = req?.submitted_at || req?.submittedAt || req?.created_at || req?.createdAt || '';
@@ -9779,8 +9818,34 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }
 
     this.rebuildRows();
+    if (this.activeCardFilter === 'all' && !this.searchFilter?.trim() && !this.dateFromFilter && !this.dateToFilter) {
+      const currentCounts = this.computeTabCounts(this.activeTabRows);
+      if (this.serverTotalCount !== null && this.serverTotalCount > currentCounts.total) {
+        currentCounts.total = this.serverTotalCount;
+      }
+      this.statusCountsByTab[this.activeTab] = currentCounts;
+      if (this.activeTab === 'requisition') {
+        this.statusCountsByTab['brand-arrival'] = { ...currentCounts };
+      }
+    } else {
+      const tabCounts = this.statusCountsByTab[this.activeTab];
+      if (tabCounts && tabCounts.total > 0) {
+        const activeFilterKey = this.activeCardFilter === 'under_process' ? 'underProcess' : this.activeCardFilter;
+        if (activeFilterKey in tabCounts) {
+          (tabCounts as any)[activeFilterKey] = this.serverTotalCount ?? this.activeTabRows.length;
+        }
+        if (this.serverTotalCount !== null && this.serverTotalCount > tabCounts.total) {
+          tabCounts.total = this.serverTotalCount;
+        }
+      } else {
+        const currentCounts = this.computeTabCounts(this.activeTabRows);
+        if (this.serverTotalCount !== null && this.serverTotalCount > currentCounts.total) {
+          currentCounts.total = this.serverTotalCount;
+        }
+        this.statusCountsByTab[this.activeTab] = currentCounts;
+      }
+    }
     this.autoSelectDefaultStatusFilter();
-    this.applyFilters();
     const refParam = this.route.snapshot.queryParams['ref'] || this.route.snapshot.queryParams['id'];
     if (refParam) {
       this.openRefWhenApplicationsLoaded(String(refParam));
@@ -10193,9 +10258,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     });
   }
 
-  get hologramCounts(): { total: number; approved: number; pending: number; paymentPending: number; rejected: number } {
+  holoStatusCounts = { total: 0, approved: 0, pending: 0, paymentPending: 0, rejected: 0 };
+
+  computeHologramCounts(list: any[]): { total: number; approved: number; pending: number; paymentPending: number; rejected: number } {
     const isItCell = this.isItCellUser;
-    return (this.hologramProcurements || []).reduce(
+    return (list || []).reduce(
       (acc, item) => {
         acc.total += 1;
         const stage = String(item.current_stage_name || item.status || '').toLowerCase();
@@ -10222,6 +10289,17 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     );
   }
 
+  get hologramCounts(): { total: number; approved: number; pending: number; paymentPending: number; rejected: number } {
+    if (this.holoStatusCounts.total > 0 || this.holoStatusCounts.approved > 0 || this.holoStatusCounts.pending > 0 || this.holoStatusCounts.paymentPending > 0) {
+      return this.holoStatusCounts;
+    }
+    const res = this.computeHologramCounts(this.hologramProcurements);
+    if (this.holoServerCount !== null && this.holoServerCount !== undefined && this.holoServerCount > res.total) {
+      res.total = this.holoServerCount;
+    }
+    return res;
+  }
+
   loadHologramProcurements(silent = false): void {
     if (!silent) this.isLoadingHologram = true;
     const queryParams: Record<string, any> = {
@@ -10244,6 +10322,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           this.holoServerCount = null;
           this.holoServerTotalPages = null;
         }
+        if (this.holoCurrentPage > 1 && rawList.length === 0 && (this.holoServerCount || 0) > 0) {
+          this.holoPageIndex = 0;
+          this.loadHologramProcurements(silent);
+          return;
+        }
         this.hologramProcurements = rawList.map((item: any) => ({
           ...item,
           id: item.id,
@@ -10260,6 +10343,29 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           status: item.status || item.current_stage_name || 'Submitted',
           allowed_actions: item.allowed_actions || item.allowedActions || []
         }));
+
+        if (this.hologramStatusFilter === 'all' && !this.hologramSearchFilter?.trim()) {
+          const counts = this.computeHologramCounts(this.hologramProcurements);
+          if (this.holoServerCount !== null && this.holoServerCount > counts.total) {
+            counts.total = this.holoServerCount;
+          }
+          this.holoStatusCounts = counts;
+        } else if (this.holoStatusCounts.total === 0) {
+          const counts = this.computeHologramCounts(this.hologramProcurements);
+          if (this.holoServerCount !== null && this.holoServerCount > counts.total) {
+            counts.total = this.holoServerCount;
+          }
+          this.holoStatusCounts = counts;
+        } else if (this.hologramStatusFilter !== 'all') {
+          if (this.hologramStatusFilter === 'approved') this.holoStatusCounts.approved = this.holoServerCount ?? this.hologramProcurements.length;
+          else if (this.hologramStatusFilter === 'pending') this.holoStatusCounts.pending = this.holoServerCount ?? this.hologramProcurements.length;
+          else if (this.hologramStatusFilter === 'payment') this.holoStatusCounts.paymentPending = this.holoServerCount ?? this.hologramProcurements.length;
+          else if (this.hologramStatusFilter === 'rejected') this.holoStatusCounts.rejected = this.holoServerCount ?? this.hologramProcurements.length;
+          if (this.holoServerCount !== null && this.holoServerCount > this.holoStatusCounts.total) {
+            this.holoStatusCounts.total = this.holoServerCount;
+          }
+        }
+
         this.isLoadingHologram = false;
         if (!silent) {
           this.autoSelectDefaultHologramStatusFilter();
@@ -10280,13 +10386,32 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       this.hologramStatusFilter = statusParam;
       return;
     }
-    if (this.hologramCounts.paymentPending > 0) {
-      this.hologramStatusFilter = 'payment';
-    } else if (this.hologramCounts.pending > 0) {
-      this.hologramStatusFilter = 'pending';
-    } else {
-      this.hologramStatusFilter = 'all';
+    if (this.hologramStatusFilter && this.hologramStatusFilter !== 'all') {
+      return;
     }
+    this.hologramStatusFilter = 'all';
+  }
+
+  onHologramStatusFilterClick(filter: string): void {
+    if (this.hologramStatusFilter === filter) return;
+    this.hologramStatusFilter = filter;
+    this.holoPageIndex = 0;
+    this.loadHologramProcurements();
+    this.cdr.markForCheck();
+  }
+
+  onHologramSearchChange(): void {
+    this.holoPageIndex = 0;
+    this.loadHologramProcurements();
+    this.cdr.markForCheck();
+  }
+
+  clearHologramFilters(): void {
+    this.hologramSearchFilter = '';
+    this.hologramStatusFilter = 'all';
+    this.holoPageIndex = 0;
+    this.loadHologramProcurements();
+    this.cdr.markForCheck();
   }
 
   handleApplyNew(): void {

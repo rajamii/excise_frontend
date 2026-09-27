@@ -113,11 +113,12 @@ export class HologramprocurementComponent implements OnInit {
     console.log('🔄 Starting to load holograms (force=' + force + ')...');
     this.isLoading = true;
     this.hologramService.getProcurements(force).subscribe({
-      next: (data) => {
-        console.log('📦 Loading hologram data from API:', data.length, 'items');
+      next: (data: any) => {
+        const rawList: any[] = Array.isArray(data) ? data : (data?.results || []);
+        console.log('📦 Loading hologram data from API:', rawList.length, 'items');
         this.isLoading = false;
 
-        let mapped: HologramRow[] = data.map(item => {
+        let mapped: HologramRow[] = rawList.map((item: any) => {
           // FIXED: Use requested_* quantities for display (these never change)
           // Fallback to regular qty for existing records without requested_* fields
           const requestedLocal = Number((item as any).requested_local_qty || item.localQty);
