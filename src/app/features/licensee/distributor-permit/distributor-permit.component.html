@@ -14,15 +14,8 @@
     <span>{{ loadError }}</span>
   </div>
 
-  <div class="dp-loading" *ngIf="isLoading">
-    <mat-progress-spinner mode="indeterminate" diameter="34"></mat-progress-spinner>
-    <span>Loading permit details...</span>
-  </div>
-
-  <ng-container *ngIf="!isLoading">
-
-    <!-- Shared Summary Stats Row & Filters (Visible for All Tabs) -->
-    <section class="registration-management-container" *ngIf="!isFormView && !isArrivalPageView">
+  <!-- Shared Summary Stats Row & Filters (Visible for All Tabs) -->
+  <section class="registration-management-container" *ngIf="!isFormView && !isArrivalPageView">
       <div class="new-license-register-header">
         
         <!-- Statistics Row for Brand Warehouse Stock Register -->
@@ -459,7 +452,7 @@
               {{ isOicDistributorUser ? 'IMFL Requisition Cases Approval Applications' : 'Import Permit Application Entries' }}
             </h5>
             <div class="register-info">
-              <span class="entries-count" style="background:rgba(255,255,255,0.12); color:#e2e8f0; border:1px solid rgba(255,255,255,0.2); padding:4px 12px; border-radius:6px; font-size:0.82rem; font-weight:600;">{{ filteredRows.length }} Entries</span>
+              <span class="entries-count" style="background:rgba(255,255,255,0.12); color:#e2e8f0; border:1px solid rgba(255,255,255,0.2); padding:4px 12px; border-radius:6px; font-size:0.82rem; font-weight:600;">{{ totalItemsCount }} Entries</span>
             </div>
           </div>
 
@@ -803,7 +796,51 @@
               </tbody>
             </table>
           </div>
-          <div class="dp-empty-state text-center p-4 text-muted" *ngIf="!error && filteredRows.length === 0">
+
+          <!-- Loader above pagination bar -->
+          <div class="table-pagination-loader py-2 px-3 bg-light border-top d-flex align-items-center justify-content-center gap-2" *ngIf="isLoading && filteredRows.length > 0">
+            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+            <span class="small text-primary fw-medium">Loading records, please wait...</span>
+          </div>
+
+          <!-- Pagination Footer Bar -->
+          <div class="register-pagination p-3 bg-white border-top" *ngIf="filteredRows.length > 0">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+              <div class="pagination-info d-flex align-items-center gap-2">
+                <span class="info-text text-muted small">
+                  Showing {{ pageStart }}-{{ pageEnd }} of {{ totalItemsCount }} entries
+                </span>
+                <span *ngIf="isLoading" class="table-loading-inline d-inline-flex align-items-center gap-1 text-primary small">
+                  <span class="spinner-border spinner-border-sm" role="status" style="width: 0.85rem; height: 0.85rem;"></span>
+                  <span>Loading...</span>
+                </span>
+              </div>
+              <div class="pagination-controls">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="page-size-selector d-flex align-items-center gap-1.5">
+                    <label class="selector-label small text-muted mb-0">Show:</label>
+                    <select class="form-select form-select-sm" [ngModel]="pageSize" (ngModelChange)="changePageSize($event)" [disabled]="isLoading" style="width: 70px;">
+                      <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
+                    </select>
+                  </div>
+                  <div class="btn-group btn-group-sm pagination-buttons">
+                    <button class="btn btn-outline-secondary" (click)="goToPage(1)" [disabled]="currentPage === 1 || isLoading">«</button>
+                    <button class="btn btn-outline-secondary" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1 || isLoading">‹</button>
+                    <span class="btn btn-light disabled fw-semibold">{{ currentPage }} / {{ totalPages }}</span>
+                    <button class="btn btn-outline-secondary" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages || isLoading">›</button>
+                    <button class="btn btn-outline-secondary" (click)="goToPage(totalPages)" [disabled]="currentPage === totalPages || isLoading">»</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty / Loading States -->
+          <div class="dp-empty-state text-center p-5 text-muted" *ngIf="isLoading && filteredRows.length === 0">
+            <mat-progress-spinner mode="indeterminate" diameter="32" class="mx-auto mb-2"></mat-progress-spinner>
+            <p class="m-0 text-muted small">Loading requisition applications...</p>
+          </div>
+          <div class="dp-empty-state text-center p-4 text-muted" *ngIf="!isLoading && !error && filteredRows.length === 0">
             <i class="bi bi-inbox fs-2 d-block mb-2"></i>
             <p class="m-0">No requisition applications found.</p>
           </div>
@@ -844,7 +881,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let row of filteredRows; let i = index; trackBy: trackByRow" (click)="onViewDetails(row)">
+                <tr *ngFor="let row of pagedRows; let i = index; trackBy: trackByRow" (click)="onViewDetails(row)">
                   <td>{{ (pageIndex * pageSize) + i + 1 }}</td>
                   <td class="fw-semibold">
                     <div class="d-flex align-items-center gap-1.5 flex-wrap">
@@ -983,6 +1020,44 @@
             </table>
           </div>
 
+          <!-- Loader above pagination bar -->
+          <div class="table-pagination-loader py-2 px-3 bg-light border-top d-flex align-items-center gap-2" *ngIf="isLoading && filteredRows.length > 0">
+            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+            <span class="small text-muted">Loading records, please wait...</span>
+          </div>
+
+          <!-- Pagination Footer Bar -->
+          <div class="register-pagination p-3 bg-white border-top" *ngIf="filteredRows.length > 0">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+              <div class="pagination-info d-flex align-items-center gap-2">
+                <span class="info-text text-muted small">
+                  Showing {{ pageStart }}-{{ pageEnd }} of {{ filteredRows.length }} entries
+                </span>
+                <span *ngIf="isLoading" class="table-loading-inline d-inline-flex align-items-center gap-1 text-primary small">
+                  <span class="spinner-border spinner-border-sm" role="status" style="width: 0.85rem; height: 0.85rem;"></span>
+                  <span>Loading...</span>
+                </span>
+              </div>
+              <div class="pagination-controls">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="page-size-selector d-flex align-items-center gap-1.5">
+                    <label class="selector-label small text-muted mb-0">Show:</label>
+                    <select class="form-select form-select-sm" [ngModel]="pageSize" (ngModelChange)="changePageSize($event)" [disabled]="isLoading" style="width: 70px;">
+                      <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
+                    </select>
+                  </div>
+                  <div class="btn-group btn-group-sm pagination-buttons">
+                    <button class="btn btn-outline-secondary" (click)="goToPage(1)" [disabled]="currentPage === 1 || isLoading">«</button>
+                    <button class="btn btn-outline-secondary" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1 || isLoading">‹</button>
+                    <span class="btn btn-light disabled fw-semibold">{{ currentPage }} / {{ totalPages }}</span>
+                    <button class="btn btn-outline-secondary" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages || isLoading">›</button>
+                    <button class="btn btn-outline-secondary" (click)="goToPage(totalPages)" [disabled]="currentPage === totalPages || isLoading">»</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="dp-empty-state text-center p-5 text-muted" *ngIf="!error && filteredRows.length === 0">
             <i class="bi bi-boxes fs-1 d-block mb-2 text-secondary"></i>
             <h6 class="fw-bold text-dark">{{ activeCardFilter === 'cancelled' ? 'No Cancelled Applications' : 'No Applications Awaiting Arrival' }}</h6>
@@ -1000,7 +1075,7 @@
               IMFL Revalidation Applications
             </h5>
             <div class="register-info">
-              <span class="entries-count" style="background:rgba(255,255,255,0.12); color:#e2e8f0; border:1px solid rgba(255,255,255,0.2); padding:4px 12px; border-radius:6px; font-size:0.82rem; font-weight:600;">{{ filteredRows.length }} Entries</span>
+              <span class="entries-count" style="background:rgba(255,255,255,0.12); color:#e2e8f0; border:1px solid rgba(255,255,255,0.2); padding:4px 12px; border-radius:6px; font-size:0.82rem; font-weight:600;">{{ totalItemsCount }} Entries</span>
             </div>
           </div>
 
@@ -1088,7 +1163,51 @@
               </tbody>
             </table>
           </div>
-          <div class="dp-empty-state text-center p-4 text-muted" *ngIf="!error && filteredRows.length === 0">
+
+          <!-- Loader above pagination bar -->
+          <div class="table-pagination-loader py-2 px-3 bg-light border-top d-flex align-items-center justify-content-center gap-2" *ngIf="isLoading && filteredRows.length > 0">
+            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+            <span class="small text-primary fw-medium">Loading records, please wait...</span>
+          </div>
+
+          <!-- Pagination Footer Bar -->
+          <div class="register-pagination p-3 bg-white border-top" *ngIf="filteredRows.length > 0">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+              <div class="pagination-info d-flex align-items-center gap-2">
+                <span class="info-text text-muted small">
+                  Showing {{ pageStart }}-{{ pageEnd }} of {{ totalItemsCount }} entries
+                </span>
+                <span *ngIf="isLoading" class="table-loading-inline d-inline-flex align-items-center gap-1 text-primary small">
+                  <span class="spinner-border spinner-border-sm" role="status" style="width: 0.85rem; height: 0.85rem;"></span>
+                  <span>Loading...</span>
+                </span>
+              </div>
+              <div class="pagination-controls">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="page-size-selector d-flex align-items-center gap-1.5">
+                    <label class="selector-label small text-muted mb-0">Show:</label>
+                    <select class="form-select form-select-sm" [ngModel]="pageSize" (ngModelChange)="changePageSize($event)" [disabled]="isLoading" style="width: 70px;">
+                      <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
+                    </select>
+                  </div>
+                  <div class="btn-group btn-group-sm pagination-buttons">
+                    <button class="btn btn-outline-secondary" (click)="goToPage(1)" [disabled]="currentPage === 1 || isLoading">«</button>
+                    <button class="btn btn-outline-secondary" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1 || isLoading">‹</button>
+                    <span class="btn btn-light disabled fw-semibold">{{ currentPage }} / {{ totalPages }}</span>
+                    <button class="btn btn-outline-secondary" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages || isLoading">›</button>
+                    <button class="btn btn-outline-secondary" (click)="goToPage(totalPages)" [disabled]="currentPage === totalPages || isLoading">»</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty / Loading States -->
+          <div class="dp-empty-state text-center p-5 text-muted" *ngIf="isLoading && filteredRows.length === 0">
+            <mat-progress-spinner mode="indeterminate" diameter="32" class="mx-auto mb-2"></mat-progress-spinner>
+            <p class="m-0 text-muted small">Loading revalidation applications...</p>
+          </div>
+          <div class="dp-empty-state text-center p-4 text-muted" *ngIf="!isLoading && !error && filteredRows.length === 0">
             <i class="bi bi-arrow-repeat fs-2 d-block mb-2"></i>
             <p class="m-0">No revalidation applications found.</p>
           </div>
@@ -1104,7 +1223,7 @@
               IMFL Cancellation Applications
             </h5>
             <div class="register-info">
-              <span class="entries-count" style="background:rgba(255,255,255,0.12); color:#e2e8f0; border:1px solid rgba(255,255,255,0.2); padding:4px 12px; border-radius:6px; font-size:0.82rem; font-weight:600;">{{ filteredRows.length }} Entries</span>
+              <span class="entries-count" style="background:rgba(255,255,255,0.12); color:#e2e8f0; border:1px solid rgba(255,255,255,0.2); padding:4px 12px; border-radius:6px; font-size:0.82rem; font-weight:600;">{{ totalItemsCount }} Entries</span>
             </div>
           </div>
 
@@ -1158,7 +1277,51 @@
               </tbody>
             </table>
           </div>
-          <div class="dp-empty-state text-center p-4 text-muted" *ngIf="!error && filteredRows.length === 0">
+
+          <!-- Loader above pagination bar -->
+          <div class="table-pagination-loader py-2 px-3 bg-light border-top d-flex align-items-center justify-content-center gap-2" *ngIf="isLoading && filteredRows.length > 0">
+            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+            <span class="small text-primary fw-medium">Loading records, please wait...</span>
+          </div>
+
+          <!-- Pagination Footer Bar -->
+          <div class="register-pagination p-3 bg-white border-top" *ngIf="filteredRows.length > 0">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+              <div class="pagination-info d-flex align-items-center gap-2">
+                <span class="info-text text-muted small">
+                  Showing {{ pageStart }}-{{ pageEnd }} of {{ totalItemsCount }} entries
+                </span>
+                <span *ngIf="isLoading" class="table-loading-inline d-inline-flex align-items-center gap-1 text-primary small">
+                  <span class="spinner-border spinner-border-sm" role="status" style="width: 0.85rem; height: 0.85rem;"></span>
+                  <span>Loading...</span>
+                </span>
+              </div>
+              <div class="pagination-controls">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="page-size-selector d-flex align-items-center gap-1.5">
+                    <label class="selector-label small text-muted mb-0">Show:</label>
+                    <select class="form-select form-select-sm" [ngModel]="pageSize" (ngModelChange)="changePageSize($event)" [disabled]="isLoading" style="width: 70px;">
+                      <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
+                    </select>
+                  </div>
+                  <div class="btn-group btn-group-sm pagination-buttons">
+                    <button class="btn btn-outline-secondary" (click)="goToPage(1)" [disabled]="currentPage === 1 || isLoading">«</button>
+                    <button class="btn btn-outline-secondary" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1 || isLoading">‹</button>
+                    <span class="btn btn-light disabled fw-semibold">{{ currentPage }} / {{ totalPages }}</span>
+                    <button class="btn btn-outline-secondary" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages || isLoading">›</button>
+                    <button class="btn btn-outline-secondary" (click)="goToPage(totalPages)" [disabled]="currentPage === totalPages || isLoading">»</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty / Loading States -->
+          <div class="dp-empty-state text-center p-5 text-muted" *ngIf="isLoading && filteredRows.length === 0">
+            <mat-progress-spinner mode="indeterminate" diameter="32" class="mx-auto mb-2"></mat-progress-spinner>
+            <p class="m-0 text-muted small">Loading cancellation applications...</p>
+          </div>
+          <div class="dp-empty-state text-center p-4 text-muted" *ngIf="!isLoading && !error && filteredRows.length === 0">
             <i class="bi bi-x-circle fs-2 d-block mb-2"></i>
             <p class="m-0">No cancellation applications found.</p>
           </div>
@@ -1394,12 +1557,12 @@
                 <span class="d-none d-sm-inline">Refresh</span>
               </button>
               <span class="entries-count" style="background:rgba(255,255,255,0.12); color:#e2e8f0; border:1px solid rgba(255,255,255,0.2); padding:4px 12px; border-radius:6px; font-size:0.82rem; font-weight:600;">
-                {{ filteredHologramProcurements.length }} Entries
+                {{ holoTotalItemsCount }} Entries
               </span>
             </div>
           </div>
 
-          <div class="table-wrapper" *ngIf="!isLoadingHologram && filteredHologramProcurements.length > 0">
+          <div class="table-wrapper" *ngIf="filteredHologramProcurements.length > 0">
             <table class="table align-middle mb-0 custom-reg-table">
               <thead>
                 <tr style="background:#1e293b; color:#f8fafc; font-size:11.5px; text-transform:uppercase; letter-spacing:0.5px;">
@@ -1415,7 +1578,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let item of filteredHologramProcurements">
+                <tr *ngFor="let item of pagedHologramProcurements">
                   <!-- Ref Number -->
                   <td style="padding:14px 16px;">
                     <div class="fw-bold text-primary font-monospace">{{ item.ref_no || 'N/A' }}</div>
@@ -1538,18 +1701,55 @@
             </table>
           </div>
 
-          <!-- Empty State -->
+          <!-- Loader above pagination bar -->
+          <div class="table-pagination-loader py-2 px-3 bg-light border-top d-flex align-items-center justify-content-center gap-2" *ngIf="isLoadingHologram && filteredHologramProcurements.length > 0">
+            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+            <span class="small text-primary fw-medium">Loading records, please wait...</span>
+          </div>
+
+          <!-- Pagination Footer Bar -->
+          <div class="register-pagination p-3 bg-white border-top" *ngIf="filteredHologramProcurements.length > 0">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+              <div class="pagination-info d-flex align-items-center gap-2">
+                <span class="info-text text-muted small">
+                  Showing {{ holoPageStart }}-{{ holoPageEnd }} of {{ holoTotalItemsCount }} entries
+                </span>
+                <span *ngIf="isLoadingHologram" class="table-loading-inline d-inline-flex align-items-center gap-1 text-primary small">
+                  <span class="spinner-border spinner-border-sm" role="status" style="width: 0.85rem; height: 0.85rem;"></span>
+                  <span>Loading...</span>
+                </span>
+              </div>
+              <div class="pagination-controls">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="page-size-selector d-flex align-items-center gap-1.5">
+                    <label class="selector-label small text-muted mb-0">Show:</label>
+                    <select class="form-select form-select-sm" [ngModel]="holoPageSize" (ngModelChange)="changeHoloPageSize($event)" [disabled]="isLoadingHologram" style="width: 70px;">
+                      <option *ngFor="let opt of holoPageSizeOptions" [value]="opt">{{ opt }}</option>
+                    </select>
+                  </div>
+                  <div class="btn-group btn-group-sm pagination-buttons">
+                    <button class="btn btn-outline-secondary" (click)="goHoloPage(1)" [disabled]="holoCurrentPage === 1 || isLoadingHologram">«</button>
+                    <button class="btn btn-outline-secondary" (click)="goHoloPage(holoCurrentPage - 1)" [disabled]="holoCurrentPage === 1 || isLoadingHologram">‹</button>
+                    <span class="btn btn-light disabled fw-semibold">{{ holoCurrentPage }} / {{ holoTotalPages }}</span>
+                    <button class="btn btn-outline-secondary" (click)="goHoloPage(holoCurrentPage + 1)" [disabled]="holoCurrentPage === holoTotalPages || isLoadingHologram">›</button>
+                    <button class="btn btn-outline-secondary" (click)="goHoloPage(holoTotalPages)" [disabled]="holoCurrentPage === holoTotalPages || isLoadingHologram">»</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty / Loading States -->
+          <div class="p-5 text-center text-muted" *ngIf="isLoadingHologram && filteredHologramProcurements.length === 0">
+            <mat-progress-spinner mode="indeterminate" diameter="30" class="mx-auto mb-2"></mat-progress-spinner>
+            <span>Loading hologram applications...</span>
+          </div>
+
           <div class="p-5 text-center text-muted" *ngIf="!isLoadingHologram && filteredHologramProcurements.length === 0">
             <i class="bi bi-tag fs-1 d-block mb-2 text-secondary"></i>
             <h6 class="fw-bold text-dark">No Hologram Procurement Applications Found</h6>
             <p class="small text-muted" *ngIf="!isOfficerUser">Click "Apply for Hologram Procurement" to request excise holograms.</p>
             <p class="small text-muted" *ngIf="isOfficerUser">No applications match the current filter criteria.</p>
-          </div>
-
-          <!-- Loading State -->
-          <div class="p-5 text-center text-muted" *ngIf="isLoadingHologram">
-            <mat-progress-spinner mode="indeterminate" diameter="30" class="mx-auto mb-2"></mat-progress-spinner>
-            <span>Loading hologram applications...</span>
           </div>
         </div>
       </div>
@@ -2950,8 +3150,8 @@
       </mat-stepper>
     </section>
 
-  </ng-container>
-</div>
+  </div>
+
 
 
 <!-- Cancellation Modal Popup Overlay -->

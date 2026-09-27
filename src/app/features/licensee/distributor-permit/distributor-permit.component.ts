@@ -130,7 +130,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   dateToFilter = '';
   allCasesProcessedList: any[] = [];
   allArrivalsList: any[] = [];
-  pageSizeOptions: number[] = [5, 10, 15];
+  pageSizeOptions: number[] = [5, 10, 25, 50];
   pageSize = 5;
   pageIndex = 0;
 
@@ -244,6 +244,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     if (this.activeTab === tab) return;
     this.activeTab = tab;
     this.pageIndex = 0;
+    this.serverTotalCount = null;
+    this.serverTotalPages = null;
     if (tab === 'hologram-procurement') {
       this.loadHologramProcurements();
     } else if (tab === 'hologram-arrival') {
@@ -252,6 +254,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       this.loadHologramOverview();
     } else if (tab === 'brand-warehouse' || tab === 'brand-arrival') {
       this.loadBrandWarehouseStock();
+    } else {
+      this.loadApplications();
     }
     this.autoSelectDefaultStatusFilter();
     this.cdr.markForCheck();
@@ -777,24 +781,149 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     });
   }
 
+  serverTotalCount: number | null = null;
+  serverTotalPages: number | null = null;
+
   get pagedRows(): DistributorPermitRow[] {
     if (this.filteredRows.length === 0) {
       return [];
+    }
+    // If data is already paginated by the server (serverTotalCount is known and rows count <= pageSize)
+    if (this.serverTotalCount !== null && this.filteredRows.length <= this.pageSize) {
+      return this.filteredRows;
     }
     const start = this.pageIndex * this.pageSize;
     return this.filteredRows.slice(start, start + this.pageSize);
   }
 
+  get currentPage(): number {
+    return this.pageIndex + 1;
+  }
+
   get totalPages(): number {
+    if (this.serverTotalPages !== null && this.serverTotalPages !== undefined && this.serverTotalPages > 0) {
+      return this.serverTotalPages;
+    }
     return this.filteredRows.length === 0 ? 0 : Math.ceil(this.filteredRows.length / this.pageSize);
   }
 
+  getTotalPages(): number {
+    return this.totalPages;
+  }
+
+  get totalItemsCount(): number {
+    if (this.serverTotalCount !== null && this.serverTotalCount !== undefined) {
+      return this.serverTotalCount;
+    }
+    return this.filteredRows.length;
+  }
+
   get pageStart(): number {
-    return this.filteredRows.length === 0 ? 0 : this.pageIndex * this.pageSize + 1;
+    if (this.totalItemsCount === 0) return 0;
+    return this.pageIndex * this.pageSize + 1;
   }
 
   get pageEnd(): number {
-    return this.filteredRows.length === 0 ? 0 : Math.min((this.pageIndex + 1) * this.pageSize, this.filteredRows.length);
+    if (this.totalItemsCount === 0) return 0;
+    return Math.min((this.pageIndex + 1) * this.pageSize, this.totalItemsCount);
+  }
+
+  goToPage(page: number): void {
+    if (page < 1 || page > this.totalPages || this.isLoading) return;
+    this.pageIndex = page - 1;
+    this.loadApplications();
+    this.cdr.markForCheck();
+  }
+
+  changePageSize(newSize: any): void {
+    const size = typeof newSize === 'number' ? newSize : Number(newSize?.target?.value || newSize || 5);
+    if (this.pageSize === size && this.pageIndex === 0) return;
+    this.pageSize = size;
+    this.pageIndex = 0;
+    this.loadApplications();
+    this.cdr.markForCheck();
+  }
+
+  prevPage(): void {
+    if (this.pageIndex > 0 && !this.isLoading) {
+      this.pageIndex -= 1;
+      this.loadApplications();
+      this.cdr.markForCheck();
+    }
+  }
+
+  nextPage(): void {
+    if (this.totalPages > 0 && this.pageIndex < this.totalPages - 1 && !this.isLoading) {
+      this.pageIndex += 1;
+      this.loadApplications();
+      this.cdr.markForCheck();
+    }
+  }
+
+  // Hologram Procurement pagination
+  holoPageSizeOptions: number[] = [5, 10, 25, 50];
+  holoPageSize = 5;
+  holoPageIndex = 0;
+  holoServerCount: number | null = null;
+  holoServerTotalPages: number | null = null;
+
+  get holoCurrentPage(): number {
+    return this.holoPageIndex + 1;
+  }
+
+  get holoTotalPages(): number {
+    if (this.holoServerTotalPages !== null && this.holoServerTotalPages !== undefined && this.holoServerTotalPages > 0) {
+      return this.holoServerTotalPages;
+    }
+    return this.filteredHologramProcurements.length === 0 ? 0 : Math.ceil(this.filteredHologramProcurements.length / this.holoPageSize);
+  }
+
+  getHoloTotalPages(): number {
+    return this.holoTotalPages;
+  }
+
+  get holoTotalItemsCount(): number {
+    if (this.holoServerCount !== null && this.holoServerCount !== undefined) {
+      return this.holoServerCount;
+    }
+    return this.filteredHologramProcurements.length;
+  }
+
+  get holoPageStart(): number {
+    if (this.holoTotalItemsCount === 0) return 0;
+    return this.holoPageIndex * this.holoPageSize + 1;
+  }
+
+  get holoPageEnd(): number {
+    if (this.holoTotalItemsCount === 0) return 0;
+    return Math.min((this.holoPageIndex + 1) * this.holoPageSize, this.holoTotalItemsCount);
+  }
+
+  get pagedHologramProcurements(): IMFLHologramProcurementItem[] {
+    if (this.filteredHologramProcurements.length === 0) {
+      return [];
+    }
+    if (this.holoServerCount !== null && this.filteredHologramProcurements.length <= this.holoPageSize) {
+      return this.filteredHologramProcurements;
+    }
+    const start = this.holoPageIndex * this.holoPageSize;
+    return this.filteredHologramProcurements.slice(start, start + this.holoPageSize);
+  }
+
+  goHoloPage(page: number): void {
+    if (page < 1 || page > this.holoTotalPages || this.isLoadingHologram) return;
+    this.holoPageIndex = page - 1;
+    this.loadHologramProcurements();
+    this.cdr.markForCheck();
+  }
+
+  changeHoloPageSize(newSize: any): void {
+    const size = typeof newSize === 'number' ? newSize : Number(newSize?.target?.value || newSize || 5);
+    if (this.holoPageSize === size && this.holoPageIndex === 0) return;
+    this.holoPageSize = size;
+    this.holoPageIndex = 0;
+    this.loadHologramProcurements();
+    this.cdr.markForCheck();
   }
 
   get totalCases(): number {
@@ -7845,22 +7974,6 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.applyFilters();
   }
 
-  onPageSizeChange(): void {
-    this.pageIndex = 0;
-  }
-
-  prevPage(): void {
-    if (this.pageIndex > 0) {
-      this.pageIndex -= 1;
-    }
-  }
-
-  nextPage(): void {
-    if (this.totalPages > 0 && this.pageIndex < this.totalPages - 1) {
-      this.pageIndex += 1;
-    }
-  }
-
   addLineItem(): void {
     this.lineItems.push(this.fb.group({
       selectedBrandName: ['', Validators.required],
@@ -9426,26 +9539,130 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return this.isOicDistributorUser ? 'IMFL Requisition Cases Approval Applications' : 'IMFL Requisition Applications';
   }
 
-  loadApplications(): void {
-    this.sidebarPendingBadgeService.triggerRefresh();
-    this.loadBrandWarehouseStock();
+  loadApplications(refreshAllTabs = false): void {
+    this.isLoading = true;
+
+    const queryParams: Record<string, any> = {
+      page: this.currentPage,
+      page_size: this.pageSize
+    };
+    if (this.activeCardFilter && this.activeCardFilter !== 'all') {
+      queryParams['status'] = this.activeCardFilter;
+    }
+    if (this.searchFilter?.trim()) {
+      queryParams['search'] = this.searchFilter.trim();
+    }
+    if (this.dateFromFilter) {
+      queryParams['date'] = this.dateFromFilter;
+    }
+
+    if (!refreshAllTabs) {
+      if (this.activeTab === 'requisition' || this.activeTab === 'brand-arrival') {
+        this.permitService.listApplications(queryParams)
+          .pipe(
+            takeUntil(this.destroy$),
+            finalize(() => {
+              this.isLoading = false;
+              this.cdr.markForCheck();
+            })
+          )
+          .subscribe({
+            next: (data) => {
+              this.processLoadedApplications(data, [], []);
+            },
+            error: (err) => {
+              console.error('Error loading requisitions:', err);
+            }
+          });
+        return;
+      } else if (this.activeTab === 'revalidation') {
+        this.permitService.getRevalidations(queryParams)
+          .pipe(
+            takeUntil(this.destroy$),
+            finalize(() => {
+              this.isLoading = false;
+              this.cdr.markForCheck();
+            })
+          )
+          .subscribe({
+            next: (data) => {
+              this.processLoadedApplications([], data, []);
+            },
+            error: (err) => {
+              console.error('Error loading revalidations:', err);
+            }
+          });
+        return;
+      } else if (this.activeTab === 'cancellation') {
+        this.permitService.getCancellations(queryParams)
+          .pipe(
+            takeUntil(this.destroy$),
+            finalize(() => {
+              this.isLoading = false;
+              this.cdr.markForCheck();
+            })
+          )
+          .subscribe({
+            next: (data) => {
+              this.processLoadedApplications([], [], data);
+            },
+            error: (err) => {
+              console.error('Error loading cancellations:', err);
+            }
+          });
+        return;
+      } else if (this.activeTab === 'hologram-procurement') {
+        this.isLoading = false;
+        this.loadHologramProcurements();
+        return;
+      }
+    }
+
     forkJoin({
-      requisitions: this.permitService.listApplications().pipe(catchError(() => of([]))),
-      revalidations: this.permitService.getRevalidations().pipe(catchError(() => of([]))),
-      cancellations: this.permitService.getCancellations().pipe(catchError(() => of([]))),
+      requisitions: this.permitService.listApplications(queryParams).pipe(catchError(() => of([]))),
+      revalidations: this.permitService.getRevalidations(queryParams).pipe(catchError(() => of([]))),
+      cancellations: this.permitService.getCancellations(queryParams).pipe(catchError(() => of([]))),
       casesProcessed: this.permitService.getCasesProcessed().pipe(catchError(() => of([]))),
       arrivals: this.permitService.getArrivals().pipe(catchError(() => of([])))
     })
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(({ requisitions, revalidations, cancellations, casesProcessed, arrivals }) => {
-        this.allCasesProcessedList = Array.isArray(casesProcessed) ? casesProcessed : (casesProcessed as any)?.results || [];
-        this.allArrivalsList = Array.isArray(arrivals) ? arrivals : (arrivals as any)?.results || [];
-        this.pendingArrivalReviews = this.allCasesProcessedList.filter((c: any) => String(c.status).toLowerCase() === 'under_review');
-        this.processLoadedApplications(requisitions, revalidations, cancellations);
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => {
+          this.isLoading = false;
+          this.cdr.markForCheck();
+        })
+      )
+      .subscribe({
+        next: ({ requisitions, revalidations, cancellations, casesProcessed, arrivals }) => {
+          this.allCasesProcessedList = Array.isArray(casesProcessed) ? casesProcessed : (casesProcessed as any)?.results || [];
+          this.allArrivalsList = Array.isArray(arrivals) ? arrivals : (arrivals as any)?.results || [];
+          this.pendingArrivalReviews = this.allCasesProcessedList.filter((c: any) => String(c.status).toLowerCase() === 'under_review');
+          this.processLoadedApplications(requisitions, revalidations, cancellations);
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          console.error('Error loading applications:', err);
+          this.isLoading = false;
+          this.cdr.markForCheck();
+        }
       });
   }
 
   private processLoadedApplications(requisitions: any, revalidations: any, cancellations: any): void {
+    if (this.activeTab === 'requisition' && (requisitions as any)?.count !== undefined) {
+      this.serverTotalCount = (requisitions as any).count;
+      this.serverTotalPages = (requisitions as any).total_pages;
+    } else if (this.activeTab === 'revalidation' && (revalidations as any)?.count !== undefined) {
+      this.serverTotalCount = (revalidations as any).count;
+      this.serverTotalPages = (revalidations as any).total_pages;
+    } else if (this.activeTab === 'cancellation' && (cancellations as any)?.count !== undefined) {
+      this.serverTotalCount = (cancellations as any).count;
+      this.serverTotalPages = (cancellations as any).total_pages;
+    } else {
+      this.serverTotalCount = null;
+      this.serverTotalPages = null;
+    }
+
     const reqList = Array.isArray(requisitions) ? requisitions : (requisitions?.results || requisitions?.data || []);
     const revList = Array.isArray(revalidations) ? revalidations : (revalidations?.results || revalidations?.data || []);
     const canList = Array.isArray(cancellations) ? cancellations : (cancellations?.results || cancellations?.data || []);
@@ -9532,16 +9749,38 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       };
     });
 
-    this.applications = [
-      ...mappedRequisitions,
-      ...mappedRevalidations,
-      ...mappedCancellations
-    ];
+    if (this.activeTab === 'requisition' || this.activeTab === 'brand-arrival') {
+      if (mappedRequisitions.length > 0 || Array.isArray(requisitions) || (requisitions as any)?.results) {
+        this.applications = [
+          ...mappedRequisitions,
+          ...this.applications.filter((a: any) => a.applicationType === 'revalidation' || a.applicationType === 'cancellation')
+        ];
+      }
+    } else if (this.activeTab === 'revalidation') {
+      if (mappedRevalidations.length > 0 || Array.isArray(revalidations) || (revalidations as any)?.results) {
+        this.applications = [
+          ...this.applications.filter((a: any) => a.applicationType !== 'revalidation'),
+          ...mappedRevalidations
+        ];
+      }
+    } else if (this.activeTab === 'cancellation') {
+      if (mappedCancellations.length > 0 || Array.isArray(cancellations) || (cancellations as any)?.results) {
+        this.applications = [
+          ...this.applications.filter((a: any) => a.applicationType !== 'cancellation'),
+          ...mappedCancellations
+        ];
+      }
+    } else {
+      this.applications = [
+        ...mappedRequisitions,
+        ...mappedRevalidations,
+        ...mappedCancellations
+      ];
+    }
+
     this.rebuildRows();
     this.autoSelectDefaultStatusFilter();
     this.applyFilters();
-    this.sidebarPendingBadgeService.triggerRefresh();
-    this.loadHologramOverview(true);
     const refParam = this.route.snapshot.queryParams['ref'] || this.route.snapshot.queryParams['id'];
     if (refParam) {
       this.openRefWhenApplicationsLoaded(String(refParam));
@@ -9985,9 +10224,26 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   loadHologramProcurements(silent = false): void {
     if (!silent) this.isLoadingHologram = true;
-    this.imflHoloService.getProcurements().subscribe({
+    const queryParams: Record<string, any> = {
+      page: this.holoCurrentPage,
+      page_size: this.holoPageSize
+    };
+    if (this.hologramStatusFilter && this.hologramStatusFilter !== 'all') {
+      queryParams['status'] = this.hologramStatusFilter;
+    }
+    if (this.hologramSearchFilter?.trim()) {
+      queryParams['search'] = this.hologramSearchFilter.trim();
+    }
+    this.imflHoloService.getProcurements(queryParams).subscribe({
       next: (data) => {
         const rawList = Array.isArray(data) ? data : (data as any)?.results || (data as any)?.data || [];
+        if ((data as any)?.count !== undefined) {
+          this.holoServerCount = (data as any).count;
+          this.holoServerTotalPages = (data as any).total_pages;
+        } else {
+          this.holoServerCount = null;
+          this.holoServerTotalPages = null;
+        }
         this.hologramProcurements = rawList.map((item: any) => ({
           ...item,
           id: item.id,

@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, Subject } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
@@ -106,8 +106,16 @@ export class ImflHologramProcurementService {
     this.refreshSubject.next();
   }
 
-  getProcurements(): Observable<IMFLHologramProcurementItem[]> {
-    return this.http.get<IMFLHologramProcurementItem[]>(`${this.baseUrl}/`);
+  getProcurements(queryParams?: Record<string, any>): Observable<any> {
+    let params = new HttpParams();
+    if (queryParams) {
+      Object.keys(queryParams).forEach((k) => {
+        if (queryParams[k] !== undefined && queryParams[k] !== null && queryParams[k] !== '') {
+          params = params.set(k, queryParams[k]);
+        }
+      });
+    }
+    return this.http.get<any>(`${this.baseUrl}/`, { params });
   }
 
   getProcurement(id: number): Observable<IMFLHologramProcurementItem> {

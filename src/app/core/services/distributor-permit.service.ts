@@ -88,12 +88,20 @@ export class DistributorPermitService {
     );
   }
 
-  listApplications(status?: string): Observable<DistributorPermitApplication[]> {
-    let params = new HttpParams();
-    if (status) {
-      params = params.set('status', status);
+  listApplications(params?: string | Record<string, any>): Observable<any> {
+    let httpParams = new HttpParams();
+    if (typeof params === 'string') {
+      if (params) {
+        httpParams = httpParams.set('status', params);
+      }
+    } else if (params && typeof params === 'object') {
+      Object.keys(params).forEach((k) => {
+        if (params[k] !== undefined && params[k] !== null && params[k] !== '') {
+          httpParams = httpParams.set(k, params[k]);
+        }
+      });
     }
-    return this.http.get<DistributorPermitApplication[]>(`${this.baseUrl}/`, { params });
+    return this.http.get<any>(`${this.baseUrl}/`, { params: httpParams });
   }
 
   getApplication(referenceNo: string): Observable<DistributorPermitApplication> {
@@ -133,8 +141,16 @@ export class DistributorPermitService {
     return this.http.get<{ excise_balance: number; education_cess_balance: number; hologram_balance?: number }>(`${this.baseUrl}/wallet-balances/?_t=${Date.now()}`);
   }
 
-  getRevalidations(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.baseUrl}/revalidation/`);
+  getRevalidations(queryParams?: Record<string, any>): Observable<any> {
+    let params = new HttpParams();
+    if (queryParams) {
+      Object.keys(queryParams).forEach((k) => {
+        if (queryParams[k] !== undefined && queryParams[k] !== null && queryParams[k] !== '') {
+          params = params.set(k, queryParams[k]);
+        }
+      });
+    }
+    return this.http.get<any>(`${this.baseUrl}/revalidation/`, { params });
   }
 
   getRevalidationDetail(referenceNo: string): Observable<any> {

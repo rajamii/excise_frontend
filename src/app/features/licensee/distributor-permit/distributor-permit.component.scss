@@ -1937,4 +1937,30 @@
   }
 }
 
+.table-pagination-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  background-color: rgba(59, 130, 246, 0.06) !important;
+  border-top: 1px solid rgba(59, 130, 246, 0.15) !important;
+  color: #2563eb;
+  font-size: 0.82rem;
+  font-weight: 500;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.table-loading-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.08);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
 
