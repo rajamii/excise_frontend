@@ -49,6 +49,7 @@ import {
 })
 export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit {
   private destroy$ = new Subject<void>();
+  private authenticationEnded$ = new Subject<void>();
   private readonly licenseApiBase = `${environment.apiBaseUrl}/masters/license`;
   private readonly newLicenseApiBase = `${environment.apiBaseUrl}/transactional/new_license_application`;
   private badgeRefreshReady = false;
@@ -196,6 +197,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     this.sidebarPendingBadgeService.refreshNeeded$
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
+        if (!this.accountService.isAuthenticated()) return;
         console.log('🔄 UNIFIED LAYOUT: Refreshing sidebar badges due to triggerRefresh');
         this.refreshSidebarBadges(true, 'full');
         this.loadLicenseeMenuAccess(true);
@@ -203,6 +205,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
     if (typeof window !== 'undefined') {
       window.addEventListener('licensee-menu-access-refresh', () => {
+        if (!this.accountService.isAuthenticated()) return;
         console.log('🔄 UNIFIED LAYOUT: Refreshing menu access due to subcategory toggle');
         this.loadLicenseeMenuAccess(true);
       });
@@ -232,7 +235,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     }
 
     // Always subscribe to authentication state for real-time updates
-    this.accountService.getAuthenticationState().subscribe((acc) => {
+    this.accountService.getAuthenticationState()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((acc) => {
       console.log('🔍 Authentication state changed:', acc);
       
       if (acc !== null) {
@@ -254,6 +259,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         // Mark component as fully loaded
         this.loaded = true;
       } else {
+        this.authenticationEnded$.next();
+        this.currentUser = null;
+        this.user = null;
+        this.lastMenuAccessUserKey = null;
         // Only redirect to login if we're sure there's no authentication
         // and we're not on the login page already
         const currentUrl = this.router.url;
@@ -262,7 +271,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
           this.router.navigate(['/']);
         }
       }
-    });
+      });
   }
 
   private setupInitialSidebarState() {
@@ -1307,6 +1316,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private loadLicenseeMenuAccess(forceRefresh: boolean = false): void {
+    if (!this.accountService.isAuthenticated()) {
+      return;
+    }
+
     // This visibility rule is only for licensee menus.
     if (!this.isLicenseeUser()) {
       this.showDistilleryMenus = false;
@@ -1332,7 +1345,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       categories: this.http.get<any>(`${environment.apiBaseUrl}/masters/core/license-categories/?_t=${timestamp}`).pipe(catchError(() => of([]))),
       subcategories: this.http.get<any>(`${environment.apiBaseUrl}/masters/core/license-subcategories/?_t=${timestamp}`).pipe(catchError(() => of([]))),
       newLicensesGrouped: this.http.get<any>(`${environment.apiBaseUrl}/transactional/new_license_application/list-by-status/?_t=${timestamp}`).pipe(catchError(() => of({})))
-    }).subscribe({
+    }).pipe(
+      takeUntil(this.authenticationEnded$),
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: ({ licenses, categories, subcategories, newLicensesGrouped }) => {
         const licenseRows = Array.isArray(licenses) ? licenses : [];
         const categoryRows = Array.isArray(categories) ? categories : (Array.isArray((categories as any)?.results) ? (categories as any).results : []);

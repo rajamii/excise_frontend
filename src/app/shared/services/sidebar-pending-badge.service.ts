@@ -27,17 +27,19 @@ export class SidebarPendingBadgeService {
   private refreshNeededSource = new Subject<void>();
   refreshNeeded$ = this.refreshNeededSource.asObservable();
 
-  triggerRefresh(): void {
-    console.log('🔄 BADGE SERVICE: Clearing cache and triggering sidebar refresh');
+  clearCache(): void {
     this.countsCache.clear();
     this.enaRequisitionService.clearCache();
     this.supplyChainService.clearCache();
     this.hologramService.clearCache();
     this.distributorPermitService.clearCache();
-    if (this.licenseApplicationService) {
-      this.licenseApplicationService.invalidateAllDashboardCaches();
-    }
+    this.licenseApplicationService?.invalidateAllDashboardCaches();
     ReadApiCacheInterceptor.clearCache();
+  }
+
+  triggerRefresh(): void {
+    console.log('🔄 BADGE SERVICE: Clearing cache and triggering sidebar refresh');
+    this.clearCache();
     this.refreshNeededSource.next();
   }
 

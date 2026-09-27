@@ -318,7 +318,8 @@ export class AccountService {
 
     try {
       const sidebarBadge = this.injector.get(SidebarPendingBadgeService, null);
-      sidebarBadge?.triggerRefresh();
+      // Logging out must clear sidebar data without requesting it again.
+      sidebarBadge?.clearCache();
     } catch (e) {}
 
     try {
