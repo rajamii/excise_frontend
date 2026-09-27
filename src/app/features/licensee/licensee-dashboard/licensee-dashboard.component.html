@@ -103,12 +103,17 @@
   @if (renewalWarnings && renewalWarnings.length > 0) {
     <div class="renewal-warnings-container">
       @for (warning of renewalWarnings; track warning.licenseId) {
-        <div class="renewal-warning-card" [class.expired]="warning.isExpired" [class.expiring-soon]="!warning.isExpired">
+        <div class="renewal-warning-card"
+             [class.expired]="warning.isExpired && !warning.hasActiveRenewal"
+             [class.expiring-soon]="!warning.isExpired && !warning.hasActiveRenewal"
+             [class.in-progress]="warning.hasActiveRenewal">
 
           <!-- Left accent strip + icon -->
           <div class="warning-left">
             <div class="warning-icon-wrap">
-              @if (warning.isExpired) {
+              @if (warning.hasActiveRenewal) {
+                <mat-icon>hourglass_empty</mat-icon>
+              } @else if (warning.isExpired) {
                 <mat-icon>cancel</mat-icon>
               } @else {
                 <mat-icon>schedule</mat-icon>
@@ -119,14 +124,27 @@
           <!-- Main content -->
           <div class="warning-body">
             <div class="warning-badge">
-              @if (warning.isExpired) {
+              @if (warning.hasActiveRenewal) {
+                <span class="badge badge-in-progress">RENEWAL UNDER PROCESS</span>
+              } @else if (warning.isExpired) {
                 <span class="badge badge-expired">EXPIRED</span>
               } @else {
                 <span class="badge badge-expiring">RENEWAL OPEN</span>
               }
             </div>
 
-            @if (warning.isExpired) {
+            @if (warning.hasActiveRenewal) {
+              <h3 class="warning-title">License Renewal Under Process</h3>
+              <p class="warning-desc">
+                Your renewal application for license <strong>{{ warning.licenseId }}</strong>
+                <span class="type-chip">{{ warning.type }}</span>
+                is currently under verification.
+              </p>
+              <p class="warning-meta">
+                <mat-icon class="meta-icon">hourglass_empty</mat-icon>
+                Status: <strong class="highlight-date in-progress-date">Under Process</strong>
+              </p>
+            } @else if (warning.isExpired) {
               <h3 class="warning-title">License Expired</h3>
               <p class="warning-desc">
                 Your license <strong>{{ warning.licenseId }}</strong>
@@ -153,10 +171,17 @@
 
           <!-- Action -->
           <div class="warning-actions">
-            <button class="renew-btn" [class.btn-expired]="warning.isExpired" [class.btn-expiring]="!warning.isExpired" (click)="openMyLicensesForRenewal()">
-              <mat-icon>autorenew</mat-icon>
-              Renew Now
-            </button>
+            @if (warning.hasActiveRenewal) {
+              <button class="renew-btn btn-in-progress" disabled>
+                <mat-icon>hourglass_empty</mat-icon>
+                Renewal Under Process
+              </button>
+            } @else {
+              <button class="renew-btn" [class.btn-expired]="warning.isExpired" [class.btn-expiring]="!warning.isExpired" (click)="openMyLicensesForRenewal()">
+                <mat-icon>autorenew</mat-icon>
+                Renew Now
+              </button>
+            }
           </div>
 
         </div>

@@ -77,7 +77,9 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     establishmentName: string,
     validUpTo: Date,
     finalDateStr: string,
-    isExpired: boolean
+    isExpired: boolean,
+    hasActiveRenewal?: boolean,
+    activeRenewalStatus?: string
   }[] = [];
 
   private routerSubscription?: Subscription;
@@ -196,11 +198,35 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
 
       forkJoin({
         timer: this.timerConfigService.getTimerConfig('LICENSE_RENEWAL_REMINDER_TIMER', fallbackSeconds).pipe(take(1)),
-        renewalConfig: this.renewalConfigService.getConfig().pipe(take(1))
-      }).subscribe(({ timer, renewalConfig }) => {
+        renewalConfig: this.renewalConfigService.getConfig().pipe(take(1)),
+        unifiedApps: this.unifiedDashboardService.getUnifiedApplicationsByStatus(true).pipe(
+          catchError(() => of({ applied: [], pending: [], objection: [], awaitingPayment: [] } as any))
+        )
+      }).subscribe(({ timer, renewalConfig, unifiedApps }) => {
         let newWarnings: any[] = [];
         const windowMs = Math.max(0, Number(timer?.delay_ms ?? 0) || 0);
         if (!windowMs) return;
+
+        const activeRenewalApps = [
+          ...((unifiedApps as any)?.applied || []),
+          ...((unifiedApps as any)?.pending || []),
+          ...((unifiedApps as any)?.objection || []),
+          ...((unifiedApps as any)?.awaitingPayment || [])
+        ];
+
+        const activeRenewedIds = new Set<string>();
+        activeRenewalApps.forEach((app: any) => {
+          if (!app) return;
+          const isRenewal = app.type === 'license-renewal' || String(app.applicationId || '').startsWith('LRA/');
+          if (isRenewal) {
+            const raw = app.raw || app;
+            const lid = String(raw.old_license_id || raw.oldLicenseId || raw.renewalOf || raw.license_id_display || app.licenseId || '').trim();
+            if (lid) {
+              activeRenewedIds.add(lid);
+              activeRenewedIds.add(lid.toUpperCase());
+            }
+          }
+        });
 
         approvedWithoutRenewal.forEach(app => {
           if (app.type === 'license-renewal') {
@@ -231,9 +257,14 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
           const now = Date.now();
           const eligibleFrom = validMs - windowMs;
 
-          if (now >= eligibleFrom) {
-            const licenseId = this.extractLicenseId(app);
-            if (licenseId) {
+          const licenseId = this.extractLicenseId(app);
+          if (licenseId) {
+            const hasActiveRenewal = activeRenewedIds.has(licenseId) ||
+              activeRenewedIds.has(licenseId.toUpperCase()) ||
+              raw.has_active_renewal === true ||
+              Boolean(raw.active_renewal_id);
+
+            if (now >= eligibleFrom || hasActiveRenewal) {
               const finalDateStr = this.formatDDMMYYYY(validUpTo);
               const isExpired = now > validMs;
               newWarnings.push({
@@ -242,7 +273,8 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
                 establishmentName: app.establishmentName || app.applicantFullName || 'N/A',
                 validUpTo,
                 finalDateStr,
-                isExpired
+                isExpired,
+                hasActiveRenewal
               });
             }
           }

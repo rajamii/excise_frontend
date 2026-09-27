@@ -3861,6 +3861,18 @@ $rw-sn-btn-to:      #e65100;
 $rw-sn-date:        #e65100;
 $rw-sn-divider:     rgba(#f9a825, 0.3);
 
+// Color tokens — in progress (indigo / blue)
+$rw-inp-bg-from:    #f0f4ff;
+$rw-inp-bg-to:      #e5edff;
+$rw-inp-border:     #3b82f6;
+$rw-inp-accent:     #1c2b78;
+$rw-inp-icon-bg:    #1c2b78;
+$rw-inp-badge-bg:   #1c2b78;
+$rw-inp-btn-from:   #1c2b78;
+$rw-inp-btn-to:     #2563eb;
+$rw-inp-date:       #1c2b78;
+$rw-inp-divider:    rgba(#1c2b78, 0.25);
+
 .renewal-warnings-container {
     margin: 0 2rem 1rem;
     display: flex;
@@ -3912,6 +3924,21 @@ $rw-sn-divider:     rgba(#f9a825, 0.3);
         .rw-type-chip    { background: rgba($rw-sn-border, 0.12); color: $rw-sn-accent; border: 1px solid rgba($rw-sn-border, 0.28); }
         .rw-meta-icon    { color: $rw-sn-date; }
         .rw-date--expiring { color: $rw-sn-date; }
+    }
+
+    // ── IN PROGRESS ──────────────────────────────
+    &.rw-in-progress {
+        background: linear-gradient(135deg, $rw-inp-bg-from 0%, $rw-inp-bg-to 100%);
+        border: 1.5px solid rgba($rw-inp-border, 0.35);
+
+        .rw-icon-section { background: linear-gradient(180deg, #1c2b78 0%, #2563eb 100%); }
+        .rw-icon-wrap    { background: rgba(255,255,255,0.18); mat-icon { color: #fff; } }
+        .rw-divider      { background: $rw-inp-divider; }
+        .rw-badge        { background: $rw-inp-badge-bg; }
+        .rw-title        { color: $rw-inp-accent; }
+        .rw-type-chip    { background: rgba(28, 43, 120, 0.08); color: #1c2b78; border: 1px solid rgba(28, 43, 120, 0.2); }
+        .rw-meta-icon    { color: $rw-inp-date; }
+        .rw-date--in-progress { color: $rw-inp-date; }
     }
 }
 
@@ -4072,12 +4099,26 @@ $rw-sn-divider:     rgba(#f9a825, 0.3);
     span      { color: #b84200; }
 }
 
+.rw-in-progress .rw-est-pill {
+    background: rgba(28, 43, 120, 0.08);
+    border: 1px solid rgba(28, 43, 120, 0.2);
+    mat-icon { color: #1c2b78; }
+    span      { color: #1c2b78; }
+}
+
 // ── License ID — same style on all card states ──
 .rw-expired .rw-license-id,
-.rw-expiring .rw-license-id {
+.rw-expiring .rw-license-id,
+.rw-in-progress .rw-license-id {
     background: rgba(120, 80, 0, 0.07);
     border: 1.5px solid rgba(120, 80, 0, 0.2);
     color: #7a5000;
+}
+
+.rw-in-progress .rw-license-id {
+    background: rgba(28, 43, 120, 0.07);
+    border: 1.5px solid rgba(28, 43, 120, 0.2);
+    color: #1c2b78;
 }
 
 // ── Category pill ─────────────────────────────────────────
@@ -4125,6 +4166,14 @@ $rw-sn-divider:     rgba(#f9a825, 0.3);
         color: #7f4e00;
         mat-icon { color: #e65100; }
         strong   { color: #e65100; }
+    }
+
+    &.rw-date-pill--in-progress {
+        background: rgba(28, 43, 120, 0.09);
+        border: 1px solid rgba(28, 43, 120, 0.25);
+        color: #1c2b78;
+        mat-icon { color: #1c2b78; }
+        strong   { color: #1c2b78; }
     }
 }
 

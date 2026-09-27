@@ -1679,11 +1679,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   private getRenewedLicenseIds(
     applied: any[], 
     pending: any[], 
-    awaitingPayment: any[]
+    awaitingPayment: any[],
+    objection: any[] = []
   ): Set<string> {
     const renewedIds = new Set<string>();
     
-    [...applied, ...pending, ...awaitingPayment].forEach(app => {
+    [...applied, ...pending, ...awaitingPayment, ...objection].forEach(app => {
       if (!app) return;
       const appId = String(app.applicationId || app.raw?.application_id || app.application_id || '').trim();
       const isRenewal = app.type === 'license-renewal' || 
@@ -1701,51 +1702,44 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       }
       const raw = app.raw || app;
       
-      const renewalOfValue = 
-        raw.renewalOf || 
-        raw.renewal_of || 
-        raw.renewalOfLicenseId || 
-        raw.renewal_of_license_id || 
-        raw.old_license_id || 
-        raw.oldLicenseId || 
-        raw.old_license || 
-        raw.oldLicense ||
-        app.renewalOf ||
-        app.old_license_id ||
-        app.oldLicenseId;
-      
-      if (renewalOfValue) {
-        let licenseIdStr = '';
-        if (typeof renewalOfValue === 'string') {
-          licenseIdStr = renewalOfValue;
-        } else if (typeof renewalOfValue === 'object' && renewalOfValue !== null) {
-          licenseIdStr = renewalOfValue.license_id || renewalOfValue.id || String(renewalOfValue);
+      const checkAndAdd = (val: any) => {
+        if (!val) return;
+        let str = '';
+        if (typeof val === 'string') {
+          str = val.trim();
+        } else if (typeof val === 'object' && val !== null) {
+          str = String(val.license_id || val.id || val.application_id || '').trim();
         } else {
-          licenseIdStr = String(renewalOfValue);
+          str = String(val).trim();
         }
-        
-        if (licenseIdStr && this.isValidLicenseIdForWarning(licenseIdStr)) {
-          renewedIds.add(licenseIdStr);
+        if (str) {
+          renewedIds.add(str);
+          renewedIds.add(str.toUpperCase());
         }
-      }
-      
-      const licenseValue = raw.license || raw.license_id || raw.issued_license_id || raw.issuedLicenseId || app.licenseId || app.license_id;
-      if (licenseValue) {
-        let licenseIdStr = '';
-        if (typeof licenseValue === 'string') {
-          licenseIdStr = licenseValue;
-        } else if (typeof licenseValue === 'object' && licenseValue !== null) {
-          licenseIdStr = licenseValue.license_id || licenseValue.id || String(licenseValue);
-        } else {
-          licenseIdStr = String(licenseValue);
-        }
-        
-        if (licenseIdStr && this.isValidLicenseIdForWarning(licenseIdStr)) {
-          renewedIds.add(licenseIdStr);
-        }
-      }
-      
+      };
+
+      checkAndAdd(raw.renewalOf);
+      checkAndAdd(raw.renewal_of);
+      checkAndAdd(raw.renewalOfLicenseId);
+      checkAndAdd(raw.renewal_of_license_id);
+      checkAndAdd(raw.old_license_id);
+      checkAndAdd(raw.oldLicenseId);
+      checkAndAdd(raw.old_license);
+      checkAndAdd(raw.oldLicense);
+      checkAndAdd(raw.license_id_display);
+      checkAndAdd(raw.issued_license_id);
+      checkAndAdd(raw.issuedLicenseId);
+      checkAndAdd(raw.license_id);
+      checkAndAdd(raw.licenseId);
+      checkAndAdd(app.renewalOf);
+      checkAndAdd(app.old_license_id);
+      checkAndAdd(app.oldLicenseId);
+      checkAndAdd(app.licenseId);
+      checkAndAdd(app.issuedLicenseId);
+
       if (appId) {
+        renewedIds.add(appId);
+        renewedIds.add(appId.toUpperCase());
         if (appId.startsWith('LRA/')) {
           renewedIds.add(appId.replace('LRA/', 'LA/'));
           renewedIds.add(appId.replace('LRA/', 'NA/'));
@@ -1782,13 +1776,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         take(1),
         catchError(() => of(null))
       ),
-      myLicenses: (this.myLicenses && this.myLicenses.length > 0)
-        ? of(this.myLicenses)
-        : this.licenseMeService.getMyLicenses(true).pipe(catchError(() => of([]))),
-      unifiedApps: this.unifiedDashboardService.getUnifiedApplicationsByStatus(false, this.dashboardConfig).pipe(
+      myLicenses: this.licenseMeService.getMyLicenses(true).pipe(catchError(() => of([]))),
+      renewalApps: this.licenseApplicationService.getLicenseRenewalApplicationsByStatus().pipe(
+        catchError(() => of({ applied: [], pending: [], objection: [], approved: [], rejected: [] }))
+      ),
+      unifiedApps: this.unifiedDashboardService.getUnifiedApplicationsByStatus(true, this.dashboardConfig).pipe(
         catchError(() => of({ approved: [], applied: [], pending: [], awaitingPayment: [] } as any))
       )
-    }).subscribe(({ timer, renewalConfig, myLicenses, unifiedApps }) => {
+    }).subscribe(({ timer, renewalConfig, myLicenses, renewalApps, unifiedApps }) => {
       let newWarnings: any[] = [];
       let windowMs = Math.max(0, Number((timer as any)?.delay_ms ?? 0) || 0);
       if (!windowMs && (timer as any)?.delay_seconds) {
@@ -1799,15 +1794,29 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         windowMs = Number(validityDays) * 24 * 60 * 60 * 1000;
       }
 
+      const allActiveRenewalApps = [
+        ...((unifiedApps as any)?.applied || []),
+        ...((unifiedApps as any)?.pending || []),
+        ...((unifiedApps as any)?.objection || []),
+        ...((unifiedApps as any)?.awaitingPayment || []),
+        ...(Array.isArray((renewalApps as any)?.results) ? (renewalApps as any).results : []),
+        ...(Array.isArray((renewalApps as any)?.applied) ? (renewalApps as any).applied : []),
+        ...(Array.isArray((renewalApps as any)?.pending) ? (renewalApps as any).pending : []),
+        ...(Array.isArray((renewalApps as any)?.objection) ? (renewalApps as any).objection : []),
+      ];
+
       const activeRenewedIds = this.getRenewedLicenseIds(
-        (unifiedApps as any)?.applied || [],
-        (unifiedApps as any)?.pending || [],
-        (unifiedApps as any)?.awaitingPayment || []
+        allActiveRenewalApps,
+        [],
+        []
       );
 
       (approvedWithRenewal || []).forEach(app => {
         const lid = this.extractLicenseId(app);
-        if (lid) activeRenewedIds.add(lid);
+        if (lid) {
+          activeRenewedIds.add(lid);
+          activeRenewedIds.add(lid.toUpperCase());
+        }
       });
 
       const appMap = new Map<string, {
@@ -1815,7 +1824,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         validUpTo: Date | null,
         isBackendExpired: boolean,
         canRenew: boolean,
-        hasActiveRenewal: boolean
+        hasActiveRenewal: boolean,
+        activeRenewalId?: string | null,
+        activeRenewalStatus?: string | null
       }>();
 
       const collectApp = (app: any) => {
@@ -1842,7 +1853,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         const licenseId = this.extractLicenseId(app);
         if (!licenseId) return;
 
-        const hasActiveRenewal = activeRenewedIds.has(licenseId);
+        const hasActiveRenewal = activeRenewedIds.has(licenseId) ||
+          activeRenewedIds.has(licenseId.toUpperCase()) ||
+          raw.has_active_renewal === true ||
+          raw.hasActiveRenewal === true ||
+          Boolean(raw.active_renewal_id || raw.activeRenewalId);
+
+        const activeRenewalId = raw.active_renewal_id || raw.activeRenewalId || null;
+        const activeRenewalStatus = raw.active_renewal_status || raw.activeRenewalStatus || 'Under Process';
 
         const existing = appMap.get(licenseId);
         if (!existing || (validUpTo && existing.validUpTo && validUpTo.getTime() > existing.validUpTo.getTime())) {
@@ -1851,12 +1869,16 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             validUpTo,
             isBackendExpired,
             canRenew,
-            hasActiveRenewal: existing ? (existing.hasActiveRenewal || hasActiveRenewal) : hasActiveRenewal
+            hasActiveRenewal: existing ? (existing.hasActiveRenewal || hasActiveRenewal) : hasActiveRenewal,
+            activeRenewalId: activeRenewalId || existing?.activeRenewalId,
+            activeRenewalStatus: activeRenewalStatus || existing?.activeRenewalStatus
           });
         } else {
           existing.hasActiveRenewal = existing.hasActiveRenewal || hasActiveRenewal;
           if (isBackendExpired) existing.isBackendExpired = true;
           if (canRenew) existing.canRenew = true;
+          if (activeRenewalId) existing.activeRenewalId = activeRenewalId;
+          if (activeRenewalStatus) existing.activeRenewalStatus = activeRenewalStatus;
         }
       };
 
@@ -1874,13 +1896,13 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
       const now = Date.now();
 
-      appMap.forEach(({ app, validUpTo, isBackendExpired, canRenew, hasActiveRenewal }, licenseId) => {
+      appMap.forEach(({ app, validUpTo, isBackendExpired, canRenew, hasActiveRenewal, activeRenewalId, activeRenewalStatus }, licenseId) => {
         const validMs = validUpTo ? validUpTo.getTime() : 0;
         const eligibleFrom = validMs > 0 ? (validMs - windowMs) : 0;
         const isExpired = isBackendExpired || (validMs > 0 && now > validMs);
 
-        // Show card if already expired or within renewal reminder window or marked canRenew
-        if (isExpired || canRenew || (validMs > 0 && now >= eligibleFrom)) {
+        // Show card if already expired or within renewal reminder window or marked canRenew or has active renewal
+        if (isExpired || canRenew || hasActiveRenewal || (validMs > 0 && now >= eligibleFrom)) {
           const raw = app.raw || app;
           const catName = app.licenseCategoryName ||
                           raw.license_category_name ||
@@ -1903,7 +1925,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             validUpTo: validUpTo || new Date(),
             finalDateStr: validUpTo ? this.formatDDMMYYYY(validUpTo) : 'Expired',
             isExpired,
-            hasActiveRenewal
+            hasActiveRenewal,
+            activeRenewalId,
+            activeRenewalStatus
           });
         }
       });
