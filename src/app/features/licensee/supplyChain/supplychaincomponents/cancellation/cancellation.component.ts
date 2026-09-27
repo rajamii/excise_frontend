@@ -947,28 +947,27 @@ export class CancellationComponent implements OnInit {
   }
 
   generateFinalLetter(item: TableData): void {
-    if (!item.id) {
-      alert('Cannot generate final letter: Missing cancellation ID');
+    if (!item.id && !item.referenceNo) {
+      alert('Cannot view cancellation slip: Missing cancellation details');
       return;
     }
 
-    // Validate that the cancellation is approved
-    const status = item.status?.toUpperCase();
-    if (!status?.includes('APPROVED')) {
-      alert('Final letter can only be generated for approved cancellations');
-      return;
-    }
+    const id = item.id || item.referenceNo;
+    const ref = item.referenceNo || item.id;
+    const userType = this.getUserType();
+    const source = userType === 'commissioner' ? 'commissioner-dashboard' : (userType === 'permit-section' ? 'permit-section' : 'licensee-dashboard');
 
     console.log('Generating final letter for approved cancellation:', item);
 
     // Navigate to cancellation final letter view with comprehensive parameters
-    this.router.navigate(['/dev-cancellation-final-letter-view'], {
+    this.router.navigate(['/unified-letter-view/cancellation'], {
       queryParams: {
-        id: item.id,
-        source: this.getUserType() === 'commissioner' ? 'commissioner-dashboard' : 'licensee-dashboard',
+        id: id,
+        ref: ref,
+        refNo: ref,
+        source: source,
         status: item.status, // Pass current status
-        refNo: item.referenceNo, // Pass reference number
-        distillery: item.distilleryName, // Pass distillery name
+        distillery: item.distilleryName || item.establishmentName, // Pass distillery name
         approved: 'true', // Explicit approval flag
         reason: item.cancellationReason, // Pass cancellation reason
         licenseType: item.licenseType, // Pass license type
@@ -979,18 +978,7 @@ export class CancellationComponent implements OnInit {
 
   // Check if final letter can be generated (only for approved cancellations)
   canGenerateFinalLetter(item: TableData): boolean {
-    const status = item.status || '';
-
-    // Check if approved locally first
-    const storedStatus = item.id ? this.getStoredStatus(item.id) : null;
-    const isApprovedLocally = this.isApprovedStatus(storedStatus || '');
-
-    // Must be approved (either from API or locally stored) and user must be commissioner
-    const isApproved = this.isApprovedStatus(status) || isApprovedLocally;
-    const isCommissioner = this.isCommissioner();
-    const hasId = !!item.id;
-
-    return isApproved && isCommissioner && hasId;
+    return this.canViewPermitSlip(item);
   }
 
   canPay(item: TableData): boolean {
@@ -1295,27 +1283,16 @@ export class CancellationComponent implements OnInit {
     // For cancellation, show payment slip after payment is made
     const hasPayment = this.hasPaymentBeenMade(item);
     
-    console.log('🔍 getActionIncludeList (cancellation):', {
-      itemId: item.id,
-      refNo: item.referenceNo,
-      status: item.status,
-      hasPayment,
-      allowedActions: item.allowedActions,
-      isCommissioner: this.isCommissioner()
-    });
-    
     // Show "View Payment Slip" after payment is made
     if (hasPayment) {
       actions.push('VIEW_PAYMENT_SLIP');
     }
     
-    // Trust backend for VIEW_PERMIT_SLIP action
-    if (item.allowedActions && item.allowedActions.includes('VIEW_PERMIT_SLIP')) {
-      console.log('✅ Backend says show VIEW_PERMIT_SLIP');
+    // Include VIEW_PERMIT_SLIP if can view permit slip
+    if (this.canViewPermitSlip(item)) {
       actions.push('VIEW_PERMIT_SLIP');
     }
     
-    console.log('🔍 Final actions array:', actions);
     return actions;
   }
 
@@ -1330,32 +1307,24 @@ export class CancellationComponent implements OnInit {
                                    status.includes('payslip') ||
                                    status.includes('paid');
     
-    console.log('🔍 hasPaymentBeenMade (cancellation):', {
-      status: item.status,
-      normalizedStatus: status,
-      statusIndicatesPayment
-    });
-    
     return statusIndicatesPayment;
   }
 
   canViewPermitSlip(item: TableData): boolean {
-    // Only commissioner can view permit slip at final approved stage
-    if (!this.isCommissioner()) {
+    if (!item) return false;
+    const status = this.normalizeStatus(item.status || '');
+    if (this.isRejectedStatus(status)) {
       return false;
     }
     
-    const status = this.normalizeStatus(item.status || '');
-    const isCommissionerApproved = status.includes('commissioner') && status.includes('approv');
-    const isFinalApproved = (isCommissionerApproved || status.includes('finalapproved')) && !this.isRejectedStatus(status);
-    
-    console.log('🔍 canViewPermitSlip (cancellation):', {
-      status: item.status,
-      normalizedStatus: status,
-      isFinalApproved,
-      isCommissioner: this.isCommissioner()
-    });
-    
-    return isFinalApproved;
+    const isApproved = this.isApprovedStatus(status) || 
+                       status.includes('approv') || 
+                       status.includes('cn09') ||
+                       (item.id ? this.isApprovedInStorage(item.id) : false);
+
+    const hasBackendSlipAction = Array.isArray(item.allowedActions) && 
+      (item.allowedActions.includes('VIEW_PERMIT_SLIP') || item.allowedActions.includes('VIEW_SLIP'));
+
+    return isApproved || hasBackendSlipAction;
   }
 }

@@ -186,6 +186,9 @@
                 <button *ngIf="hasPaymentBeenMade(item)" type="button" class="btn-action-icon btn-action-slip" (click)="openPaymentSlip(item)" title="Payment Slip" aria-label="Payment Slip">
                   <i class="bi bi-receipt"></i>
                 </button>
+                <button *ngIf="canViewPermitSlip(item)" type="button" class="btn-action-icon btn-action-permit-slip" (click)="generateFinalLetter(item)" title="Cancellation Slip / Approval Letter" aria-label="Cancellation Slip">
+                  <i class="bi bi-file-earmark-check"></i>
+                </button>
               </div>
               <!-- Unified Action Buttons Component -->
               <app-unified-action-buttons

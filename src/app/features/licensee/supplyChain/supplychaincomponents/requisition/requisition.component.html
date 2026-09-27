@@ -349,15 +349,35 @@
               </span>
             </td>
             <td class="actions" (click)="$event.stopPropagation()" style="position: relative; z-index: 1000;">
-              <!-- View Application Button -->
+              <!-- Action Buttons -->
               <div class="d-flex flex-column align-items-center gap-2">
-                <button
-                  type="button"
-                  class="btn btn-primary btn-sm view-app-btn"
-                  (click)="viewRequisitionApplication(item)"
-                  title="View Application Details">
-                  <i class="bi bi-eye"></i>
-                </button>
+                <div class="d-flex align-items-center gap-1">
+                  <button
+                    type="button"
+                    class="btn btn-primary btn-sm view-app-btn"
+                    (click)="viewRequisitionApplication(item)"
+                    title="View Application Details">
+                    <i class="bi bi-eye"></i>
+                  </button>
+                  <button
+                    *ngIf="hasPaymentBeenMade(item)"
+                    type="button"
+                    class="btn btn-success btn-sm view-app-btn"
+                    style="background-color: #10b981; border-color: #10b981;"
+                    (click)="openRequisitionSlip(item, $event)"
+                    title="Payment Slip">
+                    <i class="bi bi-receipt"></i>
+                  </button>
+                  <button
+                    *ngIf="canViewPermitSlip(item)"
+                    type="button"
+                    class="btn btn-sm view-app-btn"
+                    style="background-color: #7e22ce; border-color: #7e22ce; color: #ffffff;"
+                    (click)="openRequisitionLetter(item, $event)"
+                    title="Permit Slip / Approval Letter">
+                    <i class="bi bi-file-earmark-check"></i>
+                  </button>
+                </div>
                 <button
                   *ngIf="shouldShowCancelPermit(item)"
                   type="button"

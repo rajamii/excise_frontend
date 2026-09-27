@@ -2824,6 +2824,39 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     this.router.navigate(['/supply-chain-view'], { queryParams });
   }
 
+  canViewPermitSlip(item: TableData): boolean {
+    if (!item) return false;
+    if (this.isCommissioner()) {
+      return this.isCommissionerFinalApproved(item);
+    }
+    const status = this.normalizeStageToken(item?.status);
+    const stage = this.normalizeStageToken(item?.currentStageName);
+    const combined = `${status} ${stage}`;
+    const stageId = Number(item?.currentStage ?? -1);
+
+    if (this.isApprovedCommissionerAwaitingPayment(item)) {
+      return false;
+    }
+
+    if (
+      stageId === 33 ||
+      combined.includes('issued') ||
+      combined.includes('permitissued') ||
+      combined.includes('approvedcommissioner') ||
+      combined.includes('approvedbycommissioner') ||
+      status.includes('approved')
+    ) {
+      return true;
+    }
+
+    const actions: string[] = item?.allowedActions ?? [];
+    if (Array.isArray(actions) && (actions.includes('VIEW_PERMIT_SLIP') || actions.includes('VIEW_SLIP'))) {
+      return true;
+    }
+
+    return false;
+  }
+
   private normalizeStageToken(value: any): string {
     return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   }

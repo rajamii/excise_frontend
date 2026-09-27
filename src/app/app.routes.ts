@@ -178,6 +178,22 @@ export const routes: Routes = [
       ).then((m) => m.UnifiedfinalletterviewComponent),
   },
   {
+    path: "dev-cancellation-final-letter-view",
+    canActivate: [UserRouteAccessService],
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/UnifiedletterView/unifiedfinalletterview/unifiedfinalletterview.component"
+      ).then((m) => m.UnifiedfinalletterviewComponent),
+  },
+  {
+    path: "dev-cancellation-letter-view",
+    canActivate: [UserRouteAccessService],
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/UnifiedletterView/unifiedfinalletterview/unifiedfinalletterview.component"
+      ).then((m) => m.UnifiedfinalletterviewComponent),
+  },
+  {
     path: "unified-letter-view/revalidation",
     canActivate: [UserRouteAccessService],
     loadComponent: () =>

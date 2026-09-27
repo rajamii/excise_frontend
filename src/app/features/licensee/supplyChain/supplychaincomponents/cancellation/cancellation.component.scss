@@ -601,6 +601,24 @@
                     transform: translateY(0);
                   }
                 }
+
+                &.btn-action-permit-slip {
+                  background-color: #faf5ff;
+                  color: #7e22ce;
+                  border-color: #e9d5ff;
+
+                  &:hover {
+                    background-color: #7e22ce;
+                    color: #ffffff;
+                    border-color: #7e22ce;
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(126, 34, 206, 0.28);
+                  }
+
+                  &:active {
+                    transform: translateY(0);
+                  }
+                }
               }
 
               .action-buttons {
