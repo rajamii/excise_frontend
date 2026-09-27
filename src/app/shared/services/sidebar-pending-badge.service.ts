@@ -318,9 +318,9 @@ export class SidebarPendingBadgeService {
         if (audience === 'licensee') {
           return of(0);
         }
-        return this.enaRequisitionService.getRequisitions().pipe(
-          map((response) => this.toArray(response)),
-          map((items) => this.countRequisitionOfficerActionable(items))
+        return this.enaRequisitionService.getDashboardCounts().pipe(
+          map((resp) => Number(resp?.pending || 0)),
+          catchError(() => of(0))
         );
 
       case 'requisition:payment':
@@ -718,29 +718,16 @@ export class SidebarPendingBadgeService {
       // Exclude final / terminal states
       if (combined.includes('approv') || combined.includes('reject') || combined.includes('cancel') ||
           combined.includes('complete') || combined.includes('terminate')) {
-        // Special case: payslip review back at Permit Section stage
-        if (isPS && combined.includes('permitsection') &&
-            (combined.includes('forward') || combined.includes('payslip') || combined.includes('submit')) &&
-            !combined.includes('approvedpayslip') && !combined.includes('rejectedpayslip')) {
-          return true;
-        }
         return false;
       }
 
       if (isPS) {
-        // If forwarded to Commissioner, Permit Section has already acted -> NOT pending for PS
+        // If forwarded to Commissioner or in payslip/under-process, it is under process, not initial pending
         if (combined.includes('commissioner')) return false;
-        // Awaiting payment from licensee is not pending for Permit Section
-        if (combined.includes('awaiting') || (combined.includes('payment') && !combined.includes('payslip'))) return false;
+        if (combined.includes('awaiting') || combined.includes('payment') || combined.includes('payslip') || combined.includes('forward')) return false;
 
         // Plain PENDING is at Permit Section stage (awaiting initial review)
-        if (statusToken === 'pending' || stageToken === 'pending') return true;
-
-        // Forwarded back to Permit Section for payslip review
-        if (combined.includes('permitsection') &&
-            (combined.includes('forward') || combined.includes('payslip') || combined.includes('submit'))) {
-          return true;
-        }
+        if (statusToken === 'pending' || stageToken === 'pending' || statusToken === 'submitted' || stageToken === 'submitted') return true;
 
         const actions = this.extractAllowedActions(item);
         if (actions.some(a => ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY'].includes(a))) {

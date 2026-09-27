@@ -506,6 +506,56 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         },
         error: () => {}
       });
+    } else if (moduleName === 'requisition') {
+      this.enaRequisitionService.getDashboardCounts(true).subscribe({
+        next: (counts: any) => {
+          if (counts) {
+            this.supplyChainModuleCounts['requisition'] = {
+              applied: Number(counts.applied ?? counts.total ?? 0),
+              pending: Number(counts.pending ?? 0),
+              approved: Number(counts.approved ?? 0),
+              objection: Number(counts.objection ?? 0),
+              rejected: Number(counts.rejected ?? 0),
+              awaitingPayment: Number(counts.awaitingPayment ?? counts.awaiting_payment ?? 0)
+            };
+            this.updateSingleWindowChart();
+          }
+        },
+        error: () => {}
+      });
+    } else if (moduleName === 'company') {
+      this.companyRegistrationService.getDashboardCounts().subscribe({
+        next: (counts: any) => {
+          if (counts) {
+            this.supplyChainModuleCounts['company'] = {
+              applied: Number(counts.applied ?? counts.total ?? 0),
+              pending: Number(counts.pending ?? 0),
+              approved: Number(counts.approved ?? 0),
+              objection: Number(counts.objection ?? 0),
+              rejected: Number(counts.rejected ?? 0)
+            };
+            this.updateSingleWindowChart();
+          }
+        },
+        error: () => {}
+      });
+    } else if (moduleName === 'company-collaboration' || moduleName === 'companyCollaboration') {
+      this.companyCollaborationService.getDashboardCounts().subscribe({
+        next: (counts: any) => {
+          if (counts) {
+            this.supplyChainModuleCounts['company-collaboration'] = {
+              applied: Number(counts.applied ?? counts.total ?? 0),
+              pending: Number(counts.pending ?? 0),
+              approved: Number(counts.approved ?? 0),
+              objection: Number(counts.objection ?? 0),
+              rejected: Number(counts.rejected ?? 0),
+              awaitingPayment: Number(counts.awaiting_payment ?? counts.awaitingPayment ?? 0)
+            };
+            this.updateSingleWindowChart();
+          }
+        },
+        error: () => {}
+      });
     }
     this.updateSingleWindowChart();
   }
@@ -867,6 +917,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           map((r: any) => Array.isArray(r) ? r : (r?.results || [])),
           catchError(() => of([]))
         );
+    const reqCounts$ = this.enaRequisitionService.getDashboardCounts(forceRefresh).pipe(catchError(() => of(null)));
 
     const rev$ = prefetched?.revalidation
       ? of(prefetched.revalidation)
@@ -927,61 +978,69 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       ? this.distributorPermitService.getDashboardCounts('hologram-procurement', forceRefresh).pipe(catchError(() => of(null)))
       : of(null as any);
 
-    forkJoin({ req: req$, rev: rev$, can: can$, tra: tra$, hol: hol$, comp: comp$, collab: collab$, bld: bld$, holReq: holReq$, distReq: distReq$, distRev: distRev$, distCan: distCan$, distArr: distArr$, distHolo: distHolo$ })
+    forkJoin({ req: req$, reqCounts: reqCounts$, rev: rev$, can: can$, tra: tra$, hol: hol$, comp: comp$, collab: collab$, bld: bld$, holReq: holReq$, distReq: distReq$, distRev: distRev$, distCan: distCan$, distArr: distArr$, distHolo: distHolo$ })
       .pipe(
         takeUntil(this.destroy$),
         finalize(() => onComplete?.())
       )
-      .subscribe(({ req, rev, can, tra, hol, comp, collab, bld, holReq, distReq, distRev, distCan, distArr, distHolo }) => {
+      .subscribe(({ req, reqCounts, rev, can, tra, hol, comp, collab, bld, holReq, distReq, distRev, distCan, distArr, distHolo }) => {
 
         // ── REQUISITIONS ──────────────────────────────────────────────────────
         {
           const items: any[] = Array.isArray(req) ? req : [];
-          let pending = (isCommissioner || isPermitSection)
-            ? this.sidebarPendingBadgeService.countRequisitionOfficerActionable(items)
-            : this.sidebarPendingBadgeService.countRequisitionPendingReview(items, false);
+          let pending = reqCounts?.pending !== undefined && reqCounts?.pending !== null
+            ? Number(reqCounts.pending || 0)
+            : ((isCommissioner || isPermitSection)
+                ? this.sidebarPendingBadgeService.countRequisitionOfficerActionable(items)
+                : this.sidebarPendingBadgeService.countRequisitionPendingReview(items, false));
           const awaitingPayment = (isCommissioner || isPermitSection)
             ? 0
-            : this.sidebarPendingBadgeService.countRequisitionAwaitingPayment(items);
-          const approved = items.filter(x => {
-            const status   = String(x.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-            const stage    = String(x.current_stage_name || x.currentStageName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-            const combined = `${status} ${stage}`;
-            const stageId  = Number(x.current_stage ?? x.currentStage ?? -1);
-            if (isCommissioner) {
-              const isAwaitingPayment = combined.includes('approvedcommissioner') &&
-                !['forwardedpayslip','approvedpayslip','rejectedpayslip','paymentcompleted','paymentdone','permitsection']
-                  .some(m => combined.includes(m));
-              if (isAwaitingPayment) return false;
-              if (combined.includes('forwardedpayslip') && combined.includes('permitsection')) return false;
-              if (combined.includes('rejectedpayslip')) return false;
-              if (combined.includes('approvedpayslip')) return true;
-              if (combined.includes('issued') || combined.includes('complete') || combined.includes('paymentcompleted')) return true;
-              if (x.currentStageIsFinal === true && combined.includes('approv') && !combined.includes('reject')) return true;
-              if (stageId > 33) return true;
-              return false;
-            }
-            if (this.sidebarPendingBadgeService.countRequisitionAwaitingPayment([x]) > 0) {
-              return false;
-            }
-            return (combined.includes('approved') || combined.includes('issued')) && !combined.includes('reject');
-          }).length;
-          const rejected = items.filter(x => {
-            const combined = `${String(x.status||'').toLowerCase().replace(/[^a-z0-9]/g,'')} ${String(x.current_stage_name||x.currentStageName||'').toLowerCase().replace(/[^a-z0-9]/g,'')}`;
-            if (isCommissioner) {
-              if (combined.includes('rejectedpayslip')) return true;
-              if (x.currentStageIsFinal === true && combined.includes('reject')) return true;
-              return false;
-            }
-            return combined.includes('rejected') || combined.includes('cancelled');
-          }).length;
+            : (reqCounts?.awaitingPayment ?? reqCounts?.awaiting_payment ?? this.sidebarPendingBadgeService.countRequisitionAwaitingPayment(items));
+          const approved = reqCounts?.approved !== undefined && reqCounts?.approved !== null
+            ? Number(reqCounts.approved || 0)
+            : items.filter(x => {
+                const status   = String(x.status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                const stage    = String(x.current_stage_name || x.currentStageName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                const combined = `${status} ${stage}`;
+                const stageId  = Number(x.current_stage ?? x.currentStage ?? -1);
+                if (isCommissioner) {
+                  const isAwaitingPayment = combined.includes('approvedcommissioner') &&
+                    !['forwardedpayslip','approvedpayslip','rejectedpayslip','paymentcompleted','paymentdone','permitsection']
+                      .some(m => combined.includes(m));
+                  if (isAwaitingPayment) return false;
+                  if (combined.includes('forwardedpayslip') && combined.includes('permitsection')) return false;
+                  if (combined.includes('rejectedpayslip')) return false;
+                  if (combined.includes('approvedpayslip')) return true;
+                  if (combined.includes('issued') || combined.includes('complete') || combined.includes('paymentcompleted')) return true;
+                  if (x.currentStageIsFinal === true && combined.includes('approv') && !combined.includes('reject')) return true;
+                  if (stageId > 33) return true;
+                  return false;
+                }
+                if (this.sidebarPendingBadgeService.countRequisitionAwaitingPayment([x]) > 0) {
+                  return false;
+                }
+                return (combined.includes('approved') || combined.includes('issued')) && !combined.includes('reject');
+              }).length;
+          const rejected = reqCounts?.rejected !== undefined && reqCounts?.rejected !== null
+            ? Number(reqCounts.rejected || 0)
+            : items.filter(x => {
+                const combined = `${String(x.status||'').toLowerCase().replace(/[^a-z0-9]/g,'')} ${String(x.current_stage_name||x.currentStageName||'').toLowerCase().replace(/[^a-z0-9]/g,'')}`;
+                if (isCommissioner) {
+                  if (combined.includes('rejectedpayslip')) return true;
+                  if (x.currentStageIsFinal === true && combined.includes('reject')) return true;
+                  return false;
+                }
+                return combined.includes('rejected') || combined.includes('cancelled');
+              }).length;
+          const applied = reqCounts?.applied ?? reqCounts?.total ?? items.length;
+
           this.supplyChainModuleCounts['requisition'] = {
-            applied: (isCommissioner || isPermitSection) ? (pending + approved + rejected) : items.length,
-            pending: pending,
-            approved,
+            applied: Number(applied || (pending + approved + rejected)),
+            pending: Number(pending || 0),
+            approved: Number(approved || 0),
             objection: 0,
-            rejected,
-            awaitingPayment: awaitingPayment
+            rejected: Number(rejected || 0),
+            awaitingPayment: Number(awaitingPayment || 0)
           };
           // feed badge counts too
           this.supplyChainPendingCounts['requisition'] = this.isLicenseeUser() ? 0 : pending;

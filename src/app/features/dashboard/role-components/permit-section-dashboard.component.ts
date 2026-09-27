@@ -268,6 +268,21 @@ export class PermitSectionDashboardComponent implements OnInit {
   }
 
   loadRequisitions(): void {
+    this.enaRequisitionService.getDashboardCounts().subscribe({
+      next: (counts: any) => {
+        if (counts) {
+          this.moduleCounts['requisition'] = {
+            applied: Number(counts.applied ?? counts.total ?? 0),
+            pending: Number(counts.pending ?? 0),
+            approved: Number(counts.approved ?? 0),
+            objection: Number(counts.objection ?? 0),
+            rejected: Number(counts.rejected ?? 0),
+            underprocess: Number(counts.underprocess ?? counts.under_process ?? 0)
+          };
+        }
+      },
+      error: () => {}
+    });
     this.enaRequisitionService.getRequisitions().subscribe({
       next: (response: any) => {
         const data = Array.isArray(response) ? response : response?.results || [];
@@ -632,17 +647,22 @@ export class PermitSectionDashboardComponent implements OnInit {
       return { applied, pending, approved, rejected };
     }
 
+    const pendCount = this.allPermits.filter(p => {
+      const s = String(p.status || '').toLowerCase();
+      return (s === 'pending' || s === 'submitted' || s === 'permit_section' || s === 'permit section') &&
+             !s.includes('approve') && !s.includes('reject') && !s.includes('cancel') && !s.includes('commissioner') &&
+             !s.includes('payslip') && !s.includes('forward');
+    }).length;
+
     const appCount = this.allPermits.filter(p => {
       const s = String(p.status || '').toLowerCase();
-      return s.includes('approve') || s.includes('permit_issued') || s.includes('pass_issued') || s.includes('completed') || s.includes('issued');
+      return (s.includes('approve') && !s.includes('commissioner')) || s.includes('permit_issued') || s.includes('pass_issued') || s.includes('completed') || s.includes('issued');
     }).length;
 
     const rejCount = this.allPermits.filter(p => {
       const s = String(p.status || '').toLowerCase();
       return s.includes('reject') || s.includes('cancel');
     }).length;
-
-    const pendCount = this.allPermits.length - appCount - rejCount;
 
     return { applied: this.allPermits.length, pending: pendCount, approved: appCount, rejected: rejCount };
   }

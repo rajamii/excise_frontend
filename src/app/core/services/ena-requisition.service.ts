@@ -97,10 +97,18 @@ export class EnaRequisitionService {
     return 'anon';
   }
 
-  getDashboardCounts(): Observable<any> {
-    return this.http
-      .get(`${this.apiUrl}dashboard-counts/`, this.httpOptions)
-      .pipe(catchError(this.handleError));
+  getDashboardCounts(force = false): Observable<any> {
+    const userKey = this.getUserCacheKeyPrefix();
+    const cacheKey = `requisitions:dashboard-counts:${userKey}`;
+    if (force) {
+      this.invalidateCache(cacheKey);
+      this.invalidateCache('requisitions:dashboard-counts');
+    }
+    return this.getCachedOrFetch(cacheKey, () =>
+      this.http
+        .get(`${this.apiUrl}dashboard-counts/`, this.httpOptions)
+        .pipe(catchError(this.handleError))
+    );
   }
 
   getRequisitions(queryParamsOrForce?: Record<string, any> | boolean, force = false): Observable<any> {
