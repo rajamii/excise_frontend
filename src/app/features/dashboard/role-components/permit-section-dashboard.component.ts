@@ -649,9 +649,8 @@ export class PermitSectionDashboardComponent implements OnInit {
 
     const pendCount = this.allPermits.filter(p => {
       const s = String(p.status || '').toLowerCase();
-      return (s === 'pending' || s === 'submitted' || s === 'permit_section' || s === 'permit section') &&
-             !s.includes('approve') && !s.includes('reject') && !s.includes('cancel') && !s.includes('commissioner') &&
-             !s.includes('payslip') && !s.includes('forward');
+      return (s === 'pending' || s === 'submitted' || s === 'permit_section' || s === 'permit section' || (s.includes('permit') && (s.includes('payslip') || s.includes('forward')))) &&
+             !s.includes('approve') && !s.includes('reject') && !s.includes('cancel') && !s.includes('commissioner');
     }).length;
 
     const appCount = this.allPermits.filter(p => {

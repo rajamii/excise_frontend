@@ -922,10 +922,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const rev$ = prefetched?.revalidation
       ? of(prefetched.revalidation)
       : this.supplyChainService.getRevalidationData(forceRefresh).pipe(catchError(() => of([])));
+    const revCounts$ = this.supplyChainService.getRevalidationCounts().pipe(catchError(() => of(null)));
 
     const can$ = prefetched?.cancellation
       ? of(prefetched.cancellation)
       : this.supplyChainService.getCancellationData(forceRefresh).pipe(catchError(() => of([])));
+    const canCounts$ = this.supplyChainService.getCancellationCounts().pipe(catchError(() => of(null)));
 
     const tra$ = (skipTransit)
       ? (prefetched?.transit ? of(prefetched.transit) : of([] as any[]))
@@ -978,12 +980,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       ? this.distributorPermitService.getDashboardCounts('hologram-procurement', forceRefresh).pipe(catchError(() => of(null)))
       : of(null as any);
 
-    forkJoin({ req: req$, reqCounts: reqCounts$, rev: rev$, can: can$, tra: tra$, hol: hol$, comp: comp$, collab: collab$, bld: bld$, holReq: holReq$, distReq: distReq$, distRev: distRev$, distCan: distCan$, distArr: distArr$, distHolo: distHolo$ })
+    forkJoin({ req: req$, reqCounts: reqCounts$, rev: rev$, revCounts: revCounts$, can: can$, canCounts: canCounts$, tra: tra$, hol: hol$, comp: comp$, collab: collab$, bld: bld$, holReq: holReq$, distReq: distReq$, distRev: distRev$, distCan: distCan$, distArr: distArr$, distHolo: distHolo$ })
       .pipe(
         takeUntil(this.destroy$),
         finalize(() => onComplete?.())
       )
-      .subscribe(({ req, reqCounts, rev, can, tra, hol, comp, collab, bld, holReq, distReq, distRev, distCan, distArr, distHolo }) => {
+      .subscribe(({ req, reqCounts, rev, revCounts, can, canCounts, tra, hol, comp, collab, bld, holReq, distReq, distRev, distCan, distArr, distHolo }) => {
 
         // ── REQUISITIONS ──────────────────────────────────────────────────────
         {
@@ -1052,13 +1054,19 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         // ── REVALIDATIONS ─────────────────────────────────────────────────────
         {
           const items: any[] = Array.isArray(rev) ? rev : [];
-          const pending = (isCommissioner || isPermitSection)
-            ? this.sidebarPendingBadgeService.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY'])
-            : this.sidebarPendingBadgeService.countLicenseePendingItems(items);
-          const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
-          const rejected = items.filter(x => { const s = String(x.status||'').toLowerCase(); return s.includes('rejected') || s.includes('cancelled'); }).length;
+          const pending = revCounts?.pending !== undefined && revCounts?.pending !== null
+            ? Number(revCounts.pending || 0)
+            : ((isCommissioner || isPermitSection)
+                ? this.sidebarPendingBadgeService.countActionable(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY'])
+                : this.sidebarPendingBadgeService.countLicenseePendingItems(items));
+          const approved = revCounts?.approved !== undefined && revCounts?.approved !== null
+            ? Number(revCounts.approved || 0)
+            : items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
+          const rejected = revCounts?.rejected !== undefined && revCounts?.rejected !== null
+            ? Number(revCounts.rejected || 0)
+            : items.filter(x => { const s = String(x.status||'').toLowerCase(); return s.includes('rejected') || s.includes('cancelled'); }).length;
           this.supplyChainModuleCounts['revalidation'] = { 
-            applied: (isCommissioner || isPermitSection) ? (pending + approved + rejected) : items.length, 
+            applied: (isCommissioner || isPermitSection) ? (pending + approved + rejected) : (revCounts?.total ?? items.length), 
             pending, 
             approved, 
             objection: 0, 
@@ -1070,13 +1078,19 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         // ── CANCELLATIONS ─────────────────────────────────────────────────────
         {
           const items: any[] = Array.isArray(can) ? can : [];
-          const pending = (isCommissioner || isPermitSection)
-            ? this.sidebarPendingBadgeService.countActionableWithStatusFallback(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'APPROVEPAYSLIP', 'REJECTPAYSLIP'])
-            : this.sidebarPendingBadgeService.countLicenseePendingItems(items);
-          const approved = items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
-          const rejected = items.filter(x => { const s = String(x.status||'').toLowerCase(); return s.includes('rejected') || s.includes('cancelled'); }).length;
+          const pending = canCounts?.pending !== undefined && canCounts?.pending !== null
+            ? Number(canCounts.pending || 0)
+            : ((isCommissioner || isPermitSection)
+                ? this.sidebarPendingBadgeService.countActionableWithStatusFallback(items, ['APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'APPROVEPAYSLIP', 'REJECTPAYSLIP'])
+                : this.sidebarPendingBadgeService.countLicenseePendingItems(items));
+          const approved = canCounts?.approved !== undefined && canCounts?.approved !== null
+            ? Number(canCounts.approved || 0)
+            : items.filter(x => String(x.status || '').toLowerCase().includes('approved')).length;
+          const rejected = canCounts?.rejected !== undefined && canCounts?.rejected !== null
+            ? Number(canCounts.rejected || 0)
+            : items.filter(x => { const s = String(x.status||'').toLowerCase(); return s.includes('rejected') || s.includes('cancelled'); }).length;
           this.supplyChainModuleCounts['cancellation'] = { 
-            applied: (isCommissioner || isPermitSection) ? (pending + approved + rejected) : items.length, 
+            applied: (isCommissioner || isPermitSection) ? (pending + approved + rejected) : (canCounts?.total ?? items.length), 
             pending, 
             approved, 
             objection: 0, 
@@ -3545,6 +3559,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       const distReqPending = this.getSupplyChainPendingCount('distributor-permit-requisition') || this.getSupplyChainPendingCount('distributor-permit');
       const distHoloPending = this.getSupplyChainPendingCount('distributor-permit-hologram-procurement') || this.getSupplyChainPendingCount('imfl-hologram-procurement');
       return this.getSupplyChainPendingCount('requisition') +
+             this.getSupplyChainPendingCount('revalidation') +
+             this.getSupplyChainPendingCount('cancellation') +
              distReqPending +
              this.getSupplyChainPendingCount('distributor-permit-revalidation') +
              this.getSupplyChainPendingCount('distributor-permit-cancellation') +
@@ -3627,6 +3643,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const isCommissioner = this.isCommissionerUser();
     const modules = ['requisition', 'revalidation', 'cancellation', 'hologram',
                      'distributor-permit-requisition', 'distributor-permit-revalidation', 'distributor-permit-cancellation', 'distributor-permit-brand-arrival', 'distributor-permit-hologram-procurement'];
+    if (isCommissioner) {
+      modules.push('company-collaboration');
+    }
     if (!isCommissioner) {
       modules.push('transit');
     }
@@ -3661,6 +3680,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const isCommissioner = this.isCommissionerUser();
     const approvedModules = ['requisition', 'revalidation', 'cancellation', 'hologram',
                              'distributor-permit-requisition', 'distributor-permit-revalidation', 'distributor-permit-cancellation', 'distributor-permit-brand-arrival', 'distributor-permit-hologram-procurement'];
+    if (isCommissioner) {
+      approvedModules.push('company-collaboration');
+    }
     if (!isCommissioner) {
       approvedModules.push('transit');
     }
@@ -3695,6 +3717,9 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const isCommissioner = this.isCommissionerUser();
     const rejectedModules = ['requisition', 'revalidation', 'cancellation', 'hologram',
                              'distributor-permit-requisition', 'distributor-permit-revalidation', 'distributor-permit-cancellation', 'distributor-permit-brand-arrival', 'distributor-permit-hologram-procurement'];
+    if (isCommissioner) {
+      rejectedModules.push('company-collaboration');
+    }
     if (!isCommissioner) {
       rejectedModules.push('transit');
     }
