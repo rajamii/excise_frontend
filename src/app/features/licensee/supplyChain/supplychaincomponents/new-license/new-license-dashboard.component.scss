@@ -281,6 +281,32 @@
   }
 }
 
+.table-pagination-loader {
+  background: linear-gradient(90deg, #f0f9ff 0%, #e0f2fe 50%, #f0f9ff 100%);
+  border-top: 1px dashed #7dd3fc;
+  color: #0284c7;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.4rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.table-loading-inline {
+  font-size: 0.78rem;
+  color: #0284c7;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
 .pagination-bar {
   border-top: 1px solid #e2e8f0;
   padding: 0.75rem 1rem;

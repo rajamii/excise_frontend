@@ -318,9 +318,19 @@
         </tbody>
       </table>
 
+      <!-- Loader above pagination bar -->
+      <div class="table-pagination-loader" *ngIf="isLoading && rows.length > 0">
+        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+        <span>Loading records, please wait...</span>
+      </div>
+
       <div class="pagination-bar" *ngIf="totalCount > 0">
-        <div class="page-summary">
-          Showing {{ pageStart }}-{{ pageEnd }} of {{ totalCount }}
+        <div class="page-summary d-flex align-items-center gap-2">
+          <span>Showing {{ pageStart }}-{{ pageEnd }} of {{ totalCount }}</span>
+          <span *ngIf="isLoading" class="table-loading-inline">
+            <span class="spinner-border spinner-border-sm text-primary" role="status" style="width: 0.85rem; height: 0.85rem;"></span>
+            <span>Loading...</span>
+          </span>
         </div>
 
         <div class="page-controls">
@@ -330,6 +340,7 @@
               class="form-select form-select-sm page-size-select"
               [(ngModel)]="pageSize"
               (ngModelChange)="onPageSizeChange()"
+              [disabled]="isLoading"
             >
               <option *ngFor="let size of pageSizeOptions" [ngValue]="size">{{ size }}</option>
             </select>

@@ -1125,12 +1125,30 @@ export class LicenseApplicationService {
     return this.http.get(`${this.newLicenseUrl}/list-by-status/`, { params });
   }
 
-  getLicenseRenewalDashboardCounts(): Observable<any> {
-    return this.http.get(`${this.renewalLicenseUrl}/dashboard-counts/`);
+  getLicenseRenewalDashboardCounts(filters?: Record<string, any>): Observable<any> {
+    let params = new HttpParams();
+    if (filters) {
+      Object.keys(filters).forEach((key) => {
+        const val = filters[key];
+        if (val !== null && val !== undefined && val !== '') {
+          params = params.set(key, String(val));
+        }
+      });
+    }
+    return this.http.get(`${this.renewalLicenseUrl}/dashboard-counts/`, { params });
   }
 
-  getLicenseRenewalApplicationsByStatus(): Observable<any> {
-    return this.http.get(`${this.renewalLicenseUrl}/list-by-status/`);
+  getLicenseRenewalApplicationsByStatus(queryParams?: Record<string, any>): Observable<any> {
+    let params = new HttpParams();
+    if (queryParams) {
+      Object.keys(queryParams).forEach((key) => {
+        const val = queryParams[key];
+        if (val !== null && val !== undefined && val !== '') {
+          params = params.set(key, String(val));
+        }
+      });
+    }
+    return this.http.get(`${this.renewalLicenseUrl}/list-by-status/`, { params });
   }
 
   getNewLicenseSiteDetails(applicationId: string): Observable<any> {

@@ -1,8 +1,8 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { of, Subject } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import Swal from 'sweetalert2';
 import { MaterialModule } from '../../../../../shared/material.module';
@@ -60,8 +60,9 @@ export class LicenseRenewalDashboardComponent implements OnInit {
   error: string | null = null;
 
   counts: RenewalCounts = { applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0, awaitingPayment: 0 };
-  allRows: RenewalItem[] = [];
-  filteredRows: RenewalItem[] = [];
+  rows: RenewalItem[] = [];
+  totalCount = 0;
+  totalPages = 0;
 
   pageSizeOptions: number[] = [5, 10, 15];
   pageSize = 5;
@@ -69,7 +70,18 @@ export class LicenseRenewalDashboardComponent implements OnInit {
   searchFilter = '';
   activeSummaryFilter: RenewalItem['statusGroup'] | '' = '';
 
+  private searchSubject = new Subject<string>();
+
   ngOnInit(): void {
+    this.searchSubject.pipe(
+      debounceTime(350),
+      distinctUntilChanged()
+    ).subscribe((term) => {
+      this.searchFilter = term;
+      this.pageIndex = 0;
+      this.loadData();
+    });
+
     this.loadData();
     this.sidebarPendingBadgeService.refreshNeeded$.subscribe(() => {
       this.loadData();
@@ -81,55 +93,88 @@ export class LicenseRenewalDashboardComponent implements OnInit {
   }
 
   loadData(): void {
-    this.isLoading = true;
-    this.error = null;
-    this.activeSummaryFilter = '';
-    this.searchFilter = '';
+    this.loadCounts();
+    this.loadTableData();
+  }
 
-    forkJoin({
-      counts: this.licenseApplicationService.getLicenseRenewalDashboardCounts().pipe(
-        catchError(() => of({ applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 }))
-      ),
-      grouped: this.licenseApplicationService.getLicenseRenewalApplicationsByStatus().pipe(
-        catchError(() => of({ applied: [], pending: [], objection: [], approved: [], rejected: [] }))
-      )
-    }).subscribe({
-      next: ({ counts, grouped }) => {
-        this.allRows = this.flattenGroupedData(grouped);
-        
-        const approvedCount = this.allRows.filter(r => r.statusGroup === 'approved').length;
-        const pendingCount = this.allRows.filter(r => r.statusGroup === 'pending').length;
-        const objectionCount = this.allRows.filter(r => r.statusGroup === 'objection').length;
-        const rejectedCount = this.allRows.filter(r => r.statusGroup === 'rejected').length;
-        const awaitingPaymentCount = this.allRows.filter(r => r.statusGroup === 'awaiting-payment').length;
+  loadCounts(): void {
+    const filters: Record<string, any> = {};
+    if (this.searchFilter.trim()) {
+      filters['search'] = this.searchFilter.trim();
+    }
 
-        this.counts = {
-          applied: this.allRows.filter(r => r.statusGroup === 'applied').length,
-          pending: pendingCount + awaitingPaymentCount,
-          objection: objectionCount,
-          approved: approvedCount,
-          rejected: rejectedCount,
-          awaitingPayment: awaitingPaymentCount
-        };
-
-        if (this.activeSummaryFilter === '') {
-          if (pendingCount + awaitingPaymentCount > 0) this.activeSummaryFilter = 'pending';
-          else if (objectionCount > 0) this.activeSummaryFilter = 'objection';
-        }
-        this.applyFilters();
-        this.isLoading = false;
-      },
-      error: () => {
-        this.error = 'Failed to load license renewal applications.';
-        this.isLoading = false;
-      }
+    this.licenseApplicationService.getLicenseRenewalDashboardCounts(filters).pipe(
+      catchError(() => of({ applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 }))
+    ).subscribe((counts) => {
+      this.counts = {
+        applied: Number(counts?.applied || 0),
+        pending: Number(counts?.pending || 0),
+        objection: Number((counts as any)?.objection || 0),
+        approved: Number(counts?.approved || 0),
+        rejected: Number(counts?.rejected || 0),
+        awaitingPayment: Number((counts as any)?.awaiting_payment || 0)
+      };
     });
   }
 
+  loadTableData(): void {
+    this.isLoading = true;
+    this.error = null;
+
+    const params: Record<string, any> = {
+      page: this.pageIndex + 1,
+      page_size: this.pageSize
+    };
+
+    if (this.activeSummaryFilter) {
+      params['status'] = this.activeSummaryFilter;
+    }
+    if (this.searchFilter.trim()) {
+      params['search'] = this.searchFilter.trim();
+    }
+
+    this.licenseApplicationService.getLicenseRenewalApplicationsByStatus(params).pipe(
+      catchError(() => {
+        this.error = 'Failed to load license renewal applications.';
+        this.isLoading = false;
+        return of(null);
+      })
+    ).subscribe((resp) => {
+      if (!resp) return;
+
+      if (resp.results && Array.isArray(resp.results)) {
+        this.totalCount = Number(resp.count ?? 0);
+        this.totalPages = Number(resp.total_pages ?? Math.ceil(this.totalCount / this.pageSize) ?? 1);
+        this.rows = this.mapRawItemsToRows(resp.results, this.activeSummaryFilter);
+      } else if (typeof resp === 'object') {
+        // Fallback for legacy grouped format
+        const all = this.flattenGroupedData(resp);
+        this.totalCount = all.length;
+        this.totalPages = Math.ceil(this.totalCount / this.pageSize) || 1;
+        const start = this.pageIndex * this.pageSize;
+        this.rows = all.slice(start, start + this.pageSize);
+      } else {
+        this.rows = [];
+        this.totalCount = 0;
+        this.totalPages = 0;
+      }
+
+      this.isLoading = false;
+    });
+  }
+
+  onSearchChange(value: string): void {
+    this.searchSubject.next(value);
+  }
+
   onSummaryCardClick(group: RenewalItem['statusGroup'] | 'all'): void {
-    this.activeSummaryFilter = group === 'all' ? '' : group;
+    if (group === 'all' || this.activeSummaryFilter === group) {
+      this.activeSummaryFilter = '';
+    } else {
+      this.activeSummaryFilter = group as RenewalItem['statusGroup'];
+    }
     this.pageIndex = 0;
-    this.applyFilters();
+    this.loadTableData();
   }
 
   viewApplication(row: RenewalItem): void {
@@ -144,126 +189,115 @@ export class LicenseRenewalDashboardComponent implements OnInit {
     });
   }
 
-  applyFilters(): void {
-    if (this.activeSummaryFilter) {
-      const activeCount = this.counts[this.activeSummaryFilter as keyof RenewalCounts] ?? 0;
-      if (activeCount === 0) {
-        this.activeSummaryFilter = '';
-      }
-    }
-    const q = this.searchFilter.trim().toLowerCase();
-    const rows = this.allRows.filter((row) => {
-      const matchesSearch =
-        !q ||
-        row.applicationId.toLowerCase().includes(q) ||
-        row.applicantName.toLowerCase().includes(q) ||
-        row.oldLicenseId.toLowerCase().includes(q) ||
-        row.currentStage.toLowerCase().includes(q);
-      const matchesGroup = !this.activeSummaryFilter ||
-        (this.activeSummaryFilter === 'pending'
-          ? (row.statusGroup === 'pending' || row.statusGroup === 'awaiting-payment')
-          : row.statusGroup === this.activeSummaryFilter);
-      return matchesSearch && matchesGroup;
-    });
-    this.filteredRows = rows;
-  }
-
   get pagedRows(): RenewalItem[] {
-    const start = this.pageIndex * this.pageSize;
-    return this.filteredRows.slice(start, start + this.pageSize);
+    return this.rows;
   }
 
   get pageStart(): number {
-    return this.filteredRows.length ? this.pageIndex * this.pageSize + 1 : 0;
+    return this.totalCount ? this.pageIndex * this.pageSize + 1 : 0;
   }
 
   get pageEnd(): number {
-    return Math.min(this.filteredRows.length, (this.pageIndex + 1) * this.pageSize);
+    return Math.min(this.totalCount, (this.pageIndex + 1) * this.pageSize);
+  }
+
+  trackByApplicationId(index: number, row: RenewalItem): string {
+    return row?.applicationId || row?.id || String(index);
   }
 
   onPageSizeChange(size: number): void {
     this.pageSize = Number(size || 5);
     this.pageIndex = 0;
+    this.loadTableData();
   }
 
   onPageChange(delta: number): void {
     const next = this.pageIndex + delta;
-    const maxPage = Math.max(0, Math.ceil(this.filteredRows.length / this.pageSize) - 1);
-    this.pageIndex = Math.max(0, Math.min(maxPage, next));
+    if (next >= 0 && next < this.totalPages) {
+      this.pageIndex = next;
+      this.loadTableData();
+    }
+  }
+
+  mapRawItemsToRows(items: any[], fallbackStatusGroup?: RenewalItem['statusGroup'] | ''): RenewalItem[] {
+    if (!Array.isArray(items)) return [];
+    return items.map((raw) => this.mapRawItemToRow(raw, fallbackStatusGroup));
+  }
+
+  mapRawItemToRow(raw: any, fallbackStatusGroup?: RenewalItem['statusGroup'] | ''): RenewalItem {
+    const appId = String(raw?.application_id || raw?.applicationId || raw?.id || '').trim();
+    const currentStageId = raw?.current_stage_id || raw?.currentStageId || raw?.current_stage;
+    const currentStageRaw = String(raw?.current_stage_name || raw?.currentStageName || raw?.current_stage || '').trim();
+
+    const rawStatusGroup = raw?.status_group || raw?.statusGroup || raw?.status || fallbackStatusGroup || 'applied';
+    let finalStatusGroup: RenewalItem['statusGroup'] = 
+      rawStatusGroup === 'approved' ? 'approved' :
+      rawStatusGroup === 'pending' ? 'pending' :
+      rawStatusGroup === 'objection' ? 'objection' :
+      rawStatusGroup === 'rejected' ? 'rejected' :
+      rawStatusGroup === 'awaiting-payment' || rawStatusGroup === 'awaiting_payment' ? 'awaiting-payment' :
+      'applied';
+
+    const stageRawLower = currentStageRaw.toLowerCase();
+    const isAwaitingPaymentStage = 
+      stageRawLower.includes('awaiting payment') || 
+      stageRawLower.includes('awaiting_payment') || 
+      currentStageId === 119 || 
+      currentStageId === '119' ||
+      currentStageId === 109 ||
+      currentStageId === '109';
+
+    if (this.isLicenseeUser() && isAwaitingPaymentStage) {
+      finalStatusGroup = 'awaiting-payment';
+    }
+
+    const categoryName = String(
+      raw?.license_category_name ||
+      raw?.licenseCategoryName ||
+      raw?.license_category?.license_category ||
+      raw?.license_category?.category_name ||
+      raw?.license_category?.name ||
+      (typeof raw?.license_category === 'string' && isNaN(Number(raw.license_category)) ? raw.license_category : '') ||
+      raw?.license_type_name ||
+      raw?.licenseTypeName ||
+      '-'
+    ).trim();
+
+    const subCategoryName = String(
+      raw?.license_sub_category_name ||
+      raw?.licenseSubCategoryName ||
+      raw?.license_sub_category?.description ||
+      raw?.license_sub_category?.license_subcategory ||
+      raw?.license_sub_category?.name ||
+      (typeof raw?.license_sub_category === 'string' && isNaN(Number(raw.license_sub_category)) ? raw.license_sub_category : '') ||
+      ''
+    ).trim();
+
+    return {
+      id: appId,
+      applicationId: appId,
+      applicantName: String(raw?.applicant_name || raw?.applicantName || '').trim() || '-',
+      oldLicenseId: String(raw?.old_license_id || raw?.oldLicenseId || '').trim() || '-',
+      licenseCategoryName: categoryName,
+      licenseSubCategoryName: subCategoryName,
+      submittedOn: this.formatDate(raw?.submitted_on || raw?.submittedOn || raw?.submitted_at || raw?.submittedAt || raw?.created_at || raw?.createdAt || raw?.updated_at || raw?.updatedAt),
+      currentStage: this.computeCurrentStageLabel(finalStatusGroup, currentStageRaw),
+      currentStageRaw: currentStageRaw || '-',
+      statusGroup: finalStatusGroup,
+      canView: true,
+      canPayLicenseFee: isAwaitingPaymentStage,
+      rawRow: raw
+    };
   }
 
   private flattenGroupedData(grouped: GroupedRenewalResponse): RenewalItem[] {
-    const output: RenewalItem[] = [];
-    const groups: Array<[any, any[]]> = [
-      ['applied', grouped?.applied || []],
-      ['pending', grouped?.pending || []],
-      ['objection', (grouped as any)?.objection || []],
-      ['approved', grouped?.approved || []],
-      ['rejected', grouped?.rejected || []]
+    return [
+      ...this.mapRawItemsToRows(grouped?.applied, 'applied'),
+      ...this.mapRawItemsToRows(grouped?.pending, 'pending'),
+      ...this.mapRawItemsToRows((grouped as any)?.objection, 'objection'),
+      ...this.mapRawItemsToRows(grouped?.approved, 'approved'),
+      ...this.mapRawItemsToRows(grouped?.rejected, 'rejected')
     ];
-
-    for (const [statusGroup, list] of groups) {
-      for (const raw of list || []) {
-        const appId = String(raw?.application_id || raw?.applicationId || raw?.id || '').trim();
-        if (!appId) continue;
-
-        const currentStageId = raw?.current_stage_id || raw?.currentStageId || raw?.current_stage;
-        const currentStageRaw = String(raw?.current_stage_name || raw?.currentStageName || raw?.current_stage || '').trim();
-        
-        let finalStatusGroup: RenewalItem['statusGroup'] = statusGroup;
-        const stageRawLower = currentStageRaw.toLowerCase();
-        const isAwaitingPaymentStage = 
-          stageRawLower.includes('awaiting payment') || 
-          stageRawLower.includes('awaiting_payment') || 
-          currentStageId === 119 || 
-          currentStageId === '119' ||
-          currentStageId === 109 ||
-          currentStageId === '109';
-
-        if (this.isLicenseeUser() && isAwaitingPaymentStage) {
-          finalStatusGroup = 'awaiting-payment';
-        }
-
-        const categoryName = String(
-          raw?.license_category_name ||
-          raw?.licenseCategoryName ||
-          raw?.license_category?.license_category ||
-          raw?.license_category?.category_name ||
-          raw?.license_category?.name ||
-          (typeof raw?.license_category === 'string' && isNaN(Number(raw.license_category)) ? raw.license_category : '') ||
-          raw?.license_type_name ||
-          raw?.licenseTypeName ||
-          '-'
-        ).trim();
-
-        const subCategoryName = String(
-          raw?.license_sub_category_name ||
-          raw?.licenseSubCategoryName ||
-          raw?.license_sub_category?.description ||
-          raw?.license_sub_category?.license_subcategory ||
-          raw?.license_sub_category?.name ||
-          (typeof raw?.license_sub_category === 'string' && isNaN(Number(raw.license_sub_category)) ? raw.license_sub_category : '') ||
-          ''
-        ).trim();
-
-        output.push({
-          id: appId,
-          applicationId: appId,
-          applicantName: String(raw?.applicant_name || raw?.applicantName || '').trim() || '-',
-          oldLicenseId: String(raw?.old_license_id || raw?.oldLicenseId || '').trim() || '-',
-          licenseCategoryName: categoryName,
-          licenseSubCategoryName: subCategoryName,
-          submittedOn: this.formatDate(raw?.submitted_on || raw?.submittedOn || raw?.submitted_at || raw?.submittedAt || raw?.created_at || raw?.createdAt || raw?.updated_at || raw?.updatedAt),
-          currentStage: this.computeCurrentStageLabel(finalStatusGroup, currentStageRaw),
-          currentStageRaw: currentStageRaw || '-',
-          statusGroup: finalStatusGroup,
-          canView: true,
-          canPayLicenseFee: isAwaitingPaymentStage,
-          rawRow: raw
-        });
-      }
-    }
-    return output;
   }
 
   payRenewalFee(row: RenewalItem): void {
