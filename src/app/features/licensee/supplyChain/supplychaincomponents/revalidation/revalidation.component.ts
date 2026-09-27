@@ -469,9 +469,10 @@ export class RevalidationComponent implements OnInit {
           return Math.max(this.counts.pending || 0, computed);
         }
         if (filter === 'rejected') return this.counts.rejected;
-        if (filter === 'underprocess') return this.counts.underprocess;
-        if (filter === 'total' || filter === 'all') return this.counts.total;
-        return (this.counts as any)[filter] ?? 0;
+        if (filter === 'total' || filter === 'all') {
+          const calculated = (Number(this.counts.pending) || 0) + (Number(this.counts.approved) || 0) + (Number(this.counts.rejected) || 0);
+          return calculated > 0 ? calculated : (this.counts.total || 0);
+        }
       }
       if (filter === 'pending') {
         return this.summaryRevalidationData.filter(item => this.isPendingLikeStatus(item)).length;
