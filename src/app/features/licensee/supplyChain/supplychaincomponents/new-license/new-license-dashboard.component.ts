@@ -2,8 +2,8 @@ import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { forkJoin, of, Subject } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, timeout } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { environment } from '../../../../../../environments/environment';
@@ -14,7 +14,6 @@ import { RoleService } from '../../../../../core/services/role.service';
 import { PaymentIntegrationService } from '../../../../../core/services/payment-integration.service';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
 import { SidebarPendingBadgeService } from '../../../../../shared/services/sidebar-pending-badge.service';
-import { timeout } from 'rxjs';
 import { ResolveObjectionsDialogComponent } from './resolve-objections-dialog/resolve-objections-dialog.component';
 import { ObjectionDetailsDialogComponent } from './objection-details-dialog/objection-details-dialog.component';
 import { ApplicationFeeSlipDialogComponent } from './application-fee-slip-dialog/application-fee-slip-dialog.component';
@@ -125,18 +124,9 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
     awaitingPayment: 0
   };
 
-  private serverCounts: NewLicenseCounts = {
-    applied: 0,
-    pending: 0,
-    objection: 0,
-    approved: 0,
-    rejected: 0,
-    awaitingPayment: 0
-  };
-
-  allRows: NewLicenseItem[] = [];
-  summaryRows: NewLicenseItem[] = [];
-  filteredRows: NewLicenseItem[] = [];
+  rows: NewLicenseItem[] = [];
+  totalCount = 0;
+  totalPages = 0;
   pageSizeOptions: number[] = [5, 10, 15];
   pageSize = 5;
   pageIndex = 0;
@@ -145,10 +135,12 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
   monthFilter = '';
   activeSummaryFilter: NewLicenseItem['statusGroup'] | '' = '';
 
+  private searchSubject = new Subject<string>();
+
   get approvedLicenseNumbers(): string[] {
     if (!this.isLicenseeUser()) return [];
 
-    const numbers = this.allRows
+    const numbers = this.rows
       .filter((r) => r?.statusGroup === 'approved' && Boolean(r?.isApproved))
       .map((r) => String(r?.licenseNumber || '').trim())
       .filter(Boolean);
@@ -157,6 +149,15 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.searchSubject.pipe(
+      debounceTime(350),
+      distinctUntilChanged()
+    ).subscribe((term) => {
+      this.searchFilter = term;
+      this.pageIndex = 0;
+      this.loadData();
+    });
+
     this.loadData();
     this.sidebarPendingBadgeService.refreshNeeded$.subscribe(() => {
       console.log('🔄 NewLicenseDashboardComponent: Refreshing data due to refreshNeeded signal');
@@ -194,154 +195,129 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
   }
 
   loadData(): void {
+    this.loadCounts();
+    this.loadTableData();
+  }
+
+  loadCounts(): void {
+    const filters: Record<string, any> = {};
+    if (this.searchFilter.trim()) filters['search'] = this.searchFilter.trim();
+    if (this.dateFilter) filters['date'] = this.dateFilter;
+    if (this.monthFilter) filters['month'] = this.monthFilter;
+
+    this.licenseApplicationService.getNewLicenseDashboardCounts(filters).pipe(
+      catchError(() => of({ applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 }))
+    ).subscribe((counts) => {
+      this.counts = {
+        applied: Number(counts?.applied || 0),
+        pending: Number(counts?.pending || 0),
+        objection: Number((counts as any)?.objection || 0),
+        approved: Number(counts?.approved || 0),
+        rejected: Number(counts?.rejected || 0),
+        awaitingPayment: Number((counts as any)?.awaiting_payment || 0)
+      };
+    });
+  }
+
+  loadTableData(): void {
     this.isLoading = true;
     this.error = null;
 
-    // Reset to default pending filter on each fresh load.
-    this.activeSummaryFilter = '';
-    this.searchFilter = '';
-    this.dateFilter = '';
-    this.monthFilter = '';
+    const params: Record<string, any> = {
+      page: this.pageIndex + 1,
+      page_size: this.pageSize
+    };
 
-    forkJoin({
-      counts: this.licenseApplicationService.getNewLicenseDashboardCounts().pipe(
-        catchError(() => of({ applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 }))
-      ),
-      grouped: this.licenseApplicationService.getNewLicenseApplicationsByStatus().pipe(
-        catchError(() => of({ applied: [], pending: [], objection: [], approved: [], rejected: [] }))
-      )
-    }).subscribe({
-      next: ({ counts, grouped }) => {
-        this.serverCounts = {
-          applied: Number(counts?.applied || 0),
-          pending: Number(counts?.pending || 0),
-          objection: Number((counts as any)?.objection || 0),
-          approved: Number(counts?.approved || 0),
-          rejected: Number(counts?.rejected || 0),
-          awaitingPayment: 0
-        };
-        this.allRows = this.flattenGroupedData(grouped);
-        this.startCountdownTimer();
+    if (this.activeSummaryFilter) {
+      params['status'] = this.activeSummaryFilter;
+    }
+    if (this.searchFilter.trim()) {
+      params['search'] = this.searchFilter.trim();
+    }
+    if (this.dateFilter) {
+      params['date'] = this.dateFilter;
+    }
+    if (this.monthFilter) {
+      params['month'] = this.monthFilter;
+    }
 
-        // Calculate actual counts from rows
-        const actualObjectionCount = this.allRows.filter(r => r.statusGroup === 'objection').length;
-        const actualPendingTotal = this.allRows.filter(r => r.statusGroup === 'pending' || r.statusGroup === 'awaiting-payment').length;
-
-        // Default to Pending if any pending/awaiting-payment items exist, else Objection, else Total Applications ('')
-        if (this.activeSummaryFilter === '') {
-          if (actualPendingTotal > 0) {
-            this.activeSummaryFilter = 'pending';
-          } else if (actualObjectionCount > 0) {
-            this.activeSummaryFilter = 'objection';
-          } else {
-            this.activeSummaryFilter = '';
-          }
-        }
-
-        this.applyFilters();
-
-        if (this.allRows.length === 0) {
-          this.error = null;
-        }
-        this.isLoading = false;
-      },
-      error: () => {
+    this.licenseApplicationService.getNewLicenseApplicationsByStatus(params).pipe(
+      catchError(() => {
         this.error = 'Failed to load new license applications.';
         this.isLoading = false;
+        return of(null);
+      })
+    ).subscribe((resp) => {
+      if (!resp) return;
+
+      if (resp.results && Array.isArray(resp.results)) {
+        this.totalCount = Number(resp.count ?? 0);
+        this.totalPages = Number(resp.total_pages ?? Math.ceil(this.totalCount / this.pageSize) ?? 1);
+        this.rows = this.mapRawItemsToRows(resp.results, this.activeSummaryFilter);
+      } else if (typeof resp === 'object') {
+        // Fallback for legacy grouped format
+        const all = this.flattenGroupedData(resp);
+        this.totalCount = all.length;
+        this.totalPages = Math.ceil(this.totalCount / this.pageSize) || 1;
+        const start = this.pageIndex * this.pageSize;
+        this.rows = all.slice(start, start + this.pageSize);
+      } else {
+        this.rows = [];
+        this.totalCount = 0;
+        this.totalPages = 0;
       }
+
+      this.startCountdownTimer();
+      this.isLoading = false;
     });
+  }
+
+  onSearchChange(value: string): void {
+    this.searchSubject.next(value);
+  }
+
+  onFilterChange(): void {
+    this.pageIndex = 0;
+    this.loadData();
   }
 
   applyFilters(): void {
-    const q = this.searchFilter.trim().toLowerCase();
-
-    // Summary rows are affected by search only (counts stay stable when selecting status via card).
-    this.summaryRows = this.allRows.filter((row) => {
-      const matchesSearch = !q
-        || row.applicationId.toLowerCase().includes(q)
-        || row.applicantName.toLowerCase().includes(q)
-        || row.establishmentName.toLowerCase().includes(q)
-        || row.currentStage.toLowerCase().includes(q);
-
-      return matchesSearch;
-    });
-
-    const calculated = this.calculateCounts(this.summaryRows);
-    this.serverCounts.awaitingPayment = this.allRows.filter(r => r.statusGroup === 'awaiting-payment').length;
-    const canUseServerCounts = this.allRows.length === 0 && !this.searchFilter && !this.dateFilter && !this.monthFilter;
-    this.counts = canUseServerCounts ? this.serverCounts : calculated;
-
-    // If currently focused on a filter (e.g. 'objection') but that filter has 0 entries, reset to Total Applications ('')
-    if (this.activeSummaryFilter) {
-      const activeCount = this.counts[this.activeSummaryFilter as keyof NewLicenseCounts] ?? 0;
-      if (activeCount === 0) {
-        this.activeSummaryFilter = '';
-      }
-    }
-
-    this.filteredRows = this.summaryRows.filter((row) => {
-      // Date filter
-      if (this.dateFilter) {
-        const isoDate = this.toIsoDate(row.submittedOn);
-        if (isoDate !== this.dateFilter) return false;
-      }
-
-      // Month filter (yyyy-MM)
-      if (this.monthFilter) {
-        const isoDate = this.toIsoDate(row.submittedOn);
-        if (!isoDate || isoDate.substring(0, 7) !== this.monthFilter) return false;
-      }
-
-      // Summary card status filter
-      if (this.activeSummaryFilter) {
-        if (this.activeSummaryFilter === 'pending') {
-          if (row.statusGroup !== 'pending' && row.statusGroup !== 'awaiting-payment') return false;
-        } else if (row.statusGroup !== this.activeSummaryFilter) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-
-    // Reset pagination whenever filters change.
-    this.pageIndex = 0;
-  }
-
-  get totalPages(): number {
-    if (this.filteredRows.length === 0) return 0;
-    return Math.ceil(this.filteredRows.length / this.pageSize);
+    this.onFilterChange();
   }
 
   get pageStart(): number {
-    if (this.filteredRows.length === 0) return 0;
+    if (this.totalCount === 0) return 0;
     return this.pageIndex * this.pageSize + 1;
   }
 
   get pageEnd(): number {
-    if (this.filteredRows.length === 0) return 0;
-    return Math.min((this.pageIndex + 1) * this.pageSize, this.filteredRows.length);
+    if (this.totalCount === 0) return 0;
+    return Math.min((this.pageIndex + 1) * this.pageSize, this.totalCount);
   }
 
   get pagedRows(): NewLicenseItem[] {
-    if (this.filteredRows.length === 0) return [];
-    const start = this.pageIndex * this.pageSize;
-    return this.filteredRows.slice(start, start + this.pageSize);
+    return this.rows;
+  }
+
+  trackByApplicationId(index: number, row: NewLicenseItem): string {
+    return row?.applicationId || row?.id || String(index);
   }
 
   onPageSizeChange(): void {
     this.pageIndex = 0;
+    this.loadTableData();
   }
 
   prevPage(): void {
     if (this.pageIndex <= 0) return;
     this.pageIndex -= 1;
+    this.loadTableData();
   }
 
   nextPage(): void {
-    if (this.totalPages === 0) return;
-    if (this.pageIndex >= this.totalPages - 1) return;
+    if (this.totalPages === 0 || this.pageIndex >= this.totalPages - 1) return;
     this.pageIndex += 1;
+    this.loadTableData();
   }
 
   showApprovedLicenseNumbers(): void {
@@ -365,18 +341,18 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
     this.dateFilter = '';
     this.monthFilter = '';
     this.activeSummaryFilter = '';
-    this.applyFilters();
+    this.pageIndex = 0;
+    this.loadData();
   }
 
   onSummaryCardClick(group: NewLicenseItem['statusGroup'] | 'all'): void {
     if (group === 'all' || this.activeSummaryFilter === group) {
       this.activeSummaryFilter = '';
-      this.applyFilters();
-      return;
+    } else {
+      this.activeSummaryFilter = group as NewLicenseItem['statusGroup'];
     }
-
-    this.activeSummaryFilter = group as NewLicenseItem['statusGroup'];
-    this.applyFilters();
+    this.pageIndex = 0;
+    this.loadTableData();
   }
 
   viewApplication(row: NewLicenseItem): void {
@@ -766,197 +742,205 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  private flattenGroupedData(grouped: GroupedNewLicenseResponse): NewLicenseItem[] {
-    const mapGroup = (items: any[] | undefined, statusGroup: NewLicenseItem['statusGroup']): NewLicenseItem[] => {
-      if (!Array.isArray(items)) {
-        return [];
+  mapRawItemsToRows(items: any[], fallbackStatusGroup?: NewLicenseItem['statusGroup'] | ''): NewLicenseItem[] {
+    if (!Array.isArray(items)) return [];
+    return items.map((item) => this.mapRawItemToRow(item, fallbackStatusGroup));
+  }
+
+  mapRawItemToRow(item: any, fallbackStatusGroup?: NewLicenseItem['statusGroup'] | ''): NewLicenseItem {
+    const rawStatusGroup = item?.status_group || item?.statusGroup || item?.status || fallbackStatusGroup || 'applied';
+    const statusGroup: NewLicenseItem['statusGroup'] = 
+      rawStatusGroup === 'approved' ? 'approved' :
+      rawStatusGroup === 'pending' ? 'pending' :
+      rawStatusGroup === 'objection' ? 'objection' :
+      rawStatusGroup === 'rejected' ? 'rejected' :
+      rawStatusGroup === 'awaiting-payment' || rawStatusGroup === 'awaiting_payment' ? 'awaiting-payment' :
+      'applied';
+
+    const rawPayment = String(
+      item?.application_fee_payment_status ||
+      item?.applicationFeePaymentStatus ||
+      item?.payment_status ||
+      item?.paymentStatus ||
+      ''
+    ).trim();
+    const paymentStatus = this.normalizePaymentStatus(rawPayment);
+    const feePaid = Boolean(item?.is_application_fee_paid ?? item?.isApplicationFeePaid);
+    const currentStageRaw = String(item?.current_stage_name || item?.currentStageName || item?.current_stage || '');
+    const currentStageId = item?.current_stage_id || item?.currentStageId || item?.current_stage;
+    const rawLower = currentStageRaw.toLowerCase();
+    const isTerminated = rawLower.includes('terminat') || rawLower.includes('forfeit') || rawLower.includes('cancel') || rawLower.includes('revoke') || rawLower.includes('suspend');
+    const isRejected = statusGroup === 'rejected' || rawLower.includes('reject') || isTerminated;
+
+    const canView = paymentStatus === 'Successful' || feePaid;
+    const canPayNow = this.isLicenseeUser() && !feePaid && paymentStatus !== 'Successful' && !isRejected;
+    const isApplicationFeePaid = Boolean(feePaid || paymentStatus === 'Successful');
+    const applicationFeeTransactionId = String(
+      item?.application_fee_transaction_id ||
+      item?.applicationFeeTransactionId ||
+      item?.transaction_id ||
+      item?.transactionId ||
+      ''
+    ).trim();
+    const applicationFeePaymentDate = item?.application_fee_payment_date || item?.applicationFeePaymentDate || null;
+    const modeOfOperation = String(item?.mode_of_operation || item?.modeOfOperation || 'Self');
+
+    const paymentDateRaw = item?.application_fee_payment_date || item?.applicationFeePaymentDate;
+    const submittedOn = paymentStatus === 'Successful'
+      ? this.formatDate(paymentDateRaw || item?.created_at || item?.createdAt || item?.submitted_on)
+      : this.formatDate(item?.created_at || item?.createdAt || item?.submitted_on);
+
+    let finalStatusGroup: NewLicenseItem['statusGroup'] = isRejected ? 'rejected' : statusGroup;
+    if (this.isLicenseeUser() && !isRejected) {
+      const isAwaiting = 
+        (rawLower.includes('awaiting') && rawLower.includes('payment')) ||
+        (rawLower.includes('payment') && !rawLower.includes('reject') && !isTerminated) ||
+        canPayNow ||
+        currentStageId === 23 ||
+        currentStageId === '23';
+
+      if (isAwaiting) {
+        finalStatusGroup = 'awaiting-payment';
       }
+    }
 
-      return items.map((item: any) => {
-        const rawPayment = String(
-          item?.application_fee_payment_status ||
-          item?.applicationFeePaymentStatus ||
-          item?.payment_status ||
-          item?.paymentStatus ||
-          ''
-        ).trim();
-        const paymentStatus = this.normalizePaymentStatus(rawPayment);
-        const feePaid = Boolean(item?.is_application_fee_paid ?? item?.isApplicationFeePaid);
-        const currentStageRaw = String(item?.current_stage_name || item?.currentStageName || item?.current_stage || '');
-        const currentStageId = item?.current_stage_id || item?.currentStageId || item?.current_stage;
-        const rawLower = currentStageRaw.toLowerCase();
-        const isTerminated = rawLower.includes('terminat') || rawLower.includes('forfeit') || rawLower.includes('cancel') || rawLower.includes('revoke') || rawLower.includes('suspend');
-        const isRejected = statusGroup === 'rejected' || rawLower.includes('reject') || isTerminated;
+    // Licensee UX: a failed/unpaid application fee means the application is not submitted to workflow yet.
+    const currentStage = this.isLicenseeUser() && !canView
+      ? (paymentStatus === 'Failed' ? 'Application Not Submitted (Payment Failed)' : 'Application Not Submitted')
+      : this.computeCurrentStageLabel(item, finalStatusGroup, currentStageRaw);
 
-        const canView = paymentStatus === 'Successful' || feePaid;
-        const canPayNow = this.isLicenseeUser() && !feePaid && paymentStatus !== 'Successful' && !isRejected;
-        const isApplicationFeePaid = Boolean(feePaid || paymentStatus === 'Successful');
-        const applicationFeeTransactionId = String(
-          item?.application_fee_transaction_id ||
-          item?.applicationFeeTransactionId ||
-          item?.transaction_id ||
-          item?.transactionId ||
-          ''
-        ).trim();
-        const applicationFeePaymentDate = item?.application_fee_payment_date || item?.applicationFeePaymentDate || null;
-        const modeOfOperation = String(item?.mode_of_operation || item?.modeOfOperation || 'Self');
+    const transactions = Array.isArray(item?.transactions) ? item.transactions : [];
+    const txnText = (t: any) => `${t?.action ?? ''} ${t?.remarks ?? ''} ${t?.to_stage ?? ''} ${t?.to_stageName ?? ''} ${t?.to_stage_name ?? ''}`;
+    const hasObjectionHistory = transactions.some((t: any) => /objection/i.test(txnText(t)));
+    const hasObjectionUpdate = transactions.some((t: any) => /resolve|correct|update/i.test(txnText(t)) && /objection/i.test(txnText(t)));
 
-        const paymentDateRaw = item?.application_fee_payment_date || item?.applicationFeePaymentDate;
-        const submittedOn = paymentStatus === 'Successful'
-          ? this.formatDate(paymentDateRaw || item?.created_at || item?.createdAt || item?.submitted_on)
-          : this.formatDate(item?.created_at || item?.createdAt || item?.submitted_on);
+    const updatedObjectionFields = this.computeUpdatedObjectionFields(item);
+    const siteEnquiryIsReverted = Boolean(
+      (item?.site_enquiry_is_reverted ?? item?.siteEnquiryIsReverted ?? item?.siteEnquiryReverted) || false
+    );
 
-        let finalStatusGroup: NewLicenseItem['statusGroup'] = isRejected ? 'rejected' : statusGroup;
-        if (this.isLicenseeUser() && !isRejected) {
-          const isAwaiting = 
-            (rawLower.includes('awaiting') && rawLower.includes('payment')) ||
-            (rawLower.includes('payment') && !rawLower.includes('reject') && !isTerminated) ||
-            canPayNow ||
-            currentStageId === 23 ||
-            currentStageId === '23';
+    const applicationId = String(item?.application_id || item?.applicationId || item?.id || 'N/A');
+    const isApproved = Boolean((item?.is_approved ?? item?.isApproved ?? (statusGroup === 'approved')) && !isRejected && !isTerminated);
+    const licenseNumber = this.deriveNewLicenseNaNumber(applicationId, item);
 
-          if (isAwaiting) {
-            finalStatusGroup = 'awaiting-payment';
-          }
-        }
+    const isLicenseFeePaid = Boolean(item?.is_license_fee_paid ?? item?.isLicenseFeePaid ?? item?.is_fee_paid ?? item?.isFeePaid);
+    const isSecurityFeePaid = Boolean(item?.is_security_fee_paid ?? item?.isSecurityFeePaid ?? item?.is_security_deposit_paid ?? item?.isSecurityDepositPaid);
 
-        // Licensee UX: a failed/unpaid application fee means the application is not submitted to workflow yet.
-        const currentStage = this.isLicenseeUser() && !canView
-          ? (paymentStatus === 'Failed' ? 'Application Not Submitted (Payment Failed)' : 'Application Not Submitted')
-          : this.computeCurrentStageLabel(item, finalStatusGroup, currentStageRaw);
+    const categoryName = String(
+      item?.license_category_name ||
+      item?.licenseCategoryName ||
+      item?.license_category?.name ||
+      item?.license_category ||
+      item?.license_type_name ||
+      item?.licenseTypeName ||
+      'N/A'
+    ).trim();
 
-        const transactions = Array.isArray(item?.transactions) ? item.transactions : [];
-        const txnText = (t: any) => `${t?.action ?? ''} ${t?.remarks ?? ''} ${t?.to_stage ?? ''} ${t?.to_stageName ?? ''} ${t?.to_stage_name ?? ''}`;
-        const hasObjectionHistory = transactions.some((t: any) => /objection/i.test(txnText(t)));
-        const hasObjectionUpdate = transactions.some((t: any) => /resolve|correct|update/i.test(txnText(t)) && /objection/i.test(txnText(t)));
+    const subCategoryName = String(
+      item?.license_sub_category_name ||
+      item?.licenseSubCategoryName ||
+      item?.license_sub_category?.name ||
+      item?.license_sub_category ||
+      ''
+    ).trim();
 
-        const updatedObjectionFields = this.computeUpdatedObjectionFields(item);
-        const siteEnquiryIsReverted = Boolean(
-          (item?.site_enquiry_is_reverted ?? item?.siteEnquiryIsReverted ?? item?.siteEnquiryReverted) || false
-        );
+    const isAwaitingLicenseFee = this.isLicenseeUser() &&
+      !isRejected &&
+      (finalStatusGroup === 'awaiting-payment' || String(currentStageId) === '23' || (currentStageRaw.toLowerCase().includes('awaiting') && !rawLower.includes('reject'))) &&
+      (!isLicenseFeePaid || !isSecurityFeePaid);
 
-        const applicationId = String(item?.application_id || item?.applicationId || item?.id || 'N/A');
-        const isApproved = Boolean((item?.is_approved ?? item?.isApproved ?? (statusGroup === 'approved')) && !isRejected && !isTerminated);
-        const licenseNumber = this.deriveNewLicenseNaNumber(applicationId, item);
+    const rawLicFee = Number(item?.license_fee_amount ?? item?.licenseFeeAmount ?? item?.yearly_license_fee ?? item?.yearlyLicenseFee ?? 5000);
+    const rawSecFee = Number(item?.security_fee_amount ?? item?.securityFeeAmount ?? item?.security_deposit_amount ?? item?.securityDepositAmount ?? 5000);
+    const licenseFeeAmount = Number.isFinite(rawLicFee) && rawLicFee > 0 ? rawLicFee : 5000;
+    const securityFeeAmount = Number.isFinite(rawSecFee) && rawSecFee > 0 ? rawSecFee : licenseFeeAmount;
 
-        const isLicenseFeePaid = Boolean(item?.is_license_fee_paid ?? item?.isLicenseFeePaid ?? item?.is_fee_paid ?? item?.isFeePaid);
-        const isSecurityFeePaid = Boolean(item?.is_security_fee_paid ?? item?.isSecurityFeePaid ?? item?.is_security_deposit_paid ?? item?.isSecurityDepositPaid);
+    const isPaymentTimerActive = Boolean(item?.is_payment_timer_active ?? item?.isPaymentTimerActive);
+    const paymentDeadlineAt = item?.payment_deadline_at || item?.paymentDeadlineAt || null;
+    const paymentTimeRemainingSeconds = item?.payment_time_remaining_seconds ?? item?.paymentTimeRemainingSeconds ?? null;
 
-        const categoryName = String(
-          item?.license_category_name ||
-          item?.licenseCategoryName ||
-          item?.license_category?.name ||
-          item?.license_category ||
-          item?.license_type_name ||
-          item?.licenseTypeName ||
-          'N/A'
-        ).trim();
+    const isObjectionTimerActive = Boolean(item?.is_objection_timer_active ?? item?.isObjectionTimerActive);
+    const objectionDeadlineAt = item?.objection_deadline_at || item?.objectionDeadlineAt || null;
+    const objectionTimeRemainingSeconds = item?.objection_time_remaining_seconds ?? item?.objectionTimeRemainingSeconds ?? null;
 
-        const subCategoryName = String(
-          item?.license_sub_category_name ||
-          item?.licenseSubCategoryName ||
-          item?.license_sub_category?.name ||
-          item?.license_sub_category ||
-          ''
-        ).trim();
+    const stageId = Number(currentStageId || 0);
+    const isAutoRejected = Boolean(
+      (item?.is_auto_rejected ?? item?.isAutoRejected) ||
+      stageId === 180 ||
+      stageId === 166 ||
+      (rawLower.includes('no action') && rawLower.includes('reject')) ||
+      (rawLower.includes('payment') && rawLower.includes('reject')) ||
+      (rawLower.includes('objection') && rawLower.includes('reject'))
+    );
 
-        const isAwaitingLicenseFee = this.isLicenseeUser() &&
-          !isRejected &&
-          (finalStatusGroup === 'awaiting-payment' || String(currentStageId) === '23' || (currentStageRaw.toLowerCase().includes('awaiting') && !rawLower.includes('reject'))) &&
-          (!isLicenseFeePaid || !isSecurityFeePaid);
+    let rejectionReason = String(
+      item?.rejection_reason ||
+      item?.rejectionReason ||
+      item?.rejection_remarks ||
+      item?.rejectionRemarks ||
+      item?.remarks ||
+      ''
+    ).trim() || null;
 
-        const rawLicFee = Number(item?.license_fee_amount ?? item?.licenseFeeAmount ?? item?.yearly_license_fee ?? item?.yearlyLicenseFee ?? 5000);
-        const rawSecFee = Number(item?.security_fee_amount ?? item?.securityFeeAmount ?? item?.security_deposit_amount ?? item?.securityDepositAmount ?? 5000);
-        const licenseFeeAmount = Number.isFinite(rawLicFee) && rawLicFee > 0 ? rawLicFee : 5000;
-        const securityFeeAmount = Number.isFinite(rawSecFee) && rawSecFee > 0 ? rawSecFee : licenseFeeAmount;
+    if (!rejectionReason && isRejected) {
+      if (isTerminated || rawLower.includes('terminat') || rawLower.includes('forfeit')) {
+        rejectionReason = 'Application terminated and security deposit deducted/forfeited.';
+      } else if (stageId === 180 || (rawLower.includes('payment') && rawLower.includes('reject'))) {
+        rejectionReason = 'Application automatically rejected: License Fee and Security Deposit payments were not completed within the allowed payment window.';
+      } else if (stageId === 166 || (rawLower.includes('objection') && rawLower.includes('reject'))) {
+        rejectionReason = 'Application automatically rejected: No action or clarification was submitted on the raised objection within the allowed time limit.';
+      } else {
+        rejectionReason = `Application rejected at stage: ${currentStage}`;
+      }
+    }
 
-        const isPaymentTimerActive = Boolean(item?.is_payment_timer_active ?? item?.isPaymentTimerActive);
-        const paymentDeadlineAt = item?.payment_deadline_at || item?.paymentDeadlineAt || null;
-        const paymentTimeRemainingSeconds = item?.payment_time_remaining_seconds ?? item?.paymentTimeRemainingSeconds ?? null;
-
-        const isObjectionTimerActive = Boolean(item?.is_objection_timer_active ?? item?.isObjectionTimerActive);
-        const objectionDeadlineAt = item?.objection_deadline_at || item?.objectionDeadlineAt || null;
-        const objectionTimeRemainingSeconds = item?.objection_time_remaining_seconds ?? item?.objectionTimeRemainingSeconds ?? null;
-
-        const stageId = Number(currentStageId || 0);
-        const isAutoRejected = Boolean(
-          (item?.is_auto_rejected ?? item?.isAutoRejected) ||
-          stageId === 180 ||
-          stageId === 166 ||
-          (rawLower.includes('no action') && rawLower.includes('reject')) ||
-          (rawLower.includes('payment') && rawLower.includes('reject')) ||
-          (rawLower.includes('objection') && rawLower.includes('reject'))
-        );
-
-        let rejectionReason = String(
-          item?.rejection_reason ||
-          item?.rejectionReason ||
-          item?.rejection_remarks ||
-          item?.rejectionRemarks ||
-          item?.remarks ||
-          ''
-        ).trim() || null;
-
-        if (!rejectionReason && isRejected) {
-          if (isTerminated || rawLower.includes('terminat') || rawLower.includes('forfeit')) {
-            rejectionReason = 'Application terminated and security deposit deducted/forfeited.';
-          } else if (stageId === 180 || (rawLower.includes('payment') && rawLower.includes('reject'))) {
-            rejectionReason = 'Application automatically rejected: License Fee and Security Deposit payments were not completed within the allowed payment window.';
-          } else if (stageId === 166 || (rawLower.includes('objection') && rawLower.includes('reject'))) {
-            rejectionReason = 'Application automatically rejected: No action or clarification was submitted on the raised objection within the allowed time limit.';
-          } else {
-            rejectionReason = `Application rejected at stage: ${currentStage}`;
-          }
-        }
-
-        return ({
-          id: applicationId,
-          applicationId,
-          siteEnquiryIsReverted,
-          isApproved,
-          licenseNumber,
-          applicantName: this.getApplicantName(item),
-          establishmentName: String(item?.establishment_name || item?.establishmentName || 'N/A'),
-          licenseCategoryName: categoryName,
-          licenseSubCategoryName: subCategoryName,
-          submittedOn,
-          paymentStatus,
-          isApplicationFeePaid,
-          applicationFeeTransactionId,
-          applicationFeePaymentDate,
-          modeOfOperation,
-          isLicenseFeePaid,
-          isSecurityFeePaid,
-          canView,
-          canPayNow,
-          canPayLicenseFee: isAwaitingLicenseFee,
-          licenseFeeAmount,
-          securityFeeAmount,
-          currentStageRaw,
-          currentStage,
-          statusGroup: finalStatusGroup,
-          hasObjectionHistory,
-          hasObjectionUpdate,
-          updatedObjectionFields,
-          isPaymentTimerActive,
-          paymentDeadlineAt,
-          paymentTimeRemainingSeconds,
-          isObjectionTimerActive,
-          objectionDeadlineAt,
-          objectionTimeRemainingSeconds,
-          activeTimer: null,
-          rejectionReason,
-          isAutoRejected
-        });
-      });
+    return {
+      id: applicationId,
+      applicationId,
+      siteEnquiryIsReverted,
+      isApproved,
+      licenseNumber,
+      applicantName: this.getApplicantName(item),
+      establishmentName: String(item?.establishment_name || item?.establishmentName || 'N/A'),
+      licenseCategoryName: categoryName,
+      licenseSubCategoryName: subCategoryName,
+      submittedOn,
+      paymentStatus,
+      isApplicationFeePaid,
+      applicationFeeTransactionId,
+      applicationFeePaymentDate,
+      modeOfOperation,
+      isLicenseFeePaid,
+      isSecurityFeePaid,
+      canView,
+      canPayNow,
+      canPayLicenseFee: isAwaitingLicenseFee,
+      licenseFeeAmount,
+      securityFeeAmount,
+      currentStageRaw,
+      currentStage,
+      statusGroup: finalStatusGroup,
+      hasObjectionHistory,
+      hasObjectionUpdate,
+      updatedObjectionFields,
+      isPaymentTimerActive,
+      paymentDeadlineAt,
+      paymentTimeRemainingSeconds,
+      isObjectionTimerActive,
+      objectionDeadlineAt,
+      objectionTimeRemainingSeconds,
+      activeTimer: null,
+      rejectionReason,
+      isAutoRejected
     };
+  }
 
+  private flattenGroupedData(grouped: GroupedNewLicenseResponse): NewLicenseItem[] {
     const combined = [
-      ...mapGroup(grouped?.applied, 'applied'),
-      ...mapGroup(grouped?.pending, 'pending'),
-      ...mapGroup(grouped?.objection, 'objection'),
-      ...mapGroup(grouped?.approved, 'approved'),
-      ...mapGroup(grouped?.rejected, 'rejected')
+      ...this.mapRawItemsToRows(grouped?.applied, 'applied'),
+      ...this.mapRawItemsToRows(grouped?.pending, 'pending'),
+      ...this.mapRawItemsToRows(grouped?.objection, 'objection'),
+      ...this.mapRawItemsToRows(grouped?.approved, 'approved'),
+      ...this.mapRawItemsToRows(grouped?.rejected, 'rejected')
     ];
 
     // De-duplicate by applicationId (backend sometimes returns the same application twice).
@@ -1231,13 +1215,13 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
 
   updateAllCountdowns(): void {
     const nowMs = Date.now();
-    for (const row of this.allRows) {
+    for (const row of this.rows) {
       row.activeTimer = this.computeRowTimer(row, nowMs);
     }
 
-    const activeList = this.allRows
-      .filter(r => !!r.activeTimer)
-      .map(r => ({
+    const activeList = this.rows
+      .filter((r: NewLicenseItem) => !!r.activeTimer)
+      .map((r: NewLicenseItem) => ({
         applicationId: r.applicationId,
         licenseCategoryName: r.licenseCategoryName,
         applicantName: r.applicantName,
@@ -1248,7 +1232,7 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
         canPayNow: r.canPayNow,
         rawRow: r
       }))
-      .sort((a, b) => (a.activeTimer?.targetDeadline.getTime() || 0) - (b.activeTimer?.targetDeadline.getTime() || 0));
+      .sort((a: any, b: any) => (a.activeTimer?.targetDeadline?.getTime() || 0) - (b.activeTimer?.targetDeadline?.getTime() || 0));
 
     this.licenseApplicationService.setActiveNewLicenseTimers(activeList);
   }

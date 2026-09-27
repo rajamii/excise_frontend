@@ -256,6 +256,29 @@
 
 .table-wrapper {
   overflow-x: auto;
+  position: relative;
+  min-height: 120px;
+}
+
+.table-loading-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #3b82f6, #6366f1, #3b82f6);
+  background-size: 200% 100%;
+  animation: table-loading-slide 1.5s infinite linear;
+  z-index: 10;
+}
+
+@keyframes table-loading-slide {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 .pagination-bar {

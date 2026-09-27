@@ -5,7 +5,7 @@
       (click)="onSummaryCardClick('all')" [class.active]="activeSummaryFilter === ''">
       <div class="card-icon"><i class="bi bi-list-ul"></i></div>
       <div class="card-content">
-        <h3 class="card-value">{{ allRows.length }}</h3>
+        <h3 class="card-value">{{ counts.applied }}</h3>
         <p class="card-label">Total Applications</p>
       </div>
     </div>
@@ -57,7 +57,7 @@
         class="form-control form-control-sm"
         placeholder="Search by ID / Applicant / Establishment"
         [(ngModel)]="searchFilter"
-        (ngModelChange)="applyFilters()"
+        (ngModelChange)="onSearchChange($event)"
       />
     </div>
 
@@ -67,7 +67,7 @@
         type="date"
         class="form-control form-control-sm"
         [(ngModel)]="dateFilter"
-        (ngModelChange)="applyFilters()"
+        (ngModelChange)="onFilterChange()"
         title="Filter by date"
       />
     </div>
@@ -78,7 +78,7 @@
         type="month"
         class="form-control form-control-sm"
         [(ngModel)]="monthFilter"
-        (ngModelChange)="applyFilters()"
+        (ngModelChange)="onFilterChange()"
         title="Filter by month"
       />
     </div>
@@ -97,11 +97,12 @@
         New License Application Entries
       </h5>
       <div class="register-info">
-        <span class="entries-count">{{ filteredRows.length }} Entries</span>
+        <span class="entries-count">{{ totalCount }} Entries</span>
       </div>
     </div>
 
-    <div class="table-wrapper" *ngIf="!isLoading && !error && filteredRows.length > 0">
+    <div class="table-wrapper" *ngIf="rows.length > 0">
+      <div class="table-loading-bar" *ngIf="isLoading"></div>
       <table class="table table-hover align-middle">
         <thead>
           <tr>
@@ -117,7 +118,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let row of pagedRows; let i = index"
+          <tr *ngFor="let row of rows; let i = index; trackBy: trackByApplicationId"
               [class.row-needs-action]="needsLicenseeAction(row)">
             <td>{{ (pageIndex * pageSize) + i + 1 }}</td>
             <td class="fw-semibold">
@@ -317,9 +318,9 @@
         </tbody>
       </table>
 
-      <div class="pagination-bar" *ngIf="filteredRows.length > 0">
+      <div class="pagination-bar" *ngIf="totalCount > 0">
         <div class="page-summary">
-          Showing {{ pageStart }}-{{ pageEnd }} of {{ filteredRows.length }}
+          Showing {{ pageStart }}-{{ pageEnd }} of {{ totalCount }}
         </div>
 
         <div class="page-controls">
@@ -334,7 +335,7 @@
             </select>
           </div>
 
-          <button class="btn btn-outline-secondary btn-sm" (click)="prevPage()" [disabled]="pageIndex === 0">
+          <button class="btn btn-outline-secondary btn-sm" (click)="prevPage()" [disabled]="pageIndex === 0 || isLoading">
             Prev
           </button>
           <span class="page-indicator" *ngIf="totalPages > 0">
@@ -343,7 +344,7 @@
           <button
             class="btn btn-outline-secondary btn-sm"
             (click)="nextPage()"
-            [disabled]="totalPages === 0 || pageIndex >= totalPages - 1"
+            [disabled]="totalPages === 0 || pageIndex >= totalPages - 1 || isLoading"
           >
             Next
           </button>
@@ -351,9 +352,12 @@
       </div>
     </div>
 
-    <div class="loading-state" *ngIf="isLoading">Loading applications...</div>
-    <div class="error-state" *ngIf="error">{{ error }}</div>
-    <div class="empty-state" *ngIf="!isLoading && !error && filteredRows.length === 0">
+    <div class="loading-state" *ngIf="isLoading && rows.length === 0">
+      <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+      Loading applications...
+    </div>
+    <div class="error-state" *ngIf="error && rows.length === 0">{{ error }}</div>
+    <div class="empty-state" *ngIf="!isLoading && !error && rows.length === 0">
       No new license applications found.
     </div>
   </div>

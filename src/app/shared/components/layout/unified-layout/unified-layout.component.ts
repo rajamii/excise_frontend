@@ -1359,11 +1359,15 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
         const newLicenseApps: any[] = [];
         if (newLicensesGrouped && typeof newLicensesGrouped === 'object') {
-          Object.values(newLicensesGrouped).forEach((val) => {
-            if (Array.isArray(val)) {
-              newLicenseApps.push(...val);
-            }
-          });
+          if (Array.isArray(newLicensesGrouped.results)) {
+            newLicenseApps.push(...newLicensesGrouped.results);
+          } else {
+            Object.values(newLicensesGrouped).forEach((val) => {
+              if (Array.isArray(val)) {
+                newLicenseApps.push(...val);
+              }
+            });
+          }
         }
         this.latestApplicationRows = newLicenseApps;
 

@@ -1099,12 +1099,30 @@ export class LicenseApplicationService {
     );
   }
 
-  getNewLicenseDashboardCounts(): Observable<any> {
-    return this.http.get(`${this.newLicenseUrl}/dashboard-counts/`);
+  getNewLicenseDashboardCounts(filters?: Record<string, any>): Observable<any> {
+    let params = new HttpParams();
+    if (filters) {
+      Object.keys(filters).forEach(key => {
+        const val = filters[key];
+        if (val !== null && val !== undefined && val !== '') {
+          params = params.set(key, String(val));
+        }
+      });
+    }
+    return this.http.get(`${this.newLicenseUrl}/dashboard-counts/`, { params });
   }
 
-  getNewLicenseApplicationsByStatus(): Observable<any> {
-    return this.http.get(`${this.newLicenseUrl}/list-by-status/`);
+  getNewLicenseApplicationsByStatus(queryParams?: Record<string, any>): Observable<any> {
+    let params = new HttpParams();
+    if (queryParams) {
+      Object.keys(queryParams).forEach(key => {
+        const val = queryParams[key];
+        if (val !== null && val !== undefined && val !== '') {
+          params = params.set(key, String(val));
+        }
+      });
+    }
+    return this.http.get(`${this.newLicenseUrl}/list-by-status/`, { params });
   }
 
   getLicenseRenewalDashboardCounts(): Observable<any> {
