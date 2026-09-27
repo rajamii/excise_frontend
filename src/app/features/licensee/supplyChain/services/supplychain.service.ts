@@ -243,13 +243,46 @@ export class SupplyChainService {
       .pipe(map((response: any) => response.results || response || []));
   }
 
-  getRevalidationData(forceRefresh = false): Observable<any[]> {
+  getRevalidationCounts(): Observable<any> {
+    return this.http
+      .get(`${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/dashboard-counts/`)
+      .pipe(catchError(() => of(null)));
+  }
+
+  getRevalidationData(queryParamsOrForce?: Record<string, any> | boolean, forceRefresh = false): Observable<any> {
+    let queryParams: Record<string, any> | undefined;
+    if (typeof queryParamsOrForce === 'boolean') {
+      forceRefresh = queryParamsOrForce;
+      queryParams = undefined;
+    } else {
+      queryParams = queryParamsOrForce;
+    }
+
+    let params = new HttpParams();
+    if (queryParams) {
+      Object.entries(queryParams).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && String(value).trim() !== '') {
+          params = params.set(key, String(value).trim());
+        }
+      });
+    }
+
+    const hasPagination = queryParams && (queryParams['page'] || queryParams['search'] || queryParams['status'] || queryParams['date'] || queryParams['month']);
+    if (hasPagination) {
+      return this.http.get<any>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/`, { params }).pipe(
+        catchError((error) => {
+          console.error('getRevalidationData error', error);
+          return of({ count: 0, results: [] });
+        })
+      );
+    }
+
     const cacheKey = 'revalidations:list';
     if (forceRefresh) {
       this.invalidateCache(cacheKey);
     }
 
-    return this.getCachedOrFetch(cacheKey, () => this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/`).pipe(
+    return this.getCachedOrFetch(cacheKey, () => this.http.get<any>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/`, { params }).pipe(
       map((response: any) => {
         if (Array.isArray(response)) {
           return response;
@@ -344,13 +377,46 @@ export class SupplyChainService {
     );
   }
 
-  getCancellations(forceRefresh = false): Observable<any[]> {
+  getCancellationCounts(): Observable<any> {
+    return this.http
+      .get(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/dashboard-counts/`)
+      .pipe(catchError(() => of(null)));
+  }
+
+  getCancellations(queryParamsOrForce?: Record<string, any> | boolean, forceRefresh = false): Observable<any> {
+    let queryParams: Record<string, any> | undefined;
+    if (typeof queryParamsOrForce === 'boolean') {
+      forceRefresh = queryParamsOrForce;
+      queryParams = undefined;
+    } else {
+      queryParams = queryParamsOrForce;
+    }
+
+    let params = new HttpParams();
+    if (queryParams) {
+      Object.entries(queryParams).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && String(value).trim() !== '') {
+          params = params.set(key, String(value).trim());
+        }
+      });
+    }
+
+    const hasPagination = queryParams && (queryParams['page'] || queryParams['search'] || queryParams['status'] || queryParams['date'] || queryParams['month']);
+    if (hasPagination) {
+      return this.http.get<any>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/`, { params }).pipe(
+        catchError((error) => {
+          console.error('getCancellations error', error);
+          return of({ count: 0, results: [] });
+        })
+      );
+    }
+
     const cacheKey = 'cancellations:list';
     if (forceRefresh) {
       this.invalidateCache(cacheKey);
     }
 
-    return this.getCachedOrFetch(cacheKey, () => this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/`).pipe(
+    return this.getCachedOrFetch(cacheKey, () => this.http.get<any>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/`, { params }).pipe(
       map((response: any) => {
         if (Array.isArray(response)) return response;
         if (response?.results) return response.results;
@@ -363,8 +429,8 @@ export class SupplyChainService {
     ));
   }
 
-  getCancellationData(forceRefresh = false): Observable<any[]> {
-    return this.getCancellations(forceRefresh);
+  getCancellationData(queryParamsOrForce?: Record<string, any> | boolean, forceRefresh = false): Observable<any> {
+    return this.getCancellations(queryParamsOrForce, forceRefresh);
   }
 
   getCancellationDetail(id: string): Observable<any> {

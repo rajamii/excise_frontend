@@ -147,8 +147,16 @@ export class DistributorPermitService {
     );
   }
 
-  getCancellations(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.baseUrl}/cancellation/`);
+  getCancellations(queryParams?: any): Observable<any> {
+    let params = new HttpParams();
+    if (queryParams) {
+      Object.keys(queryParams).forEach((k) => {
+        if (queryParams[k] !== undefined && queryParams[k] !== null && queryParams[k] !== '') {
+          params = params.set(k, queryParams[k]);
+        }
+      });
+    }
+    return this.http.get<any>(`${this.baseUrl}/cancellation/`, { params });
   }
 
   getCancellation(referenceNo: string): Observable<any> {

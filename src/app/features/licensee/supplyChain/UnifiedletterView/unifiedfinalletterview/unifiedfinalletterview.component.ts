@@ -152,11 +152,12 @@ export class UnifiedfinalletterviewComponent implements OnInit {
 
     // Get cancellation data from API
     this.supplyChainService.getCancellations().subscribe({
-      next: (data) => {
+      next: (data: any) => {
         console.log('Cancellation data received:', data);
         
+        const list: any[] = Array.isArray(data) ? data : (data?.results || []);
         // Find the specific cancellation by ID
-        const foundItem = data.find(item => 
+        const foundItem = list.find((item: any) => 
           item.id?.toString() === cancellationId ||
           item.pk?.toString() === cancellationId
         );
@@ -275,11 +276,12 @@ export class UnifiedfinalletterviewComponent implements OnInit {
 
     // Get ENA revalidation data from API
     this.supplyChainService.getRevalidationData().subscribe({
-      next: (data) => {
+      next: (data: any) => {
         console.log('Revalidation data received:', data);
         
+        const list: any[] = Array.isArray(data) ? data : (data?.results || []);
         // Find the specific revalidation by ID
-        const foundItem = data.find(item => 
+        const foundItem = list.find((item: any) => 
           item.id?.toString() === revalidationId ||
           item.pk?.toString() === revalidationId
         );

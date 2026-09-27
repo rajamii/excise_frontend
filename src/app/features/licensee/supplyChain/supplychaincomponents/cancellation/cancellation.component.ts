@@ -2,6 +2,8 @@ import { Component, Inject, PLATFORM_ID, OnInit, inject } from "@angular/core";
 import { CommonModule, isPlatformBrowser } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { ActivatedRoute, Router } from "@angular/router";
+import { Subject } from "rxjs";
+import { debounceTime, distinctUntilChanged } from "rxjs/operators";
 import { SupplyChainService } from "../../services/supplychain.service";
 import { AccountService } from "../../../../../core/services/account.service";
 import { DistributorPermitService } from "../../../../../core/services/distributor-permit.service";
@@ -47,78 +49,38 @@ export class CancellationComponent implements OnInit {
   cancellationCompanyFilter: string = '';
   cancellationCompanyOptions: string[] = [];
   activeSummaryFilter: string = '';
+  searchFilter: string = '';
+  private searchSubject = new Subject<string>();
 
-  // Pagination
-  pageSizeOptions: number[] = [5, 10, 15];
+  // Pagination & Loading state
+  isLoading = false;
+  totalCount = 0;
+  totalPages = 0;
+  pageSizeOptions: number[] = [5, 10, 15, 20];
   currentPage: number = 1;
   pageSize: number = 5;
 
+  countsLoaded = false;
+  counts = {
+    total: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+    underprocess: 0
+  };
+
+  get pageStart(): number {
+    if (this.totalCount === 0) return 0;
+    return (this.currentPage - 1) * this.pageSize + 1;
+  }
+
+  get pageEnd(): number {
+    return Math.min(this.currentPage * this.pageSize, this.totalCount);
+  }
+
   filteredCancellationData: TableData[] = [];
   summaryCancellationData: TableData[] = [];
-
-  // Sample data for cancellation applications (from commissioner's perspective)
-  cancellationData: TableData[] = [
-    {
-      referenceNo: "CAN/001/2025",
-      submissionDate: "20-Sep-2025",
-      requestDate: "20-Sep-2025",
-      distilleryName: "Sikkim Distilleries Ltd",
-      status: "PENDING",
-      amount: "15.00",
-      cancellationReason: "Business Closure",
-      licenseType: "Manufacturing License"
-    },
-    {
-      referenceNo: "CAN/002/2025",
-      submissionDate: "19-Sep-2025",
-      requestDate: "19-Sep-2025",
-      distilleryName: "Darjeeling Artisan Pvt Ltd",
-      status: "APPROVED",
-      amount: "20.00",
-      cancellationReason: "Voluntary Surrender",
-      licenseType: "Retail License"
-    },
-    {
-      referenceNo: "CAN/003/2025",
-      submissionDate: "18-Sep-2025",
-      requestDate: "18-Sep-2025",
-      distilleryName: "Royal Sikkim Brewery",
-      status: "APPROVED",
-      amount: "0.00",
-      cancellationReason: "Non-Compliance",
-      licenseType: "Manufacturing License"
-    },
-    {
-      referenceNo: "CAN/004/2025",
-      submissionDate: "17-Sep-2025",
-      requestDate: "17-Sep-2025",
-      distilleryName: "Himalayan Distilleries Pvt Ltd",
-      status: "PROCESSING",
-      amount: "0.00",
-      cancellationReason: "License Transfer",
-      licenseType: "Wholesale License"
-    },
-    {
-      referenceNo: "CAN/005/2025",
-      submissionDate: "16-Sep-2025",
-      requestDate: "16-Sep-2025",
-      distilleryName: "Eastern Himalaya Distillery",
-      status: "REJECTED",
-      amount: "0.00",
-      cancellationReason: "Financial Issues",
-      licenseType: "Manufacturing License"
-    },
-    {
-      referenceNo: "CAN/006/2025",
-      submissionDate: "15-Sep-2025",
-      requestDate: "15-Sep-2025",
-      distilleryName: "Gangtok Premium Spirits",
-      status: "PENDING",
-      amount: "0.00",
-      cancellationReason: "Regulatory Violation",
-      licenseType: "Retail License"
-    }
-  ];
+  cancellationData: TableData[] = [];
 
   // Services
   private unifiedActionsService = inject(UnifiedActionsService);
@@ -141,23 +103,91 @@ export class CancellationComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.searchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged()
+    ).subscribe((term) => {
+      this.searchFilter = term;
+      this.currentPage = 1;
+      this.loadCancellationData();
+    });
+
     if (this.isBrowser) {
+      this.loadCounts();
       this.loadCancellationData();
     }
   }
 
+  loadCounts(): void {
+    this.supplyChainService.getCancellationCounts().subscribe({
+      next: (resp) => {
+        if (resp && typeof resp === 'object') {
+          this.counts = {
+            total: Number(resp.total || 0),
+            pending: Number(resp.pending || 0),
+            approved: Number(resp.approved || 0),
+            rejected: Number(resp.rejected || 0),
+            underprocess: Number(resp.underprocess || 0)
+          };
+          this.countsLoaded = true;
+        }
+      }
+    });
+  }
+
+  onSearchChange(term: string): void {
+    this.searchSubject.next(term);
+  }
+
   loadCancellationData() {
     console.log('Loading cancellation data from API...');
+    this.isLoading = true;
+
+    const params: Record<string, any> = {
+      page: this.currentPage,
+      page_size: this.pageSize
+    };
+
+    if (this.cancellationStatusFilter) {
+      params['status'] = this.cancellationStatusFilter;
+    }
+    if (this.searchFilter?.trim()) {
+      params['search'] = this.searchFilter.trim();
+    }
+    if (this.cancellationDateFilter) {
+      params['date'] = this.cancellationDateFilter;
+    }
+    if (this.cancellationMonthFilter) {
+      params['month'] = this.cancellationMonthFilter;
+    }
+    if (this.cancellationCompanyFilter) {
+      params['company'] = this.cancellationCompanyFilter;
+    }
 
     const obs = this.isImflMode()
-      ? this.distributorPermitService.getCancellations()
-      : this.supplyChainService.getCancellations();
+      ? this.distributorPermitService.getCancellations(params)
+      : this.supplyChainService.getCancellations(params);
 
     obs.subscribe({
-      next: (data) => {
-        console.log('Raw API response:', data);
+      next: (response: any) => {
+        console.log('Raw API response:', response);
 
-        this.cancellationData = (data || []).map((item: any, index: number) => {
+        let data: any[] = [];
+        if (response?.results && Array.isArray(response.results)) {
+          this.totalCount = Number(response.count ?? 0);
+          this.totalPages = Number(response.total_pages ?? Math.ceil(this.totalCount / this.pageSize) ?? 1);
+          data = response.results;
+        } else if (Array.isArray(response)) {
+          data = response;
+          this.totalCount = data.length;
+          this.totalPages = Math.ceil(this.totalCount / this.pageSize) || 1;
+        } else {
+          data = [];
+          this.totalCount = 0;
+          this.totalPages = 0;
+        }
+
+        this.cancellationData = data.map((item: any, index: number) => {
           const refNo = item.reference_no || item.referenceNo || item.ourRefNo || item.our_ref_no || 'N/A';
           const dateStr = item.submitted_at || item.submittedAt || item.cancellationDate || item.cancellation_date || item.requisitionDate;
           const subDate = dateStr ? new Date(dateStr).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
@@ -195,10 +225,19 @@ export class CancellationComponent implements OnInit {
           return mappedItem;
         });
 
-        this.applyCancellationFilters();
-        this.maybeAutoSelectPendingSummary();
+        this.filteredCancellationData = this.cancellationData;
+        this.summaryCancellationData = this.cancellationData;
+        this.isLoading = false;
       },
-      error: (err) => console.error('Error loading cancellation data:', err)
+      error: (err) => {
+        console.error('Error loading cancellation data:', err);
+        this.cancellationData = [];
+        this.filteredCancellationData = [];
+        this.summaryCancellationData = [];
+        this.totalCount = 0;
+        this.totalPages = 0;
+        this.isLoading = false;
+      }
     });
   }
 
@@ -394,71 +433,8 @@ export class CancellationComponent implements OnInit {
 
   // Filter methods
   applyCancellationFilters(): void {
-    let summary = [...this.cancellationData].filter(item => this.isVisibleToCurrentAdmin(item));
-
-    // Date filter
-    if (this.cancellationDateFilter) {
-      const filterDate = new Date(this.cancellationDateFilter);
-      summary = summary.filter(item => {
-        const itemDate = this.parseDate(item.submissionDate);
-        return itemDate.toDateString() === filterDate.toDateString();
-      });
-    }
-
-    // Month filter (Jan-Dec)
-    if (this.cancellationMonthFilter) {
-      const monthNum = parseInt(this.cancellationMonthFilter, 10);
-      summary = summary.filter(item => {
-        const itemDate = this.parseDate(item.submissionDate);
-        return itemDate.getMonth() + 1 === monthNum;
-      });
-    }
-
-    this.summaryCancellationData = summary;
-
-    // Build company options for commissioner filter
-    this.cancellationCompanyOptions = Array.from(
-      new Set(
-        summary
-          .map(item => String(item?.establishmentName || item?.distilleryName || '').trim())
-          .filter(v => !!v)
-      )
-    ).sort((a, b) => a.localeCompare(b));
-
-    let filtered = [...summary];
-
-    // Company filter — commissioner only
-    if (this.cancellationCompanyFilter) {
-      filtered = filtered.filter(item =>
-        String(item?.establishmentName || item?.distilleryName || '').trim() === this.cancellationCompanyFilter
-      );
-    }
-
-    // Status filter
-    if (this.cancellationStatusFilter) {
-      filtered = filtered.filter(item => {
-        const itemStatus = this.normalizeStatus(item.status);
-        const filterStatus = this.normalizeStatus(this.cancellationStatusFilter);
-
-        // Handle different status variations
-        if (filterStatus === 'pending') {
-          return (this.isCommissioner() || this.isPermitSection())
-            ? this.isActionablePending(item)
-            : this.isPendingSummaryStatus(item.status);
-        } else if (filterStatus === 'approved') {
-          return this.isApprovedStatus(item.status);
-        } else if (filterStatus === 'rejected') {
-          return this.isRejectedStatus(item.status);
-        } else if (filterStatus === 'underprocess') {
-          return this.isUnderProcessLikeStatus(item.status);
-        } else {
-          return itemStatus === filterStatus;
-        }
-      });
-    }
-
-    this.filteredCancellationData = filtered;
-    this.resetPagination();
+    this.currentPage = 1;
+    this.loadCancellationData();
   }
 
   clearCancellationFilters(): void {
@@ -466,8 +442,10 @@ export class CancellationComponent implements OnInit {
     this.cancellationMonthFilter = '';
     this.cancellationStatusFilter = '';
     this.cancellationCompanyFilter = '';
+    this.searchFilter = '';
     this.activeSummaryFilter = '';
-    this.applyCancellationFilters();
+    this.currentPage = 1;
+    this.loadCancellationData();
   }
 
   onCancellationDateFilterChange(): void {
@@ -485,6 +463,15 @@ export class CancellationComponent implements OnInit {
 
   // Summary methods
   getCancellationStatusCount(status: string): number {
+    if (this.countsLoaded) {
+      const key = this.normalizeStatus(status);
+      if (key === 'pending') return this.counts.pending;
+      if (key === 'approved') return this.counts.approved;
+      if (key === 'rejected') return this.counts.rejected;
+      if (key === 'underprocess') return this.counts.underprocess;
+      if (key === 'total' || key === 'all') return this.counts.total;
+      return (this.counts as any)[key] ?? 0;
+    }
     if (status === 'PENDING') {
       const predicate = (this.isCommissioner() || this.isPermitSection())
         ? (item: TableData) => this.isActionablePending(item)
@@ -515,20 +502,15 @@ export class CancellationComponent implements OnInit {
     if (!normalized || normalized === 'all') {
       this.activeSummaryFilter = '';
       this.cancellationStatusFilter = '';
-      this.applyCancellationFilters();
-      return;
-    }
-
-    if (current === normalized) {
+    } else if (current === normalized) {
       this.activeSummaryFilter = '';
       this.cancellationStatusFilter = '';
-      this.applyCancellationFilters();
-      return;
+    } else {
+      this.activeSummaryFilter = filter;
+      this.cancellationStatusFilter = filter;
     }
-
-    this.activeSummaryFilter = filter;
-    this.cancellationStatusFilter = filter;
-    this.applyCancellationFilters();
+    this.currentPage = 1;
+    this.loadCancellationData();
   }
 
   private syncActiveSummaryFilter(): void {
@@ -1050,18 +1032,18 @@ export class CancellationComponent implements OnInit {
   }
 
   getTotalPages(): number {
-    return Math.max(1, Math.ceil((this.filteredCancellationData?.length || 0) / this.pageSize));
+    return this.totalPages;
   }
 
   getPaged(): TableData[] {
-    const start = (this.currentPage - 1) * this.pageSize;
-    return (this.filteredCancellationData || []).slice(start, start + this.pageSize);
+    return this.filteredCancellationData;
   }
 
   goToPage(page: number): void {
-    const total = this.getTotalPages();
-    if (page < 1 || page > total) return;
-    this.currentPage = page;
+    if (page >= 1 && page <= this.getTotalPages() && page !== this.currentPage && !this.isLoading) {
+      this.currentPage = page;
+      this.loadCancellationData();
+    }
   }
 
   resetPagination(): void {
@@ -1070,9 +1052,10 @@ export class CancellationComponent implements OnInit {
 
   changePageSize(size: string | number): void {
     const s = typeof size === "string" ? parseInt(size, 10) : size;
-    if (!s) return;
+    if (!s || s === this.pageSize) return;
     this.pageSize = s;
     this.currentPage = 1;
+    this.loadCancellationData();
   }
 
   // Dashboard statistics methods

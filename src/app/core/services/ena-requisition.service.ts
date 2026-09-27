@@ -4,6 +4,7 @@ import {
   HttpClient,
   HttpErrorResponse,
   HttpHeaders,
+  HttpParams,
 } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { Observable, catchError, finalize, of, shareReplay, tap, throwError } from 'rxjs';
@@ -96,7 +97,37 @@ export class EnaRequisitionService {
     return 'anon';
   }
 
-  getRequisitions(force = false): Observable<any> {
+  getDashboardCounts(): Observable<any> {
+    return this.http
+      .get(`${this.apiUrl}dashboard-counts/`, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  getRequisitions(queryParamsOrForce?: Record<string, any> | boolean, force = false): Observable<any> {
+    let queryParams: Record<string, any> | undefined;
+    if (typeof queryParamsOrForce === 'boolean') {
+      force = queryParamsOrForce;
+      queryParams = undefined;
+    } else {
+      queryParams = queryParamsOrForce;
+    }
+
+    let params = new HttpParams();
+    if (queryParams) {
+      Object.entries(queryParams).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && String(value).trim() !== '') {
+          params = params.set(key, String(value).trim());
+        }
+      });
+    }
+
+    const hasPagination = queryParams && (queryParams['page'] || queryParams['search'] || queryParams['status'] || queryParams['date'] || queryParams['month']);
+    if (hasPagination) {
+      return this.http
+        .get(this.apiUrl, { ...this.httpOptions, params })
+        .pipe(catchError(this.handleError));
+    }
+
     const userKey = this.getUserCacheKeyPrefix();
     const cacheKey = `requisitions:list:${userKey}`;
     if (force) {
@@ -105,7 +136,7 @@ export class EnaRequisitionService {
     }
     return this.getCachedOrFetch(cacheKey, () =>
       this.http
-        .get(this.apiUrl, this.httpOptions)
+        .get(this.apiUrl, { ...this.httpOptions, params })
         .pipe(catchError(this.handleError))
     );
   }

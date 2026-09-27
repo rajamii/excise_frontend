@@ -2,7 +2,8 @@ import { Component, OnInit, Inject, PLATFORM_ID, inject } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
 import { SupplyChainService } from '../../services/supplychain.service';
 import { environment } from '../../../../../../environments/environment';
@@ -31,10 +32,10 @@ interface TableData {
   amount: string;
   isLive?: boolean;
   isInvalid?: boolean;
-  allowedActions?: string[]; // Dynamic actions from backend
+  allowedActions?: string[];
   workflowId?: number;
   currentStage?: number;
-  currentStageIsFinal?: boolean | string; // Indicates if current stage is final approval
+  currentStageIsFinal?: boolean | string;
   allowedActionConfigs?: any[];
   detailsPermitsNumber?: string;
   requisitionNumberOfPermits?: number;
@@ -60,16 +61,40 @@ export class RevalidationComponent implements OnInit {
   revalidationCompanyFilter: string = '';
   revalidationCompanyOptions: string[] = [];
   activeSummaryFilter: string = '';
+  searchFilter: string = '';
+  private searchSubject = new Subject<string>();
 
   filteredRevalidationData: TableData[] = [];
   summaryRevalidationData: TableData[] = [];
-
   revlidationData: TableData[] = [];
 
-  // Pagination state
+  // Pagination & Loading state
+  isLoading = false;
+  totalCount = 0;
+  totalPages = 0;
   pageSizeOptions: number[] = [5, 10, 15];
   pageSize: number = 5;
   currentPage: number = 1;
+
+  countsLoaded = false;
+  counts = {
+    total: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+    underprocess: 0,
+    live: 0,
+    invalid: 0
+  };
+
+  get pageStart(): number {
+    if (this.totalCount === 0) return 0;
+    return (this.currentPage - 1) * this.pageSize + 1;
+  }
+
+  get pageEnd(): number {
+    return Math.min(this.currentPage * this.pageSize, this.totalCount);
+  }
 
   // Services
   private unifiedActionsService = inject(UnifiedActionsService);
@@ -87,32 +112,97 @@ export class RevalidationComponent implements OnInit {
 
   ngOnInit(): void {
     console.log('DEBUG: ngOnInit');
+    this.searchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged()
+    ).subscribe((term) => {
+      this.searchFilter = term;
+      this.currentPage = 1;
+      this.fetchRevalidationData();
+    });
+
+    this.loadCounts();
     this.fetchRevalidationData();
+  }
+
+  loadCounts(): void {
+    this.supplyChainService.getRevalidationCounts().subscribe({
+      next: (resp) => {
+        if (resp && typeof resp === 'object') {
+          this.counts = {
+            total: Number(resp.total || 0),
+            pending: Number(resp.pending || 0),
+            approved: Number(resp.approved || 0),
+            rejected: Number(resp.rejected || 0),
+            underprocess: Number(resp.underprocess || 0),
+            live: Number(resp.live || 0),
+            invalid: Number(resp.invalid || 0)
+          };
+          this.countsLoaded = true;
+        }
+      }
+    });
+  }
+
+  onSearchChange(term: string): void {
+    this.searchSubject.next(term);
   }
 
   async fetchRevalidationData() {
     try {
-      console.log('DEBUG: Fetching data...');
+      console.log('DEBUG: Fetching revalidation data...');
+      this.isLoading = true;
+
+      const params: Record<string, any> = {
+        page: this.currentPage,
+        page_size: this.pageSize
+      };
+
+      if (this.revalidationStatusFilter) {
+        params['status'] = this.revalidationStatusFilter;
+      }
+      if (this.searchFilter?.trim()) {
+        params['search'] = this.searchFilter.trim();
+      }
+      if (this.revalidationDateFilter) {
+        params['date'] = this.revalidationDateFilter;
+      }
+      if (this.revalidationMonthFilter) {
+        params['month'] = this.revalidationMonthFilter;
+      }
+      if (this.revalidationYearFilter) {
+        params['year'] = this.revalidationYearFilter;
+      }
+      if (this.revalidationCompanyFilter) {
+        params['company'] = this.revalidationCompanyFilter;
+      }
 
       let response: any;
-
       if (this.supplyChainService) {
-        console.log('DEBUG: Using SupplyChainService');
-        response = await firstValueFrom(this.supplyChainService.getRevalidationData());
+        response = await firstValueFrom(this.supplyChainService.getRevalidationData(params));
       } else {
-        console.warn('DEBUG: Service undefined! Using direct Http as fallback.');
         const url = `${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/`;
-        response = await firstValueFrom(this.http.get<any[]>(url));
-
-        // Manual handling of results structure if direct call
-        if (response && !Array.isArray(response) && response.results) {
-          response = response.results;
-        }
+        response = await firstValueFrom(this.http.get<any>(url, { params }));
       }
 
       console.log('DEBUG: Raw Response:', response);
 
-      this.revlidationData = (response || []).map((item: any) => {
+      let data: any[] = [];
+      if (response?.results && Array.isArray(response.results)) {
+        this.totalCount = Number(response.count ?? 0);
+        this.totalPages = Number(response.total_pages ?? Math.ceil(this.totalCount / this.pageSize) ?? 1);
+        data = response.results;
+      } else if (Array.isArray(response)) {
+        data = response;
+        this.totalCount = data.length;
+        this.totalPages = Math.ceil(this.totalCount / this.pageSize) || 1;
+      } else {
+        data = [];
+        this.totalCount = 0;
+        this.totalPages = 0;
+      }
+
+      this.revlidationData = data.map((item: any) => {
         const dateVal = item.revalidationDate || item.revalidation_date;
         let formattedDate = '';
         try {
@@ -122,7 +212,7 @@ export class RevalidationComponent implements OnInit {
         }
 
         return {
-          id: item.id, // Map ID
+          id: item.id,
           referenceNo: item.ourRefNo || item.our_ref_no,
           submissionDate: formattedDate,
           submissionDateRaw: dateVal || '',
@@ -148,29 +238,20 @@ export class RevalidationComponent implements OnInit {
           currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,
           detailsPermitsNumber: item.detailsPermitsNumber || item.details_permits_number || '',
           requisitionNumberOfPermits: item.requisitionNumberOfPermits || item.requisition_number_of_permits || item.requisiton_number_of_permits || 0
-        }
+        };
       });
 
-      // Freeze objects to prevent mutations
-      this.revlidationData.forEach(item => {
-        Object.freeze(item.allowedActions);
-      });
-
-      this.applyRevalidationFilters();
-      this.maybeAutoSelectPendingSummary();
-      console.log('DEBUG: Processed Data length:', this.filteredRevalidationData.length);
-      console.log('DEBUG: Each item allowedActions:');
-      this.filteredRevalidationData.forEach(item => {
-        console.log(`  ID ${item.id}: allowedActions =`, item.allowedActions, `(length: ${item.allowedActions?.length || 0})`);
-      });
-
-      console.log('DEBUG: revlidationData[0] reference check:');
-      console.log('  revlidationData[0]:', this.revlidationData[0]);
-      console.log('  filteredRevalidationData[0]:', this.filteredRevalidationData[0]);
-      console.log('  Same object?', this.revlidationData[0] === this.filteredRevalidationData[0]);
-
+      this.filteredRevalidationData = this.revlidationData;
+      this.summaryRevalidationData = this.revlidationData;
+      this.isLoading = false;
     } catch (error) {
       console.error('Error fetching revalidation data:', error);
+      this.revlidationData = [];
+      this.filteredRevalidationData = [];
+      this.summaryRevalidationData = [];
+      this.totalCount = 0;
+      this.totalPages = 0;
+      this.isLoading = false;
     }
   }
 
@@ -184,94 +265,15 @@ export class RevalidationComponent implements OnInit {
     if (pendingCount > 0) {
       this.activeSummaryFilter = 'PENDING';
       this.revalidationStatusFilter = 'PENDING';
-      this.applyRevalidationFilters();
+      this.currentPage = 1;
+      this.fetchRevalidationData();
     }
   }
 
   // Revalidation filter methods
   applyRevalidationFilters(): void {
-    console.log('applyRevalidationFilters called');
-    console.log('Source data (revlidationData) before filter:');
-    this.revlidationData.forEach(item => {
-      console.log(`  ID ${item.id}: allowedActions =`, item.allowedActions);
-    });
-
-    console.log('Applying revalidation filters:', {
-      dateFilter: this.revalidationDateFilter,
-      monthFilter: this.revalidationMonthFilter,
-      yearFilter: this.revalidationYearFilter,
-      statusFilter: this.revalidationStatusFilter
-    });
-
-    this.summaryRevalidationData = this.revlidationData.filter(item => {
-      // Admin visibility: only show records at or past this admin's stage
-      if (!this.isVisibleToCurrentAdmin(item)) return false;
-
-      const submissionDate =
-        this.parseDate(item.submissionDateRaw) ||
-        this.parseDate(item.submissionDate);
-
-      if (!submissionDate) {
-        return !this.revalidationDateFilter && !this.revalidationMonthFilter && !this.revalidationYearFilter;
-      }
-
-      if (this.revalidationDateFilter && this.toIsoDay(submissionDate) !== this.revalidationDateFilter) {
-        return false;
-      }
-
-      if (this.revalidationMonthFilter && this.toIsoMonth(submissionDate) !== this.revalidationMonthFilter) {
-        return false;
-      }
-
-      if (this.revalidationYearFilter && String(submissionDate.getFullYear()) !== String(this.revalidationYearFilter)) {
-        return false;
-      }
-
-      return true;
-    });
-
-    // Build company options for commissioner filter
-    this.revalidationCompanyOptions = Array.from(
-      new Set(
-        this.summaryRevalidationData
-          .map(item => String(item?.factoryName || item?.distilleryName || '').trim())
-          .filter(v => !!v)
-      )
-    ).sort((a, b) => a.localeCompare(b));
-
-    this.filteredRevalidationData = this.summaryRevalidationData.filter(item => {
-      // Company filter — commissioner only
-      if (this.revalidationCompanyFilter) {
-        const company = String(item?.factoryName || item?.distilleryName || '').trim();
-        if (company !== this.revalidationCompanyFilter) return false;
-      }
-
-      if (!this.revalidationStatusFilter) {
-        return true;
-      }
-
-      const filter = this.normalizeStageToken(this.revalidationStatusFilter);
-      if (filter === 'actionrequired') {
-        return this.isActionRequiredLikeStatus(item);
-      }
-      if (filter === 'approved') {
-        return this.isApprovedLikeStatus(item);
-      }
-      if (filter === 'pending') {
-        return this.isPendingLikeStatus(item);
-      }
-      if (filter === 'underprocess') {
-        return this.isUnderProcessLikeStatus(item);
-      }
-      return this.normalizeStageToken(item.status).includes(filter);
-    });
-
-    console.log('Filtered data after filter:');
-    this.filteredRevalidationData.forEach(item => {
-      console.log(`  ID ${item.id}: allowedActions =`, item.allowedActions);
-    });
-
-    this.resetPagination();
+    this.currentPage = 1;
+    this.fetchRevalidationData();
   }
 
   clearRevalidationFilters(): void {
@@ -280,10 +282,10 @@ export class RevalidationComponent implements OnInit {
     this.revalidationYearFilter = '';
     this.revalidationStatusFilter = '';
     this.revalidationCompanyFilter = '';
+    this.searchFilter = '';
     this.activeSummaryFilter = '';
-    this.summaryRevalidationData = [...this.revlidationData];
-    this.filteredRevalidationData = [...this.revlidationData];
-    this.resetPagination();
+    this.currentPage = 1;
+    this.fetchRevalidationData();
   }
 
   onRevalidationDateFilterChange(): void {
@@ -299,7 +301,10 @@ export class RevalidationComponent implements OnInit {
   }
 
   onRevalidationStatusFilterChange(): void {
-    this.syncActiveSummaryFilter();
+    this.applyRevalidationFilters();
+  }
+
+  onRevalidationCompanyFilterChange(): void {
     this.applyRevalidationFilters();
   }
 
@@ -310,20 +315,15 @@ export class RevalidationComponent implements OnInit {
     if (!normalized || normalized === 'all') {
       this.activeSummaryFilter = '';
       this.revalidationStatusFilter = '';
-      this.applyRevalidationFilters();
-      return;
-    }
-
-    if (current === normalized) {
+    } else if (current === normalized) {
       this.activeSummaryFilter = '';
       this.revalidationStatusFilter = '';
-      this.applyRevalidationFilters();
-      return;
+    } else {
+      this.activeSummaryFilter = filter;
+      this.revalidationStatusFilter = filter;
     }
-
-    this.activeSummaryFilter = filter;
-    this.revalidationStatusFilter = filter;
-    this.applyRevalidationFilters();
+    this.currentPage = 1;
+    this.fetchRevalidationData();
   }
 
   private syncActiveSummaryFilter(): void {
@@ -431,6 +431,19 @@ export class RevalidationComponent implements OnInit {
   }
 
   getRevalidationStatusCount(status: string): number {
+    if (this.countsLoaded) {
+      const filter = this.normalizeStageToken(status);
+      if (filter === 'actionrequired' || filter === 'invalid') {
+        return this.counts.invalid || 0;
+      }
+      if (filter === 'approved') return this.counts.approved;
+      if (filter === 'pending') return this.counts.pending;
+      if (filter === 'underprocess') return this.counts.underprocess;
+      if (filter === 'rejected') return this.counts.rejected;
+      if (filter === 'live') return this.counts.live;
+      if (filter === 'total' || filter === 'all') return this.counts.total;
+      return (this.counts as any)[filter] ?? 0;
+    }
     const filter = this.normalizeStageToken(status);
     if (filter === 'actionrequired') {
       return this.summaryRevalidationData.filter(item => this.isActionRequiredLikeStatus(item)).length;
@@ -448,7 +461,7 @@ export class RevalidationComponent implements OnInit {
   }
 
   getLiveRevalidationCount(): number {
-    return this.revlidationData.filter(item => item.isLive).length;
+    return this.countsLoaded ? this.counts.live : this.revlidationData.filter(item => item.isLive).length;
   }
 
   getTotalRevalidationAmount(): number {
@@ -591,25 +604,18 @@ export class RevalidationComponent implements OnInit {
   }
 
   getTotalPages(): number {
-    return Math.max(1, Math.ceil(this.filteredRevalidationData.length / this.pageSize));
+    return this.totalPages;
   }
 
   getPaged(): TableData[] {
-    const start = (this.currentPage - 1) * this.pageSize;
-    const paged = this.filteredRevalidationData.slice(start, start + this.pageSize);
-    console.log('getPaged() returning:', paged.length, 'items');
-    console.log('CHECK SOURCE DATA - revlidationData[0]:', this.revlidationData[0]?.allowedActions);
-    console.log('CHECK FILTERED DATA - filteredRevalidationData[0]:', this.filteredRevalidationData[0]?.allowedActions);
-    paged.forEach(item => {
-      console.log(`  Paged ID ${item.id}: allowedActions =`, item.allowedActions);
-    });
-    return paged;
+    return this.filteredRevalidationData;
   }
 
   goToPage(page: number): void {
-    const total = this.getTotalPages();
-    if (page < 1 || page > total) return;
-    this.currentPage = page;
+    if (page >= 1 && page <= this.getTotalPages() && page !== this.currentPage && !this.isLoading) {
+      this.currentPage = page;
+      this.fetchRevalidationData();
+    }
   }
 
   resetPagination(): void {
@@ -618,9 +624,10 @@ export class RevalidationComponent implements OnInit {
 
   changePageSize(size: string | number): void {
     const s = typeof size === "string" ? parseInt(size, 10) : size;
-    if (!s) return;
+    if (!s || s === this.pageSize) return;
     this.pageSize = s;
     this.currentPage = 1;
+    this.fetchRevalidationData();
   }
 
   // Role detection methods

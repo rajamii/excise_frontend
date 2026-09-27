@@ -8,7 +8,7 @@
         <i class="bi bi-list-ul"></i>
       </div>
       <div class="card-content">
-        <h3 class="card-value">{{ summaryRevalidationData.length }}</h3>
+        <h3 class="card-value">{{ countsLoaded ? counts.total : totalCount }}</h3>
         <p class="card-label">Total Revalidations</p>
       </div>
     </div>
@@ -56,6 +56,15 @@
       <small class="text-muted">Filters:</small>
     </div>
 
+    <!-- Search Filter -->
+    <div class="compact-filter search-filter">
+      <div class="input-group input-group-sm">
+        <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+        <input type="text" class="form-control" placeholder="Search reference, distillery..."
+               [ngModel]="searchFilter" (ngModelChange)="onSearchChange($event)" />
+      </div>
+    </div>
+
     <!-- Date Filter -->
     <div class="compact-filter">
       <input type="date" class="form-control form-control-sm" [(ngModel)]="revalidationDateFilter"
@@ -90,7 +99,7 @@
 
     <!-- Clear Button - only show when filters are active -->
     <button class="btn btn-outline-danger btn-sm" (click)="clearRevalidationFilters()"
-      *ngIf="revalidationDateFilter || revalidationMonthFilter || revalidationYearFilter || revalidationStatusFilter || revalidationCompanyFilter"
+      *ngIf="revalidationDateFilter || revalidationMonthFilter || revalidationYearFilter || revalidationStatusFilter || revalidationCompanyFilter || searchFilter"
       title="Clear all filters">
       <i class="bi bi-x-circle"></i>
       Clear
@@ -99,19 +108,16 @@
 
   <!-- Filter Results Summary -->
   <div class="filter-results-compact mt-2"
-    *ngIf="revalidationDateFilter || revalidationMonthFilter || revalidationYearFilter || revalidationStatusFilter || revalidationCompanyFilter">
+    *ngIf="revalidationDateFilter || revalidationMonthFilter || revalidationYearFilter || revalidationStatusFilter || revalidationCompanyFilter || searchFilter">
     <small class="text-info">
       <i class="bi bi-info-circle me-1"></i>
-      Showing <strong>{{ filteredRevalidationData.length }}</strong> of <strong>{{ revlidationData.length
-        }}</strong> revalidations
-      <span *ngIf="revalidationDateFilter" class="filter-tag">Date: {{ revalidationDateFilter | date:'dd MMM
-        yyyy' }}</span>
-      <span *ngIf="revalidationMonthFilter" class="filter-tag">Month: {{ revalidationMonthFilter | date:'MMM
-        yyyy' }}</span>
+      Showing <strong>{{ pageStart }}-{{ pageEnd }}</strong> of <strong>{{ totalCount }}</strong> revalidations
+      <span *ngIf="searchFilter" class="filter-tag">Search: "{{ searchFilter }}"</span>
+      <span *ngIf="revalidationDateFilter" class="filter-tag">Date: {{ revalidationDateFilter | date:'dd MMM yyyy' }}</span>
+      <span *ngIf="revalidationMonthFilter" class="filter-tag">Month: {{ revalidationMonthFilter | date:'MMM yyyy' }}</span>
       <span *ngIf="revalidationYearFilter" class="filter-tag">Year: {{ revalidationYearFilter }}</span>
       <span *ngIf="revalidationCompanyFilter" class="filter-tag">Company: {{ revalidationCompanyFilter }}</span>
-      <span *ngIf="revalidationStatusFilter" class="filter-tag">Status: {{ revalidationStatusFilter
-        }}</span>
+      <span *ngIf="revalidationStatusFilter" class="filter-tag">Status: {{ revalidationStatusFilter }}</span>
     </small>
   </div>
 </div>
@@ -125,168 +131,173 @@
         Revalidation Register Entries
       </h5>
       <div class="register-info">
-        <span class="entries-count">{{ filteredRevalidationData.length }} Entries</span>
+        <span class="entries-count">{{ totalCount }} Entries</span>
       </div>
     </div>
 
-      <div class="table-responsive" *ngIf="filteredRevalidationData.length > 0">
-        <table class="table register-table">
-          <thead>
-            <tr>
-              <th class="sl-no">Sl. No.</th>
-              <th class="ref-number">Reference No</th>
-              <th class="establishment-col" *ngIf="isCommissioner() || isPermitSection() || isAdmin()">Establishment / Company</th>
-              <th class="submission-date">App. Sub. Date</th>
-              <th class="reval-permits">Number of Permits</th>
-              <th class="revalidation-extension">Revalidation Extended (From-To)</th>
-              <th class="status">Status</th>
-              <th class="actions">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (
-            item of getPaged();
-            track item.referenceNo;
-            let i = $index
-            ) {
-            <tr class="register-row">
-              <td class="sl-no">{{ (getCurrentPage() - 1) * getPageSize() + i + 1
-                }}</td>
-              <td class="ref-number">
-                <div class="d-flex align-items-center gap-2">
-                  <span class="ref-text">{{ item.referenceNo }}</span>
-                  @if (item.isLive) {
-                  <span class="badge bg-danger text-white live-badge">LIVE</span>
-                  }
+    <div class="table-responsive" *ngIf="filteredRevalidationData.length > 0">
+      <table class="table register-table">
+        <thead>
+          <tr>
+            <th class="sl-no">Sl. No.</th>
+            <th class="ref-number">Reference No</th>
+            <th class="establishment-col" *ngIf="isCommissioner() || isPermitSection() || isAdmin()">Establishment / Company</th>
+            <th class="submission-date">App. Sub. Date</th>
+            <th class="reval-permits">Number of Permits</th>
+            <th class="revalidation-extension">Revalidation Extended (From-To)</th>
+            <th class="status">Status</th>
+            <th class="actions">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (
+          item of getPaged();
+          track item.referenceNo;
+          let i = $index
+          ) {
+          <tr class="register-row">
+            <td class="sl-no">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
+            <td class="ref-number">
+              <div class="d-flex align-items-center gap-2">
+                <span class="ref-text">{{ item.referenceNo }}</span>
+                @if (item.isLive) {
+                <span class="badge bg-danger text-white live-badge">LIVE</span>
+                }
+              </div>
+            </td>
+            <td class="establishment-col" *ngIf="isCommissioner() || isPermitSection() || isAdmin()">
+              <div class="d-flex flex-column gap-1 align-items-start">
+                <span class="fw-bold text-dark establishment-title">{{ item.establishmentName || item.factoryName || item.distilleryName || 'Mount Distilleries Limited' }}</span>
+                <div>
+                  <span class="badge bg-light text-primary border px-2 py-1 establishment-badge">
+                    <i class="bi bi-building me-1"></i>{{ item.establishmentType || 'Distillery' }}
+                  </span>
                 </div>
-              </td>
-              <td class="establishment-col" *ngIf="isCommissioner() || isPermitSection() || isAdmin()">
-                <div class="d-flex flex-column gap-1 align-items-start">
-                  <span class="fw-bold text-dark establishment-title">{{ item.establishmentName || item.factoryName || item.distilleryName || 'Mount Distilleries Limited' }}</span>
-                  <div>
-                    <span class="badge bg-light text-primary border px-2 py-1 establishment-badge">
-                      <i class="bi bi-building me-1"></i>{{ item.establishmentType || 'Distillery' }}
-                    </span>
-                  </div>
-                </div>
-              </td>
-              <td class="submission-date">
-                <span class="date-text">{{ item.submissionDate }}</span>
-              </td>
-              <td class="reval-permits">
-                <span class="ref-text text-dark fw-semibold">{{ getPermitsDisplay(item) }}</span>
-              </td>
-              <td class="revalidation-extension">
-                <span class="date-text">{{ getRevalidationExtensionRange(item) }}</span>
-              </td>
-              <td class="status">
-                <span class="status-badge {{ getStatusBadgeClass(item) }}">
-                  {{ item.status }}
-                </span>
-              </td>
-              <td class="actions">
-                <div class="action-buttons-group d-flex flex-column justify-content-center align-items-center gap-2">
-                  <div class="d-flex justify-content-center align-items-center gap-2">
-                    <button type="button" class="btn-action-icon btn-action-view" (click)="openDetails(item)" title="View Application" aria-label="View Application">
-                      <i class="bi bi-eye"></i>
-                    </button>
-                    <button *ngIf="hasPaymentBeenMade(item)" type="button" class="btn-action-icon btn-action-slip" (click)="openPaymentSlip(item)" title="Payment Slip" aria-label="Payment Slip">
-                      <i class="bi bi-receipt"></i>
-                    </button>
-                  </div>
-                  <!-- Yellow Request Revalidation Button (Licensee Only) -->
-                  <button
-                    *ngIf="shouldShowRequestRevalidation(item)"
-                    type="button"
-                    class="btn-reval-request"
-                    (click)="requestRevlidation(item)"
-                    title="Request Revalidation">
-                    <i class="bi bi-arrow-repeat me-1"></i> Request Revalidation
+              </div>
+            </td>
+            <td class="submission-date">
+              <span class="date-text">{{ item.submissionDate }}</span>
+            </td>
+            <td class="reval-permits">
+              <span class="ref-text text-dark fw-semibold">{{ getPermitsDisplay(item) }}</span>
+            </td>
+            <td class="revalidation-extension">
+              <span class="date-text">{{ getRevalidationExtensionRange(item) }}</span>
+            </td>
+            <td class="status">
+              <span class="status-badge {{ getStatusBadgeClass(item) }}">
+                {{ item.status }}
+              </span>
+            </td>
+            <td class="actions">
+              <div class="action-buttons-group d-flex flex-column justify-content-center align-items-center gap-2">
+                <div class="d-flex justify-content-center align-items-center gap-2">
+                  <button type="button" class="btn-action-icon btn-action-view" (click)="openDetails(item)" title="View Application" aria-label="View Application">
+                    <i class="bi bi-eye"></i>
+                  </button>
+                  <button *ngIf="hasPaymentBeenMade(item)" type="button" class="btn-action-icon btn-action-slip" (click)="openPaymentSlip(item)" title="Payment Slip" aria-label="Payment Slip">
+                    <i class="bi bi-receipt"></i>
                   </button>
                 </div>
-              </td>
-            </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+                <!-- Yellow Request Revalidation Button (Licensee Only) -->
+                <button
+                  *ngIf="shouldShowRequestRevalidation(item)"
+                  type="button"
+                  class="btn-reval-request"
+                  (click)="requestRevlidation(item)"
+                  title="Request Revalidation">
+                  <i class="bi bi-arrow-repeat me-1"></i> Request Revalidation
+                </button>
+              </div>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
 
-      <!-- Empty State -->
-      <div class="empty-state" *ngIf="filteredRevalidationData.length === 0">
-        <div class="empty-icon">
-          <i class="bi bi-journal-x"></i>
-        </div>
-        <h5 class="empty-title">
-          {{ (revalidationDateFilter || revalidationMonthFilter || revalidationYearFilter ||
-          revalidationStatusFilter) ? 'No Matching Revalidations Found' : 'No Revalidations Found' }}
-        </h5>
-        <p class="empty-message">
-          {{ (revalidationDateFilter || revalidationMonthFilter || revalidationYearFilter ||
-          revalidationStatusFilter) ?
-          'No revalidations match your current filter criteria. Try adjusting your filters or clear them to
-          see all revalidations.' :
-          'You haven\'t submitted any revalidations yet. Start by creating your first revalidation.' }}
-        </p>
-        <button class="btn btn-primary"
-          *ngIf="filteredRevalidationData.length === 0 && !revalidationDateFilter && !revalidationMonthFilter && !revalidationYearFilter && !revalidationStatusFilter">
-          <i class="bi bi-plus-circle me-2"></i>
-          Create New Revalidation
-        </button>
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="!isLoading && filteredRevalidationData.length === 0">
+      <div class="empty-icon">
+        <i class="bi bi-journal-x"></i>
       </div>
+      <h5 class="empty-title">
+        {{ (revalidationDateFilter || revalidationMonthFilter || revalidationYearFilter ||
+        revalidationStatusFilter || searchFilter) ? 'No Matching Revalidations Found' : 'No Revalidations Found' }}
+      </h5>
+      <p class="empty-message">
+        {{ (revalidationDateFilter || revalidationMonthFilter || revalidationYearFilter ||
+        revalidationStatusFilter || searchFilter) ?
+        'No revalidations match your current filter criteria. Try adjusting your filters or clear them to see all revalidations.' :
+        'You haven\'t submitted any revalidations yet. Start by creating your first revalidation.' }}
+      </p>
+      <button class="btn btn-primary"
+        *ngIf="!revalidationDateFilter && !revalidationMonthFilter && !revalidationYearFilter && !revalidationStatusFilter && !searchFilter">
+        <i class="bi bi-plus-circle me-2"></i>
+        Create New Revalidation
+      </button>
+    </div>
 
-      <!-- Register Summary Footer -->
-      <div class="register-footer" *ngIf="filteredRevalidationData.length > 0">
-        <div class="summary-row">
-          <div class="summary-item">
-            <span class="summary-label">Total Revalidations:</span>
-            <span class="summary-value">{{ filteredRevalidationData.length }}</span>
-          </div>
+    <!-- Register Summary Footer -->
+    <div class="register-footer" *ngIf="filteredRevalidationData.length > 0">
+      <div class="summary-row">
+        <div class="summary-item">
+          <span class="summary-label">Total Revalidations:</span>
+          <span class="summary-value">{{ totalCount }}</span>
         </div>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- Pagination -->
-  <div class="register-pagination" *ngIf="filteredRevalidationData.length > 0">
-    <div class="d-flex justify-content-between align-items-center">
-      <div class="pagination-info">
-        <span class="info-text">
-          Showing {{ (getCurrentPage() - 1) * getPageSize() + 1 }}-{{
-          Math.min(getCurrentPage() * getPageSize(),
-          filteredRevalidationData.length) }} of {{ filteredRevalidationData.length }} entries
-        </span>
-      </div>
-      <div class="pagination-controls">
-        <div class="d-flex align-items-center gap-3">
-          <div class="page-size-selector">
-            <label class="selector-label">Show:</label>
-            <select class="form-select form-select-sm" [ngModel]="getPageSize()"
-              (ngModelChange)="changePageSize($event)">
-              <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
-            </select>
-          </div>
-          <div class="btn-group btn-group-sm pagination-buttons">
-            <button class="btn btn-outline-secondary" (click)="goToPage(1)" [disabled]="getCurrentPage() === 1">
-              «
-            </button>
-            <button class="btn btn-outline-secondary" (click)="goToPage(getCurrentPage() - 1)"
-              [disabled]="getCurrentPage() === 1">
-              ‹
-            </button>
-            <span class="btn btn-light disabled">
-              {{ getCurrentPage() }} / {{ getTotalPages() }}
-            </span>
-            <button class="btn btn-outline-secondary" (click)="goToPage(getCurrentPage() + 1)"
-              [disabled]="getCurrentPage() === getTotalPages()">
-              ›
-            </button>
-            <button class="btn btn-outline-secondary" (click)="goToPage(getTotalPages())"
-              [disabled]="getCurrentPage() === getTotalPages()">
-              »
-            </button>
-          </div>
+<!-- Loading strip indicator above pagination -->
+<div class="table-pagination-loader" *ngIf="isLoading">
+  <span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>
+  <span class="ms-2">Loading data, please wait...</span>
+</div>
+
+<!-- Pagination -->
+<div class="register-pagination" *ngIf="totalCount > 0">
+  <div class="d-flex justify-content-between align-items-center">
+    <div class="pagination-info d-flex align-items-center gap-2">
+      <span class="info-text">
+        Showing {{ pageStart }}-{{ pageEnd }} of {{ totalCount }} entries
+      </span>
+      <span class="badge bg-light text-primary border table-loading-inline" *ngIf="isLoading">
+        <span class="spinner-border spinner-border-sm me-1" style="width: 12px; height: 12px; border-width: 2px;" role="status"></span>
+        Updating...
+      </span>
+    </div>
+    <div class="pagination-controls">
+      <div class="d-flex align-items-center gap-3">
+        <div class="page-size-selector">
+          <label class="selector-label">Show:</label>
+          <select class="form-select form-select-sm" [ngModel]="pageSize"
+            (ngModelChange)="changePageSize($event)" [disabled]="isLoading">
+            <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
+          </select>
+        </div>
+        <div class="btn-group btn-group-sm pagination-buttons">
+          <button class="btn btn-outline-secondary" (click)="goToPage(1)" [disabled]="currentPage === 1 || isLoading">
+            «
+          </button>
+          <button class="btn btn-outline-secondary" (click)="goToPage(currentPage - 1)"
+            [disabled]="currentPage === 1 || isLoading">
+            ‹
+          </button>
+          <span class="btn btn-light disabled">
+            {{ currentPage }} / {{ totalPages || 1 }}
+          </span>
+          <button class="btn btn-outline-secondary" (click)="goToPage(currentPage + 1)"
+            [disabled]="currentPage >= totalPages || isLoading">
+            ›
+          </button>
+          <button class="btn btn-outline-secondary" (click)="goToPage(totalPages)"
+            [disabled]="currentPage >= totalPages || isLoading">
+            »
+          </button>
         </div>
       </div>
     </div>
   </div>
-
+</div>

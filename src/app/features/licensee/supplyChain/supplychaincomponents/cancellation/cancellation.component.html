@@ -8,7 +8,7 @@
         <i class="bi bi-list-ul"></i>
       </div>
       <div class="card-content">
-        <h3 class="card-value">{{ summaryCancellationData.length }}</h3>
+        <h3 class="card-value">{{ countsLoaded ? counts.total : totalCount }}</h3>
         <p class="card-label">Total Cancellations</p>
       </div>
     </div>
@@ -44,6 +44,15 @@
     <div class="filter-label-text">
       <i class="bi bi-funnel me-1"></i>
       <small class="text-muted">Filters:</small>
+    </div>
+
+    <!-- Search Filter -->
+    <div class="compact-filter search-filter">
+      <div class="input-group input-group-sm">
+        <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+        <input type="text" class="form-control" placeholder="Search reference, distillery..."
+               [ngModel]="searchFilter" (ngModelChange)="onSearchChange($event)" />
+      </div>
     </div>
 
     <!-- Date Filter -->
@@ -83,11 +92,25 @@
 
     <!-- Clear Button -->
     <button class="btn btn-outline-danger btn-sm" (click)="clearCancellationFilters()"
-      *ngIf="cancellationDateFilter || cancellationMonthFilter || cancellationStatusFilter || cancellationCompanyFilter"
+      *ngIf="cancellationDateFilter || cancellationMonthFilter || cancellationStatusFilter || cancellationCompanyFilter || searchFilter"
       title="Clear all filters">
       <i class="bi bi-x-circle"></i>
       Clear
     </button>
+  </div>
+
+  <!-- Filter Results Summary -->
+  <div class="filter-results-compact mt-2"
+    *ngIf="cancellationDateFilter || cancellationMonthFilter || cancellationStatusFilter || cancellationCompanyFilter || searchFilter">
+    <small class="text-info">
+      <i class="bi bi-info-circle me-1"></i>
+      Showing <strong>{{ pageStart }}-{{ pageEnd }}</strong> of <strong>{{ totalCount }}</strong> applications
+      <span *ngIf="searchFilter" class="filter-tag">Search: "{{ searchFilter }}"</span>
+      <span *ngIf="cancellationDateFilter" class="filter-tag">Date: {{ cancellationDateFilter }}</span>
+      <span *ngIf="cancellationMonthFilter" class="filter-tag">Month: {{ cancellationMonthFilter }}</span>
+      <span *ngIf="cancellationCompanyFilter" class="filter-tag">Company: {{ cancellationCompanyFilter }}</span>
+      <span *ngIf="cancellationStatusFilter" class="filter-tag">Status: {{ cancellationStatusFilter }}</span>
+    </small>
   </div>
 </div>
 
@@ -100,7 +123,7 @@
         Cancellation Applications
       </h5>
       <div class="register-info">
-        <span class="entries-count">{{ filteredCancellationData.length }} Applications</span>
+        <span class="entries-count">{{ totalCount }} Applications</span>
       </div>
     </div>
 
@@ -124,7 +147,7 @@
           let i = $index
           ) {
           <tr class="register-row">
-            <td class="sl-no">{{ (getCurrentPage() - 1) * getPageSize() + i + 1 }}</td>
+            <td class="sl-no">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
             <td class="ref-number">
               <div class="d-flex align-items-center gap-2">
                 <span class="ref-text">{{ item.referenceNo }}</span>
@@ -180,10 +203,8 @@
       </table>
     </div>
 
-
-
     <!-- Empty State -->
-    <div class="empty-state" *ngIf="filteredCancellationData.length === 0">
+    <div class="empty-state" *ngIf="!isLoading && filteredCancellationData.length === 0">
       <div class="empty-icon">
         <i class="bi bi-journal-x"></i>
       </div>
@@ -193,43 +214,58 @@
       </p>
     </div>
 
+    <!-- Loading strip indicator above pagination -->
+    <div class="table-pagination-loader" *ngIf="isLoading">
+      <span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>
+      <span class="ms-2">Loading data, please wait...</span>
+    </div>
+
     <!-- Pagination Controls -->
     <div class="d-flex justify-content-between align-items-center mt-3 border-top pt-3"
-      *ngIf="filteredCancellationData.length > 0">
+      *ngIf="totalCount > 0">
       <div class="d-flex align-items-center gap-2">
         <span class="text-muted small">Show:</span>
-        <select class="form-select form-select-sm" style="width: 70px" [ngModel]="getPageSize()"
-          (ngModelChange)="changePageSize($event)">
-          <option [value]="5">5</option>
-          <option [value]="10">10</option>
-          <option [value]="15">15</option>
-          <option [value]="20">20</option>
+        <select class="form-select form-select-sm" style="width: 70px" [ngModel]="pageSize"
+          (ngModelChange)="changePageSize($event)" [disabled]="isLoading">
+          <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
         </select>
         <span class="text-muted small">entries</span>
+        <span class="badge bg-light text-primary border table-loading-inline ms-2" *ngIf="isLoading">
+          <span class="spinner-border spinner-border-sm me-1" style="width: 12px; height: 12px; border-width: 2px;" role="status"></span>
+          Updating...
+        </span>
       </div>
 
       <div class="d-flex align-items-center gap-3">
         <span class="text-muted small">
-          Showing {{ (getCurrentPage() - 1) * getPageSize() + 1 }}
-          to {{ Math.min(getCurrentPage() * getPageSize(), filteredCancellationData.length) }}
-          of {{ filteredCancellationData.length }} entries
+          Showing {{ pageStart }} to {{ pageEnd }} of {{ totalCount }} entries
         </span>
 
         <nav aria-label="Page navigation">
           <ul class="pagination pagination-sm mb-0">
-            <li class="page-item" [class.disabled]="getCurrentPage() === 1">
-              <button class="page-link" (click)="goToPage(getCurrentPage() - 1)">
+            <li class="page-item" [class.disabled]="currentPage === 1 || isLoading">
+              <button class="page-link" (click)="goToPage(1)" [disabled]="currentPage === 1 || isLoading" title="First Page">
+                <i class="bi bi-chevron-double-left"></i>
+              </button>
+            </li>
+            <li class="page-item" [class.disabled]="currentPage === 1 || isLoading">
+              <button class="page-link" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1 || isLoading" title="Previous Page">
                 <i class="bi bi-chevron-left"></i>
               </button>
             </li>
             <li class="page-item disabled">
               <span class="page-link">
-                Page {{ getCurrentPage() }} of {{ getTotalPages() }}
+                Page {{ currentPage }} of {{ totalPages || 1 }}
               </span>
             </li>
-            <li class="page-item" [class.disabled]="getCurrentPage() === getTotalPages()">
-              <button class="page-link" (click)="goToPage(getCurrentPage() + 1)">
+            <li class="page-item" [class.disabled]="currentPage >= totalPages || isLoading">
+              <button class="page-link" (click)="goToPage(currentPage + 1)" [disabled]="currentPage >= totalPages || isLoading" title="Next Page">
                 <i class="bi bi-chevron-right"></i>
+              </button>
+            </li>
+            <li class="page-item" [class.disabled]="currentPage >= totalPages || isLoading">
+              <button class="page-link" (click)="goToPage(totalPages)" [disabled]="currentPage >= totalPages || isLoading" title="Last Page">
+                <i class="bi bi-chevron-double-right"></i>
               </button>
             </li>
           </ul>
@@ -238,4 +274,3 @@
     </div>
   </div>
 </div>
-

@@ -10,8 +10,8 @@ import { CancellationRequestComponent } from '../../cancellation-request/cancell
 import { UnifiedActionsService } from '../../../../../shared/services/unified-actions.service';
 import { SidebarPendingBadgeService } from '../../../../../shared/services/sidebar-pending-badge.service';
 import { BulkSpiritUsageService, BulkSpiritUsageRecord, BulkSpiritInventorySummaryResponse } from '../../../../../core/services/bulk-spirit-usage.service';
-import { forkJoin, of, Subscription } from 'rxjs';
-import { catchError, debounceTime } from 'rxjs/operators';
+import { forkJoin, of, Subject, Subscription } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
 interface TableData {
   id?: number;
@@ -208,10 +208,34 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   newUsagePurpose: string = 'Production / Blending';
   newUsageRemarks: string = '';
 
-  // Pagination
+  // Pagination & Loading
+  isLoading: boolean = false;
+  totalCount: number = 0;
+  totalPages: number = 0;
   currentPage: number = 1;
   pageSize: number = 5;
   pageSizeOptions: number[] = [5, 10, 25, 50];
+  searchFilter: string = '';
+  private searchSubject = new Subject<string>();
+  countsLoaded = false;
+  counts = {
+    total: 0,
+    applied: 0,
+    pending: 0,
+    underprocess: 0,
+    approved: 0,
+    rejected: 0,
+    cancellation: 0
+  };
+
+  get pageStart(): number {
+    if (this.totalCount === 0) return 0;
+    return (this.currentPage - 1) * this.pageSize + 1;
+  }
+
+  get pageEnd(): number {
+    return Math.min(this.currentPage * this.pageSize, this.totalCount);
+  }
 
   constructor(@Inject(PLATFORM_ID) platformId: Object) {
     this.isBrowser = isPlatformBrowser(platformId);
@@ -234,11 +258,21 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       this.tryAutoOpenCancellationModal();
     });
 
+    this.searchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged()
+    ).subscribe((term) => {
+      this.searchFilter = term;
+      this.currentPage = 1;
+      this.loadData();
+    });
+
     this.refreshSub = this.sidebarPendingBadgeService.refreshNeeded$
       .pipe(debounceTime(300))
       .subscribe(() => {
         console.log('🔄 RequisitionComponent: Received refresh notification, reloading data');
         this.enaRequisitionService.clearCache();
+        this.loadCounts();
         this.loadData();
       });
 
@@ -246,6 +280,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       window.addEventListener('pageshow', this.pageshowHandler);
     }
 
+    this.loadCounts();
     this.loadData();
   }
 
@@ -313,27 +348,84 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     return 'licensee';
   }
 
+  loadCounts(): void {
+    this.enaRequisitionService.getDashboardCounts().subscribe({
+      next: (resp) => {
+        if (resp && typeof resp === 'object') {
+          this.counts = {
+            total: Number(resp.total || 0),
+            applied: Number(resp.applied || 0),
+            pending: Number(resp.pending || 0),
+            underprocess: Number(resp.underprocess || 0),
+            approved: Number(resp.approved || 0),
+            rejected: Number(resp.rejected || 0),
+            cancellation: Number(resp.cancellation || 0)
+          };
+          this.countsLoaded = true;
+        }
+      },
+      error: () => {}
+    });
+  }
+
+  onSearchChange(term: string): void {
+    this.searchSubject.next(term);
+  }
+
   // Load data based on user type
   loadData(): void {
     console.log('DEBUG: Loading requisition data...');
-    this.enaRequisitionService.clearCache();
+    this.isLoading = true;
+
+    const params: Record<string, any> = {
+      page: this.currentPage,
+      page_size: this.pageSize
+    };
+
+    if (this.requisitionStatusFilter) {
+      params['status'] = this.requisitionStatusFilter;
+    }
+    if (this.searchFilter?.trim()) {
+      params['search'] = this.searchFilter.trim();
+    }
+    if (this.requisitionDateFilter) {
+      params['date'] = this.requisitionDateFilter;
+    }
+    if (this.requisitionMonthFilter) {
+      params['month'] = this.requisitionMonthFilter;
+    }
+    if (this.requisitionYearFilter) {
+      params['year'] = this.requisitionYearFilter;
+    }
+    if (this.requisitionCompanyFilter) {
+      params['company'] = this.requisitionCompanyFilter;
+    }
 
     forkJoin({
-      requisitions: this.enaRequisitionService.getRequisitions().pipe(catchError(() => of([]))),
+      requisitions: this.enaRequisitionService.getRequisitions(params).pipe(catchError(() => of(null))),
       revalidations: this.supplyChainService.getRevalidationData().pipe(catchError(() => of([])))
     }).subscribe({
       next: ({ requisitions, revalidations }: { requisitions: any; revalidations: any[] }) => {
         const response = requisitions;
         console.log('DEBUG: Raw requisition response:', response);
 
-        // Handle array, DRF paginated `{ results }`, and `{ data }` envelopes.
         let data: any[] = [];
-        if (Array.isArray(response)) {
-          data = response;
-        } else if (response?.results && Array.isArray(response.results)) {
+        if (response?.results && Array.isArray(response.results)) {
+          this.totalCount = Number(response.count ?? 0);
+          this.totalPages = Number(response.total_pages ?? Math.ceil(this.totalCount / this.pageSize) ?? 1);
           data = response.results;
+        } else if (Array.isArray(response)) {
+          data = response;
+          this.totalCount = data.length;
+          this.totalPages = Math.ceil(this.totalCount / this.pageSize) || 1;
         } else if (response?.data && Array.isArray(response.data)) {
           data = response.data;
+          this.totalCount = data.length;
+          this.totalPages = Math.ceil(this.totalCount / this.pageSize) || 1;
+        } else {
+          data = [];
+          this.totalCount = 0;
+          this.totalPages = 0;
         }
 
         this.revalidationApprovedDateByRef = this.buildRevalidationApprovedDateIndex(revalidations || []);
@@ -448,7 +540,6 @@ export class RequisitionComponent implements OnInit, OnDestroy {
             canCancel: this.toBooleanFlag(item.canCancel ?? item.can_cancel, undefined) ?? undefined,
             allowedActions: item.allowedActions || item.allowed_actions || [],
             allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
-            // Additional properties that might be needed
             quantity: item.quantity || item.totalQuantity || item.total_quantity,
             numberOfPermits:
               item.numberOfPermits ||
@@ -493,59 +584,34 @@ export class RequisitionComponent implements OnInit, OnDestroy {
           };
         });
 
-        // Sort descending: latest action / update / payment / submission at top
-        this.requisitionData.sort((a, b) => {
-          const timeA = new Date(a.updatedAtRaw || a.paymentDate || a.approvalDateRaw || a.submissionDateRaw || a.createdAtRaw || 0).getTime() || (a.id || 0);
-          const timeB = new Date(b.updatedAtRaw || b.paymentDate || b.approvalDateRaw || b.submissionDateRaw || b.createdAtRaw || 0).getTime() || (b.id || 0);
-          return timeB - timeA;
-        });
+        this.filteredRequisitionData = this.requisitionData;
+        this.summaryRequisitionData = this.requisitionData;
 
-        console.log('DEBUG: Processed requisition data:', this.requisitionData);
-        console.log('DEBUG: Each item allowedActions:');
-        this.requisitionData.forEach(item => {
-          console.log(`  ID ${item.id}: allowedActions =`, item.allowedActions, `(length: ${item.allowedActions?.length || 0})`);
-        });
+        this.requisitionCompanyOptions = Array.from(
+          new Set(
+            this.requisitionData
+              .map(item => String(item?.establishmentName || item?.distilleryName || '').trim())
+              .filter(v => !!v)
+          )
+        ).sort((a, b) => a.localeCompare(b));
 
-        this.applyFilters();
-        this.maybeAutoSelectPendingSummary();
         this.tryAutoOpenArrivalModal();
         this.tryAutoOpenCancellationModal();
+        this.isLoading = false;
       },
       error: (error) => {
         console.error('Error loading requisitions:', error);
-        // Show empty state or error message
         this.requisitionData = [];
         this.summaryRequisitionData = [];
         this.filteredRequisitionData = [];
+        this.totalCount = 0;
+        this.totalPages = 0;
         this.revalidationApprovedDateByRef = {};
         this.revalidationActiveByRef = {};
         this.activeRevalidationPermitNumbers.clear();
+        this.isLoading = false;
       }
     });
-  }
-
-  private maybeAutoSelectPendingSummary(): void {
-    const pendingCount = this.getRequisitionStatusCount('PENDING');
-    if (pendingCount > 0) {
-      if (!this.requisitionStatusFilter || this.activeSummaryFilter === 'PENDING') {
-        this.activeSummaryFilter = 'PENDING';
-        this.requisitionStatusFilter = 'PENDING';
-      }
-    } else {
-      // When pending is 0 and we were on PENDING tab (or initial unselected state),
-      // transition to UNDERPROCESS if available for officer roles, otherwise ALL.
-      if (!this.requisitionStatusFilter || this.requisitionStatusFilter === 'PENDING' || this.activeSummaryFilter === 'PENDING') {
-        const underProcessCount = this.getRequisitionStatusCount('UNDERPROCESS');
-        if (underProcessCount > 0 && (this.isPermitSection() || this.isCommissioner())) {
-          this.activeSummaryFilter = 'UNDERPROCESS';
-          this.requisitionStatusFilter = 'UNDERPROCESS';
-        } else {
-          this.activeSummaryFilter = '';
-          this.requisitionStatusFilter = '';
-        }
-      }
-    }
-    this.applyFilters();
   }
 
   private captureArrivalAutoOpenRequest(): void {
@@ -631,86 +697,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   applyFilters(): void {
-    this.summaryRequisitionData = this.requisitionData.filter(item => {
-      // Admin visibility: only show records at or past this admin's stage
-      if (!this.isVisibleToCurrentAdmin(item)) return false;
-
-      let matches = true;
-
-      const submissionDate =
-        this.parseDate(item.submissionDateRaw) ||
-        this.parseDate(item.submissionDate);
-
-      if (this.requisitionDateFilter) {
-        matches =
-          matches &&
-          Boolean(submissionDate) &&
-          this.toIsoDay(submissionDate as Date) === this.requisitionDateFilter;
-      }
-
-      if (this.requisitionMonthFilter) {
-        matches =
-          matches &&
-          Boolean(submissionDate) &&
-          this.toIsoMonth(submissionDate as Date) === this.requisitionMonthFilter;
-      }
-
-      if (this.requisitionYearFilter) {
-        matches =
-          matches &&
-          Boolean(submissionDate) &&
-          String((submissionDate as Date).getFullYear()) === String(this.requisitionYearFilter);
-      }
-
-      return matches;
-    });
-
-    // Build company options for commissioner filter
-    this.requisitionCompanyOptions = Array.from(
-      new Set(
-        this.summaryRequisitionData
-          .map(item => String(item?.establishmentName || item?.distilleryName || '').trim())
-          .filter(v => !!v)
-      )
-    ).sort((a, b) => a.localeCompare(b));
-
-    this.filteredRequisitionData = this.summaryRequisitionData.filter(item => {
-      // Company filter — commissioner only
-      if (this.requisitionCompanyFilter) {
-        const company = String(item?.establishmentName || item?.distilleryName || '').trim();
-        if (company !== this.requisitionCompanyFilter) return false;
-      }
-
-      if (!this.requisitionStatusFilter) {
-        return true;
-      }
-
-      const filter = this.normalizeStageToken(this.requisitionStatusFilter);
-      if (filter === 'awaitingpayment' || filter === 'payment') {
-        return this.isApprovedCommissionerAwaitingPayment(item);
-      }
-      if (filter === 'pending' || filter === 'review') {
-        return (this.isCommissioner() || this.isPermitSection())
-          ? this.isPendingLikeStatus(item)
-          : this.isPendingSummaryStatus(item);
-      }
-      if (filter === 'approved') {
-        return this.isApprovedLikeStatus(item);
-      }
-      if (filter === 'rejected') {
-        return this.isRejectedLikeStatus(item);
-      }
-      if (filter === 'underprocess') {
-        return this.isUnderProcessLikeStatus(item);
-      }
-      if (filter === 'cancellation' || filter === 'cancel' || filter === 'cancelled') {
-        return this.isCancellationLikeStatus(item);
-      }
-      const token = `${this.normalizeStageToken(item.status)} ${this.normalizeStageToken(item.currentStageName)}`;
-      return token.includes(filter);
-    });
-
     this.currentPage = 1;
+    this.loadData();
   }
 
   isCommissioner(): boolean {
@@ -2395,8 +2383,10 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     this.requisitionYearFilter = '';
     this.requisitionStatusFilter = '';
     this.requisitionCompanyFilter = '';
+    this.searchFilter = '';
     this.activeSummaryFilter = '';
-    this.applyFilters();
+    this.currentPage = 1;
+    this.loadData();
   }
 
   clearRequisitionFilters(): void {
@@ -2405,19 +2395,23 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
   onRequisitionStatusFilterChange(): void {
     this.syncActiveSummaryFilter();
-    this.applyFilters();
+    this.currentPage = 1;
+    this.loadData();
   }
 
   onRequisitionYearFilterChange(): void {
-    this.applyFilters();
+    this.currentPage = 1;
+    this.loadData();
   }
 
   onRequisitionMonthFilterChange(): void {
-    this.applyFilters();
+    this.currentPage = 1;
+    this.loadData();
   }
 
   onRequisitionDateFilterChange(): void {
-    this.applyFilters();
+    this.currentPage = 1;
+    this.loadData();
   }
 
   onSummaryCardClick(filter: string): void {
@@ -2427,20 +2421,15 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     if (!normalized || normalized === 'all') {
       this.activeSummaryFilter = '';
       this.requisitionStatusFilter = '';
-      this.applyFilters();
-      return;
-    }
-
-    if (current === normalized) {
+    } else if (current === normalized) {
       this.activeSummaryFilter = '';
       this.requisitionStatusFilter = '';
-      this.applyFilters();
-      return;
+    } else {
+      this.activeSummaryFilter = filter;
+      this.requisitionStatusFilter = filter;
     }
-
-    this.activeSummaryFilter = filter;
-    this.requisitionStatusFilter = filter;
-    this.applyFilters();
+    this.currentPage = 1;
+    this.loadData();
   }
 
   private syncActiveSummaryFilter(): void {
@@ -2454,11 +2443,19 @@ export class RequisitionComponent implements OnInit, OnDestroy {
 
   getRequisitionStatusCount(status: string): number {
     const filter = this.normalizeStageToken(status);
+    if (this.countsLoaded) {
+      if (filter === 'all' || filter === 'total') return this.counts.total;
+      if (filter === 'applied' || filter === 'submit') return this.counts.applied;
+      if (filter === 'pending' || filter === 'review') return this.counts.pending;
+      if (filter === 'underprocess') return this.counts.underprocess;
+      if (filter === 'approved') return this.counts.approved;
+      if (filter === 'rejected') return this.counts.rejected;
+      if (filter === 'cancellation' || filter === 'cancel' || filter === 'cancelled') return this.counts.cancellation;
+    }
     if (filter === 'awaitingpayment' || filter === 'payment') {
       return this.summaryRequisitionData.filter(item => this.isApprovedCommissionerAwaitingPayment(item)).length;
     }
     if (filter === 'pending' || filter === 'review') {
-      // Commissioner and Permit Section: pending = action required RIGHT NOW
       const predicate = (this.isCommissioner() || this.isPermitSection())
         ? (item: TableData) => this.isPendingLikeStatus(item)
         : (item: TableData) => this.isPendingSummaryStatus(item);
@@ -3092,36 +3089,38 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   }
 
   getTotalPages(): number {
-    return Math.max(1, Math.ceil(this.filteredRequisitionData.length / this.pageSize));
+    return Math.max(1, this.totalPages || Math.ceil(this.totalCount / this.pageSize) || 1);
   }
 
   getPaged(): TableData[] {
-    const startIndex = (this.currentPage - 1) * this.pageSize;
-    const endIndex = startIndex + this.pageSize;
-    return this.filteredRequisitionData.slice(startIndex, endIndex);
+    return this.filteredRequisitionData;
   }
 
   goToPage(page: number): void {
-    if (page >= 1 && page <= this.getTotalPages()) {
+    if (page >= 1 && page <= this.getTotalPages() && page !== this.currentPage && !this.isLoading) {
       this.currentPage = page;
+      this.loadData();
     }
   }
 
   nextPage(): void {
-    if (this.currentPage < this.getTotalPages()) {
+    if (this.currentPage < this.getTotalPages() && !this.isLoading) {
       this.currentPage++;
+      this.loadData();
     }
   }
 
   previousPage(): void {
-    if (this.currentPage > 1) {
+    if (this.currentPage > 1 && !this.isLoading) {
       this.currentPage--;
+      this.loadData();
     }
   }
 
   changePageSize(newSize: number): void {
     this.pageSize = newSize;
     this.currentPage = 1;
+    this.loadData();
   }
 
   navigateTo(route: string): void {

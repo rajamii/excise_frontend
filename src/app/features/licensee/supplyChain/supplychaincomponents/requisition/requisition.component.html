@@ -21,7 +21,7 @@
         <i class="bi bi-list-ul"></i>
       </div>
       <div class="card-content">
-        <h3 class="card-value">{{ summaryRequisitionData.length }}</h3>
+        <h3 class="card-value">{{ countsLoaded ? counts.total : totalCount }}</h3>
         <p class="card-label">{{ isCommissioner() ? 'Total Applications' : 'Total Requisitions' }}</p>
       </div>
     </div>
@@ -167,6 +167,15 @@
       <small class="text-muted">Filters:</small>
     </div>
 
+    <!-- Search Filter -->
+    <div class="compact-filter search-filter">
+      <div class="input-group input-group-sm">
+        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+        <input type="text" class="form-control form-control-sm border-start-0 ps-0" [(ngModel)]="searchFilter"
+          (ngModelChange)="onSearchChange($event)" placeholder="Search reference, distillery..." title="Search requisitions">
+      </div>
+    </div>
+
     <!-- Date Filter -->
     <div class="compact-filter">
       <input type="date" class="form-control form-control-sm" [(ngModel)]="requisitionDateFilter"
@@ -201,7 +210,7 @@
 
     <!-- Clear Button -->
     <button class="btn btn-outline-danger btn-sm" (click)="clearRequisitionFilters()"
-      *ngIf="requisitionDateFilter || requisitionMonthFilter || requisitionYearFilter || requisitionStatusFilter || requisitionCompanyFilter"
+      *ngIf="searchFilter || requisitionDateFilter || requisitionMonthFilter || requisitionYearFilter || requisitionStatusFilter || requisitionCompanyFilter"
       title="Clear all filters">
       <i class="bi bi-x-circle"></i>
       Clear
@@ -213,8 +222,7 @@
     *ngIf="requisitionDateFilter || requisitionMonthFilter || requisitionYearFilter || requisitionStatusFilter || requisitionCompanyFilter">
     <small class="text-info">
       <i class="bi bi-info-circle me-1"></i>
-      Showing <strong>{{ filteredRequisitionData.length }}</strong> of <strong>{{ requisitionData.length }}</strong>
-      requisitions
+      Showing <strong>{{ totalCount }}</strong> requisitions
       <span *ngIf="requisitionDateFilter" class="filter-tag">Date: {{ requisitionDateFilter | date:'dd MMM yyyy'
         }}</span>
       <span *ngIf="requisitionMonthFilter" class="filter-tag">Month: {{ requisitionMonthFilter | date:'MMM yyyy'
@@ -235,7 +243,7 @@
         Requisition Register Entries
       </h5>
       <div class="register-info">
-        <span class="entries-count">{{ filteredRequisitionData.length }} Entries</span>
+        <span class="entries-count">{{ totalCount }} Entries</span>
       </div>
     </div>
 
@@ -409,12 +417,18 @@
       </button>
     </div>
 
+    <!-- Loader above pagination bar -->
+    <div class="table-pagination-loader" *ngIf="isLoading && requisitionData.length > 0">
+      <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+      <span>Loading records, please wait...</span>
+    </div>
+
     <!-- Register Summary Footer -->
-    <div class="register-footer" *ngIf="filteredRequisitionData.length > 0">
+    <div class="register-footer" *ngIf="totalCount > 0">
       <div class="summary-row">
         <div class="summary-item">
           <span class="summary-label">Total Requisitions:</span>
-          <span class="summary-value">{{ filteredRequisitionData.length }}</span>
+          <span class="summary-value">{{ totalCount }}</span>
         </div>
         <div class="summary-item">
           <span class="summary-label">Total Amount:</span>
@@ -426,32 +440,34 @@
 </div>
 
 <!-- Pagination -->
-<div class="register-pagination" *ngIf="filteredRequisitionData.length > 0">
+<div class="register-pagination" *ngIf="totalCount > 0">
   <div class="d-flex justify-content-between align-items-center">
-    <div class="pagination-info">
+    <div class="pagination-info d-flex align-items-center gap-2">
       <span class="info-text">
-        Showing {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize,
-        filteredRequisitionData.length) }}
-        of {{ filteredRequisitionData.length }} entries
+        Showing {{ pageStart }}-{{ pageEnd }} of {{ totalCount }} entries
+      </span>
+      <span *ngIf="isLoading" class="table-loading-inline">
+        <span class="spinner-border spinner-border-sm text-primary" role="status" style="width: 0.85rem; height: 0.85rem;"></span>
+        <span>Loading...</span>
       </span>
     </div>
     <div class="pagination-controls">
       <div class="d-flex align-items-center gap-3">
         <div class="page-size-selector">
           <label class="selector-label">Show:</label>
-          <select class="form-select form-select-sm" [ngModel]="pageSize" (ngModelChange)="changePageSize($event)">
+          <select class="form-select form-select-sm" [ngModel]="pageSize" (ngModelChange)="changePageSize($event)" [disabled]="isLoading">
             <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
           </select>
         </div>
         <div class="btn-group btn-group-sm pagination-buttons">
-          <button class="btn btn-outline-secondary" (click)="goToPage(1)" [disabled]="currentPage === 1">«</button>
+          <button class="btn btn-outline-secondary" (click)="goToPage(1)" [disabled]="currentPage === 1 || isLoading">«</button>
           <button class="btn btn-outline-secondary" (click)="goToPage(currentPage - 1)"
-            [disabled]="currentPage === 1">‹</button>
+            [disabled]="currentPage === 1 || isLoading">‹</button>
           <span class="btn btn-light disabled">{{ currentPage }} / {{ getTotalPages() }}</span>
           <button class="btn btn-outline-secondary" (click)="goToPage(currentPage + 1)"
-            [disabled]="currentPage === getTotalPages()">›</button>
+            [disabled]="currentPage === getTotalPages() || isLoading">›</button>
           <button class="btn btn-outline-secondary" (click)="goToPage(getTotalPages())"
-            [disabled]="currentPage === getTotalPages()">»</button>
+            [disabled]="currentPage === getTotalPages() || isLoading">»</button>
         </div>
       </div>
     </div>
