@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { forkJoin, of, Subject } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, timeout } from 'rxjs/operators';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { environment } from '../../../../../../environments/environment';
 import Swal from 'sweetalert2';
@@ -102,6 +102,7 @@ interface GroupedNewLicenseResponse {
 export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private dialog = inject(MatDialog);
   private roleService = inject(RoleService);
   private paymentIntegrationService = inject(PaymentIntegrationService);
@@ -111,6 +112,7 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
 
   private countdownInterval: any = null;
   private expiredTriggeredIds = new Set<string>();
+  private initialFilterApplied = false;
 
   isLoading = false;
   error: string | null = null;
@@ -196,7 +198,9 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
 
   loadData(): void {
     this.loadCounts();
-    this.loadTableData();
+    if (this.initialFilterApplied) {
+      this.loadTableData();
+    }
   }
 
   loadCounts(): void {
@@ -216,6 +220,20 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
         rejected: Number(counts?.rejected || 0),
         awaitingPayment: Number((counts as any)?.awaiting_payment || 0)
       };
+
+      if (!this.initialFilterApplied) {
+        this.initialFilterApplied = true;
+        const statusParam = String(this.route.snapshot.queryParams['status'] || '').toLowerCase();
+        if (['applied', 'pending', 'objection', 'approved', 'rejected', 'awaiting-payment'].includes(statusParam)) {
+          this.activeSummaryFilter = statusParam as NewLicenseItem['statusGroup'];
+        } else if (this.counts.pending > 0) {
+          this.activeSummaryFilter = 'pending';
+        } else {
+          this.activeSummaryFilter = '';
+        }
+        this.pageIndex = 0;
+        this.loadTableData();
+      }
     });
   }
 
