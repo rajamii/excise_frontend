@@ -806,6 +806,16 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const isITCell        = this.isITCellUser();
     const skipTransit     = isCommissioner || isJointComm || isPermitSection;
 
+    // Joint Commissioner has no Supply Chain / IMFL / Hologram dashboard module.
+    // Avoid loading every workflow list just to calculate counts that are neither
+    // displayed nor actionable for this role.
+    if (isJointComm) {
+      this.supplyChainModuleStatsLoaded = true;
+      this.updateSingleWindowChart();
+      onComplete?.();
+      return;
+    }
+
     // Distributor OIC only processes Distributor Permit Requisition and Brand Arrival
     if (this.isDistributorOic()) {
       const distReq$ = this.distributorPermitService.getDashboardCounts('requisition', forceRefresh).pipe(catchError(() => of(null)));

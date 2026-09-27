@@ -248,7 +248,6 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
         // IMPORTANT: Update the role service with the actual logged-in user
         this.updateRoleServiceWithActualUser(acc);
-        this.refreshSidebarBadges(true, 'full');
         this.setupInitialSidebarState();
         this.loadLicenseeMenuAccess();
         
@@ -684,23 +683,12 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       return sections;
     }
 
-    const sections: string[] = [
-      'distributor-permit',
-      'imfl-permit',
-      'distributor-permit-requisition',
-      'imfl-requisition',
-      'distributor-permit-revalidation',
-      'imfl-revalidation',
-      'distributor-permit-cancellation',
-      'imfl-cancellation',
-      'cancellation',
-      'distributor-permit-hologram-procurement',
-      'imfl-hologram-procurement',
-      'hologram-procurement',
-      'distributor-permit-hologram-arrival',
-      'imfl-hologram-arrival',
-      'hologram-arrival'
-    ];
+    // Do not prefetch badges for workflow sections merely because they exist in the
+    // application.  In particular, the former fallback list made a Joint
+    // Commissioner login call IMFL and hologram-procurement APIs even though those
+    // sections were not present in that user's sidebar.  Only visible, permitted
+    // navigation items are allowed to contribute a badge request.
+    const sections: string[] = [];
     for (const item of this.officerSectionItems) {
       if (!this.shouldShowOfficerSectionItem(item)) continue;
       sections.push(item.section);
