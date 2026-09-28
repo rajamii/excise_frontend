@@ -554,6 +554,36 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return false;
   }
 
+  isPermitRevalidationRequired(row: any): boolean {
+    if (!row) return false;
+    if (this.isPermitCancelled(row) || this.isPermitCancellationApplied(row) || this.isPermitRevalidatedAndValid(row) || this.isPermitRevalidationInProgress(row)) {
+      return false;
+    }
+
+    const info = this.getRevalidationInfo(row);
+    if (info?.isRequired) {
+      return true;
+    }
+
+    const rowObj: any = row;
+    const rawApp = rowObj?.application || rowObj;
+    const pDetail = rawApp?.current_permit_detail;
+    if (pDetail && (pDetail['isRevalidationRequired'] || pDetail['is_revalidation_required'] || pDetail['can_submit_application'])) {
+      return true;
+    }
+
+    if (rowObj?.isActivatedSchedule || rawApp?.is_activated_schedule || rawApp?.can_submit_application) {
+      return true;
+    }
+
+    const stage = String(rowObj?.['currentStage'] || rowObj?.['status'] || rawApp?.['status'] || '').toLowerCase();
+    if (stage.includes('revalidation required') || stage.includes('ready for revalidation') || stage.includes('expired')) {
+      return true;
+    }
+
+    return false;
+  }
+
   getBrandArrivalStatusForRow(row: any): string {
     if (this.isPermitCancelled(row)) {
       return 'cancelled';
@@ -565,6 +595,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
     if (this.isPermitRevalidationInProgress(row)) {
       return 'revalidation_in_progress';
+    }
+
+    if (this.isPermitRevalidationRequired(row)) {
+      return 'revalidation_required';
     }
 
     if (this.hasOicSavedBrandArrival(row)) {
@@ -599,6 +633,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       if (brandStatus === 'cancelled' || brandStatus === 'cancellation_applied') return 'cancelled';
       if (brandStatus === 'rejected') return 'rejected';
       if (brandStatus === 'revalidation_in_progress') return 'under_process';
+      if (brandStatus === 'revalidation_required') return 'pending';
       if (brandStatus === 'approved') return 'approved';
       return 'pending';
     }
@@ -1540,6 +1575,34 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   openUpdateBrandsArrivalModal(rowOrApp: any): void {
+    if (this.isPermitRevalidationRequired(rowOrApp)) {
+      void Swal.fire({
+        icon: 'warning',
+        title: 'Revalidation Required',
+        text: 'Permit validity has expired and revalidation is required. Physical stock arrival cannot be updated until the permit is revalidated and approved.',
+        confirmButtonColor: '#0284c7'
+      });
+      return;
+    }
+    if (this.isPermitRevalidationInProgress(rowOrApp)) {
+      void Swal.fire({
+        icon: 'info',
+        title: 'Revalidation In Progress',
+        text: 'Revalidation is currently under process. Physical stock arrival cannot be updated until revalidation is approved by the Commissioner.',
+        confirmButtonColor: '#0284c7'
+      });
+      return;
+    }
+    if (this.isPermitCancelled(rowOrApp) || this.isPermitCancellationApplied(rowOrApp)) {
+      void Swal.fire({
+        icon: 'error',
+        title: 'Permit Cancelled',
+        text: 'This permit is cancelled or pending cancellation. Stock arrival cannot be updated.',
+        confirmButtonColor: '#dc2626'
+      });
+      return;
+    }
+
     const app = rowOrApp?.application || rowOrApp || {};
     const currentPermitNo = String(app.current_permit_number || rowOrApp?.permit_number || rowOrApp?.distributorPermitRef || rowOrApp?.applicationId || app.reference_no || app.referenceNo || '').trim();
     const parentRefNo = String(app.parent_reference_no || app.reference_no || app.referenceNo || app.id || rowOrApp?.applicationId || '').trim();
@@ -7414,7 +7477,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }
 
     const rawApp = row.application || row;
-    const isArrivalDone = this.hasOicSavedBrandArrival(row) || this.getBrandArrivalStatusForRow(row) === 'approved';
+    const isArrivalDone = this.hasOicSavedBrandArrival(row);
     if (isArrivalDone) {
       return null;
     }
