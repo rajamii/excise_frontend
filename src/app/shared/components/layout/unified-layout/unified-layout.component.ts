@@ -585,21 +585,17 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         'salesman-barman-registration',
         'company-registration',
         'company-collaboration',
-        'special-permit'
+        'special-permit',
+        'distributor-permit',
+        'distributor-permit-requisition',
+        'imfl-requisition',
+        'distributor-permit-revalidation',
+        'imfl-revalidation',
+        'distributor-permit-cancellation',
+        'imfl-cancellation',
+        'distributor-permit-hologram-procurement',
+        'imfl-hologram-procurement'
       ];
-      if (this.showDistributorPermitMenu) {
-        licenseeSections.push(
-          'distributor-permit',
-          'distributor-permit-requisition',
-          'imfl-requisition',
-          'distributor-permit-revalidation',
-          'imfl-revalidation',
-          'distributor-permit-cancellation',
-          'imfl-cancellation',
-          'distributor-permit-hologram-procurement',
-          'imfl-hologram-procurement'
-        );
-      }
       // Distillery licensees always see Bulk Spirit menus even when DB navigation routes are incomplete.
       // Ensure Requisition payment-pending badge still loads in that case.
       if (this.showDistilleryMenus || hasDbRoute(/requisition|ena|bulk[_-]?spirit/)) {
@@ -1841,6 +1837,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     }
 
     this.triggerUiRefresh();
+    this.refreshSidebarBadges(false, 'full');
   }
 
   private hasActiveValidDistributorLicense(rows: any[], distributorCategorySet: Set<string>): boolean {

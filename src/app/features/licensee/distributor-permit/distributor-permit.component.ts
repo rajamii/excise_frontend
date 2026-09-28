@@ -275,7 +275,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
     this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { tab, ref: null, id: null, mode: null, status: null },
+      queryParams: { tab, ref: null, id: null, mode: null, status: this.activeCardFilter },
       queryParamsHandling: 'merge',
       replaceUrl: true
     });
@@ -5138,9 +5138,13 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           showConfirmButton: false
         });
         this.loadApplications();
+        this.loadDashboardCounts(true);
+        this.sidebarPendingBadgeService.triggerRefresh();
       },
       error: () => {
         this.loadApplications();
+        this.loadDashboardCounts(true);
+        this.sidebarPendingBadgeService.triggerRefresh();
       }
     });
   }
@@ -5555,6 +5559,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.isSubmittingCommissionerApproval = false;
     this.closeCommissionerPermitApprovalModal();
     this.loadApplications();
+    this.loadDashboardCounts(true);
+    this.sidebarPendingBadgeService.triggerRefresh();
     this.loadHologramOverview(true);
     this.cdr.detectChanges();
 
@@ -7956,7 +7962,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.pageIndex = 0;
     this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { status: filter === 'all' ? null : filter },
+      queryParams: { status: filter },
       queryParamsHandling: 'merge',
       replaceUrl: true
     });
@@ -7978,7 +7984,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.pageIndex = 0;
     this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { status: null },
+      queryParams: { status: 'all' },
       queryParamsHandling: 'merge',
       replaceUrl: true
     });
