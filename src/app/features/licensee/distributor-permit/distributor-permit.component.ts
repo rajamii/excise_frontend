@@ -270,6 +270,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     } else if (tab === 'brand-warehouse' || tab === 'brand-arrival') {
       this.loadBrandWarehouseStock();
     } else {
+      this.loadDashboardCounts(true);
       this.loadApplications();
     }
     this.cdr.markForCheck();
@@ -777,10 +778,14 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   get counts(): { total: number; approved: number; pending: number; underProcess: number; objection: number; rejected: number; cancelled: number } {
     const cached = this.statusCountsByTab[this.activeTab];
-    if (cached) {
+    if (cached && cached.total > 0) {
       return cached;
     }
-    return this.computeTabCounts(this.activeTabRows);
+    const computed = this.computeTabCounts(this.activeTabRows);
+    if (computed && computed.total > 0) {
+      return computed;
+    }
+    return cached || { total: 0, approved: 0, pending: 0, underProcess: 0, objection: 0, rejected: 0, cancelled: 0 };
   }
 
   get filteredRows(): DistributorPermitRow[] {
@@ -5243,6 +5248,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           selectedForApproval: false,
           status: p.status || 'PENDING_APPROVAL',
           assignedRanges: p.assignedRanges || p.assigned_ranges || p.assigned_hologram_ranges || p.assignedHologramRanges || p.hologram_ranges || [],
+          approved_at: p.approved_at || p.approvedAt || null,
+          approvedAt: p.approvedAt || p.approved_at || null,
+          valid_up_to: p.valid_up_to || p.validUpTo || null,
+          validUpTo: p.validUpTo || p.valid_up_to || null,
           items: items.map((it: any) => {
             const bName = it.brand || it.brand_name || it.brandName || 'Brand';
             const sizeMl = it.size_ml || it.sizeMl || (it.size ? parseInt(it.size, 10) : 750);
@@ -5494,11 +5503,22 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       void Swal.fire('Select permits', 'Select at least one pending permit, or use Approve All Permits.', 'info');
       return;
     }
+    const nowIso = new Date().toISOString();
+    const validUntilIso = new Date(Date.now() + (7 * 60 * 1000)).toISOString();
+
     newlyApprovedPermits.forEach(p => {
       p.isApproved = true;
       p.selectedForApproval = false;
       p.status = 'APPROVED';
       p.assigned_hologram_ranges = p.assignedRanges || [];
+      if (!p.approved_at && !p.approvedAt) {
+        p.approved_at = nowIso;
+        p.approvedAt = nowIso;
+      }
+      if (!p.valid_up_to && !p.validUpTo) {
+        p.valid_up_to = validUntilIso;
+        p.validUpTo = validUntilIso;
+      }
     });
     const approvedPermits = this.commissionerApprovalPermits.filter(p => p.isApproved);
     approvedPermits.forEach(p => p.assigned_hologram_ranges = p.assignedRanges || p.assigned_hologram_ranges || []);
@@ -5597,15 +5617,18 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           this.allCasesProcessedList = Array.isArray(res) ? res : res?.results || [];
           this.buildPermitWiseDetailsItems(row);
           this.showPermitDetailsModal = true;
+          this.startPermitDetailsTimer();
         },
         error: () => {
           this.buildPermitWiseDetailsItems(row);
           this.showPermitDetailsModal = true;
+          this.startPermitDetailsTimer();
         }
       });
     } else {
       this.buildPermitWiseDetailsItems(row);
       this.showPermitDetailsModal = true;
+      this.startPermitDetailsTimer();
     }
   }
 
@@ -5815,15 +5838,114 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         cancellationRecord: canRec || null,
         cancellationStatus,
         revalidationRecord: revRec || null,
-        revalidationStatus
+        revalidationStatus,
+        approved_at: p.approved_at || p.approvedAt || null,
+        approvedAt: p.approvedAt || p.approved_at || null,
+        valid_up_to: p.valid_up_to || p.validUpTo || null,
+        validUpTo: p.validUpTo || p.valid_up_to || null
       };
     });
   }
 
   closePermitDetailsModal(): void {
+    this.stopPermitDetailsTimer();
     this.showPermitDetailsModal = false;
     this.selectedPermitDetailsRow = null;
     this.selectedPermitWiseItems = [];
+  }
+
+  private permitDetailsTimerInterval: any = null;
+
+  startPermitDetailsTimer(): void {
+    this.stopPermitDetailsTimer();
+    this.permitDetailsTimerInterval = setInterval(() => {
+      if (this.showPermitDetailsModal) {
+        this.cdr.markForCheck();
+      }
+    }, 1000);
+  }
+
+  stopPermitDetailsTimer(): void {
+    if (this.permitDetailsTimerInterval) {
+      clearInterval(this.permitDetailsTimerInterval);
+      this.permitDetailsTimerInterval = null;
+    }
+  }
+
+  getPermitRevalidationCountdown(item: any, row: any): { text: string; isExpired: boolean; isUrgent: boolean; deadlineText: string } {
+    const rawApp = row?.application || row || {};
+    const now = Date.now();
+
+    // 1. Resolve validity target date if stored directly on permit item
+    let targetTime = 0;
+    const validUpToStr = item?.valid_up_to || item?.validUpTo;
+    if (validUpToStr) {
+      const parsed = new Date(validUpToStr).getTime();
+      if (!isNaN(parsed) && parsed > 0) {
+        targetTime = parsed;
+      }
+    }
+
+    // 2. If valid_up_to is not directly set on permit item, check item.approved_at + 7 minutes
+    if (!targetTime) {
+      const itemApprovedAtStr = item?.approved_at || item?.approvedAt;
+      if (itemApprovedAtStr) {
+        const parsedItemApproved = new Date(itemApprovedAtStr).getTime();
+        if (!isNaN(parsedItemApproved) && parsedItemApproved > 0) {
+          targetTime = parsedItemApproved + (7 * 60 * 1000); // 7 minutes
+        }
+      }
+    }
+
+    // 3. Fall back to application-level valid_up_to
+    if (!targetTime) {
+      const appValidUpToStr = rawApp?.valid_up_to || rawApp?.validUpTo;
+      if (appValidUpToStr) {
+        const parsedAppValid = new Date(appValidUpToStr).getTime();
+        if (!isNaN(parsedAppValid) && parsedAppValid > 0) {
+          targetTime = parsedAppValid;
+        }
+      }
+    }
+
+    // 4. Fall back to application approval date / updated_at + 7 minutes
+    if (!targetTime) {
+      const approvalDateStr = rawApp?.approval_date || rawApp?.approvalDate || rawApp?.updated_at || rawApp?.submittedDate || rawApp?.created_at;
+      const parsedApproval = approvalDateStr ? new Date(approvalDateStr).getTime() : 0;
+      if (!isNaN(parsedApproval) && parsedApproval > 0) {
+        targetTime = parsedApproval + (7 * 60 * 1000); // Configured IMFL_REVALIDATION_ACTIVATION delay (7 minutes)
+      }
+    }
+
+    if (!targetTime) {
+      return { text: '07m 00s', isExpired: false, isUrgent: false, deadlineText: 'Active' };
+    }
+
+    const remainingMs = targetTime - now;
+    const targetDate = new Date(targetTime);
+    const deadlineText = targetDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    if (remainingMs <= 0) {
+      return { text: 'Validity Expired', isExpired: true, isUrgent: true, deadlineText };
+    }
+
+    const totalSecs = Math.floor(remainingMs / 1000);
+    const days = Math.floor(totalSecs / 86400);
+    const hours = Math.floor((totalSecs % 86400) / 3600);
+    const mins = Math.floor((totalSecs % 3600) / 60);
+    const secs = totalSecs % 60;
+
+    let text = '';
+    if (days > 0) {
+      text = `${days}d ${hours.toString().padStart(2, '0')}h ${mins.toString().padStart(2, '0')}m`;
+    } else if (hours > 0) {
+      text = `${hours.toString().padStart(2, '0')}h ${mins.toString().padStart(2, '0')}m ${secs.toString().padStart(2, '0')}s`;
+    } else {
+      text = `${mins.toString().padStart(2, '0')}m ${secs.toString().padStart(2, '0')}s`;
+    }
+
+    const isUrgent = remainingMs < (2 * 60 * 1000); // under 2 minutes
+    return { text, isExpired: false, isUrgent, deadlineText };
   }
 
   isPermitItemApproved(p: any, app: any, idx: number): boolean {
@@ -5950,6 +6072,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   getCurrentPermitDisabledReason(): string {
     const selectedOpt = (this.availablePermitOptionsForArrival as any[]).find(o => o.permitNumber === this.selectedPermitNumberForArrival);
     if (!selectedOpt) return '';
+    if (selectedOpt.isAwaitingCommissionerApproval || (!selectedOpt.isPermitApproved && selectedOpt.isPermitApproved !== undefined)) {
+      return 'This permit has not yet been approved by the Commissioner. Physical stock arrival details can only be updated for approved permits.';
+    }
     if (selectedOpt.isApproved) return 'Physical stock arrival for this permit has already been approved by OIC and completed.';
     if (selectedOpt.isAwaiting) return 'Physical stock arrival details for this permit have been submitted and are currently awaiting review by the Officer-in-Charge.';
     if (selectedOpt.isCancelled) return 'This permit has been cancelled. Physical stock arrival details cannot be updated for a cancelled permit.';
@@ -6084,6 +6209,12 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     if (!this.isDistributorUser) return false;
     const appId = String(row?.applicationId || row?.referenceNo || '').toUpperCase();
     if (!appId.startsWith('IMFLREQ')) return false;
+    const rawApp = row?.application || row;
+    const pDetails = rawApp?.permit_wise_details || rawApp?.permitWiseDetails || [];
+    if (Array.isArray(pDetails) && pDetails.length > 0) {
+      const hasApprovedPermit = pDetails.some((p: any, idx: number) => this.isPermitItemApproved(p, rawApp, idx));
+      return this.isApproved(row) || hasApprovedPermit;
+    }
     return this.isApproved(row);
   }
 
@@ -6095,6 +6226,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     totalCases: number;
     label: string;
     isApproved?: boolean;
+    isPermitApproved?: boolean;
+    isAwaitingCommissionerApproval?: boolean;
     isAwaiting?: boolean;
     isCancelled?: boolean;
     isUnderProcess?: boolean;
@@ -6165,9 +6298,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
     if (Array.isArray(pDetails) && pDetails.length > 0) {
       const isSinglePermit = pDetails.length === 1;
-      pDetails.forEach((p: any) => {
+      pDetails.forEach((p: any, idx: number) => {
         const pNum = String(p.permit_number || p.permitNumber || appId);
         const cases = Number(p.total_cases || p.totalCases || 0);
+        const isPermitApproved = isSinglePermit || this.isPermitItemApproved(p, rawApp, idx);
 
         const approvedArrival = (this.allArrivalsList || []).find((a: any) => {
           const aPNo = String(a.permit_number || a.permitNumber || '').toLowerCase().trim();
@@ -6273,6 +6407,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           label += ' - (Cancellation Under Process)';
         } else if (isRevalidatedWaiting) {
           label += ' - (Revalidation Under Process)';
+        } else if (!isPermitApproved) {
+          label += ' - (Awaiting Commissioner Approval)';
         } else if (rejectedArrival) {
           label += ' - (Previous Stock Arrival Rejected - Re-entry Allowed)';
         }
@@ -6282,9 +6418,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           totalCases: cases,
           label,
           isApproved,
+          isPermitApproved,
+          isAwaitingCommissionerApproval: !isPermitApproved,
           isAwaiting,
           isCancelled,
-          isUnderProcess,
+          isUnderProcess: isUnderProcess || !isPermitApproved,
           isRevalidated: isRevalidatedWaiting,
           detail: p
         });
@@ -6377,6 +6515,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         totalCases: Number(fallbackDetail.totalCases || 0),
         label,
         isApproved,
+        isPermitApproved: true,
         isAwaiting,
         isCancelled,
         isUnderProcess,
@@ -6385,7 +6524,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       });
     }
 
-    const firstAvailable = this.availablePermitOptionsForArrival.find(opt => !opt.isApproved && !opt.isAwaiting && !opt.isCancelled && !opt.isUnderProcess && !opt.isRevalidated);
+    const firstAvailable = this.availablePermitOptionsForArrival.find(opt => opt.isPermitApproved !== false && !opt.isApproved && !opt.isAwaiting && !opt.isCancelled && !opt.isUnderProcess && !opt.isRevalidated);
     this.selectedPermitNumberForArrival = firstAvailable ? firstAvailable.permitNumber : (this.availablePermitOptionsForArrival[0]?.permitNumber || appId);
     this.onPermitSelectionChangeForArrival();
     this.showArrivalModal = true;
@@ -7405,7 +7544,14 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   canRequestRevalidation(row: DistributorPermitRow | any): boolean {
     if (!this.isDistributorUser) return false;
     const raw = row?.application || row;
-    return Boolean(raw?.['is_activated_schedule'] || raw?.['can_submit_application']) || (this.isApproved(row) && !String(row?.applicationId || '').startsWith('IMFLREV'));
+    const appId = String(row?.applicationId || row?.referenceNo || '').toUpperCase();
+    if (appId.startsWith('IMFLREV')) return false;
+    const pDetails = raw?.permit_wise_details || raw?.permitWiseDetails || [];
+    if (Array.isArray(pDetails) && pDetails.length > 0) {
+      const hasApprovedPermit = pDetails.some((p: any, idx: number) => this.isPermitItemApproved(p, raw, idx));
+      return Boolean(raw?.['is_activated_schedule'] || raw?.['can_submit_application']) || this.isApproved(row) || hasApprovedPermit;
+    }
+    return Boolean(raw?.['is_activated_schedule'] || raw?.['can_submit_application']) || this.isApproved(row);
   }
 
   showRevalidationModal = false;
@@ -7510,11 +7656,13 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     if (Array.isArray(pDetails) && pDetails.length > 0) {
       const unActionedPermits: any[] = [];
       let totalUnActionedCases = 0;
+      const isSinglePermit = pDetails.length === 1;
 
-      pDetails.forEach((p: any) => {
+      pDetails.forEach((p: any, idx: number) => {
         const pNum = String(p.permit_number || p.permitNumber || appId);
         const cases = Number(p.total_cases || p.totalCases || 0);
         const pNumLower = pNum.toLowerCase().trim();
+        const isPermitApproved = isSinglePermit || this.isPermitItemApproved(p, rawApp, idx);
 
         // Check if OIC has already received or approved physical stock arrival for this permit
         const approvedArrival = (this.allArrivalsList || []).find((a: any) => {
@@ -7573,6 +7721,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           underProcessReason = 'OIC has updated arrival - Please update arrival';
         }
 
+        if (!isPermitApproved && !isSinglePermit) {
+          isUnderProcess = true;
+          underProcessReason = 'Pending Commissioner Approval';
+        }
+
         if (existingForPermitCan) {
           const st = String(existingForPermitCan['status'] || existingForPermitCan['currentStage'] || '').toUpperCase();
           if (st.includes('APPROVED') || st.includes('COMPLETED')) {
@@ -7591,7 +7744,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           }
         }
 
-        if (!isCancelled && !isUnderProcess && !isArrivalApproved) {
+        if (!isCancelled && !isUnderProcess && !isArrivalApproved && isPermitApproved) {
           unActionedPermits.push(p);
           totalUnActionedCases += cases;
         }
@@ -7601,6 +7754,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           label += ' - (OIC has updated arrival - Please update arrival)';
         } else if (isCancelled) {
           label += ' - (Cancelled)';
+        } else if (!isPermitApproved && !isSinglePermit) {
+          label += ' - (Pending Commissioner Approval)';
         } else if (isUnderProcess && underProcessReason) {
           label += ` - (${underProcessReason})`;
         }
