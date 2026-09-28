@@ -4798,7 +4798,7 @@
                         </div>
                         <small class="d-block text-muted" style="font-size: 11px; line-height: 1.35;">
                           <ng-container *ngIf="!getPermitRevalidationCountdown(item, selectedPermitDetailsRow).isExpired">
-                            If physical stock arrival is not recorded before expiry (7 min timer), this permit will undergo automatic revalidation.
+                            If physical stock arrival is not recorded before expiry ({{ getRevalidationTimerDescription() }}), this permit will undergo automatic revalidation.
                           </ng-container>
                           <ng-container *ngIf="getPermitRevalidationCountdown(item, selectedPermitDetailsRow).isExpired">
                             Permit validity expired without stock arrival. Revalidation schedule is automatically activated.

@@ -26,6 +26,8 @@ import { SidebarPendingBadgeService } from '../../../shared/services/sidebar-pen
 import { ImflHologramProcurementService, IMFLHologramProcurementItem, IMFLHologramArrivalItem } from '../../../core/services/imfl-hologram-procurement.service';
 import { RoleService } from '../../../core/services/role.service';
 
+import { TimerConfigService } from '../../../core/services/timer-config.service';
+
 type DistributorPermitStatusFilter = 'all' | 'approved' | 'pending' | 'under_process' | 'objection' | 'rejected' | 'cancelled';
 type DistributorPermitStatusGroup = Exclude<DistributorPermitStatusFilter, 'all'>;
 
@@ -71,8 +73,13 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   private readonly unifiedActionsService = inject(UnifiedActionsService);
   private readonly sidebarPendingBadgeService = inject(SidebarPendingBadgeService);
   private readonly paymentIntegrationService = inject(PaymentIntegrationService);
+  private readonly timerConfigService = inject(TimerConfigService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroy$ = new Subject<void>();
+
+  imflRevalidationDelaySeconds = 120;
+  imflRevalidationDelayValue = 2;
+  imflRevalidationDelayUnit = 'minute';
 
   readonly applicantForm = this.fb.group({
     applicantCompanyName: [{ value: '', disabled: true }, Validators.required],
@@ -152,6 +159,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.syncBrandStepValidity();
     this.loadInitialData();
     this.loadApplicantDefaults();
+    this.loadTimerConfig();
 
     this.route.queryParams
       .pipe(takeUntil(this.destroy$))
@@ -557,16 +565,27 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       const targetPermits = this.extractTargetPermitsFromApp(appObj);
       const refTarget = String(appObj?.['application']?.['distributor_permit'] || appObj?.['application']?.['distributorPermit'] || appObj?.['distributor_permit'] || appObj?.['distributorPermitRef'] || '').toLowerCase().trim();
 
+      // Check if this rev-app targets a specific sub-permit (not 'all' and not just the parent ref)
+      const hasSpecificSubPermitTarget = targetPermits.length > 0 && !targetPermits.includes('all') &&
+        targetPermits.every(t => t.includes('-p') || t.includes('_p'));
+
       if (targetPermits.length > 0) {
-        if (targetPermits.includes('all') || (isParentOnly && parentId && targetPermits.includes(parentId))) return true;
+        // 'ALL' revalidation or parent-level with no sub-permit specifics
+        if (targetPermits.includes('all')) return true;
+        // Parent-level check but only if rev-app doesn't target a specific sub-permit
+        if (isParentOnly && parentId && targetPermits.includes(parentId) && !hasSpecificSubPermitTarget) return true;
+        // Exact permit match
         if (targetPermits.includes(pNum)) return true;
-      } else if (refTarget) {
+      } else if (refTarget && !hasSpecificSubPermitTarget) {
+        // refTarget fallback: only valid if the rev-app doesn't target a specific sub-permit
+        // (if it does, only the exact permit match above should trigger)
         if (refTarget === pNum || (isParentOnly && parentId && refTarget === parentId)) return true;
       }
     }
 
     return false;
   }
+
 
   isPermitRevalidationRequired(row: any, specificPermitNum?: string): boolean {
     if (!row) return false;
@@ -5693,8 +5712,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       void Swal.fire('Select permits', 'Select at least one pending permit, or use Approve All Permits.', 'info');
       return;
     }
+    const delayMs = (this.imflRevalidationDelaySeconds || 120) * 1000;
     const nowIso = new Date().toISOString();
-    const validUntilIso = new Date(Date.now() + (7 * 60 * 1000)).toISOString();
+    const validUntilIso = new Date(Date.now() + delayMs).toISOString();
 
     newlyApprovedPermits.forEach(p => {
       p.isApproved = true;
@@ -5705,10 +5725,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         p.approved_at = nowIso;
         p.approvedAt = nowIso;
       }
-      if (!p.valid_up_to && !p.validUpTo) {
-        p.valid_up_to = validUntilIso;
-        p.validUpTo = validUntilIso;
-      }
+      p.valid_up_to = validUntilIso;
+      p.validUpTo = validUntilIso;
     });
     const approvedPermits = this.commissionerApprovalPermits.filter(p => p.isApproved);
     approvedPermits.forEach(p => p.assigned_hologram_ranges = p.assignedRanges || p.assigned_hologram_ranges || []);
@@ -6062,9 +6080,34 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }
   }
 
+  private loadTimerConfig(): void {
+    this.timerConfigService.getTimerConfig('IMFL_REVALIDATION_ACTIVATION', 120)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (cfg) => {
+          if (cfg && cfg.delay_seconds > 0) {
+            this.imflRevalidationDelaySeconds = cfg.delay_seconds;
+            this.imflRevalidationDelayValue = cfg.delay_value || Math.round(cfg.delay_seconds / 60);
+            this.imflRevalidationDelayUnit = cfg.delay_unit || 'minute';
+            this.cdr.markForCheck();
+          }
+        },
+        error: (err) => console.warn('Could not load IMFL_REVALIDATION_ACTIVATION timer config:', err)
+      });
+  }
+
+  getRevalidationTimerDescription(): string {
+    if (this.imflRevalidationDelayValue && this.imflRevalidationDelayUnit) {
+      return `${this.imflRevalidationDelayValue} ${this.imflRevalidationDelayUnit} timer`;
+    }
+    const mins = Math.round(this.imflRevalidationDelaySeconds / 60);
+    return `${mins} min timer`;
+  }
+
   getPermitRevalidationCountdown(item: any, row: any): { text: string; isExpired: boolean; isUrgent: boolean; deadlineText: string } {
     const rawApp = row?.application || row || {};
     const now = Date.now();
+    const delayMs = (this.imflRevalidationDelaySeconds || 120) * 1000;
 
     // 1. Resolve validity target date if stored directly on permit item
     let targetTime = 0;
@@ -6076,13 +6119,13 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       }
     }
 
-    // 2. If valid_up_to is not directly set on permit item, check item.approved_at + 7 minutes
+    // 2. If valid_up_to is not directly set on permit item, check item.approved_at + delayMs
     if (!targetTime) {
       const itemApprovedAtStr = item?.approved_at || item?.approvedAt;
       if (itemApprovedAtStr) {
         const parsedItemApproved = new Date(itemApprovedAtStr).getTime();
         if (!isNaN(parsedItemApproved) && parsedItemApproved > 0) {
-          targetTime = parsedItemApproved + (7 * 60 * 1000); // 7 minutes
+          targetTime = parsedItemApproved + delayMs;
         }
       }
     }
@@ -6098,17 +6141,18 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       }
     }
 
-    // 4. Fall back to application approval date / updated_at + 7 minutes
+    // 4. Fall back to application approval date / updated_at + delayMs
     if (!targetTime) {
       const approvalDateStr = rawApp?.approval_date || rawApp?.approvalDate || rawApp?.updated_at || rawApp?.submittedDate || rawApp?.created_at;
       const parsedApproval = approvalDateStr ? new Date(approvalDateStr).getTime() : 0;
       if (!isNaN(parsedApproval) && parsedApproval > 0) {
-        targetTime = parsedApproval + (7 * 60 * 1000); // Configured IMFL_REVALIDATION_ACTIVATION delay (7 minutes)
+        targetTime = parsedApproval + delayMs;
       }
     }
 
     if (!targetTime) {
-      return { text: '07m 00s', isExpired: false, isUrgent: false, deadlineText: 'Active' };
+      const defaultMins = Math.floor(delayMs / 60000);
+      return { text: `${defaultMins.toString().padStart(2, '0')}m 00s`, isExpired: false, isUrgent: false, deadlineText: 'Active' };
     }
 
     const remainingMs = targetTime - now;
@@ -6134,7 +6178,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       text = `${mins.toString().padStart(2, '0')}m ${secs.toString().padStart(2, '0')}s`;
     }
 
-    const isUrgent = remainingMs < (2 * 60 * 1000); // under 2 minutes
+    const isUrgent = remainingMs <= 60 * 1000;
     return { text, isExpired: false, isUrgent, deadlineText };
   }
 
@@ -7378,11 +7422,15 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       const targetPermits = this.extractTargetPermitsFromApp(a);
       const refTarget = String(a.application?.distributor_permit || a.application?.distributorPermit || a.distributor_permit || a.distributorPermitRef || '').toLowerCase().trim();
 
+      // Check if this rev-app targets a specific sub-permit (not 'all')
+      const hasSpecificSubPermitTarget = targetPermits.length > 0 && !targetPermits.includes('all') &&
+        targetPermits.every((t: string) => t.includes('-p') || t.includes('_p'));
+
       if (targetPermits.length > 0) {
-        if (targetPermits.includes('all') || (parentId && targetPermits.includes(parentId))) return true;
+        if (targetPermits.includes('all') || (parentId && targetPermits.includes(parentId) && !hasSpecificSubPermitTarget)) return true;
         return targetPermits.includes(pNum);
       }
-      if (refTarget) {
+      if (refTarget && !hasSpecificSubPermitTarget) {
         return refTarget === pNum || (parentId && refTarget === parentId);
       }
       return false;
@@ -7419,7 +7467,70 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }
 
     const now = new Date();
-    const validUpToStr = rawApp?.valid_up_to || rawApp?.validUpTo || row?.application?.valid_up_to || '';
+    const pWise = rawApp?.permit_wise_details || rawApp?.permitWiseDetails || [];
+
+    // If a specificPermitNum is given, try to find that permit's valid_up_to from permit_wise_details first
+    let validUpToStr = '';
+    if (specificPermitNum && Array.isArray(pWise) && pWise.length > 0) {
+      const matchedP = pWise.find((p: any) => {
+        const pN = String(p.permit_number || p.permitNumber || '').toLowerCase().trim();
+        return pN === pNum;
+      });
+      if (matchedP) {
+        validUpToStr = matchedP?.valid_up_to || matchedP?.validUpTo || '';
+        // If this specific permit is marked as revalidated and its valid_up_to hasn't expired, it's valid
+        const isPermitRevalidatedInDetails = Boolean(matchedP?.is_revalidated || matchedP?.isRevalidated);
+        if (isPermitRevalidatedInDetails && validUpToStr) {
+          const permitValidUntil = new Date(validUpToStr);
+          if (permitValidUntil > now) {
+            // Still within revalidation window — not expired yet
+            return {
+              isRevalidated: true,
+              isUnderProcess: false,
+              isRequired: false,
+              permitNumbers: [specificPermitNum],
+              label: 'Revalidated'
+            };
+          }
+          // Revalidated permit's window has expired again — needs re-revalidation
+          return {
+            isRevalidated: false,
+            isUnderProcess: false,
+            isRequired: true,
+            permitNumbers: [],
+            label: 'Revalidation Required'
+          };
+        }
+      }
+    }
+
+    // Fallback: use parent-level valid_up_to only for parent-level checks (no specificPermitNum)
+    if (!validUpToStr && !specificPermitNum) {
+      validUpToStr = rawApp?.valid_up_to || rawApp?.validUpTo || row?.application?.valid_up_to || '';
+    }
+
+    // If checking a specific sub-permit and no valid_up_to was found, check if there's
+    // a processed/activated schedule in this.applications for this specific permit.
+    // This handles permits like P1 that expired without being revalidated — their schedule
+    // fired (STATUS_PROCESSED) and they appear as "Revalidation Activated" synthetic rows.
+    if (specificPermitNum && !validUpToStr) {
+      const activatedScheduleForPermit = (this.applications || []).find((a: any) => {
+        if (!a.isActivatedSchedule && !a.is_activated_schedule) return false;
+        const schedPermit = String(a.revalidatedPermitNumber || a.revalidated_permit_number || a.permitNumber || a.permit_number || '').toLowerCase().trim();
+        const schedRef = String(a.referenceNo || a.reference_no || a.distributor_permit_ref_no || '').toLowerCase().trim();
+        return schedPermit === pNum || schedRef === pNum;
+      });
+      if (activatedScheduleForPermit) {
+        return {
+          isRevalidated: false,
+          isUnderProcess: false,
+          isRequired: true,
+          permitNumbers: [],
+          label: 'Revalidation Required'
+        };
+      }
+    }
+
     const validUpToDate = validUpToStr ? new Date(validUpToStr) : null;
     const isExpired = Boolean(validUpToDate && validUpToDate <= now);
     const isActivatedSched = Boolean(
@@ -7441,12 +7552,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       };
     }
 
-    const pWise = rawApp?.permit_wise_details || rawApp?.permitWiseDetails || [];
     if (Array.isArray(pWise) && pWise.length > 0) {
       const revalidatedP = pWise.filter((p: any) => {
         const pN = String(p.permit_number || p.permitNumber || '').toLowerCase().trim();
         const matchesThis = !specificPermitNum || pN === pNum;
-        return matchesThis && (p.isRevalidated || p.revalidated || String(p.status || '').toUpperCase().includes('REVALIDAT'));
+        return matchesThis && (p.isRevalidated || p.is_revalidated || p.revalidated || String(p.status || '').toUpperCase().includes('REVALIDAT'));
       });
       if (revalidatedP.length > 0) {
         return {
@@ -7461,6 +7571,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
     return null;
   }
+
 
   getCancellationInfo(row: any): { isCancelled: boolean; isUnderProcess: boolean; permitNumbers: string[]; label: string } | null {
     if (!row) return null;
