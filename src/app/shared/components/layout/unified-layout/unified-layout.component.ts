@@ -585,10 +585,21 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         'salesman-barman-registration',
         'company-registration',
         'company-collaboration',
-        'special-permit',
-        'distributor-permit',
-        'distributor-permit-hologram-procurement'
+        'special-permit'
       ];
+      if (this.showDistributorPermitMenu) {
+        licenseeSections.push(
+          'distributor-permit',
+          'distributor-permit-requisition',
+          'imfl-requisition',
+          'distributor-permit-revalidation',
+          'imfl-revalidation',
+          'distributor-permit-cancellation',
+          'imfl-cancellation',
+          'distributor-permit-hologram-procurement',
+          'imfl-hologram-procurement'
+        );
+      }
       // Distillery licensees always see Bulk Spirit menus even when DB navigation routes are incomplete.
       // Ensure Requisition payment-pending badge still loads in that case.
       if (this.showDistilleryMenus || hasDbRoute(/requisition|ena|bulk[_-]?spirit/)) {
@@ -642,8 +653,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   private getVisibleOfficerSections(): string[] {
     if (this.isLicenseeUser()) return [];
 
+    const sections: string[] = [];
+
     if (this.isDistributorOic()) {
-      const sections: string[] = [
+      sections.push(
         'distributor-permit-requisition',
         'imfl-requisition',
         'imfl-requisition-cases',
@@ -657,52 +670,41 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         'distributor-permit-hologram-overview',
         'imfl-hologram-overview',
         'hologram-overview'
-      ];
-      for (const item of this.officerSectionItems) {
-        if (!this.shouldShowOfficerSectionItem(item)) continue;
-        sections.push(item.section);
-      }
-      return sections;
-    }
-
-    if (this.isPermitSectionUser()) {
-      const sections: string[] = [
+      );
+    } else if (this.isPermitSectionUser()) {
+      sections.push(
         'distributor-permit',
         'imfl-permit',
         'distributor-permit-requisition',
         'imfl-requisition'
-      ];
-      for (const item of this.officerSectionItems) {
-        if (!this.shouldShowOfficerSectionItem(item)) continue;
-        sections.push(item.section);
-      }
-      return sections;
-    }
-
-    if (this.isItCellUser()) {
-      const sections: string[] = [
+      );
+    } else if (this.isItCellUser()) {
+      sections.push(
         'distributor-permit-hologram-procurement',
         'imfl-hologram-procurement',
         'hologram-procurement'
-      ];
-      for (const item of this.officerSectionItems) {
-        if (!this.shouldShowOfficerSectionItem(item)) continue;
-        sections.push(item.section);
-      }
-      return sections;
+      );
+    } else if (this.isCommissionerUser() || this.showDistributorPermitMenu) {
+      sections.push(
+        'distributor-permit',
+        'imfl-permit',
+        'distributor-permit-requisition',
+        'imfl-requisition',
+        'distributor-permit-revalidation',
+        'imfl-revalidation',
+        'distributor-permit-cancellation',
+        'imfl-cancellation',
+        'distributor-permit-hologram-procurement',
+        'imfl-hologram-procurement',
+        'hologram-procurement'
+      );
     }
 
-    // Do not prefetch badges for workflow sections merely because they exist in the
-    // application.  In particular, the former fallback list made a Joint
-    // Commissioner login call IMFL and hologram-procurement APIs even though those
-    // sections were not present in that user's sidebar.  Only visible, permitted
-    // navigation items are allowed to contribute a badge request.
-    const sections: string[] = [];
     for (const item of this.officerSectionItems) {
       if (!this.shouldShowOfficerSectionItem(item)) continue;
       sections.push(item.section);
     }
-    return sections;
+    return Array.from(new Set(sections));
   }
 
   getImflPermitTotalPendingCount(): number {
