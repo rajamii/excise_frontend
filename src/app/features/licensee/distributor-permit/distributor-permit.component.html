@@ -4578,7 +4578,7 @@
                 <!-- Auto-Revalidation Countdown Pill (Header) -->
                 <span
                   class="badge bg-warning bg-opacity-25 text-dark border border-warning font-monospace py-1.5 px-2.5 shadow-xs"
-                  *ngIf="isPermitApproved(item, selectedPermitDetailsRow) && item.arrivalStatus !== 'approved' && !item.cancellationStatus && !getPermitRevalidationCountdown(item, selectedPermitDetailsRow).isExpired"
+                  *ngIf="isPermitApproved(item, selectedPermitDetailsRow) && !item.arrivalStatus && !item.cancellationStatus && !getPermitRevalidationCountdown(item, selectedPermitDetailsRow).isExpired"
                   title="Countdown until permit auto-revalidation triggers if physical arrival is not recorded"
                 >
                   <i class="bi bi-stopwatch-fill text-warning me-1"></i> Auto-Revalidation in: <strong>{{ getPermitRevalidationCountdown(item, selectedPermitDetailsRow).text }}</strong>
@@ -4586,7 +4586,7 @@
 
                 <span
                   class="badge bg-danger bg-opacity-10 text-danger border border-danger font-monospace py-1.5 px-2.5 shadow-xs"
-                  *ngIf="isPermitApproved(item, selectedPermitDetailsRow) && item.arrivalStatus !== 'approved' && !item.cancellationStatus && getPermitRevalidationCountdown(item, selectedPermitDetailsRow).isExpired"
+                  *ngIf="isPermitApproved(item, selectedPermitDetailsRow) && !item.arrivalStatus && !item.cancellationStatus && getPermitRevalidationCountdown(item, selectedPermitDetailsRow).isExpired"
                 >
                   <i class="bi bi-exclamation-triangle-fill me-1"></i> Auto-Revalidation Triggered
                 </span>
@@ -4779,7 +4779,7 @@
                           'is-expired': getPermitRevalidationCountdown(item, selectedPermitDetailsRow).isExpired,
                           'is-urgent': getPermitRevalidationCountdown(item, selectedPermitDetailsRow).isUrgent
                         }"
-                        *ngIf="isPermitApproved(item, selectedPermitDetailsRow) && item.arrivalStatus !== 'approved' && !item.cancellationStatus"
+                        *ngIf="isPermitApproved(item, selectedPermitDetailsRow) && !item.arrivalStatus && !item.cancellationStatus"
                       >
                         <div class="d-flex align-items-center justify-content-between mb-1">
                           <span class="small fw-bold text-dark d-flex align-items-center">
