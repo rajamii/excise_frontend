@@ -771,51 +771,22 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   get counts(): { total: number; approved: number; pending: number; underProcess: number; objection: number; rejected: number; cancelled: number } {
+    const cached = this.statusCountsByTab[this.activeTab];
+    if (cached) {
+      return cached;
+    }
     return this.computeTabCounts(this.activeTabRows);
   }
 
   get filteredRows(): DistributorPermitRow[] {
-    const q = this.searchFilter.trim().toLowerCase();
-    const parsedFrom = this.dateFromFilter ? this.parseDate(this.dateFromFilter) : null;
-    const parsedTo = this.dateToFilter ? this.parseDate(this.dateToFilter) : null;
-    const validFrom = parsedFrom && !Number.isNaN(parsedFrom.getTime()) ? parsedFrom : null;
-    const validTo = parsedTo && !Number.isNaN(parsedTo.getTime()) ? parsedTo : null;
-
-    return this.activeTabRows.filter((row) => {
-      const stGroup = this.isOicDistributorUser
-        ? this.getOfficerStatusGroup(row)
-        : (this.isPermitCancelled(row) || this.isPermitCancellationApplied(row) ? 'cancelled' : row.statusGroup);
-      const matchesStatus =
-        this.activeCardFilter === 'all' ||
-        stGroup === this.activeCardFilter ||
-        (this.activeCardFilter === 'cancelled' && (
-          this.isPermitCancelled(row) ||
-          this.isPermitCancellationApplied(row) ||
-          this.getBrandArrivalStatusForRow(row) === 'cancelled' ||
-          this.getBrandArrivalStatusForRow(row) === 'cancellation_applied'
-        ));
-      const matchesSearch = !q ||
-        (row.applicationId || '').toLowerCase().includes(q) ||
-        (row.applicantName || '').toLowerCase().includes(q) ||
-        (row.supplierName || '').toLowerCase().includes(q) ||
-        (row.currentStage || '').toLowerCase().includes(q);
-
-      const matchesFrom = !validFrom || (row.submittedDate !== null && row.submittedDate >= this.startOfDay(validFrom));
-      const matchesTo = !validTo || (row.submittedDate !== null && row.submittedDate <= this.endOfDay(validTo));
-
-      return matchesStatus && matchesSearch && matchesFrom && matchesTo;
-    });
+    return this.activeTabRows;
   }
 
   serverTotalCount: number | null = null;
   serverTotalPages: number | null = null;
 
   get pagedRows(): DistributorPermitRow[] {
-    if (this.filteredRows.length === 0) {
-      return [];
-    }
-    const start = this.pageIndex * this.pageSize;
-    return this.filteredRows.slice(start, start + this.pageSize);
+    return this.activeTabRows;
   }
 
   get currentPage(): number {
@@ -823,7 +794,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   get totalPages(): number {
-    return this.filteredRows.length === 0 ? 0 : Math.ceil(this.filteredRows.length / this.pageSize);
+    if (this.serverTotalPages !== null && this.serverTotalPages !== undefined && this.serverTotalPages > 0) {
+      return this.serverTotalPages;
+    }
+    return this.totalItemsCount === 0 ? 0 : Math.ceil(this.totalItemsCount / this.pageSize);
   }
 
   getTotalPages(): number {
@@ -831,7 +805,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   get totalItemsCount(): number {
-    return this.filteredRows.length;
+    if (this.serverTotalCount !== null && this.serverTotalCount !== undefined) {
+      return this.serverTotalCount;
+    }
+    return this.activeTabRows.length;
   }
 
   get pageStart(): number {
@@ -845,8 +822,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   goToPage(page: number): void {
-    if (page < 1 || page > this.totalPages) return;
+    if (page < 1 || page > this.totalPages || this.isLoading) return;
     this.pageIndex = page - 1;
+    this.loadApplications();
     this.cdr.markForCheck();
   }
 
@@ -855,19 +833,22 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     if (this.pageSize === size && this.pageIndex === 0) return;
     this.pageSize = size;
     this.pageIndex = 0;
+    this.loadApplications();
     this.cdr.markForCheck();
   }
 
   prevPage(): void {
-    if (this.pageIndex > 0) {
+    if (this.pageIndex > 0 && !this.isLoading) {
       this.pageIndex -= 1;
+      this.loadApplications();
       this.cdr.markForCheck();
     }
   }
 
   nextPage(): void {
-    if (this.totalPages > 0 && this.pageIndex < this.totalPages - 1) {
+    if (this.totalPages > 0 && this.pageIndex < this.totalPages - 1 && !this.isLoading) {
       this.pageIndex += 1;
+      this.loadApplications();
       this.cdr.markForCheck();
     }
   }
@@ -7979,11 +7960,13 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       queryParamsHandling: 'merge',
       replaceUrl: true
     });
+    this.loadApplications();
     this.cdr.markForCheck();
   }
 
   applyFilters(): void {
     this.pageIndex = 0;
+    this.loadApplications();
     this.cdr.markForCheck();
   }
 
@@ -7999,6 +7982,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       queryParamsHandling: 'merge',
       replaceUrl: true
     });
+    this.loadApplications();
+    this.loadDashboardCounts(true);
     this.cdr.markForCheck();
   }
 
@@ -9497,13 +9482,12 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     this.loadError = '';
 
+    this.loadDashboardCounts();
+
     forkJoin({
       suppliers: this.permitService.getSuppliers().pipe(catchError(() => of([] as DistributorSupplier[]))),
       brands: this.permitService.getBrandMaster().pipe(catchError(() => of({ success: true, data: [] as DistributorBrandMaster[], total: 0 }))),
       premises: this.permitService.getPremises().pipe(catchError(() => of({ destination: '' } as any))),
-      requisitions: this.permitService.listApplications().pipe(catchError(() => of([] as any[]))),
-      revalidations: this.permitService.getRevalidations().pipe(catchError(() => of([] as any[]))),
-      cancellations: this.permitService.getCancellations().pipe(catchError(() => of([] as any[]))),
       casesProcessed: this.permitService.getCasesProcessed().pipe(catchError(() => of([] as any[]))),
       arrivals: this.permitService.getArrivals().pipe(catchError(() => of([] as any[])))
     })
@@ -9514,7 +9498,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         })
       )
       .subscribe({
-        next: ({ suppliers, brands, premises, requisitions, revalidations, cancellations, casesProcessed, arrivals }) => {
+        next: ({ suppliers, brands, premises, casesProcessed, arrivals }) => {
           try {
             this.suppliers = Array.isArray(suppliers) ? suppliers : [];
             this.brandMaster = Array.isArray(brands?.data) ? brands.data : (Array.isArray(brands) ? brands : []);
@@ -9525,7 +9509,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
             this.allArrivalsList = Array.isArray(arrivals) ? arrivals : (arrivals as any)?.results || [];
             this.pendingArrivalReviews = this.allCasesProcessedList.filter((c: any) => String(c.status).toLowerCase() === 'under_review');
 
-            this.processLoadedApplications(requisitions, revalidations, cancellations);
+            this.loadApplications();
             if (this.activeTab === 'brand-warehouse') {
               this.loadBrandWarehouseStock();
             } else if (this.activeTab === 'hologram-overview') {
@@ -9538,6 +9522,46 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         error: (err) => {
           console.error('Error loading initial permit data:', err);
           this.loadError = 'Unable to load distributor permit details.';
+        }
+      });
+  }
+
+  loadDashboardCounts(force = false): void {
+    const tab = this.activeTab === 'brand-warehouse' || this.activeTab === 'hologram-overview' ? 'requisition' : this.activeTab as any;
+    this.permitService.getDashboardCounts(tab, force)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          if (res) {
+            const counts = {
+              total: Number(res.total ?? res.applied ?? 0),
+              approved: Number(res.approved ?? 0),
+              pending: Number(res.pending ?? 0),
+              underProcess: Number(res.under_process ?? res.underProcess ?? 0),
+              objection: Number(res.objection ?? 0),
+              rejected: Number(res.rejected ?? 0),
+              cancelled: Number(res.cancelled ?? 0)
+            };
+            this.statusCountsByTab[this.activeTab] = counts;
+            if (this.activeTab === 'requisition') {
+              this.statusCountsByTab['brand-arrival'] = { ...counts };
+            }
+
+            const statusParam = this.route.snapshot.queryParams['status'];
+            if (!statusParam) {
+              if (counts.pending > 0 && this.activeCardFilter !== 'pending') {
+                this.activeCardFilter = 'pending';
+                this.loadApplications();
+              } else if (counts.pending === 0 && this.activeCardFilter === 'pending') {
+                this.activeCardFilter = 'all';
+                this.loadApplications();
+              }
+            }
+            this.cdr.markForCheck();
+          }
+        },
+        error: (err) => {
+          console.error('Error fetching dashboard counts:', err);
         }
       });
   }
@@ -9570,9 +9594,23 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   loadApplications(refreshAllTabs = false): void {
     this.isLoading = true;
 
+    const queryParams: Record<string, any> = {
+      page: this.currentPage,
+      page_size: this.pageSize
+    };
+    if (this.activeCardFilter && this.activeCardFilter !== 'all') {
+      queryParams['status'] = this.activeCardFilter;
+    }
+    if (this.searchFilter?.trim()) {
+      queryParams['search'] = this.searchFilter.trim();
+    }
+    if (this.dateFromFilter) {
+      queryParams['date'] = this.dateFromFilter;
+    }
+
     if (!refreshAllTabs) {
       if (this.activeTab === 'requisition' || this.activeTab === 'brand-arrival') {
-        this.permitService.listApplications()
+        this.permitService.listApplications(queryParams)
           .pipe(
             takeUntil(this.destroy$),
             finalize(() => {
@@ -9590,7 +9628,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           });
         return;
       } else if (this.activeTab === 'revalidation') {
-        this.permitService.getRevalidations()
+        this.permitService.getRevalidations(queryParams)
           .pipe(
             takeUntil(this.destroy$),
             finalize(() => {
@@ -9608,7 +9646,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           });
         return;
       } else if (this.activeTab === 'cancellation') {
-        this.permitService.getCancellations()
+        this.permitService.getCancellations(queryParams)
           .pipe(
             takeUntil(this.destroy$),
             finalize(() => {
@@ -9633,9 +9671,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }
 
     forkJoin({
-      requisitions: this.permitService.listApplications().pipe(catchError(() => of([]))),
-      revalidations: this.permitService.getRevalidations().pipe(catchError(() => of([]))),
-      cancellations: this.permitService.getCancellations().pipe(catchError(() => of([]))),
+      requisitions: this.permitService.listApplications(queryParams).pipe(catchError(() => of([]))),
+      revalidations: this.permitService.getRevalidations(queryParams).pipe(catchError(() => of([]))),
+      cancellations: this.permitService.getCancellations(queryParams).pipe(catchError(() => of([]))),
       casesProcessed: this.permitService.getCasesProcessed().pipe(catchError(() => of([]))),
       arrivals: this.permitService.getArrivals().pipe(catchError(() => of([])))
     })
@@ -9663,6 +9701,20 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   private processLoadedApplications(requisitions: any, revalidations: any, cancellations: any): void {
+    if (this.activeTab === 'requisition' && (requisitions as any)?.count !== undefined) {
+      this.serverTotalCount = (requisitions as any).count;
+      this.serverTotalPages = (requisitions as any).total_pages;
+    } else if (this.activeTab === 'revalidation' && (revalidations as any)?.count !== undefined) {
+      this.serverTotalCount = (revalidations as any).count;
+      this.serverTotalPages = (revalidations as any).total_pages;
+    } else if (this.activeTab === 'cancellation' && (cancellations as any)?.count !== undefined) {
+      this.serverTotalCount = (cancellations as any).count;
+      this.serverTotalPages = (cancellations as any).total_pages;
+    } else {
+      this.serverTotalCount = null;
+      this.serverTotalPages = null;
+    }
+
     const reqList = Array.isArray(requisitions) ? requisitions : (requisitions?.results || requisitions?.data || []);
     const revList = Array.isArray(revalidations) ? revalidations : (revalidations?.results || revalidations?.data || []);
     const canList = Array.isArray(cancellations) ? cancellations : (cancellations?.results || cancellations?.data || []);
@@ -9779,11 +9831,6 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }
 
     this.rebuildRows();
-    const currentCounts = this.computeTabCounts(this.activeTabRows);
-    this.statusCountsByTab[this.activeTab] = currentCounts;
-    if (this.activeTab === 'requisition') {
-      this.statusCountsByTab['brand-arrival'] = { ...currentCounts };
-    }
 
     const refParam = this.route.snapshot.queryParams['ref'] || this.route.snapshot.queryParams['id'];
     if (refParam) {
