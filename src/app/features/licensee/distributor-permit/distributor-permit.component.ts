@@ -358,7 +358,49 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return false;
   }
 
-  isPermitCancelled(row: any): boolean {
+  extractTargetPermitsFromApp(appObj: any): string[] {
+    const list: string[] = [];
+    const directPermitStr = String(
+      appObj?.['revalidated_permit_number'] ||
+      appObj?.['revalidatedPermitNumber'] ||
+      appObj?.['cancelled_permit_number'] ||
+      appObj?.['cancelledPermitNumber'] ||
+      appObj?.['application']?.['revalidated_permit_number'] ||
+      appObj?.['application']?.['revalidatedPermitNumber'] ||
+      appObj?.['application']?.['cancelled_permit_number'] ||
+      appObj?.['application']?.['cancelledPermitNumber'] ||
+      ''
+    ).trim();
+
+    if (directPermitStr) {
+      directPermitStr.split(',').forEach((s) => {
+        const t = s.trim().toLowerCase();
+        if (t && !list.includes(t)) list.push(t);
+      });
+    }
+
+    const pDetails =
+      appObj?.['permit_wise_details'] ||
+      appObj?.['permitWiseDetails'] ||
+      appObj?.['revalidated_permits'] ||
+      appObj?.['revalidatedPermits'] ||
+      appObj?.['cancelled_permits'] ||
+      appObj?.['cancelledPermits'] ||
+      appObj?.['application']?.['permit_wise_details'] ||
+      appObj?.['application']?.['permitWiseDetails'] ||
+      [];
+
+    if (Array.isArray(pDetails)) {
+      pDetails.forEach((p: any) => {
+        const t = String(p?.['permit_number'] || p?.['permitNumber'] || p || '').trim().toLowerCase();
+        if (t && !list.includes(t)) list.push(t);
+      });
+    }
+
+    return list;
+  }
+
+  isPermitCancelled(row: any, specificPermitNum?: string): boolean {
     if (!row) return false;
     const rowObj: any = row;
     const stage = String(rowObj?.['currentStage'] || rowObj?.['status'] || rowObj?.['application']?.['status'] || '').toLowerCase();
@@ -372,8 +414,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       return true;
     }
 
-    const pNum = String(rowObj?.['applicationId'] || rowObj?.['id'] || rowObj?.['referenceNo'] || rowObj?.['distributorPermitRef'] || rowObj?.['permit_number'] || rowObj?.['permitNumber'] || '').toLowerCase().trim();
-    const parentId = String(rowObj?.['parentApplicationId'] || rowObj?.['application']?.['parent_reference_no'] || '').toLowerCase().trim();
+    const pNum = String(specificPermitNum || rowObj?.['application']?.['current_permit_number'] || rowObj?.['applicationId'] || rowObj?.['id'] || rowObj?.['referenceNo'] || rowObj?.['distributorPermitRef'] || rowObj?.['permit_number'] || rowObj?.['permitNumber'] || '').toLowerCase().trim();
+    const parentId = String(rowObj?.['parentApplicationId'] || rowObj?.['application']?.['parent_reference_no'] || rowObj?.['application']?.['reference_no'] || '').toLowerCase().trim();
+    const isParentOnly = !pNum.includes('-p') && !pNum.includes('_p');
 
     const canApps = (this.applications as any[] || []).filter((a: any) => {
       const isCan = String(a?.['referenceNo'] || a?.['reference_no'] || a?.['id'] || '').startsWith('IMFLCAN') || a?.['applicationType'] === 'cancellation';
@@ -387,31 +430,23 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       const isApproved = st.includes('APPROVED') || st.includes('COMPLETED') || stId === 152 || stId === 166 || appObj?.['statusGroup'] === 'approved';
       if (!isApproved) continue;
 
+      const targetPermits = this.extractTargetPermitsFromApp(appObj);
       const refTarget = String(appObj?.['application']?.['distributor_permit'] || appObj?.['application']?.['distributorPermit'] || appObj?.['distributor_permit'] || appObj?.['distributorPermitRef'] || '').toLowerCase().trim();
-      const targetNo = String(appObj?.['application']?.['distributor_permit_ref_no'] || appObj?.['distributor_permit_ref_no'] || appObj?.['cancelled_permit_number'] || appObj?.['cancelledPermitNumber'] || appObj?.['application']?.['cancelled_permit_number'] || appObj?.['application']?.['cancelledPermitNumber'] || '').toLowerCase().trim();
-      const remarksText = String(appObj?.['remarks'] || appObj?.['cancellation_reason'] || appObj?.['cancellationReason'] || appObj?.['application']?.['remarks'] || '').toLowerCase().trim();
-      const targetPermits = (appObj?.['application']?.['cancelled_permits'] || appObj?.['cancelled_permits'] || appObj?.['application']?.['cancelledPermits'] || appObj?.['cancelledPermits'] || []);
 
-      if (targetNo && (targetNo === pNum || targetNo.includes(pNum) || pNum.includes(targetNo))) return true;
-      if (Array.isArray(targetPermits) && targetPermits.length > 0) {
-        const matchesPermit = targetPermits.some((tp: any) => {
-          const tpNum = String(tp?.['permitNumber'] || tp?.['permit_number'] || tp || '').toLowerCase().trim();
-          return tpNum === pNum || tpNum.includes(pNum) || pNum.includes(tpNum);
-        });
-        if (matchesPermit) return true;
-      }
-      if (remarksText && remarksText.includes(pNum)) return true;
-      if (!targetNo && (!targetPermits || targetPermits.length === 0)) {
-        if (refTarget && (refTarget === pNum || (parentId && refTarget === parentId))) return true;
+      if (targetPermits.length > 0) {
+        if (targetPermits.includes('all') || (isParentOnly && parentId && targetPermits.includes(parentId))) return true;
+        if (targetPermits.includes(pNum)) return true;
+      } else if (refTarget) {
+        if (refTarget === pNum || (isParentOnly && parentId && refTarget === parentId)) return true;
       }
     }
 
     return false;
   }
 
-  isPermitCancellationApplied(row: any): boolean {
+  isPermitCancellationApplied(row: any, specificPermitNum?: string): boolean {
     if (!row) return false;
-    if (this.isPermitCancelled(row)) return false;
+    if (this.isPermitCancelled(row, specificPermitNum)) return false;
 
     const rowObj: any = row;
     const stage = String(rowObj?.['currentStage'] || rowObj?.['status'] || rowObj?.['application']?.['status'] || '').toLowerCase();
@@ -424,8 +459,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       return true;
     }
 
-    const pNum = String(rowObj?.['applicationId'] || rowObj?.['id'] || rowObj?.['referenceNo'] || rowObj?.['distributorPermitRef'] || rowObj?.['permit_number'] || rowObj?.['permitNumber'] || '').toLowerCase().trim();
-    const parentId = String(rowObj?.['parentApplicationId'] || rowObj?.['application']?.['parent_reference_no'] || '').toLowerCase().trim();
+    const pNum = String(specificPermitNum || rowObj?.['application']?.['current_permit_number'] || rowObj?.['applicationId'] || rowObj?.['id'] || rowObj?.['referenceNo'] || rowObj?.['distributorPermitRef'] || rowObj?.['permit_number'] || rowObj?.['permitNumber'] || '').toLowerCase().trim();
+    const parentId = String(rowObj?.['parentApplicationId'] || rowObj?.['application']?.['parent_reference_no'] || rowObj?.['application']?.['reference_no'] || '').toLowerCase().trim();
+    const isParentOnly = !pNum.includes('-p') && !pNum.includes('_p');
 
     const canApps = (this.applications as any[] || []).filter((a: any) => {
       const isCan = String(a?.['referenceNo'] || a?.['reference_no'] || a?.['id'] || '').startsWith('IMFLCAN') || a?.['applicationType'] === 'cancellation';
@@ -439,31 +475,23 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       const isRejected = st.includes('REJECTED') || appObj?.['statusGroup'] === 'rejected';
       if (isApproved || isRejected) continue;
 
+      const targetPermits = this.extractTargetPermitsFromApp(appObj);
       const refTarget = String(appObj?.['application']?.['distributor_permit'] || appObj?.['application']?.['distributorPermit'] || appObj?.['distributor_permit'] || appObj?.['distributorPermitRef'] || '').toLowerCase().trim();
-      const targetNo = String(appObj?.['application']?.['distributor_permit_ref_no'] || appObj?.['distributor_permit_ref_no'] || appObj?.['cancelled_permit_number'] || appObj?.['cancelledPermitNumber'] || appObj?.['application']?.['cancelled_permit_number'] || appObj?.['application']?.['cancelledPermitNumber'] || '').toLowerCase().trim();
-      const remarksText = String(appObj?.['remarks'] || appObj?.['cancellation_reason'] || appObj?.['cancellationReason'] || appObj?.['application']?.['remarks'] || '').toLowerCase().trim();
-      const targetPermits = (appObj?.['application']?.['cancelled_permits'] || appObj?.['cancelled_permits'] || appObj?.['application']?.['cancelledPermits'] || appObj?.['cancelledPermits'] || []);
 
-      if (targetNo && (targetNo === pNum || targetNo.includes(pNum) || pNum.includes(targetNo))) return true;
-      if (Array.isArray(targetPermits) && targetPermits.length > 0) {
-        const matchesPermit = targetPermits.some((tp: any) => {
-          const tpNum = String(tp?.['permitNumber'] || tp?.['permit_number'] || tp || '').toLowerCase().trim();
-          return tpNum === pNum || tpNum.includes(pNum) || pNum.includes(tpNum);
-        });
-        if (matchesPermit) return true;
-      }
-      if (remarksText && remarksText.includes(pNum)) return true;
-      if (!targetNo && (!targetPermits || targetPermits.length === 0)) {
-        if (refTarget && (refTarget === pNum || (parentId && refTarget === parentId))) return true;
+      if (targetPermits.length > 0) {
+        if (targetPermits.includes('all') || (isParentOnly && parentId && targetPermits.includes(parentId))) return true;
+        if (targetPermits.includes(pNum)) return true;
+      } else if (refTarget) {
+        if (refTarget === pNum || (isParentOnly && parentId && refTarget === parentId)) return true;
       }
     }
 
     return false;
   }
 
-  isPermitRevalidationInProgress(row: any): boolean {
+  isPermitRevalidationInProgress(row: any, specificPermitNum?: string): boolean {
     if (!row) return false;
-    if (this.isPermitCancelled(row) || this.isPermitCancellationApplied(row)) return false;
+    if (this.isPermitCancelled(row, specificPermitNum) || this.isPermitCancellationApplied(row, specificPermitNum)) return false;
 
     const rowObj: any = row;
     const pDetail = rowObj?.['application']?.['current_permit_detail'];
@@ -471,8 +499,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       return true;
     }
 
-    const pNum = String(rowObj?.['applicationId'] || rowObj?.['id'] || rowObj?.['referenceNo'] || rowObj?.['distributorPermitRef'] || rowObj?.['permit_number'] || rowObj?.['permitNumber'] || '').toLowerCase().trim();
-    const parentId = String(rowObj?.['parentApplicationId'] || rowObj?.['application']?.['parent_reference_no'] || '').toLowerCase().trim();
+    const pNum = String(specificPermitNum || rowObj?.['application']?.['current_permit_number'] || rowObj?.['applicationId'] || rowObj?.['id'] || rowObj?.['referenceNo'] || rowObj?.['distributorPermitRef'] || rowObj?.['permit_number'] || rowObj?.['permitNumber'] || '').toLowerCase().trim();
+    const parentId = String(rowObj?.['parentApplicationId'] || rowObj?.['application']?.['parent_reference_no'] || rowObj?.['application']?.['reference_no'] || '').toLowerCase().trim();
+    const isParentOnly = !pNum.includes('-p') && !pNum.includes('_p');
 
     const revApps = (this.applications as any[] || []).filter((a: any) => {
       const isRev = String(a?.['referenceNo'] || a?.['reference_no'] || a?.['id'] || '').startsWith('IMFLREV') || a?.['applicationType'] === 'revalidation';
@@ -486,31 +515,23 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       const isRejected = st.includes('REJECTED') || appObj?.['statusGroup'] === 'rejected';
       if (isApproved || isRejected) continue;
 
+      const targetPermits = this.extractTargetPermitsFromApp(appObj);
       const refTarget = String(appObj?.['application']?.['distributor_permit'] || appObj?.['application']?.['distributorPermit'] || appObj?.['distributor_permit'] || appObj?.['distributorPermitRef'] || '').toLowerCase().trim();
-      const targetNo = String(appObj?.['application']?.['distributor_permit_ref_no'] || appObj?.['distributor_permit_ref_no'] || appObj?.['revalidated_permit_number'] || appObj?.['revalidatedPermitNumber'] || appObj?.['application']?.['revalidated_permit_number'] || appObj?.['application']?.['revalidatedPermitNumber'] || '').toLowerCase().trim();
-      const remarksText = String(appObj?.['remarks'] || appObj?.['revalidation_reason'] || appObj?.['revalidationReason'] || appObj?.['application']?.['remarks'] || '').toLowerCase().trim();
-      const targetPermits = (appObj?.['application']?.['revalidated_permits'] || appObj?.['revalidated_permits'] || appObj?.['application']?.['revalidatedPermits'] || appObj?.['revalidatedPermits'] || []);
 
-      if (targetNo && (targetNo === pNum || targetNo.includes(pNum) || pNum.includes(targetNo))) return true;
-      if (Array.isArray(targetPermits) && targetPermits.length > 0) {
-        const matchesPermit = targetPermits.some((tp: any) => {
-          const tpNum = String(tp?.['permitNumber'] || tp?.['permit_number'] || tp || '').toLowerCase().trim();
-          return tpNum === pNum || tpNum.includes(pNum) || pNum.includes(tpNum);
-        });
-        if (matchesPermit) return true;
-      }
-      if (remarksText && remarksText.includes(pNum)) return true;
-      if (!targetNo && (!targetPermits || targetPermits.length === 0)) {
-        if (refTarget && (refTarget === pNum || (parentId && refTarget === parentId))) return true;
+      if (targetPermits.length > 0) {
+        if (targetPermits.includes('all') || (isParentOnly && parentId && targetPermits.includes(parentId))) return true;
+        if (targetPermits.includes(pNum)) return true;
+      } else if (refTarget) {
+        if (refTarget === pNum || (isParentOnly && parentId && refTarget === parentId)) return true;
       }
     }
 
     return false;
   }
 
-  isPermitRevalidatedAndValid(row: any): boolean {
+  isPermitRevalidatedAndValid(row: any, specificPermitNum?: string): boolean {
     if (!row) return false;
-    if (this.isPermitCancelled(row) || this.isPermitCancellationApplied(row)) return false;
+    if (this.isPermitCancelled(row, specificPermitNum) || this.isPermitCancellationApplied(row, specificPermitNum)) return false;
 
     const rowObj: any = row;
     const pDetail = rowObj?.['application']?.['current_permit_detail'];
@@ -518,8 +539,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       return true;
     }
 
-    const pNum = String(rowObj?.['applicationId'] || rowObj?.['id'] || rowObj?.['referenceNo'] || rowObj?.['distributorPermitRef'] || rowObj?.['permit_number'] || rowObj?.['permitNumber'] || '').toLowerCase().trim();
-    const parentId = String(rowObj?.['parentApplicationId'] || rowObj?.['application']?.['parent_reference_no'] || '').toLowerCase().trim();
+    const pNum = String(specificPermitNum || rowObj?.['application']?.['current_permit_number'] || rowObj?.['applicationId'] || rowObj?.['id'] || rowObj?.['referenceNo'] || rowObj?.['distributorPermitRef'] || rowObj?.['permit_number'] || rowObj?.['permitNumber'] || '').toLowerCase().trim();
+    const parentId = String(rowObj?.['parentApplicationId'] || rowObj?.['application']?.['parent_reference_no'] || rowObj?.['application']?.['reference_no'] || '').toLowerCase().trim();
+    const isParentOnly = !pNum.includes('-p') && !pNum.includes('_p');
 
     const revApps = (this.applications as any[] || []).filter((a: any) => {
       const isRev = String(a?.['referenceNo'] || a?.['reference_no'] || a?.['id'] || '').startsWith('IMFLREV') || a?.['applicationType'] === 'revalidation';
@@ -532,35 +554,27 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       const isApproved = st.includes('APPROVED') || st.includes('COMPLETED') || appObj?.['statusGroup'] === 'approved';
       if (!isApproved) continue;
 
+      const targetPermits = this.extractTargetPermitsFromApp(appObj);
       const refTarget = String(appObj?.['application']?.['distributor_permit'] || appObj?.['application']?.['distributorPermit'] || appObj?.['distributor_permit'] || appObj?.['distributorPermitRef'] || '').toLowerCase().trim();
-      const targetNo = String(appObj?.['application']?.['distributor_permit_ref_no'] || appObj?.['distributor_permit_ref_no'] || appObj?.['revalidated_permit_number'] || appObj?.['revalidatedPermitNumber'] || appObj?.['application']?.['revalidated_permit_number'] || appObj?.['application']?.['revalidatedPermitNumber'] || '').toLowerCase().trim();
-      const remarksText = String(appObj?.['remarks'] || appObj?.['revalidation_reason'] || appObj?.['revalidationReason'] || appObj?.['application']?.['remarks'] || '').toLowerCase().trim();
-      const targetPermits = (appObj?.['application']?.['revalidated_permits'] || appObj?.['revalidated_permits'] || appObj?.['application']?.['revalidatedPermits'] || appObj?.['revalidatedPermits'] || []);
 
-      if (targetNo && (targetNo === pNum || targetNo.includes(pNum) || pNum.includes(targetNo))) return true;
-      if (Array.isArray(targetPermits) && targetPermits.length > 0) {
-        const matchesPermit = targetPermits.some((tp: any) => {
-          const tpNum = String(tp?.['permitNumber'] || tp?.['permit_number'] || tp || '').toLowerCase().trim();
-          return tpNum === pNum || tpNum.includes(pNum) || pNum.includes(tpNum);
-        });
-        if (matchesPermit) return true;
-      }
-      if (remarksText && remarksText.includes(pNum)) return true;
-      if (!targetNo && (!targetPermits || targetPermits.length === 0)) {
-        if (refTarget && (refTarget === pNum || (parentId && refTarget === parentId))) return true;
+      if (targetPermits.length > 0) {
+        if (targetPermits.includes('all') || (isParentOnly && parentId && targetPermits.includes(parentId))) return true;
+        if (targetPermits.includes(pNum)) return true;
+      } else if (refTarget) {
+        if (refTarget === pNum || (isParentOnly && parentId && refTarget === parentId)) return true;
       }
     }
 
     return false;
   }
 
-  isPermitRevalidationRequired(row: any): boolean {
+  isPermitRevalidationRequired(row: any, specificPermitNum?: string): boolean {
     if (!row) return false;
-    if (this.isPermitCancelled(row) || this.isPermitCancellationApplied(row) || this.isPermitRevalidatedAndValid(row) || this.isPermitRevalidationInProgress(row)) {
+    if (this.isPermitCancelled(row, specificPermitNum) || this.isPermitCancellationApplied(row, specificPermitNum) || this.isPermitRevalidatedAndValid(row, specificPermitNum) || this.isPermitRevalidationInProgress(row, specificPermitNum)) {
       return false;
     }
 
-    const info = this.getRevalidationInfo(row);
+    const info = this.getRevalidationInfo(row, specificPermitNum);
     if (info?.isRequired) {
       return true;
     }
@@ -4187,33 +4201,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         const pNum = String(p.permit_number || p.permitNumber || appId);
         const cases = Number(p.total_cases || p.totalCases || 0);
 
-        const existingForPermit = existingCancellations.find((canApp: any) => {
-          const cancelledNo = String(canApp.cancelledPermitNumber || canApp.cancelled_permit_number || canApp.application?.cancelled_permit_number || canApp.application?.cancelledPermitNumber || canApp.distributor_permit || '').toLowerCase().trim();
-          const reasonText = String(canApp.cancellationReason || canApp.cancellation_reason || canApp.application?.cancellation_reason || canApp.remarks || canApp.application?.remarks || '').toLowerCase().trim();
-          const pNumLower = pNum.toLowerCase().trim();
-          return (cancelledNo && (cancelledNo === pNumLower || cancelledNo.includes(pNumLower) || pNumLower.includes(cancelledNo))) || (reasonText && reasonText.includes(pNumLower)) || isSinglePermit;
-        });
+        const isRevalInProgress = this.isPermitRevalidationInProgress(row, pNum);
+        const isRevalRequired = this.isPermitRevalidationRequired(row, pNum);
+        const isCancelled = this.isPermitCancelled(row, pNum);
+        const isCancellationApplied = this.isPermitCancellationApplied(row, pNum);
 
-        const existingForPermitRev = existingRevalidations.find((revApp: any) => {
-          const revNo = String(revApp.revalidatedPermitNumber || revApp.revalidated_permit_number || revApp.application?.revalidated_permit_number || revApp.application?.revalidatedPermitNumber || revApp.distributor_permit || '').toLowerCase().trim();
-          const reasonText = String(revApp.revalidationReason || revApp.revalidation_reason || revApp.application?.revalidation_reason || revApp.remarks || revApp.application?.remarks || '').toLowerCase().trim();
-          const pNumLower = pNum.toLowerCase().trim();
-          return (revNo && (revNo === pNumLower || revNo.includes(pNumLower) || pNumLower.includes(revNo))) || (reasonText && reasonText.includes(pNumLower)) || isSinglePermit;
-        });
-
-        const now = new Date();
-        const validUpToStr = rawApp?.valid_up_to || rawApp?.validUpTo || row?.application?.valid_up_to || '';
-        const validUpToDate = validUpToStr ? new Date(validUpToStr) : null;
-        const isExpired = Boolean(validUpToDate && validUpToDate <= now);
-        const isActivatedSched = Boolean(
-          row?.isActivatedSchedule ||
-          rawApp?.is_activated_schedule ||
-          rawApp?.can_submit_application ||
-          String(row?.currentStage || rawApp?.status || '').toLowerCase().includes('activated') ||
-          String(row?.currentStage || rawApp?.status || '').toLowerCase().includes('ready for revalidation')
-        );
-
-        let isCancelled = false;
         let isUnderProcess = false;
         let isRevalidatedWaiting = false;
 
@@ -4249,26 +4241,16 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           isUnderProcess = true;
         }
 
-        if (existingForPermit) {
-          const st = String(existingForPermit['status'] || existingForPermit['currentStage'] || '').toUpperCase();
-          if (st.includes('APPROVED') || st.includes('COMPLETED')) {
-            isCancelled = true;
-          } else if (!st.includes('REJECTED')) {
-            isUnderProcess = true;
-          }
-        }
-
-        if (!isCancelled && !isUnderProcess) {
-          if (existingForPermitRev) {
-            const st = String(existingForPermitRev['status'] || existingForPermitRev['currentStage'] || '').toUpperCase();
-            if (!st.includes('REJECTED') && !st.includes('APPROVED')) {
-              isRevalidatedWaiting = true;
-            } else if (isExpired || isActivatedSched) {
-              isRevalidatedWaiting = true;
-            }
-          } else if (isExpired || isActivatedSched) {
-            isRevalidatedWaiting = true;
-          }
+        if (isCancelled) {
+          // already cancelled
+        } else if (isCancellationApplied) {
+          isUnderProcess = true;
+        } else if (isRevalInProgress) {
+          isRevalidatedWaiting = true;
+          isUnderProcess = true;
+        } else if (isRevalRequired) {
+          isRevalidatedWaiting = true;
+          isUnderProcess = true;
         }
 
         let label = `${pNum} (${cases} Cases)`;
@@ -4278,10 +4260,12 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           label += ' - (Stock Arrival Awaiting OIC Approval)';
         } else if (isCancelled) {
           label += ' - (Cancelled)';
-        } else if (isUnderProcess) {
+        } else if (isCancellationApplied) {
           label += ' - (Cancellation Under Process)';
-        } else if (isRevalidatedWaiting) {
-          label += ' - (Revalidation Waiting)';
+        } else if (isRevalInProgress) {
+          label += ' - (Revalidation Under Process)';
+        } else if (isRevalRequired) {
+          label += ' - (Revalidation Required - Expired)';
         } else {
           label += ' - (Available)';
         }
@@ -4290,7 +4274,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           permitNumber: pNum,
           totalCases: cases,
           label,
-          isUnderProcess,
+          isUnderProcess: isUnderProcess || isRevalidatedWaiting,
           isCancelled,
           isRevalidated: isRevalidatedWaiting,
           isArrivalApproved,
@@ -4319,24 +4303,65 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         const st = String(c.status || '').toLowerCase();
         return st === 'under_review' && pAppRef === appIdLower;
       });
-      const isUnderProcess = Boolean(pendingArrival || isArrivalApproved);
-      let label = `${appId} - Single Permit`;
+
+      const isRevalInProgress = this.isPermitRevalidationInProgress(row, appId);
+      const isRevalRequired = this.isPermitRevalidationRequired(row, appId);
+      const isCancelled = this.isPermitCancelled(row, appId);
+      const isCancellationApplied = this.isPermitCancellationApplied(row, appId);
+
+      let isUnderProcess = false;
+      let isRevalidatedWaiting = false;
+
+      if (pendingArrival || isArrivalApproved) {
+        isUnderProcess = true;
+      }
+
+      if (isCancelled) {
+        // already cancelled
+      } else if (isCancellationApplied) {
+        isUnderProcess = true;
+      } else if (isRevalInProgress) {
+        isRevalidatedWaiting = true;
+        isUnderProcess = true;
+      } else if (isRevalRequired) {
+        isRevalidatedWaiting = true;
+        isUnderProcess = true;
+      }
+
+      let label = `${appId} (${Number(row.cases || rawApp?.cases || 0)} Cases)`;
       if (isArrivalApproved) {
         label += ' - (OIC has updated stock in Arrival - Cannot Cancel)';
       } else if (pendingArrival) {
         label += ' - (Stock Arrival Awaiting OIC Approval)';
+      } else if (isCancelled) {
+        label += ' - (Cancelled)';
+      } else if (isCancellationApplied) {
+        label += ' - (Cancellation Under Process)';
+      } else if (isRevalInProgress) {
+        label += ' - (Revalidation Under Process)';
+      } else if (isRevalRequired) {
+        label += ' - (Revalidation Required - Expired)';
       } else {
         label += ' - (Available)';
       }
+
+      const fallbackDetail = {
+        permit_number: appId,
+        permitNumber: appId,
+        total_cases: Number(row.cases || rawApp?.cases || 0),
+        totalCases: Number(row.cases || rawApp?.cases || 0),
+        line_items: rawApp?.line_items || rawApp?.lineItems || []
+      };
+
       this.availablePermitOptionsForCancellation.push({
         permitNumber: appId,
-        totalCases: Number(row.cases || 0),
+        totalCases: Number(row.cases || rawApp?.cases || 0),
         label,
-        isUnderProcess,
-        isCancelled: false,
-        isRevalidated: false,
+        isUnderProcess: isUnderProcess || isRevalidatedWaiting,
+        isCancelled,
+        isRevalidated: isRevalidatedWaiting,
         isArrivalApproved,
-        detail: null,
+        detail: fallbackDetail,
         selected: false
       });
     }
@@ -6244,7 +6269,12 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     if (selectedOpt.isAwaiting) return 'Physical stock arrival details for this permit have been submitted and are currently awaiting review by the Officer-in-Charge.';
     if (selectedOpt.isCancelled) return 'This permit has been cancelled. Physical stock arrival details cannot be updated for a cancelled permit.';
     if (selectedOpt.isUnderProcess) return 'A cancellation request is under process for this permit. Physical stock arrival details cannot be updated.';
-    if (selectedOpt.isRevalidated) return 'A revalidation request is under process for this permit. Physical stock arrival details cannot be updated.';
+    if (selectedOpt.isRevalidated) {
+      if (this.arrivalTargetRow && this.isPermitRevalidationRequired(this.arrivalTargetRow, selectedOpt.permitNumber)) {
+        return 'Permit validity has expired. Revalidation is required and must be approved before physical stock arrival details can be updated.';
+      }
+      return 'A revalidation request is under process for this permit. Physical stock arrival details cannot be updated until approved.';
+    }
     return '';
   }
 
@@ -6433,32 +6463,6 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }
 
     const appIdLower = String(appId).toLowerCase().trim();
-    const existingCancellations = (this.applications || []).filter((a: any) => {
-      const isCan = String(a.referenceNo || a.reference_no || '').startsWith('IMFLCAN') || a.applicationType === 'cancellation';
-      const refTarget = String(a.application?.distributor_permit || a.application?.distributorPermit || a.distributor_permit || a.distributorPermitRef || '').toLowerCase().trim();
-      const targetNo = String(a.application?.distributor_permit_ref_no || a.distributor_permit_ref_no || a.cancelled_permit_number || a.cancelledPermitNumber || '').toLowerCase().trim();
-      const remarksText = String(a.remarks || a.cancellation_reason || a.cancellationReason || a.application?.remarks || '').toLowerCase().trim();
-      return isCan && (
-        (refTarget && (refTarget === appIdLower || refTarget.includes(appIdLower) || appIdLower.includes(refTarget))) ||
-        (targetNo && (targetNo === appIdLower || targetNo.includes(appIdLower) || appIdLower.includes(targetNo))) ||
-        (remarksText && remarksText.includes(appIdLower)) ||
-        String(a.referenceNo || a.reference_no || '').toLowerCase().includes(appIdLower)
-      );
-    });
-
-    const existingRevalidations = (this.applications || []).filter((a: any) => {
-      const isRev = String(a.referenceNo || a.reference_no || '').startsWith('IMFLREV') || a.applicationType === 'revalidation';
-      const refTarget = String(a.application?.distributor_permit || a.application?.distributorPermit || a.distributor_permit || a.distributorPermitRef || '').toLowerCase().trim();
-      const targetNo = String(a.application?.distributor_permit_ref_no || a.distributor_permit_ref_no || a.revalidated_permit_number || a.revalidatedPermitNumber || '').toLowerCase().trim();
-      const remarksText = String(a.remarks || a.revalidation_reason || a.revalidationReason || a.application?.remarks || '').toLowerCase().trim();
-      return isRev && (
-        (refTarget && (refTarget === appIdLower || refTarget.includes(appIdLower) || appIdLower.includes(refTarget))) ||
-        (targetNo && (targetNo === appIdLower || targetNo.includes(appIdLower) || appIdLower.includes(targetNo))) ||
-        (remarksText && remarksText.includes(appIdLower)) ||
-        String(a.referenceNo || a.reference_no || '').toLowerCase().includes(appIdLower)
-      );
-    });
-
     this.availablePermitOptionsForArrival = [];
 
     if (Array.isArray(pDetails) && pDetails.length > 0) {
@@ -6484,7 +6488,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           return isSinglePermit && cAppRef === appIdLower;
         });
 
-        const isApproved = Boolean(approvedArrival || approvedCaseProc.length > 0);
+        const isWarehouseStocked = this.hasOicSavedBrandArrival({ applicationId: pNum, referenceNo: pNum, permit_number: pNum }) || this.hasOicSavedBrandArrival(p);
+        const isApproved = Boolean(approvedArrival || approvedCaseProc.length > 0 || isWarehouseStocked);
 
         const pendingArrival = (this.allCasesProcessedList || []).find((c: any) => {
           const pNo = String(c.permit_number || c.permitNumber || '').toLowerCase().trim();
@@ -6504,61 +6509,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           return isSinglePermit && pAppRef === appIdLower;
         });
 
-        const existingForPermit = existingCancellations.find((canApp: any) => {
-          const cancelledNo = String(canApp.cancelledPermitNumber || canApp.cancelled_permit_number || canApp.application?.cancelled_permit_number || canApp.application?.cancelledPermitNumber || canApp.distributor_permit || '').toLowerCase().trim();
-          const reasonText = String(canApp.cancellationReason || canApp.cancellation_reason || canApp.application?.cancellation_reason || canApp.remarks || canApp.application?.remarks || '').toLowerCase().trim();
-          const pNumLower = pNum.toLowerCase().trim();
-          const canPDetails = canApp.permit_wise_details || canApp.permitWiseDetails || canApp.application?.permit_wise_details || canApp.application?.permitWiseDetails || [];
-          if (cancelledNo && (cancelledNo === pNumLower || cancelledNo.includes(pNumLower) || pNumLower.includes(cancelledNo))) return true;
-          if (reasonText && reasonText.includes(pNumLower)) return true;
-          if (Array.isArray(canPDetails) && canPDetails.length > 0) {
-            return canPDetails.some((cp: any) => {
-              const cpNum = String(cp.permit_number || cp.permitNumber || '').toLowerCase().trim();
-              return cpNum === pNumLower || cpNum.includes(pNumLower) || pNumLower.includes(cpNum);
-            });
-          }
-          return isSinglePermit;
-        });
-
-        const existingForPermitRev = existingRevalidations.find((revApp: any) => {
-          const revNo = String(revApp.revalidatedPermitNumber || revApp.revalidated_permit_number || revApp.application?.revalidated_permit_number || revApp.application?.revalidatedPermitNumber || revApp.distributor_permit || '').toLowerCase().trim();
-          const reasonText = String(revApp.revalidationReason || revApp.revalidation_reason || revApp.application?.revalidation_reason || revApp.remarks || revApp.application?.remarks || '').toLowerCase().trim();
-          const pNumLower = pNum.toLowerCase().trim();
-          const revPDetails = revApp.permit_wise_details || revApp.permitWiseDetails || revApp.application?.permit_wise_details || revApp.application?.permitWiseDetails || [];
-          if (revNo && (revNo === pNumLower || revNo.includes(pNumLower) || pNumLower.includes(revNo))) return true;
-          if (reasonText && reasonText.includes(pNumLower)) return true;
-          if (Array.isArray(revPDetails) && revPDetails.length > 0) {
-            return revPDetails.some((rp: any) => {
-              const rpNum = String(rp.permit_number || rp.permitNumber || '').toLowerCase().trim();
-              return rpNum === pNumLower || rpNum.includes(pNumLower) || pNumLower.includes(rpNum);
-            });
-          }
-          const revDistPermit = String(revApp.distributor_permit || revApp.distributorPermit || revApp.application?.distributor_permit || revApp.application?.distributorPermit || '').toLowerCase().trim();
-          if (revDistPermit && (revDistPermit === appIdLower || appIdLower.includes(revDistPermit))) {
-            if (!revNo || revNo === appIdLower || revNo.includes(pNumLower)) return true;
-          }
-          return isSinglePermit;
-        });
-
-        let isCancelled = false;
-        let isUnderProcess = false;
-        let isRevalidatedWaiting = false;
-
-        if (existingForPermit) {
-          const st = String(existingForPermit['status'] || existingForPermit['currentStage'] || (existingForPermit['current_stage'] as any)?.name || '').toUpperCase();
-          if (st.includes('APPROVED') || st.includes('COMPLETED')) {
-            isCancelled = true;
-          } else if (!st.includes('REJECTED')) {
-            isUnderProcess = true;
-          }
-        }
-
-        if (existingForPermitRev) {
-          const st = String(existingForPermitRev['status'] || existingForPermitRev['currentStage'] || (existingForPermitRev['current_stage'] as any)?.name || '').toUpperCase();
-          if (!st.includes('APPROVED') && !st.includes('REJECTED')) {
-            isRevalidatedWaiting = true;
-          }
-        }
+        const isRevalInProgress = this.isPermitRevalidationInProgress(row, pNum);
+        const isRevalRequired = this.isPermitRevalidationRequired(row, pNum);
+        const isCancelled = this.isPermitCancelled(row, pNum);
+        const isCancellationApplied = this.isPermitCancellationApplied(row, pNum);
 
         const isAwaiting = Boolean(pendingArrival);
         let label = `${pNum} (${cases} Cases)`;
@@ -6568,10 +6522,12 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           label += ' - (Stock Cases Arrival Pending Approval)';
         } else if (isCancelled) {
           label += ' - (Cancelled)';
-        } else if (isUnderProcess) {
+        } else if (isCancellationApplied) {
           label += ' - (Cancellation Under Process)';
-        } else if (isRevalidatedWaiting) {
+        } else if (isRevalInProgress) {
           label += ' - (Revalidation Under Process)';
+        } else if (isRevalRequired) {
+          label += ' - (Revalidation Required - Permit Expired)';
         } else if (!isPermitApproved) {
           label += ' - (Awaiting Commissioner Approval)';
         } else if (rejectedArrival) {
@@ -6587,8 +6543,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           isAwaitingCommissionerApproval: !isPermitApproved,
           isAwaiting,
           isCancelled,
-          isUnderProcess: isUnderProcess || !isPermitApproved,
-          isRevalidated: isRevalidatedWaiting,
+          isUnderProcess: isCancellationApplied || !isPermitApproved,
+          isRevalidated: isRevalInProgress || isRevalRequired,
           detail: p
         });
       });
@@ -6605,7 +6561,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         return st === 'approved' && cAppRef === appIdLower;
       });
 
-      const isApproved = Boolean(approvedArrival || approvedCaseProc.length > 0);
+      const isWarehouseStocked = this.hasOicSavedBrandArrival(row) || this.hasOicSavedBrandArrival({ applicationId: appId, referenceNo: appId });
+      const isApproved = Boolean(approvedArrival || approvedCaseProc.length > 0 || isWarehouseStocked);
 
       const pendingArrival = (this.allCasesProcessedList || []).find((c: any) => {
         const pAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase();
@@ -6620,37 +6577,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         return st === 'rejected' && pAppRef === appIdLower;
       });
 
-      const existingForPermit = existingCancellations.find((canApp: any) => {
-        const cancelledNo = String(canApp.cancelledPermitNumber || canApp.cancelled_permit_number || canApp.application?.cancelled_permit_number || canApp.application?.cancelledPermitNumber || canApp.distributor_permit || '').toLowerCase().trim();
-        const reasonText = String(canApp.cancellationReason || canApp.cancellation_reason || canApp.application?.cancellation_reason || canApp.remarks || canApp.application?.remarks || '').toLowerCase().trim();
-        return (cancelledNo && (cancelledNo === appIdLower || cancelledNo.includes(appIdLower) || appIdLower.includes(cancelledNo))) || (reasonText && reasonText.includes(appIdLower)) || isSinglePermit;
-      });
-
-      const existingForPermitRev = existingRevalidations.find((revApp: any) => {
-        const revNo = String(revApp.revalidatedPermitNumber || revApp.revalidated_permit_number || revApp.application?.revalidated_permit_number || revApp.application?.revalidatedPermitNumber || revApp.distributor_permit || '').toLowerCase().trim();
-        const reasonText = String(revApp.revalidationReason || revApp.revalidation_reason || revApp.application?.revalidation_reason || revApp.remarks || revApp.application?.remarks || '').toLowerCase().trim();
-        return (revNo && (revNo === appIdLower || revNo.includes(appIdLower) || appIdLower.includes(revNo))) || (reasonText && reasonText.includes(appIdLower)) || isSinglePermit;
-      });
-
-      let isCancelled = false;
-      let isUnderProcess = false;
-      let isRevalidatedWaiting = false;
-
-      if (existingForPermit) {
-        const st = String(existingForPermit['status'] || existingForPermit['currentStage'] || (existingForPermit['current_stage'] as any)?.name || '').toUpperCase();
-        if (st.includes('APPROVED') || st.includes('COMPLETED')) {
-          isCancelled = true;
-        } else if (!st.includes('REJECTED')) {
-          isUnderProcess = true;
-        }
-      }
-
-      if (existingForPermitRev) {
-        const st = String(existingForPermitRev['status'] || existingForPermitRev['currentStage'] || (existingForPermitRev['current_stage'] as any)?.name || '').toUpperCase();
-        if (!st.includes('APPROVED') && !st.includes('REJECTED')) {
-          isRevalidatedWaiting = true;
-        }
-      }
+      const isRevalInProgress = this.isPermitRevalidationInProgress(row, appId);
+      const isRevalRequired = this.isPermitRevalidationRequired(row, appId);
+      const isCancelled = this.isPermitCancelled(row, appId);
+      const isCancellationApplied = this.isPermitCancellationApplied(row, appId);
 
       const fallbackDetail = {
         permit_number: appId,
@@ -6667,10 +6597,12 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         label += ' - (Stock Cases Arrival Pending Approval)';
       } else if (isCancelled) {
         label += ' - (Cancelled)';
-      } else if (isUnderProcess) {
+      } else if (isCancellationApplied) {
         label += ' - (Cancellation Under Process)';
-      } else if (isRevalidatedWaiting) {
+      } else if (isRevalInProgress) {
         label += ' - (Revalidation Under Process)';
+      } else if (isRevalRequired) {
+        label += ' - (Revalidation Required - Permit Expired)';
       } else if (rejectedArrival) {
         label += ' - (Previous Stock Arrival Rejected - Re-entry Allowed)';
       }
@@ -6683,8 +6615,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         isPermitApproved: true,
         isAwaiting,
         isCancelled,
-        isUnderProcess,
-        isRevalidated: isRevalidatedWaiting,
+        isUnderProcess: isCancellationApplied,
+        isRevalidated: isRevalInProgress || isRevalRequired,
         detail: fallbackDetail
       });
     }
@@ -7416,7 +7348,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return '';
   }
 
-  getRevalidationInfo(row: any): { isRevalidated: boolean; isUnderProcess: boolean; isRequired: boolean; permitNumbers: string[]; label: string } | null {
+  getRevalidationInfo(row: any, specificPermitNum?: string): { isRevalidated: boolean; isUnderProcess: boolean; isRequired: boolean; permitNumbers: string[]; label: string } | null {
     if (!row) return null;
     const appId = String(row.applicationId || row.referenceNo || row.reference_no || row.id || '').trim();
     if (!appId) return null;
@@ -7434,22 +7366,26 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       };
     }
 
+    const pNum = String(specificPermitNum || row?.application?.current_permit_number || row?.current_permit_number || row?.permit_number || row?.permitNumber || appIdLower).toLowerCase().trim();
+    const parentId = String(row?.parentApplicationId || row?.application?.parent_reference_no || row?.application?.reference_no || appIdLower).toLowerCase().trim();
+
     const revApps = (this.applications || []).filter((a: any) => {
       const aRef = String(a.referenceNo || a.reference_no || a.id || '').trim().toLowerCase();
       const isRev = aRef.startsWith('imflrev') || a.applicationType === 'revalidation';
       if (!isRev) return false;
       if (a.isActivatedSchedule || a.is_activated_schedule || a['application']?.is_activated_schedule) return false;
 
+      const targetPermits = this.extractTargetPermitsFromApp(a);
       const refTarget = String(a.application?.distributor_permit || a.application?.distributorPermit || a.distributor_permit || a.distributorPermitRef || '').toLowerCase().trim();
-      const targetNo = String(a.application?.distributor_permit_ref_no || a.distributor_permit_ref_no || a.revalidated_permit_number || a.revalidatedPermitNumber || a.application?.revalidated_permit_number || a.application?.revalidatedPermitNumber || '').toLowerCase().trim();
-      const remarksText = String(a.remarks || a.revalidation_reason || a.revalidationReason || a.application?.remarks || '').toLowerCase().trim();
 
-      return (
-        (refTarget && (refTarget === appIdLower || refTarget.includes(appIdLower) || appIdLower.includes(refTarget))) ||
-        (targetNo && (targetNo === appIdLower || targetNo.includes(appIdLower) || appIdLower.includes(targetNo))) ||
-        (remarksText && remarksText.includes(appIdLower)) ||
-        (aRef && aRef.includes(appIdLower))
-      );
+      if (targetPermits.length > 0) {
+        if (targetPermits.includes('all') || (parentId && targetPermits.includes(parentId))) return true;
+        return targetPermits.includes(pNum);
+      }
+      if (refTarget) {
+        return refTarget === pNum || (parentId && refTarget === parentId);
+      }
+      return false;
     });
 
     if (revApps.length > 0) {
@@ -7460,9 +7396,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
       const pNums: string[] = [];
       revApps.forEach((a: any) => {
-        const pNum = a.revalidatedPermitNumber || a.revalidated_permit_number || a.application?.revalidated_permit_number || a.application?.revalidatedPermitNumber;
-        if (pNum && !pNums.includes(pNum)) {
-          pNums.push(pNum);
+        const pNumVal = a.revalidatedPermitNumber || a.revalidated_permit_number || a.application?.revalidated_permit_number || a.application?.revalidatedPermitNumber;
+        if (pNumVal && !pNums.includes(pNumVal)) {
+          pNums.push(pNumVal);
         }
       });
 
@@ -7507,7 +7443,11 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
     const pWise = rawApp?.permit_wise_details || rawApp?.permitWiseDetails || [];
     if (Array.isArray(pWise) && pWise.length > 0) {
-      const revalidatedP = pWise.filter((p: any) => p.isRevalidated || p.revalidated || String(p.status || '').toUpperCase().includes('REVALIDAT'));
+      const revalidatedP = pWise.filter((p: any) => {
+        const pN = String(p.permit_number || p.permitNumber || '').toLowerCase().trim();
+        const matchesThis = !specificPermitNum || pN === pNum;
+        return matchesThis && (p.isRevalidated || p.revalidated || String(p.status || '').toUpperCase().includes('REVALIDAT'));
+      });
       if (revalidatedP.length > 0) {
         return {
           isRevalidated: true,
@@ -8015,8 +7955,19 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const firstAvailable = this.availablePermitOptionsForRevalidation.find(opt => !opt.isCancelled && !opt.isUnderProcess && !opt.isArrivalApproved);
-    this.selectedPermitNumberForRevalidation = firstAvailable ? firstAvailable.permitNumber : (this.availablePermitOptionsForRevalidation[0]?.permitNumber || appId);
+    const targetPermitNum = String(rawApp?.revalidated_permit_number || rawApp?.revalidatedPermitNumber || rawApp?.permit_number || '').trim();
+    if (targetPermitNum) {
+      const matchingOpt = this.availablePermitOptionsForRevalidation.find(opt => opt.permitNumber.toLowerCase() === targetPermitNum.toLowerCase() && !opt.isCancelled && !opt.isUnderProcess && !opt.isArrivalApproved);
+      if (matchingOpt) {
+        this.selectedPermitNumberForRevalidation = matchingOpt.permitNumber;
+      } else {
+        const firstAvailable = this.availablePermitOptionsForRevalidation.find(opt => !opt.isCancelled && !opt.isUnderProcess && !opt.isArrivalApproved);
+        this.selectedPermitNumberForRevalidation = firstAvailable ? firstAvailable.permitNumber : (this.availablePermitOptionsForRevalidation[0]?.permitNumber || appId);
+      }
+    } else {
+      const firstAvailable = this.availablePermitOptionsForRevalidation.find(opt => !opt.isCancelled && !opt.isUnderProcess && !opt.isArrivalApproved);
+      this.selectedPermitNumberForRevalidation = firstAvailable ? firstAvailable.permitNumber : (this.availablePermitOptionsForRevalidation[0]?.permitNumber || appId);
+    }
     this.onPermitSelectionChangeForRevalidation();
 
     this.showRevalidationModal = true;
@@ -9370,6 +9321,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   getStatusGroup(statusStr: string | undefined, rawApp?: any): DistributorPermitStatusGroup {
     const value = String(statusStr || rawApp?.status || '').toLowerCase();
     const stageId = Number(rawApp?.current_stage_id || rawApp?.currentStageId || rawApp?.current_stage?.id || 0);
+    const refNoUpper = String(rawApp?.reference_no || rawApp?.referenceNo || rawApp?.id || '').toUpperCase();
+    const isRevalidationApp = refNoUpper.startsWith('IMFLREV') || rawApp?.applicationType === 'revalidation';
+    const isCancellationApp = refNoUpper.startsWith('IMFLCAN') || rawApp?.applicationType === 'cancellation';
 
     // 1. Check REJECTED first before isFinal!
     if (stageId === 152 || stageId === 166 || value.includes('reject') || value.includes('cancel')) {
@@ -9382,7 +9336,15 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }
 
     // 3. Check APPROVED (stageId 151/165 or all permits approved)
-    if (stageId === 151 || stageId === 165 || value.includes('approved by commissioner') || value.includes('permit issued') || value.includes('arrival approved') || value.includes('stock completed') || this.isAllPermitsApproved(rawApp)) {
+    if (
+      stageId === 151 ||
+      stageId === 165 ||
+      value.includes('approved by commissioner') ||
+      value.includes('permit issued') ||
+      value.includes('arrival approved') ||
+      value.includes('stock completed') ||
+      (!isRevalidationApp && !isCancellationApp && this.isAllPermitsApproved(rawApp))
+    ) {
       return 'approved';
     }
 
@@ -9391,7 +9353,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       return 'approved';
     }
 
-    if (this.isPartiallyApproved(rawApp)) {
+    if (!isRevalidationApp && !isCancellationApp && this.isPartiallyApproved(rawApp)) {
       return 'under_process';
     }
 
