@@ -6,6 +6,7 @@ import { catchError, forkJoin, of } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { SupplyChainService } from '../../../features/licensee/supplyChain/services/supplychain.service';
 import { HologramDataService } from '../../../features/licensee/supplyChain/services/hologram-data.service';
+import { DistributorPermitService } from '../../../core/services/distributor-permit.service';
 
 interface TransitPermitRow {
   id: number;
@@ -131,7 +132,8 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
     private router: Router,
     private supplyChainService: SupplyChainService,
     private http: HttpClient,
-    private hologramDataService: HologramDataService
+    private hologramDataService: HologramDataService,
+    private distributorPermitService: DistributorPermitService
   ) {}
 
   ngOnInit(): void {
@@ -144,7 +146,20 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
     this.referenceNo = String(q['billNo'] || q['referenceNo'] || q['refNo'] || q['ref'] || '').trim();
     this.source = String(q['source'] || '').trim();
     this.backSection = String(q['section'] || q['fromSection'] || '').trim().toLowerCase();
-    this.pageTitle = this.moduleType === 'transit' ? 'Transit Payment Slip' : `${this.toTitle(this.moduleType)} Payment Slip`;
+
+    if (this.isImfl()) {
+      if (this.moduleType === 'requisition') {
+        this.pageTitle = 'IMFL Requisition Payment Slip';
+      } else if (this.moduleType === 'revalidation') {
+        this.pageTitle = 'IMFL Revalidation Payment Slip';
+      } else if (this.moduleType === 'cancellation') {
+        this.pageTitle = 'IMFL Cancellation Payment Slip';
+      } else {
+        this.pageTitle = 'IMFL Payment Slip';
+      }
+    } else {
+      this.pageTitle = this.moduleType === 'transit' ? 'Transit Payment Slip' : `${this.toTitle(this.moduleType)} Payment Slip`;
+    }
 
     console.log('🔍 PAYMENT SLIP VIEW: Parsed params:', {
       moduleType: this.moduleType,
@@ -266,7 +281,61 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
     });
   }
 
+  isImfl(): boolean {
+    const ref = String(this.referenceNo || this.applicationId || '').trim().toUpperCase();
+    const src = String(this.source || '').trim().toLowerCase();
+    const mod = String(this.moduleType || '').trim().toLowerCase();
+    const back = String(this.backSection || '').trim().toLowerCase();
+
+    // Explicit bulk spirit / ENA prefixes are never IMFL
+    if (
+      ref.startsWith('REQ/') ||
+      ref.startsWith('REV/') ||
+      ref.startsWith('CAN/') ||
+      ref.startsWith('ENA/') ||
+      ref.startsWith('DIST/')
+    ) {
+      return false;
+    }
+
+    return (
+      ref.startsWith('IMFL') ||
+      ref.startsWith('IMP/') ||
+      ref.startsWith('IMP-') ||
+      src === 'distributor-permit' ||
+      src === 'imfl-requisition' ||
+      src === 'imfl-revalidation' ||
+      src === 'imfl-cancellation' ||
+      src === 'imfl' ||
+      mod === 'distributor-permit' ||
+      mod.startsWith('imfl-') ||
+      back === 'distributor-permit'
+    );
+  }
+
   goBack(): void {
+    if (this.isImfl()) {
+      const tabParam = this.moduleType === 'cancellation' ? 'cancellation' : (this.moduleType === 'revalidation' ? 'revalidation' : 'requisition');
+      this.router.navigate(['/dashboard'], {
+        queryParams: { section: 'distributor-permit', tab: tabParam }
+      });
+      return;
+    }
+
+    const src = String(this.source || '').trim().toLowerCase();
+    if (src === 'permit-section' || src === 'permit_section') {
+      if (this.moduleType === 'requisition' || this.moduleType === 'bulk-spirit') {
+        this.router.navigate(['/dashboard'], { queryParams: { section: 'requisition' } });
+        return;
+      } else if (this.moduleType === 'revalidation') {
+        this.router.navigate(['/dashboard'], { queryParams: { section: 'revalidation' } });
+        return;
+      } else if (this.moduleType === 'cancellation') {
+        this.router.navigate(['/dashboard'], { queryParams: { section: 'cancellation' } });
+        return;
+      }
+    }
+
     const section = this.resolveBackSection();
     this.router.navigate(['/dashboard'], {
       queryParams: { section }
@@ -820,6 +889,10 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   }
 
   private resolveBackSection(): string {
+    if (this.isImfl()) {
+      return 'distributor-permit';
+    }
+
     const moduleToSection: Record<string, string> = {
       requisition: 'requisition',
       revalidation: 'revalidation',
@@ -898,8 +971,14 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   private loadRequisitionSlip(): void {
     console.log('🔍 REQUISITION SLIP: Starting load with:', {
       applicationId: this.applicationId,
-      referenceNo: this.referenceNo
+      referenceNo: this.referenceNo,
+      source: this.source
     });
+
+    if (this.isImfl()) {
+      this.loadImflRequisitionSlip();
+      return;
+    }
 
     const detailUrl = this.applicationId
       ? `${environment.apiBaseUrl}/transactional/supply_chain/ena-requisitions/${encodeURIComponent(this.applicationId)}/`
@@ -997,6 +1076,89 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
     });
   }
 
+  private loadImflRequisitionSlip(): void {
+    const ref = this.referenceNo || this.applicationId;
+    if (!ref) {
+      this.errorMessage = 'Reference number or application ID is required to view payment slip.';
+      this.isLoading = false;
+      return;
+    }
+
+    console.log('🔍 IMFL REQUISITION SLIP: Fetching for ref:', ref);
+
+    const detail$ = this.distributorPermitService.getApplication(ref).pipe(
+      catchError((err) => {
+        console.warn('Could not fetch IMFL application detail directly:', err);
+        return of(null);
+      })
+    );
+
+    const list$ = this.distributorPermitService.listApplications({ reference_no: ref }).pipe(
+      catchError((err) => {
+        console.warn('Could not list IMFL applications:', err);
+        return of(null);
+      })
+    );
+
+    forkJoin({ detail: detail$, list: list$ }).subscribe({
+      next: ({ detail, list }) => {
+        let row: any = detail;
+        if (!row && list) {
+          const items = Array.isArray(list) ? list : (Array.isArray(list?.results) ? list.results : (Array.isArray(list?.data) ? list.data : []));
+          row = items.find((item: any) => {
+            const itemRef = String(item?.reference_no || item?.referenceNo || item?.id || '').trim().toUpperCase();
+            return itemRef === ref.toUpperCase();
+          }) || items[0] || null;
+        }
+
+        if (!row) {
+          this.errorMessage = `No requisition record found for reference ${this.referenceNo || this.applicationId}.`;
+          this.isLoading = false;
+          return;
+        }
+
+        const permitsList = Array.isArray(row.permit_wise_details) ? row.permit_wise_details : (Array.isArray(row.permitWiseDetails) ? row.permitWiseDetails : []);
+        const permitNumbers = permitsList.map((p: any) => p.permit_number || p.permitNo || p.permit_no).filter(Boolean).join(', ');
+        const permitCount = permitsList.length || Number(row.brand_count || row.brandCount || 1);
+        const permitDisplay = permitNumbers ? `${permitCount} (${permitNumbers})` : String(permitCount);
+
+        const importFee = Number(row.total_import_value ?? row.totalImportValue ?? 0);
+        const eduCess = Number(row.total_education_cess ?? row.totalEducationCess ?? 0);
+        const addlEd = Number(row.total_additional_ed ?? row.totalAdditionalEd ?? 0);
+        let totalAmount = importFee + eduCess + addlEd;
+        if (totalAmount <= 0) {
+          totalAmount = Number(row.amount || row.payment_amount || row.paymentAmount || row.total_amount || row.totalAmount || 0);
+        }
+
+        this.requisitionRow = {
+          id: Number(row.id || 0) || 1,
+          reference_no: String(row.reference_no || row.referenceNo || this.referenceNo || ref),
+          submission_date: String(row.submitted_at || row.submittedAt || row.created_at || row.createdAt || row.submission_date || ''),
+          distillery_name: String(row.supplier_company_name || row.supplierCompanyName || row.applicant_name || row.applicantName || '-'),
+          status: String(row.current_stage_name || row.currentStageName || row.status || '-'),
+          quantity_bl: Number(row.total_bulk_litres ?? row.totalBulkLitres ?? row.quantity_bl ?? row.quantityBl ?? 0),
+          number_of_permits: permitDisplay,
+          permit_numbers: permitNumbers,
+          transaction_id: String(row.transaction_id || row.transactionId || ''),
+          purpose: 'IMFL Import Requisition',
+          amount: totalAmount
+        };
+
+        if (!this.referenceNo) {
+          this.referenceNo = this.requisitionRow.reference_no;
+        }
+
+        this.enrichRequisitionAmountFromWallet(row, this.requisitionRow.reference_no);
+        this.isLoading = false;
+      },
+      error: (err) => {
+        console.error('Error loading IMFL requisition payment slip:', err);
+        this.errorMessage = 'Unable to load requisition payment slip details.';
+        this.isLoading = false;
+      }
+    });
+  }
+
   private enrichRequisitionAmountFromWallet(sourceRow: any, referenceNo: string): void {
     const ref = String(referenceNo || '').trim();
     if (!ref) return;
@@ -1034,7 +1196,12 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
           const txnId = String(row?.transaction_id || row?.transactionId || '').toUpperCase();
           // Strict requisition match to avoid picking revalidation/cancellation txns
           // that can share the same requisition reference number.
-          const looksRequisition = sourceModule.includes('requisition') || txnId.startsWith('REQ-');
+          const looksRequisition =
+            sourceModule.includes('requisition') ||
+            sourceModule.includes('permit') ||
+            txnId.startsWith('REQ-') ||
+            txnId.startsWith('IMFL') ||
+            targetRef.startsWith('IMFL');
 
           return isDebitLike && looksRequisition;
         });
@@ -1122,6 +1289,11 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
       referenceNo: this.referenceNo
     });
 
+    if (this.isImfl()) {
+      this.loadImflRevalidationSlip();
+      return;
+    }
+
     const detailUrl = this.applicationId
       ? `${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/${encodeURIComponent(this.applicationId)}/`
       : '';
@@ -1206,11 +1378,53 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
     });
   }
 
+  private loadImflRevalidationSlip(): void {
+    const ref = this.referenceNo || this.applicationId;
+    this.distributorPermitService.getRevalidationDetail(ref).pipe(
+      catchError(() => this.distributorPermitService.getRevalidations({ reference_no: ref }))
+    ).subscribe({
+      next: (res: any) => {
+        const row = res?.data || (Array.isArray(res?.results) ? res.results[0] : (Array.isArray(res) ? res[0] : res));
+        if (!row) {
+          this.errorMessage = `No revalidation record found for reference ${this.referenceNo || this.applicationId}.`;
+          this.isLoading = false;
+          return;
+        }
+        this.revalidationRow = {
+          id: Number(row.id || 0),
+          reference_no: String(row.reference_no || row.referenceNo || this.referenceNo || ref),
+          submission_date: String(row.revalidation_date || row.revalidationDate || row.submission_date || row.created_at || ''),
+          factory_name: String(row.establishment_name || row.supplier_company_name || row.applicant_name || '-'),
+          distillery_name: String(row.supplier_company_name || row.distillery_name || '-'),
+          status: String(row.current_stage_name || row.status || '-'),
+          quantity_bl: Number(row.total_bulk_litres || row.quantity_bl || 0),
+          permit_numbers: String(row.permit_number || row.permit_numbers || '-'),
+          original_permit_date: String(row.original_permit_date || row.permit_date || ''),
+          expiry_date: String(row.extended_validity_date || row.expiry_date || ''),
+          revalidation_fee: Number(row.fee || row.revalidation_fee || 1000)
+        };
+        if (!this.referenceNo) {
+          this.referenceNo = this.revalidationRow.reference_no;
+        }
+        this.isLoading = false;
+      },
+      error: () => {
+        this.errorMessage = 'Unable to load revalidation payment slip details.';
+        this.isLoading = false;
+      }
+    });
+  }
+
   private loadCancellationSlip(): void {
     console.log('🔍 CANCELLATION SLIP: Starting load with:', {
       applicationId: this.applicationId,
       referenceNo: this.referenceNo
     });
+
+    if (this.isImfl()) {
+      this.loadImflCancellationSlip();
+      return;
+    }
 
     const url = `${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/`;
     let params: any = {};
@@ -1303,6 +1517,42 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
       },
       error: (error) => {
         console.error('❌ CANCELLATION SLIP: Fatal error:', error);
+        this.errorMessage = 'Unable to load cancellation payment slip details.';
+        this.isLoading = false;
+      }
+    });
+  }
+
+  private loadImflCancellationSlip(): void {
+    const ref = this.referenceNo || this.applicationId;
+    this.distributorPermitService.getCancellation(ref).pipe(
+      catchError(() => this.distributorPermitService.getCancellations({ reference_no: ref }))
+    ).subscribe({
+      next: (res: any) => {
+        const row = res?.data || (Array.isArray(res?.results) ? res.results[0] : (Array.isArray(res) ? res[0] : res));
+        if (!row) {
+          this.errorMessage = `No cancellation record found for reference ${this.referenceNo || this.applicationId}.`;
+          this.isLoading = false;
+          return;
+        }
+        this.cancellationRow = {
+          id: Number(row.id || 0),
+          reference_no: String(row.reference_no || row.referenceNo || this.referenceNo || ref),
+          cancellation_date: String(row.cancellation_date || row.created_at || ''),
+          distillery_name: String(row.supplier_company_name || row.distillery_name || row.applicant_name || '-'),
+          status: String(row.current_stage_name || row.status || '-'),
+          original_requisition_ref: String(row.original_permit_application_ref || row.original_requisition_ref || '-'),
+          cancelled_permit_numbers: String(row.cancelled_permit_number || row.permit_numbers || '-'),
+          total_permits_cancelled: Number(row.total_permits_cancelled || 1),
+          refund_amount: Number(row.refund_amount || row.total_refund_amount || 0),
+          reason: String(row.reason || 'Cancellation Request')
+        };
+        if (!this.referenceNo) {
+          this.referenceNo = this.cancellationRow.reference_no;
+        }
+        this.isLoading = false;
+      },
+      error: () => {
         this.errorMessage = 'Unable to load cancellation payment slip details.';
         this.isLoading = false;
       }

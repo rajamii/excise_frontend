@@ -3567,6 +3567,9 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
 
     getExcludeActionsForDetailView(): string[] {
         const base = ['VIEW'];
+        if (this.isImflRequisition() || (this.isImflDistributorPermitSource() && String(this.applicationType || '').toLowerCase().includes('requisition'))) {
+            base.push('FORWARD');
+        }
         if (this.isCompanyRegistration() || this.isCompanyCollaboration() || this.isSalesmanBarmanRegistration() || this.isRenewal()) {
             base.push('MAKE_PAYMENT', 'PAY');
         }
@@ -3665,6 +3668,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                 actions = actions.filter(a => a !== 'VERIFY');
             }
 
+            if (this.isImflRequisition() || (this.isImflDistributorPermitSource() && String(this.applicationType || '').toLowerCase().includes('requisition'))) {
+                actions = actions.filter(a => a !== 'FORWARD');
+            }
+
             if (actions.length > 0) {
                 return Array.from(new Set(actions));
             }
@@ -3759,6 +3766,9 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         }
 
         let finalActions = Array.from(new Set(normalizedActions));
+        if (this.isImflRequisition() || (this.isImflDistributorPermitSource() && String(this.applicationType || '').toLowerCase().includes('requisition'))) {
+            finalActions = finalActions.filter(a => a !== 'FORWARD');
+        }
         if (!this.isLicenseeContext()) {
             finalActions = finalActions.filter(a => a !== 'PAY' && a !== 'FORCE_PAY');
         }

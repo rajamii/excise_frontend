@@ -457,6 +457,37 @@
             </div>
           </div>
 
+          <!-- Under Process Sub-Filter Toggle (All vs Partially Approved) -->
+          <div class="px-3 py-2 bg-light border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2" *ngIf="activeCardFilter === 'under_process' && !isOicDistributorUser">
+            <div class="d-flex align-items-center gap-2">
+              <span class="text-muted small fw-semibold">Filter:</span>
+              <button
+                type="button"
+                class="btn btn-sm"
+                [ngClass]="underProcessSubFilter === 'all' ? 'btn-primary shadow-xs fw-bold' : 'btn-outline-secondary'"
+                (click)="setUnderProcessSubFilter('all')"
+              >
+                <i class="bi bi-list-ul me-1"></i>
+                All Under Process
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm d-flex align-items-center gap-1.5"
+                [ngClass]="underProcessSubFilter === 'partially_approved' ? 'btn-success shadow-xs fw-bold text-white' : 'btn-outline-success'"
+                (click)="setUnderProcessSubFilter('partially_approved')"
+              >
+                <i class="bi bi-patch-check-fill"></i>
+                Partially Approved Permits
+                <span class="badge rounded-pill" [ngClass]="underProcessSubFilter === 'partially_approved' ? 'bg-white text-success' : 'bg-success text-white'">
+                  {{ partiallyApprovedCount }}
+                </span>
+              </button>
+            </div>
+            <div class="small text-muted" *ngIf="underProcessSubFilter === 'partially_approved'">
+              <i class="bi bi-info-circle text-success me-1"></i> Showing applications with partial permits approved by Commissioner
+            </div>
+          </div>
+
           <!-- Officer Approval Table for IMFL Requisition Stock Arrival Cases -->
           <div class="table-wrapper" *ngIf="!error && filteredRows.length > 0 && isOicDistributorUser">
             <table class="table align-middle dp-entries-table">
@@ -691,6 +722,11 @@
                   </td>
                   <td class="permit-status" style="min-width: 270px;">
                     <div class="d-flex flex-column gap-1 align-items-start" style="font-size: 0.82rem;">
+                      <!-- Show partially approved permits status -->
+                      <span class="badge bg-success bg-opacity-10 text-success border border-success px-2 py-1 mb-1" *ngIf="isPartiallyApproved(row)">
+                        <i class="bi bi-patch-check-fill me-1"></i> Partially Approved ({{ getApprovedPermitsRatio(row) }} Permits)
+                      </span>
+
                       <!-- Show current requisition permit numbers if available -->
                       <div class="permit-numbers-list mb-1" *ngIf="getPermitNumbersText(row)">
                         <small class="text-muted fw-bold d-block" style="font-size: 0.72rem;">Permit Number(s):</small>
@@ -708,12 +744,15 @@
                       </span>
 
                       <!-- Show empty dash if no permits generated yet -->
-                      <span class="text-muted fw-semibold" *ngIf="!getPermitNumbersText(row) && !getRevalidatedPermitNumbersText(row) && !getCancelledPermitNumbersText(row)">—</span>
+                      <span class="text-muted fw-semibold" *ngIf="!isPartiallyApproved(row) && !getPermitNumbersText(row) && !getRevalidatedPermitNumbersText(row) && !getCancelledPermitNumbersText(row)">—</span>
                     </div>
                   </td>
                   <td>
                     <span class="status-badge status-badge--{{ row.statusGroup }}">
                       {{ row.currentStage }}
+                    </span>
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success mt-1 d-inline-flex align-items-center" *ngIf="isPartiallyApproved(row)">
+                      <i class="bi bi-check-circle-fill text-success me-1"></i> {{ getApprovedPermitsRatio(row) }} Permits Approved
                     </span>
                     <span class="badge bg-warning text-dark mt-1 d-block" *ngIf="hasPendingArrival(row)">
                       <i class="bi bi-clock-history me-1"></i> Arrival Awaiting Approval
@@ -4489,15 +4528,36 @@
 
         <!-- Permit Cards -->
         <div class="d-flex flex-column gap-3">
-          <div class="card border shadow-sm rounded-3 overflow-hidden" *ngFor="let item of selectedPermitWiseItems; let idx = index">
+          <div
+            class="card rounded-3 overflow-hidden"
+            [ngClass]="isPermitApproved(item, selectedPermitDetailsRow) ? 'border-success border-2 shadow-sm bg-success bg-opacity-5' : 'border shadow-sm'"
+            *ngFor="let item of selectedPermitWiseItems; let idx = index"
+          >
             <!-- Permit Card Header -->
-            <div class="card-header bg-white py-2.5 px-3 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div
+              class="card-header py-2.5 px-3 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2"
+              [ngClass]="isPermitApproved(item, selectedPermitDetailsRow) ? 'bg-success bg-opacity-10 border-success border-opacity-25' : 'bg-white'"
+            >
               <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-primary text-white rounded-pill px-2.5 py-1 fs-7">#{{ idx + 1 }}</span>
+                <span
+                  class="badge rounded-pill px-2.5 py-1 fs-7"
+                  [ngClass]="isPermitApproved(item, selectedPermitDetailsRow) ? 'bg-success text-white' : 'bg-primary text-white'"
+                >#{{ idx + 1 }}</span>
                 <h6 class="m-0 fw-bold text-dark font-monospace d-flex align-items-center">
-                  <i class="bi bi-card-heading text-primary me-2"></i>
+                  <i
+                    class="bi me-2"
+                    [ngClass]="isPermitApproved(item, selectedPermitDetailsRow) ? 'bi-check-circle-fill text-success' : 'bi-card-heading text-primary'"
+                  ></i>
                   {{ item.permitNumber }}
                 </h6>
+
+                <!-- Commissioner Approval Badge -->
+                <span class="badge bg-success text-white py-1 px-2.5 shadow-xs ms-1" *ngIf="isPermitApproved(item, selectedPermitDetailsRow)">
+                  <i class="bi bi-shield-check me-1"></i> Approved by Commissioner
+                </span>
+                <span class="badge bg-warning text-dark py-1 px-2.5 shadow-xs ms-1" *ngIf="!isPermitApproved(item, selectedPermitDetailsRow) && !item.cancellationStatus">
+                  <i class="bi bi-hourglass-split me-1"></i> Pending Commissioner Approval
+                </span>
               </div>
               <div class="d-flex align-items-center gap-2 flex-wrap">
                 <!-- Stock Arrival Status Badges -->
@@ -4539,18 +4599,30 @@
               <div class="row g-3">
                 <!-- Panel 1: Allocation & Brands -->
                 <div class="col-lg-4 col-md-12">
-                  <div class="p-3 bg-light rounded-3 border h-100 d-flex flex-column justify-content-between">
+                  <div
+                    class="p-3 rounded-3 border h-100 d-flex flex-column justify-content-between"
+                    [ngClass]="isPermitApproved(item, selectedPermitDetailsRow) ? 'bg-success bg-opacity-10 border-success border-opacity-25' : 'bg-light'"
+                  >
                     <div>
-                      <h6 class="text-primary fs-7 text-uppercase fw-bold mb-2 pb-1 border-bottom d-flex align-items-center justify-content-between">
-                        <span><i class="bi bi-box-seam me-1"></i> Allocation Details</span>
-                        <span class="badge bg-primary text-white font-monospace">{{ item.totalCases }} Cases</span>
+                      <h6
+                        class="fs-7 text-uppercase fw-bold mb-2 pb-1 border-bottom d-flex align-items-center justify-content-between"
+                        [ngClass]="isPermitApproved(item, selectedPermitDetailsRow) ? 'text-success border-success border-opacity-25' : 'text-primary'"
+                      >
+                        <span>
+                          <i class="bi me-1" [ngClass]="isPermitApproved(item, selectedPermitDetailsRow) ? 'bi-check-circle-fill text-success' : 'bi-box-seam'"></i>
+                          Allocation Details
+                        </span>
+                        <span
+                          class="badge font-monospace"
+                          [ngClass]="isPermitApproved(item, selectedPermitDetailsRow) ? 'bg-success text-white' : 'bg-primary text-white'"
+                        >{{ item.totalCases }} Cases</span>
                       </h6>
 
                       <!-- If multiple brands / line items in this permit -->
                       <div *ngIf="item.lineItems && item.lineItems.length > 1; else singleBrandBlock" class="d-flex flex-column gap-2 mb-2">
                         <div class="p-2 bg-white rounded border shadow-2xs" *ngFor="let li of item.lineItems; let liIdx = index">
                           <div class="fw-semibold text-dark text-truncate" [title]="li.brand_name || li.brandName || item.brandName">
-                            <i class="bi bi-tag-fill text-primary me-1 small"></i>{{ li.brand_name || li.brandName || item.brandName }}
+                            <i class="bi bi-tag-fill me-1 small" [ngClass]="isPermitApproved(item, selectedPermitDetailsRow) ? 'text-success' : 'text-primary'"></i>{{ li.brand_name || li.brandName || item.brandName }}
                           </div>
                           <div class="d-flex justify-content-between align-items-center small text-muted mt-1">
                             <span>{{ li.size_ml || li.sizeMl || item.sizeMl }} ml ({{ li.pieces_per_case || li.piecesPerCase || item.piecesPerCase }} pcs/cs)</span>
@@ -4564,7 +4636,7 @@
                         <div class="mb-2">
                           <small class="text-muted d-block" style="font-size: 11px;">Brand Name</small>
                           <strong class="text-dark d-block text-truncate fs-6" [title]="item.brandName">
-                            <i class="bi bi-tag text-primary me-1"></i>{{ item.brandName }}
+                            <i class="bi bi-tag me-1" [ngClass]="isPermitApproved(item, selectedPermitDetailsRow) ? 'text-success' : 'text-primary'"></i>{{ item.brandName }}
                           </strong>
                         </div>
                         <div class="row g-2 mb-2">
@@ -4584,7 +4656,7 @@
                     <div class="mt-2 pt-2 border-top" *ngIf="item.hologramSummary && !item.hologramSummary.isPending">
                       <div class="d-flex align-items-center justify-content-between">
                         <small class="text-muted" style="font-size: 11px;">Assigned Holograms:</small>
-                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 font-monospace">
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 font-monospace">
                           <i class="bi bi-upc-scan me-1"></i>{{ item.hologramSummary.from }} &rarr; {{ item.hologramSummary.to }} ({{ item.hologramSummary.count }} pcs)
                         </span>
                       </div>
@@ -4662,10 +4734,17 @@
 
                 <!-- Panel 3: Permit Lifecycle & Status -->
                 <div class="col-lg-4 col-md-12">
-                  <div class="p-3 bg-light rounded-3 border h-100 d-flex flex-column justify-content-between">
+                  <div
+                    class="p-3 rounded-3 border h-100 d-flex flex-column justify-content-between"
+                    [ngClass]="isPermitApproved(item, selectedPermitDetailsRow) ? 'bg-success bg-opacity-10 border-success border-opacity-25' : 'bg-light'"
+                  >
                     <div>
-                      <h6 class="text-primary fs-7 text-uppercase fw-bold mb-2 pb-1 border-bottom">
-                        <i class="bi bi-shield-check me-1"></i> Permit Requests &amp; Lifecycle
+                      <h6
+                        class="fs-7 text-uppercase fw-bold mb-2 pb-1 border-bottom"
+                        [ngClass]="isPermitApproved(item, selectedPermitDetailsRow) ? 'text-success border-success border-opacity-25' : 'text-primary'"
+                      >
+                        <i class="bi me-1" [ngClass]="isPermitApproved(item, selectedPermitDetailsRow) ? 'bi-shield-fill-check text-success' : 'bi-shield-check'"></i>
+                        Permit Requests &amp; Lifecycle
                       </h6>
 
                       <!-- Cancellation Record -->
@@ -4689,12 +4768,21 @@
                         <div class="small text-muted">Status: <span class="fw-semibold text-dark">{{ item.revalidationRecord.status || item.revalidationRecord.currentStage }}</span></div>
                       </div>
 
-                      <!-- Active and Good Standing -->
-                      <div *ngIf="!item.cancellationRecord && !item.revalidationRecord" class="text-center py-4 text-muted">
-                        <i class="bi bi-check-circle-fill text-success fs-3 d-block mb-1"></i>
-                        <div class="fw-semibold small text-success">Permit Active &amp; Valid</div>
+                      <!-- Active and Approved Standing -->
+                      <div *ngIf="isPermitApproved(item, selectedPermitDetailsRow) && !item.cancellationRecord && !item.revalidationRecord" class="text-center py-4">
+                        <i class="bi bi-patch-check-fill text-success fs-2 d-block mb-1"></i>
+                        <div class="fw-bold fs-6 text-success">Permit Approved &amp; Active</div>
+                        <small class="d-block text-success px-2 mt-1 fw-semibold" style="font-size: 11px;">
+                          Holograms allocated and permit approved by Commissioner. Valid for consignment transport.
+                        </small>
+                      </div>
+
+                      <!-- Active but Awaiting Approval Standing -->
+                      <div *ngIf="!isPermitApproved(item, selectedPermitDetailsRow) && !item.cancellationRecord && !item.revalidationRecord" class="text-center py-4 text-muted">
+                        <i class="bi bi-hourglass-top text-warning fs-3 d-block mb-1"></i>
+                        <div class="fw-semibold small text-warning">Awaiting Commissioner Approval</div>
                         <small class="d-block text-muted px-2 mt-1" style="font-size: 11px;">
-                          No cancellation, disputes, or revalidation requests recorded against this permit.
+                          Application submitted and under review by Commissioner for hologram allocation.
                         </small>
                       </div>
                     </div>

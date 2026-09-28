@@ -649,13 +649,18 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       return this.rows.filter((row) => {
         const ref = String(row.applicationId || '').toUpperCase();
         const appType = String(row.application?.['applicationType'] || '').toLowerCase();
-        return (
+        const matchesRequisition = (
           !ref.startsWith('IMFLREV') &&
           !ref.startsWith('IMFLCAN') &&
           appType !== 'revalidation' &&
           appType !== 'cancellation' &&
           !row.isActivatedSchedule
         );
+        if (!matchesRequisition) return false;
+        if (this.activeCardFilter === 'under_process' && this.underProcessSubFilter === 'partially_approved') {
+          return this.isPartiallyApproved(row);
+        }
+        return true;
       });
     } else if (this.activeTab === 'brand-arrival') {
       const brandArrivalRows: DistributorPermitRow[] = [];
@@ -5821,6 +5826,118 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.selectedPermitWiseItems = [];
   }
 
+  isPermitItemApproved(p: any, app: any, idx: number): boolean {
+    if (!p) return false;
+    const pNum = String(p.permit_number || p.permitNumber || `${app?.reference_no || app?.applicationId || app?.id || 'P'}-P${idx + 1}`).toLowerCase().trim();
+    const st = String(p.status || p.permit_status || p.permitStatus || '').toUpperCase();
+    if (st === 'APPROVED' || p.is_approved === true || p.isApproved === true) {
+      return true;
+    }
+    const pRanges = p.assignedRanges || p.assigned_ranges || p.assigned_hologram_ranges || p.assignedHologramRanges || [];
+    if (Array.isArray(pRanges) && pRanges.length > 0) {
+      return true;
+    }
+    const assignedRanges = app?.assigned_hologram_ranges || app?.assignedHologramRanges || [];
+    if (Array.isArray(assignedRanges) && assignedRanges.length > 0) {
+      const hasRange = assignedRanges.some((r: any) => {
+        const rPNum = String(r.permit_number || r.permitNumber || '').toLowerCase().trim();
+        const rPIdx = Number(r.permit_index || r.permitIndex || 0);
+        return (rPNum && (rPNum === pNum || pNum.includes(rPNum) || rPNum.includes(pNum))) || (rPIdx && rPIdx === idx + 1);
+      });
+      if (hasRange) return true;
+    }
+    const appStatus = String(app?.status || app?.current_stage_name || app?.currentStageName || (app as any)?.currentStage || '').toUpperCase();
+    const stageId = Number(app?.current_stage_id || app?.currentStageId || app?.current_stage?.id || 0);
+    if (stageId === 151 || stageId === 165 || appStatus === 'APPROVED' || appStatus.includes('APPROVED BY COMMISSIONER') || appStatus.includes('PERMIT ISSUED')) {
+      return true;
+    }
+    return false;
+  }
+
+  isPermitApproved(item: any, appRow?: any): boolean {
+    if (!item) return false;
+    if (item.status === 'APPROVED' || item.isApproved === true || item.is_approved === true) {
+      return true;
+    }
+    if (item.hologramSummary && !item.hologramSummary.isPending && Number(item.hologramSummary.count || 0) > 0) {
+      return true;
+    }
+    const app = appRow?.application || appRow || this.selectedPermitDetailsRow;
+    const idx = this.selectedPermitWiseItems ? this.selectedPermitWiseItems.indexOf(item) : 0;
+    return this.isPermitItemApproved(item, app, idx);
+  }
+
+  isPartiallyApproved(row: any): boolean {
+    const app = row?.application || row;
+    let pWise = app?.permit_wise_details || app?.permitWiseDetails || [];
+    if (typeof pWise === 'string') {
+      try { pWise = JSON.parse(pWise); } catch { pWise = []; }
+    }
+    if (!Array.isArray(pWise) || pWise.length <= 1) {
+      return false;
+    }
+    let approvedCount = 0;
+    pWise.forEach((p: any, idx: number) => {
+      if (this.isPermitItemApproved(p, app, idx)) {
+        approvedCount++;
+      }
+    });
+    return approvedCount > 0 && approvedCount < pWise.length;
+  }
+
+  isAllPermitsApproved(row: any): boolean {
+    const app = row?.application || row;
+    let pWise = app?.permit_wise_details || app?.permitWiseDetails || [];
+    if (typeof pWise === 'string') {
+      try { pWise = JSON.parse(pWise); } catch { pWise = []; }
+    }
+    if (!Array.isArray(pWise) || pWise.length === 0) {
+      return false;
+    }
+    return pWise.every((p: any, idx: number) => this.isPermitItemApproved(p, app, idx));
+  }
+
+  getApprovedPermitsRatio(row: any): string {
+    const app = row?.application || row;
+    let pWise = app?.permit_wise_details || app?.permitWiseDetails || [];
+    if (typeof pWise === 'string') {
+      try { pWise = JSON.parse(pWise); } catch { pWise = []; }
+    }
+    if (!Array.isArray(pWise) || pWise.length === 0) return '';
+    let approvedCount = 0;
+    pWise.forEach((p: any, idx: number) => {
+      if (this.isPermitItemApproved(p, app, idx)) {
+        approvedCount++;
+      }
+    });
+    return `${approvedCount}/${pWise.length}`;
+  }
+
+  underProcessSubFilter: 'all' | 'partially_approved' = 'all';
+
+  get partiallyApprovedCount(): number {
+    return this.rows.filter((row) => {
+      const ref = String(row.applicationId || '').toUpperCase();
+      const appType = String(row.application?.['applicationType'] || '').toLowerCase();
+      const matchesRequisition = (
+        !ref.startsWith('IMFLREV') &&
+        !ref.startsWith('IMFLCAN') &&
+        appType !== 'revalidation' &&
+        appType !== 'cancellation' &&
+        !row.isActivatedSchedule
+      );
+      if (!matchesRequisition) return false;
+      const stGroup = this.isOicDistributorUser ? this.getOfficerStatusGroup(row) : (this.isPermitCancelled(row) || this.isPermitCancellationApplied(row) ? 'cancelled' : row.statusGroup);
+      return stGroup === 'under_process' && this.isPartiallyApproved(row);
+    }).length;
+  }
+
+  setUnderProcessSubFilter(filter: 'all' | 'partially_approved'): void {
+    this.underProcessSubFilter = filter;
+    this.pageIndex = 0;
+    this.cdr.markForCheck();
+  }
+
   isCurrentPermitDisabledForArrival(): boolean {
     const selectedOpt = (this.availablePermitOptionsForArrival as any[]).find(o => o.permitNumber === this.selectedPermitNumberForArrival);
     return Boolean(selectedOpt?.isApproved || selectedOpt?.isAwaiting || selectedOpt?.isCancelled || selectedOpt?.isUnderProcess || selectedOpt?.isRevalidated);
@@ -7959,6 +8076,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   onCardFilterClick(filter: DistributorPermitStatusFilter): void {
     if (this.activeCardFilter === filter) return;
     this.activeCardFilter = filter;
+    if (filter !== 'under_process') {
+      this.underProcessSubFilter = 'all';
+    }
     this.pageIndex = 0;
     this.router.navigate([], {
       relativeTo: this.route,
@@ -8941,14 +9061,18 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       return 'objection';
     }
 
-    // 3. Check APPROVED
-    if (stageId === 151 || stageId === 165 || value.includes('approved by commissioner') || value.includes('permit issued') || value.includes('arrival approved') || value.includes('stock completed')) {
+    // 3. Check APPROVED (stageId 151/165 or all permits approved)
+    if (stageId === 151 || stageId === 165 || value.includes('approved by commissioner') || value.includes('permit issued') || value.includes('arrival approved') || value.includes('stock completed') || this.isAllPermitsApproved(rawApp)) {
       return 'approved';
     }
 
     const isFinal = Boolean(rawApp?.current_stage_is_final || rawApp?.currentStageIsFinal || rawApp?.current_stage?.is_final);
     if (isFinal) {
       return 'approved';
+    }
+
+    if (this.isPartiallyApproved(rawApp)) {
+      return 'under_process';
     }
 
     const { isPermitSection, isCommissioner } = this.getUserRoleInfo();
