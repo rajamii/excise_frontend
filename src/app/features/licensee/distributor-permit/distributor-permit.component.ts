@@ -163,32 +163,19 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         const tabParam = String(params?.['tab'] || '').toLowerCase() as ImflTabType;
         if (['requisition', 'brand-arrival', 'revalidation', 'cancellation', 'brand-warehouse', 'hologram-procurement', 'hologram-arrival', 'hologram-overview'].includes(tabParam)) {
           this.activeTab = tabParam;
-          if (tabParam === 'brand-warehouse') {
-            this.loadBrandWarehouseStock();
-          } else if (tabParam === 'hologram-procurement') {
-            this.loadHologramProcurements();
-          } else if (tabParam === 'hologram-arrival') {
-            this.loadHologramArrivals();
-          } else if (tabParam === 'hologram-overview') {
-            this.loadHologramOverview();
-          }
         } else {
           // Also resolve from the 'section' param (e.g. distributor-permit-cancellation, distributor-permit-brand-arrival)
           const sectionParam = String(params?.['section'] || '').toLowerCase();
           if (sectionParam.includes('hologram-overview') || sectionParam.includes('hologram_overview')) {
             this.activeTab = 'hologram-overview';
-            this.loadHologramOverview();
           } else if (sectionParam.includes('hologram-arrival') || sectionParam.includes('hologram_arrival')) {
             this.activeTab = 'hologram-arrival';
-            this.loadHologramArrivals();
           } else if (this.isItCellUser || sectionParam.includes('hologram')) {
             this.activeTab = 'hologram-procurement';
-            this.loadHologramProcurements();
           } else if (sectionParam.includes('brand-arrival') || sectionParam.includes('brand_arrival')) {
             this.activeTab = 'brand-arrival';
           } else if (sectionParam.includes('brand-warehouse') || sectionParam.includes('brand_warehouse')) {
             this.activeTab = 'brand-warehouse';
-            this.loadBrandWarehouseStock();
           } else if (sectionParam.includes('cancellation')) {
             this.activeTab = 'cancellation';
           } else if (sectionParam.includes('revalidation')) {
@@ -197,6 +184,26 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
             this.activeTab = 'requisition';
           }
         }
+
+        if (this.activeTab === 'brand-warehouse') {
+          this.loadBrandWarehouseStock();
+        } else if (this.activeTab === 'brand-arrival') {
+          this.loadBrandWarehouseStock();
+          this.loadDashboardCounts(true);
+          this.loadApplications();
+        } else if (this.activeTab === 'hologram-procurement') {
+          this.loadDashboardCounts(true);
+          this.loadHologramProcurements();
+        } else if (this.activeTab === 'hologram-arrival') {
+          this.loadDashboardCounts(true);
+          this.loadHologramArrivals();
+        } else if (this.activeTab === 'hologram-overview') {
+          this.loadHologramOverview();
+        } else {
+          this.loadDashboardCounts(true);
+          this.loadApplications();
+        }
+
         const statusParam = String(params?.['status'] || '').toLowerCase() as DistributorPermitStatusFilter;
         if (['all', 'approved', 'pending', 'under_process', 'objection', 'rejected', 'cancelled'].includes(statusParam)) {
           this.activeCardFilter = statusParam;
@@ -254,7 +261,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.dateFromFilter = '';
     this.dateToFilter = '';
     const tabCounts = this.statusCountsByTab[tab];
-    if (tabCounts && tabCounts.pending > 0) {
+    if (tab === 'brand-arrival' || (tabCounts && tabCounts.pending > 0)) {
       this.activeCardFilter = 'pending';
     } else {
       this.activeCardFilter = 'all';
@@ -267,8 +274,12 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       this.loadHologramArrivals();
     } else if (tab === 'hologram-overview') {
       this.loadHologramOverview();
-    } else if (tab === 'brand-warehouse' || tab === 'brand-arrival') {
+    } else if (tab === 'brand-warehouse') {
       this.loadBrandWarehouseStock();
+    } else if (tab === 'brand-arrival') {
+      this.loadBrandWarehouseStock();
+      this.loadDashboardCounts(true);
+      this.loadApplications();
     } else {
       this.loadDashboardCounts(true);
       this.loadApplications();
@@ -286,6 +297,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const statusParam = String(this.route.snapshot.queryParams['status'] || '').toLowerCase();
     if (['all', 'approved', 'pending', 'under_process', 'objection', 'rejected', 'cancelled'].includes(statusParam)) {
       this.activeCardFilter = statusParam as DistributorPermitStatusFilter;
+      return;
+    }
+    if (this.activeTab === 'brand-arrival') {
+      this.activeCardFilter = 'pending';
       return;
     }
     const tabCounts = this.statusCountsByTab[this.activeTab];
@@ -647,7 +662,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   get activeTabRows(): DistributorPermitRow[] {
     if (this.activeTab === 'requisition') {
-      return this.rows.filter((row) => {
+      const reqRows = this.rows.filter((row) => {
         const ref = String(row.applicationId || '').toUpperCase();
         const appType = String(row.application?.['applicationType'] || '').toLowerCase();
         const matchesRequisition = (
@@ -663,78 +678,25 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         }
         return true;
       });
+
+      if (this.activeCardFilter && this.activeCardFilter !== 'all') {
+        return reqRows.filter((r) => {
+          const stGroup = this.isOicDistributorUser ? this.getOfficerStatusGroup(r) : (this.isPermitCancelled(r) || this.isPermitCancellationApplied(r) ? 'cancelled' : r.statusGroup);
+          return stGroup === this.activeCardFilter;
+        });
+      }
+      return reqRows;
     } else if (this.activeTab === 'brand-arrival') {
-      const brandArrivalRows: DistributorPermitRow[] = [];
-      this.rows.forEach((row) => {
-        const ref = String(row.applicationId || '').toUpperCase();
-        const appType = String(row.application?.['applicationType'] || '').toLowerCase();
-        if (
-          ref.startsWith('IMFLREV') ||
-          ref.startsWith('IMFLCAN') ||
-          appType === 'revalidation' ||
-          appType === 'cancellation' ||
-          row.isActivatedSchedule
-        ) {
-          return;
-        }
-
-        if (!this.canUpdateBrandsArrival(row)) {
-          return;
-        }
-
-        const app = row.application || row;
-        let pWise = app.permit_wise_details || app.permitWiseDetails || [];
-        if (typeof pWise === 'string') {
-          try { pWise = JSON.parse(pWise); } catch { pWise = []; }
-        }
-
-        if (Array.isArray(pWise) && pWise.length > 0) {
-          const approvedPermits = pWise.filter((p: any) => p.isApproved !== false && p.status !== 'ON_HOLD');
-          if (approvedPermits.length > 0) {
-            approvedPermits.forEach((p: any, idx: number) => {
-              const pNum = p.permit_number || p.permitNumber || `${row.applicationId}-P${p.permit_sequence || idx + 1}`;
-              const pCases = Number(p.total_cases ?? p.totalCases ?? (p.line_items?.reduce((s: number, it: any) => s + Number(it.cases || 0), 0) || row.cases));
-              let pRanges = p.assignedRanges || p.assigned_ranges || p.assigned_hologram_ranges || p.assignedHologramRanges || [];
-              if (!Array.isArray(pRanges) || pRanges.length === 0) {
-                const allAppRanges = (app as any)['assigned_hologram_ranges'] || (app as any)['assignedHologramRanges'] || [];
-                pRanges = allAppRanges.filter((r: any) => {
-                  const rPNum = String(r.permit_number || r.permitNumber || '').toLowerCase().trim();
-                  const rPIdx = Number(r.permit_index || r.permitIndex || 0);
-                  return (rPNum && rPNum === pNum.toLowerCase()) || (rPIdx && rPIdx === Number(p.permit_sequence || idx + 1));
-                });
-                if (pRanges.length === 0 && approvedPermits.length === 1) {
-                  pRanges = allAppRanges;
-                }
-              }
-              const firstItem = p.line_items?.[0] || p.items?.[0];
-              const brand = firstItem?.brand_name || firstItem?.brandName || firstItem?.brand || row.brandName;
-
-              brandArrivalRows.push({
-                ...row,
-                id: pNum,
-                applicationId: pNum,
-                parentApplicationId: row.applicationId,
-                distributorPermitRef: pNum,
-                cases: pCases,
-                brandName: brand,
-                application: {
-                  ...app,
-                  current_permit_number: pNum,
-                  parent_reference_no: row.applicationId,
-                  current_permit_detail: p,
-                  assigned_hologram_ranges: pRanges
-                }
-              });
-            });
-            return;
-          }
-        }
-
-        brandArrivalRows.push(row);
-      });
-      return brandArrivalRows;
+      const allRows = this.allBrandArrivalRows;
+      if (this.activeCardFilter && this.activeCardFilter !== 'all') {
+        return allRows.filter((r) => {
+          const stGroup = this.getOfficerStatusGroup(r);
+          return stGroup === this.activeCardFilter;
+        });
+      }
+      return allRows;
     } else if (this.activeTab === 'revalidation') {
-      return this.rows.filter((row) => {
+      const revRows = this.rows.filter((row) => {
         const ref = String(row.applicationId || '').toUpperCase();
         const appType = String(row.application?.['applicationType'] || '').toLowerCase();
         if (this.isOfficerUser) {
@@ -742,14 +704,102 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         }
         return ref.startsWith('IMFLREV') || appType === 'revalidation' || row.isActivatedSchedule;
       });
+
+      if (this.activeCardFilter && this.activeCardFilter !== 'all') {
+        return revRows.filter((r) => {
+          let stGroup = r.statusGroup;
+          if (r.isActivatedSchedule) {
+            stGroup = this.isOfficerUser ? 'approved' : 'pending';
+          }
+          return stGroup === this.activeCardFilter;
+        });
+      }
+      return revRows;
     } else if (this.activeTab === 'cancellation') {
-      return this.rows.filter((row) => {
+      const canRows = this.rows.filter((row) => {
         const ref = String(row.applicationId || '').toUpperCase();
         const appType = String(row.application?.['applicationType'] || '').toLowerCase();
         return ref.startsWith('IMFLCAN') || appType === 'cancellation';
       });
+
+      if (this.activeCardFilter && this.activeCardFilter !== 'all') {
+        return canRows.filter((r) => r.statusGroup === this.activeCardFilter);
+      }
+      return canRows;
     }
     return this.rows;
+  }
+
+  get allBrandArrivalRows(): DistributorPermitRow[] {
+    const brandArrivalRows: DistributorPermitRow[] = [];
+    this.rows.forEach((row) => {
+      const ref = String(row.applicationId || '').toUpperCase();
+      const appType = String(row.application?.['applicationType'] || '').toLowerCase();
+      if (
+        ref.startsWith('IMFLREV') ||
+        ref.startsWith('IMFLCAN') ||
+        appType === 'revalidation' ||
+        appType === 'cancellation' ||
+        row.isActivatedSchedule
+      ) {
+        return;
+      }
+
+      if (!this.canUpdateBrandsArrival(row)) {
+        return;
+      }
+
+      const app = row.application || row;
+      let pWise = app.permit_wise_details || app.permitWiseDetails || [];
+      if (typeof pWise === 'string') {
+        try { pWise = JSON.parse(pWise); } catch { pWise = []; }
+      }
+
+      if (Array.isArray(pWise) && pWise.length > 0) {
+        const approvedPermits = pWise.filter((p: any) => p.isApproved !== false && p.status !== 'ON_HOLD');
+        if (approvedPermits.length > 0) {
+          approvedPermits.forEach((p: any, idx: number) => {
+            const pNum = p.permit_number || p.permitNumber || `${row.applicationId}-P${p.permit_sequence || idx + 1}`;
+            const pCases = Number(p.total_cases ?? p.totalCases ?? (p.line_items?.reduce((s: number, it: any) => s + Number(it.cases || 0), 0) || row.cases));
+            let pRanges = p.assignedRanges || p.assigned_ranges || p.assigned_hologram_ranges || p.assignedHologramRanges || [];
+            if (!Array.isArray(pRanges) || pRanges.length === 0) {
+              const allAppRanges = (app as any)['assigned_hologram_ranges'] || (app as any)['assignedHologramRanges'] || [];
+              pRanges = allAppRanges.filter((r: any) => {
+                const rPNum = String(r.permit_number || r.permitNumber || '').toLowerCase().trim();
+                const rPIdx = Number(r.permit_index || r.permitIndex || 0);
+                return (rPNum && rPNum === pNum.toLowerCase()) || (rPIdx && rPIdx === Number(p.permit_sequence || idx + 1));
+              });
+              if (pRanges.length === 0 && approvedPermits.length === 1) {
+                pRanges = allAppRanges;
+              }
+            }
+            const firstItem = p.line_items?.[0] || p.items?.[0];
+            const brand = firstItem?.brand_name || firstItem?.brandName || firstItem?.brand || row.brandName;
+
+            brandArrivalRows.push({
+              ...row,
+              id: pNum,
+              applicationId: pNum,
+              parentApplicationId: row.applicationId,
+              distributorPermitRef: pNum,
+              cases: pCases,
+              brandName: brand,
+              application: {
+                ...app,
+                current_permit_number: pNum,
+                parent_reference_no: row.applicationId,
+                current_permit_detail: p,
+                assigned_hologram_ranges: pRanges
+              }
+            });
+          });
+          return;
+        }
+      }
+
+      brandArrivalRows.push(row);
+    });
+    return brandArrivalRows;
   }
 
   statusCountsByTab: Record<string, { total: number; approved: number; pending: number; underProcess: number; objection: number; rejected: number; cancelled: number }> = {
@@ -763,7 +813,17 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return (rows || []).reduce(
       (acc, row) => {
         acc.total += 1;
-        const stGroup = this.isOicDistributorUser ? this.getOfficerStatusGroup(row) : (this.isPermitCancelled(row) || this.isPermitCancellationApplied(row) ? 'cancelled' : row.statusGroup);
+        let stGroup: DistributorPermitStatusGroup;
+        if (this.activeTab === 'brand-arrival' || this.isOicDistributorUser) {
+          stGroup = this.getOfficerStatusGroup(row);
+        } else if (this.isPermitCancelled(row) || this.isPermitCancellationApplied(row)) {
+          stGroup = 'cancelled';
+        } else if (row.isActivatedSchedule) {
+          stGroup = this.isOfficerUser ? 'approved' : 'pending';
+        } else {
+          stGroup = row.statusGroup;
+        }
+
         if (stGroup === 'approved') acc.approved += 1;
         else if (stGroup === 'pending') acc.pending += 1;
         else if (stGroup === 'under_process') acc.underProcess += 1;
@@ -777,15 +837,57 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   get counts(): { total: number; approved: number; pending: number; underProcess: number; objection: number; rejected: number; cancelled: number } {
+    if (this.activeTab === 'brand-arrival') {
+      const computed = this.computeTabCounts(this.allBrandArrivalRows);
+      if (computed && computed.total > 0) {
+        return computed;
+      }
+    } else if (this.activeTab === 'revalidation') {
+      const revRows = this.rows.filter((row) => {
+        const ref = String(row.applicationId || '').toUpperCase();
+        const appType = String(row.application?.['applicationType'] || '').toLowerCase();
+        if (this.isOfficerUser) {
+          return (ref.startsWith('IMFLREV') || appType === 'revalidation') && !row.isActivatedSchedule;
+        }
+        return ref.startsWith('IMFLREV') || appType === 'revalidation' || row.isActivatedSchedule;
+      });
+      const computed = this.computeTabCounts(revRows);
+      if (computed && computed.total > 0) {
+        return computed;
+      }
+    } else if (this.activeTab === 'cancellation') {
+      const canRows = this.rows.filter((row) => {
+        const ref = String(row.applicationId || '').toUpperCase();
+        const appType = String(row.application?.['applicationType'] || '').toLowerCase();
+        return ref.startsWith('IMFLCAN') || appType === 'cancellation';
+      });
+      const computed = this.computeTabCounts(canRows);
+      if (computed && computed.total > 0) {
+        return computed;
+      }
+    } else if (this.activeTab === 'requisition') {
+      const reqRows = this.rows.filter((row) => {
+        const ref = String(row.applicationId || '').toUpperCase();
+        const appType = String(row.application?.['applicationType'] || '').toLowerCase();
+        return (
+          !ref.startsWith('IMFLREV') &&
+          !ref.startsWith('IMFLCAN') &&
+          appType !== 'revalidation' &&
+          appType !== 'cancellation' &&
+          !row.isActivatedSchedule
+        );
+      });
+      const computed = this.computeTabCounts(reqRows);
+      if (computed && computed.total > 0) {
+        return computed;
+      }
+    }
+
     const cached = this.statusCountsByTab[this.activeTab];
     if (cached && cached.total > 0) {
       return cached;
     }
-    const computed = this.computeTabCounts(this.activeTabRows);
-    if (computed && computed.total > 0) {
-      return computed;
-    }
-    return cached || { total: 0, approved: 0, pending: 0, underProcess: 0, objection: 0, rejected: 0, cancelled: 0 };
+    return { total: 0, approved: 0, pending: 0, underProcess: 0, objection: 0, rejected: 0, cancelled: 0 };
   }
 
   get filteredRows(): DistributorPermitRow[] {
@@ -9827,14 +9929,16 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
               rejected: Number(res.rejected ?? 0),
               cancelled: Number(res.cancelled ?? 0)
             };
-            this.statusCountsByTab[this.activeTab] = counts;
-            if (this.activeTab === 'requisition') {
-              this.statusCountsByTab['brand-arrival'] = { ...counts };
-            }
+            this.statusCountsByTab[tab] = counts;
 
             const statusParam = this.route.snapshot.queryParams['status'];
             if (!statusParam) {
-              if (counts.pending > 0 && this.activeCardFilter !== 'pending') {
+              if (this.activeTab === 'brand-arrival') {
+                if (this.activeCardFilter !== 'pending') {
+                  this.activeCardFilter = 'pending';
+                  this.loadApplications();
+                }
+              } else if (counts.pending > 0 && this.activeCardFilter !== 'pending') {
                 this.activeCardFilter = 'pending';
                 this.loadApplications();
               } else if (counts.pending === 0 && this.activeCardFilter === 'pending') {
@@ -9883,9 +9987,6 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       page: this.currentPage,
       page_size: this.pageSize
     };
-    if (this.activeCardFilter && this.activeCardFilter !== 'all') {
-      queryParams['status'] = this.activeCardFilter;
-    }
     if (this.searchFilter?.trim()) {
       queryParams['search'] = this.searchFilter.trim();
     }
@@ -9895,6 +9996,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
     if (!refreshAllTabs) {
       if (this.activeTab === 'requisition' || this.activeTab === 'brand-arrival') {
+        if (this.activeTab === 'brand-arrival') {
+          queryParams['tab'] = 'brand-arrival';
+        }
         this.permitService.listApplications(queryParams)
           .pipe(
             takeUntil(this.destroy$),
