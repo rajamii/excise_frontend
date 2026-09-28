@@ -2633,8 +2633,12 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
             `,
             confirmButtonColor: '#10b981'
           });
+          // Capture open modal row BEFORE closing arrival modal
+          this._pendingPermitDetailsRefreshRow = this.selectedPermitDetailsRow;
           this.closeUpdateArrivalModal();
-          this.loadApplications();
+          // Force full refresh so casesProcessed/arrivals lists are up-to-date
+          // and the Permit Wise Details modal auto-updates without manual refresh
+          this.loadApplications(true);
           this.loadBrandWarehouseStock(true);
         },
         error: (err: any) => {
@@ -4761,6 +4765,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   showPermitDetailsModal = false;
   selectedPermitDetailsRow: any = null;
   selectedPermitWiseItems: any[] = [];
+  /** Row reference saved before an arrival/cancellation save so the modal can be rebuilt after full data reload */
+  _pendingPermitDetailsRefreshRow: any = null;
 
   showPermitHologramDetailsModal = false;
   selectedPermitHologramDetailsRow: any = null;
@@ -5937,7 +5943,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       });
 
       const arrivalObj = caseProc || arrRec || null;
-      let arrivalStatus = caseProc ? String(caseProc.status).toLowerCase() : (arrRec ? 'approved' : 'pending');
+      let arrivalStatus: string | null = caseProc ? String(caseProc.status).toLowerCase() : (arrRec ? 'approved' : null);
 
       const vehicleNo = caseProc?.vehicle_number || caseProc?.vehicleNumber || caseProc?.vehicle_no || arrRec?.vehicle_number || arrRec?.vehicleNumber || '';
       const arrivedCasesVal = (caseProc?.arrived_cases !== undefined && caseProc?.arrived_cases !== null)
@@ -10356,6 +10362,21 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     }
 
     this.rebuildRows();
+
+    // If Permit Wise Details modal is open or was pending refresh, rebuild its items with freshly loaded data
+    const modalTargetRow = this._pendingPermitDetailsRefreshRow || (this.showPermitDetailsModal ? this.selectedPermitDetailsRow : null);
+    if (modalTargetRow) {
+      const targetAppId = String(modalTargetRow.applicationId || modalTargetRow.referenceNo || modalTargetRow.reference_no || modalTargetRow.id || '').toLowerCase();
+      const updatedRow = (this.applications || []).find((a: any) => {
+        const ref = String(a.referenceNo || a.reference_no || a.id || '').toLowerCase();
+        return ref === targetAppId;
+      }) || modalTargetRow;
+
+      this.selectedPermitDetailsRow = updatedRow;
+      this.buildPermitWiseDetailsItems(updatedRow);
+      this._pendingPermitDetailsRefreshRow = null;
+      this.cdr.markForCheck();
+    }
 
     const refParam = this.route.snapshot.queryParams['ref'] || this.route.snapshot.queryParams['id'];
     if (refParam) {
