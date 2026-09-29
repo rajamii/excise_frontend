@@ -127,7 +127,7 @@
                 <button *ngIf="row.canView" class="btn btn-link p-0 action-eye" title="View Details" (click)="viewApplication(row)">
                   <i class="bi bi-eye-fill"></i>
                 </button>
-                <button class="btn btn-link p-0 action-eye" title="Application Movement History" (click)="viewTimeline(row)">
+                <button *ngIf="!isLicenseeUser()" class="btn btn-link p-0 action-eye" title="Application Movement History" (click)="viewTimeline(row)">
                   <i class="bi bi-clock-history"></i>
                 </button>
                 <button

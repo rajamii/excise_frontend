@@ -175,7 +175,7 @@ export class ApplicationTableComponent implements OnInit, OnChanges {
 
     // Method to check if View Timeline button should be shown
     shouldShowTimelineButton(): boolean {
-        // Hide timeline button for licensee users in approved applications
-        return !(this.tableType === 'approved' && this.isLicenseeUser());
+        // Hide timeline button completely for licensee users
+        return !this.isLicenseeUser();
     }
 }
