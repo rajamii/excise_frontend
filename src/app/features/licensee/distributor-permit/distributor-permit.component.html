@@ -1053,18 +1053,6 @@
                         <i class="bi bi-x-circle"></i> Permit Cancelled
                       </span>
 
-                      <button
-                        *ngIf="getBrandArrivalStatusForRow(row) === 'approved'"
-                        class="btn btn-sm text-white fw-semibold shadow-sm d-flex align-items-center gap-1 px-3 py-1.5"
-                        type="button"
-                        title="Update / Edit Hologram & Arrival Details"
-                        (click)="openUpdateBrandsArrivalModal(row)"
-                        (mousedown)="openUpdateBrandsArrivalModal(row)"
-                        style="background: linear-gradient(135deg, #10b981, #059669); font-size: 12px; border-radius: 6px; border: none;"
-                      >
-                        <i class="bi bi-pencil-square"></i>
-                        <span>Update Arrival / Holograms</span>
-                      </button>
 
                       <button
                         class="btn btn-sm btn-soft-info"

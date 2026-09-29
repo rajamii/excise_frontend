@@ -366,6 +366,57 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return false;
   }
 
+  /**
+   * Returns true when the distributor has completed brand arrival & hologram entry
+   * (records exist in brandWarehouseStocks or allArrivalsList with approved status).
+   */
+  hasDistributorCompletedHologramEntry(row: any): boolean {
+    if (!row) return false;
+    if (this.isPermitCancelled(row) || this.isPermitCancellationApplied(row)) return false;
+
+    const rowObj: any = row;
+    const appId = String(rowObj?.['permit_number'] || rowObj?.['permitNumber'] || rowObj?.['applicationId'] || rowObj?.['referenceNo'] || rowObj?.['reference_no'] || rowObj?.['id'] || '').toLowerCase().trim();
+    if (!appId) return false;
+
+    // 1. Check in brandWarehouseStocks (exact permit match)
+    if (this.brandWarehouseStocks && this.brandWarehouseStocks.length > 0) {
+      const foundInWarehouse = this.brandWarehouseStocks.some((b: any) => {
+        const recent = b.recent_entries || b.recentEntries || [];
+        const hasRecent = recent.some((e: any) => {
+          const pNo = String(e.permit_number || e.permitNumber || '').toLowerCase().trim();
+          return pNo === appId;
+        });
+        const latestP = String(b.latest_permit_number || b.latestPermitNumber || '').toLowerCase().trim();
+        return hasRecent || (latestP && latestP === appId);
+      });
+      if (foundInWarehouse) return true;
+    }
+
+    // 2. Check in allArrivalsList with arrival approved status
+    if (this.allArrivalsList && this.allArrivalsList.length > 0) {
+      const foundInArrivals = this.allArrivalsList.some((a: any) => {
+        const pNo = String(a.permit_number || a.permitNumber || '').toLowerCase().trim();
+        const distPermit = String(a.distributor_permit?.reference_no || a.distributor_permit || '').toLowerCase().trim();
+        const st = String(a.status || '').toLowerCase().trim();
+        return (pNo === appId || distPermit === appId) && (st.includes('approved') || st.includes('completed'));
+      });
+      if (foundInArrivals) return true;
+    }
+
+    // 3. Check in allCasesProcessedList
+    if (this.allCasesProcessedList && this.allCasesProcessedList.length > 0) {
+      const foundInProcessed = this.allCasesProcessedList.some((c: any) => {
+        const pNo = String(c.permit_number || c.permitNumber || '').toLowerCase().trim();
+        const cAppRef = String(c.application_ref || c.distributor_permit || '').toLowerCase().trim();
+        const st = String(c.status || '').toLowerCase().trim();
+        return (st === 'approved' || st === 'completed') && (pNo === appId || cAppRef === appId);
+      });
+      if (foundInProcessed) return true;
+    }
+
+    return false;
+  }
+
   extractTargetPermitsFromApp(appObj: any): string[] {
     const list: string[] = [];
     const directPermitStr = String(
@@ -634,7 +685,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       return 'revalidation_required';
     }
 
-    if (this.hasOicSavedBrandArrival(row)) {
+    if (this.hasDistributorCompletedHologramEntry(row)) {
       return 'approved';
     }
 
@@ -2640,6 +2691,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           // and the Permit Wise Details modal auto-updates without manual refresh
           this.loadApplications(true);
           this.loadBrandWarehouseStock(true);
+          this.loadDashboardCounts(true);
         },
         error: (err: any) => {
           console.error('Error updating brand arrival:', err);
