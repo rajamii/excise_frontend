@@ -4651,6 +4651,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     isCompanyRegistration(): boolean { return this.applicationType === 'company-registration'; }
     isCompanyRegistrationAwaitingPayment(): boolean {
         if (!this.isCompanyRegistration() || !this.applicationData) return false;
+        if (!this.isLicenseeContext() || this.roleService.isAdminRole()) return false;
         const stageName = String(
             this.applicationData['current_stage_name'] ??
             this.applicationData['currentStageName'] ??
@@ -4671,6 +4672,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     isCompanyCollaboration(): boolean { return this.applicationType === 'company-collaboration'; }
     isCompanyCollabAwaitingPayment(): boolean {
         if (!this.isCompanyCollaboration() || !this.applicationData) return false;
+        if (!this.isLicenseeContext() || this.roleService.isAdminRole()) return false;
         const stageName = String(
             this.applicationData['current_stage_name'] ??
             this.applicationData['currentStageName'] ??
@@ -4692,6 +4694,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     isSalesmanBarmanRegistration(): boolean { return this.applicationType === 'salesman-barman-registration' || (this.applicationType as any) === 'salesman-barman'; }
     isSalesmanBarmanAwaitingPayment(): boolean {
         if (!this.isSalesmanBarmanRegistration() || !this.applicationData) return false;
+        if (!this.isLicenseeContext() || this.roleService.isAdminRole()) return false;
         const stageName = String(
             this.applicationData['current_stage_name'] ??
             this.applicationData['currentStageName'] ??
@@ -4705,7 +4708,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
             (this.applicationData as any)?.currentStage ||
             0
         );
-        return stageId === 104 ||
+        return stageId === 104 || stageId === 24 || stageId === 32 ||
             stageName.includes('awaiting_payment') ||
             stageName.includes('awaiting payment') ||
             (stageName.includes('awaiting') && stageName.includes('payment'));
@@ -4713,7 +4716,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
 
     isLicenseRenewalAwaitingPayment(): boolean {
         if (!this.isRenewal() || !this.applicationData) return false;
-        if (!this.isLicenseeContext()) return false;
+        if (!this.isLicenseeContext() || this.roleService.isAdminRole()) return false;
         const stageName = String(
             this.applicationData['current_stage_name'] ??
             this.applicationData['currentStageName'] ??
@@ -4728,7 +4731,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
 
     isNewLicenseAwaitingPayment(): boolean {
         if (!this.isNewLicense() || !this.applicationData) return false;
-        if (!this.isLicenseeContext()) return false;
+        if (!this.isLicenseeContext() || this.roleService.isAdminRole()) return false;
         const stageName = String(
             this.applicationData['current_stage_name'] ??
             this.applicationData['currentStageName'] ??

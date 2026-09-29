@@ -1031,7 +1031,7 @@ private getTransitRejectSummary(): {
 
   private isAwaitingCompanyRegistrationPaymentForLicensee(): boolean {
     if (this.itemType !== 'company-registration') return false;
-    if (this.context !== 'licensee' && !this.isCurrentUserLicensee()) return false;
+    if (this.context !== 'licensee' || !this.isCurrentUserLicensee()) return false;
     const stageName = String(
       this.item?.['current_stage_name'] ??
       this.item?.['currentStageName'] ??
@@ -1045,7 +1045,7 @@ private getTransitRejectSummary(): {
 
   private isAwaitingCompanyCollaborationPaymentForLicensee(): boolean {
     if (this.itemType !== 'company-collaboration') return false;
-    if (this.context !== 'licensee' && !this.isCurrentUserLicensee()) return false;
+    if (this.context !== 'licensee' || !this.isCurrentUserLicensee()) return false;
     const stageName = String(
       this.item?.['current_stage_name'] ??
       this.item?.['currentStageName'] ??
@@ -1959,7 +1959,7 @@ private getTransitRejectSummary(): {
       }
     }
 
-    if (this.itemType === 'company-registration' && (this.context === 'licensee' || this.isCurrentUserLicensee())) {
+    if (this.itemType === 'company-registration' && this.context === 'licensee' && this.isCurrentUserLicensee()) {
       const stageName = String(
         this.item?.['current_stage_name'] ??
         this.item?.['currentStageName'] ??
