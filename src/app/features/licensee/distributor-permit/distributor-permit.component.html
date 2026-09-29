@@ -4833,6 +4833,16 @@
                         <small class="d-block text-success px-2 mt-1 fw-semibold" style="font-size: 11px;">
                           Holograms allocated and permit approved by Commissioner. Valid for consignment transport.
                         </small>
+                        <div class="mt-2.5" *ngIf="isDistributorUser && (!item.arrivalRecord || item.arrivalStatus === 'rejected')">
+                          <button
+                            type="button"
+                            class="btn btn-sm btn-outline-danger shadow-xs py-1 px-3 rounded-pill fw-semibold"
+                            style="font-size: 0.76rem;"
+                            (click)="closePermitDetailsModal(); onCancelPermit(selectedPermitDetailsRow, $event, item.permitNumber)"
+                          >
+                            <i class="bi bi-x-circle me-1"></i> Cancel This Permit
+                          </button>
+                        </div>
                       </div>
 
                       <!-- Active but Awaiting Approval Standing -->

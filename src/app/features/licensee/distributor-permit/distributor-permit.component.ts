@@ -4222,16 +4222,28 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     if (!this.isDistributorUser) return false;
     const appId = String(row?.applicationId || row?.referenceNo || '').toUpperCase();
     if (!appId.startsWith('IMFLREQ')) return false;
+    if (this.isPermitCancelled(row) || row?.statusGroup === 'rejected') {
+      return false;
+    }
     const rawApp = row?.application || row;
     const pDetails = rawApp?.permit_wise_details || rawApp?.permitWiseDetails || [];
     if (Array.isArray(pDetails) && pDetails.length > 0) {
       const hasApprovedPermit = pDetails.some((p: any, idx: number) => this.isPermitItemApproved(p, rawApp, idx));
       if (!this.isApproved(row) && !hasApprovedPermit && !this.isPartiallyApproved(row)) return false;
+
+      // If all permits are already cancelled, do not show cancel button
+      const allCancelled = pDetails.every((p: any) => {
+        const pNum = String(p.permit_number || p.permitNumber || appId);
+        return this.isPermitCancelled(row, pNum) || this.isPermitCancellationApplied(row, pNum);
+      });
+      if (allCancelled) return false;
+
+      return true;
     } else {
-      if (!this.isApproved(row)) return false;
+      if (!this.isApproved(row) && !this.isPartiallyApproved(row)) return false;
+      if (this.isPermitCancelled(row) || this.isPermitCancellationApplied(row)) return false;
+      return true;
     }
-    if (this.hasPendingArrival(row)) return false;
-    return true;
   }
 
   showCancellationModal = false;
@@ -4258,7 +4270,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   selectedPermitDetail: any = null;
   selectedPermitNumbersForCancellation: string[] = [];
 
-  onCancelPermit(row: DistributorPermitRow | any, event?: Event): void {
+  onCancelPermit(row: DistributorPermitRow | any, event?: Event, specificPermitNum?: string): void {
     if (event) {
       try { event.preventDefault(); } catch {}
       try { event.stopPropagation(); } catch {}
@@ -4495,12 +4507,29 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       });
     }
 
-    // Default select first available permit
-    const firstAvailable = this.availablePermitOptionsForCancellation.find(
-      opt => opt.statusBadge === 'available'
-    );
-    if (firstAvailable) {
-      firstAvailable.selected = true;
+    if (specificPermitNum) {
+      const match = this.availablePermitOptionsForCancellation.find(
+        opt => String(opt.permitNumber).toLowerCase() === String(specificPermitNum).toLowerCase() && opt.statusBadge === 'available'
+      );
+      if (match) {
+        this.availablePermitOptionsForCancellation.forEach(o => o.selected = false);
+        match.selected = true;
+      } else {
+        const firstAvailable = this.availablePermitOptionsForCancellation.find(
+          opt => opt.statusBadge === 'available'
+        );
+        if (firstAvailable) {
+          firstAvailable.selected = true;
+        }
+      }
+    } else {
+      // Default select first available permit
+      const firstAvailable = this.availablePermitOptionsForCancellation.find(
+        opt => opt.statusBadge === 'available'
+      );
+      if (firstAvailable) {
+        firstAvailable.selected = true;
+      }
     }
     this.syncSelectedPermitNumbersForCancellation();
 
