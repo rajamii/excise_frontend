@@ -3282,8 +3282,8 @@
               class="border rounded-3 p-3 transition-all"
               [ngClass]="{
                 'border-danger bg-danger bg-opacity-10 shadow-xs': opt.selected,
-                'border-secondary border-opacity-25 bg-white': !opt.selected && !opt.isUnderProcess && !opt.isCancelled && !opt.isRevalidated && !opt.isArrivalApproved,
-                'bg-light text-muted border-light opacity-75': opt.isUnderProcess || opt.isCancelled || opt.isRevalidated || opt.isArrivalApproved
+                'border-secondary border-opacity-25 bg-white': !opt.selected && opt.statusBadge === 'available',
+                'bg-light text-muted border-light opacity-75': opt.statusBadge !== 'available'
               }"
               style="cursor: pointer;"
               (click)="togglePermitSelectionForCancellation(opt)"
@@ -3294,7 +3294,7 @@
                     class="form-check-input mt-0 fs-5 cursor-pointer"
                     type="checkbox"
                     [checked]="opt.selected"
-                    [disabled]="opt.isUnderProcess || opt.isCancelled || opt.isRevalidated || opt.isArrivalApproved"
+                    [disabled]="opt.statusBadge !== 'available'"
                     (click)="$event.stopPropagation()"
                     (change)="togglePermitSelectionForCancellation(opt)"
                   />
@@ -3314,19 +3314,25 @@
                 </div>
 
                 <div class="text-end">
-                  <span class="badge bg-success" *ngIf="!opt.isUnderProcess && !opt.isCancelled && !opt.isRevalidated && !opt.isArrivalApproved">
+                  <span class="badge bg-success" *ngIf="opt.statusBadge === 'available'">
                     <i class="bi bi-check-circle me-1"></i> Available
                   </span>
-                  <span class="badge bg-warning text-dark" *ngIf="opt.isUnderProcess && !opt.isRevalidated && !opt.isArrivalApproved">
+                  <span class="badge bg-warning text-dark" *ngIf="opt.statusBadge === 'cancellation_under_process'">
                     <i class="bi bi-hourglass-split me-1"></i> Cancellation Under Process
                   </span>
-                  <span class="badge bg-warning text-dark" *ngIf="opt.isRevalidated && !opt.isArrivalApproved">
+                  <span class="badge text-white" style="background-color: #0284c7;" *ngIf="opt.statusBadge === 'revalidation_under_process'">
+                    <i class="bi bi-arrow-repeat me-1"></i> Revalidation Under Process
+                  </span>
+                  <span class="badge bg-warning text-dark" *ngIf="opt.statusBadge === 'revalidation_required'">
                     <i class="bi bi-exclamation-triangle me-1"></i> Revalidation Required
                   </span>
-                  <span class="badge bg-danger" *ngIf="opt.isArrivalApproved">
+                  <span class="badge" style="background-color: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;" *ngIf="opt.statusBadge === 'pending_approval'">
+                    <i class="bi bi-clock-history me-1"></i> Pending Commissioner Approval
+                  </span>
+                  <span class="badge bg-danger" *ngIf="opt.statusBadge === 'oic_stock_updated'">
                     <i class="bi bi-lock-fill me-1"></i> OIC has updated stock
                   </span>
-                  <span class="badge bg-secondary" *ngIf="opt.isCancelled && !opt.isArrivalApproved">
+                  <span class="badge bg-secondary" *ngIf="opt.statusBadge === 'cancelled'">
                     <i class="bi bi-x-circle me-1"></i> Cancelled
                   </span>
                 </div>

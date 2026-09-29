@@ -644,13 +644,31 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       return false;
     }
 
+    const rowObj: any = row;
+    const rawApp = rowObj?.application || rowObj;
+
+    // If a specific permit number is checked, ensure that permit is approved by Commissioner before flagging as expired/revalidation required
+    if (specificPermitNum) {
+      const pWise = rawApp?.permit_wise_details || rawApp?.permitWiseDetails || [];
+      if (Array.isArray(pWise) && pWise.length > 0) {
+        const foundP = pWise.find((p: any) => {
+          const pNo = String(p.permit_number || p.permitNumber || '').toLowerCase().trim();
+          return pNo === specificPermitNum.toLowerCase().trim();
+        });
+        if (foundP) {
+          const isItemApproved = this.isPermitItemApproved(foundP, rawApp, pWise.indexOf(foundP));
+          if (!isItemApproved && !this.isApproved(row)) {
+            return false;
+          }
+        }
+      }
+    }
+
     const info = this.getRevalidationInfo(row, specificPermitNum);
     if (info?.isRequired) {
       return true;
     }
 
-    const rowObj: any = row;
-    const rawApp = rowObj?.application || rowObj;
     const pDetail = rawApp?.current_permit_detail;
     if (pDetail && (pDetail['isRevalidationRequired'] || pDetail['is_revalidation_required'] || pDetail['can_submit_application'])) {
       return true;
@@ -4199,7 +4217,17 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   canRequestCancellation(row: DistributorPermitRow | any): boolean {
-    if (!this.isApproved(row) || !this.isDistributorUser) return false;
+    if (!this.isDistributorUser) return false;
+    const appId = String(row?.applicationId || row?.referenceNo || '').toUpperCase();
+    if (!appId.startsWith('IMFLREQ')) return false;
+    const rawApp = row?.application || row;
+    const pDetails = rawApp?.permit_wise_details || rawApp?.permitWiseDetails || [];
+    if (Array.isArray(pDetails) && pDetails.length > 0) {
+      const hasApprovedPermit = pDetails.some((p: any, idx: number) => this.isPermitItemApproved(p, rawApp, idx));
+      if (!this.isApproved(row) && !hasApprovedPermit && !this.isPartiallyApproved(row)) return false;
+    } else {
+      if (!this.isApproved(row)) return false;
+    }
     if (this.hasPendingArrival(row)) return false;
     return true;
   }
@@ -4216,10 +4244,12 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     permitNumber: string;
     totalCases: number;
     label: string;
+    statusBadge?: 'available' | 'cancellation_under_process' | 'revalidation_under_process' | 'revalidation_required' | 'pending_approval' | 'oic_stock_updated' | 'cancelled';
     isUnderProcess: boolean;
     isCancelled: boolean;
     isRevalidated: boolean;
     isArrivalApproved?: boolean;
+    isPendingApproval?: boolean;
     detail: any;
     selected?: boolean;
   }> = [];
@@ -4272,17 +4302,14 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const isSinglePermit = !Array.isArray(pDetails) || pDetails.length <= 1;
 
     if (Array.isArray(pDetails) && pDetails.length > 0) {
-      pDetails.forEach((p: any) => {
+      pDetails.forEach((p: any, idx: number) => {
         const pNum = String(p.permit_number || p.permitNumber || appId);
         const cases = Number(p.total_cases || p.totalCases || 0);
 
+        const isPermitApproved = isSinglePermit || this.isPermitItemApproved(p, rawApp, idx);
         const isRevalInProgress = this.isPermitRevalidationInProgress(row, pNum);
-        const isRevalRequired = this.isPermitRevalidationRequired(row, pNum);
         const isCancelled = this.isPermitCancelled(row, pNum);
         const isCancellationApplied = this.isPermitCancellationApplied(row, pNum);
-
-        let isUnderProcess = false;
-        let isRevalidatedWaiting = false;
 
         const approvedArrival = (this.allArrivalsList || []).find((a: any) => {
           const aPNo = String(a.permit_number || a.permitNumber || '').toLowerCase().trim();
@@ -4312,35 +4339,49 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           return isSinglePermit && pAppRef === appIdLower;
         });
 
-        if (pendingArrival || isArrivalApproved) {
-          isUnderProcess = true;
-        }
+        let statusBadge: 'available' | 'cancellation_under_process' | 'revalidation_under_process' | 'revalidation_required' | 'pending_approval' | 'oic_stock_updated' | 'cancelled' = 'available';
+        let isUnderProcess = false;
+        let isRevalidatedWaiting = false;
+        let isPendingCommissionerApproval = false;
 
         if (isCancelled) {
-          // already cancelled
+          statusBadge = 'cancelled';
+          isUnderProcess = true;
+        } else if (isArrivalApproved || pendingArrival) {
+          statusBadge = 'oic_stock_updated';
+          isUnderProcess = true;
         } else if (isCancellationApplied) {
+          statusBadge = 'cancellation_under_process';
           isUnderProcess = true;
         } else if (isRevalInProgress) {
+          statusBadge = 'revalidation_under_process';
           isRevalidatedWaiting = true;
           isUnderProcess = true;
-        } else if (isRevalRequired) {
+        } else if (!isPermitApproved && !this.isApproved(row)) {
+          statusBadge = 'pending_approval';
+          isPendingCommissionerApproval = true;
+          isUnderProcess = true;
+        } else if (this.isPermitRevalidationRequired(row, pNum)) {
+          statusBadge = 'revalidation_required';
           isRevalidatedWaiting = true;
           isUnderProcess = true;
+        } else {
+          statusBadge = 'available';
         }
 
         let label = `${pNum} (${cases} Cases)`;
-        if (isArrivalApproved) {
+        if (statusBadge === 'oic_stock_updated') {
           label += ' - (OIC has updated stock in Arrival - Cannot Cancel)';
-        } else if (pendingArrival) {
-          label += ' - (Stock Arrival Awaiting OIC Approval)';
-        } else if (isCancelled) {
+        } else if (statusBadge === 'cancelled') {
           label += ' - (Cancelled)';
-        } else if (isCancellationApplied) {
+        } else if (statusBadge === 'cancellation_under_process') {
           label += ' - (Cancellation Under Process)';
-        } else if (isRevalInProgress) {
+        } else if (statusBadge === 'revalidation_under_process') {
           label += ' - (Revalidation Under Process)';
-        } else if (isRevalRequired) {
+        } else if (statusBadge === 'revalidation_required') {
           label += ' - (Revalidation Required - Expired)';
+        } else if (statusBadge === 'pending_approval') {
+          label += ' - (Pending Commissioner Approval - Not Issued Yet)';
         } else {
           label += ' - (Available)';
         }
@@ -4349,10 +4390,12 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           permitNumber: pNum,
           totalCases: cases,
           label,
-          isUnderProcess: isUnderProcess || isRevalidatedWaiting,
+          statusBadge,
+          isUnderProcess: isUnderProcess || isRevalidatedWaiting || isPendingCommissionerApproval,
           isCancelled,
           isRevalidated: isRevalidatedWaiting,
           isArrivalApproved,
+          isPendingApproval: isPendingCommissionerApproval,
           detail: p,
           selected: false
         });
@@ -4379,43 +4422,51 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         return st === 'under_review' && pAppRef === appIdLower;
       });
 
-      const isRevalInProgress = this.isPermitRevalidationInProgress(row, appId);
-      const isRevalRequired = this.isPermitRevalidationRequired(row, appId);
-      const isCancelled = this.isPermitCancelled(row, appId);
-      const isCancellationApplied = this.isPermitCancellationApplied(row, appId);
+      const isCancelled = this.isPermitCancelled(row);
+      const isCancellationApplied = this.isPermitCancellationApplied(row);
+      const isRevalInProgress = this.isPermitRevalidationInProgress(row);
 
+      let statusBadge: 'available' | 'cancellation_under_process' | 'revalidation_under_process' | 'revalidation_required' | 'pending_approval' | 'oic_stock_updated' | 'cancelled' = 'available';
       let isUnderProcess = false;
       let isRevalidatedWaiting = false;
 
-      if (pendingArrival || isArrivalApproved) {
-        isUnderProcess = true;
-      }
-
       if (isCancelled) {
-        // already cancelled
+        statusBadge = 'cancelled';
+        isUnderProcess = true;
+      } else if (isArrivalApproved || pendingArrival) {
+        statusBadge = 'oic_stock_updated';
+        isUnderProcess = true;
       } else if (isCancellationApplied) {
+        statusBadge = 'cancellation_under_process';
         isUnderProcess = true;
       } else if (isRevalInProgress) {
+        statusBadge = 'revalidation_under_process';
         isRevalidatedWaiting = true;
         isUnderProcess = true;
-      } else if (isRevalRequired) {
+      } else if (!this.isApproved(row)) {
+        statusBadge = 'pending_approval';
+        isUnderProcess = true;
+      } else if (this.isPermitRevalidationRequired(row)) {
+        statusBadge = 'revalidation_required';
         isRevalidatedWaiting = true;
         isUnderProcess = true;
+      } else {
+        statusBadge = 'available';
       }
 
       let label = `${appId} (${Number(row.cases || rawApp?.cases || 0)} Cases)`;
-      if (isArrivalApproved) {
+      if (statusBadge === 'oic_stock_updated') {
         label += ' - (OIC has updated stock in Arrival - Cannot Cancel)';
-      } else if (pendingArrival) {
-        label += ' - (Stock Arrival Awaiting OIC Approval)';
-      } else if (isCancelled) {
+      } else if (statusBadge === 'cancelled') {
         label += ' - (Cancelled)';
-      } else if (isCancellationApplied) {
+      } else if (statusBadge === 'cancellation_under_process') {
         label += ' - (Cancellation Under Process)';
-      } else if (isRevalInProgress) {
+      } else if (statusBadge === 'revalidation_under_process') {
         label += ' - (Revalidation Under Process)';
-      } else if (isRevalRequired) {
+      } else if (statusBadge === 'revalidation_required') {
         label += ' - (Revalidation Required - Expired)';
+      } else if (statusBadge === 'pending_approval') {
+        label += ' - (Pending Commissioner Approval - Not Issued Yet)';
       } else {
         label += ' - (Available)';
       }
@@ -4432,7 +4483,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         permitNumber: appId,
         totalCases: Number(row.cases || rawApp?.cases || 0),
         label,
-        isUnderProcess: isUnderProcess || isRevalidatedWaiting,
+        statusBadge,
+        isUnderProcess,
         isCancelled,
         isRevalidated: isRevalidatedWaiting,
         isArrivalApproved,
@@ -4443,7 +4495,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
     // Default select first available permit
     const firstAvailable = this.availablePermitOptionsForCancellation.find(
-      opt => !opt.isCancelled && !opt.isUnderProcess && !opt.isRevalidated && !(opt as any).isArrivalApproved
+      opt => opt.statusBadge === 'available'
     );
     if (firstAvailable) {
       firstAvailable.selected = true;
@@ -4461,7 +4513,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   togglePermitSelectionForCancellation(opt: any): void {
-    if (opt.isUnderProcess || opt.isCancelled || opt.isRevalidated || opt.isArrivalApproved) {
+    if (opt.statusBadge !== 'available') {
       return;
     }
     opt.selected = !opt.selected;
@@ -4469,7 +4521,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   }
 
   setPermitSelectionForCancellation(opt: any, isSelected: boolean): void {
-    if (opt.isUnderProcess || opt.isCancelled || opt.isRevalidated || opt.isArrivalApproved) {
+    if (opt.statusBadge !== 'available') {
       return;
     }
     opt.selected = isSelected;
@@ -4478,7 +4530,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   toggleSelectAllPermitsForCancellation(): void {
     const availableOpts = this.availablePermitOptionsForCancellation.filter(
-      opt => !opt.isUnderProcess && !opt.isCancelled && !opt.isRevalidated && !opt.isArrivalApproved
+      opt => opt.statusBadge === 'available'
     );
     const allSelected = availableOpts.length > 0 && availableOpts.every(opt => opt.selected);
     availableOpts.forEach(opt => opt.selected = !allSelected);
@@ -4487,14 +4539,14 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   isAllAvailablePermitsSelectedForCancellation(): boolean {
     const availableOpts = this.availablePermitOptionsForCancellation.filter(
-      opt => !opt.isUnderProcess && !opt.isCancelled && !opt.isRevalidated && !opt.isArrivalApproved
+      opt => opt.statusBadge === 'available'
     );
     return availableOpts.length > 0 && availableOpts.every(opt => opt.selected);
   }
 
   hasAvailablePermitsForCancellation(): boolean {
     return this.availablePermitOptionsForCancellation.some(
-      opt => !opt.isUnderProcess && !opt.isCancelled && !opt.isRevalidated && !opt.isArrivalApproved
+      opt => opt.statusBadge === 'available'
     );
   }
 
