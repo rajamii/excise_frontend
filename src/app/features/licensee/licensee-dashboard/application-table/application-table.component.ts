@@ -160,8 +160,10 @@ export class ApplicationTableComponent implements OnInit, OnChanges {
 
     viewMovement(element: UnifiedApplication): void {
         this.dialog.open(ApplicationMovementComponent, {
-            width: '700px',
-            maxHeight: '80vh',
+            width: '95vw',
+            maxWidth: '1400px',
+            maxHeight: '90vh',
+            panelClass: 'application-movement-dialog',
             data: { application: element }
         });
     }

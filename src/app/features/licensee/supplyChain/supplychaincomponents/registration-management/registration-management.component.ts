@@ -320,8 +320,10 @@ export class RegistrationManagementComponent implements OnInit {
     this.http.get<any>(`${apiBase}/detail/${encoded}/`).subscribe({
       next: (res: any) => {
         this.dialog.open(ApplicationMovementComponent, {
-          width: '700px',
-          maxHeight: '80vh',
+          width: '95vw',
+          maxWidth: '1400px',
+          maxHeight: '90vh',
+          panelClass: 'application-movement-dialog',
           data: { movementDataSource: { data: [res] } }
         });
       },

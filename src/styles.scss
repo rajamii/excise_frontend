@@ -2139,4 +2139,21 @@ app-unified-action-buttons button[mat-icon-button][color="accent"]:hover,
   }
 }
 
+.application-movement-dialog {
+  .mat-mdc-dialog-container {
+    padding: 0 !important;
+    border-radius: 16px !important;
+    overflow: hidden !important;
+    background: transparent !important;
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25) !important;
+
+    .mdc-dialog__surface {
+      padding: 0 !important;
+      border-radius: 16px !important;
+      background: #ffffff !important;
+      overflow: hidden !important;
+    }
+  }
+}
+
 

@@ -724,8 +724,10 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
     this.http.get<any>(`${this.apiBase}/detail/${encoded}/`).subscribe({
       next: (res: any) => {
         this.dialog.open(ApplicationMovementComponent, {
-          width: '700px',
-          maxHeight: '80vh',
+          width: '95vw',
+          maxWidth: '1400px',
+          maxHeight: '90vh',
+          panelClass: 'application-movement-dialog',
           data: { movementDataSource: { data: [res] } }
         });
       },
