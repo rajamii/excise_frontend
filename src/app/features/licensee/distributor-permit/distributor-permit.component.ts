@@ -6492,7 +6492,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           `• Additional Excise Duty Refund Credited: ₹${this.cancellationRefundAddEd.toFixed(2)}\n` +
           `• Education Duty Refund Credited: ₹${this.cancellationRefundEducationCess.toFixed(2)}\n` +
           `• Total Refund Credited: ₹${this.cancellationTotalRefund.toFixed(2)}`);
-        this.loadApplications();
+        this._pendingPermitDetailsRefreshRow = this.selectedPermitDetailsRow || this.cancellationTargetRow;
+        this.loadApplications(true);
+        this.loadDashboardCounts(true);
       },
       error: (err: any) => {
         this.isSubmittingCancellation = false;
@@ -8348,7 +8350,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
           `• Revalidation Fee Debited: ₹${this.revalidationFeeAmount.toFixed(2)}\n` +
           `• Application forwarded to Commissioner for approval.`
         );
-        this.loadApplications();
+        this._pendingPermitDetailsRefreshRow = this.selectedPermitDetailsRow || this.revalidationTargetRow;
+        this.loadApplications(true);
+        this.loadDashboardCounts(true);
       },
       error: (err: any) => {
         this.isSubmittingRevalidation = false;
