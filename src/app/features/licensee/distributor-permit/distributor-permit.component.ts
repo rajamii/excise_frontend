@@ -137,6 +137,8 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   dateToFilter = '';
   allCasesProcessedList: any[] = [];
   allArrivalsList: any[] = [];
+  allCancellationsList: any[] = [];
+  allRevalidationsList: any[] = [];
   pageSizeOptions: number[] = [5, 10, 25, 50];
   pageSize = 5;
   pageIndex = 0;
@@ -477,7 +479,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const parentId = String(rowObj?.['parentApplicationId'] || rowObj?.['application']?.['parent_reference_no'] || rowObj?.['application']?.['reference_no'] || '').toLowerCase().trim();
     const isParentOnly = !pNum.includes('-p') && !pNum.includes('_p');
 
-    const canApps = (this.applications as any[] || []).filter((a: any) => {
+    const canApps = [...(this.applications as any[] || []), ...(this.allCancellationsList || [])].filter((a: any) => {
       const isCan = String(a?.['referenceNo'] || a?.['reference_no'] || a?.['id'] || '').startsWith('IMFLCAN') || a?.['applicationType'] === 'cancellation';
       return isCan;
     });
@@ -522,7 +524,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const parentId = String(rowObj?.['parentApplicationId'] || rowObj?.['application']?.['parent_reference_no'] || rowObj?.['application']?.['reference_no'] || '').toLowerCase().trim();
     const isParentOnly = !pNum.includes('-p') && !pNum.includes('_p');
 
-    const canApps = (this.applications as any[] || []).filter((a: any) => {
+    const canApps = [...(this.applications as any[] || []), ...(this.allCancellationsList || [])].filter((a: any) => {
       const isCan = String(a?.['referenceNo'] || a?.['reference_no'] || a?.['id'] || '').startsWith('IMFLCAN') || a?.['applicationType'] === 'cancellation';
       return isCan;
     });
@@ -562,7 +564,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const parentId = String(rowObj?.['parentApplicationId'] || rowObj?.['application']?.['parent_reference_no'] || rowObj?.['application']?.['reference_no'] || '').toLowerCase().trim();
     const isParentOnly = !pNum.includes('-p') && !pNum.includes('_p');
 
-    const revApps = (this.applications as any[] || []).filter((a: any) => {
+    const revApps = [...(this.applications as any[] || []), ...(this.allRevalidationsList || [])].filter((a: any) => {
       const isRev = String(a?.['referenceNo'] || a?.['reference_no'] || a?.['id'] || '').startsWith('IMFLREV') || a?.['applicationType'] === 'revalidation';
       return isRev;
     });
@@ -602,7 +604,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const parentId = String(rowObj?.['parentApplicationId'] || rowObj?.['application']?.['parent_reference_no'] || rowObj?.['application']?.['reference_no'] || '').toLowerCase().trim();
     const isParentOnly = !pNum.includes('-p') && !pNum.includes('_p');
 
-    const revApps = (this.applications as any[] || []).filter((a: any) => {
+    const revApps = [...(this.applications as any[] || []), ...(this.allRevalidationsList || [])].filter((a: any) => {
       const isRev = String(a?.['referenceNo'] || a?.['reference_no'] || a?.['id'] || '').startsWith('IMFLREV') || a?.['applicationType'] === 'revalidation';
       return isRev;
     });
@@ -4271,7 +4273,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const pDetails = rawApp?.permit_wise_details || rawApp?.permitWiseDetails || [];
 
     const appIdLower = String(appId).toLowerCase().trim();
-    const existingCancellations = (this.applications || []).filter((a: any) => {
+    const existingCancellations = [...(this.applications || []), ...(this.allCancellationsList || [])].filter((a: any) => {
       const isCan = String(a.referenceNo || a.reference_no || '').startsWith('IMFLCAN') || a.applicationType === 'cancellation';
       const refTarget = String(a.application?.distributor_permit || a.application?.distributorPermit || a.distributor_permit || a.distributorPermitRef || '').toLowerCase().trim();
       const targetNo = String(a.application?.distributor_permit_ref_no || a.distributor_permit_ref_no || a.cancelled_permit_number || a.cancelledPermitNumber || '').toLowerCase().trim();
@@ -4284,7 +4286,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       );
     });
 
-    const existingRevalidations = (this.applications || []).filter((a: any) => {
+    const existingRevalidations = [...(this.applications || []), ...(this.allRevalidationsList || [])].filter((a: any) => {
       const isRev = String(a.referenceNo || a.reference_no || '').startsWith('IMFLREV') || a.applicationType === 'revalidation';
       const refTarget = String(a.application?.distributor_permit || a.application?.distributorPermit || a.distributor_permit || a.distributorPermitRef || '').toLowerCase().trim();
       const targetNo = String(a.application?.distributor_permit_ref_no || a.distributor_permit_ref_no || a.revalidated_permit_number || a.revalidatedPermitNumber || '').toLowerCase().trim();
@@ -6085,35 +6087,39 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         }
       }
 
-      // 3. Revalidation Record
-      const revRec = existingRevalidations.find((revApp: any) => {
-        const revNo = String(revApp.revalidatedPermitNumber || revApp.revalidated_permit_number || revApp.application?.revalidated_permit_number || revApp.application?.revalidatedPermitNumber || revApp.distributor_permit || '').toLowerCase().trim();
-        const reasonText = String(revApp.revalidationReason || revApp.revalidation_reason || revApp.application?.revalidation_reason || revApp.remarks || revApp.application?.remarks || '').toLowerCase().trim();
-        const revPDetails = revApp.permit_wise_details || revApp.permitWiseDetails || revApp.application?.permit_wise_details || revApp.application?.permitWiseDetails || [];
-        if (revNo && (revNo === pNumLower || revNo.includes(pNumLower) || pNumLower.includes(revNo))) return true;
-        if (reasonText && reasonText.includes(pNumLower)) return true;
-        if (Array.isArray(revPDetails) && revPDetails.length > 0) {
-          return revPDetails.some((rp: any) => {
-            const rpNum = String(rp.permit_number || rp.permitNumber || '').toLowerCase().trim();
-            return rpNum === pNumLower || rpNum.includes(pNumLower) || pNumLower.includes(rpNum);
-          });
-        }
-        const revDistPermit = String(revApp.distributor_permit || revApp.distributorPermit || revApp.application?.distributor_permit || revApp.application?.distributorPermit || '').toLowerCase().trim();
-        if (revDistPermit && (revDistPermit === appIdLower || appIdLower.includes(revDistPermit))) {
-          if (!revNo || revNo === appIdLower || revNo.includes(pNumLower)) return true;
-        }
-        return isSinglePermit;
-      });
+      // 3. Revalidation Record (only applicable if neither cancellation nor arrival action has been taken)
+      let revRec: any = null;
+      let revalidationStatus: string | null = null;
 
-      let revalidationStatus = null;
-      if (revRec) {
-        const st = String(revRec['status'] || revRec['currentStage'] || (revRec['current_stage'] as any)?.name || '').toUpperCase();
-        if (st.includes('APPROVED') || st.includes('COMPLETED')) {
-          revalidationStatus = 'approved';
-        } else if (st.includes('REJECTED')) {
-          revalidationStatus = 'rejected';
-        } else {
-          revalidationStatus = 'under_process';
+      if (!cancellationStatus && !arrivalStatus && !arrivalObj) {
+        revRec = existingRevalidations.find((revApp: any) => {
+          const revNo = String(revApp.revalidatedPermitNumber || revApp.revalidated_permit_number || revApp.application?.revalidated_permit_number || revApp.application?.revalidatedPermitNumber || revApp.distributor_permit || '').toLowerCase().trim();
+          const reasonText = String(revApp.revalidationReason || revApp.revalidation_reason || revApp.application?.revalidation_reason || revApp.remarks || revApp.application?.remarks || '').toLowerCase().trim();
+          const revPDetails = revApp.permit_wise_details || revApp.permitWiseDetails || revApp.application?.permit_wise_details || revApp.application?.permitWiseDetails || [];
+          if (revNo && (revNo === pNumLower || revNo.includes(pNumLower) || pNumLower.includes(revNo))) return true;
+          if (reasonText && reasonText.includes(pNumLower)) return true;
+          if (Array.isArray(revPDetails) && revPDetails.length > 0) {
+            return revPDetails.some((rp: any) => {
+              const rpNum = String(rp.permit_number || rp.permitNumber || '').toLowerCase().trim();
+              return rpNum === pNumLower || rpNum.includes(pNumLower) || pNumLower.includes(rpNum);
+            });
+          }
+          const revDistPermit = String(revApp.distributor_permit || revApp.distributorPermit || revApp.application?.distributor_permit || revApp.application?.distributorPermit || '').toLowerCase().trim();
+          if (revDistPermit && (revDistPermit === appIdLower || appIdLower.includes(revDistPermit))) {
+            if (!revNo || revNo === appIdLower || revNo.includes(pNumLower)) return true;
+          }
+          return isSinglePermit;
+        });
+
+        if (revRec) {
+          const st = String(revRec['status'] || revRec['currentStage'] || (revRec['current_stage'] as any)?.name || '').toUpperCase();
+          if (st.includes('APPROVED') || st.includes('COMPLETED')) {
+            revalidationStatus = 'approved';
+          } else if (st.includes('REJECTED')) {
+            revalidationStatus = 'rejected';
+          } else {
+            revalidationStatus = 'under_process';
+          }
         }
       }
 
@@ -6537,6 +6543,26 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         this.closeCancellationModal();
         this.paymentIntegrationService.clearWalletCache();
         const refNo = res.reference_no || res.id || '';
+        const createdCanRecord = {
+          ...res,
+          referenceNo: refNo,
+          reference_no: refNo,
+          applicationType: 'cancellation',
+          distributorPermit: appId,
+          distributor_permit: appId,
+          distributorPermitRef: appId,
+          cancelledPermitNumber: targetPermitStr,
+          cancelled_permit_number: targetPermitStr,
+          permitWiseDetails: selectedPermits,
+          permit_wise_details: selectedPermits,
+          status: res.status || 'Forwarded to Commissioner',
+          currentStage: res.current_stage || { name: 'Forwarded to Commissioner' },
+          current_stage: res.current_stage || { name: 'Forwarded to Commissioner' }
+        };
+        this.allCancellationsList = [createdCanRecord, ...(this.allCancellationsList || []).filter((c: any) => (c.referenceNo || c.reference_no) !== refNo)];
+        this.applications = [createdCanRecord, ...(this.applications || []).filter((a: any) => (a.referenceNo || a.reference_no) !== refNo)];
+        this.rebuildRows();
+
         alert(`IMFL Permit Cancellation Request ${refNo} Submitted Successfully!\n\n` +
           `• Number of Permits Cancelled: ${selectedPermits.length}\n` +
           `• Cancellation Processing Fee Debited (${selectedPermits.length} × ₹1,000): ₹${this.cancellationFeeAmount.toFixed(2)}\n` +
@@ -8397,6 +8423,26 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         this.closeRevalidationModal();
         this.paymentIntegrationService.clearWalletCache();
         const refNo = res.reference_no || res.id || '';
+        const createdRevRecord = {
+          ...res,
+          referenceNo: refNo,
+          reference_no: refNo,
+          applicationType: 'revalidation',
+          distributorPermit: appId,
+          distributor_permit: appId,
+          distributorPermitRef: appId,
+          revalidatedPermitNumber: targetPermitStr,
+          revalidated_permit_number: targetPermitStr,
+          permitWiseDetails: permitWiseDetails,
+          permit_wise_details: permitWiseDetails,
+          status: res.status || 'Forwarded to Commissioner',
+          currentStage: res.current_stage || { name: 'Forwarded to Commissioner' },
+          current_stage: res.current_stage || { name: 'Forwarded to Commissioner' }
+        };
+        this.allRevalidationsList = [createdRevRecord, ...(this.allRevalidationsList || []).filter((r: any) => (r.referenceNo || r.reference_no) !== refNo)];
+        this.applications = [createdRevRecord, ...(this.applications || []).filter((a: any) => (a.referenceNo || a.reference_no) !== refNo)];
+        this.rebuildRows();
+
         alert(
           `Revalidation Application ${refNo} Submitted Successfully!\n\n` +
           `• Revalidation Fee Debited: ₹${this.revalidationFeeAmount.toFixed(2)}\n` +
@@ -10126,7 +10172,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       brands: this.permitService.getBrandMaster().pipe(catchError(() => of({ success: true, data: [] as DistributorBrandMaster[], total: 0 }))),
       premises: this.permitService.getPremises().pipe(catchError(() => of({ destination: '' } as any))),
       casesProcessed: this.permitService.getCasesProcessed().pipe(catchError(() => of([] as any[]))),
-      arrivals: this.permitService.getArrivals().pipe(catchError(() => of([] as any[])))
+      arrivals: this.permitService.getArrivals().pipe(catchError(() => of([] as any[]))),
+      cancellations: this.permitService.getCancellations().pipe(catchError(() => of([] as any[]))),
+      revalidations: this.permitService.getRevalidations().pipe(catchError(() => of([] as any[])))
     })
       .pipe(
         takeUntil(this.destroy$),
@@ -10135,7 +10183,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         })
       )
       .subscribe({
-        next: ({ suppliers, brands, premises, casesProcessed, arrivals }) => {
+        next: ({ suppliers, brands, premises, casesProcessed, arrivals, cancellations, revalidations }) => {
           try {
             this.suppliers = Array.isArray(suppliers) ? suppliers : [];
             this.brandMaster = Array.isArray(brands?.data) ? brands.data : (Array.isArray(brands) ? brands : []);
@@ -10145,6 +10193,10 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
             this.allCasesProcessedList = Array.isArray(casesProcessed) ? casesProcessed : (casesProcessed as any)?.results || [];
             this.allArrivalsList = Array.isArray(arrivals) ? arrivals : (arrivals as any)?.results || [];
             this.pendingArrivalReviews = this.allCasesProcessedList.filter((c: any) => String(c.status).toLowerCase() === 'under_review');
+            const canArr = Array.isArray(cancellations) ? cancellations : (cancellations as any)?.results || [];
+            const revArr = Array.isArray(revalidations) ? revalidations : (revalidations as any)?.results || [];
+            this.allCancellationsList = canArr;
+            this.allRevalidationsList = revArr;
 
             this.loadApplications();
             if (this.activeTab === 'brand-warehouse') {
@@ -10180,6 +10232,16 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
               cancelled: Number(res.cancelled ?? 0)
             };
             this.statusCountsByTab[tab] = counts;
+
+            if (tab === 'hologram-procurement') {
+              this.holoStatusCounts = {
+                total: Number(res.total ?? res.applied ?? 0),
+                approved: Number(res.approved ?? 0),
+                pending: Number(res.pending ?? 0),
+                paymentPending: Number(res.awaiting_payment ?? res.awaitingPayment ?? 0),
+                rejected: Number(res.rejected ?? 0)
+              };
+            }
 
             const statusParam = this.route.snapshot.queryParams['status'];
             if (!statusParam) {
@@ -10440,11 +10502,23 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       };
     });
 
+    if (mappedCancellations.length > 0) {
+      this.allCancellationsList = mappedCancellations;
+    }
+    if (mappedRevalidations.length > 0) {
+      this.allRevalidationsList = mappedRevalidations;
+    }
+
     if (this.activeTab === 'requisition' || this.activeTab === 'brand-arrival') {
       if (mappedRequisitions.length > 0 || Array.isArray(requisitions) || (requisitions as any)?.results) {
+        const existingExtra = this.applications.filter((a: any) => a.applicationType === 'revalidation' || a.applicationType === 'cancellation');
+        const extraCancellations = (this.allCancellationsList || []).filter((c: any) => !existingExtra.some((e: any) => (e.referenceNo || e.reference_no) === (c.referenceNo || c.reference_no)));
+        const extraRevalidations = (this.allRevalidationsList || []).filter((r: any) => !existingExtra.some((e: any) => (e.referenceNo || e.reference_no) === (r.referenceNo || r.reference_no)));
         this.applications = [
           ...mappedRequisitions,
-          ...this.applications.filter((a: any) => a.applicationType === 'revalidation' || a.applicationType === 'cancellation')
+          ...existingExtra,
+          ...extraCancellations,
+          ...extraRevalidations
         ];
       }
     } else if (this.activeTab === 'revalidation') {
@@ -10854,7 +10928,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
   isSubmittingHologram = false;
   hologramRatePerPiece = 0.15;
   hologramSearchFilter = '';
-  hologramStatusFilter = 'pending';
+  hologramStatusFilter = 'all';
   isProcessingHologramAction = false;
   actionRemarksModalOpen = false;
   pendingHologramAction: { item: IMFLHologramProcurementItem; action: string; title: string } | null = null;
