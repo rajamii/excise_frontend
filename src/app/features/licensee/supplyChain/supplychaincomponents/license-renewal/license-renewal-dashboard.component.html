@@ -127,6 +127,9 @@
                 <button *ngIf="row.canView" class="btn btn-link p-0 action-eye" title="View Details" (click)="viewApplication(row)">
                   <i class="bi bi-eye-fill"></i>
                 </button>
+                <button class="btn btn-link p-0 action-eye" title="Application Movement History" (click)="viewTimeline(row)">
+                  <i class="bi bi-clock-history"></i>
+                </button>
                 <button
                   *ngIf="isLicenseeUser() && !row.isTerminated && row.statusGroup !== 'rejected' && (row.canPayLicenseFee || row.statusGroup === 'awaiting-payment')"
                   class="btn btn-sm btn-success fw-bold shadow-sm d-inline-flex align-items-center gap-1"

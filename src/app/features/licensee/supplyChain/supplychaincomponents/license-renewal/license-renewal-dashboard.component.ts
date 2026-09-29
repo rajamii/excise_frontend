@@ -1,14 +1,18 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
+import { MatDialog } from '@angular/material/dialog';
 import { of, Subject } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { Router, ActivatedRoute } from '@angular/router';
 import Swal from 'sweetalert2';
+import { environment } from '../../../../../../environments/environment';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { RoleService } from '../../../../../core/services/role.service';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
 import { SidebarPendingBadgeService } from '../../../../../shared/services/sidebar-pending-badge.service';
+import { ApplicationMovementComponent } from '../../../licensee-dashboard/application-table/application-movement/application-movement.component';
 
 interface RenewalCounts {
   applied: number;
@@ -55,6 +59,8 @@ interface GroupedRenewalResponse {
 export class LicenseRenewalDashboardComponent implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private http = inject(HttpClient);
+  private dialog = inject(MatDialog);
   private roleService = inject(RoleService);
   private licenseApplicationService = inject(LicenseApplicationService);
   private sidebarPendingBadgeService = inject(SidebarPendingBadgeService);
@@ -206,6 +212,29 @@ export class LicenseRenewalDashboardComponent implements OnInit {
         ref: row.applicationId,
         type: 'license-renewal',
         source: this.getDetailViewSource()
+      }
+    });
+  }
+
+  viewTimeline(row: RenewalItem): void {
+    const applicationId = String(row.applicationId || '').trim();
+    if (!applicationId) return;
+
+    const encoded = encodeURIComponent(applicationId);
+    const url = `${environment.apiBaseUrl}/transactional/license_renewal_application/detail/${encoded}/`;
+    this.http.get<any>(url).subscribe({
+      next: (res: any) => {
+        this.dialog.open(ApplicationMovementComponent, {
+          width: '95vw',
+          maxWidth: '1400px',
+          maxHeight: '90vh',
+          panelClass: 'application-movement-dialog',
+          data: { movementDataSource: { data: [res] } }
+        });
+      },
+      error: (err: any) => {
+        const msg = err?.error?.detail || err?.error?.error || err?.message || 'Failed to load timeline.';
+        void Swal.fire('Error', String(msg), 'error');
       }
     });
   }
