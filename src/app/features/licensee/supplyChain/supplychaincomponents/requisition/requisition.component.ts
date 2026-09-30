@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -6,6 +6,7 @@ import { AccountService } from '../../../../../core/services/account.service';
 import { EnaRequisitionService } from '../../../../../core/services/ena-requisition.service';
 import { SupplyChainService } from '../../services/supplychain.service';
 import { CancellationRequestComponent } from '../../cancellation-request/cancellation-request.component';
+import { TimerConfigService } from '../../../../../core/services/timer-config.service';
 
 import { UnifiedActionsService } from '../../../../../shared/services/unified-actions.service';
 import { SidebarPendingBadgeService } from '../../../../../shared/services/sidebar-pending-badge.service';
@@ -19,6 +20,7 @@ interface TableData {
   submissionDate: string;
   submissionDateRaw?: string;
   approvalDateRaw?: string;
+  validUpToRaw?: string;
   updatedAtRaw?: string;
   createdAtRaw?: string;
   distilleryName: string;
@@ -77,6 +79,16 @@ interface TankerArrivalEntry {
   detail_id?: number;
 }
 
+export interface IndividualPermitDetail {
+  permitNo: string;
+  status: 'ACTIVE' | 'ARRIVED' | 'CANCELLED' | 'REVALIDATED' | 'EXPIRED';
+  statusLabel: string;
+  statusBadgeClass: string;
+  allocatedBulkLiter: number;
+  validUpToFormatted: string;
+  tankerEntries: TankerArrivalEntry[];
+}
+
 interface ArrivalDetailsRow {
   id: number;
   requisitionId: number;
@@ -121,6 +133,14 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   private supplyChainService = inject(SupplyChainService);
   private unifiedActionsService = inject(UnifiedActionsService);
   private sidebarPendingBadgeService = inject(SidebarPendingBadgeService);
+  private timerConfigService = inject(TimerConfigService);
+  private cdr = inject(ChangeDetectorRef);
+
+  // Timer configuration
+  public enaRevalidationDelaySeconds: number = 1800; // default 30 mins
+  public enaRevalidationDelayValue: number = 30;
+  public enaRevalidationDelayUnit: string = 'minute';
+  private tickerTimerInterval: any = null;
 
   // Data properties
   requisitionData: TableData[] = [];
@@ -160,6 +180,11 @@ export class RequisitionComponent implements OnInit, OnDestroy {
   arrivalServerEntriesByPermit: Record<string, TankerArrivalEntry[]> = {};
   arrivalServerPermitStatusByPermit: Record<string, string> = {};
   isArrivalViewModalOpen: boolean = false;
+  // Permit Details Modal properties
+  isPermitDetailsModalOpen: boolean = false;
+  selectedPermitRequisition: TableData | null = null;
+  permitDetailsList: IndividualPermitDetail[] = [];
+  isLoadingPermitDetails: boolean = false;
   arrivalViewErrorMessage: string = '';
   arrivalViewTankerCount: number = 0;
   arrivalViewTotalBulkLiter: number = 0;
@@ -280,6 +305,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       window.addEventListener('pageshow', this.pageshowHandler);
     }
 
+    this.loadTimerConfig();
+    this.startCountdownTicker();
     this.loadCounts();
   }
 
@@ -295,6 +322,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     if (this.isBrowser && typeof window !== 'undefined') {
       window.removeEventListener('pageshow', this.pageshowHandler);
     }
+    this.stopCountdownTicker();
     this.cleanupSidebarLockState();
     this.setBulkRecordModalMode(false);
   }
@@ -518,6 +546,7 @@ export class RequisitionComponent implements OnInit, OnDestroy {
             submissionDate: formattedDate,
             submissionDateRaw: dateVal || '',
             approvalDateRaw: item.approvalDate || item.approval_date || '',
+            validUpToRaw: item.valid_up_to || item.validUpTo || '',
             updatedAtRaw: item.updated_at || item.updatedAt || '',
             createdAtRaw: item.created_at || item.createdAt || '',
             distilleryName: item.liftedFromDistilleryName || item.lifted_from_distillery_name || item.distilleryName || item.distillery_name || item.manufacturingUnit || 'N/A',
@@ -2637,6 +2666,263 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       month: 'short',
       year: 'numeric'
     }).replace(/ /g, '-');
+  }
+
+  // ── Auto-Revalidation Timer Methods ──────────────────────────────────────────
+
+  private loadTimerConfig(): void {
+    this.timerConfigService.getTimerConfig('ENA_REVALIDATION_ACTIVATION', 1800)
+      .subscribe({
+        next: (cfg) => {
+          if (cfg && cfg.delay_seconds > 0) {
+            this.enaRevalidationDelaySeconds = cfg.delay_seconds;
+            this.enaRevalidationDelayValue = cfg.delay_value || Math.round(cfg.delay_seconds / 60);
+            this.enaRevalidationDelayUnit = cfg.delay_unit || 'minute';
+            this.cdr.markForCheck();
+          }
+        },
+        error: () => {}
+      });
+  }
+
+  private startCountdownTicker(): void {
+    if (!this.isBrowser) return;
+    this.stopCountdownTicker();
+    this.tickerTimerInterval = setInterval(() => {
+      this.cdr.markForCheck();
+    }, 1000);
+  }
+
+  private stopCountdownTicker(): void {
+    if (this.tickerTimerInterval) {
+      clearInterval(this.tickerTimerInterval);
+      this.tickerTimerInterval = null;
+    }
+  }
+
+  getRevalidationCountdown(item: TableData): { text: string; isExpired: boolean; isUrgent: boolean; deadlineText: string } {
+    const now = Date.now();
+    const delayMs = (this.enaRevalidationDelaySeconds || 1800) * 1000;
+
+    let targetTime = 0;
+    const validUpToStr = item.validUpToRaw;
+    if (validUpToStr) {
+      const parsed = new Date(validUpToStr).getTime();
+      if (!isNaN(parsed) && parsed > 0) {
+        targetTime = parsed;
+      }
+    }
+
+    if (!targetTime && item.approvalDateRaw) {
+      const parsedApproval = new Date(item.approvalDateRaw).getTime();
+      if (!isNaN(parsedApproval) && parsedApproval > 0) {
+        targetTime = parsedApproval + delayMs;
+      }
+    }
+
+    if (!targetTime && item.updatedAtRaw) {
+      const parsedUpdated = new Date(item.updatedAtRaw).getTime();
+      if (!isNaN(parsedUpdated) && parsedUpdated > 0) {
+        targetTime = parsedUpdated + delayMs;
+      }
+    }
+
+    if (!targetTime) {
+      const defaultMins = Math.floor(delayMs / 60000);
+      return { text: `${defaultMins.toString().padStart(2, '0')}m 00s`, isExpired: false, isUrgent: false, deadlineText: 'Active' };
+    }
+
+    const remainingMs = targetTime - now;
+    const targetDate = new Date(targetTime);
+    const deadlineText = targetDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    if (remainingMs <= 0) {
+      return { text: 'Validity Expired', isExpired: true, isUrgent: true, deadlineText };
+    }
+
+    const totalSecs = Math.floor(remainingMs / 1000);
+    const days = Math.floor(totalSecs / 86400);
+    const hours = Math.floor((totalSecs % 86400) / 3600);
+    const mins = Math.floor((totalSecs % 3600) / 60);
+    const secs = totalSecs % 60;
+
+    let text = '';
+    if (days > 0) {
+      text = `${days}d ${hours.toString().padStart(2, '0')}h ${mins.toString().padStart(2, '0')}m`;
+    } else if (hours > 0) {
+      text = `${hours.toString().padStart(2, '0')}h ${mins.toString().padStart(2, '0')}m ${secs.toString().padStart(2, '0')}s`;
+    } else {
+      text = `${mins.toString().padStart(2, '0')}m ${secs.toString().padStart(2, '0')}s`;
+    }
+
+    const isUrgent = remainingMs <= 5 * 60 * 1000; // <= 5 minutes
+    return { text, isExpired: false, isUrgent, deadlineText };
+  }
+
+  /**
+   * Check if requisition has received final approval (not under process / intermediate stage)
+   */
+  isRequisitionApproved(item: TableData | null | undefined): boolean {
+    if (!item || !item.status) return false;
+    if (this.isApprovedCommissionerAwaitingPayment(item)) return false;
+
+    const statusUpper = String(item.status).trim().toUpperCase();
+    const stageUpper = String(item.currentStageName || '').trim().toUpperCase();
+    const combined = `${statusUpper} ${stageUpper}`;
+
+    // Under process / intermediate statuses must NOT be treated as approved
+    if (statusUpper === 'APPROVED COMMISSIONER') return false;
+    if (
+      statusUpper.includes('PENDING') ||
+      statusUpper.includes('SUBMITTED') ||
+      statusUpper.includes('REJECTED') ||
+      statusUpper.includes('DRAFT') ||
+      statusUpper.includes('PROCESSING') ||
+      statusUpper.includes('FORWARDED') ||
+      statusUpper.includes('REVIEW') ||
+      statusUpper.includes('AWAITING')
+    ) {
+      return false;
+    }
+    if (combined.includes('forwarded') || combined.includes('review') || combined.includes('awaiting')) {
+      return false;
+    }
+
+    if (statusUpper === 'APPROVED' || statusUpper === 'APPROVED PAYSLIP' || combined.includes('issued') || combined.includes('complete')) {
+      return true;
+    }
+
+    return this.isCommissionerFinalApproval(item);
+  }
+
+  getPermitStatus(item: TableData, permitNo: string): { status: string; label: string; badgeClass: string } {
+    const token = String(permitNo || '').trim();
+
+    // 1. Check cancelled
+    const cancelledTokens = this.getCancelledPermitNumbers(item).split(',').map((s) => s.trim()).filter(Boolean);
+    if (cancelledTokens.includes(token)) {
+      return { status: 'CANCELLED', label: 'Cancelled / Surrendered', badgeClass: 'badge-permit-cancelled' };
+    }
+
+    // 2. Check revalidated
+    const revalTokens = this.getRevalidatedPermitNumbers(item).split(',').map((s) => s.trim()).filter(Boolean);
+    if (revalTokens.includes(token)) {
+      return { status: 'REVALIDATED', label: 'Revalidated (45 Days Extension)', badgeClass: 'badge-permit-revalidated' };
+    }
+
+    // 3. Check arrived
+    const arrivedTokens = this.getArrivedPermitNumbers(item).split(',').map((s) => s.trim()).filter(Boolean);
+    if (arrivedTokens.includes(token)) {
+      return { status: 'ARRIVED', label: 'Arrival Completed', badgeClass: 'badge-permit-arrived' };
+    }
+
+    // 4. Check countdown expiry
+    const countdown = this.getRevalidationCountdown(item);
+    if (countdown.isExpired) {
+      return { status: 'EXPIRED', label: 'Auto-Revalidation Triggered (Validity Expired)', badgeClass: 'badge-permit-expired' };
+    }
+
+    return { status: 'ACTIVE', label: 'Active & Valid', badgeClass: 'badge-permit-active' };
+  }
+
+  openPermitDetailsModal(item: TableData): void {
+    this.selectedPermitRequisition = item;
+    this.isPermitDetailsModalOpen = true;
+    this.permitDetailsList = [];
+    this.isLoadingPermitDetails = true;
+
+    const permits = this.resolveArrivalPermitNumbers(item);
+    const totalQty = Number(item.quantity || item.requestedTotalQuantity || 0);
+    const perPermitQty = permits.length > 0 ? totalQty / permits.length : totalQty;
+
+    const validUpToDate = this.parseDate(item.validUpToRaw);
+    const validUpToFormatted = validUpToDate ? this.formatDisplayDate(validUpToDate) : 'Valid (30m delay)';
+
+    this.permitDetailsList = permits.map((permitNo) => {
+      const statusInfo = this.getPermitStatus(item, permitNo);
+      return {
+        permitNo,
+        status: statusInfo.status as any,
+        statusLabel: statusInfo.label,
+        statusBadgeClass: statusInfo.badgeClass,
+        allocatedBulkLiter: perPermitQty,
+        validUpToFormatted,
+        tankerEntries: []
+      };
+    });
+
+    if (item.id) {
+      this.enaRequisitionService.getRequisitionArrivalDetails(item.id, 'ALL').subscribe({
+        next: (response: any) => {
+          this.isLoadingPermitDetails = false;
+          const data = response?.data;
+          if (!data) {
+            this.cdr.markForCheck();
+            return;
+          }
+          const entries = Array.isArray(data.tanker_details) ? data.tanker_details : [];
+          const grouped: Record<string, TankerArrivalEntry[]> = {};
+          for (const row of entries) {
+            const pNo = String(row?.permit_no ?? row?.permitNo ?? '').trim();
+            if (!pNo) continue;
+            if (!grouped[pNo]) grouped[pNo] = [];
+            grouped[pNo].push({
+              permit_no: pNo,
+              tanker_no: String(row?.tanker_no ?? row?.tankerNo ?? '').trim(),
+              bulk_liter: Number(row?.bulk_liter ?? row?.bulkLiter ?? 0) || null,
+              approval_status: String(row?.approval_status ?? row?.approvalStatus ?? '').trim()
+            });
+          }
+          this.permitDetailsList.forEach((p) => {
+            if (grouped[p.permitNo]) {
+              p.tankerEntries = grouped[p.permitNo];
+            }
+          });
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.isLoadingPermitDetails = false;
+          this.cdr.markForCheck();
+        }
+      });
+    } else {
+      this.isLoadingPermitDetails = false;
+    }
+  }
+
+  closePermitDetailsModal(): void {
+    this.isPermitDetailsModalOpen = false;
+    this.selectedPermitRequisition = null;
+    this.permitDetailsList = [];
+    this.isLoadingPermitDetails = false;
+  }
+
+  shouldShowRevalidationTimer(item: TableData): boolean {
+    if (!item) return false;
+    // Must be strictly approved (not under process) and have permit numbers
+    if (!this.isRequisitionApproved(item)) {
+      return false;
+    }
+    if (!item.detailsPermitsNumber) {
+      return false;
+    }
+    // If all permits are arrived, timer no longer needed
+    const arrived = this.getArrivedPermitNumbers(item);
+    const totalPermitsStr = item.detailsPermitsNumber || '';
+    if (arrived && arrived.trim() === totalPermitsStr.trim()) {
+      return false;
+    }
+    // If all permits are cancelled, timer no longer needed
+    const cancelled = this.getCancelledPermitNumbers(item);
+    if (cancelled && cancelled.trim() === totalPermitsStr.trim()) {
+      return false;
+    }
+    // If all permits are already revalidated, timer no longer needed
+    const revalidated = this.getRevalidatedPermitNumbers(item);
+    if (revalidated && revalidated.trim() === totalPermitsStr.trim()) {
+      return false;
+    }
+    return true;
   }
 
   private buildRevalidationApprovedDateIndex(rows: any[]): Record<string, string> {

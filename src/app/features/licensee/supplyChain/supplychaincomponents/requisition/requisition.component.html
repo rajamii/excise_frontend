@@ -306,6 +306,31 @@
                     <span class="permit-number-text">{{ item.detailsPermitsNumber }}</span>
                   </div>
                 }
+
+                <!-- Permit Details Button (Only for approved requisitions) -->
+                @if (isRequisitionApproved(item) && (item.detailsPermitsNumber || (item.numberOfPermits && item.numberOfPermits > 0))) {
+                  <button
+                    type="button"
+                    class="btn btn-sm permit-details-action-btn mt-1"
+                    (click)="openPermitDetailsModal(item); $event.stopPropagation()"
+                    title="View Permit-wise Details and Revalidation Timeline">
+                    <i class="bi bi-card-checklist me-1"></i>
+                    <span>Permit Details</span>
+                  </button>
+                }
+
+                <!-- Auto-Revalidation Active Countdown Badge (Only for approved requisitions, when timer is active) -->
+                @if (shouldShowRevalidationTimer(item) && !getRevalidationCountdown(item).isExpired) {
+                  <span
+                    class="permit-status-badge timer-active-badge mt-1"
+                    (click)="openPermitDetailsModal(item); $event.stopPropagation()"
+                    role="button"
+                    [title]="'Auto-revalidation triggers in ' + getRevalidationCountdown(item).text + ' (at ' + getRevalidationCountdown(item).deadlineText + ') if arrival or cancellation is not recorded. Click for permit-wise details.'"
+                  >
+                    <i class="bi bi-stopwatch-fill"></i>
+                    <span>Auto-Reval in: <strong>{{ getRevalidationCountdown(item).text }}</strong></span>
+                  </span>
+                }
                 
                 <!-- Show cancelled permits with specific numbers -->
                 @if (getCancelledPermitNumbers(item)) {
@@ -328,7 +353,7 @@
                   </span>
                 }
                 
-                @if (!item.detailsPermitsNumber && !getCancelledPermitNumbers(item) && !getRevalidatedPermitNumbers(item) && !getArrivedPermitNumbers(item)) {
+                @if (!item.detailsPermitsNumber && !getCancelledPermitNumbers(item) && !getRevalidatedPermitNumbers(item) && !getArrivedPermitNumbers(item) && !isRequisitionApproved(item)) {
                   <span class="text-muted">—</span>
                 }
               </div>
@@ -1010,6 +1035,173 @@
           <i class="bi bi-x-circle me-2"></i>Close
         </button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Permit Details Modal -->
+<div class="custom-app-modal" *ngIf="isPermitDetailsModalOpen" tabindex="-1" role="dialog" aria-modal="true" (click)="closePermitDetailsModal()">
+  <div class="custom-modal-dialog permit-details-dialog" role="document" (click)="$event.stopPropagation()">
+    <div class="modal-content permit-details-modal">
+      
+      <!-- Header -->
+      <div class="modal-header permit-details-header">
+        <div class="header-content">
+          <i class="bi bi-shield-check header-icon"></i>
+          <div class="header-text">
+            <h5 class="modal-title">Permit Details & Revalidation Timeline</h5>
+            <p class="modal-subtitle">Permit-wise Breakdown for Reference: {{ selectedPermitRequisition?.referenceNo }}</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" (click)="closePermitDetailsModal()" aria-label="Close"></button>
+      </div>
+
+      <!-- Body -->
+      <div class="modal-body permit-details-body">
+        
+        <!-- Quick Summary Cards -->
+        <div class="summary-cards-grid mb-3">
+          <div class="summary-stat-card">
+            <span class="stat-label"><i class="bi bi-hash text-primary me-1"></i> Reference No.</span>
+            <span class="stat-value fw-bold text-dark">{{ selectedPermitRequisition?.referenceNo }}</span>
+          </div>
+          <div class="summary-stat-card">
+            <span class="stat-label"><i class="bi bi-building text-info me-1"></i> Distillery / Unit</span>
+            <span class="stat-value fw-semibold text-truncate" [title]="selectedPermitRequisition?.distilleryName">{{ selectedPermitRequisition?.distilleryName || '-' }}</span>
+          </div>
+          <div class="summary-stat-card">
+            <span class="stat-label"><i class="bi bi-droplet-fill text-primary me-1"></i> Total Quantity</span>
+            <span class="stat-value fw-bold text-primary">{{ (selectedPermitRequisition?.quantity || selectedPermitRequisition?.requestedTotalQuantity || 0) | number:'1.2-2' }} BL</span>
+          </div>
+          <div class="summary-stat-card">
+            <span class="stat-label"><i class="bi bi-cash-stack text-success me-1"></i> Pass Fee Amount</span>
+            <span class="stat-value fw-bold text-success">₹{{ selectedPermitRequisition?.amount }}</span>
+          </div>
+        </div>
+
+        <!-- Overall Auto-Revalidation Banner (if approved) -->
+        <div class="reval-info-banner mb-3" *ngIf="selectedPermitRequisition && shouldShowRevalidationTimer(selectedPermitRequisition)">
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+              <i class="bi fs-4" [ngClass]="getRevalidationCountdown(selectedPermitRequisition).isExpired ? 'bi-exclamation-triangle-fill text-danger' : 'bi-stopwatch-fill text-warning'"></i>
+              <div>
+                <h6 class="mb-0 fw-bold" [ngClass]="getRevalidationCountdown(selectedPermitRequisition).isExpired ? 'text-danger' : 'text-dark'">
+                  {{ getRevalidationCountdown(selectedPermitRequisition).isExpired ? 'Auto-Revalidation Window Elapsed' : 'Auto-Revalidation Countdown Active' }}
+                </h6>
+                <small class="text-muted">
+                  {{ getRevalidationCountdown(selectedPermitRequisition).isExpired ? 'Permit validity has expired. Eligible for revalidation request.' : 'Requisition approved on ' + (selectedPermitRequisition.approvalDateRaw | date:'dd-MMM-yyyy, hh:mm a') + '. Complete arrival or surrender before timer ends.' }}
+                </small>
+              </div>
+            </div>
+            <div class="reval-timer-pill" [ngClass]="getRevalidationCountdown(selectedPermitRequisition).isExpired ? 'pill-expired' : 'pill-active'">
+              <span class="timer-label">{{ getRevalidationCountdown(selectedPermitRequisition).isExpired ? 'Status:' : 'Time Remaining:' }}</span>
+              <span class="timer-countdown">{{ getRevalidationCountdown(selectedPermitRequisition).text }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Permit Wise Breakdown Heading -->
+        <div class="section-title-wrapper mb-2 d-flex align-items-center justify-content-between">
+          <div>
+            <h6 class="section-title mb-0">
+              <i class="bi bi-list-check me-2 text-primary"></i>Permit-Wise Breakdown ({{ permitDetailsList.length }} Permit{{ permitDetailsList.length > 1 ? 's' : '' }})
+            </h6>
+            <span class="text-muted small">Individual permit status, validity, and tanker arrival entries</span>
+          </div>
+          <div *ngIf="isLoadingPermitDetails" class="spinner-border spinner-border-sm text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
+
+        <!-- Permit Wise Cards -->
+        <div class="permit-cards-container d-flex flex-column gap-3">
+          <div *ngFor="let p of permitDetailsList; let i = index" class="permit-item-card" [ngClass]="'status-card-' + p.status.toLowerCase()">
+            <div class="permit-card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+              <div class="d-flex align-items-center gap-2">
+                <span class="permit-badge">
+                  <i class="bi bi-file-earmark-text-fill me-1"></i> Permit #{{ p.permitNo }}
+                </span>
+                <span class="badge" [ngClass]="p.statusBadgeClass">
+                  <i class="bi me-1" [ngClass]="{
+                    'bi-check-circle-fill': p.status === 'ARRIVED',
+                    'bi-x-circle-fill': p.status === 'CANCELLED',
+                    'bi-arrow-repeat': p.status === 'REVALIDATED',
+                    'bi-patch-check-fill': p.status === 'ACTIVE',
+                    'bi-exclamation-triangle-fill': p.status === 'EXPIRED'
+                  }"></i>
+                  {{ p.statusLabel }}
+                </span>
+              </div>
+              <div class="permit-allocated-qty">
+                <span class="text-muted small me-1">Allocated Volume:</span>
+                <strong class="text-dark">{{ p.allocatedBulkLiter | number:'1.2-2' }} BL</strong>
+              </div>
+            </div>
+
+            <div class="permit-card-body mt-2 pt-2 border-top">
+              <div class="row g-2">
+                
+                <!-- Validity & Timer column -->
+                <div class="col-md-6">
+                  <div class="permit-info-block">
+                    <span class="info-block-label"><i class="bi bi-clock-history me-1"></i> Validity & Countdown</span>
+                    <div class="info-block-content mt-1">
+                      <ng-container [ngSwitch]="p.status">
+                        <div *ngSwitchCase="'ACTIVE'" class="permit-timer-text text-success d-flex align-items-center gap-1">
+                          <i class="bi bi-stopwatch-fill text-warning"></i>
+                          <span>Auto-Reval in: <strong>{{ selectedPermitRequisition ? getRevalidationCountdown(selectedPermitRequisition).text : '-' }}</strong></span>
+                        </div>
+                        <div *ngSwitchCase="'EXPIRED'" class="permit-timer-text text-danger d-flex align-items-center gap-1">
+                          <i class="bi bi-exclamation-triangle-fill"></i>
+                          <span>Validity Expired (Auto-Reval Triggered)</span>
+                        </div>
+                        <div *ngSwitchCase="'ARRIVED'" class="permit-timer-text text-success d-flex align-items-center gap-1">
+                          <i class="bi bi-check2-all"></i>
+                          <span>Arrival Confirmed</span>
+                        </div>
+                        <div *ngSwitchCase="'CANCELLED'" class="permit-timer-text text-muted d-flex align-items-center gap-1">
+                          <i class="bi bi-dash-circle"></i>
+                          <span>Permit Cancelled</span>
+                        </div>
+                        <div *ngSwitchCase="'REVALIDATED'" class="permit-timer-text text-info d-flex align-items-center gap-1">
+                          <i class="bi bi-arrow-repeat"></i>
+                          <span>Revalidation Active</span>
+                        </div>
+                      </ng-container>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Tanker / Arrival Info column -->
+                <div class="col-md-6">
+                  <div class="permit-info-block">
+                    <span class="info-block-label"><i class="bi bi-truck me-1"></i> Tanker Arrival Info</span>
+                    <div class="info-block-content mt-1">
+                      <div *ngIf="p.tankerEntries && p.tankerEntries.length > 0" class="d-flex flex-wrap gap-1">
+                        <span *ngFor="let t of p.tankerEntries" class="badge bg-light text-dark border">
+                          {{ t.tanker_no }} ({{ t.bulk_liter }} BL)
+                        </span>
+                      </div>
+                      <div *ngIf="!p.tankerEntries || p.tankerEntries.length === 0" class="text-muted small fst-italic">
+                        {{ p.status === 'ARRIVED' ? 'Arrived at destination' : (p.status === 'CANCELLED' ? 'N/A (Cancelled)' : 'Awaiting arrival update') }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer -->
+      <div class="modal-footer permit-details-footer">
+        <button type="button" class="btn btn-secondary px-4" (click)="closePermitDetailsModal()">Close</button>
+      </div>
+
     </div>
   </div>
 </div>
