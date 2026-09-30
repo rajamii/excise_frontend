@@ -80,14 +80,14 @@ interface CommissionerData {
                  class="holo-stat-card pending"
                  role="button"
                  tabindex="0"
-                 (click)="setHologramStatusSummary('UNDER_PROCESS')"
-                 (keydown.enter)="setHologramStatusSummary('UNDER_PROCESS')"
-                 (keydown.space)="setHologramStatusSummary('UNDER_PROCESS')"
-                 [class.active]="hologramStatusSummary === 'UNDER_PROCESS'">
+                 (click)="setHologramStatusSummary('PENDING')"
+                 (keydown.enter)="setHologramStatusSummary('PENDING')"
+                 (keydown.space)="setHologramStatusSummary('PENDING')"
+                 [class.active]="hologramStatusSummary === 'PENDING'">
                  <div class="holo-stat-icon"><i class="bi bi-clock"></i></div>
                  <div class="holo-stat-content">
-                   <div class="holo-stat-number">{{ getHologramSummaryCount('UNDER_PROCESS') }}</div>
-                   <div class="holo-stat-label">UNDER PROCESS</div>
+                   <div class="holo-stat-number">{{ getHologramSummaryCount('PENDING') }}</div>
+                   <div class="holo-stat-label">PENDING</div>
                  </div>
                </div>
                <div
@@ -916,7 +916,7 @@ export class CommissionerDashboardComponent implements OnInit {
   companyOptions: string[] = [];
   hologramMonthFilter: string = '';
   hologramDateFilter: string = '';
-  hologramStatusSummary: 'ALL' | 'UNDER_PROCESS' | 'APPROVED' | 'REJECTED' = 'ALL';
+  hologramStatusSummary: 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED' = 'ALL';
   private currentRoleId: number = 0;
   private currentRoleName: string = '';
 
@@ -1300,6 +1300,9 @@ export class CommissionerDashboardComponent implements OnInit {
           }));
 
         console.log(`Commissioner Dashboard: Mapped ${holograms.length} hologram applications`);
+        if (this.hologramPendingCount > 0 && this.hologramStatusSummary === 'ALL') {
+          this.hologramStatusSummary = 'PENDING';
+        }
         this.updateApplications('hologram', holograms);
       },
       error: (error) => {
@@ -1509,19 +1512,19 @@ export class CommissionerDashboardComponent implements OnInit {
     this.applyFilters();
   }
 
-  setHologramStatusSummary(value: 'ALL' | 'UNDER_PROCESS' | 'APPROVED' | 'REJECTED'): void {
+  setHologramStatusSummary(value: 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'): void {
     this.hologramStatusSummary = value;
     this.applyFilters();
   }
 
-  getHologramSummaryCount(value: 'ALL' | 'UNDER_PROCESS' | 'APPROVED' | 'REJECTED'): number {
+  getHologramSummaryCount(value: 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'): number {
     const holograms = this.allApplications.filter(a => a.type === 'hologram');
     return holograms.filter(app => this.matchesHologramStatusSummary(app?.status || '', value)).length;
   }
 
   private matchesHologramStatusSummary(
     status: string,
-    value: 'ALL' | 'UNDER_PROCESS' | 'APPROVED' | 'REJECTED'
+    value: 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'
   ): boolean {
     if (value === 'ALL') return true;
     const s = String(status || '').toLowerCase().replace(/[^a-z0-9]/g, '');
