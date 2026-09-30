@@ -145,7 +145,7 @@ export class WorkflowActionService {
 
       case 'hologram':
       case 'hologram-procurement':
-        return this.http.get<any>(`${environment.apiBaseUrl}/transactional/supply_chain/hologram-procurement/${id}/`).pipe(
+        return this.http.get<any>(`${environment.apiBaseUrl}/transactional/supply_chain/hologram/procurement/${id}/`).pipe(
           map((res: any) => res.allowed_action_configs || []),
           catchError(() => of([]))
         );
