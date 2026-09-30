@@ -323,6 +323,9 @@ export class HologramComponent {
     }
 
     // Quantity must be >= 1,00,000 and in increments of 1,00,000 only.
+    // Quantity must be >= 1,00,000 and in increments of 1,00,000 only.
+    // Commented out as requested - allow user to enter any desired quantity (will activate later)
+    /*
     const selectedQty = localQty > 0 ? localQty : exportQty > 0 ? exportQty : defenceQty;
     if (selectedQty < this.qtyStep) {
       this.errorMessage = `Minimum quantity is ${this.qtyStep.toLocaleString('en-IN')}.`;
@@ -332,6 +335,8 @@ export class HologramComponent {
       this.errorMessage = `Quantity must be in multiples of ${this.qtyStep.toLocaleString('en-IN')} (e.g. 100000, 200000, 300000).`;
       return false;
     }
+
+    */
 
     this.errorMessage = '';
     return true;
