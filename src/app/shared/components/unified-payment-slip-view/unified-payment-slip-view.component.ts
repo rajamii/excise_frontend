@@ -73,6 +73,8 @@ interface RevalidationSlipRow {
   original_permit_date: string;
   expiry_date: string;
   revalidation_fee: number;
+  transaction_id?: string;
+  number_of_permits?: number;
 }
 
 interface CancellationSlipRow {
@@ -690,7 +692,7 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
       return { total: amount, excise: amount, cess: 0, addl: 0, bottlingFee: 0 };
     }
     if (this.moduleType === 'revalidation') {
-      const amount = Number(this.revalidationRow?.revalidation_fee || 1000);
+      const amount = Number(this.revalidationRow?.revalidation_fee || 0);
       return { total: amount, excise: amount, cess: 0, addl: 0, bottlingFee: 0 };
     }
     if (this.moduleType === 'cancellation') {
@@ -768,7 +770,7 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
       return Number(this.requisitionRow?.amount || 0);
     }
     if (this.moduleType === 'revalidation') {
-      return Number(this.revalidationRow?.revalidation_fee || 1000);
+      return Number(this.revalidationRow?.revalidation_fee || 0);
     }
     if (this.moduleType === 'cancellation') {
       return Number(this.cancellationRow?.refund_amount || 0);
@@ -857,7 +859,7 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
 
   get primarySummaryLabel(): string {
     if (this.moduleType === 'requisition') return 'Total Requisition Amount';
-    if (this.moduleType === 'revalidation') return 'Revalidation Fee';
+    if (this.moduleType === 'revalidation') return 'Revalidation Fee Paid';
     if (this.moduleType === 'hologram') return 'Total Hologram Amount';
     if (this.moduleType === 'cancellation') return 'Pass Fee Refund Amount';
     return 'Total Transit Amount';
@@ -1363,6 +1365,29 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
           return;
         }
 
+        const permitSequence = String(row.details_permits_number || row.detailsPermitsNumber || row.permit_numbers || row.permitNumbers || row.permit_number || row.permitNumber || '').trim();
+        const parsedPermitCount = permitSequence
+          ? permitSequence.split(',').map((s: string) => s.trim()).filter(Boolean).length
+          : 0;
+
+        const permitCount = Number(row.requisiton_number_of_permits || row.requisitonNumberOfPermits || row.number_of_permits || row.numberOfPermits || 0) ||
+          parsedPermitCount || 1;
+
+        let fee = Number(
+          row.revalidation_br_amount ||
+          row.revalidationBrAmount ||
+          row.revalidation_fee ||
+          row.revalidationFee ||
+          row.fee_amount ||
+          row.feeAmount ||
+          0
+        );
+
+        const expectedFee = permitCount * 5000;
+        if (fee <= 0 || fee === 1000 || fee < expectedFee) {
+          fee = expectedFee;
+        }
+
         this.revalidationRow = {
           id: Number(row.id || 0),
           reference_no: String(row.ourRefNo || row.our_ref_no || row.referenceNo || row.ref_no || this.referenceNo || ''),
@@ -1371,10 +1396,11 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
           distillery_name: String(row.liftedFromDistilleryName || row.lifted_from_distillery_name || row.distilleryName || row.distillery_name || '-'),
           status: String(row.status || '-'),
           quantity_bl: this.resolveRevalidationQuantityBl(row),
-          permit_numbers: String(row.details_permits_number || row.detailsPermitsNumber || row.permitNumbers || row.permit_numbers || '-'),
+          permit_numbers: permitSequence || '-',
           original_permit_date: String(row.requisitionDate || row.requisition_date || row.originalPermitDate || row.original_permit_date || ''),
           expiry_date: String(row.expiryDate || row.expiry_date || row.revalidationDate || row.revalidation_date || ''),
-          revalidation_fee: 1000 // Fixed revalidation fee
+          revalidation_fee: fee,
+          number_of_permits: permitCount
         };
 
         console.log('✅ REVALIDATION SLIP: Loaded successfully:', this.revalidationRow);
@@ -1382,6 +1408,7 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
         if (!this.referenceNo) {
           this.referenceNo = this.revalidationRow.reference_no;
         }
+        this.enrichRevalidationAmountFromWallet(row, this.revalidationRow.reference_no);
         this.isLoading = false;
       },
       error: (error) => {
@@ -1390,6 +1417,75 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
         this.isLoading = false;
       }
     });
+  }
+
+  private enrichRevalidationAmountFromWallet(sourceRow: any, referenceNo: string): void {
+    const ref = String(referenceNo || '').trim();
+    if (!ref) return;
+
+    const licenseeId =
+      String(
+        sourceRow?.licensee_id ||
+        sourceRow?.licenseeId ||
+        this.getLicenseeIdFromSession()
+      ).trim();
+
+    if (!licenseeId) return;
+
+    const historyUrl = `${environment.apiBaseUrl}/transactional/payment/wallet/${licenseeId}/history/`;
+    this.http.get<any>(historyUrl, { params: { limit: '500' } })
+      .pipe(catchError(() => of({ results: [] })))
+      .subscribe((response) => {
+        const rows = Array.isArray(response)
+          ? response
+          : (Array.isArray(response?.results) ? response.results : []);
+
+        const targetRef = ref.toUpperCase();
+        const candidates = rows.filter((row: any) => {
+          const rowRef = String(row?.reference_no || row?.referenceNo || '').trim().toUpperCase();
+          if (!rowRef || rowRef !== targetRef) return false;
+
+          const entryType = String(row?.entry_type || row?.entryType || '').toLowerCase();
+          const type = String(row?.transaction_type || row?.transactionType || '').toLowerCase();
+          const isDebitLike =
+            entryType.includes('debit') ||
+            entryType.includes('utilized') ||
+            entryType.includes('dr') ||
+            type.includes('debit');
+
+          return isDebitLike;
+        });
+
+        if (!candidates.length) return;
+
+        candidates.sort((a: any, b: any) => {
+          const at = new Date(a?.created_at || a?.createdAt || 0).getTime();
+          const bt = new Date(b?.created_at || b?.createdAt || 0).getTime();
+          return bt - at;
+        });
+
+        const latest = candidates[0];
+        const paidAmount = Number(latest?.amount || 0);
+        const permitCount = Number(this.revalidationRow?.number_of_permits || 1);
+        const expectedFee = permitCount * 5000;
+        const effectiveAmount = Math.max(paidAmount, expectedFee);
+
+        if (Number.isFinite(effectiveAmount) && effectiveAmount > 0 && this.revalidationRow) {
+          this.revalidationRow.revalidation_fee = effectiveAmount;
+        }
+        if (this.revalidationRow) {
+          const txnId = String(
+            latest?.transaction_id ||
+            latest?.transactionId ||
+            latest?.wallet_transaction_id ||
+            latest?.walletTransactionId ||
+            ''
+          ).trim();
+          if (txnId) {
+            this.revalidationRow.transaction_id = txnId;
+          }
+        }
+      });
   }
 
   private loadImflRevalidationSlip(): void {
@@ -1415,7 +1511,8 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
           permit_numbers: String(row.permit_number || row.permit_numbers || '-'),
           original_permit_date: String(row.original_permit_date || row.permit_date || ''),
           expiry_date: String(row.extended_validity_date || row.expiry_date || ''),
-          revalidation_fee: Number(row.fee || row.revalidation_fee || 1000)
+          revalidation_fee: Number(row.fee || row.revalidation_fee || 5000),
+          number_of_permits: Number(row.number_of_permits || row.numberOfPermits || 1)
         };
         if (!this.referenceNo) {
           this.referenceNo = this.revalidationRow.reference_no;

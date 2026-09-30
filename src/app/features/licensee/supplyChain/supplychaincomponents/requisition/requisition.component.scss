@@ -3240,6 +3240,10 @@
         border-left: 4px solid #3b82f6;
       }
 
+      &.status-card-arrival_submitted {
+        border-left: 4px solid #0284c7;
+      }
+
       &.status-card-active {
         border-left: 4px solid #f59e0b;
       }
@@ -3294,6 +3298,13 @@
   background-color: #ecfdf5 !important;
   color: #047857 !important;
   border: 1px solid #a7f3d0 !important;
+  font-weight: 600 !important;
+}
+
+.badge-permit-arrival-submitted {
+  background-color: #f0f9ff !important;
+  color: #0369a1 !important;
+  border: 1px solid #bae6fd !important;
   font-weight: 600 !important;
 }
 

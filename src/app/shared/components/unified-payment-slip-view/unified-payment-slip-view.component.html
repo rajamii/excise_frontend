@@ -106,6 +106,10 @@
             <span class="info-value">{{ revalidationDisplayName }}</span>
           </div>
           <div class="info-item" *ngIf="moduleType === 'revalidation'">
+            <span class="info-label">Permit Numbers</span>
+            <span class="info-value">{{ revalidationRow?.permit_numbers || '-' }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType === 'revalidation'">
             <span class="info-label">Original Permit Date</span>
             <span class="info-value">{{ revalidationRow?.original_permit_date ? (revalidationRow?.original_permit_date | date:'dd-MM-yyyy') : '-' }}</span>
           </div>
@@ -114,8 +118,12 @@
             <span class="info-value">{{ revalidationRow?.expiry_date ? (revalidationRow?.expiry_date | date:'dd-MM-yyyy') : '-' }}</span>
           </div>
           <div class="info-item" *ngIf="moduleType === 'revalidation'">
-            <span class="info-label">Revalidation Fee</span>
+            <span class="info-label">Revalidation Fee Paid</span>
             <span class="info-value amount">₹{{ revalidationRow?.revalidation_fee | number:'1.2-2' }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType === 'revalidation' && revalidationRow?.transaction_id">
+            <span class="info-label">Transaction ID</span>
+            <span class="info-value">{{ revalidationRow?.transaction_id }}</span>
           </div>
           <div class="info-item" *ngIf="moduleType === 'cancellation'">
             <span class="info-label">Distillery</span>
@@ -268,7 +276,7 @@
               <th>Permit Numbers</th>
               <th>Original Permit Date</th>
               <th>Expiry Date</th>
-              <th>Revalidation Fee</th>
+              <th>Revalidation Fee Paid</th>
             </tr>
           </thead>
           <tbody>

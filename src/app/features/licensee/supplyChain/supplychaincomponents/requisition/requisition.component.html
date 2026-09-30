@@ -1124,6 +1124,7 @@
                 <span class="badge" [ngClass]="p.statusBadgeClass">
                   <i class="bi me-1" [ngClass]="{
                     'bi-check-circle-fill': p.status === 'ARRIVED',
+                    'bi-truck': p.status === 'ARRIVAL_SUBMITTED',
                     'bi-x-circle-fill': p.status === 'CANCELLED',
                     'bi-arrow-repeat': p.status === 'REVALIDATED',
                     'bi-patch-check-fill': p.status === 'ACTIVE',
@@ -1150,6 +1151,10 @@
                         <div *ngSwitchCase="'ACTIVE'" class="permit-timer-text text-success d-flex align-items-center gap-1">
                           <i class="bi bi-stopwatch-fill text-warning"></i>
                           <span>Auto-Reval in: <strong>{{ selectedPermitRequisition ? getRevalidationCountdown(selectedPermitRequisition).text : '-' }}</strong></span>
+                        </div>
+                        <div *ngSwitchCase="'ARRIVAL_SUBMITTED'" class="permit-timer-text text-primary d-flex align-items-center gap-1">
+                          <i class="bi bi-truck text-primary"></i>
+                          <span>Arrival Submitted (No Revalidation Needed)</span>
                         </div>
                         <div *ngSwitchCase="'EXPIRED'" class="permit-timer-text text-danger d-flex align-items-center gap-1">
                           <i class="bi bi-exclamation-triangle-fill"></i>
@@ -1183,7 +1188,7 @@
                         </span>
                       </div>
                       <div *ngIf="!p.tankerEntries || p.tankerEntries.length === 0" class="text-muted small fst-italic">
-                        {{ p.status === 'ARRIVED' ? 'Arrived at destination' : (p.status === 'CANCELLED' ? 'N/A (Cancelled)' : 'Awaiting arrival update') }}
+                        {{ p.status === 'ARRIVED' ? 'Arrived at destination' : (p.status === 'ARRIVAL_SUBMITTED' ? 'Arrival submitted for OIC verification' : (p.status === 'CANCELLED' ? 'N/A (Cancelled)' : 'Awaiting arrival update')) }}
                       </div>
                     </div>
                   </div>

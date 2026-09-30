@@ -29,7 +29,7 @@
 
       <p>
         <b>Sub:</b> REQUEST FOR REVALIDATION OF IMPORT PERMITS
-        <span class="fw-bold text-dark">{{ displayData.permitNumbers }}</span>
+        <span class="fw-bold text-dark">{{ getPermitSubjectText() }}</span>
         DATED
         <span class="fw-bold text-dark">{{ displayData.permitDate | date : "dd.MM.yyyy" }}</span>
       </p>
@@ -42,7 +42,7 @@
         BL
         <b><span class="fw-bold text-dark">{{ displayData.bulk_spirit_type }}</span></b>
         against Import Permits No.
-        <span class="fw-bold text-dark">{{ displayData.permitNumbers }}</span>
+        <span class="fw-bold text-dark">{{ getPermitBodyText() }}</span>
         dated
         <span class="fw-bold text-dark">{{ displayData.permitDate | date : "dd.MM.yyyy" }}</span>
         which expired on
@@ -96,26 +96,80 @@
     [style.display]="showDeclaration ? 'block' : 'none'"
     tabindex="-1"
   >
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header bg-warning text-dark">
-          <h5 class="modal-title">
-            <i class="bi bi-exclamation-triangle me-2"></i>Important Declaration
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-warning text-dark border-0 pb-2">
+          <h5 class="modal-title fw-bold">
+            <i class="bi bi-exclamation-triangle-fill me-2 text-dark"></i>Important Declaration
           </h5>
           <button type="button" class="btn-close" [disabled]="isSubmittingRevalidation" (click)="closeDeclarationModal()"></button>
         </div>
-        <div class="modal-body">
-          <div class="alert alert-warning">
-            <strong>Note:</strong> By submitting this revalidation request, you acknowledge that
-            <b>{{ formatCurrency(revalidationCharge) }} will be deducted</b> from your account for revalidation charges.
+        <div class="modal-body pt-3 pb-2 px-4">
+          <div class="alert alert-warning border-warning-subtle mb-3">
+            <div class="d-flex align-items-start gap-2">
+              <i class="bi bi-info-circle-fill fs-5 text-warning-emphasis flex-shrink-0 mt-1"></i>
+              <div class="text-dark">
+                <strong>Note:</strong> By submitting this revalidation request for
+                <span class="fw-bold text-dark">{{ displayData.permitDisplayText || (numberOfPermits + ' Permit(s)') }}</span>,
+                you acknowledge that
+                <b class="text-dark">{{ formatCurrency(totalRevalidationCharge) }} will be deducted</b>
+                <span *ngIf="numberOfPermits > 1" class="text-muted small ms-1">({{ numberOfPermits }} permits × {{ formatCurrency(revalidationChargePerPermit) }})</span>
+                from your account for revalidation charges.
+              </div>
+            </div>
           </div>
-          <p class="mb-0">Do you wish to proceed?</p>
+
+          <!-- Wallet Balance Summary Card -->
+          <div class="declaration-wallet-box p-3 mb-3 border rounded-3 bg-light">
+            <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+              <span class="text-muted small fw-semibold"><i class="bi bi-wallet2 text-primary me-1"></i> Wallet Account</span>
+              <span class="small fw-bold text-dark">{{ walletSourceLabel }}</span>
+            </div>
+
+            <div *ngIf="isWalletLoading" class="text-center py-2">
+              <div class="spinner-border spinner-border-sm text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+              <span class="small text-muted ms-2">Fetching wallet balance...</span>
+            </div>
+
+            <div *ngIf="!isWalletLoading" class="row g-2 text-center mt-1">
+              <div class="col-12 col-md-4">
+                <div class="p-2 bg-white rounded-3 border h-100 d-flex flex-column justify-content-center">
+                  <div class="text-muted small text-uppercase" style="font-size: 0.72rem; font-weight: 700; letter-spacing: 0.5px;">Before Deduction</div>
+                  <div class="fw-bold text-dark fs-6 mt-1">{{ formatCurrency(availableWalletBalance) }}</div>
+                </div>
+              </div>
+              <div class="col-12 col-md-4">
+                <div class="p-2 bg-white rounded-3 border border-danger-subtle h-100 d-flex flex-column justify-content-center">
+                  <div class="text-danger small text-uppercase" style="font-size: 0.72rem; font-weight: 700; letter-spacing: 0.5px;">Deduction</div>
+                  <div class="fw-bold text-danger fs-6 mt-1">- {{ formatCurrency(totalRevalidationCharge) }}</div>
+                  <div *ngIf="numberOfPermits > 1" class="text-muted" style="font-size: 0.68rem;">{{ numberOfPermits }} × {{ formatCurrency(revalidationChargePerPermit) }}</div>
+                </div>
+              </div>
+              <div class="col-12 col-md-4">
+                <div class="p-2 bg-white rounded-3 border h-100 d-flex flex-column justify-content-center" [class.border-success-subtle]="hasSufficientWalletBalance()" [class.border-danger]="!hasSufficientWalletBalance()" [class.bg-danger-subtle]="!hasSufficientWalletBalance()">
+                  <div [class.text-success]="hasSufficientWalletBalance()" [class.text-danger]="!hasSufficientWalletBalance()" class="small text-uppercase" style="font-size: 0.72rem; font-weight: 700; letter-spacing: 0.5px;">After Deduction</div>
+                  <div class="fw-bold fs-6 mt-1" [class.text-success]="hasSufficientWalletBalance()" [class.text-danger]="!hasSufficientWalletBalance()">
+                    {{ formatCurrency(getBalanceAfterDeduction()) }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="!isWalletLoading && !hasSufficientWalletBalance()" class="alert alert-danger py-1 px-2 mt-2 mb-0 small d-flex align-items-center gap-1">
+              <i class="bi bi-x-circle-fill text-danger flex-shrink-0"></i>
+              <span>Insufficient balance. Please recharge your wallet before proceeding.</span>
+            </div>
+          </div>
+
+          <p class="mb-0 fw-semibold text-secondary">Do you wish to proceed?</p>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" [disabled]="isSubmittingRevalidation" (click)="closeDeclarationModal()">
+        <div class="modal-footer border-0 pt-0 px-4 pb-3">
+          <button type="button" class="btn btn-secondary px-3" [disabled]="isSubmittingRevalidation" (click)="closeDeclarationModal()">
             Cancel
           </button>
-          <button type="button" class="btn btn-success" [disabled]="isSubmittingRevalidation" (click)="openWalletConfirmation()">
+          <button type="button" class="btn btn-success px-4" [disabled]="isSubmittingRevalidation || isWalletLoading" (click)="openWalletConfirmation()">
             <span
               *ngIf="isSubmittingRevalidation"
               class="spinner-border spinner-border-sm me-2"
@@ -171,11 +225,19 @@
             <div class="wallet-summary-grid">
               <div class="wallet-summary-tile">
                 <span class="wallet-summary-label">Payment For</span>
-                <strong>Revalidation</strong>
+                <strong>Revalidation Charges</strong>
               </div>
               <div class="wallet-summary-tile">
                 <span class="wallet-summary-label">Reference No.</span>
                 <strong>{{ displayData.refNo }}</strong>
+              </div>
+              <div class="wallet-summary-tile">
+                <span class="wallet-summary-label">Permits to Revalidate</span>
+                <strong>{{ displayData.permitDisplayText }}</strong>
+              </div>
+              <div class="wallet-summary-tile">
+                <span class="wallet-summary-label">Fee Rate</span>
+                <strong>{{ formatCurrency(revalidationChargePerPermit) }} / permit</strong>
               </div>
               <div class="wallet-summary-tile">
                 <span class="wallet-summary-label">Wallet Source</span>
@@ -189,8 +251,9 @@
                 <strong>{{ formatCurrency(availableWalletBalance) }}</strong>
               </div>
               <div class="wallet-balance-card deduct">
-                <span class="wallet-summary-label">Deduction on Proceed</span>
-                <strong>- {{ formatCurrency(revalidationCharge) }}</strong>
+                <span class="wallet-summary-label">Deduction ({{ numberOfPermits }} Permit{{ numberOfPermits > 1 ? 's' : '' }})</span>
+                <strong class="text-danger">- {{ formatCurrency(totalRevalidationCharge) }}</strong>
+                <small *ngIf="numberOfPermits > 1" class="text-muted d-block mt-1">{{ numberOfPermits }} × {{ formatCurrency(revalidationChargePerPermit) }}</small>
               </div>
               <div class="wallet-balance-card after" [class.insufficient]="!hasSufficientWalletBalance()">
                 <span class="wallet-summary-label">Balance After Proceed</span>

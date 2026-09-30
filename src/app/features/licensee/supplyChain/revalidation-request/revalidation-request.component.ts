@@ -12,6 +12,8 @@ interface DisplayData {
   totalENA: string;
   bulk_spirit_type: string;
   permitNumbers: string;
+  numberOfPermits: number;
+  permitDisplayText: string;
   permitDate: Date;
   expiryDate: Date;
 }
@@ -35,7 +37,42 @@ interface WalletSummaryRowLike {
   imports: [CommonModule, FormsModule],
 })
 export class RevalidationRequestComponent implements OnInit {
-  readonly revalidationCharge = 5000;
+  readonly revalidationChargePerPermit = 5000;
+  // Backward compatibility getter
+  get revalidationCharge(): number {
+    return this.totalRevalidationCharge;
+  }
+
+  get numberOfPermits(): number {
+    if (this.displayData.numberOfPermits > 0) return this.displayData.numberOfPermits;
+    if (this.displayData.permitNumbers) {
+      const tokens = this.displayData.permitNumbers.split(',').map((s) => s.trim()).filter(Boolean);
+      if (tokens.length > 0) return tokens.length;
+    }
+    return 1;
+  }
+
+  get totalRevalidationCharge(): number {
+    return this.numberOfPermits * this.revalidationChargePerPermit;
+  }
+
+  getPermitSubjectText(): string {
+    const pNo = (this.displayData.permitNumbers || '').trim();
+    const count = this.numberOfPermits;
+    if (pNo && pNo !== String(count)) {
+      return `${count} (Permit No(s): ${pNo})`;
+    }
+    return `${count}`;
+  }
+
+  getPermitBodyText(): string {
+    const pNo = (this.displayData.permitNumbers || '').trim();
+    const count = this.numberOfPermits;
+    if (pNo && pNo !== String(count)) {
+      return `${count} (Permit No(s): ${pNo})`;
+    }
+    return `${count}`;
+  }
 
   message = '';
   messageType = 'danger';
@@ -60,6 +97,8 @@ export class RevalidationRequestComponent implements OnInit {
     totalENA: '0',
     bulk_spirit_type: '',
     permitNumbers: '',
+    numberOfPermits: 1,
+    permitDisplayText: '',
     permitDate: new Date(),
     expiryDate: new Date(),
   };
@@ -117,12 +156,37 @@ export class RevalidationRequestComponent implements OnInit {
     this.currentStatus = data.status || '';
     this.currentAllowedActions = data.allowedActions || data.allowed_actions || [];
     this.isRevalidationReady = !!this.currentRevalidationId;
+
+    const rawPermits = String(
+      data.detailsPermitsNumber ||
+      data.details_permits_number ||
+      data.details_permit_number ||
+      data.detailsPermitNumber ||
+      data.permitNumbers ||
+      data.permit_numbers ||
+      ''
+    ).trim();
+
+    const parsedCount = Number(
+      data.requisitonNumberOfPermits ||
+      data.requisiton_number_of_permits ||
+      data.numberOfPermits ||
+      data.number_of_permits ||
+      0
+    );
+
+    const permitTokens = rawPermits ? rawPermits.split(',').map((s) => s.trim()).filter(Boolean) : [];
+    const count = parsedCount > 0 ? parsedCount : (permitTokens.length > 0 ? permitTokens.length : 1);
+    const permitsStr = permitTokens.length > 0 ? permitTokens.join(', ') : '';
+
     this.displayData = {
       refNo: data.ourRefNo || data.our_ref_no || this.displayData.refNo,
       date: new Date(data.revalidationDate || data.revalidation_date || Date.now()),
       totalENA: data.totalBl || data.total_bl || '0',
       bulk_spirit_type: data.strength || data.bulk_spirit_type || '',
-      permitNumbers: (data.requisitonNumberOfPermits || data.requisiton_number_of_permits || '0').toString(),
+      permitNumbers: permitsStr || rawPermits,
+      numberOfPermits: count,
+      permitDisplayText: permitsStr ? `${count} (Permit No(s): ${permitsStr})` : `${count} Permit(s)`,
       permitDate: new Date(data.requisitionDate || data.requisition_date || Date.now()),
       expiryDate: new Date(data.revalidationDate || data.revalidation_date || Date.now()),
     };
@@ -157,6 +221,9 @@ export class RevalidationRequestComponent implements OnInit {
       return;
     }
     this.showDeclaration = true;
+    if (this.currentLicenseeId) {
+      this.loadWalletBalance();
+    }
   }
 
   closeDeclarationModal() {

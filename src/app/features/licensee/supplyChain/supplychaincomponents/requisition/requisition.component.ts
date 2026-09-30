@@ -81,7 +81,7 @@ interface TankerArrivalEntry {
 
 export interface IndividualPermitDetail {
   permitNo: string;
-  status: 'ACTIVE' | 'ARRIVED' | 'CANCELLED' | 'REVALIDATED' | 'EXPIRED';
+  status: 'ACTIVE' | 'ARRIVED' | 'ARRIVAL_SUBMITTED' | 'CANCELLED' | 'REVALIDATED' | 'EXPIRED';
   statusLabel: string;
   statusBadgeClass: string;
   allocatedBulkLiter: number;
@@ -2855,7 +2855,8 @@ export class RequisitionComponent implements OnInit, OnDestroy {
       this.enaRequisitionService.getRequisitionArrivalDetails(item.id, 'ALL').subscribe({
         next: (response: any) => {
           this.isLoadingPermitDetails = false;
-          const data = response?.data;
+          const raw = response?.data ?? response;
+          const data = raw?.data ?? raw;
           if (!data) {
             this.cdr.markForCheck();
             return;
@@ -2873,9 +2874,38 @@ export class RequisitionComponent implements OnInit, OnDestroy {
               approval_status: String(row?.approval_status ?? row?.approvalStatus ?? '').trim()
             });
           }
+
+          const permitStatuses: Record<string, string> = {};
+          const rawStatuses = data?.permit_statuses ?? data?.permitStatuses ?? {};
+          if (rawStatuses && typeof rawStatuses === 'object') {
+            Object.keys(rawStatuses).forEach((k) => {
+              permitStatuses[String(k).trim()] = String((rawStatuses as any)[k] || '').toUpperCase();
+            });
+          }
+
           this.permitDetailsList.forEach((p) => {
             if (grouped[p.permitNo]) {
               p.tankerEntries = grouped[p.permitNo];
+            }
+            const serverStatus = permitStatuses[p.permitNo] || '';
+            const hasTankers = Array.isArray(p.tankerEntries) && p.tankerEntries.length > 0;
+
+            if (serverStatus === 'APPROVED') {
+              p.status = 'ARRIVED';
+              p.statusLabel = 'Arrival Confirmed';
+              p.statusBadgeClass = 'badge-permit-arrived';
+            } else if (serverStatus === 'PENDING' || hasTankers) {
+              p.status = 'ARRIVAL_SUBMITTED';
+              p.statusLabel = 'Arrival Submitted';
+              p.statusBadgeClass = 'badge-permit-arrival-submitted';
+            } else if (serverStatus === 'CANCELLED') {
+              p.status = 'CANCELLED';
+              p.statusLabel = 'Cancelled / Surrendered';
+              p.statusBadgeClass = 'badge-permit-cancelled';
+            } else if (serverStatus === 'CANCEL_REQUESTED') {
+              p.status = 'CANCELLED';
+              p.statusLabel = 'Cancellation Pending';
+              p.statusBadgeClass = 'badge-permit-cancelled';
             }
           });
           this.cdr.markForCheck();
@@ -2905,6 +2935,15 @@ export class RequisitionComponent implements OnInit, OnDestroy {
     }
     if (!item.detailsPermitsNumber) {
       return false;
+    }
+    // If inside permit details modal and all permits have action taken (arrived/submitted/cancelled/revalidated), hide countdown banner
+    if (this.isPermitDetailsModalOpen && this.permitDetailsList && this.permitDetailsList.length > 0) {
+      const hasActiveUnprocessed = this.permitDetailsList.some(
+        (p) => p.status === 'ACTIVE' || p.status === 'EXPIRED'
+      );
+      if (!hasActiveUnprocessed) {
+        return false;
+      }
     }
     // If all permits are arrived, timer no longer needed
     const arrived = this.getArrivedPermitNumbers(item);
