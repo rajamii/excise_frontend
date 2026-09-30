@@ -35,7 +35,7 @@ interface WalletSummaryRowLike {
   imports: [CommonModule, FormsModule],
 })
 export class RevalidationRequestComponent implements OnInit {
-  readonly revalidationCharge = 1000;
+  readonly revalidationCharge = 5000;
 
   message = '';
   messageType = 'danger';

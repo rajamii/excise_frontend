@@ -42,7 +42,7 @@ interface WalletSummaryRowLike {
   styleUrls: ['./cancellation-request.component.scss'],
 })
 export class CancellationRequestComponent implements OnInit, OnChanges {
-  readonly cancellationChargePerPermit = 1000;
+  readonly cancellationChargePerPermit = 5000;
   @Input() referenceNo: string = '';
   @Output() close = new EventEmitter<void>();
 

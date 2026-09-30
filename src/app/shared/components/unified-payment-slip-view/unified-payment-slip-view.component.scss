@@ -251,6 +251,16 @@
   border-left: 4px solid #10b981;
 }
 
+.danger-card {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  border-left: 4px solid #ef4444;
+}
+
+.warning-card {
+  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+  border-left: 4px solid #f97316;
+}
+
 .info-card {
   background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
   border-left: 4px solid #f59e0b;

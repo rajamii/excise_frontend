@@ -85,6 +85,7 @@ interface CancellationSlipRow {
   cancelled_permit_numbers: string;
   total_permits_cancelled: number;
   refund_amount: number;
+  cancellation_fee: number;
   reason: string;
 }
 
@@ -501,6 +502,14 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
           background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
           border-color: #10b981;
         }
+        .warning-card { 
+          background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+          border-color: #f97316;
+        }
+        .danger-card { 
+          background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+          border-color: #ef4444;
+        }
         .info-card { 
           background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
           border-color: #f59e0b;
@@ -834,6 +843,10 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
     return Number.isFinite(n) ? n : 0;
   }
 
+  get cancellationFeeTotal(): number {
+    return Number(this.cancellationRow?.cancellation_fee || 0);
+  }
+
   get showRefundSummaryCard(): boolean {
     return this.moduleType !== 'revalidation' && this.moduleType !== 'cancellation';
   }
@@ -846,13 +859,14 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
     if (this.moduleType === 'requisition') return 'Total Requisition Amount';
     if (this.moduleType === 'revalidation') return 'Revalidation Fee';
     if (this.moduleType === 'hologram') return 'Total Hologram Amount';
-    if (this.moduleType === 'cancellation') return 'Total Refund Amount';
+    if (this.moduleType === 'cancellation') return 'Pass Fee Refund Amount';
     return 'Total Transit Amount';
   }
 
   get secondarySummaryLabel(): string {
     if (this.moduleType === 'requisition') return 'Payable Amount';
     if (this.moduleType === 'hologram') return 'Wallet Paid Amount';
+    if (this.moduleType === 'cancellation') return 'Pass Fee Refund Amount';
     return 'Refund Amount';
   }
 
@@ -1485,13 +1499,33 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
           return;
         }
 
+        const permitCount = Number(row.permitNocount || row.permit_nocount || 0) ||
+          (String(row.cancelled_permit_numbers || row.cancelledPermitNumbers || row.cancelled_permit_number || row.cancelledPermitNumber || row.details_permits_number || row.detailsPermitsNumber || '').split(',').map((s: string) => s.trim()).filter(Boolean).length) || 1;
+
+        const fee = Number(
+          row.cancellationBrAmount ||
+          row.cancellation_br_amount ||
+          row.feeAmount ||
+          row.fee_amount ||
+          row.cancellationFee ||
+          row.cancellation_fee ||
+          0
+        );
+
         this.cancellationRow = {
           id: Number(row.id || 0),
           reference_no: String(row.ourRefNo || row.our_ref_no || row.referenceNo || row.ref_no || this.referenceNo || ''),
           cancellation_date: String(row.cancellationDate || row.cancellation_date || row.submissionDate || row.submission_date || row.date || row.created_at || ''),
           distillery_name: String(row.branchName || row.branch_name || row.distilleryName || row.distillery_name || '-'),
           status: String(row.status || '-'),
-          original_requisition_ref: String(row.originalRequisitionRef || row.original_requisition_ref || '-'),
+          original_requisition_ref: String(
+            row.requisition_ref_no ||
+            row.requisitionRefNo ||
+            row.originalRequisitionRef ||
+            row.original_requisition_ref ||
+            row.requisition ||
+            '-'
+          ),
           cancelled_permit_numbers: String(
             row.cancelled_permit_numbers ||
             row.cancelledPermitNumbers ||
@@ -1503,8 +1537,9 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
             row.permitNo ||
             '-'
           ),
-          total_permits_cancelled: Number(row.permitNocount || row.permit_nocount || 0),
+          total_permits_cancelled: permitCount,
           refund_amount: Number(row.totalCancellationAmount || row.total_cancellation_amount || 0),
+          cancellation_fee: fee > 0 ? fee : (permitCount * 5000),
           reason: String(row.cancellationReason || row.cancellation_reason || 'Cancellation Request')
         };
 
@@ -1535,6 +1570,8 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
           this.isLoading = false;
           return;
         }
+        const imflPermitCount = Number(row.total_permits_cancelled || 1);
+        const imflFee = Number(row.cancellation_fee || row.cancellationFee || row.processing_fee || (imflPermitCount * 1000));
         this.cancellationRow = {
           id: Number(row.id || 0),
           reference_no: String(row.reference_no || row.referenceNo || this.referenceNo || ref),
@@ -1543,8 +1580,9 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
           status: String(row.current_stage_name || row.status || '-'),
           original_requisition_ref: String(row.original_permit_application_ref || row.original_requisition_ref || '-'),
           cancelled_permit_numbers: String(row.cancelled_permit_number || row.permit_numbers || '-'),
-          total_permits_cancelled: Number(row.total_permits_cancelled || 1),
+          total_permits_cancelled: imflPermitCount,
           refund_amount: Number(row.refund_amount || row.total_refund_amount || 0),
+          cancellation_fee: imflFee,
           reason: String(row.reason || 'Cancellation Request')
         };
         if (!this.referenceNo) {

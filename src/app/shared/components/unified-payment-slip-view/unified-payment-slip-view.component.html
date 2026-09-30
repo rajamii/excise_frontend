@@ -44,18 +44,26 @@
     <div *ngIf="!isLoading && !errorMessage">
       <!-- Summary Cards -->
       <section class="summary-section">
-        <div class="summary-card primary-card">
+        <div class="summary-card primary-card" *ngIf="moduleType !== 'cancellation'">
           <div class="card-icon">₹</div>
           <div class="card-content">
             <p class="card-label">{{ primarySummaryLabel }}</p>
             <h3 class="card-value">₹{{ transitSummary.total | number:'1.2-2' }}</h3>
           </div>
         </div>
+
+        <div class="summary-card danger-card" *ngIf="moduleType === 'cancellation'">
+          <div class="card-icon">₹</div>
+          <div class="card-content">
+            <p class="card-label">Cancellation Fee / Charge</p>
+            <h3 class="card-value text-danger">₹{{ cancellationFeeTotal | number:'1.2-2' }}</h3>
+          </div>
+        </div>
         
-        <div class="summary-card success-card" *ngIf="showRefundSummaryCard">
+        <div class="summary-card success-card" *ngIf="showRefundSummaryCard || moduleType === 'cancellation'">
           <div class="card-icon">✓</div>
           <div class="card-content">
-            <p class="card-label">{{ secondarySummaryLabel }}</p>
+            <p class="card-label">{{ moduleType === 'cancellation' ? 'Total Refund Amount' : secondarySummaryLabel }}</p>
             <h3 class="card-value">₹{{ refundAmountTotal | number:'1.2-2' }}</h3>
           </div>
         </div>
@@ -120,6 +128,14 @@
           <div class="info-item" *ngIf="moduleType === 'cancellation'">
             <span class="info-label">Cancelled Permits</span>
             <span class="info-value">{{ cancellationRow?.cancelled_permit_numbers || '-' }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType === 'cancellation'">
+            <span class="info-label">Cancellation Fee Paid</span>
+            <span class="info-value text-danger fw-bold">₹{{ cancellationRow?.cancellation_fee | number:'1.2-2' }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType === 'cancellation'">
+            <span class="info-label">Pass Fee Refund</span>
+            <span class="info-value amount">₹{{ cancellationRow?.refund_amount | number:'1.2-2' }}</span>
           </div>
           <div class="info-item" *ngIf="moduleType === 'cancellation'">
             <span class="info-label">Cancellation Reason</span>
@@ -286,6 +302,8 @@
               <th>Original Requisition</th>
               <th>Cancelled Permits</th>
               <th>Total Permits Cancelled</th>
+              <th>Cancellation Fee</th>
+              <th>Pass Fee Refund</th>
               <th>Reason</th>
             </tr>
           </thead>
@@ -298,6 +316,8 @@
               <td>{{ cancellationRow.original_requisition_ref }}</td>
               <td>{{ cancellationRow.cancelled_permit_numbers }}</td>
               <td>{{ cancellationRow.total_permits_cancelled }}</td>
+              <td class="text-danger fw-bold">₹{{ cancellationRow.cancellation_fee | number:'1.2-2' }}</td>
+              <td class="amount-cell">₹{{ cancellationRow.refund_amount | number:'1.2-2' }}</td>
               <td>{{ cancellationRow.reason }}</td>
             </tr>
           </tbody>
