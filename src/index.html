@@ -7,14 +7,17 @@
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/x-icon" href="assets/icons/fav-icon.png">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <!-- Preconnect to speed up external resource loading -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" media="print" onload="this.media='all'">
 
-  <!-- BillDesk Web SDK UAT Scripts -->
-   <script type="module" src="https://uat1.billdesk.com/u2/web/v1_2/sdk"></script>
-  <script type="module" src="https://uat1.billdesk.com/merchant-uat/sdk/dist/billdesksdk/billdesksdk.esm.js"></script>
-  <script nomodule="" src="https://uat1.billdesk.com/merchant-uat/sdk/dist/billdesksdk.js"></script>
-  <link href="https://uat1.billdesk.com/merchant-uat/sdk/dist/billdesksdk/billdesksdk.css" rel="stylesheet">
+  <!-- BillDesk Web SDK UAT Scripts (deferred – not needed for initial render) -->
+  <script type="module" src="https://uat1.billdesk.com/u2/web/v1_2/sdk" defer></script>
+  <script type="module" src="https://uat1.billdesk.com/merchant-uat/sdk/dist/billdesksdk/billdesksdk.esm.js" defer></script>
+  <script nomodule="" src="https://uat1.billdesk.com/merchant-uat/sdk/dist/billdesksdk.js" defer></script>
+  <link href="https://uat1.billdesk.com/merchant-uat/sdk/dist/billdesksdk/billdesksdk.css" rel="stylesheet" media="print" onload="this.media='all'">
 </head>
 
 <body>
@@ -109,6 +112,7 @@
       position: absolute;
       inset: 0;
       animation: factorySlide 2.8s ease-in-out infinite;
+      will-change: transform, opacity;
     }
 
     #app-preloader .factory-belt svg {
@@ -120,6 +124,7 @@
     #app-preloader .bottle-liquid {
       animation: liquidPour 2.8s ease-in-out infinite;
       transform-origin: center top;
+      will-change: transform;
     }
 
     @keyframes loaderSpin {
@@ -217,14 +222,14 @@
   </div>
 
   <script>
-    // The browser does not expose exact Angular download progress. This gives
-    // users a truthful, forward-only startup indicator up to 90%; main.ts
-    // completes it at 100% when Angular has bootstrapped.
+    // Lightweight progress indicator – stops itself once the preloader is removed.
     (function () {
       var progress = document.getElementById('app-preloader-progress');
       if (!progress || !window.requestAnimationFrame) return;
       var startedAt = performance.now();
       function advance(now) {
+        // Stop the loop immediately once Angular has removed the preloader
+        if (!document.getElementById('app-preloader')) return;
         var elapsed = now - startedAt;
         var value = 90 * (1 - Math.exp(-elapsed / 1100));
         progress.style.width = Math.min(value, 90).toFixed(1) + '%';
