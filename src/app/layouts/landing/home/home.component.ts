@@ -70,14 +70,6 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       bgGlow: 'rgba(0, 172, 193, 0.16)'
     },
     {
-      id: 'print-license',
-      title: 'PRINT LICENSE',
-      subtitle: 'Download Issued License',
-      color: '#1976D2',
-      borderColor: '#2196F3',
-      bgGlow: 'rgba(33, 150, 243, 0.16)'
-    },
-    {
       id: 'license-renewal',
       title: 'License Renewal',
       subtitle: 'Annual Renewal & Extension',
@@ -100,6 +92,14 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       color: '#00796B',
       borderColor: '#4CAF50',
       bgGlow: 'rgba(76, 175, 80, 0.16)'
+    },
+    {
+      id: 'salesman-barman',
+      title: 'Salesman / Barman Registration',
+      subtitle: 'Certified Staff ID & Badges',
+      color: '#4F46E5',
+      borderColor: '#6366F1',
+      bgGlow: 'rgba(99, 102, 241, 0.16)'
     },
     {
       id: 'label-reg',
@@ -132,6 +132,22 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       color: '#1C2B78',
       borderColor: '#3F51B5',
       bgGlow: 'rgba(28, 43, 120, 0.16)'
+    },
+    {
+      id: 'transit-permit',
+      title: 'Transit Permit',
+      subtitle: 'Consignment Transit & Movement Pass',
+      color: '#0369A1',
+      borderColor: '#0284C7',
+      bgGlow: 'rgba(2, 132, 199, 0.16)'
+    },
+    {
+      id: 'dry-day-permit',
+      title: 'Dry Day Permit',
+      subtitle: 'Special Permission to Operate on Dry Days',
+      color: '#D97706',
+      borderColor: '#F59E0B',
+      bgGlow: 'rgba(245, 158, 11, 0.18)'
     }
   ];
 
