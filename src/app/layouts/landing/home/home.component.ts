@@ -59,6 +59,86 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   activeLicenseInfos: any[] = [];
   currentLicenseInfoIndex = 0;
 
+  // E-Services list for home portal landing card
+  eServices = [
+    {
+      id: 'apply-license',
+      title: 'Apply for New Excise License',
+      subtitle: 'Wholesale, Retail, Bar, Distillery',
+      color: '#00838F',
+      borderColor: '#00ACC1',
+      bgGlow: 'rgba(0, 172, 193, 0.16)'
+    },
+    {
+      id: 'print-license',
+      title: 'PRINT LICENSE',
+      subtitle: 'Download Issued License',
+      color: '#1976D2',
+      borderColor: '#2196F3',
+      bgGlow: 'rgba(33, 150, 243, 0.16)'
+    },
+    {
+      id: 'license-renewal',
+      title: 'License Renewal',
+      subtitle: 'Annual Renewal & Extension',
+      color: '#2E7D32',
+      borderColor: '#43A047',
+      bgGlow: 'rgba(67, 160, 71, 0.16)'
+    },
+    {
+      id: 'company-reg',
+      title: 'Company Registration',
+      subtitle: 'Brewery, Bottling & Distilleries',
+      color: '#1565C0',
+      borderColor: '#1976D2',
+      bgGlow: 'rgba(25, 118, 210, 0.16)'
+    },
+    {
+      id: 'company-collab',
+      title: 'Company Collaboration',
+      subtitle: 'Brand Tie-ups & Bottling Pact',
+      color: '#00796B',
+      borderColor: '#4CAF50',
+      bgGlow: 'rgba(76, 175, 80, 0.16)'
+    },
+    {
+      id: 'label-reg',
+      title: 'Label Registration',
+      subtitle: 'Brand Label Approvals',
+      color: '#7B1FA2',
+      borderColor: '#9C27B0',
+      bgGlow: 'rgba(156, 39, 176, 0.16)'
+    },
+    {
+      id: 'bulk-spirit',
+      title: 'Import of Bulk Spirit',
+      subtitle: 'ENA / Alcohol Transit Passes',
+      color: '#E65100',
+      borderColor: '#FF9800',
+      bgGlow: 'rgba(255, 152, 0, 0.16)'
+    },
+    {
+      id: 'import-imfl',
+      title: 'Import of IMFL',
+      subtitle: 'Distributor Import Permits',
+      color: '#C2185B',
+      borderColor: '#E91E63',
+      bgGlow: 'rgba(233, 30, 99, 0.16)'
+    },
+    {
+      id: 'hologram',
+      title: 'Security Hologram',
+      subtitle: 'Hologram Requisition & Orders',
+      color: '#1C2B78',
+      borderColor: '#3F51B5',
+      bgGlow: 'rgba(28, 43, 120, 0.16)'
+    }
+  ];
+
+  onEServiceClick(service: any): void {
+    this.router.navigate(['/login']);
+  }
+
   truncateWords(text: string, limit: number): string {
     if (!text) return '';
     const words = text.trim().split(/\s+/);
