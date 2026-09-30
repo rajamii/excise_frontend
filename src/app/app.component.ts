@@ -15,7 +15,7 @@ import { CarouselComponent } from "./layouts/landing/carousel/carousel.component
 import { AccountService } from './core/services/account.service';
 import { InactivityService } from './core/services/inactivity.service';
 import { Subject, filter, takeUntil } from 'rxjs';
-import { MaterialModule } from './shared/material.module';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { UiLoadingService } from './core/services/ui-loading.service';
 
 @Component({
@@ -23,7 +23,7 @@ import { UiLoadingService } from './core/services/ui-loading.service';
   standalone: true,
   imports: [
     RouterOutlet,
-    MaterialModule,
+    MatProgressBarModule,
     HeaderComponent,
     FooterComponent,
     CarouselComponent
@@ -58,7 +58,7 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly loading = inject(UiLoadingService);
   private wasAuthenticated = false;
   private doc = inject(DOCUMENT);
-  private preloaderRemoved = false;
+  private initialNavigationCompleted = false;
   
   constructor() {
     // Listen for route changes to toggle header/footer visibility
@@ -79,14 +79,26 @@ export class AppComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(event => {
         if (event instanceof NavigationStart) {
-          if (this.shouldShowRouteLoader(event.url)) this.loading.setRouteLoading(true);
+          // The bootstrap preloader is already covering the first navigation.
+          // Do not flash a second full-screen loader as the application opens.
+          const coveredByBootstrapLoader =
+            !this.initialNavigationCompleted && !!this.doc.getElementById('app-preloader');
+          if (!coveredByBootstrapLoader && this.shouldShowRouteLoader(event.url)) {
+            this.loading.setRouteLoading(true);
+          }
         }
         if (event instanceof NavigationEnd) {
           this.loading.setRouteLoading(false);
-          this.removePreloader();
+          this.initialNavigationCompleted = true;
         }
-        if (event instanceof NavigationCancel) this.loading.setRouteLoading(false);
-        if (event instanceof NavigationError) this.loading.setRouteLoading(false);
+        if (event instanceof NavigationCancel) {
+          this.loading.setRouteLoading(false);
+          this.initialNavigationCompleted = true;
+        }
+        if (event instanceof NavigationError) {
+          this.loading.setRouteLoading(false);
+          this.initialNavigationCompleted = true;
+        }
       });
 
   }
@@ -152,18 +164,4 @@ export class AppComponent implements OnInit, OnDestroy {
     return withoutQuery.trim();
   }
 
-  private removePreloader(): void {
-    if (this.preloaderRemoved) return;
-    this.preloaderRemoved = true;
-
-    const preloader = this.doc.getElementById('app-preloader');
-    if (!preloader) return;
-
-    const runAfterPaint = globalThis.requestAnimationFrame ?? ((callback: () => void) => globalThis.setTimeout(callback, 16));
-
-    runAfterPaint(() => {
-      preloader.classList.add('is-leaving');
-      globalThis.setTimeout(() => preloader.remove(), 320);
-    });
-  }
 }

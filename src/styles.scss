@@ -1,10 +1,11 @@
 // Import shared styles - @use must come first
 @use 'app/shared/styles/status-badges';
 
-@import url('https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700,900');
 @import 'bootstrap-icons/font/bootstrap-icons.css';
 
-* { font-family: 'Poppins', sans-serif; }
+// Keep the first response small: the old remote Poppins import made Angular
+// inline a very large font stylesheet into index.html on every first visit.
+* { font-family: Inter, 'Segoe UI', Roboto, Arial, sans-serif; }
 body{ background-color: #EDF7FE; }
 /* Login route gets the deep amber-charcoal factory atmosphere */
 body.login-page { background-color: #f8fafc; }

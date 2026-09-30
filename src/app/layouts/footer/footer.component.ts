@@ -1,12 +1,12 @@
 import { Component, EventEmitter, Output } from '@angular/core';
-import { MaterialModule } from '../../shared/material.module';
 import { Router } from '@angular/router';
 import {MatMenuModule} from '@angular/material/menu';
+import { MatButtonModule } from '@angular/material/button';
 
 
 @Component({
   selector: 'app-footer',
-  imports: [MaterialModule, MatMenuModule],
+  imports: [MatButtonModule, MatMenuModule],
   templateUrl: './footer.component.html',
   styleUrl: './footer.component.scss'
 })

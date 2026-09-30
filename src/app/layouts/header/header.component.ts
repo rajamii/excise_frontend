@@ -1,5 +1,5 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { MaterialModule } from '../../shared/material.module';
+import { MatIconModule } from '@angular/material/icon';
 import { Router, RouterModule } from '@angular/router';
 import { AccountService } from '../../core/services/account.service';
 import Swal from 'sweetalert2';
@@ -8,7 +8,7 @@ import { AuthService } from '../../core/services/auth.service';
 @Component({
   selector: 'app-header',
   imports: [
-    MaterialModule,
+    MatIconModule,
     RouterModule,
   ],
   templateUrl: './header.component.html',
