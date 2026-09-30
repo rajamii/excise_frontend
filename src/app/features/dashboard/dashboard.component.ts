@@ -491,12 +491,17 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       this.distributorPermitService.getDashboardCounts(tab, true).subscribe({
         next: (counts) => {
           if (counts) {
+            const pending = Number(counts.pending ?? 0);
+            const approved = Number(counts.approved ?? 0);
+            const objection = Number(counts.objection ?? 0);
+            const rejected = Number(counts.rejected ?? 0);
+            const applied = Number(counts.applied || counts.total || 0) || (pending + approved + objection + rejected);
             const parsed = {
-              applied: Number(counts.applied ?? counts.total ?? 0),
-              pending: Number(counts.pending ?? 0),
-              approved: Number(counts.approved ?? 0),
-              objection: Number(counts.objection ?? 0),
-              rejected: Number(counts.rejected ?? 0),
+              applied,
+              pending,
+              approved,
+              objection,
+              rejected,
               awaitingPayment: Number(counts.awaitingPayment ?? counts.awaiting_payment ?? 0)
             };
             this.supplyChainModuleCounts[moduleName] = parsed;
@@ -512,12 +517,17 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       this.enaRequisitionService.getDashboardCounts(true).subscribe({
         next: (counts: any) => {
           if (counts) {
+            const pending = Number(counts.pending ?? 0);
+            const approved = Number(counts.approved ?? 0);
+            const objection = Number(counts.objection ?? 0);
+            const rejected = Number(counts.rejected ?? 0);
+            const applied = Number(counts.applied || counts.total || 0) || (pending + approved + objection + rejected);
             this.supplyChainModuleCounts['requisition'] = {
-              applied: Number(counts.applied ?? counts.total ?? 0),
-              pending: Number(counts.pending ?? 0),
-              approved: Number(counts.approved ?? 0),
-              objection: Number(counts.objection ?? 0),
-              rejected: Number(counts.rejected ?? 0),
+              applied,
+              pending,
+              approved,
+              objection,
+              rejected,
               awaitingPayment: Number(counts.awaitingPayment ?? counts.awaiting_payment ?? 0)
             };
             this.updateSingleWindowChart();
@@ -529,12 +539,17 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       this.companyRegistrationService.getDashboardCounts().subscribe({
         next: (counts: any) => {
           if (counts) {
+            const pending = Number(counts.pending ?? 0);
+            const approved = Number(counts.approved ?? 0);
+            const objection = Number(counts.objection ?? 0);
+            const rejected = Number(counts.rejected ?? 0);
+            const applied = Number(counts.applied || counts.total || 0) || (pending + approved + objection + rejected);
             this.supplyChainModuleCounts['company'] = {
-              applied: Number(counts.applied ?? counts.total ?? 0),
-              pending: Number(counts.pending ?? 0),
-              approved: Number(counts.approved ?? 0),
-              objection: Number(counts.objection ?? 0),
-              rejected: Number(counts.rejected ?? 0)
+              applied,
+              pending,
+              approved,
+              objection,
+              rejected
             };
             this.updateSingleWindowChart();
           }
@@ -545,12 +560,17 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       this.companyCollaborationService.getDashboardCounts().subscribe({
         next: (counts: any) => {
           if (counts) {
+            const pending = Number(counts.pending ?? 0);
+            const approved = Number(counts.approved ?? 0);
+            const objection = Number(counts.objection ?? 0);
+            const rejected = Number(counts.rejected ?? 0);
+            const applied = Number(counts.applied || counts.total || 0) || (pending + approved + objection + rejected);
             this.supplyChainModuleCounts['company-collaboration'] = {
-              applied: Number(counts.applied ?? counts.total ?? 0),
-              pending: Number(counts.pending ?? 0),
-              approved: Number(counts.approved ?? 0),
-              objection: Number(counts.objection ?? 0),
-              rejected: Number(counts.rejected ?? 0),
+              applied,
+              pending,
+              approved,
+              objection,
+              rejected,
               awaitingPayment: Number(counts.awaiting_payment ?? counts.awaitingPayment ?? 0)
             };
             this.updateSingleWindowChart();
@@ -748,11 +768,34 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       return (sourceCounts as any)[status] || 0;
     }
 
+    const isPermitSection = this.getCurrentRoleId() === 5 || Number(this.currentUser?.roleId || 0) === 5;
+    if (isPermitSection) {
+      const psModules = ['distributor-permit-requisition', 'requisition', 'company', 'company-collaboration'];
+      if (this.selectedChartModule === 'all') {
+        return psModules.reduce((sum, m) => {
+          const mc = this.supplyChainModuleCounts[m] || (m === 'company' ? this.detailedCounts.company : (m === 'company-collaboration' ? this.detailedCounts.companyCollaboration : null));
+          if (!mc) return sum;
+          if (status === 'applied') {
+            const app = Number(mc.applied || 0);
+            return sum + (app > 0 ? app : ((mc.pending || 0) + (mc.approved || 0) + (mc.objection || 0) + (mc.rejected || 0)));
+          }
+          return sum + Number((mc as any)?.[status] || 0);
+        }, 0);
+      }
+      const mc = this.supplyChainModuleCounts[this.selectedChartModule] || (this.selectedChartModule === 'company' ? this.detailedCounts.company : (this.selectedChartModule === 'company-collaboration' ? this.detailedCounts.companyCollaboration : null)) || { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 };
+      if (status === 'applied') {
+        const app = Number(mc.applied || 0);
+        return app > 0 ? app : ((mc.pending || 0) + (mc.approved || 0) + (mc.objection || 0) + (mc.rejected || 0));
+      }
+      return Number((mc as any)?.[status] || 0);
+    }
+
     if (this.selectedChartModule !== 'all' && this.supplyChainModuleCounts[this.selectedChartModule]) {
       const sourceCounts = this.supplyChainModuleCounts[this.selectedChartModule];
       if (status === 'applied') {
-        if (sourceCounts.applied !== undefined && sourceCounts.applied !== null) {
-          return Number(sourceCounts.applied || 0);
+        const app = Number(sourceCounts.applied || 0);
+        if (app > 0) {
+          return app;
         }
         return Number((sourceCounts.pending || 0) + (sourceCounts.approved || 0) + (sourceCounts.objection || 0) + (sourceCounts.rejected || 0) + ((sourceCounts as any).awaitingPayment || (sourceCounts as any)?.awaiting_payment || 0));
       }
@@ -945,7 +988,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Company registration — only for Permit Section
     const comp$ = isPermitSection
-      ? this.companyRegistrationService.getApplicationsByStatus().pipe(catchError(() => of({})))
+      ? this.companyRegistrationService.getDashboardCounts().pipe(catchError(() => of(null)))
       : of(null as any);
 
     // Company collaboration — for Permit Section and Commissioner
@@ -1051,10 +1094,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
                 }
                 return combined.includes('rejected') || combined.includes('cancelled');
               }).length;
-          const applied = reqCounts?.applied ?? reqCounts?.total ?? items.length;
+          const applied = Number(reqCounts?.applied || reqCounts?.total || items.length || 0) || (pending + approved + rejected);
 
           this.supplyChainModuleCounts['requisition'] = {
-            applied: Number(applied || (pending + approved + rejected)),
+            applied,
             pending: Number(pending || 0),
             approved: Number(approved || 0),
             objection: 0,
@@ -1225,27 +1268,19 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
         // ── COMPANY REGISTRATION (Permit Section only) ────────────────────────
         if (isPermitSection && comp) {
-          const flatten = (arr: any[]) => Array.isArray(arr) ? arr : [];
-          // For the Permit Section, the response buckets are from the officer perspective:
-          // "pending" = stages at Permit Section level, "approved" = forwarded to Commissioner or approved
-          // Use buckets directly — countActionable() won't work because allowedActions isn't in the response
-          const pendingItems  = flatten(comp?.pending);
-          const appliedItems  = flatten(comp?.applied);
-          const approvedItems = flatten(comp?.approved);
-          const rejectedItems = flatten(comp?.rejected);
-          const objectionItems = flatten(comp?.objection);
-          const awaitingItems = flatten(comp?.awaiting_payment);
-
-          // Permit section sees "pending" as whatever is currently at their stage.
-          // The API returns items at permit_section stage under comp.pending.
-          // Items that came through applied are also actionable for permit section (initial applicant_applied stage).
-          const pending   = pendingItems.length + appliedItems.length;
-          const approved  = approvedItems.length;
-          const rejected  = rejectedItems.length;
-          const objection = objectionItems.length;
-          const totalItems = pending + approved + rejected + objection + awaitingItems.length;
-
-          this.supplyChainModuleCounts['company'] = { applied: totalItems, pending, approved, objection, rejected };
+          const compApplied = Number(comp?.applied ?? 0);
+          const compPending = Number(comp?.pending ?? 0);
+          const compApproved = Number(comp?.approved ?? 0);
+          const compObjection = Number(comp?.objection ?? 0);
+          const compRejected = Number(comp?.rejected ?? 0);
+          this.supplyChainModuleCounts['company'] = {
+            applied: compApplied || (compPending + compApproved + compObjection + compRejected),
+            pending: compPending,
+            approved: compApproved,
+            objection: compObjection,
+            rejected: compRejected
+          };
+          this.detailedCounts.company = { ...this.supplyChainModuleCounts['company'] };
         }
 
         // ── COMPANY COLLABORATION (Permit Section + Commissioner) ─────────────
@@ -1272,14 +1307,21 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
         // ── DISTRIBUTOR PERMIT ────────────────────────────────────────────────
         {
-          const toDashboardCount = (counts: any): DashboardCount & { objection: number; awaitingPayment: number } => ({
-            applied: Number(counts?.applied ?? counts?.total ?? 0),
-            pending: Number(counts?.pending ?? 0),
-            approved: Number(counts?.approved ?? 0),
-            objection: Number(counts?.objection ?? 0),
-            rejected: Number(counts?.rejected ?? 0),
-            awaitingPayment: Number(counts?.awaitingPayment ?? counts?.awaiting_payment ?? 0)
-          });
+          const toDashboardCount = (counts: any): DashboardCount & { objection: number; awaitingPayment: number } => {
+            const pending = Number(counts?.pending ?? 0);
+            const approved = Number(counts?.approved ?? 0);
+            const objection = Number(counts?.objection ?? 0);
+            const rejected = Number(counts?.rejected ?? 0);
+            const applied = Number(counts?.applied || counts?.total || 0) || (pending + approved + objection + rejected);
+            return {
+              applied,
+              pending,
+              approved,
+              objection,
+              rejected,
+              awaitingPayment: Number(counts?.awaitingPayment ?? counts?.awaiting_payment ?? 0)
+            };
+          };
 
           const reqStats = toDashboardCount(distReq);
           const revStats = toDashboardCount(distRev);

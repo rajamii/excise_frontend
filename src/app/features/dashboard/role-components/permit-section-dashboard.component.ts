@@ -214,6 +214,26 @@ export class PermitSectionDashboardComponent implements OnInit {
   }
 
   private loadDistributorPermits(): void {
+    this.distributorPermitService.getDashboardCounts('requisition').subscribe({
+      next: (counts: any) => {
+        if (counts) {
+          const applied = Number(counts.applied || counts.total || 0);
+          const pending = Number(counts.pending ?? 0);
+          const approved = Number(counts.approved ?? 0);
+          const objection = Number(counts.objection ?? 0);
+          const rejected = Number(counts.rejected ?? 0);
+          this.moduleCounts['distributor-permit-requisition'] = {
+            applied: applied || (pending + approved + objection + rejected),
+            pending,
+            approved,
+            objection,
+            rejected
+          };
+        }
+      },
+      error: () => {}
+    });
+
     this.distributorPermitService.listApplications().subscribe({
       next: (apps: any[]) => {
         const list = Array.isArray(apps) ? apps : [];
@@ -243,7 +263,7 @@ export class PermitSectionDashboardComponent implements OnInit {
             referenceNo: item.reference_no || item.referenceNo,
             submissionDate: this.formatDate(item.submitted_at || item.submittedAt || item.created_at || item.createdAt),
             distilleryName: item.supplier_company_name || item.supplierCompanyName || item.applicant_name || item.applicantName || 'N/A',
-            status: item.current_stage?.name || item.status || 'PENDING',
+            status: item.current_stage?.name || item.current_stage_name || item.currentStageName || item.status || 'Pending',
             amount: String(item.total_import_value || item.totalImportValue || '0.00'),
             type: ref.startsWith('IMFLREV') ? 'imfl-revalidation' : (ref.startsWith('IMFLCAN') ? 'imfl-cancellation' : 'imfl-requisition'),
             allowedActions: allowedActions,
@@ -271,12 +291,17 @@ export class PermitSectionDashboardComponent implements OnInit {
     this.enaRequisitionService.getDashboardCounts().subscribe({
       next: (counts: any) => {
         if (counts) {
+          const applied = Number(counts.applied || counts.total || 0);
+          const pending = Number(counts.pending ?? 0);
+          const approved = Number(counts.approved ?? 0);
+          const objection = Number(counts.objection ?? 0);
+          const rejected = Number(counts.rejected ?? 0);
           this.moduleCounts['requisition'] = {
-            applied: Number(counts.applied ?? counts.total ?? 0),
-            pending: Number(counts.pending ?? 0),
-            approved: Number(counts.approved ?? 0),
-            objection: Number(counts.objection ?? 0),
-            rejected: Number(counts.rejected ?? 0),
+            applied: applied || (pending + approved + objection + rejected),
+            pending,
+            approved,
+            objection,
+            rejected,
             underprocess: Number(counts.underprocess ?? counts.under_process ?? 0)
           };
         }
@@ -358,6 +383,26 @@ export class PermitSectionDashboardComponent implements OnInit {
   }
 
   loadCompanyRegistrations(): void {
+    this.companyRegistrationService.getDashboardCounts().subscribe({
+      next: (counts: any) => {
+        if (counts) {
+          const applied = Number(counts.applied || counts.total || 0);
+          const pending = Number(counts.pending ?? 0);
+          const approved = Number(counts.approved ?? 0);
+          const objection = Number(counts.objection ?? 0);
+          const rejected = Number(counts.rejected ?? 0);
+          this.moduleCounts['company'] = {
+            applied: applied || (pending + approved + objection + rejected),
+            pending,
+            approved,
+            objection,
+            rejected
+          };
+        }
+      },
+      error: () => {}
+    });
+
     // Use list-by-status endpoint — same as registration-management component uses
     // to get the actual row data visible to permit section
     this.companyRegistrationService.getApplicationsByStatus().subscribe({
@@ -396,8 +441,8 @@ export class PermitSectionDashboardComponent implements OnInit {
             submissionDate: this.formatDate(item.submitted_on || item.submittedOn || item.created_at),
             distilleryName: item.establishment_name || item.establishmentName ||
                             item.company_name || item.companyName || 'N/A',
-            status: item.current_stage_name || item.currentStageName ||
-                    item.status || 'PENDING',
+            status: item.current_stage?.name || item.current_stage_name || item.currentStageName ||
+                    item.status || (item.is_approved ? 'Approved' : 'Pending'),
             amount: String(item.amount || item.fee || '0.00'),
             type: 'company' as const,
             allowedActions: item.allowedActions || item.allowed_actions || (isActionable ? ['APPROVE', 'REJECT'] : []),
@@ -414,7 +459,7 @@ export class PermitSectionDashboardComponent implements OnInit {
           next: (res: any) => {
             const data = Array.isArray(res) ? res : (res?.results || res?.data || []);
             const companies: PermitData[] = data.map((item: any) => {
-              const status = String(item.current_stage_name || item.currentStageName || item.status || '').toLowerCase();
+              const status = String(item.current_stage?.name || item.current_stage_name || item.currentStageName || item.status || '').toLowerCase();
               const isActionable = status.includes('permit_section') || status.includes('pending') || status.includes('submit');
               return {
                 id: item.id,
@@ -422,7 +467,7 @@ export class PermitSectionDashboardComponent implements OnInit {
                 submissionDate: this.formatDate(item.submitted_on || item.submittedOn || item.created_at),
                 distilleryName: item.establishment_name || item.establishmentName ||
                                 item.company_name || item.companyName || 'N/A',
-                status: item.current_stage_name || item.currentStageName || item.status || 'PENDING',
+                status: item.current_stage?.name || item.current_stage_name || item.currentStageName || item.status || (item.is_approved ? 'Approved' : 'Pending'),
                 amount: String(item.amount || item.fee || '0.00'),
                 type: 'company' as const,
                 allowedActions: item.allowedActions || item.allowed_actions || (isActionable ? ['APPROVE', 'REJECT'] : []),
@@ -440,6 +485,26 @@ export class PermitSectionDashboardComponent implements OnInit {
   }
 
   loadCompanyCollaborations(): void {
+    this.companyCollaborationService.getDashboardCounts().subscribe({
+      next: (counts: any) => {
+        if (counts) {
+          const applied = Number(counts.applied || counts.total || 0);
+          const pending = Number(counts.pending ?? 0);
+          const approved = Number(counts.approved ?? 0);
+          const objection = Number(counts.objection ?? 0);
+          const rejected = Number(counts.rejected ?? 0);
+          this.moduleCounts['company-collaboration'] = {
+            applied: applied || (pending + approved + objection + rejected),
+            pending,
+            approved,
+            objection,
+            rejected
+          };
+        }
+      },
+      error: () => {}
+    });
+
     this.companyCollaborationService.getApplicationsByStatus().subscribe({
       next: (response: any) => {
         const flatten = (arr: any[]) => Array.isArray(arr) ? arr : [];
@@ -473,7 +538,7 @@ export class PermitSectionDashboardComponent implements OnInit {
             referenceNo: item.application_id || item.applicationId || `CCOL-${item.id}`,
             submissionDate: this.formatDate(item.created_at || item.updated_at),
             distilleryName: item.brand_owner_name || item.brandOwnerName || 'N/A',
-            status: item.current_stage_name || item.currentStageName || item.status || 'PENDING',
+            status: item.current_stage?.name || item.current_stage_name || item.currentStageName || item.status || (item.is_approved ? 'Approved' : 'Pending'),
             amount: String(item.amount || item.fee || '0.00'),
             type: 'company' as const, // Treat as company so it falls under the "Company Registration" filter/stats
             allowedActions: item.allowedActions || item.allowed_actions || (isActionable ? ['APPROVE', 'REJECT'] : []),
@@ -489,14 +554,14 @@ export class PermitSectionDashboardComponent implements OnInit {
           next: (res: any) => {
             const data = Array.isArray(res) ? res : (res?.results || res?.data || []);
             const collabs: PermitData[] = data.map((item: any) => {
-              const status = String(item.current_stage_name || item.currentStageName || item.status || '').toLowerCase();
+              const status = String(item.current_stage?.name || item.current_stage_name || item.currentStageName || item.status || '').toLowerCase();
               const isActionable = status.includes('permit_section') || status.includes('pending') || status.includes('submit');
               return {
                 id: item.id,
                 referenceNo: item.application_id || item.applicationId || `CCOL-${item.id}`,
                 submissionDate: this.formatDate(item.created_at || item.updated_at),
                 distilleryName: item.brand_owner_name || item.brandOwnerName || 'N/A',
-                status: item.current_stage_name || item.currentStageName || item.status || 'PENDING',
+                status: item.current_stage?.name || item.current_stage_name || item.currentStageName || item.status || (item.is_approved ? 'Approved' : 'Pending'),
                 amount: String(item.amount || item.fee || '0.00'),
                 type: 'company' as const,
                 allowedActions: item.allowedActions || item.allowed_actions || (isActionable ? ['APPROVE', 'REJECT'] : []),
