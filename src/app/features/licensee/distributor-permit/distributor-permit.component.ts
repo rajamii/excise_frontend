@@ -7687,7 +7687,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     if (!appId) return null;
     const appIdLower = appId.toLowerCase();
 
-    // Cancellation check
+    // Cancellation check for specific permit
     if (this.isPermitCancelled(row, specificPermitNum) || this.isPermitCancellationApplied(row, specificPermitNum)) {
       return null;
     }
@@ -7715,12 +7715,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const parentId = String(row?.parentApplicationId || rawApp?.parent_reference_no || rawApp?.reference_no || appIdLower).toLowerCase().trim();
 
     const isRowApproved = this.isApproved(row);
-    const pWise = rawApp?.permit_wise_details || rawApp?.permitWiseDetails || [];
-    const hasAnyApprovedPermit = Array.isArray(pWise) && pWise.some((p: any, idx: number) => this.isPermitItemApproved(p, rawApp, idx));
-
-    if (!isRowApproved && !hasAnyApprovedPermit && !row?.isActivatedSchedule && !rawApp?.is_activated_schedule) {
-      return null;
-    }
+    const pWise: any[] = rawApp?.permit_wise_details || rawApp?.permitWiseDetails || [];
 
     const revApps = (this.applications || []).filter((a: any) => {
       const aRef = String(a.referenceNo || a.reference_no || a.id || '').trim().toLowerCase();
@@ -7731,7 +7726,6 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
       const targetPermits = this.extractTargetPermitsFromApp(a);
       const refTarget = String(a.application?.distributor_permit || a.application?.distributorPermit || a.distributor_permit || a.distributorPermitRef || '').toLowerCase().trim();
 
-      // Check if this rev-app targets a specific sub-permit (not 'all')
       const hasSpecificSubPermitTarget = targetPermits.length > 0 && !targetPermits.includes('all') &&
         targetPermits.every((t: string) => t.includes('-p') || t.includes('_p'));
 
@@ -7771,68 +7765,133 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
     const now = new Date();
 
-    // If a specificPermitNum is given, try to find that permit's valid_up_to from permit_wise_details first
-    let validUpToStr = '';
+    // 1. Specific permit check
     if (specificPermitNum && Array.isArray(pWise) && pWise.length > 0) {
       const matchedP = pWise.find((p: any) => {
         const pN = String(p.permit_number || p.permitNumber || '').toLowerCase().trim();
         return pN === pNum;
       });
-      if (matchedP) {
-        validUpToStr = matchedP?.valid_up_to || matchedP?.validUpTo || '';
-        // If this specific permit is marked as revalidated and its valid_up_to hasn't expired, it's valid
-        const isPermitRevalidatedInDetails = Boolean(matchedP?.is_revalidated || matchedP?.isRevalidated);
-        if (isPermitRevalidatedInDetails && validUpToStr) {
-          const permitValidUntil = new Date(validUpToStr);
-          if (!isNaN(permitValidUntil.getTime()) && permitValidUntil > now) {
-            // Still within revalidation window — not expired yet
-            return {
-              isRevalidated: true,
-              isUnderProcess: false,
-              isRequired: false,
-              permitNumbers: [specificPermitNum],
-              label: 'Revalidated'
-            };
-          }
-          if (!isNaN(permitValidUntil.getTime()) && permitValidUntil <= now) {
-            // Revalidated permit's window has expired again — needs re-revalidation
-            return {
-              isRevalidated: false,
-              isUnderProcess: false,
-              isRequired: true,
-              permitNumbers: [],
-              label: 'Revalidation Required'
-            };
-          }
+
+      if (!matchedP) return null;
+      const isItemAppr = this.isPermitItemApproved(matchedP, rawApp, pWise.indexOf(matchedP)) || isRowApproved;
+      if (!isItemAppr) return null;
+
+      const isItemCancelled = this.isPermitCancelled(row, pNum) || this.isPermitCancellationApplied(row, pNum);
+      if (isItemCancelled) return null;
+
+      const validUpToStr = matchedP?.valid_up_to || matchedP?.validUpTo || '';
+      const isPermitRevalidatedInDetails = Boolean(matchedP?.is_revalidated || matchedP?.isRevalidated);
+      if (isPermitRevalidatedInDetails && validUpToStr) {
+        const permitValidUntil = new Date(validUpToStr);
+        if (!isNaN(permitValidUntil.getTime()) && permitValidUntil > now) {
+          return {
+            isRevalidated: true,
+            isUnderProcess: false,
+            isRequired: false,
+            permitNumbers: [specificPermitNum],
+            label: 'Revalidated'
+          };
+        }
+        if (!isNaN(permitValidUntil.getTime()) && permitValidUntil <= now) {
+          return {
+            isRevalidated: false,
+            isUnderProcess: false,
+            isRequired: true,
+            permitNumbers: [specificPermitNum],
+            label: 'Revalidation Required'
+          };
         }
       }
+
+      if (validUpToStr) {
+        const permitValidUntil = new Date(validUpToStr);
+        if (!isNaN(permitValidUntil.getTime()) && permitValidUntil <= now) {
+          return {
+            isRevalidated: false,
+            isUnderProcess: false,
+            isRequired: true,
+            permitNumbers: [specificPermitNum],
+            label: 'Revalidation Required'
+          };
+        }
+        return null; // Valid unexpired permit
+      }
+
+      return null;
     }
 
-    // Fallback: use parent-level valid_up_to only for parent-level checks (no specificPermitNum)
-    if (!validUpToStr && !specificPermitNum) {
-      validUpToStr = rawApp?.valid_up_to || rawApp?.validUpTo || row?.application?.valid_up_to || '';
-    }
-
-    // If checking a specific sub-permit and no valid_up_to was found, check if there's
-    // a processed/activated schedule in this.applications for this specific permit.
-    if (specificPermitNum && !validUpToStr) {
-      const activatedScheduleForPermit = (this.applications || []).find((a: any) => {
-        if (!a.isActivatedSchedule && !a.is_activated_schedule) return false;
-        const schedPermit = String(a.revalidatedPermitNumber || a.revalidated_permit_number || a.permitNumber || a.permit_number || '').toLowerCase().trim();
-        const schedRef = String(a.referenceNo || a.reference_no || a.distributor_permit_ref_no || '').toLowerCase().trim();
-        return schedPermit === pNum || schedRef === pNum;
+    // 2. Application-level check (when specificPermitNum is not passed)
+    if (Array.isArray(pWise) && pWise.length > 0) {
+      // Find all approved and NOT cancelled permits
+      const activeApprovedPermits = pWise.filter((p: any, idx: number) => {
+        const pN = String(p.permit_number || p.permitNumber || `${appId}-P${idx + 1}`).trim();
+        const isAppr = this.isPermitItemApproved(p, rawApp, idx) || isRowApproved;
+        if (!isAppr) return false;
+        if (this.isPermitCancelled(row, pN) || this.isPermitCancellationApplied(row, pN)) return false;
+        return true;
       });
-      if (activatedScheduleForPermit) {
+
+      if (activeApprovedPermits.length === 0) {
+        return null;
+      }
+
+      const expiredPermitNumbers: string[] = [];
+      const revalidatedPermitNumbers: string[] = [];
+
+      for (const p of activeApprovedPermits) {
+        const pN = String(p.permit_number || p.permitNumber || '').trim();
+        if (this.isPermitRevalidationInProgress(row, pN)) {
+          continue;
+        }
+
+        const pValidUpToStr = p.valid_up_to || p.validUpTo || '';
+        const pValidDate = pValidUpToStr ? new Date(pValidUpToStr) : null;
+        const isDateExpired = Boolean(pValidDate && !isNaN(pValidDate.getTime()) && pValidDate <= now);
+
+        if (this.isPermitRevalidatedAndValid(row, pN) || p.is_revalidated || p.isRevalidated) {
+          if (isDateExpired) {
+            expiredPermitNumbers.push(pN);
+          } else {
+            revalidatedPermitNumbers.push(pN);
+          }
+        } else if (isDateExpired) {
+          expiredPermitNumbers.push(pN);
+        }
+      }
+
+      if (expiredPermitNumbers.length > 0) {
         return {
           isRevalidated: false,
           isUnderProcess: false,
           isRequired: true,
-          permitNumbers: [],
+          permitNumbers: expiredPermitNumbers,
           label: 'Revalidation Required'
         };
       }
+
+      if (revalidatedPermitNumbers.length > 0) {
+        return {
+          isRevalidated: true,
+          isUnderProcess: false,
+          isRequired: false,
+          permitNumbers: revalidatedPermitNumbers,
+          label: 'Revalidated'
+        };
+      }
+
+      return null;
     }
 
+    // 3. Fallback for simple rows without permit_wise_details
+    if (!isRowApproved && !row?.isActivatedSchedule && !rawApp?.is_activated_schedule) {
+      return null;
+    }
+
+    if (this.isPermitCancelled(row) || this.isPermitCancellationApplied(row)) {
+      return null;
+    }
+
+    const validUpToStr = rawApp?.valid_up_to || rawApp?.validUpTo || row?.application?.valid_up_to || '';
     const validUpToDate = validUpToStr ? new Date(validUpToStr) : null;
     const isDateExpired = Boolean(validUpToDate && !isNaN(validUpToDate.getTime()) && validUpToDate <= now);
     const isActivatedSched = Boolean(
@@ -7848,23 +7907,6 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         permitNumbers: [],
         label: 'Revalidation Required'
       };
-    }
-
-    if (Array.isArray(pWise) && pWise.length > 0) {
-      const revalidatedP = pWise.filter((p: any) => {
-        const pN = String(p.permit_number || p.permitNumber || '').toLowerCase().trim();
-        const matchesThis = !specificPermitNum || pN === pNum;
-        return matchesThis && (p.isRevalidated || p.is_revalidated || p.revalidated || String(p.status || '').toUpperCase().includes('REVALIDAT'));
-      });
-      if (revalidatedP.length > 0) {
-        return {
-          isRevalidated: true,
-          isUnderProcess: false,
-          isRequired: false,
-          permitNumbers: revalidatedP.map((p: any) => p.permit_number || p.permitNumber),
-          label: 'Revalidated'
-        };
-      }
     }
 
     return null;
@@ -7941,11 +7983,20 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   getRevalidatedPermitNumbersText(row: any): string {
     const info = this.getRevalidationInfo(row);
-    if (!info) return '';
+    if (!info || !info.isRevalidated) return '';
     if (info.permitNumbers && info.permitNumbers.length > 0) {
       return info.permitNumbers.join(', ');
     }
-    return info.label;
+    return '';
+  }
+
+  getRevalidationRequiredPermitNumbersText(row: any): string {
+    const info = this.getRevalidationInfo(row);
+    if (!info || !info.isRequired) return '';
+    if (info.permitNumbers && info.permitNumbers.length > 0) {
+      return info.permitNumbers.join(', ');
+    }
+    return '';
   }
 
   getArrivedPermitNumbersText(row: any): string {
