@@ -5399,8 +5399,15 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const rawApp = row?.application || row;
     const stageId = Number(rawApp?.current_stage_id || rawApp?.currentStageId || rawApp?.current_stage?.id || 0);
     const stageName = String(rawApp?.current_stage?.name || rawApp?.current_stage_name || rawApp?.status || row?.currentStage || '').toLowerCase().trim();
+    const paymentStatus = String(row?.paymentStatus || rawApp?.payment_status || '').toLowerCase().trim();
+    const isPaid = Boolean(rawApp?.is_excise_duty_fee_paid || rawApp?.isExciseDutyFeePaid || paymentStatus === 'paid');
 
-    // If awaiting payment, officers don't reject directly
+    // Once payment is completed (e.g. Paid, Stage 156, Stage 157, payslip verified), admin/officer cannot reject the application
+    if (isPaid || paymentStatus === 'paid' || stageId === 156 || stageId === 157 || stageName.includes('payslip') || stageName.includes('paid')) {
+      return false;
+    }
+
+    // If awaiting payment, officers cannot reject
     if (stageId === 154 || stageName.includes('payment') || stageName.includes('awaiting payment')) {
       return false;
     }
@@ -5408,15 +5415,15 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     const { isPermitSection, isCommissioner, isAdmin } = this.getUserRoleInfo();
 
     if (isCommissioner) {
-      return this.isCommissionerApprovalStage(row);
+      return this.isCommissionerFirstApprovalStage(row);
     }
 
     if (isPermitSection) {
-      return this.isPermitSectionStage(row);
+      return (stageId === 148 || stageId === 149 || stageId === 147 || stageName.includes('permit') || stageName.includes('pending')) && !stageName.includes('payslip');
     }
 
     if (isAdmin) {
-      return this.isCommissionerApprovalStage(row) || this.isPermitSectionStage(row);
+      return this.isCommissionerFirstApprovalStage(row) || (this.isPermitSectionStage(row) && !isPaid && !stageName.includes('payslip'));
     }
 
     return false;
