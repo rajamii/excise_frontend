@@ -163,7 +163,11 @@ export class UnifiedDashboardService {
 
     getUnifiedDashboardCounts(config?: DashboardConfig, forceRefresh = false): Observable<DashboardCount> {
     const userKey = this.getCurrentUserKey();
-    const enabledTypes = Array.from(new Set([...this.inferEnabledTypesFromConfig(config), 'license-renewal', 'company-registration', 'company-collaboration', 'salesman-barman', 'new-license', 'special-permit', 'label-registration']));
+    // Only fetch counts for module types present in the user's navigation config.
+    // Previously ALL types were merged in unconditionally via Set spread, causing
+    // salesman-barman, company-registration, etc. to fire for every user regardless
+    // of whether those tabs exist in their dashboard.
+    const enabledTypes = this.inferEnabledTypesFromConfig(config);
     const cacheKey = `user:${userKey}:${enabledTypes.slice().sort().join('|')}`;
     if (!forceRefresh && this.unifiedCountsCache$ && this.unifiedCountsCacheKey === cacheKey) {
       return this.unifiedCountsCache$;
@@ -295,7 +299,8 @@ export class UnifiedDashboardService {
     labelRegistration?: DashboardCount;
   }> {
     const userKey = this.getCurrentUserKey();
-    const enabledTypes = Array.from(new Set([...this.inferEnabledTypesFromConfig(config), 'license-renewal', 'company-registration', 'company-collaboration', 'salesman-barman', 'new-license', 'special-permit', 'label-registration']));
+    // Only fetch counts for module types present in the user's navigation config.
+    const enabledTypes = this.inferEnabledTypesFromConfig(config);
     const cacheKey = `user:${userKey}::` + [
       enabledTypes.slice().sort().join('|'),
       `month:${month ?? 'all'}`,
@@ -395,11 +400,8 @@ export class UnifiedDashboardService {
     rejected: UnifiedApplication[];
     awaitingPayment?: UnifiedApplication[];
   }> {
-    const baseTypes = ['license-renewal', 'company-registration', 'company-collaboration'];
-    if (!excludeSpecialPermit) {
-      baseTypes.push('special-permit');
-    }
-    let enabledTypes = Array.from(new Set([...this.inferEnabledTypesFromConfig(config), ...baseTypes]));
+    // Only fetch application lists for types present in the user's navigation config.
+    let enabledTypes = this.inferEnabledTypesFromConfig(config);
     if (excludeSpecialPermit) {
       enabledTypes = enabledTypes.filter(t => t !== 'special-permit');
     }

@@ -11,6 +11,8 @@ import { UnifiedActionButtonsComponent } from '../../../shared/components/unifie
 import { UnifiedActionsService } from '../../../shared/services/unified-actions.service';
 import { UnifiedDashboardService } from '../../../core/services/unified-dashboard.service';
 import { DistributorPermitService } from '../../../core/services/distributor-permit.service';
+import { DashboardConfigService } from '../../../core/services/dashboard-config.service';
+import { switchMap, catchError } from 'rxjs/operators';
 
 interface CommissionerData {
   id?: number;
@@ -905,6 +907,7 @@ export class CommissionerDashboardComponent implements OnInit {
   private unifiedActionsService = inject(UnifiedActionsService);
   private unifiedDashboardService = inject(UnifiedDashboardService);
   private distributorPermitService = inject(DistributorPermitService);
+  private dashboardConfigService = inject(DashboardConfigService);
 
   // Data properties
   allApplications: CommissionerData[] = [];
@@ -1063,7 +1066,13 @@ export class CommissionerDashboardComponent implements OnInit {
   }
 
   loadUnifiedDashboardCounts(): void {
-    this.unifiedDashboardService.getUnifiedDashboardCounts(undefined, true).subscribe({
+    // Load config first so only the commissioner's actual navigation tabs
+    // fire count API calls — prevents the allTypes fallback that was calling
+    // all 7 module endpoints regardless of role.
+    this.dashboardConfigService.getCurrentUserDashboardConfigCached().pipe(
+      switchMap((config) => this.unifiedDashboardService.getUnifiedDashboardCounts(config, true)),
+      catchError(() => this.unifiedDashboardService.getUnifiedDashboardCounts(undefined, true))
+    ).subscribe({
       next: (counts) => {
         console.log('Unified dashboard counts loaded for commissioner:', counts);
         this.unifiedCounts = {
