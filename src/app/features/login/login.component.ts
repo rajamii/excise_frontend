@@ -837,8 +837,16 @@ export class LoginComponent extends BaseComponent {
       localStorage.setItem('access', accessToken);
       localStorage.setItem('refresh', refreshToken);
 
+      // auth.service.ts login() already called identity(true) before invoking
+      // handleAuthResponse, so the profile is always cached at this point.
+      // Use the sync getter to avoid a redundant third /me/ HTTP request.
       const currentUser = this.accountService.getUserProfileSync();
       if (currentUser) {
+        if (this.isLocallyBlockedUser(currentUser)) {
+          this.accountService.clearAppData();
+          this.setLoginErrors(['This user has been deleted and is not allowed to log in from this system.']);
+          return;
+        }
         const previousUrl = this.stateStorgeService.getUrl();
         const safePreviousUrl = typeof previousUrl === 'string' ? previousUrl.trim() : '';
         if (safePreviousUrl && safePreviousUrl !== '/login' && safePreviousUrl.startsWith('/dashboard')) {
@@ -847,13 +855,14 @@ export class LoginComponent extends BaseComponent {
           return;
         }
         if (safePreviousUrl) {
-          // Prevent cross-dashboard redirects (e.g. officer dashboard URL from a prior session)
           this.stateStorgeService.clearUrl();
         }
         this.redirectBasedOnRole(currentUser.role?.id);
         return;
       }
 
+      // Fallback: profile not yet in cache (e.g. OTP login path with loadProfile=false).
+      // Call identity() once to fetch and cache it.
       this.accountService.identity().subscribe({
         next: (user) => {
           if (user) {
