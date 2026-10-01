@@ -840,7 +840,7 @@ export class RevalidationComponent implements OnInit {
   getActionIncludeList(item: TableData): string[] {
     const actions = ['VIEW', ...(item.allowedActions || [])];
     
-    // For revalidation, show payment slip after submission (₹1000 deduction)
+    // For revalidation, show payment slip after submission (₹5000 deduction)
     const hasPayment = this.hasPaymentBeenMade(item);
     if (hasPayment) {
       actions.push('VIEW_PAYMENT_SLIP');
@@ -854,11 +854,11 @@ export class RevalidationComponent implements OnInit {
   }
 
   hasPaymentBeenMade(item: TableData): boolean {
-    // Check if payment has been completed (₹1000 deducted from wallet)
+    // Check if payment has been completed (₹5000 deducted from wallet)
     const status = (item.status || '').toLowerCase().replace(/\s+/g, '');
     
     // Payment indicators for revalidation
-    // After submission, ₹1000 is deducted, so any status after submission indicates payment
+    // After submission, ₹5000 is deducted, so any status after submission indicates payment
     const statusIndicatesPayment = status.includes('forwarded') ||
                                    status.includes('approved') ||
                                    status.includes('revalidation') ||

@@ -4599,7 +4599,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.cancellationTotalRefund = importFeeSum + addEdSum + cessSum;
 
     const numPermits = selectedList.length;
-    this.cancellationFeeAmount = 1000 * numPermits;
+    this.cancellationFeeAmount = 5000 * numPermits;
     this.cancellationNetExciseChange = (importFeeSum + addEdSum) - this.cancellationFeeAmount;
     this.cancellationNetCessChange = cessSum;
 
@@ -6469,7 +6469,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   // Cancellation Refund & Financial Confirmation State
   showCancellationConfirmationModal = false;
-  cancellationFeeAmount = 1000;
+  cancellationFeeAmount = 5000;
   cancellationRefundImportFee = 0;
   cancellationRefundAddEd = 0;
   cancellationRefundEducationCess = 0;
@@ -6515,9 +6515,9 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     this.cancellationRefundEducationCess = cessSum;
     this.cancellationTotalRefund = importFeeSum + addEdSum + cessSum;
 
-    // Fee = Rs.1000 per permit number being cancelled
+    // Fee = Rs.5000 per permit number being cancelled
     const numPermits = selectedPermits.length;
-    this.cancellationFeeAmount = 1000 * numPermits;
+    this.cancellationFeeAmount = 5000 * numPermits;
     this.cancellationNetExciseChange = (importFeeSum + addEdSum) - this.cancellationFeeAmount;
     this.cancellationNetCessChange = cessSum;
 
@@ -6594,7 +6594,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
         alert(`IMFL Permit Cancellation Request ${refNo} Submitted Successfully!\n\n` +
           `• Number of Permits Cancelled: ${selectedPermits.length}\n` +
-          `• Cancellation Processing Fee Debited (${selectedPermits.length} × ₹1,000): ₹${this.cancellationFeeAmount.toFixed(2)}\n` +
+          `• Cancellation Processing Fee Debited (${selectedPermits.length} × ₹5,000): ₹${this.cancellationFeeAmount.toFixed(2)}\n` +
           `• Excise Duty Refund Credited: ₹${this.cancellationRefundImportFee.toFixed(2)}\n` +
           `• Additional Excise Duty Refund Credited: ₹${this.cancellationRefundAddEd.toFixed(2)}\n` +
           `• Education Duty Refund Credited: ₹${this.cancellationRefundEducationCess.toFixed(2)}\n` +
@@ -7946,7 +7946,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
 
   // Revalidation payment confirmation state
   showRevalidationPaymentModal = false;
-  revalidationFeeAmount = 1000;
+  revalidationFeeAmount = 5000;
   revalidationCurrentExciseBalance = 0;
   revalidationProjectedExciseBalance = 0;
 
@@ -8409,7 +8409,7 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
         .filter((n: string) => !!n)
     );
     const numPermits = uniquePermitNos.size || 1;
-    this.revalidationFeeAmount = 1000 * numPermits;
+    this.revalidationFeeAmount = 5000 * numPermits;
 
     // Load live wallet balance and show confirmation popup
     this.loadLiveWalletBalances((exBal, cessBal) => {

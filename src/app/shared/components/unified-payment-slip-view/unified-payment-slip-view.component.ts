@@ -52,13 +52,31 @@ interface RequisitionSlipRow {
   reference_no: string;
   submission_date: string;
   distillery_name: string;
+  applicant_name?: string;
+  licensee_id?: string;
   status: string;
   quantity_bl: number;
   number_of_permits: string | number;
   permit_numbers?: string;
   transaction_id?: string;
+  transaction_ids?: string[];
   purpose: string;
   amount: number;
+  import_fee?: number;
+  additional_ed?: number;
+  education_cess?: number;
+  payment_method?: string;
+  wallet_transactions?: Array<{
+    transaction_id: string;
+    wallet_type: string;
+    head_of_account: string;
+    amount: number;
+    created_at?: string;
+    remarks?: string;
+    reference_no?: string;
+  }>;
+  permit_wise_details?: any[];
+  line_items?: any[];
 }
 
 interface RevalidationSlipRow {
@@ -129,6 +147,34 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   revalidationRow: RevalidationSlipRow | null = null;
   cancellationRow: CancellationSlipRow | null = null;
   hologramRow: HologramSlipRow | null = null;
+
+  showAllTransactionIds = false;
+  showAllWalletTxns = false;
+
+  get allTransactionIds(): string[] {
+    if (this.requisitionRow?.transaction_ids && Array.isArray(this.requisitionRow.transaction_ids) && this.requisitionRow.transaction_ids.length > 0) {
+      return this.requisitionRow.transaction_ids.map(id => String(id).trim()).filter(Boolean);
+    }
+    const raw = String(this.requisitionRow?.transaction_id || '').trim();
+    if (!raw || raw === '-') return [];
+    return raw.split(',').map(id => id.trim()).filter(Boolean);
+  }
+
+  get displayedTransactionIds(): string[] {
+    const list = this.allTransactionIds;
+    if (this.showAllTransactionIds || list.length <= 3) {
+      return list;
+    }
+    return list.slice(0, 3);
+  }
+
+  get displayedWalletTransactions(): any[] {
+    const list = this.requisitionRow?.wallet_transactions || [];
+    if (this.showAllWalletTxns || list.length <= 4) {
+      return list;
+    }
+    return list.slice(0, 4);
+  }
 
   constructor(
     private route: ActivatedRoute,
@@ -689,7 +735,10 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   get transitSummary() {
     if (this.moduleType === 'requisition') {
       const amount = Number(this.requisitionRow?.amount || 0);
-      return { total: amount, excise: amount, cess: 0, addl: 0, bottlingFee: 0 };
+      const excise = Number(this.requisitionRow?.import_fee || 0);
+      const addl = Number(this.requisitionRow?.additional_ed || 0);
+      const cess = Number(this.requisitionRow?.education_cess || 0);
+      return { total: amount, excise, cess, addl, bottlingFee: 0 };
     }
     if (this.moduleType === 'revalidation') {
       const amount = Number(this.revalidationRow?.revalidation_fee || 0);
@@ -1133,14 +1182,174 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
           return;
         }
 
-        const permitsList = Array.isArray(row.permit_wise_details) ? row.permit_wise_details : (Array.isArray(row.permitWiseDetails) ? row.permitWiseDetails : []);
-        const permitNumbers = permitsList.map((p: any) => p.permit_number || p.permitNo || p.permit_no).filter(Boolean).join(', ');
-        const permitCount = permitsList.length || Number(row.brand_count || row.brandCount || 1);
+        let rawPermits = row.permit_wise_details || row.permitWiseDetails || [];
+        if (typeof rawPermits === 'string') {
+          try { rawPermits = JSON.parse(rawPermits); } catch(e) { rawPermits = []; }
+        }
+        if (!Array.isArray(rawPermits)) {
+          rawPermits = [];
+        }
+
+        let rootLineItems = row.line_items || row.lineItems || [];
+        if (typeof rootLineItems === 'string') {
+          try { rootLineItems = JSON.parse(rootLineItems); } catch(e) { rootLineItems = []; }
+        }
+        if (!Array.isArray(rootLineItems)) {
+          rootLineItems = [];
+        }
+
+        // If rawPermits is empty but we have root line items, group them by permit_number
+        if (rawPermits.length === 0 && rootLineItems.length > 0) {
+          const groupedByPermit = new Map<string, any[]>();
+          rootLineItems.forEach((it: any) => {
+            const pNo = String(it.permit_number || it.permitNumber || `${ref}-P1`).trim();
+            if (!groupedByPermit.has(pNo)) {
+              groupedByPermit.set(pNo, []);
+            }
+            groupedByPermit.get(pNo)!.push(it);
+          });
+
+          let pSeq = 1;
+          groupedByPermit.forEach((items, pNo) => {
+            rawPermits.push({
+              permit_sequence: pSeq,
+              permit_index: pSeq,
+              permit_number: pNo,
+              line_items: items
+            });
+            pSeq++;
+          });
+        }
+
+        // If still empty, create at least 1 permit entry from row
+        if (rawPermits.length === 0) {
+          rawPermits.push({
+            permit_sequence: 1,
+            permit_index: 1,
+            permit_number: `${ref}-P1`,
+            line_items: rootLineItems.length > 0 ? rootLineItems : [row]
+          });
+        }
+
+        const normalizedPermits = rawPermits.map((p: any, pIdx: number) => {
+          const pSeq = Number(p.permit_sequence || p.permitSequence || p.permit_index || p.permitIndex || (pIdx + 1));
+          const pNum = String(
+            p.permit_number ||
+            p.permitNumber ||
+            p.permit_no ||
+            p.permitNo ||
+            `${row.reference_no || ref}-P${pSeq}`
+          ).trim();
+
+          let pLineItems = p.line_items || p.lineItems || p.items || p.brands || p.brand_details || p.products || [];
+          if (typeof pLineItems === 'string') {
+            try { pLineItems = JSON.parse(pLineItems); } catch(e) { pLineItems = []; }
+          }
+          if (!Array.isArray(pLineItems) || pLineItems.length === 0) {
+            if (rootLineItems.length > 0) {
+              const matched = rootLineItems.filter((it: any) => {
+                const itPNum = String(it.permit_number || it.permitNumber || it.permit_no || it.permitNo || '').trim().toLowerCase();
+                return itPNum && (itPNum === pNum.toLowerCase() || pNum.toLowerCase().includes(itPNum) || itPNum.includes(pNum.toLowerCase()));
+              });
+              if (matched.length > 0) {
+                pLineItems = matched;
+              } else if (rootLineItems[pIdx]) {
+                pLineItems = [rootLineItems[pIdx]];
+              } else {
+                pLineItems = rootLineItems;
+              }
+            } else if (p.brand_name || p.brandName || p.brand || row.brand_name || row.brandName) {
+              pLineItems = [p];
+            } else {
+              pLineItems = [{
+                brand_name: 'IMFL Spirit',
+                size_ml: 180,
+                pieces_per_case: 6,
+                cases: Number(p.total_cases || p.totalCases || p.cases || 1)
+              }];
+            }
+          }
+
+          const resolvedItems = pLineItems.map((item: any) => {
+            const bName = this.cleanBrandName(
+              String(item.brand_name || item.brandName || item.brand || p.brand_name || p.brand || row.brand_name || 'IMFL Spirit')
+            );
+            const sMl = Number(item.size_ml || item.sizeMl || item.pack_size || p.size_ml || 180);
+            const bpc = Number(item.pieces_per_case || item.piecesPerCase || item.bottles_per_case || (sMl === 180 ? 6 : 12));
+            const cases = Number(item.cases || item.allocated_cases || item.quantity_cases || item.quantityCases || p.total_cases || p.cases || 1);
+
+            const importFeePerCase = Number(item.import_pass_fee_per_case ?? item.importPassFeePerCase ?? item.import_fee ?? (item.total_import ? item.total_import / cases : 1400));
+            const addlEdPerCase = Number(item.additional_ed_per_case ?? item.additionalEdPerCase ?? item.additional_ed ?? (item.total_additional_ed ? item.total_additional_ed / cases : 350));
+            const eduCessPerCase = Number(item.education_cess_per_case ?? item.educationCessPerCase ?? item.education_cess ?? (item.total_education_cess ? item.total_education_cess / cases : 60));
+
+            const totalImport = Number(item.total_import ?? item.totalImport ?? item.total_import_fee ?? (importFeePerCase * cases));
+            const totalAddl = Number(item.total_additional_ed ?? item.totalAdditionalEd ?? (addlEdPerCase * cases));
+            const totalCess = Number(item.total_education_cess ?? item.totalEducationCess ?? (eduCessPerCase * cases));
+            const bl = Number(item.bulk_litres ?? item.bulkLitres ?? item.total_bulk_litres ?? ((cases * sMl * bpc) / 1000));
+
+            return {
+              brand_name: bName,
+              brandName: bName,
+              size_ml: sMl,
+              sizeMl: sMl,
+              pieces_per_case: bpc,
+              piecesPerCase: bpc,
+              cases: cases,
+              import_pass_fee_per_case: importFeePerCase,
+              additional_ed_per_case: addlEdPerCase,
+              education_cess_per_case: eduCessPerCase,
+              total_import: totalImport,
+              total_additional_ed: totalAddl,
+              total_education_cess: totalCess,
+              bulk_litres: bl,
+              subtotal: totalImport + totalAddl + totalCess
+            };
+          });
+
+          const pCases = Number(p.total_cases ?? p.totalCases ?? resolvedItems.reduce((s: number, it: any) => s + it.cases, 0));
+          const pBl = Number(p.total_bulk_litres ?? p.totalBulkLitres ?? resolvedItems.reduce((s: number, it: any) => s + it.bulk_litres, 0));
+          const pImportFee = Number(p.total_import_fee ?? p.totalImportFee ?? resolvedItems.reduce((s: number, it: any) => s + it.total_import, 0));
+          const pAddlEd = Number(p.total_additional_ed ?? p.totalAdditionalEd ?? resolvedItems.reduce((s: number, it: any) => s + it.total_additional_ed, 0));
+          const pEduCess = Number(p.total_education_cess ?? p.totalEducationCess ?? resolvedItems.reduce((s: number, it: any) => s + it.total_education_cess, 0));
+
+          return {
+            permit_sequence: pSeq,
+            permit_number: pNum,
+            permitNo: pNum,
+            total_cases: pCases,
+            totalCases: pCases,
+            total_bulk_litres: pBl,
+            totalBulkLitres: pBl,
+            total_import_fee: pImportFee,
+            totalImportFee: pImportFee,
+            total_additional_ed: pAddlEd,
+            totalAdditionalEd: pAddlEd,
+            total_education_cess: pEduCess,
+            totalEducationCess: pEduCess,
+            line_items: resolvedItems,
+            items: resolvedItems
+          };
+        });
+
+        const permitNumbers = normalizedPermits.map((p: any) => p.permit_number).filter(Boolean).join(', ');
+        const permitCount = normalizedPermits.length;
         const permitDisplay = permitNumbers ? `${permitCount} (${permitNumbers})` : String(permitCount);
 
-        const importFee = Number(row.total_import_value ?? row.totalImportValue ?? 0);
-        const eduCess = Number(row.total_education_cess ?? row.totalEducationCess ?? 0);
-        const addlEd = Number(row.total_additional_ed ?? row.totalAdditionalEd ?? 0);
+        let importFee = normalizedPermits.reduce((sum: number, p: any) => sum + Number(p.total_import_fee || 0), 0);
+        let addlEd = normalizedPermits.reduce((sum: number, p: any) => sum + Number(p.total_additional_ed || 0), 0);
+        let eduCess = normalizedPermits.reduce((sum: number, p: any) => sum + Number(p.total_education_cess || 0), 0);
+        let totalBl = normalizedPermits.reduce((sum: number, p: any) => sum + Number(p.total_bulk_litres || 0), 0);
+
+        if (importFee === 0) {
+          importFee = Number(row.total_import_value ?? row.total_import_fee ?? row.totalImportValue ?? row.totalImportFee ?? 0);
+        }
+        if (addlEd === 0) {
+          addlEd = Number(row.total_additional_ed ?? row.totalAdditionalEd ?? 0);
+        }
+        if (eduCess === 0) {
+          eduCess = Number(row.total_education_cess ?? row.totalEducationCess ?? 0);
+        }
+
         let totalAmount = importFee + eduCess + addlEd;
         if (totalAmount <= 0) {
           totalAmount = Number(row.amount || row.payment_amount || row.paymentAmount || row.total_amount || row.totalAmount || 0);
@@ -1151,13 +1360,21 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
           reference_no: String(row.reference_no || row.referenceNo || this.referenceNo || ref),
           submission_date: String(row.submitted_at || row.submittedAt || row.created_at || row.createdAt || row.submission_date || ''),
           distillery_name: String(row.supplier_company_name || row.supplierCompanyName || row.applicant_name || row.applicantName || '-'),
+          applicant_name: String(row.applicant_name || row.applicantName || row.applicant?.name || '-'),
+          licensee_id: String(row.licensee_id || row.licenseeId || ''),
           status: String(row.current_stage_name || row.currentStageName || row.status || '-'),
-          quantity_bl: Number(row.total_bulk_litres ?? row.totalBulkLitres ?? row.quantity_bl ?? row.quantityBl ?? 0),
+          quantity_bl: totalBl || Number(row.total_bulk_litres ?? row.totalBulkLitres ?? row.quantity_bl ?? row.quantityBl ?? 0),
           number_of_permits: permitDisplay,
           permit_numbers: permitNumbers,
           transaction_id: String(row.transaction_id || row.transactionId || ''),
           purpose: 'IMFL Import Requisition',
-          amount: totalAmount
+          amount: totalAmount,
+          import_fee: importFee,
+          additional_ed: addlEd,
+          education_cess: eduCess,
+          payment_method: 'Wallet (Excise & Cess)',
+          permit_wise_details: normalizedPermits,
+          line_items: rootLineItems
         };
 
         if (!this.referenceNo) {
@@ -1183,12 +1400,14 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
       String(
         sourceRow?.licensee_id ||
         sourceRow?.licenseeId ||
+        sourceRow?.applicant?.licensee_id ||
+        sourceRow?.applicant?.username ||
         this.getLicenseeIdFromSession()
       ).trim();
 
     if (!licenseeId) return;
 
-    const historyUrl = `${environment.apiBaseUrl}/transactional/payment/wallet/${licenseeId}/history/`;
+    const historyUrl = `${environment.apiBaseUrl}/transactional/payment/wallet/${encodeURIComponent(licenseeId)}/history/`;
     this.http.get<any>(historyUrl, { params: { limit: '500' } })
       .pipe(catchError(() => of({ results: [] })))
       .subscribe((response) => {
@@ -1197,29 +1416,50 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
           : (Array.isArray(response?.results) ? response.results : []);
 
         const targetRef = ref.toUpperCase();
+        const targetRefClean = targetRef.replace(/[^A-Z0-9]/g, '');
+
         const candidates = rows.filter((row: any) => {
           const rowRef = String(row?.reference_no || row?.referenceNo || '').trim().toUpperCase();
-          if (!rowRef || rowRef !== targetRef) return false;
-
+          const rowRefClean = rowRef.replace(/[^A-Z0-9]/g, '');
+          const txnId = String(row?.transaction_id || row?.transactionId || '').toUpperCase();
+          const txnIdClean = txnId.replace(/[^A-Z0-9]/g, '');
+          const remarks = String(row?.remarks || '').toUpperCase();
+          const remarksClean = remarks.replace(/[^A-Z0-9]/g, '');
+          const sourceModule = String(row?.source_module || row?.sourceModule || '').toLowerCase();
           const entryType = String(row?.entry_type || row?.entryType || '').toLowerCase();
           const type = String(row?.transaction_type || row?.transactionType || '').toLowerCase();
+
+          // Match reference or permit numbers or transaction ids
+          const isRefMatch =
+            (rowRef && (rowRef === targetRef || rowRef.startsWith(targetRef) || targetRef.startsWith(rowRef) || rowRefClean.includes(targetRefClean) || targetRefClean.includes(rowRefClean))) ||
+            remarks.includes(targetRef) ||
+            remarksClean.includes(targetRefClean) ||
+            txnId.includes(targetRef) ||
+            txnId.includes(targetRef.replace(/\//g, '_')) ||
+            txnIdClean.includes(targetRefClean);
+
+          if (!isRefMatch) return false;
+
           const isDebitLike =
+            entryType === 'dr' ||
             entryType.includes('debit') ||
             entryType.includes('utilized') ||
-            type.includes('debit');
+            type === 'dr' ||
+            type.includes('debit') ||
+            type === 'payment' ||
+            type.includes('recharge') === false;
 
-          const sourceModule = String(row?.source_module || row?.sourceModule || '').toLowerCase();
-          const txnId = String(row?.transaction_id || row?.transactionId || '').toUpperCase();
-          // Strict requisition match to avoid picking revalidation/cancellation txns
-          // that can share the same requisition reference number.
           const looksRequisition =
             sourceModule.includes('requisition') ||
+            sourceModule.includes('imfl_permit') ||
             sourceModule.includes('permit') ||
+            txnId.startsWith('PAY-EXCISE') ||
+            txnId.startsWith('PAY-CESS') ||
             txnId.startsWith('REQ-') ||
-            txnId.startsWith('IMFL') ||
-            targetRef.startsWith('IMFL');
+            remarks.includes('REQUISITION') ||
+            remarks.includes('IMPORT PASS');
 
-          return isDebitLike && looksRequisition;
+          return isDebitLike && (looksRequisition || isRefMatch);
         });
 
         if (!candidates.length) return;
@@ -1227,27 +1467,87 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
         candidates.sort((a: any, b: any) => {
           const at = new Date(a?.created_at || a?.createdAt || 0).getTime();
           const bt = new Date(b?.created_at || b?.createdAt || 0).getTime();
-          return bt - at;
+          return at - bt;
         });
 
-        const latest = candidates[0];
-        const paidAmount = Number(latest?.amount || 0);
-        if (Number.isFinite(paidAmount) && paidAmount > 0 && this.requisitionRow) {
-          this.requisitionRow.amount = paidAmount;
-        }
+        let importFeePaid = 0;
+        let additionalEdPaid = 0;
+        let educationCessPaid = 0;
+        let totalPaid = 0;
+
+        const walletTxns: any[] = [];
+        const txnIdSet = new Set<string>();
+
+        candidates.forEach((c: any) => {
+          const amt = Number(c?.amount || 0);
+          const txnId = String(c?.transaction_id || c?.transactionId || c?.wallet_transaction_id || '').trim();
+          const wtype = String(c?.wallet_type?.code || c?.wallet_type?.name || c?.wallet_type || c?.walletType || '').toLowerCase();
+          const srcMod = String(c?.source_module || c?.sourceModule || '').toLowerCase();
+          const hoa = String(c?.head_of_account || c?.headOfAccount || '-');
+          const refNo = String(c?.reference_no || c?.referenceNo || ref);
+          const rem = String(c?.remarks || '');
+          const dt = String(c?.created_at || c?.createdAt || '');
+
+          if (txnId) txnIdSet.add(txnId);
+
+          if (wtype.includes('additional') || srcMod.includes('additional') || rem.toLowerCase().includes('additional')) {
+            additionalEdPaid += amt;
+          } else if (wtype.includes('education') || wtype.includes('cess') || srcMod.includes('education') || srcMod.includes('cess')) {
+            educationCessPaid += amt;
+          } else {
+            importFeePaid += amt;
+          }
+          totalPaid += amt;
+
+          walletTxns.push({
+            transaction_id: txnId,
+            wallet_type: wtype,
+            head_of_account: hoa,
+            amount: amt,
+            created_at: dt,
+            remarks: rem,
+            reference_no: refNo
+          });
+        });
+
         if (this.requisitionRow) {
-          const txnId = String(
-            latest?.transaction_id ||
-            latest?.transactionId ||
-            latest?.wallet_transaction_id ||
-            latest?.walletTransactionId ||
-            ''
-          ).trim();
-          if (txnId) {
-            this.requisitionRow.transaction_id = txnId;
+          if (totalPaid > 0) {
+            this.requisitionRow.amount = totalPaid;
+          }
+          if (importFeePaid > 0) {
+            this.requisitionRow.import_fee = importFeePaid;
+          }
+          if (additionalEdPaid > 0) {
+            this.requisitionRow.additional_ed = additionalEdPaid;
+          }
+          if (educationCessPaid > 0) {
+            this.requisitionRow.education_cess = educationCessPaid;
+          }
+          this.requisitionRow.wallet_transactions = walletTxns;
+
+          const txnIdsList = Array.from(txnIdSet);
+          if (txnIdsList.length > 0) {
+            this.requisitionRow.transaction_id = txnIdsList.join(', ');
+            this.requisitionRow.transaction_ids = txnIdsList;
           }
         }
       });
+  }
+
+  cleanBrandName(name: string): string {
+    if (!name) return '-';
+    return String(name).replace(/[`'"]/g, '').trim();
+  }
+
+  formatWalletTypeName(type: string): string {
+    const t = String(type || '').trim().toLowerCase();
+    if (t.includes('additional')) return 'Excise Duty Wallet (Addl. ED)';
+    if (t.includes('education') || t.includes('cess')) return 'Education Cess Wallet';
+    if (t.includes('excise')) return 'Excise Duty Wallet';
+    if (t.includes('hologram')) return 'Hologram Wallet';
+    if (t.includes('security')) return 'Security Deposit Wallet';
+    if (t.includes('license')) return 'License Fee Wallet';
+    return this.toTitle(type);
   }
 
   private resolveRequisitionPermitSequence(row: any): string {
@@ -1285,15 +1585,20 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   private getLicenseeIdFromSession(): string {
     try {
       const raw = sessionStorage.getItem('currentUser');
-      if (!raw) return '';
-      const parsed = JSON.parse(raw);
-      return String(
-        parsed?.licensee_id ||
-        parsed?.licenseeId ||
-        parsed?.licensee_id_no ||
-        parsed?.licenseeIdNo ||
-        ''
-      ).trim();
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const val = parsed?.licensee_id || parsed?.licenseeId || parsed?.licensee_id_no || parsed?.licenseeIdNo || parsed?.username;
+        if (val) return String(val).trim();
+      }
+      const fromLocal = localStorage.getItem('currentUser') || localStorage.getItem('user');
+      if (fromLocal) {
+        const parsed = JSON.parse(fromLocal);
+        const val = parsed?.licensee_id || parsed?.licenseeId || parsed?.licensee_id_no || parsed?.licenseeIdNo || parsed?.username;
+        if (val) return String(val).trim();
+      }
+      const rawUser = localStorage.getItem('username');
+      if (rawUser) return String(rawUser).trim();
+      return '';
     } catch {
       return '';
     }
