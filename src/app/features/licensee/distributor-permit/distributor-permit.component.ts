@@ -5392,6 +5392,106 @@ export class DistributorPermitComponent implements OnInit, OnDestroy {
     return false;
   }
 
+  canOfficerReject(row: DistributorPermitRow | any): boolean {
+    if (!row || !this.isOfficerUser) return false;
+    if (this.isApproved(row) || row?.statusGroup === 'rejected') return false;
+
+    const rawApp = row?.application || row;
+    const stageId = Number(rawApp?.current_stage_id || rawApp?.currentStageId || rawApp?.current_stage?.id || 0);
+    const stageName = String(rawApp?.current_stage?.name || rawApp?.current_stage_name || rawApp?.status || row?.currentStage || '').toLowerCase().trim();
+
+    // If awaiting payment, officers don't reject directly
+    if (stageId === 154 || stageName.includes('payment') || stageName.includes('awaiting payment')) {
+      return false;
+    }
+
+    const { isPermitSection, isCommissioner, isAdmin } = this.getUserRoleInfo();
+
+    if (isCommissioner) {
+      return this.isCommissionerApprovalStage(row);
+    }
+
+    if (isPermitSection) {
+      return this.isPermitSectionStage(row);
+    }
+
+    if (isAdmin) {
+      return this.isCommissionerApprovalStage(row) || this.isPermitSectionStage(row);
+    }
+
+    return false;
+  }
+
+  handleOfficerRejectAction(row: DistributorPermitRow | any, event?: Event): void {
+    if (event) {
+      try { event.preventDefault(); } catch {}
+      try { event.stopPropagation(); } catch {}
+    }
+
+    const refNo = row.applicationId || row.referenceNo || row.id || '';
+
+    void Swal.fire({
+      title: 'Reject Application?',
+      text: `Please enter the reason for rejecting application ${refNo}:`,
+      input: 'textarea',
+      inputPlaceholder: 'Enter rejection reason / remarks...',
+      inputAttributes: {
+        'aria-label': 'Enter rejection reason'
+      },
+      showCancelButton: true,
+      confirmButtonText: '<i class="bi bi-x-circle me-1"></i> Reject Application',
+      confirmButtonColor: '#dc2626',
+      cancelButtonText: 'Cancel',
+      inputValidator: (value) => {
+        if (!value || !value.trim()) {
+          return 'Reason for rejection is required.';
+        }
+        return null;
+      }
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        this.executeOfficerReject(row, result.value.trim());
+      }
+    });
+  }
+
+  executeOfficerReject(row: DistributorPermitRow | any, remarks: string): void {
+    const rawApp = row?.application || row;
+    const refNo = row.applicationId || row.referenceNo || row.id || '';
+
+    const payload: any = {
+      action: 'REJECT',
+      application_id: refNo,
+      target_stage_id: 150,
+      status: 'Rejected',
+      current_stage_name: this.isCommissionerUser ? 'Rejected by Commissioner' : 'Rejected by Permit Section',
+      remarks: remarks || 'Application Rejected'
+    };
+
+    this.unifiedActionsService.executeAction('REJECT', row, 'distributor_permit', 'officer_reject', {
+      workflowContextData: payload
+    }).subscribe({
+      next: () => {
+        void Swal.fire({
+          icon: 'success',
+          title: 'Application Rejected',
+          text: `Application ${refNo} has been rejected.`,
+          timer: 2500,
+          showConfirmButton: false
+        });
+        this.loadApplications();
+        this.loadDashboardCounts(true);
+        this.sidebarPendingBadgeService.triggerRefresh();
+      },
+      error: (err) => {
+        console.error('Rejection error:', err);
+        this.loadApplications();
+        this.loadDashboardCounts(true);
+        this.sidebarPendingBadgeService.triggerRefresh();
+      }
+    });
+  }
+
   getOfficerApproveButtonLabel(row: DistributorPermitRow | any): string {
     if (this.isCommissionerUser) {
       if (this.isCommissionerFinalApprovalStage(row)) {

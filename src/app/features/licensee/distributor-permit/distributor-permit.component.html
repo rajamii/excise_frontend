@@ -803,6 +803,17 @@
                           <i class="bi bi-check2-circle me-1"></i>
                           <span>{{ getOfficerApproveButtonLabel(row) }}</span>
                         </button>
+                        <button
+                          class="btn btn-sm btn-danger-solid"
+                          type="button"
+                          *ngIf="canOfficerReject(row)"
+                          title="Reject Application"
+                          (click)="handleOfficerRejectAction(row, $event)"
+                          (mousedown)="handleOfficerRejectAction(row, $event)"
+                        >
+                          <i class="bi bi-x-circle me-1"></i>
+                          <span>Reject</span>
+                        </button>
                       </div>
 
                       <!-- Row 2 Action Buttons -->
