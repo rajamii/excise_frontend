@@ -89,9 +89,9 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       id: 'company-collab',
       title: 'Company Collaboration',
       subtitle: 'Brand Tie-ups & Bottling Pact',
-      color: '#00796B',
-      borderColor: '#4CAF50',
-      bgGlow: 'rgba(76, 175, 80, 0.16)'
+      color: '#7C3AED',
+      borderColor: '#8B5CF6',
+      bgGlow: 'rgba(139, 92, 246, 0.18)'
     },
     {
       id: 'salesman-barman',
