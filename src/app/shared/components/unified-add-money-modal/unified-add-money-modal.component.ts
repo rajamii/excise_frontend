@@ -58,6 +58,12 @@ export class UnifiedAddMoneyModalComponent implements OnInit, OnDestroy {
     this.proceed.emit(this.amount);
   }
 
+  get isLocalhost(): boolean {
+    if (typeof window === 'undefined') return false;
+    const host = window.location.hostname;
+    return host === 'localhost' || host === '127.0.0.1';
+  }
+
   onForcePayClick(): void {
     this.forcePay.emit();
   }
