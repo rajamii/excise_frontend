@@ -90,16 +90,58 @@
             <span class="info-value module-badge">{{ moduleType || 'transit' }}</span>
           </div>
           <div class="info-item" *ngIf="moduleType === 'requisition'">
-            <span class="info-label">Distillery</span>
+            <span class="info-label">Distillery / Supplier</span>
             <span class="info-value">{{ requisitionRow?.distillery_name || '-' }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType === 'requisition' && requisitionRow?.applicant_name">
+            <span class="info-label">Applicant Name</span>
+            <span class="info-value">{{ requisitionRow?.applicant_name }}</span>
           </div>
           <div class="info-item" *ngIf="moduleType === 'requisition'">
             <span class="info-label">Purpose</span>
             <span class="info-value">{{ requisitionRow?.purpose || '-' }}</span>
           </div>
           <div class="info-item" *ngIf="moduleType === 'requisition'">
-            <span class="info-label">Transaction ID</span>
-            <span class="info-value">{{ requisitionRow?.transaction_id || '-' }}</span>
+            <span class="info-label">Payment Method</span>
+            <span class="info-value"><span class="badge bg-success text-white" style="font-size: 11px; padding: 4px 8px;">{{ requisitionRow?.payment_method || 'Wallet (Excise & Cess)' }}</span></span>
+          </div>
+          <div class="info-item" *ngIf="moduleType === 'requisition'">
+            <span class="info-label">Excise Duty (Import Fee)</span>
+            <span class="info-value amount">₹{{ (requisitionRow?.import_fee || 0) | number:'1.2-2' }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType === 'requisition'">
+            <span class="info-label">Additional Excise Duty</span>
+            <span class="info-value amount">₹{{ (requisitionRow?.additional_ed || 0) | number:'1.2-2' }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType === 'requisition'">
+            <span class="info-label">Education Cess</span>
+            <span class="info-value amount">₹{{ (requisitionRow?.education_cess || 0) | number:'1.2-2' }}</span>
+          </div>
+          <div class="info-item" *ngIf="moduleType === 'requisition'">
+            <span class="info-label">Total Amount Paid</span>
+            <span class="info-value amount" style="font-size: 17px; font-weight: 800;">₹{{ (requisitionRow?.amount || 0) | number:'1.2-2' }}</span>
+          </div>
+          <div class="info-item full-width" *ngIf="moduleType === 'requisition'">
+            <span class="info-label">Transaction ID(s)</span>
+            <div class="info-value d-flex flex-wrap align-items-center gap-1 justify-content-end" style="max-width: 75%;">
+              <ng-container *ngIf="allTransactionIds.length > 0; else noTxn">
+                <span *ngFor="let txnId of displayedTransactionIds" class="badge bg-light text-primary border font-monospace" style="font-size: 11px; padding: 4px 6px; font-weight: 600;">
+                  {{ txnId }}
+                </span>
+                <button
+                  *ngIf="allTransactionIds.length > 3"
+                  type="button"
+                  class="btn btn-sm btn-outline-primary py-0 px-2 ms-1 no-print"
+                  style="font-size: 10.5px; border-radius: 12px;"
+                  (click)="showAllTransactionIds = !showAllTransactionIds"
+                >
+                  {{ showAllTransactionIds ? 'Show Less' : '+ ' + (allTransactionIds.length - 3) + ' More' }}
+                </button>
+              </ng-container>
+              <ng-template #noTxn>
+                <span class="font-monospace text-muted">-</span>
+              </ng-template>
+            </div>
           </div>
           <div class="info-item" *ngIf="moduleType === 'revalidation'">
             <span class="info-label">Factory</span>
@@ -230,34 +272,186 @@
 
     <!-- Requisition Details Table -->
     <div *ngIf="!isLoading && moduleType === 'requisition' && requisitionRow" class="details-section">
-      <h2 class="section-title">Requisition Details</h2>
+      <h2 class="section-title">Requisition Summary</h2>
       <div class="table-container">
         <table class="modern-table">
           <thead>
             <tr>
               <th>Reference</th>
               <th>Submission Date</th>
-              <th>Factory</th>
+              <th>Factory / Supplier</th>
               <th>Status</th>
               <th>Quantity (BL)</th>
               <th>No. of Permits</th>
               <th>Purpose</th>
-              <th>Amount</th>
+              <th class="text-end">Total Amount</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>{{ requisitionRow.reference_no }}</td>
+              <td><strong class="font-monospace text-primary">{{ requisitionRow.reference_no }}</strong></td>
               <td>{{ requisitionRow.submission_date ? (requisitionRow.submission_date | date:'dd-MM-yyyy HH:mm:ss') : '-' }}</td>
               <td>{{ requisitionRow.distillery_name }}</td>
               <td><span class="table-status">{{ requisitionRow.status }}</span></td>
-              <td>{{ requisitionRow.quantity_bl }}</td>
+              <td>{{ requisitionRow.quantity_bl | number:'1.3-3' }} BL</td>
               <td>{{ requisitionRow.number_of_permits }}</td>
               <td>{{ requisitionRow.purpose }}</td>
-              <td class="amount-cell">₹{{ requisitionRow.amount | number:'1.2-2' }}</td>
+              <td class="amount-cell text-end">₹{{ requisitionRow.amount | number:'1.2-2' }}</td>
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Wallet Payment & Deduction Breakdown Table for Requisition -->
+    <div *ngIf="!isLoading && moduleType === 'requisition' && requisitionRow?.wallet_transactions?.length" class="details-section">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h2 class="section-title mb-0">Wallet Payment & Deduction Breakdown</h2>
+        <span *ngIf="(requisitionRow?.wallet_transactions?.length || 0) > 4" class="badge bg-secondary" style="font-size: 11px;">
+          Showing {{ displayedWalletTransactions.length }} of {{ requisitionRow?.wallet_transactions?.length }} entries
+        </span>
+      </div>
+      <div class="table-container">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th>Transaction ID</th>
+              <th>Wallet Account</th>
+              <th>Head of Account</th>
+              <th>Permit Reference</th>
+              <th>Date & Time</th>
+              <th class="text-center">Entry</th>
+              <th class="text-end">Amount Debited</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let txn of displayedWalletTransactions">
+              <td><strong class="font-monospace text-primary" style="font-size: 11px;">{{ txn.transaction_id }}</strong></td>
+              <td><span class="table-status" style="background:#e0f2fe; color:#0369a1;">{{ formatWalletTypeName(txn.wallet_type) }}</span></td>
+              <td><span class="font-monospace text-muted" style="font-size: 10.5px;">{{ txn.head_of_account }}</span></td>
+              <td><span class="font-monospace" style="font-size: 11px;">{{ txn.reference_no || requisitionRow?.reference_no }}</span></td>
+              <td>{{ txn.created_at ? (txn.created_at | date:'dd-MM-yyyy HH:mm:ss') : '-' }}</td>
+              <td class="text-center"><span class="badge bg-danger text-white">DEBIT</span></td>
+              <td class="amount-cell text-end">₹{{ txn.amount | number:'1.2-2' }}</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="table-light fw-bold">
+              <td colspan="6" class="text-end">Total Wallet Payment Debited:</td>
+              <td class="amount-cell text-end">₹{{ (requisitionRow?.amount || 0) | number:'1.2-2' }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <div *ngIf="(requisitionRow?.wallet_transactions?.length || 0) > 4" class="text-center mt-2 no-print">
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-primary px-3 py-1"
+          style="font-size: 11.5px; border-radius: 20px; font-weight: 600;"
+          (click)="showAllWalletTxns = !showAllWalletTxns"
+        >
+          <i class="bi" [ngClass]="showAllWalletTxns ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+          {{ showAllWalletTxns ? 'Show Less (Collapse Table)' : 'Show All ' + requisitionRow?.wallet_transactions?.length + ' Transactions (+ ' + ((requisitionRow?.wallet_transactions?.length || 0) - 4) + ' more)' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Fee Component Summary for Requisition (when individual wallet transactions not yet populated) -->
+    <div *ngIf="!isLoading && moduleType === 'requisition' && requisitionRow && (!requisitionRow.wallet_transactions || requisitionRow.wallet_transactions.length === 0)" class="details-section">
+      <h2 class="section-title">Wallet Fee Deduction Summary</h2>
+      <div class="table-container">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th>Fee Head / Component</th>
+              <th>Debit Wallet</th>
+              <th>Head of Account</th>
+              <th class="text-center">Payment Mode</th>
+              <th class="text-end">Amount Paid</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Excise Duty (Import Pass Fee)</strong></td>
+              <td><span class="table-status" style="background:#e0f2fe; color:#0369a1;">Excise Duty Wallet</span></td>
+              <td><span class="font-monospace text-muted">0039-00-105-45-01</span></td>
+              <td class="text-center"><span class="badge bg-success text-white">WALLET DEBIT</span></td>
+              <td class="amount-cell text-end">₹{{ (requisitionRow.import_fee || 0) | number:'1.2-2' }}</td>
+            </tr>
+            <tr>
+              <td><strong>Additional Excise Duty</strong></td>
+              <td><span class="table-status" style="background:#e0f2fe; color:#0369a1;">Excise Duty Wallet</span></td>
+              <td><span class="font-monospace text-muted">0039-00-105-45-01</span></td>
+              <td class="text-center"><span class="badge bg-success text-white">WALLET DEBIT</span></td>
+              <td class="amount-cell text-end">₹{{ (requisitionRow.additional_ed || 0) | number:'1.2-2' }}</td>
+            </tr>
+            <tr>
+              <td><strong>Education Cess</strong></td>
+              <td><span class="table-status" style="background:#fef3c7; color:#92400e;">Education Cess Wallet</span></td>
+              <td><span class="font-monospace text-muted">0039-00-105-45-02</span></td>
+              <td class="text-center"><span class="badge bg-success text-white">WALLET DEBIT</span></td>
+              <td class="amount-cell text-end">₹{{ (requisitionRow.education_cess || 0) | number:'1.2-2' }}</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="table-light fw-bold">
+              <td colspan="4" class="text-end">Total Amount Paid:</td>
+              <td class="amount-cell text-end">₹{{ (requisitionRow.amount || 0) | number:'1.2-2' }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- Permit & Line Items Breakdown for Requisition -->
+    <div *ngIf="!isLoading && moduleType === 'requisition' && requisitionRow?.permit_wise_details?.length" class="details-section">
+      <h2 class="section-title">Permit & Brand Wise Allocation</h2>
+      <div *ngFor="let p of (requisitionRow?.permit_wise_details || []); let pIdx = index" class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-2 px-2">
+          <strong class="text-primary font-monospace" style="font-size: 13.5px;">
+            <i class="bi bi-file-earmark-text me-1"></i> Permit #{{ p.permit_sequence || (pIdx + 1) }}: {{ p.permit_number || p.permitNo }}
+          </strong>
+          <span class="badge bg-secondary" style="font-size: 11px;">{{ p.total_cases || p.totalCases || 0 }} Cases ({{ (p.total_bulk_litres || p.totalBulkLitres || 0) | number:'1.3-3' }} BL)</span>
+        </div>
+        <div class="table-container mb-3">
+          <table class="modern-table">
+            <thead>
+              <tr>
+                <th>Brand Name</th>
+                <th>Pack Size</th>
+                <th class="text-center">Cases</th>
+                <th class="text-end">Import Pass Fee</th>
+                <th class="text-end">Addl. ED</th>
+                <th class="text-end">Education Cess</th>
+                <th class="text-end">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of (p.line_items || p.items || [])">
+                <td><strong>{{ cleanBrandName(item.brand_name || item.brandName) }}</strong></td>
+                <td>{{ item.size_ml || item.sizeMl }}ml ({{ item.pieces_per_case || item.piecesPerCase }} bpc)</td>
+                <td class="text-center">{{ item.cases || item.allocated_cases || 0 }}</td>
+                <td class="text-end">₹{{ (item.total_import || (item.import_pass_fee_per_case * item.cases) || 0) | number:'1.2-2' }}</td>
+                <td class="text-end">₹{{ (item.total_additional_ed || (item.additional_ed_per_case * item.cases) || 0) | number:'1.2-2' }}</td>
+                <td class="text-end">₹{{ (item.total_education_cess || (item.education_cess_per_case * item.cases) || 0) | number:'1.2-2' }}</td>
+                <td class="amount-cell text-end">
+                  ₹{{ ((item.total_import || 0) + (item.total_additional_ed || 0) + (item.total_education_cess || 0)) | number:'1.2-2' }}
+                </td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="table-light fw-bold">
+                <td colspan="3" class="text-end">Permit Totals:</td>
+                <td class="text-end text-success">₹{{ (p.total_import_fee || 0) | number:'1.2-2' }}</td>
+                <td class="text-end">₹{{ (p.total_additional_ed || 0) | number:'1.2-2' }}</td>
+                <td class="text-end">₹{{ (p.total_education_cess || 0) | number:'1.2-2' }}</td>
+                <td class="amount-cell text-end">
+                  ₹{{ ((p.total_import_fee || 0) + (p.total_additional_ed || 0) + (p.total_education_cess || 0)) | number:'1.2-2' }}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
       </div>
     </div>
 

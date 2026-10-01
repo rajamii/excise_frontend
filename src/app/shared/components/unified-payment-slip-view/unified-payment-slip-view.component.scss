@@ -428,6 +428,28 @@
       }
     }
   }
+
+  tfoot {
+    background: #f9fafb;
+    border-top: 2px solid #e5e7eb;
+
+    td {
+      padding: 8px 6px;
+      font-size: 11px;
+      color: #1f2937;
+      vertical-align: middle;
+
+      &.amount-cell {
+        font-weight: 800;
+        color: #059669;
+        font-size: 13px;
+      }
+    }
+  }
+}
+
+.grid-col-span-2, .full-width {
+  grid-column: 1 / -1;
 }
 
 .table-status {

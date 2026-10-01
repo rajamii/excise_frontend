@@ -734,17 +734,22 @@
                       </div>
 
                       <!-- Show revalidated status -->
-                      <span class="badge bg-warning text-dark" *ngIf="getRevalidatedPermitNumbersText(row)">
+                      <span class="badge bg-success bg-opacity-10 text-success border border-success mb-1" *ngIf="getRevalidatedPermitNumbersText(row)">
                         <i class="bi bi-arrow-repeat me-1"></i>Revalidated: {{ getRevalidatedPermitNumbersText(row) }}
                       </span>
 
+                      <!-- Show revalidation required status -->
+                      <span class="badge bg-warning text-dark border border-warning mb-1" *ngIf="getRevalidationRequiredPermitNumbersText(row)">
+                        <i class="bi bi-exclamation-triangle me-1"></i>Revalidation Required: {{ getRevalidationRequiredPermitNumbersText(row) }}
+                      </span>
+
                       <!-- Show cancelled permits -->
-                      <span class="badge bg-danger text-white" *ngIf="getCancelledPermitNumbersText(row)">
+                      <span class="badge bg-danger text-white mb-1" *ngIf="getCancelledPermitNumbersText(row)">
                         <i class="bi bi-x-circle me-1"></i>Cancelled: {{ getCancelledPermitNumbersText(row) }}
                       </span>
 
                       <!-- Show empty dash if no permits generated yet -->
-                      <span class="text-muted fw-semibold" *ngIf="!isPartiallyApproved(row) && !getPermitNumbersText(row) && !getRevalidatedPermitNumbersText(row) && !getCancelledPermitNumbersText(row)">—</span>
+                      <span class="text-muted fw-semibold" *ngIf="!isPartiallyApproved(row) && !getPermitNumbersText(row) && !getRevalidatedPermitNumbersText(row) && !getRevalidationRequiredPermitNumbersText(row) && !getCancelledPermitNumbersText(row)">—</span>
                     </div>
                   </td>
                   <td>
@@ -802,6 +807,17 @@
                         >
                           <i class="bi bi-check2-circle me-1"></i>
                           <span>{{ getOfficerApproveButtonLabel(row) }}</span>
+                        </button>
+                        <button
+                          class="btn btn-sm btn-danger-solid"
+                          type="button"
+                          *ngIf="canOfficerReject(row)"
+                          title="Reject Application"
+                          (click)="handleOfficerRejectAction(row, $event)"
+                          (mousedown)="handleOfficerRejectAction(row, $event)"
+                        >
+                          <i class="bi bi-x-circle me-1"></i>
+                          <span>Reject</span>
                         </button>
                       </div>
 
@@ -3350,8 +3366,8 @@
             <div class="d-flex align-items-center gap-3">
               <div>
                 <span class="small text-muted d-block">Cancellation Charge</span>
-                <strong class="text-danger fs-6">₹{{ cancellationSelectedPermitsCount * 1000 | number:'1.2-2' }}</strong>
-                <span class="small text-muted"> ({{ cancellationSelectedPermitsCount }} × ₹1,000)</span>
+                <strong class="text-danger fs-6">₹{{ cancellationSelectedPermitsCount * 5000 | number:'1.2-2' }}</strong>
+                <span class="small text-muted"> ({{ cancellationSelectedPermitsCount }} × ₹5,000)</span>
               </div>
               <div class="border-start ps-3">
                 <span class="small text-muted d-block">Estimated Total Refund</span>
@@ -3410,7 +3426,7 @@
             <!-- Grand Total Summary -->
             <div class="p-2 bg-light rounded border d-flex flex-wrap gap-3 justify-content-around text-center small mt-3">
               <div><span class="text-muted d-block">Total Cases</span><strong>{{ getCancellationGrandTotalCases() }}</strong></div>
-              <div><span class="text-muted d-block">Cancellation Charge</span><strong class="text-danger">₹{{ cancellationSelectedPermitsCount * 1000 | number:'1.2-2' }}</strong></div>
+              <div><span class="text-muted d-block">Cancellation Charge</span><strong class="text-danger">₹{{ cancellationSelectedPermitsCount * 5000 | number:'1.2-2' }}</strong></div>
               <div><span class="text-muted d-block">Total Import Fee Refund</span><strong class="text-success">₹{{ getCancellationGrandTotalImportFee() | number:'1.2-2' }}</strong></div>
               <div><span class="text-muted d-block">Total Add. ED Refund</span><strong>₹{{ getCancellationGrandTotalAddEd() | number:'1.2-2' }}</strong></div>
               <div><span class="text-muted d-block">Total Bulk Litres</span><strong>{{ getCancellationGrandTotalBL() | number:'1.3-3' }} BL</strong></div>
@@ -3534,7 +3550,7 @@
         <div class="card mb-4 border-primary border-opacity-25 shadow-sm">
           <div class="card-header bg-primary bg-opacity-10 py-2 px-3 fw-bold text-primary d-flex justify-content-between align-items-center">
             <span><i class="bi bi-receipt me-2"></i> Financial Adjustment Breakdown</span>
-            <span class="badge bg-primary fs-7">{{ cancellationSelectedPermitsCount }} Permit(s) (&#64; ₹1,000 / permit)</span>
+            <span class="badge bg-primary fs-7">{{ cancellationSelectedPermitsCount }} Permit(s) (&#64; ₹5,000 / permit)</span>
           </div>
           <div class="card-body p-3">
             <div class="table-responsive">
@@ -3552,7 +3568,7 @@
                   <tr>
                     <td class="fw-semibold text-danger">
                       <i class="bi bi-dash-circle-fill me-1"></i> Cancellation Processing Fee
-                      <span class="badge bg-light text-danger border border-danger ms-2">{{ cancellationSelectedPermitsCount }} Permit(s) × ₹1,000</span>
+                      <span class="badge bg-light text-danger border border-danger ms-2">{{ cancellationSelectedPermitsCount }} Permit(s) × ₹5,000</span>
                     </td>
                     <td><span class="badge bg-secondary">Excise Duty Wallet</span></td>
                     <td class="text-center"><span class="badge bg-danger text-white">DEBIT</span></td>
@@ -3905,7 +3921,7 @@
           <i class="bi bi-wallet2 text-warning fs-5 me-3 mt-1"></i>
           <div>
             <strong>Revalidation Processing Fee</strong><br />
-            A fee of <strong>₹1,000 per permit</strong> will be debited from your Excise Duty wallet on submission.
+            A fee of <strong>₹5,000 per permit</strong> will be debited from your Excise Duty wallet on submission.
           </div>
         </div>
       </div>
@@ -3929,7 +3945,7 @@
         >
           <span *ngIf="isSubmittingRevalidation" class="spinner-border spinner-border-sm me-2"></span>
           <i *ngIf="!isSubmittingRevalidation" class="bi bi-credit-card-fill me-2"></i>
-          {{ isSubmittingRevalidation ? 'Submitting...' : 'Pay ₹1,000 & Submit to Commissioner' }}
+          {{ isSubmittingRevalidation ? 'Submitting...' : 'Pay ₹5,000 & Submit to Commissioner' }}
         </button>
         <!-- Manual: needs reason + declaration + payment -->
         <button
