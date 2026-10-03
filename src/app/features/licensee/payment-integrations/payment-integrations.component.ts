@@ -58,9 +58,9 @@ export class PaymentIntegrationsComponent implements OnInit {
   errorMessage = '';
 
   readonly paymentGatewayUrl =
-    environment.payment?.billdeskGatewayUrl || 'https://uat1.billdesk.com/pgidsk/PGIMerchantPayment';
-  readonly callbackUrl = environment.payment?.callbackUrl || 'http://localhost:4200/payment/callback';
-  readonly cancelUrl = environment.payment?.cancelUrl || 'http://localhost:4200/payment/cancel';
+    environment.payment?.billdeskGatewayUrl || 'https://pay.billdesk.com/web/v1_2/sdk';
+  readonly callbackUrl = environment.payment?.callbackUrl || 'https://sems.sikkim.gov.in/transactional/payment-gateway/billdesk/response/';
+  readonly cancelUrl = environment.payment?.cancelUrl || 'https://sems.sikkim.gov.in/transactional/payment-gateway/billdesk/response/';
 
   constructor(
     private fb: FormBuilder,
