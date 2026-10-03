@@ -2,16 +2,35 @@
   display: block;
   position: relative;
   z-index: 2;
-  background: transparent;
+  background: #0f172a;
 }
 
-img {
-  width: 100%;  // Full width of the container
-  height: 400px; // Adjust height as needed
-  object-fit: cover; // Ensures the image covers the space without distortion
+.carousel-inner {
+  background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+  min-height: 400px;
+}
+
+.carousel-item {
+  min-height: 400px;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+
+  img {
+    width: 100%;
+    height: 400px;
+    object-fit: cover;
+    background-color: #1e293b;
+    transition: opacity 0.3s ease-in;
+  }
 }
 
 .carousel-caption {
-  color: white; /* Ensure text is white for contrast */
-  text-shadow: 3px 3px 5px rgba(0, 0, 0, 0.9); /* Dark shadow for better readability */
+  color: white;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  padding: 12px 20px;
+  border-radius: 8px;
+  bottom: 30px;
+  max-width: 800px;
+  margin: 0 auto;
 }
