@@ -127,12 +127,16 @@ export class AccountService {
   }
 
   identity(force = false): Observable<Account | null> {
+    // Only create a new request when forced or when no cache exists.
+    // Previously this method had two separate getUserDetails() assignments —
+    // the first was overwritten by the second on every force=true call (login),
+    // causing two parallel /me/ HTTP requests on every login.
     if (!this.accountCache$ || force) {
       this.accountCache$ = this.getUserDetails().pipe(
         tap(account => {
           if (isPlatformBrowser(this.platformId)) {
             localStorage.setItem('username', account?.username ?? '');
-            console.log('User Identity Loaded:', account);
+            localStorage.setItem('role', account.role!.name);
             localStorage.setItem('role_id', String(account?.role?.id ?? ''));
             localStorage.setItem('firstName', account.firstName);
             localStorage.setItem('lastName', account.lastName);
@@ -142,11 +146,14 @@ export class AccountService {
             }
             localStorage.setItem('currentUser', JSON.stringify(account));
 
-            // Auto logout
+            // Setup auto logout timer
             const access = localStorage.getItem('access');
             const expiry = access ? TokenUtil.getTokenExpiry(access) : null;
             if (expiry) {
               const timeout = expiry - Date.now();
+              if (this.logoutTimer) {
+                clearTimeout(this.logoutTimer);
+              }
               this.logoutTimer = setTimeout(() => {
                 this.clearAppData();
                 this.router.navigate(['/login'], { queryParams: { sessionExpired: true } });
@@ -156,44 +163,9 @@ export class AccountService {
 
           this.authenticate(account);
         }),
-        shareReplay()
+        shareReplay(1)
       );
     }
-
-    // Return pending request if exists
-    if (!force && this.accountCache$) {
-      return this.accountCache$.pipe(catchError(() => of(null)));
-    }
-
-    // Make new API request
-    this.accountCache$ = this.getUserDetails().pipe(
-      tap(account => {
-        if (isPlatformBrowser(this.platformId)) {
-          localStorage.setItem('username', account?.username ?? '');
-          localStorage.setItem('role', account.role!.name);
-          localStorage.setItem('firstName', account.firstName);
-          localStorage.setItem('lastName', account.lastName);
-          localStorage.setItem('has_active_license', String(account.hasActiveLicense ?? false));
-
-          // Setup auto logout timer
-          const access = localStorage.getItem('access');
-          const expiry = access ? TokenUtil.getTokenExpiry(access) : null;
-          if (expiry) {
-            const timeout = expiry - Date.now();
-            if (this.logoutTimer) {
-              clearTimeout(this.logoutTimer);
-            }
-            this.logoutTimer = setTimeout(() => {
-              this.clearAppData();
-              this.router.navigate(['/login'], { queryParams: { sessionExpired: true } });
-            }, timeout);
-          }
-        }
-
-        this.authenticate(account);
-      }),
-      shareReplay(1)
-    );
 
     return this.accountCache$.pipe(
       catchError(() => {

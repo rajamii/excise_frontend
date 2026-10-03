@@ -67,10 +67,11 @@
       </div>
 
       <div class="modal-footer justify-content-center gap-2">
+        <!-- Force Pay Test Button: strictly visible only in local development (localhost) and hidden on live server -->
         <button
           type="button"
           class="btn btn-warning px-3 fw-bold shadow-sm"
-          *ngIf="context?.walletType === 'security_deposit'"
+          *ngIf="isLocalhost && context?.walletType === 'security_deposit'"
           (click)="onForcePayClick()"
           title="Simulate successful payment in localhost testing">
           <i class="bi bi-lightning-charge-fill me-1"></i>Force Pay Security (Test)

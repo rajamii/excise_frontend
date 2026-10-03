@@ -11,6 +11,7 @@ import { UnifiedDashboardService } from '../../../core/services/unified-dashboar
 import { UnifiedApplication } from '../../../core/models/unified-application.model';
 import { SalesmanBarmanRegistrationService } from '../../../core/services/salesman-barman-registration.service';
 import { DashboardConfigService } from '../../../core/services/dashboard-config.service';
+import { DashboardConfig } from '../../../core/models/dashboard.models';
 import { SidebarPendingBadgeService } from '../../../shared/services/sidebar-pending-badge.service';
 import { TimerConfigService } from '../../../core/services/timer-config.service';
 import { RenewalConfigService } from '../../../core/services/renewal-config.service';
@@ -85,6 +86,8 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
   private routerSubscription?: Subscription;
   private supplyChainSubscription?: Subscription;
   supplyChainPendingCounts: Record<string, number> = {};
+  // Cached dashboard config — stored after first load so all methods use the same filtered type set
+  private cachedDashboardConfig?: DashboardConfig;
 
   constructor(
     private salesmanBarmanService: SalesmanBarmanRegistrationService,
@@ -199,7 +202,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
       forkJoin({
         timer: this.timerConfigService.getTimerConfig('LICENSE_RENEWAL_REMINDER_TIMER', fallbackSeconds).pipe(take(1)),
         renewalConfig: this.renewalConfigService.getConfig().pipe(take(1)),
-        unifiedApps: this.unifiedDashboardService.getUnifiedApplicationsByStatus(true).pipe(
+        unifiedApps: this.unifiedDashboardService.getUnifiedApplicationsByStatus(true, this.cachedDashboardConfig).pipe(
           catchError(() => of({ applied: [], pending: [], objection: [], awaitingPayment: [] } as any))
         )
       }).subscribe(({ timer, renewalConfig, unifiedApps }) => {
@@ -346,12 +349,13 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     this.dashboardConfigService
       .getCurrentUserDashboardConfigCached()
       .pipe(
-        switchMap((config) =>
-          forkJoin({
+        switchMap((config) => {
+          this.cachedDashboardConfig = config; // cache for use in checkRenewalEligibility
+          return forkJoin({
             counts: this.unifiedDashboardService.getUnifiedDashboardCounts(config, true),
             applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus(true, config)
-          })
-        ),
+          });
+        }),
         catchError((error) => {
           console.error('❌ Error loading dashboard config:', error);
           return forkJoin({

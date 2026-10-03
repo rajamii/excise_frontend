@@ -572,38 +572,41 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     // For licensee users, show payment-pending badges on New License, Salesman/Barman,
     // and supply chain nav items (Bulk Spirit + Hologram sub-sections).
     if (this.isLicenseeUser()) {
-      const hasDbRoute = (pattern: RegExp): boolean => {
-        for (const route of this.dbNavigationRoutes) {
-          if (pattern.test(String(route || ''))) return true;
-        }
-        return false;
-      };
+      // Build the sections list dynamically from the DB-backed navigation routes
+      // so we only call badge APIs for tabs the user actually has.
+      // Previously this was a hardcoded list that fired every API for every licensee.
+      const licenseeSections: string[] = [];
 
-      const licenseeSections: string[] = [
-        'new-license',
-        'license-renewal',
-        'salesman-barman-registration',
-        'company-registration',
-        'company-collaboration',
-        'special-permit',
-        'distributor-permit',
-        'distributor-permit-requisition',
-        'imfl-requisition',
-        'distributor-permit-revalidation',
-        'imfl-revalidation',
-        'distributor-permit-cancellation',
-        'imfl-cancellation',
-        'distributor-permit-hologram-procurement',
-        'imfl-hologram-procurement'
+      // Map of route patterns to section keys
+      const routeToSection: Array<{ pattern: RegExp; section: string }> = [
+        { pattern: /new[_-]?license|new_license_application/, section: 'new-license' },
+        { pattern: /license[_-]?renewal|renewal[_-]?application/, section: 'license-renewal' },
+        { pattern: /salesman|barman|salesman_barman/, section: 'salesman-barman-registration' },
+        { pattern: /company[_-]?registration/, section: 'company-registration' },
+        { pattern: /company[_-]?collaboration/, section: 'company-collaboration' },
+        { pattern: /special[_-]?permit|dry[_-]?day/, section: 'special-permit' },
+        { pattern: /distributor[_-]?permit|imfl[_-]?permit/, section: 'distributor-permit' },
+        { pattern: /imfl[_-]?requisition|distributor.*requisition/, section: 'distributor-permit-requisition' },
+        { pattern: /imfl[_-]?revalidation|distributor.*revalid/, section: 'distributor-permit-revalidation' },
+        { pattern: /imfl[_-]?cancellation|distributor.*cancel/, section: 'distributor-permit-cancellation' },
+        { pattern: /hologram[_-]?procurement|imfl.*hologram.*procure/, section: 'distributor-permit-hologram-procurement' },
+        { pattern: /hologram[_-]?overview|imfl.*hologram.*overview/, section: 'imfl-hologram-procurement' },
       ];
-      // Distillery licensees always see Bulk Spirit menus even when DB navigation routes are incomplete.
-      // Ensure Requisition payment-pending badge still loads in that case.
-      if (this.showDistilleryMenus || hasDbRoute(/requisition|ena|bulk[_-]?spirit/)) {
+
+      const dbRoutesList = Array.from(this.dbNavigationRoutes);
+      for (const { pattern, section } of routeToSection) {
+        if (dbRoutesList.some(r => pattern.test(r)) && !licenseeSections.includes(section)) {
+          licenseeSections.push(section);
+        }
+      }
+
+      // Distillery licensees: always include ENA requisition badge
+      if (this.showDistilleryMenus || dbRoutesList.some(r => /requisition|ena|bulk[_-]?spirit/.test(r))) {
         licenseeSections.push('requisition');
       }
-      // Brewery/distillery licensees can see hologram-related menus; load badge even if routes are missing.
-      if (this.showBreweryOrDistilleryMenus || hasDbRoute(/hologram/)) {
-        licenseeSections.push('hologram');
+      // Brewery/distillery: include hologram badge
+      if (this.showBreweryOrDistilleryMenus || dbRoutesList.some(r => /hologram/.test(r))) {
+        if (!licenseeSections.includes('hologram')) licenseeSections.push('hologram');
       }
 
       this.sidebarPendingBadgeService

@@ -3568,7 +3568,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     getExcludeActionsForDetailView(): string[] {
         const base = ['VIEW'];
         if (this.isImflRequisition() || (this.isImflDistributorPermitSource() && String(this.applicationType || '').toLowerCase().includes('requisition'))) {
-            base.push('FORWARD');
+            // Hide REJECT, APPROVE, and FORWARD from supply-chain-view detail page for officers as actions are located on the main dashboard table
+            base.push('FORWARD', 'REJECT', 'APPROVE', 'FORWARD_TO_COMMISSIONER');
         }
         if (this.isCompanyRegistration() || this.isCompanyCollaboration() || this.isSalesmanBarmanRegistration() || this.isRenewal()) {
             base.push('MAKE_PAYMENT', 'PAY');
@@ -3653,6 +3654,9 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
 
             if (!this.isLicenseeContext()) {
                 actions = actions.filter(a => a !== 'PAY' && a !== 'FORCE_PAY');
+                if (this.isImflRequisition() || (this.isImflDistributorPermitSource() && String(this.applicationType || '').toLowerCase().includes('requisition'))) {
+                    actions = actions.filter(a => a !== 'REJECT' && a !== 'APPROVE' && a !== 'FORWARD' && a !== 'FORWARD_TO_COMMISSIONER');
+                }
             }
 
             if (String(this.applicationType).includes('revalidation')) {

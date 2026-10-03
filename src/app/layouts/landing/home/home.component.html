@@ -119,6 +119,178 @@
     </div>
   }
 
+  <!-- ========================================================================= -->
+  <!-- E-SERVICES CARD (ACTIVE)                                                  -->
+  <!-- ========================================================================= -->
+  <mat-card class="e-services grid-card">
+    <mat-card-header>
+      <span>E-SERVICES</span>
+    </mat-card-header>
+    <mat-card-content class="card-container eservices-card-body">
+      <div class="eservices-scroll-area">
+        <div class="eservices-grid">
+          @for (service of eServices; track service.id) {
+            <div class="eservice-item" (click)="onEServiceClick(service)" [title]="service.title + ' - ' + service.subtitle">
+              <div class="eservice-circle" [style.border-color]="service.borderColor" [style.box-shadow]="'0 6px 16px ' + service.bgGlow">
+                <div class="eservice-icon-container">
+                  @switch (service.id) {
+                    @case ('apply-license') {
+                      <svg viewBox="0 0 64 64" width="42" height="42" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="8" y="14" width="48" height="32" rx="4" fill="#00ACC1" />
+                        <rect x="12" y="18" width="40" height="24" rx="2" fill="#E0F7FA" />
+                        <path d="M4 46H60C61.1 46 62 46.9 62 48C62 49.1 61.1 50 60 50H4C2.9 50 2 49.1 2 48C2 46.9 2.9 46 4 46Z" fill="#00838F" />
+                        <rect x="34" y="6" width="22" height="26" rx="2" fill="#FFFFFF" stroke="#00838F" stroke-width="1.5" />
+                        <line x1="38" y1="11" x2="48" y2="11" stroke="#00ACC1" stroke-width="1.5" stroke-linecap="round" />
+                        <line x1="38" y1="15" x2="52" y2="15" stroke="#00ACC1" stroke-width="1.5" stroke-linecap="round" />
+                        <line x1="38" y1="19" x2="46" y2="19" stroke="#00ACC1" stroke-width="1.5" stroke-linecap="round" />
+                        <path d="M48 24L56 16L58 18L50 26L47 27L48 24Z" fill="#FFB300" stroke="#E65100" stroke-width="1" />
+                      </svg>
+                    }
+                    @case ('dry-day-permit') {
+                      <svg viewBox="0 0 64 64" width="42" height="42" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="10" y="12" width="44" height="42" rx="6" fill="#FFFBEB" stroke="#D97706" stroke-width="2.5" />
+                        <path d="M10 18C10 14.7 12.7 12 16 12H48C51.3 12 54 14.7 54 18V24H10V18Z" fill="#F59E0B" />
+                        <rect x="18" y="7" width="5" height="9" rx="2.5" fill="#B45309" />
+                        <rect x="41" y="7" width="5" height="9" rx="2.5" fill="#B45309" />
+                        <g transform="translate(18, 28)">
+                          <circle cx="14" cy="12" r="10" fill="#FEF3C7" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="2 2" />
+                          <path d="M14 6L16 10.5L20.5 11.5L17 15L18 19.5L14 17L10 19.5L11 15L7.5 11.5L12 10.5L14 6Z" fill="#D97706" />
+                          <path d="M14 8L15.3 11L18.5 11.7L16 14.2L16.8 17.5L14 15.7L11.2 17.5L12 14.2L9.5 11.7L12.7 11L14 8Z" fill="#FDE68A" />
+                        </g>
+                      </svg>
+                    }
+                    @case ('license-renewal') {
+                      <svg viewBox="0 0 64 64" width="42" height="42" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="14" y="10" width="36" height="44" rx="3" fill="#E8F5E9" stroke="#2E7D32" stroke-width="2" />
+                        <line x1="20" y1="18" x2="36" y2="18" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" />
+                        <line x1="20" y1="24" x2="44" y2="24" stroke="#81C784" stroke-width="1.5" stroke-linecap="round" />
+                        <line x1="20" y1="29" x2="40" y2="29" stroke="#81C784" stroke-width="1.5" stroke-linecap="round" />
+                        <circle cx="24" cy="40" r="8" fill="#43A047" stroke="#1B5E20" stroke-width="1.5" />
+                        <path d="M21 40L23.5 42.5L27.5 37.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <g transform="translate(32, 28) rotate(-15)">
+                          <path d="M12 2C10 2 9 4 9 7L10 14H18L19 7C19 4 18 2 16 2H12Z" fill="#8D6E63" stroke="#4E342E" stroke-width="1" />
+                          <rect x="6" y="14" width="16" height="6" rx="2" fill="#D7CCC8" stroke="#4E342E" stroke-width="1" />
+                          <rect x="4" y="19" width="20" height="4" rx="1" fill="#FF5722" />
+                        </g>
+                      </svg>
+                    }
+                    @case ('company-reg') {
+                      <svg viewBox="0 0 64 64" width="42" height="42" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="8" y="12" width="48" height="38" rx="5" fill="#E3F2FD" stroke="#1976D2" stroke-width="2.5" />
+                        <rect x="24" y="8" width="16" height="5" rx="2" fill="#90CAF9" stroke="#1565C0" stroke-width="1" />
+                        <circle cx="21" cy="26" r="6" fill="#1976D2" />
+                        <path d="M13 39C13 34.5 16.5 33 21 33C25.5 33 29 34.5 29 39" fill="#1976D2" />
+                        <line x1="34" y1="22" x2="48" y2="22" stroke="#1976D2" stroke-width="2.5" stroke-linecap="round" />
+                        <line x1="34" y1="28" x2="46" y2="28" stroke="#64B5F6" stroke-width="2" stroke-linecap="round" />
+                        <line x1="34" y1="34" x2="44" y2="34" stroke="#64B5F6" stroke-width="2" stroke-linecap="round" />
+                      </svg>
+                    }
+                    @case ('company-collab') {
+                      <svg viewBox="0 0 64 64" width="42" height="42" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="32" cy="32" r="23" stroke="#8B5CF6" stroke-width="2" stroke-dasharray="3 3" />
+                        <circle cx="32" cy="9" r="3" fill="#EC4899" />
+                        <circle cx="55" cy="32" r="3" fill="#8B5CF6" />
+                        <circle cx="32" cy="55" r="3" fill="#6366F1" />
+                        <circle cx="9" cy="32" r="3" fill="#3B82F6" />
+                        <g transform="translate(14, 18)">
+                          <path d="M2 14L8 8L16 16L10 22Z" fill="#6366F1" />
+                          <path d="M34 14L28 8L20 16L26 22Z" fill="#8B5CF6" />
+                          <path d="M10 20L18 13L24 19L17 26Z" fill="#C084FC" stroke="#7C3AED" stroke-width="1" />
+                          <path d="M26 20L18 13L13 18L21 26Z" fill="#DDD6FE" stroke="#7C3AED" stroke-width="1" />
+                        </g>
+                      </svg>
+                    }
+                    @case ('salesman-barman') {
+                      <svg viewBox="0 0 64 64" width="42" height="42" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M26 4L32 14L38 4" stroke="#6366F1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                        <rect x="29" y="13" width="6" height="4" rx="1" fill="#4F46E5" />
+                        <rect x="12" y="16" width="40" height="42" rx="5" fill="#EEF2FF" stroke="#4F46E5" stroke-width="2.5" />
+                        <circle cx="23" cy="30" r="5.5" fill="#4F46E5" />
+                        <path d="M15 42C15 38 18.5 37 23 37C27.5 37 31 38 31 42" fill="#4F46E5" />
+                        <path d="M21 38L23 40L25 38L24 41L23 40L22 41L21 38Z" fill="#F59E0B" />
+                        <line x1="34" y1="27" x2="46" y2="27" stroke="#4F46E5" stroke-width="2" stroke-linecap="round" />
+                        <line x1="34" y1="33" x2="44" y2="33" stroke="#818CF8" stroke-width="1.8" stroke-linecap="round" />
+                        <line x1="34" y1="39" x2="42" y2="39" stroke="#818CF8" stroke-width="1.8" stroke-linecap="round" />
+                        <circle cx="42" cy="47" r="4.5" fill="#10B981" />
+                        <path d="M40 47L41.5 48.5L44 45.5" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+                      </svg>
+                    }
+                    @case ('label-reg') {
+                      <svg viewBox="0 0 64 64" width="42" height="42" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="32" cy="32" r="22" fill="#BA68C8" />
+                        <g transform="translate(24, 10)">
+                          <path d="M6 0H10V6H6V0Z" fill="#FFD54F" stroke="#FFA000" stroke-width="1" />
+                          <path d="M6 6H10L12 12H4L6 6Z" fill="#FFFFFF" />
+                          <path d="M4 12C2 14 1 18 1 22V42C1 43.1 1.9 44 3 44H13C14.1 44 15 43.1 15 42V22C15 18 14 14 12 12H4Z" fill="#212121" />
+                          <rect x="3" y="24" width="10" height="14" rx="1.5" fill="#FFFFFF" />
+                          <line x1="5" y1="28" x2="11" y2="28" stroke="#9C27B0" stroke-width="1.5" stroke-linecap="round" />
+                          <line x1="5" y1="32" x2="11" y2="32" stroke="#9C27B0" stroke-width="1.5" stroke-linecap="round" />
+                        </g>
+                      </svg>
+                    }
+                    @case ('bulk-spirit') {
+                      <svg viewBox="0 0 64 64" width="42" height="42" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <g transform="translate(6, 16)">
+                          <rect x="0" y="4" width="33" height="18" rx="8" fill="#1565C0" stroke="#0D47A1" stroke-width="1.5" />
+                          <rect x="2" y="10" width="29" height="5" fill="#FFC107" />
+                          <path d="M33 9H43L49 16V22H33V9Z" fill="#FF9800" stroke="#E65100" stroke-width="1.5" />
+                          <path d="M36 11H41L45 16H36V11Z" fill="#E0F7FA" stroke="#00838F" stroke-width="1" />
+                          <rect x="0" y="22" width="50" height="4" fill="#37474F" />
+                          <circle cx="8" cy="27" r="4.5" fill="#263238" stroke="#ECEFF1" stroke-width="1.5" />
+                          <circle cx="20" cy="27" r="4.5" fill="#263238" stroke="#ECEFF1" stroke-width="1.5" />
+                          <circle cx="42" cy="27" r="4.5" fill="#263238" stroke="#ECEFF1" stroke-width="1.5" />
+                        </g>
+                      </svg>
+                    }
+                    @case ('import-imfl') {
+                      <svg viewBox="0 0 64 64" width="42" height="42" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <g transform="translate(10, 10)">
+                          <path d="M12 2H16V6H12V2Z" fill="#C2185B" />
+                          <path d="M10 10C8 12 7 16 7 20V40H21V20C21 16 20 12 18 10L16 6H12L10 10Z" fill="#880E4F" />
+                          <rect x="9" y="22" width="10" height="12" rx="1" fill="#FFF8E1" stroke="#FFA000" stroke-width="1" />
+                          <path d="M28 6H32V10H28V6Z" fill="#FFB300" />
+                          <path d="M25 12H35C36 12 37 13 37 14V38C37 39 36 40 35 40H25C24 40 23 39 23 38V14C23 13 24 12 25 12Z" fill="#FF8F00" />
+                          <rect x="25" y="20" width="10" height="12" rx="1" fill="#FFFFFF" stroke="#D84315" stroke-width="1" />
+                          <path d="M38 28L40 38H45L47 28H38Z" fill="#FFE082" stroke="#FFA000" stroke-width="1" />
+                          <line x1="42.5" y1="38" x2="42.5" y2="42" stroke="#757575" stroke-width="2" />
+                          <line x1="39" y1="42" x2="46" y2="42" stroke="#757575" stroke-width="2" stroke-linecap="round" />
+                        </g>
+                      </svg>
+                    }
+                    @case ('hologram') {
+                      <svg viewBox="0 0 64 64" width="42" height="42" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M32 6L48 13V28C48 40 32 54 32 54C32 54 16 40 16 28V13L32 6Z" fill="#E8EAF6" stroke="#1C2B78" stroke-width="2" />
+                        <rect x="24" y="20" width="6" height="6" fill="#1C2B78" />
+                        <rect x="34" y="20" width="6" height="6" fill="#1C2B78" />
+                        <rect x="24" y="30" width="6" height="6" fill="#1C2B78" />
+                        <rect x="34" y="30" width="3" height="3" fill="#1C2B78" />
+                        <rect x="37" y="33" width="3" height="3" fill="#1C2B78" />
+                        <path d="M32 12L33.5 16.5L38 18L33.5 19.5L32 24L30.5 19.5L26 18L30.5 16.5L32 12Z" fill="#FFD700" stroke="#FF8F00" stroke-width="0.8" />
+                      </svg>
+                    }
+                    @case ('transit-permit') {
+                      <svg viewBox="0 0 64 64" width="42" height="42" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="10" y="12" width="44" height="40" rx="6" fill="#F0F9FF" stroke="#0284C7" stroke-width="2.5" />
+                        <path d="M18 42L28 20H36L46 42H18Z" fill="#0369A1" />
+                        <line x1="32" y1="23" x2="32" y2="28" stroke="#FDE047" stroke-width="1.5" stroke-linecap="round" />
+                        <line x1="32" y1="33" x2="32" y2="39" stroke="#FDE047" stroke-width="1.5" stroke-linecap="round" />
+                        <g transform="translate(24, 6)">
+                          <circle cx="8" cy="8" r="7" fill="#EF4444" stroke="#B91C1C" stroke-width="1.5" />
+                          <circle cx="8" cy="8" r="2.5" fill="#FFFFFF" />
+                        </g>
+                      </svg>
+                    }
+                  }
+                </div>
+                <div class="eservice-title">{{ service.title }}</div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
   <mat-card class="about-us grid-card" id="about-us">
     <mat-card-header>About Us</mat-card-header>
     <mat-card-content class="card-container">
@@ -386,178 +558,6 @@
   </mat-card>
   -->
 
-  <!-- ========================================================================= -->
-  <!-- E-SERVICES CARD (ACTIVE)                                                  -->
-  <!-- ========================================================================= -->
-  <mat-card class="e-services grid-card">
-    <mat-card-header>
-      <span>E-SERVICES</span>
-    </mat-card-header>
-    <mat-card-content class="card-container eservices-card-body">
-      <div class="eservices-scroll-area">
-        <div class="eservices-grid">
-          @for (service of eServices; track service.id) {
-            <div class="eservice-item" (click)="onEServiceClick(service)" [title]="service.title + ' - ' + service.subtitle">
-              <div class="eservice-circle" [style.border-color]="service.borderColor" [style.box-shadow]="'0 6px 16px ' + service.bgGlow">
-                <div class="eservice-icon-container">
-                  @switch (service.id) {
-                    @case ('apply-license') {
-                      <svg viewBox="0 0 64 64" width="42" height="42" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="8" y="14" width="48" height="32" rx="4" fill="#00ACC1" />
-                        <rect x="12" y="18" width="40" height="24" rx="2" fill="#E0F7FA" />
-                        <path d="M4 46H60C61.1 46 62 46.9 62 48C62 49.1 61.1 50 60 50H4C2.9 50 2 49.1 2 48C2 46.9 2.9 46 4 46Z" fill="#00838F" />
-                        <rect x="34" y="6" width="22" height="26" rx="2" fill="#FFFFFF" stroke="#00838F" stroke-width="1.5" />
-                        <line x1="38" y1="11" x2="48" y2="11" stroke="#00ACC1" stroke-width="1.5" stroke-linecap="round" />
-                        <line x1="38" y1="15" x2="52" y2="15" stroke="#00ACC1" stroke-width="1.5" stroke-linecap="round" />
-                        <line x1="38" y1="19" x2="46" y2="19" stroke="#00ACC1" stroke-width="1.5" stroke-linecap="round" />
-                        <path d="M48 24L56 16L58 18L50 26L47 27L48 24Z" fill="#FFB300" stroke="#E65100" stroke-width="1" />
-                      </svg>
-                    }
-                    @case ('dry-day-permit') {
-                      <svg viewBox="0 0 64 64" width="42" height="42" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="10" y="12" width="44" height="42" rx="6" fill="#FFFBEB" stroke="#D97706" stroke-width="2.5" />
-                        <path d="M10 18C10 14.7 12.7 12 16 12H48C51.3 12 54 14.7 54 18V24H10V18Z" fill="#F59E0B" />
-                        <rect x="18" y="7" width="5" height="9" rx="2.5" fill="#B45309" />
-                        <rect x="41" y="7" width="5" height="9" rx="2.5" fill="#B45309" />
-                        <g transform="translate(18, 28)">
-                          <circle cx="14" cy="12" r="10" fill="#FEF3C7" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="2 2" />
-                          <path d="M14 6L16 10.5L20.5 11.5L17 15L18 19.5L14 17L10 19.5L11 15L7.5 11.5L12 10.5L14 6Z" fill="#D97706" />
-                          <path d="M14 8L15.3 11L18.5 11.7L16 14.2L16.8 17.5L14 15.7L11.2 17.5L12 14.2L9.5 11.7L12.7 11L14 8Z" fill="#FDE68A" />
-                        </g>
-                      </svg>
-                    }
-                    @case ('license-renewal') {
-                      <svg viewBox="0 0 64 64" width="42" height="42" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="14" y="10" width="36" height="44" rx="3" fill="#E8F5E9" stroke="#2E7D32" stroke-width="2" />
-                        <line x1="20" y1="18" x2="36" y2="18" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" />
-                        <line x1="20" y1="24" x2="44" y2="24" stroke="#81C784" stroke-width="1.5" stroke-linecap="round" />
-                        <line x1="20" y1="29" x2="40" y2="29" stroke="#81C784" stroke-width="1.5" stroke-linecap="round" />
-                        <circle cx="24" cy="40" r="8" fill="#43A047" stroke="#1B5E20" stroke-width="1.5" />
-                        <path d="M21 40L23.5 42.5L27.5 37.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                        <g transform="translate(32, 28) rotate(-15)">
-                          <path d="M12 2C10 2 9 4 9 7L10 14H18L19 7C19 4 18 2 16 2H12Z" fill="#8D6E63" stroke="#4E342E" stroke-width="1" />
-                          <rect x="6" y="14" width="16" height="6" rx="2" fill="#D7CCC8" stroke="#4E342E" stroke-width="1" />
-                          <rect x="4" y="19" width="20" height="4" rx="1" fill="#FF5722" />
-                        </g>
-                      </svg>
-                    }
-                    @case ('company-reg') {
-                      <svg viewBox="0 0 64 64" width="42" height="42" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="8" y="12" width="48" height="38" rx="5" fill="#E3F2FD" stroke="#1976D2" stroke-width="2.5" />
-                        <rect x="24" y="8" width="16" height="5" rx="2" fill="#90CAF9" stroke="#1565C0" stroke-width="1" />
-                        <circle cx="21" cy="26" r="6" fill="#1976D2" />
-                        <path d="M13 39C13 34.5 16.5 33 21 33C25.5 33 29 34.5 29 39" fill="#1976D2" />
-                        <line x1="34" y1="22" x2="48" y2="22" stroke="#1976D2" stroke-width="2.5" stroke-linecap="round" />
-                        <line x1="34" y1="28" x2="46" y2="28" stroke="#64B5F6" stroke-width="2" stroke-linecap="round" />
-                        <line x1="34" y1="34" x2="44" y2="34" stroke="#64B5F6" stroke-width="2" stroke-linecap="round" />
-                      </svg>
-                    }
-                    @case ('company-collab') {
-                      <svg viewBox="0 0 64 64" width="42" height="42" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="32" cy="32" r="23" stroke="#4CAF50" stroke-width="2" stroke-dasharray="3 3" />
-                        <circle cx="32" cy="9" r="3" fill="#E53935" />
-                        <circle cx="55" cy="32" r="3" fill="#FB8C00" />
-                        <circle cx="32" cy="55" r="3" fill="#43A047" />
-                        <circle cx="9" cy="32" r="3" fill="#1E88E5" />
-                        <g transform="translate(14, 18)">
-                          <path d="M2 14L8 8L16 16L10 22Z" fill="#1E88E5" />
-                          <path d="M34 14L28 8L20 16L26 22Z" fill="#43A047" />
-                          <path d="M10 20L18 13L24 19L17 26Z" fill="#FFB74D" stroke="#E65100" stroke-width="1" />
-                          <path d="M26 20L18 13L13 18L21 26Z" fill="#FFE082" stroke="#E65100" stroke-width="1" />
-                        </g>
-                      </svg>
-                    }
-                    @case ('salesman-barman') {
-                      <svg viewBox="0 0 64 64" width="42" height="42" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M26 4L32 14L38 4" stroke="#6366F1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-                        <rect x="29" y="13" width="6" height="4" rx="1" fill="#4F46E5" />
-                        <rect x="12" y="16" width="40" height="42" rx="5" fill="#EEF2FF" stroke="#4F46E5" stroke-width="2.5" />
-                        <circle cx="23" cy="30" r="5.5" fill="#4F46E5" />
-                        <path d="M15 42C15 38 18.5 37 23 37C27.5 37 31 38 31 42" fill="#4F46E5" />
-                        <path d="M21 38L23 40L25 38L24 41L23 40L22 41L21 38Z" fill="#F59E0B" />
-                        <line x1="34" y1="27" x2="46" y2="27" stroke="#4F46E5" stroke-width="2" stroke-linecap="round" />
-                        <line x1="34" y1="33" x2="44" y2="33" stroke="#818CF8" stroke-width="1.8" stroke-linecap="round" />
-                        <line x1="34" y1="39" x2="42" y2="39" stroke="#818CF8" stroke-width="1.8" stroke-linecap="round" />
-                        <circle cx="42" cy="47" r="4.5" fill="#10B981" />
-                        <path d="M40 47L41.5 48.5L44 45.5" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
-                      </svg>
-                    }
-                    @case ('label-reg') {
-                      <svg viewBox="0 0 64 64" width="42" height="42" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="32" cy="32" r="22" fill="#BA68C8" />
-                        <g transform="translate(24, 10)">
-                          <path d="M6 0H10V6H6V0Z" fill="#FFD54F" stroke="#FFA000" stroke-width="1" />
-                          <path d="M6 6H10L12 12H4L6 6Z" fill="#FFFFFF" />
-                          <path d="M4 12C2 14 1 18 1 22V42C1 43.1 1.9 44 3 44H13C14.1 44 15 43.1 15 42V22C15 18 14 14 12 12H4Z" fill="#212121" />
-                          <rect x="3" y="24" width="10" height="14" rx="1.5" fill="#FFFFFF" />
-                          <line x1="5" y1="28" x2="11" y2="28" stroke="#9C27B0" stroke-width="1.5" stroke-linecap="round" />
-                          <line x1="5" y1="32" x2="11" y2="32" stroke="#9C27B0" stroke-width="1.5" stroke-linecap="round" />
-                        </g>
-                      </svg>
-                    }
-                    @case ('bulk-spirit') {
-                      <svg viewBox="0 0 64 64" width="42" height="42" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <g transform="translate(6, 16)">
-                          <rect x="0" y="4" width="33" height="18" rx="8" fill="#1565C0" stroke="#0D47A1" stroke-width="1.5" />
-                          <rect x="2" y="10" width="29" height="5" fill="#FFC107" />
-                          <path d="M33 9H43L49 16V22H33V9Z" fill="#FF9800" stroke="#E65100" stroke-width="1.5" />
-                          <path d="M36 11H41L45 16H36V11Z" fill="#E0F7FA" stroke="#00838F" stroke-width="1" />
-                          <rect x="0" y="22" width="50" height="4" fill="#37474F" />
-                          <circle cx="8" cy="27" r="4.5" fill="#263238" stroke="#ECEFF1" stroke-width="1.5" />
-                          <circle cx="20" cy="27" r="4.5" fill="#263238" stroke="#ECEFF1" stroke-width="1.5" />
-                          <circle cx="42" cy="27" r="4.5" fill="#263238" stroke="#ECEFF1" stroke-width="1.5" />
-                        </g>
-                      </svg>
-                    }
-                    @case ('import-imfl') {
-                      <svg viewBox="0 0 64 64" width="42" height="42" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <g transform="translate(10, 10)">
-                          <path d="M12 2H16V6H12V2Z" fill="#C2185B" />
-                          <path d="M10 10C8 12 7 16 7 20V40H21V20C21 16 20 12 18 10L16 6H12L10 10Z" fill="#880E4F" />
-                          <rect x="9" y="22" width="10" height="12" rx="1" fill="#FFF8E1" stroke="#FFA000" stroke-width="1" />
-                          <path d="M28 6H32V10H28V6Z" fill="#FFB300" />
-                          <path d="M25 12H35C36 12 37 13 37 14V38C37 39 36 40 35 40H25C24 40 23 39 23 38V14C23 13 24 12 25 12Z" fill="#FF8F00" />
-                          <rect x="25" y="20" width="10" height="12" rx="1" fill="#FFFFFF" stroke="#D84315" stroke-width="1" />
-                          <path d="M38 28L40 38H45L47 28H38Z" fill="#FFE082" stroke="#FFA000" stroke-width="1" />
-                          <line x1="42.5" y1="38" x2="42.5" y2="42" stroke="#757575" stroke-width="2" />
-                          <line x1="39" y1="42" x2="46" y2="42" stroke="#757575" stroke-width="2" stroke-linecap="round" />
-                        </g>
-                      </svg>
-                    }
-                    @case ('hologram') {
-                      <svg viewBox="0 0 64 64" width="42" height="42" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M32 6L48 13V28C48 40 32 54 32 54C32 54 16 40 16 28V13L32 6Z" fill="#E8EAF6" stroke="#1C2B78" stroke-width="2" />
-                        <rect x="24" y="20" width="6" height="6" fill="#1C2B78" />
-                        <rect x="34" y="20" width="6" height="6" fill="#1C2B78" />
-                        <rect x="24" y="30" width="6" height="6" fill="#1C2B78" />
-                        <rect x="34" y="30" width="3" height="3" fill="#1C2B78" />
-                        <rect x="37" y="33" width="3" height="3" fill="#1C2B78" />
-                        <path d="M32 12L33.5 16.5L38 18L33.5 19.5L32 24L30.5 19.5L26 18L30.5 16.5L32 12Z" fill="#FFD700" stroke="#FF8F00" stroke-width="0.8" />
-                      </svg>
-                    }
-                    @case ('transit-permit') {
-                      <svg viewBox="0 0 64 64" width="42" height="42" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="10" y="12" width="44" height="40" rx="6" fill="#F0F9FF" stroke="#0284C7" stroke-width="2.5" />
-                        <path d="M18 42L28 20H36L46 42H18Z" fill="#0369A1" />
-                        <line x1="32" y1="23" x2="32" y2="28" stroke="#FDE047" stroke-width="1.5" stroke-linecap="round" />
-                        <line x1="32" y1="33" x2="32" y2="39" stroke="#FDE047" stroke-width="1.5" stroke-linecap="round" />
-                        <g transform="translate(24, 6)">
-                          <circle cx="8" cy="8" r="7" fill="#EF4444" stroke="#B91C1C" stroke-width="1.5" />
-                          <circle cx="8" cy="8" r="2.5" fill="#FFFFFF" />
-                        </g>
-                      </svg>
-                    }
-                  }
-                </div>
-                <div class="eservice-title">{{ service.title }}</div>
-              </div>
-            </div>
-          }
-        </div>
-      </div>
-    </mat-card-content>
-  </mat-card>
-  
   <mat-card class = "connect-with-us grid-card">
     <mat-card-header>Connect With Us</mat-card-header>
     <mat-card-content class = "card-container">
