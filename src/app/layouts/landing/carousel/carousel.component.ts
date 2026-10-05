@@ -11,12 +11,6 @@ import { Component } from '@angular/core';
 export class CarouselComponent {
   slides = [
     {
-      webp: 'assets/images/carousel/carousel2.webp',
-      src: 'assets/images/carousel/carousel2.jpg',
-      title: 'State Excise',
-      subtitle: 'Ensuring Public Health through Regulation and Intelligence, Enforcement Measures'
-    },
-    {
       webp: 'assets/images/carousel/carousel4.webp',
       src: 'assets/images/carousel/carousel4.jpg',
       title: 'State Excise',
