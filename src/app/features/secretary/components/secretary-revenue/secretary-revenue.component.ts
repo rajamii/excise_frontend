@@ -614,6 +614,28 @@ export class SecretaryRevenueComponent implements OnInit, OnDestroy {
     this.selectedSecurityDeposit = null;
   }
 
+  getStatusBadgeClass(status?: string): string {
+    const s = String(status || '').toUpperCase().trim();
+    if (s.includes('DEDUCT') || s.includes('FORFEIT') || s.includes('REFUND') || s.includes('REJECT')) {
+      return 'badge-status-deducted';
+    }
+    if (s.includes('PARTIAL') || s.includes('ADJUST') || s.includes('PENDING')) {
+      return 'badge-status-partial';
+    }
+    return 'badge-status-paid';
+  }
+
+  getStatusIconClass(status?: string): string {
+    const s = String(status || '').toUpperCase().trim();
+    if (s.includes('DEDUCT') || s.includes('FORFEIT') || s.includes('REFUND') || s.includes('REJECT')) {
+      return 'bi-exclamation-triangle-fill';
+    }
+    if (s.includes('PARTIAL') || s.includes('ADJUST') || s.includes('PENDING')) {
+      return 'bi-clock-history';
+    }
+    return 'bi-check-circle-fill';
+  }
+
   getHeadCardClass(headName: string = ''): string {
     const name = (headName || '').toLowerCase();
     if (name.includes('additional')) return 'head-theme-indigo';
