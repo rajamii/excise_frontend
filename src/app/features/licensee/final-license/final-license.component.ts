@@ -31,6 +31,11 @@ type FinalLicenseTemplateData = {
   applicationYear?: string;
   financialYear?: string;
   licenseSubTitle?: string;
+  additionalDetails?: string;
+  miniBar?: boolean;
+  miniBarQuantity?: number;
+  draughtBeer?: boolean;
+  pachwai?: boolean;
   // Company Collaboration specific
   collaborationRefId?: string;
   brandOwnerName?: string;
@@ -213,6 +218,12 @@ export class FinalLicenseComponent implements OnDestroy {
     return this.resolvedApiType() === 'company-collaboration';
   }
 
+  get showLicenseSubTitle(): boolean {
+    if (this.isSalesmanBarman) return false;
+    const sub = (this.templateData().licenseSubTitle || '').trim().toUpperCase();
+    return !!sub && sub !== 'COUNTER FOIL';
+  }
+
   private loadFinalLicense(): void {
     const applicationId = this.queryAppId();
     if (!applicationId) return;
@@ -289,6 +300,20 @@ export class FinalLicenseComponent implements OnDestroy {
         this.termsPages.set([{ start: 1, items: normalizedTerms }]);
         if (!this.isSalesmanBarman && !this.isCompanyRegistration) void this.paginateTermsToPages();
 
+        const additionalItems: string[] = [];
+        const hasMiniBar = Boolean(data?.miniBar ?? data?.mini_bar);
+        const miniBarQty = Number(data?.miniBarQuantity ?? data?.mini_bar_quantity ?? 0);
+        if (hasMiniBar) {
+          additionalItems.push(miniBarQty > 0 ? `Mini Bar (Quantity: ${miniBarQty})` : 'Mini Bar');
+        }
+        if (Boolean(data?.draughtBeer ?? data?.draught_beer)) {
+          additionalItems.push('Draught Beer');
+        }
+        if (Boolean(data?.pachwai)) {
+          additionalItems.push('Pachwai');
+        }
+        const resolvedAdditionalDetails = String(data?.additionalDetails || data?.additional_details || additionalItems.join(', '));
+
         this.templateData.update(current => ({
           ...current,
           applicationId: String(data?.applicationId || data?.application_id || current.applicationId || applicationId),
@@ -301,6 +326,11 @@ export class FinalLicenseComponent implements OnDestroy {
           addressOfBusiness: String(data?.addressOfBusiness || current.addressOfBusiness || ''),
           district: String(data?.district || current.district || ''),
           modeOfOperation: String(data?.modeOfOperation || current.modeOfOperation || ''),
+          additionalDetails: resolvedAdditionalDetails || current.additionalDetails || '',
+          miniBar: hasMiniBar,
+          miniBarQuantity: miniBarQty,
+          draughtBeer: Boolean(data?.draughtBeer ?? data?.draught_beer),
+          pachwai: Boolean(data?.pachwai),
           passportPhotoUrl: '',
           licenseFee: String(data?.licenseFee || current.licenseFee || ''),
           transactionRef: String(data?.transactionRef || current.transactionRef || ''),

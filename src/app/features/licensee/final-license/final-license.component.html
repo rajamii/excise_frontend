@@ -112,6 +112,12 @@
             <td class="value">{{ templateData().modeOfOperation || '-' }}</td>
             <td class="photo-spacer"></td>
           </tr>
+          <tr *ngIf="templateData().additionalDetails">
+            <td class="key">Additional Details</td>
+            <td class="colon">:</td>
+            <td class="value">{{ templateData().additionalDetails }}</td>
+            <td class="photo-spacer"></td>
+          </tr>
         </table>
       </div>
     </ng-template>
@@ -304,7 +310,7 @@
         </div>
       </header>
 
-      <div class="sub-title" *ngIf="!isSalesmanBarman">{{ templateData().licenseSubTitle || 'COUNTER FOIL' }}</div>
+      <div class="sub-title" *ngIf="showLicenseSubTitle">{{ templateData().licenseSubTitle }}</div>
 
       <div class="content">
         <ng-container *ngTemplateOutlet="licenseDetails"></ng-container>
