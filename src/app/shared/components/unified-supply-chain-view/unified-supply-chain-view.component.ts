@@ -3232,8 +3232,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
 
         const openDialog = (existingReport: any | null) => {
             const dialogRef = this.dialog.open(SiteEnquiryFormDialogComponent, {
-                width: '980px',
-                maxWidth: '98vw',
+                width: '1140px',
+                maxWidth: '96vw',
                 disableClose: true,
                 data: { applicationId, existingReport }
             });

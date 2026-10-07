@@ -1,19 +1,35 @@
 <div class="dialog-header">
-  <div class="app-id">{{ applicationId }}</div>
-  <div class="title">Site Enquiry Form</div>
+  <div class="title-group">
+    <mat-icon class="header-icon">assignment_turned_in</mat-icon>
+    <div class="title-text">
+      <div class="title">Site Enquiry Form</div>
+      <div class="subtitle">Official Site Verification & Assessment</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <span class="app-id-badge">{{ applicationId }}</span>
+    <button type="button" class="dialog-close-btn" (click)="cancel()" aria-label="Close dialog">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
 </div>
 
 <mat-dialog-content class="dialog-content">
   <div class="revert-banner" *ngIf="isReverted">
-    <div class="badge">REVERTED</div>
+    <div class="banner-icon-col">
+      <mat-icon>assignment_late</mat-icon>
+    </div>
     <div class="text">
-      <div class="title">Joint Commissioner remarks</div>
+      <div class="banner-top-row">
+        <span class="badge">REVERTED BACK</span>
+        <span class="title">Joint Commissioner Remarks</span>
+      </div>
       <div class="remarks" *ngIf="revertedRemarks; else noRemarks">{{ revertedRemarks }}</div>
       <ng-template #noRemarks><div class="remarks muted">No remarks provided.</div></ng-template>
     </div>
   </div>
   <form [formGroup]="form">
-  <mat-horizontal-stepper>
+  <mat-horizontal-stepper linear="false" class="custom-site-stepper">
     <!-- STEP 1: Location Restrictions -->
     <mat-step [stepControl]="form">
       <ng-template matStepLabel>Location Restrictions</ng-template>

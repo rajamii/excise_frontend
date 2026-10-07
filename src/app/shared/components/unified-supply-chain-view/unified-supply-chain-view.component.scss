@@ -1294,10 +1294,10 @@
 .site-enquiry-modal-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(4, 17, 37, 0.58);
+    background: rgba(4, 17, 37, 0.65);
     z-index: 9050;
-    -webkit-backdrop-filter: blur(3px);
-    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
 }
 
 .site-enquiry-modal {
@@ -1307,18 +1307,18 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 16px;
+    padding: 20px;
 }
 
 .site-enquiry-modal-container {
-    width: 100%;
-    max-width: 980px;
-    max-height: 88vh;
+    width: 95vw;
+    max-width: 1140px;
+    max-height: 90vh;
     display: flex;
     flex-direction: column;
     background: #fff;
     border-radius: 18px;
-    box-shadow: 0 24px 64px rgba(15, 23, 42, 0.3);
+    box-shadow: 0 24px 64px rgba(15, 23, 42, 0.35);
     overflow: hidden;
 }
 
@@ -1501,56 +1501,72 @@
 }
 
 .site-enquiry-stepper-tabs {
-    display: flex;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
     background: #f1f5f9;
-    padding: 6px;
-    border-radius: 12px;
-    overflow-x: auto;
+    padding: 8px;
+    border-radius: 14px;
+    margin-bottom: 20px;
+
+    @media (max-width: 820px) {
+        grid-template-columns: 1fr;
+    }
 
     .stepper-tab-btn {
         display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 10px 16px;
-        border: none;
-        background: transparent;
-        border-radius: 8px;
-        font-size: 0.88rem;
+        gap: 12px;
+        padding: 12px 18px;
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+        border-radius: 10px;
+        font-size: 0.92rem;
         font-weight: 600;
         color: #475569;
         cursor: pointer;
-        transition: all 0.2s ease;
-        white-space: nowrap;
-        flex: 1;
-        justify-content: center;
+        transition: all 0.25s ease;
+        text-align: left;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 
         .step-num {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 24px;
-            height: 24px;
+            width: 30px;
+            height: 30px;
+            min-width: 30px;
             border-radius: 50%;
-            background: #cbd5e1;
+            background: #e2e8f0;
             color: #1e293b;
-            font-size: 0.78rem;
+            font-size: 0.85rem;
             font-weight: 700;
+            transition: all 0.25s ease;
+        }
+
+        .step-title {
+            line-height: 1.35;
+            white-space: normal;
         }
 
         &:hover {
-            background: #e2e8f0;
-            color: #1e293b;
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            color: #1e3a8a;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
         }
 
         &.active {
-            background: #1e3a8a;
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            border-color: #1e3a8a;
             color: #ffffff;
-            box-shadow: 0 4px 10px rgba(30, 58, 138, 0.25);
+            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
 
             .step-num {
-                background: #3b82f6;
-                color: #ffffff;
+                background: #ffffff;
+                color: #1e3a8a;
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
             }
         }
     }
