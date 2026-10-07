@@ -2554,8 +2554,14 @@
                 <div class="site-enquiry-modal-subtitle">
                     {{ applicationData?.referenceNo || applicationData?.['application_id'] || 'Application' }}
                 </div>
-                <div class="mt-1" *ngIf="siteEnquiryReport?.['is_reverted']">
-                    <span class="badge bg-warning text-dark">REVERTED</span>
+                <div class="mt-2 d-flex gap-2 align-items-center flex-wrap" *ngIf="siteEnquiryReport">
+                    <span class="badge bg-warning text-dark" *ngIf="siteEnquiryReport?.['is_reverted']">REVERTED</span>
+                    <span class="badge bg-danger text-white px-2 py-1" *ngIf="isSiteEnquiryNotRecommended()">
+                        <i class="bi bi-x-circle-fill me-1"></i> NOT RECOMMENDED
+                    </span>
+                    <span class="badge bg-success text-white px-2 py-1" *ngIf="isSiteEnquiryRecommended()">
+                        <i class="bi bi-check-circle-fill me-1"></i> RECOMMENDED
+                    </span>
                 </div>
             </div>
             <button type="button" class="site-enquiry-modal-close" (click)="closeSiteEnquiryReportModal()" aria-label="Close">
@@ -2572,31 +2578,91 @@
                 {{ siteEnquiryReportError }}
             </div>
 
-            <div class="site-enquiry-report-card" *ngIf="!siteEnquiryReportLoading && !siteEnquiryReportError && siteEnquiryReportEntries.length > 0">
-                <div class="alert alert-warning mb-3" *ngIf="siteEnquiryReport?.['is_reverted'] && siteEnquiryReport?.['reverted_remarks']">
-                    <div class="fw-semibold mb-1">Revert remarks</div>
-                    <div class="small">{{ siteEnquiryReport?.['reverted_remarks'] }}</div>
+            <!-- PROMINENT RECOMMENDATION HIGHLIGHT BANNER -->
+            <div class="site-enquiry-banner banner-not-recommended mb-3" *ngIf="!siteEnquiryReportLoading && isSiteEnquiryNotRecommended()">
+                <div class="banner-icon"><i class="bi bi-exclamation-octagon-fill"></i></div>
+                <div class="banner-content">
+                    <div class="banner-title">ATTENTION: PROPOSAL NOT RECOMMENDED</div>
+                    <div class="banner-text">
+                        The Site Enquiry Officer has marked this application as <strong>NOT RECOMMENDED</strong> for grant of excise license.
+                    </div>
+                    <div class="banner-remarks mt-2" *ngIf="getSiteEnquiryRecommendationComments()">
+                        <strong>Officer's Reason / Comments:</strong> {{ getSiteEnquiryRecommendationComments() }}
+                    </div>
                 </div>
-                <table class="table table-bordered site-enquiry-report-table mb-0">
-                    <tbody>
-                        <tr *ngFor="let field of siteEnquiryReportEntries">
-                            <td class="site-enquiry-report-table__label">{{ field.label }}</td>
-                            <td class="site-enquiry-report-table__value">
-                                <a *ngIf="field.href; else siteEnquiryValueText"
-                                    [href]="field.href"
-                                    target="_blank"
-                                    rel="noopener"
-                                    class="site-enquiry-report-link">
-                                    <i class="bi bi-box-arrow-up-right me-1"></i>{{ field.displayValue }}
-                                </a>
-                                <ng-template #siteEnquiryValueText>{{ field.displayValue }}</ng-template>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
             </div>
 
-            <div class="alert alert-info mb-0" *ngIf="!siteEnquiryReportLoading && !siteEnquiryReportError && siteEnquiryReportEntries.length === 0">
+            <div class="site-enquiry-banner banner-recommended mb-3" *ngIf="!siteEnquiryReportLoading && isSiteEnquiryRecommended()">
+                <div class="banner-icon"><i class="bi bi-check-circle-fill"></i></div>
+                <div class="banner-content">
+                    <div class="banner-title">PROPOSAL RECOMMENDED</div>
+                    <div class="banner-text">
+                        The Site Enquiry Officer has <strong>RECOMMENDED</strong> this proposal for grant of excise license.
+                    </div>
+                    <div class="banner-remarks mt-1" *ngIf="getSiteEnquiryRecommendationComments()">
+                        <strong>Officer's Comments:</strong> {{ getSiteEnquiryRecommendationComments() }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- REVERT REMARKS -->
+            <div class="alert alert-warning mb-3" *ngIf="!siteEnquiryReportLoading && siteEnquiryReport?.['is_reverted'] && siteEnquiryReport?.['reverted_remarks']">
+                <div class="fw-semibold mb-1"><i class="bi bi-arrow-counterclockwise me-1"></i>Joint Commissioner Revert Remarks:</div>
+                <div class="small">{{ siteEnquiryReport?.['reverted_remarks'] }}</div>
+            </div>
+
+            <!-- STEPPER-WISE NAVIGATION TABS & REPORT DETAILS -->
+            <div *ngIf="!siteEnquiryReportLoading && !siteEnquiryReportError && siteEnquiryReportSections.length > 0">
+                <div class="site-enquiry-stepper-tabs mb-3">
+                    <button type="button" 
+                        *ngFor="let sec of siteEnquiryReportSections" 
+                        class="stepper-tab-btn" 
+                        [class.active]="siteEnquiryActiveTab === sec.id"
+                        (click)="siteEnquiryActiveTab = sec.id">
+                        <span class="step-num">{{ sec.id }}</span>
+                        <span class="step-title">{{ sec.title }}</span>
+                    </button>
+                </div>
+
+                <!-- SECTION CONTENT -->
+                <ng-container *ngFor="let sec of siteEnquiryReportSections">
+                    <div class="site-enquiry-section-card" *ngIf="siteEnquiryActiveTab === sec.id">
+                        <div class="section-card-header">
+                            <span class="badge bg-primary me-2">Step {{ sec.id }}</span>
+                            <span class="fw-bold">{{ sec.title }}</span>
+                        </div>
+                        <div class="section-card-body">
+                            <div class="report-question-block" *ngFor="let item of sec.items">
+                                <div class="question-header">
+                                    <span class="q-number">{{ item.number }}.</span>
+                                    <span class="q-text">{{ item.question }}</span>
+                                    <span class="q-badge badge" *ngIf="item.isBoolean" [ngClass]="item.booleanValue ? 'bg-success' : (item.isRecommendation ? 'bg-danger' : 'bg-secondary')">
+                                        {{ item.booleanValue ? (item.isRecommendation ? 'Recommend' : 'Yes') : (item.isRecommendation ? 'Not Recommend' : 'No') }}
+                                    </span>
+                                </div>
+                                <div class="q-value-simple" *ngIf="item.value !== undefined">
+                                    {{ item.value }}
+                                </div>
+                                <div class="q-subitems" *ngIf="item.subItems && item.subItems.length > 0">
+                                    <div class="subitem-row" *ngFor="let sub of item.subItems">
+                                        <div class="sub-label">{{ sub.label }}</div>
+                                        <div class="sub-value">
+                                            <a *ngIf="sub.href; else subValText" [href]="sub.href" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-box-arrow-up-right me-1"></i>View Document
+                                            </a>
+                                            <ng-template #subValText>
+                                                <span [class.text-muted]="sub.value === 'Not Available'">{{ sub.value }}</span>
+                                            </ng-template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </ng-container>
+            </div>
+
+            <div class="alert alert-info mb-0" *ngIf="!siteEnquiryReportLoading && !siteEnquiryReportError && siteEnquiryReportSections.length === 0">
                 No site enquiry report data found for this application.
             </div>
         </div>

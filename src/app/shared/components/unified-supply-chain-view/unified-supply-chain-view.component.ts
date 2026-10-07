@@ -446,6 +446,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     siteEnquiryReportError = '';
     siteEnquiryReport: Record<string, any> | null = null;
     siteEnquiryReportEntries: SiteEnquiryReportField[] = [];
+    siteEnquiryActiveTab = 1;
+    siteEnquiryReportSections: any[] = [];
     newLicenseFeeApprovalModalOpen = false;
     newLicenseFeeApprovalOptionsLoading = false;
     newLicenseFeeApprovalFeeLoading = false;
@@ -3501,12 +3503,376 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         return value;
     }
 
+    isSiteEnquiryNotRecommended(): boolean {
+        if (!this.siteEnquiryReport) return false;
+        const rec = this.siteEnquiryReport['license_recommendation'] ?? this.siteEnquiryReport['licenseRecommendation'];
+        return rec === false || rec === 'false';
+    }
+
+    isSiteEnquiryRecommended(): boolean {
+        if (!this.siteEnquiryReport) return false;
+        const rec = this.siteEnquiryReport['license_recommendation'] ?? this.siteEnquiryReport['licenseRecommendation'];
+        return rec === true || rec === 'true';
+    }
+
+    getSiteEnquiryRecommendationComments(): string {
+        return String(
+            this.siteEnquiryReport?.['recommendation_comments'] ??
+            this.siteEnquiryReport?.['recommendationComments'] ??
+            ''
+        ).trim();
+    }
+
+    buildSiteEnquirySections(report: Record<string, any>): any[] {
+        if (!report || Object.keys(report).length === 0) return [];
+
+        const getVal = (key: string): any => {
+            if (!report) return undefined;
+            if (report[key] !== undefined && report[key] !== null) return report[key];
+            const camelKey = key.replace(/_([a-z0-9])/g, (_, chr) => chr.toUpperCase());
+            if (report[camelKey] !== undefined && report[camelKey] !== null) return report[camelKey];
+            const snakeKey = key.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
+            if (report[snakeKey] !== undefined && report[snakeKey] !== null) return report[snakeKey];
+            return undefined;
+        };
+
+        const isTrue = (key: string): boolean => {
+            const val = getVal(key);
+            return val === true || val === 1 || String(val).trim().toLowerCase() === 'true';
+        };
+
+        const getText = (key: string): string => {
+            const val = getVal(key);
+            if (val === null || val === undefined) return '';
+            return String(val).trim();
+        };
+
+        const getDocUrl = (val: any) => {
+            if (this.isFilePath(val)) {
+                return this.normalizeDocUrl(this.getFileUrl(val));
+            }
+            return undefined;
+        };
+
+        const formatVal = (key: string, val: any) => {
+            return this.formatSiteEnquiryFieldValue(key, val);
+        };
+
+        const docHref = getDocUrl(getVal('shop_image_document'));
+
+        // ── Step 1: Location Restrictions Subitems ──
+        const worshipSubItems: any[] = [];
+        if (isTrue('has_traditional_place')) {
+            const dist = getVal('traditional_place_distance');
+            if (dist != null && dist !== '') {
+                worshipSubItems.push({
+                    label: 'a. Distance of the nearest traditional place of Public Worship like Mandir, Gumpa, Church etc from the proposed site (in ft.)',
+                    value: `${dist} ft.`
+                });
+            }
+            const name = getText('traditional_place_name');
+            if (name) {
+                worshipSubItems.push({ label: 'b. Name of the place of Worship', value: name });
+            }
+            const nature = getText('traditional_place_nature');
+            if (nature) {
+                worshipSubItems.push({ label: 'c. Nature of the place of worship', value: nature });
+            }
+            const constr = getText('traditional_place_construction');
+            if (constr) {
+                worshipSubItems.push({ label: 'd. Nature of Construction', value: formatVal('traditional_place_construction', constr) });
+            }
+        }
+
+        const eduSubItems: any[] = [];
+        if (isTrue('has_educational_institution')) {
+            const dist = getVal('educational_institution_distance');
+            if (dist != null && dist !== '') {
+                eduSubItems.push({
+                    label: 'a. Distance of the nearest educational institution recognized by State Govt. or Central Govt established by law from the proposed site (in ft)',
+                    value: `${dist} ft.`
+                });
+            }
+            const name = getText('educational_institution_name');
+            if (name) {
+                eduSubItems.push({ label: 'b. Name of the institution', value: name });
+            }
+            const nature = getText('educational_institution_nature');
+            if (nature) {
+                eduSubItems.push({ label: 'c. Nature of the institution', value: nature });
+            }
+        }
+
+        const hospitalSubItems: any[] = [];
+        if (isTrue('has_hospital')) {
+            const dist = getVal('hospital_distance');
+            if (dist != null && dist !== '') {
+                hospitalSubItems.push({
+                    label: 'a. Distance of the nearest Hospital for the public use from the proposed site (in ft)',
+                    value: `${dist} ft.`
+                });
+            }
+            const name = getText('hospital_name');
+            if (name) {
+                hospitalSubItems.push({ label: 'b. Name of the Hospital', value: name });
+            }
+        }
+
+        const taxiSubItems: any[] = [];
+        if (isTrue('has_taxi_stand')) {
+            const name = getText('taxi_stand_name');
+            if (name) {
+                taxiSubItems.push({ label: 'a. Name of the Nearest Taxi Stand', value: name });
+            }
+            const dist = getVal('taxi_stand_distance');
+            if (dist != null && dist !== '') {
+                taxiSubItems.push({
+                    label: 'b. Distance of the nearest Taxi Stand from the proposed site (in ft.)',
+                    value: `${dist} ft.`
+                });
+            }
+        }
+
+        const shopInterconnectSubItems: any[] = [];
+        const interconnectRemarks = getText('interconnectivity_remarks');
+        if (interconnectRemarks) {
+            shopInterconnectSubItems.push({ label: 'Remarks', value: interconnectRemarks });
+        }
+
+        // ── Step 2: Other Enquiry Points Subitems ──
+        const shopConstSubItems: any[] = [];
+        const constType = getText('shop_construction_type');
+        if (constType) {
+            shopConstSubItems.push({
+                label: 'Type of construction',
+                value: formatVal('shop_construction_type', constType)
+            });
+        }
+
+        const nearbyExciseSubItems: any[] = [];
+        const shopCount = getVal('nearby_excise_shop_count');
+        const shopRemarks = getText('nearby_excise_shops_remarks');
+        if (isTrue('has_excise_shops_nearby') || (shopCount != null && Number(shopCount) > 0) || shopRemarks) {
+            nearbyExciseSubItems.push({
+                label: 'Numbers of FLR shop, FLB shop and other Excise licensee within a radius of approximately, 100 m',
+                value: String(shopCount ?? 0)
+            });
+            if (shopRemarks) {
+                nearbyExciseSubItems.push({ label: 'Remarks', value: shopRemarks });
+            }
+        }
+
+        const highwaySubItems: any[] = [];
+        const hwayName = getText('highway_name');
+        if (isTrue('is_on_highway') || hwayName) {
+            highwaySubItems.push({
+                label: 'Highway Details / Name',
+                value: hwayName || 'Yes'
+            });
+        }
+
+        const latVal = getVal('latitude');
+        const lngVal = getVal('longitude');
+        const latLngSubItems: any[] = [
+            { label: 'Latitude', value: latVal != null ? String(latVal) : 'Not Captured' },
+            { label: 'Longitude', value: lngVal != null ? String(lngVal) : 'Not Captured' }
+        ];
+
+        const shopSizeSubItems: any[] = [];
+        const sizeRemarks = getText('shop_size_remarks');
+        if (sizeRemarks) {
+            shopSizeSubItems.push({ label: 'Remarks if any', value: sizeRemarks });
+        }
+
+        // ── Step 3: Document Verification Helper ──
+        const makeDocItem = (num: string, qText: string, boolKey: string, commentKey: string) => {
+            const comment = getText(commentKey);
+            return {
+                number: num,
+                question: qText,
+                isBoolean: true,
+                booleanValue: isTrue(boolKey),
+                subItems: comment ? [{ label: 'Remarks / Comments', value: comment }] : []
+            };
+        };
+
+        const recComment = getText('recommendation_comments');
+
+        return [
+            {
+                id: 1,
+                title: 'Location Restrictions',
+                items: [
+                    {
+                        number: '1',
+                        question: 'Whether there is any traditional place of Public Worship like Mandir, Gumpa, Church etc ?',
+                        isBoolean: true,
+                        booleanValue: isTrue('has_traditional_place'),
+                        subItems: worshipSubItems
+                    },
+                    {
+                        number: '2',
+                        question: 'Whether there is any educational institution ?',
+                        isBoolean: true,
+                        booleanValue: isTrue('has_educational_institution'),
+                        subItems: eduSubItems
+                    },
+                    {
+                        number: '3',
+                        question: 'Whether there is any Hospital ?',
+                        isBoolean: true,
+                        booleanValue: isTrue('has_hospital'),
+                        subItems: hospitalSubItems
+                    },
+                    {
+                        number: '4',
+                        question: 'Whether there is any Taxi Stand ?',
+                        isBoolean: true,
+                        booleanValue: isTrue('has_taxi_stand'),
+                        subItems: taxiSubItems
+                    },
+                    {
+                        number: '5',
+                        question: 'Whether the proposed site is inter-connected with Grocery Shop, Pan Shop, Vegetable Shop & Residency ?',
+                        isBoolean: true,
+                        booleanValue: isTrue('is_interconnected_with_shops'),
+                        subItems: shopInterconnectSubItems
+                    },
+                    {
+                        number: '6',
+                        question: 'Any other comments from the enquiry officer',
+                        value: getText('enquiry_officer_comments') || 'None'
+                    }
+                ]
+            },
+            {
+                id: 2,
+                title: 'Other Enquiry Points',
+                items: [
+                    {
+                        number: '1',
+                        question: 'Type of construction of proposed shop',
+                        isBoolean: getVal('has_shop_construction') !== undefined ? true : false,
+                        booleanValue: isTrue('has_shop_construction'),
+                        subItems: shopConstSubItems
+                    },
+                    {
+                        number: '2',
+                        question: 'Whether there is any FLR shop, FLB shop and other Excise licensee within a radius of approximately, 100 m',
+                        isBoolean: true,
+                        booleanValue: isTrue('has_excise_shops_nearby'),
+                        subItems: nearbyExciseSubItems
+                    },
+                    {
+                        number: '3',
+                        question: 'Whether the proposed site falls on the State Highway/ National Highway?',
+                        isBoolean: true,
+                        booleanValue: isTrue('is_on_highway'),
+                        subItems: highwaySubItems
+                    },
+                    {
+                        number: '4',
+                        question: 'Latitude - Longitude',
+                        subItems: latLngSubItems
+                    },
+                    {
+                        number: '5',
+                        question: 'Whether the size of the shop premises provided by the applicant is correct or not (remarks if any)',
+                        isBoolean: true,
+                        booleanValue: isTrue('is_shop_size_correct'),
+                        subItems: shopSizeSubItems
+                    },
+                    {
+                        number: '6',
+                        question: 'Upload shop image document',
+                        subItems: [
+                            { label: 'Shop Image Document', value: docHref ? 'View Document' : 'Not Uploaded', href: docHref }
+                        ]
+                    },
+                    {
+                        number: '7',
+                        question: 'Any other comments from the enquiry officer',
+                        value: getText('additional_enquiry_officer_comments') || 'None'
+                    }
+                ]
+            },
+            {
+                id: 3,
+                title: 'Whether the following documents have duly been verified and found in order:-',
+                items: [
+                    makeDocItem(
+                        '1',
+                        'Document like Certificate of Identification/ Sikkim Subject / RC is furnished and duly verified by concern authority',
+                        'has_id_proof',
+                        'id_proof_comments'
+                    ),
+                    makeDocItem(
+                        '2',
+                        'Proof of age of the applicant, in case when the applicant is an individual or individual(s).',
+                        'has_age_proof',
+                        'age_proof_comments'
+                    ),
+                    makeDocItem(
+                        '3',
+                        'NOC from the Landlord regarding the use of premises for a period of 4 years to run the excise license applied for, if the premises is rented or leased or sub leased.',
+                        'has_noc_from_landlord',
+                        'noc_comments'
+                    ),
+                    makeDocItem(
+                        '4',
+                        'Parcha/Allotment Paper/ Sale deed, if the premises is owned by the applicant.',
+                        'has_ownership_proof',
+                        'ownership_proof_comments'
+                    ),
+                    makeDocItem(
+                        '5',
+                        'Whether Trade License is furnished and duly verified by concern authority.',
+                        'has_trade_license',
+                        'trade_license_comments'
+                    ),
+                    makeDocItem(
+                        '6',
+                        'Whether the applicant has proposed to appoint Barman/Salesman for running the shop.',
+                        'proposes_barman_or_salesman',
+                        'worker_proposal_comments'
+                    ),
+                    makeDocItem(
+                        '7',
+                        'Whether the document submitted by applicant for Salesman/Barman are found to be in order.',
+                        'worker_docs_valid',
+                        'worker_docs_comments'
+                    ),
+                    {
+                        number: '8',
+                        question: 'Whether the proposal for grant of license is recommended:',
+                        isBoolean: true,
+                        isRecommendation: true,
+                        booleanValue: isTrue('license_recommendation'),
+                        subItems: recComment ? [{ label: 'Officer Comments / Reason', value: recComment }] : []
+                    },
+                    {
+                        number: '9',
+                        question: 'Special Remarks, if any :',
+                        value: getText('special_remarks') || 'None'
+                    },
+                    {
+                        number: '10',
+                        question: 'Reporting Place / Location:',
+                        value: getText('reporting_place') || 'Not Specified'
+                    }
+                ]
+            }
+        ];
+    }
+
     private resetSiteEnquiryReportState(): void {
         this.siteEnquiryReportModalOpen = false;
         this.siteEnquiryReportLoading = false;
         this.siteEnquiryReportError = '';
         this.siteEnquiryReport = null;
         this.siteEnquiryReportEntries = [];
+        this.siteEnquiryReportSections = [];
+        this.siteEnquiryActiveTab = 1;
     }
 
     private extractHttpErrorMessage(error: any, fallback: string, apiContext = 'the requested API'): string {
@@ -4409,6 +4775,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         this.licenseApplicationService.getSiteEnquiryReport(applicationId).subscribe({
             next: (report: Record<string, any>) => {
                 this.siteEnquiryReport = report || null;
+                this.siteEnquiryActiveTab = 1;
+                this.siteEnquiryReportSections = this.buildSiteEnquirySections(report || {});
                 this.siteEnquiryReportEntries = this.buildSiteEnquiryReportEntries(report || {});
                 this.siteEnquiryReportLoading = false;
             },
