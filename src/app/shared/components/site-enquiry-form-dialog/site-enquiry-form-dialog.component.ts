@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit, NgZone, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -44,11 +44,16 @@ export class SiteEnquiryFormDialogComponent implements OnInit {
   revertedRemarks = '';
   existingShopImageUrl = '';
   existingShopImageName = '';
+  isLocating = false;
+  locationMessage = '';
+  locationError = '';
   private readonly existingReport: any | null;
 
   constructor(
     private fb: FormBuilder,
     private dialogRef: MatDialogRef<SiteEnquiryFormDialogComponent>,
+    private ngZone: NgZone,
+    private cdr: ChangeDetectorRef,
     @Inject(MAT_DIALOG_DATA) data: SiteEnquiryDialogData
   ) {
     this.applicationId = data?.applicationId || '';
@@ -58,7 +63,7 @@ export class SiteEnquiryFormDialogComponent implements OnInit {
       traditional_place_distance: [''],
       traditional_place_name: ['', [Validators.maxLength(1000)]],
       traditional_place_nature: ['', [Validators.maxLength(1000)]],
-      traditional_place_construction: ['', Validators.required],
+      traditional_place_construction: [''],
 
       has_educational_institution: [false, Validators.required],
       educational_institution_distance: [''],
@@ -75,7 +80,8 @@ export class SiteEnquiryFormDialogComponent implements OnInit {
 
       is_interconnected_with_shops: [false, Validators.required],
       interconnectivity_remarks: [''],
-      shop_construction_type: ['', Validators.required],
+      has_shop_construction: [null, Validators.required],
+      shop_construction_type: [''],
       has_excise_shops_nearby: [false, Validators.required],
       nearby_excise_shop_count: [0],
       nearby_excise_shops_remarks: [''],
@@ -110,7 +116,6 @@ export class SiteEnquiryFormDialogComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.captureCurrentLocation();
     if (this.existingReport) {
       this.prefillFromExistingReport(this.existingReport);
     }
@@ -136,6 +141,7 @@ export class SiteEnquiryFormDialogComponent implements OnInit {
       'has_hospital',
       'has_taxi_stand',
       'is_interconnected_with_shops',
+      'has_shop_construction',
       'has_excise_shops_nearby',
       'is_on_highway',
       'is_shop_size_correct',
@@ -239,21 +245,64 @@ export class SiteEnquiryFormDialogComponent implements OnInit {
   }
 
   captureCurrentLocation(): void {
-    if (!('geolocation' in navigator)) {
+    if (typeof window === 'undefined' || !('geolocation' in navigator)) {
+      this.locationError = 'Geolocation is not supported by your browser.';
+      this.locationMessage = '';
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
+    this.isLocating = true;
+    this.locationMessage = 'Fetching location...';
+    this.locationError = '';
+
+    const applyPosition = (pos: GeolocationPosition) => {
+      this.ngZone.run(() => {
+        const lat = Number(pos.coords.latitude.toFixed(6));
+        const lng = Number(pos.coords.longitude.toFixed(6));
         this.form.patchValue({
-          latitude: Number(position.coords.latitude.toFixed(6)),
-          longitude: Number(position.coords.longitude.toFixed(6))
+          latitude: lat,
+          longitude: lng
         });
+        this.isLocating = false;
+        this.locationMessage = 'Location captured successfully!';
+        this.locationError = '';
+        this.cdr.markForCheck();
+      });
+    };
+
+    const handleFinalError = (err: GeolocationPositionError) => {
+      this.ngZone.run(() => {
+        this.isLocating = false;
+        this.locationMessage = '';
+        if (err.code === 1) {
+          this.locationError = 'Location access denied. Please allow location permissions in browser.';
+        } else if (err.code === 2) {
+          this.locationError = 'Location unavailable. Please enter coordinates manually.';
+        } else if (err.code === 3) {
+          this.locationError = 'Location request timed out. Please enter coordinates manually.';
+        } else {
+          this.locationError = 'Could not fetch location. Please enter coordinates manually.';
+        }
+        this.cdr.markForCheck();
+      });
+    };
+
+    // First attempt: High accuracy
+    navigator.geolocation.getCurrentPosition(
+      applyPosition,
+      (err) => {
+        // If high accuracy fails with timeout or unavailable, retry with low accuracy / standard cache
+        if (err.code === 2 || err.code === 3) {
+          navigator.geolocation.getCurrentPosition(
+            applyPosition,
+            handleFinalError,
+            { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+          );
+        } else {
+          handleFinalError(err);
+        }
       },
-      () => {
-        // Ignore location permission errors; user can type manually.
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
     );
   }
 
@@ -271,22 +320,30 @@ export class SiteEnquiryFormDialogComponent implements OnInit {
   }
 
   isStep1Complete(): boolean {
-    return this.hasValue('has_traditional_place') && this.hasValue('traditional_place_construction');
-  }
-
-  isStep2Complete(): boolean {
     const requiredControls = [
+      'has_traditional_place',
       'has_educational_institution',
       'has_hospital',
       'has_taxi_stand',
-      'is_interconnected_with_shops',
-      'shop_construction_type',
+      'is_interconnected_with_shops'
+    ];
+    const allFilled = requiredControls.every((c) => this.hasValue(c));
+    if (!allFilled) return false;
+    if (this.form.get('has_traditional_place')?.value === true) {
+      return this.hasValue('traditional_place_construction');
+    }
+    return true;
+  }
+
+  isStep2Complete(): boolean {
+    const hasDoc = !!this.existingShopImageUrl || this.hasValue('shop_image_document');
+    const requiredControls = [
+      'has_shop_construction',
       'has_excise_shops_nearby',
       'is_on_highway',
-      'is_shop_size_correct',
-      'shop_image_document'
+      'is_shop_size_correct'
     ];
-    return requiredControls.every((control) => this.hasValue(control));
+    return hasDoc && requiredControls.every((control) => this.hasValue(control));
   }
 
   submit(): void {

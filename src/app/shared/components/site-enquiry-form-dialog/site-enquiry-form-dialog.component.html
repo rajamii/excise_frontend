@@ -14,41 +14,130 @@
   </div>
   <form [formGroup]="form">
   <mat-horizontal-stepper>
+    <!-- STEP 1: Location Restrictions -->
     <mat-step [stepControl]="form">
       <ng-template matStepLabel>Location Restrictions</ng-template>
 
+      <!-- 1. Worship Place -->
       <div class="question">
-        <div class="label">1. Whether there is any traditional place of Public Worship like Mandir, Gumpa, Church etc?</div>
+        <div class="label">1. Whether there is any traditional place of Public Worship like Mandir, Gumpa, Church etc ?</div>
         <mat-radio-group formControlName="has_traditional_place" class="radio-row">
           <mat-radio-button [value]="true">Yes</mat-radio-button>
           <mat-radio-button [value]="false">No</mat-radio-button>
         </mat-radio-group>
       </div>
 
-      <div *ngIf="shouldShow('has_traditional_place')">
+      <div *ngIf="shouldShow('has_traditional_place')" class="sub-section">
         <mat-form-field appearance="outline">
-          <mat-label>Distance from site (ft.)</mat-label>
+          <mat-label>a. Distance of the nearest traditional place of Public Worship like Mandir, Gumpa, Church etc from the proposed site(in ft.)</mat-label>
           <input matInput type="number" formControlName="traditional_place_distance" placeholder="Enter distance in feet">
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Name of place of worship</mat-label>
-          <textarea matInput rows="2" maxlength="1000" formControlName="traditional_place_name"></textarea>
+          <mat-label>b. Name of the place of Worship</mat-label>
+          <textarea matInput rows="2" maxlength="1000" formControlName="traditional_place_name" placeholder="Enter name of place of worship"></textarea>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Nature of place of worship</mat-label>
-          <textarea matInput rows="2" maxlength="1000" formControlName="traditional_place_nature"></textarea>
+          <mat-label>c. Nature of the place of worship</mat-label>
+          <textarea matInput rows="2" maxlength="1000" formControlName="traditional_place_nature" placeholder="Enter nature of place of worship"></textarea>
+        </mat-form-field>
+
+        <div class="question sub-question">
+          <mat-form-field appearance="outline">
+            <mat-label>d. Nature of Construction</mat-label>
+            <input matInput formControlName="traditional_place_construction" placeholder="Enter nature of construction (e.g. RCC, Wooden Structure, etc.)">
+          </mat-form-field>
+        </div>
+      </div>
+
+      <!-- 2. Educational Institution -->
+      <div class="question">
+        <div class="label">2. Whether there is any educational institution ?</div>
+        <mat-radio-group formControlName="has_educational_institution" class="radio-row">
+          <mat-radio-button [value]="true">Yes</mat-radio-button>
+          <mat-radio-button [value]="false">No</mat-radio-button>
+        </mat-radio-group>
+      </div>
+
+      <div *ngIf="shouldShow('has_educational_institution')" class="sub-section">
+        <mat-form-field appearance="outline">
+          <mat-label>a. Distance of the nearest educational institution recognized by State Govt. or Central Govt established by law from the proposed site (in ft)</mat-label>
+          <input matInput type="number" formControlName="educational_institution_distance" placeholder="Enter distance in feet">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>b. Name of the institution</mat-label>
+          <textarea matInput rows="2" maxlength="1000" formControlName="educational_institution_name" placeholder="Enter name of institution"></textarea>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>c. Nature of the institution</mat-label>
+          <textarea matInput rows="2" maxlength="1000" formControlName="educational_institution_nature" placeholder="Enter nature of institution"></textarea>
         </mat-form-field>
       </div>
 
+      <!-- 3. Hospital -->
       <div class="question">
-        <div class="label">Nature of construction</div>
-        <mat-radio-group formControlName="traditional_place_construction" class="radio-row">
-          <mat-radio-button value="rcc">RCC</mat-radio-button>
-          <mat-radio-button value="wooden_structure">Wooden Structure</mat-radio-button>
-          <mat-radio-button value="temporary">Temporary</mat-radio-button>
+        <div class="label">3. Whether there is any Hospital ?</div>
+        <mat-radio-group formControlName="has_hospital" class="radio-row">
+          <mat-radio-button [value]="true">Yes</mat-radio-button>
+          <mat-radio-button [value]="false">No</mat-radio-button>
         </mat-radio-group>
+      </div>
+
+      <div *ngIf="shouldShow('has_hospital')" class="sub-section">
+        <mat-form-field appearance="outline">
+          <mat-label>a. Distance of the nearest Hospital for the public use from the proposed site (in ft)</mat-label>
+          <input matInput type="number" formControlName="hospital_distance" placeholder="Enter distance in feet">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>b. Name of the Hospital</mat-label>
+          <textarea matInput rows="2" maxlength="1000" formControlName="hospital_name" placeholder="Enter hospital name"></textarea>
+        </mat-form-field>
+      </div>
+
+      <!-- 4. Taxi Stand -->
+      <div class="question">
+        <div class="label">4. Whether there is any Taxi Stand ?</div>
+        <mat-radio-group formControlName="has_taxi_stand" class="radio-row">
+          <mat-radio-button [value]="true">Yes</mat-radio-button>
+          <mat-radio-button [value]="false">No</mat-radio-button>
+        </mat-radio-group>
+      </div>
+
+      <div *ngIf="shouldShow('has_taxi_stand')" class="sub-section">
+        <mat-form-field appearance="outline">
+          <mat-label>a. Name of the Nearest Taxi Stand</mat-label>
+          <textarea matInput rows="2" maxlength="1000" formControlName="taxi_stand_name" placeholder="Enter taxi stand name"></textarea>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>b. Distance of the nearest Taxi Stand from the proposed site (in ft.)</mat-label>
+          <input matInput type="number" formControlName="taxi_stand_distance" placeholder="Enter distance in feet">
+        </mat-form-field>
+      </div>
+
+      <!-- 5. Inter-connected -->
+      <div class="question">
+        <div class="label">5. Whether the proposed site is inter-connected with Grocery Shop, Pan Shop, Vegetable Shop & Residency ?</div>
+        <mat-radio-group formControlName="is_interconnected_with_shops" class="radio-row">
+          <mat-radio-button [value]="true">Yes</mat-radio-button>
+          <mat-radio-button [value]="false">No</mat-radio-button>
+        </mat-radio-group>
+      </div>
+
+      <div *ngIf="shouldShow('is_interconnected_with_shops')" class="sub-section">
+        <mat-form-field appearance="outline">
+          <mat-label>Remarks</mat-label>
+          <textarea matInput rows="2" formControlName="interconnectivity_remarks" placeholder="Enter interconnectivity remarks"></textarea>
+        </mat-form-field>
+      </div>
+
+      <!-- 6. Comments from Enquiry Officer -->
+      <div class="question">
+        <div class="label">6. Any other comments from the enquiry officer</div>
+        <mat-form-field appearance="outline">
+          <mat-label>Any other comments from the enquiry officer</mat-label>
+          <textarea matInput rows="2" formControlName="enquiry_officer_comments" placeholder="Enter comments if any"></textarea>
+        </mat-form-field>
       </div>
 
       <div class="step-actions">
@@ -60,123 +149,104 @@
       </div>
     </mat-step>
 
+    <!-- STEP 2: Other Enquiry Points -->
     <mat-step [stepControl]="form">
-      <ng-template matStepLabel>Site & Document Checks</ng-template>
+      <ng-template matStepLabel>Other Enquiry Points</ng-template>
 
-      <div class="question"><div class="label">Educational institution nearby?</div>
-        <mat-radio-group formControlName="has_educational_institution" class="radio-row">
+      <!-- 1. Shop Construction Type -->
+      <div class="question">
+        <div class="label">1. Type of construction of proposed shop</div>
+        <mat-radio-group formControlName="has_shop_construction" class="radio-row">
           <mat-radio-button [value]="true">Yes</mat-radio-button>
           <mat-radio-button [value]="false">No</mat-radio-button>
         </mat-radio-group>
       </div>
-      <div *ngIf="shouldShow('has_educational_institution')">
+
+      <div *ngIf="shouldShow('has_shop_construction')" class="sub-section">
         <mat-form-field appearance="outline">
-          <mat-label>Educational institution distance (ft.)</mat-label>
-          <input matInput type="number" formControlName="educational_institution_distance">
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Educational institution name</mat-label>
-          <textarea matInput rows="2" maxlength="1000" formControlName="educational_institution_name"></textarea>
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Nature of educational institution</mat-label>
-          <textarea matInput rows="2" maxlength="1000" formControlName="educational_institution_nature"></textarea>
+          <mat-label>Type of construction (e.g. RCC, Wooden Structure, etc.)</mat-label>
+          <input matInput formControlName="shop_construction_type" placeholder="Enter type of construction">
         </mat-form-field>
       </div>
 
-      <div class="question"><div class="label">Hospital nearby?</div>
-        <mat-radio-group formControlName="has_hospital" class="radio-row">
-          <mat-radio-button [value]="true">Yes</mat-radio-button>
-          <mat-radio-button [value]="false">No</mat-radio-button>
-        </mat-radio-group>
-      </div>
-      <div *ngIf="shouldShow('has_hospital')">
-        <mat-form-field appearance="outline">
-          <mat-label>Hospital distance (ft.)</mat-label>
-          <input matInput type="number" formControlName="hospital_distance">
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Hospital name</mat-label>
-          <textarea matInput rows="2" maxlength="1000" formControlName="hospital_name"></textarea>
-        </mat-form-field>
-      </div>
-
-      <div class="question"><div class="label">Taxi stand nearby?</div>
-        <mat-radio-group formControlName="has_taxi_stand" class="radio-row">
-          <mat-radio-button [value]="true">Yes</mat-radio-button>
-          <mat-radio-button [value]="false">No</mat-radio-button>
-        </mat-radio-group>
-      </div>
-      <div *ngIf="shouldShow('has_taxi_stand')">
-        <mat-form-field appearance="outline">
-          <mat-label>Taxi stand distance (ft.)</mat-label>
-          <input matInput type="number" formControlName="taxi_stand_distance">
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Taxi stand name</mat-label>
-          <textarea matInput rows="2" maxlength="1000" formControlName="taxi_stand_name"></textarea>
-        </mat-form-field>
-      </div>
-
-      <div class="question"><div class="label">Interconnected with other shops?</div>
-        <mat-radio-group formControlName="is_interconnected_with_shops" class="radio-row">
-          <mat-radio-button [value]="true">Yes</mat-radio-button>
-          <mat-radio-button [value]="false">No</mat-radio-button>
-        </mat-radio-group>
-      </div>
-      <mat-form-field appearance="outline" *ngIf="shouldShow('is_interconnected_with_shops')">
-        <mat-label>Interconnectivity remarks</mat-label>
-        <textarea matInput rows="2" formControlName="interconnectivity_remarks"></textarea>
-      </mat-form-field>
-
-      <div class="question"><div class="label">Shop construction type</div>
-        <mat-radio-group formControlName="shop_construction_type" class="radio-row">
-          <mat-radio-button value="rcc">RCC</mat-radio-button>
-          <mat-radio-button value="wooden_structure">Wooden Structure</mat-radio-button>
-          <mat-radio-button value="temporary">Temporary</mat-radio-button>
-        </mat-radio-group>
-      </div>
-
-      <div class="question"><div class="label">Excise shops nearby?</div>
+      <!-- 2. Nearby Excise Shop -->
+      <div class="question">
+        <div class="label">2. Whether there is any FLR shop, FLB shop and other Excise licensee within a radius of approximately, 100 m</div>
         <mat-radio-group formControlName="has_excise_shops_nearby" class="radio-row">
           <mat-radio-button [value]="true">Yes</mat-radio-button>
           <mat-radio-button [value]="false">No</mat-radio-button>
         </mat-radio-group>
       </div>
-      <div *ngIf="shouldShow('has_excise_shops_nearby')">
+
+      <div *ngIf="shouldShow('has_excise_shops_nearby')" class="sub-section">
         <mat-form-field appearance="outline">
-          <mat-label>Nearby excise shop count</mat-label>
-          <input matInput type="number" formControlName="nearby_excise_shop_count">
+          <mat-label>Numbers of FLR shop, FLB shop and other Excise licensee within a radius of approximately, 100 m</mat-label>
+          <input matInput type="number" formControlName="nearby_excise_shop_count" placeholder="Enter count">
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Nearby excise shops remarks</mat-label>
-          <textarea matInput rows="2" formControlName="nearby_excise_shops_remarks"></textarea>
+          <mat-label>Remarks</mat-label>
+          <textarea matInput rows="2" formControlName="nearby_excise_shops_remarks" placeholder="Enter remarks"></textarea>
         </mat-form-field>
       </div>
 
-      <div class="question"><div class="label">Is shop on highway?</div>
+      <!-- 3. Highway -->
+      <div class="question">
+        <div class="label">3. Whether the proposed site falls on the State Highway/ National Highway?</div>
         <mat-radio-group formControlName="is_on_highway" class="radio-row">
           <mat-radio-button [value]="true">Yes</mat-radio-button>
           <mat-radio-button [value]="false">No</mat-radio-button>
         </mat-radio-group>
       </div>
-      <mat-form-field appearance="outline" *ngIf="shouldShow('is_on_highway')">
-        <mat-label>Highway name</mat-label>
-        <input matInput formControlName="highway_name">
-      </mat-form-field>
 
-      <div class="question"><div class="label">Shop size correct?</div>
+      <div *ngIf="shouldShow('is_on_highway')" class="sub-section">
+        <mat-form-field appearance="outline">
+          <mat-label>Highway Details / Name</mat-label>
+          <input matInput formControlName="highway_name" placeholder="Enter State / National Highway name">
+        </mat-form-field>
+      </div>
+
+      <!-- 4. Coordinates -->
+      <div class="question">
+        <div class="label">4. Latitude - Longitude</div>
+        <div class="coordinates-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Latitude</mat-label>
+            <input matInput type="number" formControlName="latitude" step="0.000001" placeholder="e.g. 27.3389">
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Longitude</mat-label>
+            <input matInput type="number" formControlName="longitude" step="0.000001" placeholder="e.g. 88.6065">
+          </mat-form-field>
+        </div>
+        <div class="location-btn-row">
+          <button mat-stroked-button color="primary" type="button" (click)="captureCurrentLocation()" [disabled]="isLocating">
+            <mat-icon>my_location</mat-icon>
+            {{ isLocating ? 'Fetching Location...' : 'Use Current Location' }}
+          </button>
+          <span class="location-success" *ngIf="locationMessage">{{ locationMessage }}</span>
+          <span class="location-error" *ngIf="locationError">{{ locationError }}</span>
+        </div>
+      </div>
+
+      <!-- 5. Shop Size -->
+      <div class="question">
+        <div class="label">5. Whether the size of the shop premises provided by the applicant is correct or not (remarks if any)</div>
         <mat-radio-group formControlName="is_shop_size_correct" class="radio-row">
           <mat-radio-button [value]="true">Yes</mat-radio-button>
           <mat-radio-button [value]="false">No</mat-radio-button>
         </mat-radio-group>
       </div>
-      <mat-form-field appearance="outline" *ngIf="shouldShow('is_shop_size_correct', false)">
-        <mat-label>Shop size remarks</mat-label>
-        <textarea matInput rows="2" formControlName="shop_size_remarks"></textarea>
-      </mat-form-field>
 
-      <div class="question"><div class="label">Upload shop image document</div>
+      <div *ngIf="shouldShow('is_shop_size_correct', false)" class="sub-section">
+        <mat-form-field appearance="outline">
+          <mat-label>Remarks if any</mat-label>
+          <textarea matInput rows="2" formControlName="shop_size_remarks" placeholder="Enter shop size remarks"></textarea>
+        </mat-form-field>
+      </div>
+
+      <!-- Upload shop image -->
+      <div class="question">
+        <div class="label">Upload shop image document</div>
         <input type="file" (change)="onFileSelected($event)" accept="image/*,.pdf">
         <div class="file-name" *ngIf="selectedFileName">{{ selectedFileName }}</div>
         <a class="existing-doc" *ngIf="existingShopImageUrl" [href]="existingShopImageUrl" target="_blank" rel="noopener">
@@ -184,17 +254,13 @@
         </a>
       </div>
 
-      <div class="question"><div class="label">Shop coordinates</div></div>
-      <mat-form-field appearance="outline">
-        <mat-label>Latitude</mat-label>
-        <input matInput type="number" formControlName="latitude" step="0.000001">
-      </mat-form-field>
-      <mat-form-field appearance="outline">
-        <mat-label>Longitude</mat-label>
-        <input matInput type="number" formControlName="longitude" step="0.000001">
-      </mat-form-field>
-      <div class="step-actions">
-        <button mat-stroked-button type="button" (click)="captureCurrentLocation()">Use Current Location</button>
+      <!-- 6. Comments from Enquiry Officer -->
+      <div class="question">
+        <div class="label">6. Any other comments from the enquiry officer</div>
+        <mat-form-field appearance="outline">
+          <mat-label>Any other comments from the enquiry officer</mat-label>
+          <textarea matInput rows="2" formControlName="additional_enquiry_officer_comments" placeholder="Enter comments if any"></textarea>
+        </mat-form-field>
       </div>
 
       <div class="step-actions">
@@ -206,60 +272,78 @@
       </div>
     </mat-step>
 
+    <!-- STEP 3: Whether the following documents have duly been verified and found in order:- -->
     <mat-step [stepControl]="form">
-      <ng-template matStepLabel>Final Recommendation</ng-template>
+      <ng-template matStepLabel>Whether the following documents have duly been verified and found in order:-</ng-template>
 
-      <div class="question"><div class="label">ID proof valid?</div>
+      <!-- 1. Certificate of Identification -->
+      <div class="question">
+        <div class="label">1. Document like Certificate of Identification/ Sikkim Subject / RC is furnished and duly verified by concern authority</div>
         <mat-radio-group formControlName="has_id_proof" class="radio-row">
           <mat-radio-button [value]="true">Yes</mat-radio-button>
           <mat-radio-button [value]="false">No</mat-radio-button>
         </mat-radio-group>
       </div>
       <mat-form-field appearance="outline" *ngIf="shouldShow('has_id_proof', false)">
-        <mat-label>ID proof comments</mat-label>
+        <mat-label>ID proof remarks / comments</mat-label>
         <textarea matInput rows="2" formControlName="id_proof_comments"></textarea>
       </mat-form-field>
-      <div class="question"><div class="label">Age proof valid?</div>
+
+      <!-- 2. Proof of Age -->
+      <div class="question">
+        <div class="label">2. Proof of age of the applicant, in case when the applicant is an individual or individual(s).</div>
         <mat-radio-group formControlName="has_age_proof" class="radio-row">
           <mat-radio-button [value]="true">Yes</mat-radio-button>
           <mat-radio-button [value]="false">No</mat-radio-button>
         </mat-radio-group>
       </div>
       <mat-form-field appearance="outline" *ngIf="shouldShow('has_age_proof', false)">
-        <mat-label>Age proof comments</mat-label>
+        <mat-label>Age proof remarks / comments</mat-label>
         <textarea matInput rows="2" formControlName="age_proof_comments"></textarea>
       </mat-form-field>
-      <div class="question"><div class="label">NOC from landlord?</div>
+
+      <!-- 3. NOC from Landlord -->
+      <div class="question">
+        <div class="label">3. NOC from the Landlord regarding the use of premises for a period of 4 years to run the excise license applied for, if the premises is rented or leased or sub leased.</div>
         <mat-radio-group formControlName="has_noc_from_landlord" class="radio-row">
           <mat-radio-button [value]="true">Yes</mat-radio-button>
           <mat-radio-button [value]="false">No</mat-radio-button>
         </mat-radio-group>
       </div>
       <mat-form-field appearance="outline" *ngIf="shouldShow('has_noc_from_landlord', false)">
-        <mat-label>NOC comments</mat-label>
+        <mat-label>NOC remarks / comments</mat-label>
         <textarea matInput rows="2" formControlName="noc_comments"></textarea>
       </mat-form-field>
-      <div class="question"><div class="label">Ownership proof valid?</div>
+
+      <!-- 4. Parcha / Allotment Paper -->
+      <div class="question">
+        <div class="label">4. Parcha/Allotment Paper/ Sale deed, if the premises is owned by the applicant.</div>
         <mat-radio-group formControlName="has_ownership_proof" class="radio-row">
           <mat-radio-button [value]="true">Yes</mat-radio-button>
           <mat-radio-button [value]="false">No</mat-radio-button>
         </mat-radio-group>
       </div>
       <mat-form-field appearance="outline" *ngIf="shouldShow('has_ownership_proof', false)">
-        <mat-label>Ownership proof comments</mat-label>
+        <mat-label>Ownership proof remarks / comments</mat-label>
         <textarea matInput rows="2" formControlName="ownership_proof_comments"></textarea>
       </mat-form-field>
-      <div class="question"><div class="label">Trade license valid?</div>
+
+      <!-- 5. Trade License -->
+      <div class="question">
+        <div class="label">5. Whether Trade License is furnished and duly verified by concern authority.</div>
         <mat-radio-group formControlName="has_trade_license" class="radio-row">
           <mat-radio-button [value]="true">Yes</mat-radio-button>
           <mat-radio-button [value]="false">No</mat-radio-button>
         </mat-radio-group>
       </div>
       <mat-form-field appearance="outline" *ngIf="shouldShow('has_trade_license', false)">
-        <mat-label>Trade license comments</mat-label>
+        <mat-label>Trade license remarks / comments</mat-label>
         <textarea matInput rows="2" formControlName="trade_license_comments"></textarea>
       </mat-form-field>
-      <div class="question"><div class="label">Proposes barman/salesman?</div>
+
+      <!-- 6. Barman / Salesman -->
+      <div class="question">
+        <div class="label">6. Whether the applicant has proposed to appoint Barman/Salesman for running the shop.</div>
         <mat-radio-group formControlName="proposes_barman_or_salesman" class="radio-row">
           <mat-radio-button [value]="true">Yes</mat-radio-button>
           <mat-radio-button [value]="false">No</mat-radio-button>
@@ -269,7 +353,10 @@
         <mat-label>Worker proposal comments</mat-label>
         <textarea matInput rows="2" formControlName="worker_proposal_comments"></textarea>
       </mat-form-field>
-      <div class="question"><div class="label">Worker docs valid?</div>
+
+      <!-- 7. Worker Docs -->
+      <div class="question">
+        <div class="label">7. Whether the document submitted by applicant for Salesman/Barman are found to be in order.</div>
         <mat-radio-group formControlName="worker_docs_valid" class="radio-row">
           <mat-radio-button [value]="true">Yes</mat-radio-button>
           <mat-radio-button [value]="false">No</mat-radio-button>
@@ -279,7 +366,10 @@
         <mat-label>Worker docs comments</mat-label>
         <textarea matInput rows="2" formControlName="worker_docs_comments"></textarea>
       </mat-form-field>
-      <div class="question"><div class="label">License recommendation</div>
+
+      <!-- 8. Recommendation -->
+      <div class="question">
+        <div class="label">8. Whether the proposal for grant of license is recommended:</div>
         <mat-radio-group formControlName="license_recommendation" class="radio-row">
           <mat-radio-button [value]="true">Recommend</mat-radio-button>
           <mat-radio-button [value]="false">Not Recommend</mat-radio-button>
@@ -290,25 +380,23 @@
         <textarea matInput rows="2" formControlName="recommendation_comments"></textarea>
       </mat-form-field>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Enquiry officer comments</mat-label>
-        <textarea matInput rows="2" formControlName="enquiry_officer_comments"></textarea>
-      </mat-form-field>
+      <!-- 9. Special Remarks -->
+      <div class="question">
+        <div class="label">9. Special Remarks, if any :</div>
+        <mat-form-field appearance="outline">
+          <mat-label>Special Remarks, if any</mat-label>
+          <textarea matInput rows="3" formControlName="special_remarks"></textarea>
+        </mat-form-field>
+      </div>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Additional enquiry officer comments</mat-label>
-        <textarea matInput rows="2" formControlName="additional_enquiry_officer_comments"></textarea>
-      </mat-form-field>
-
-      <mat-form-field appearance="outline">
-        <mat-label>Special remarks</mat-label>
-        <textarea matInput rows="3" formControlName="special_remarks"></textarea>
-      </mat-form-field>
-
-      <mat-form-field appearance="outline">
-        <mat-label>Reporting place</mat-label>
-        <input matInput formControlName="reporting_place">
-      </mat-form-field>
+      <!-- 10. Reporting Place / Name of Enquiry Officer -->
+      <div class="question">
+        <div class="label">10. Reporting Place / Location:</div>
+        <mat-form-field appearance="outline">
+          <mat-label>Reporting place</mat-label>
+          <input matInput formControlName="reporting_place" placeholder="e.g. Gangtok, Sikkim">
+        </mat-form-field>
+      </div>
 
       <div class="step-actions">
         <button mat-button matStepperPrevious type="button">Back</button>

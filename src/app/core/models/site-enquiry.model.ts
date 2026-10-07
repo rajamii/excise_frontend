@@ -24,7 +24,8 @@ export class SiteEnquiryFormModel {
 
   enquiryOfficerComments?: string;
 
-  shopConstructionType!: 'RCC' | 'Wooden Structure' | 'Temporary';
+  hasShopConstruction?: boolean;
+  shopConstructionType?: string;
 
   hasExciseShopsNearby!: boolean;
   nearbyExciseShopCount?: number;
