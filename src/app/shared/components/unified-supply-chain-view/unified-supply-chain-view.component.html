@@ -1400,10 +1400,22 @@
                                     <td class="fw-semibold bg-light">Location Category</td>
                                     <td>{{ applicationData.location_category || applicationData.locationCategory || 'Not Available' }}</td>
                                 </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Location Name</td>
-                                    <td>{{ applicationData.location_name || applicationData.locationName || 'Not Available' }}</td>
-                                </tr>
+                                <ng-container *ngIf="isRuralLocation(); else urbanLocationBlock">
+                                    <tr>
+                                        <td class="fw-semibold bg-light">GPU</td>
+                                        <td>{{ applicationData.location_subcategory || applicationData.locationSubcategory || applicationData.location_name || applicationData.locationName || 'Not Available' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-semibold bg-light">Block</td>
+                                        <td>{{ applicationData.block_name || applicationData.blockName || applicationData.block || 'Not Available' }}</td>
+                                    </tr>
+                                </ng-container>
+                                <ng-template #urbanLocationBlock>
+                                    <tr>
+                                        <td class="fw-semibold bg-light">Location Subcategory</td>
+                                        <td>{{ applicationData.location_subcategory || applicationData.locationSubcategory || applicationData.location_name || applicationData.locationName || 'Not Available' }}</td>
+                                    </tr>
+                                </ng-template>
                                 <tr>
                                     <td class="fw-semibold bg-light">Ward Name</td>
                                     <td>{{ applicationData.ward_name || applicationData.wardName || 'Not Available' }}</td>

@@ -145,8 +145,13 @@ export interface UnifiedApplicationData {
 
     location_category?: string;
     locationCategory?: string;
+    location_subcategory?: string;
+    locationSubcategory?: string;
     location_name?: string;
     locationName?: string;
+    block_name?: string;
+    blockName?: string;
+    block?: string;
     ward_name?: string;
     wardName?: string;
     business_address?: string;
@@ -4973,6 +4978,11 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     isNewLicense(): boolean { return this.applicationType === 'new-license'; }
     isRenewal(): boolean { return this.applicationType === 'license-renewal'; }
     isSpecialPermit(): boolean { return this.applicationType === 'special-permit'; }
+    isRuralLocation(): boolean {
+        if (!this.applicationData) return false;
+        const cat = String(this.applicationData.location_category || this.applicationData.locationCategory || '').trim().toLowerCase();
+        return cat.includes('rural');
+    }
     isSalesmanRenewal(): boolean {
         if (!this.applicationData) return false;
         const id = String(this.applicationData.referenceNo || this.applicationData.id || '').toUpperCase();
