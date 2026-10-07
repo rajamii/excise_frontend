@@ -470,19 +470,25 @@
                 </div>
               </div>
 
-              <mat-form-field appearance="outline" class="full-select">
-                <mat-label>District</mat-label>
-                <mat-select formControlName="district" (selectionChange)="onDistrictChange($event.value)">
-                  <mat-option *ngFor="let d of districts" [value]="d.districtCode">{{ d.district }}</mat-option>
-                </mat-select>
-              </mat-form-field>
+              <div class="field-group">
+                <label>District <span class="req">*</span></label>
+                <div class="select-box" [class.has-value]="registrationForm.get('district')?.value">
+                  <mat-icon class="input-icon">location_city</mat-icon>
+                  <mat-select formControlName="district" placeholder="Select District" (selectionChange)="onDistrictChange($event.value)">
+                    <mat-option *ngFor="let d of districts" [value]="d.districtCode">{{ d.district }}</mat-option>
+                  </mat-select>
+                </div>
+              </div>
 
-              <mat-form-field appearance="outline" class="full-select">
-                <mat-label>Subdivision</mat-label>
-                <mat-select formControlName="subdivision" [disabled]="!registrationForm.get('district')?.value">
-                  <mat-option *ngFor="let s of subdivisions" [value]="s.subdivisionCode">{{ s.subdivision }}</mat-option>
-                </mat-select>
-              </mat-form-field>
+              <div class="field-group">
+                <label>Subdivision <span class="req">*</span></label>
+                <div class="select-box" [class.disabled]="!registrationForm.get('district')?.value || subdivisions.length === 0" [class.has-value]="registrationForm.get('subdivision')?.value">
+                  <mat-icon class="input-icon">map</mat-icon>
+                  <mat-select formControlName="subdivision" [placeholder]="!registrationForm.get('district')?.value ? 'Select District First' : (subdivisions.length === 0 ? 'No Subdivisions Found' : 'Select Subdivision')" [disabled]="!registrationForm.get('district')?.value || subdivisions.length === 0">
+                    <mat-option *ngFor="let s of subdivisions" [value]="s.subdivisionCode">{{ s.subdivision }}</mat-option>
+                  </mat-select>
+                </div>
+              </div>
 
               <div class="field-group">
                 <label>Password <span class="req">*</span></label>

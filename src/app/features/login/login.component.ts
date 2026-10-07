@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
 import {
   FormGroup,
   FormBuilder,
@@ -69,6 +69,7 @@ export class LoginComponent extends BaseComponent {
 
   districts: District[] = [];
   subdivisions: Subdivision[] = [];
+  allSubdivisions: Subdivision[] = [];
   loadingDistricts = false;
   loadingSubdivisions = false;
 
@@ -78,6 +79,7 @@ export class LoginComponent extends BaseComponent {
     protected override authService: AuthService,
     protected override masterService: MasterService,
     private fb: FormBuilder,
+    private cdr: ChangeDetectorRef,
   ) {
     super(baseDependency);
 
@@ -271,6 +273,7 @@ export class LoginComponent extends BaseComponent {
       }
     });
     this.fetchDistricts();
+    this.fetchSubdivisions();
   }
 
   switchToSignUp() {
@@ -405,10 +408,11 @@ export class LoginComponent extends BaseComponent {
   // Fetch districts
   fetchDistricts(): void {
     this.loadingDistricts = true;
-    this.masterService.getDistrict().subscribe({
+    this.masterService.getDistricts().subscribe({
       next: (districts) => {
         this.districts = districts;
         this.loadingDistricts = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Failed to load districts', err);
@@ -417,27 +421,89 @@ export class LoginComponent extends BaseComponent {
     });
   }
 
-  // Fetch subdivisions based on selected district
-  onDistrictChange(districtCode: number): void {
-    if (!districtCode) {
-      this.subdivisions = [];
-      this.registrationForm.get('subdivision')?.reset();
-      return;
-    }
-
+  // Fetch all subdivisions for instant filtering (same as new license stepper)
+  fetchSubdivisions(): void {
     this.loadingSubdivisions = true;
-    this.masterService.getSubdivisionsByDistrict(districtCode).subscribe({
+    this.masterService.getSubdivisions().subscribe({
       next: (subdivisions) => {
-        this.subdivisions = subdivisions;
+        this.allSubdivisions = subdivisions;
         this.loadingSubdivisions = false;
-        this.registrationForm.get('subdivision')?.reset();
+        const currentDist = this.registrationForm.get('district')?.value;
+        if (currentDist) {
+          this.onDistrictChange(currentDist);
+        }
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Failed to load subdivisions', err);
-        this.subdivisions = [];
         this.loadingSubdivisions = false;
       }
     });
+  }
+
+  // Fetch / filter subdivisions based on selected district
+  onDistrictChange(districtValue: any): void {
+    if (!districtValue) {
+      this.subdivisions = [];
+      this.registrationForm.get('subdivision')?.reset();
+      this.registrationForm.get('subdivision')?.disable();
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const selectedCode = Number(districtValue);
+    const district = this.districts.find(d => 
+      Number(d.districtCode) === selectedCode || 
+      Number(d.id) === selectedCode
+    );
+
+    const targetDistrictCode = district ? Number(district.districtCode) : selectedCode;
+    const targetDistrictId = district ? Number(district.id) : selectedCode;
+
+    // Filter instantly from preloaded subdivisions
+    if (this.allSubdivisions && this.allSubdivisions.length > 0) {
+      this.subdivisions = this.allSubdivisions.filter(s => {
+        const item = s as any;
+        const sDistCode = Number(s.districtCode ?? item.district_code ?? item.district?.districtCode ?? item.district_code_id);
+        const sDistId = Number(item.districtId ?? item.district_id ?? item.district?.id);
+        return sDistCode === targetDistrictCode || (targetDistrictId && sDistId === targetDistrictId);
+      });
+    }
+
+    // Fallback: fetch via API if filtered list is empty
+    if (!this.subdivisions || this.subdivisions.length === 0) {
+      this.loadingSubdivisions = true;
+      this.masterService.getSubdivisionsByDistrict(targetDistrictCode || selectedCode).subscribe({
+        next: (subs) => {
+          if (Array.isArray(subs)) {
+            this.subdivisions = subs;
+          }
+          this.loadingSubdivisions = false;
+          this.syncSubdivisionControlState();
+        },
+        error: (err) => {
+          console.error('Failed to load subdivisions for district', err);
+          this.loadingSubdivisions = false;
+          this.syncSubdivisionControlState();
+        }
+      });
+    } else {
+      this.syncSubdivisionControlState();
+    }
+  }
+
+  private syncSubdivisionControlState(): void {
+    const subControl = this.registrationForm.get('subdivision');
+    const currentVal = subControl?.value;
+    if (currentVal && !this.subdivisions.some(s => s.subdivisionCode === currentVal || s.id === currentVal)) {
+      subControl?.reset();
+    }
+    if (this.subdivisions.length > 0) {
+      subControl?.enable();
+    } else {
+      subControl?.disable();
+    }
+    this.cdr.markForCheck();
   }
 
   checkUsername(): void {
