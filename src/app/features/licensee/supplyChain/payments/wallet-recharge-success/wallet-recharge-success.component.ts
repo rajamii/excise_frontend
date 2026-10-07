@@ -71,7 +71,7 @@ export class WalletRechargeSuccessComponent {
         params.get('payment_module_code') ||
         ''
       ).trim();
-      const appId = String(params.get('applicationId') || params.get('application_id') || params.get('payer_id') || params.get('payerId') || '').trim();
+      const appId = String(params.get('applicationId') || params.get('application_id') || '').trim();
       const sbmId = String(params.get('sbmApplicationId') || params.get('sbm_application_id') || '').trim();
       const sbmSub = params.get('sbmSubmitted') === '1' || params.get('sbm_submitted') === '1' || params.get('sbmSubmitted') === 'true' || params.get('sbm_submitted') === 'true';
 
@@ -174,8 +174,8 @@ export class WalletRechargeSuccessComponent {
       this.headerTitle = this.statusKind === 'failed' ? 'Wallet Recharge Failed' : 'Wallet Recharge Successful';
       this.headerSubtitle =
         this.statusKind === 'failed'
-          ? 'Payment could not be completed. Please retry or contact support if the amount is debited.'
-          : 'Amount credited for testing (dummy flow).';
+          ? 'Payment could not be completed. Please retry or contact support if the amount was debited.'
+          : 'Your wallet has been credited successfully.';
 
       if (normalized === 'failed') this.statusLabel = 'Failed';
       else if (normalized === 'success') this.statusLabel = 'Payment Successful';
