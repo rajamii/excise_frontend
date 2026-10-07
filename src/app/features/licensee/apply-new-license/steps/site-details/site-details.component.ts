@@ -686,15 +686,17 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   private loadLocationCategories(): void {
     this.masterService.getLocationCategories().subscribe({
       next: (data: any[]) => {
-        this.locationCategories = data.map(item => ({
-          id: item.id,
-          categoryName: item.categoryName || item.category_name,
-          description: item.description,
-          isActive: item.isActive ?? item.is_active ?? true,
-          isRural: item.isRural ?? item.is_rural ?? false,
-          status: item.status,
-          subcategoryCount: item.subcategoryCount || item.subcategory_count
-        }));
+        this.locationCategories = data
+          .filter(item => (item.isActive ?? item.is_active ?? true))
+          .map(item => ({
+            id: item.id,
+            categoryName: item.categoryName || item.category_name,
+            description: item.description,
+            isActive: item.isActive ?? item.is_active ?? true,
+            isRural: item.isRural ?? item.is_rural ?? false,
+            status: item.status,
+            subcategoryCount: item.subcategoryCount || item.subcategory_count
+          }));
         sessionStorage.setItem('locationCategories', JSON.stringify(this.locationCategories));
         console.log('✅ Location Categories loaded:', this.locationCategories.length);
         this.restoreAllFromSession();
@@ -706,16 +708,18 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   private loadLocationSubcategories(): void {
     this.masterService.getLocationSubcategories().subscribe({
       next: (data: any[]) => {
-        this.allLocationSubcategories = data.map(item => ({
-          id: item.id,
-          subcategoryName: item.subcategoryName || item.subcategory_name,
-          categoryId: item.categoryId || item.category_id || item.category,
-          categoryName: item.categoryName || item.category_name,
-          description: item.description,
-          isActive: item.isActive ?? item.is_active ?? true,
-          status: item.status,
-          subDivision: item.subDivision || item.sub_division
-        }));
+        this.allLocationSubcategories = data
+          .filter(item => (item.isActive ?? item.is_active ?? true))
+          .map(item => ({
+            id: item.id,
+            subcategoryName: item.subcategoryName || item.subcategory_name,
+            categoryId: item.categoryId ?? item.category_id ?? item.category,
+            categoryName: item.categoryName || item.category_name,
+            description: item.description,
+            isActive: item.isActive ?? item.is_active ?? true,
+            status: item.status,
+            subDivision: item.subDivision ?? item.sub_division ?? item.sub_division_id
+          }));
         sessionStorage.setItem('locationSubcategories', JSON.stringify(this.allLocationSubcategories));
         console.log('✅ Location Subcategories loaded:', this.allLocationSubcategories.length);
         this.restoreAllFromSession();
@@ -727,13 +731,15 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   private loadLocations(): void {
     this.masterService.getLocations().subscribe({
       next: (data: any[]) => {
-        this.allLocations = data.map(item => ({
-          id: item.id,
-          locationCode: item.locationCode || item.location_code,
-          locationDescription: item.locationDescription || item.location_description,
-          districtCode: item.districtCode || item.district_code || item.district,
-          isActive: item.isActive ?? item.is_active ?? true
-        }));
+        this.allLocations = data
+          .filter(item => (item.isActive ?? item.is_active ?? true))
+          .map(item => ({
+            id: item.id,
+            locationCode: item.locationCode || item.location_code,
+            locationDescription: item.locationDescription || item.location_description,
+            districtCode: item.districtCode || item.district_code || item.district,
+            isActive: item.isActive ?? item.is_active ?? true
+          }));
         sessionStorage.setItem('locations', JSON.stringify(this.allLocations));
         console.log('✅ Locations loaded:', this.allLocations.length);
         this.restoreAllFromSession();
@@ -745,15 +751,18 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   private loadBlocks(): void {
     this.masterService.getBlocks().subscribe({
       next: (data: any[]) => {
-        this.allBlocks = data.map(item => ({
-          id: item.id,
-          blockName: item.blockName || item.block_name,
-          subcategory: item.subcategory,
-          subcategoryName: item.subcategoryName || item.subcategory_name,
-          isActive: item.isActive || item.is_active
-        }));
+        this.allBlocks = data
+          .filter(item => (item.isActive ?? item.is_active ?? true))
+          .map(item => ({
+            id: item.id,
+            blockName: item.gpuName || item.gpu_name || item.blockName || item.block_name,
+            gpuName: item.gpuName || item.gpu_name || item.blockName || item.block_name,
+            subcategory: item.subcategory,
+            subcategoryName: item.subcategoryName || item.subcategory_name,
+            isActive: item.isActive ?? item.is_active ?? true
+          }));
         sessionStorage.setItem('blocks', JSON.stringify(this.allBlocks));
-        console.log('✅ Blocks loaded:', this.allBlocks.length);
+        console.log('✅ Blocks/GPUs loaded:', this.allBlocks.length);
         this.restoreAllFromSession();
       },
       error: (err) => console.error('❌ Failed to load blocks:', err)
@@ -763,14 +772,16 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   private loadRuralWards(): void {
     this.masterService.getRuralWards().subscribe({
       next: (data: any[]) => {
-        this.allRuralWards = data.map(item => ({
-          id: item.id,
-          wardName: item.wardName || item.ward_name,
-          wardNumber: item.wardNumber || item.ward_number,
-          block: item.block,
-          blockName: item.blockName || item.block_name,
-          isActive: item.isActive || item.is_active
-        }));
+        this.allRuralWards = data
+          .filter(item => (item.isActive ?? item.is_active ?? true))
+          .map(item => ({
+            id: item.id,
+            wardName: item.wardName || item.ward_name,
+            wardNumber: item.wardNumber || item.ward_number,
+            block: item.block,
+            blockName: item.blockName || item.block_name || item.gpu_name || item.gpuName,
+            isActive: item.isActive ?? item.is_active ?? true
+          }));
         sessionStorage.setItem('ruralWards', JSON.stringify(this.allRuralWards));
         console.log('✅ Rural Wards loaded:', this.allRuralWards.length);
         this.restoreAllFromSession();
@@ -1083,11 +1094,11 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   }
 
   private filterBlocks(subcategoryId: number): void {
-    console.log('🔍 Filtering blocks for subcategory:', subcategoryId);
+    console.log('🔍 Filtering blocks/GPUs for subcategory:', subcategoryId);
     this.blocks = this.allBlocks.filter(
-      b => b.subcategory === subcategoryId
+      b => b.subcategory === subcategoryId && (b.isActive ?? true)
     );
-    console.log('✅ Filtered blocks:', this.blocks.length);
+    console.log('✅ Filtered blocks/GPUs:', this.blocks.length);
     const current = this.siteDetailsForm.get('block')?.value;
     if (current && !this.blocks.some(b => b.id === current)) {
       this.siteDetailsForm.patchValue({ block: null, ward: null }, { emitEvent: false });
@@ -1096,9 +1107,9 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   }
 
   private filterRuralWards(blockId: number): void {
-    console.log('🔍 Filtering rural wards for block:', blockId);
+    console.log('🔍 Filtering rural wards for block/GPU:', blockId);
     this.wards = this.allRuralWards.filter(
-      w => w.block === blockId
+      w => w.block === blockId && (w.isActive ?? true)
     );
     console.log('✅ Filtered rural wards:', this.wards.length);
     const current = this.siteDetailsForm.get('ward')?.value;
@@ -1128,12 +1139,20 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     wardCtrl?.updateValueAndValidity({ emitEvent: false });
   }
 
-  // Filter location subcategories by category
+  // Filter location subcategories by category and site subdivision
   private filterLocationSubcategories(categoryId: number): void {
     console.log('🔍 Filtering location subcategories for category:', categoryId);
-    this.locationSubcategories = this.allLocationSubcategories.filter(
-      sub => sub.categoryId === categoryId
-    );
+    const subdivisionId = this.siteDetailsForm.get('siteSubdivision')?.value;
+    
+    this.locationSubcategories = this.allLocationSubcategories.filter(sub => {
+      const matchCat = sub.categoryId === categoryId;
+      if (!matchCat) return false;
+      if (sub.isActive === false) return false;
+      if (subdivisionId && sub.subDivision) {
+        return Number(sub.subDivision) === Number(subdivisionId);
+      }
+      return true;
+    });
     console.log('✅ Filtered location subcategories:', this.locationSubcategories.length);
     
     const current = this.siteDetailsForm.get('locationSubcategory')?.value;
@@ -1309,11 +1328,11 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     return JSON.parse(storedData);
   }
 
-  // ✅ Helper to get block display name from loaded array
+  // ✅ Helper to get block/GPU display name from loaded array
   private getBlockDisplayName(blockId: number | null): string | null {
     if (!blockId) return null;
     const block = this.allBlocks.find(b => b.id === blockId);
-    return block?.blockName || null;
+    return block?.gpuName || block?.blockName || null;
   }
 
   // ✅ FIXED: Helper to get location display name from loaded array
@@ -1357,7 +1376,13 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   private updateErrorMessage(field: keyof typeof this.errorMessages) {
     const control = this.siteDetailsForm.get(field);
     if (control?.hasError('required')) {
-      this.errorMessages[field].set('This field is required');
+      if (field === 'locationSubcategory') {
+        this.errorMessages[field].set(this.isRuralSubdivision ? 'Please select GPU' : 'This field is required');
+      } else if (field === 'block') {
+        this.errorMessages[field].set('Please select Block');
+      } else {
+        this.errorMessages[field].set('This field is required');
+      }
     } else if (control?.hasError('pattern')) {
       if (field === 'pinCode') {
         this.errorMessages[field].set('PIN Code must be a 6-digit number');

@@ -85,13 +85,13 @@
           </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Location Subcategory</mat-label>
+          <mat-label>{{ isRuralSubdivision ? 'GPU' : 'Location Subcategory' }}</mat-label>
           <mat-select formControlName="locationSubcategory" required>
             @if (locationSubcategories.length === 0 && !siteDetailsForm.get('locationCategory')?.value) {
               <mat-option disabled>Please select category first</mat-option>
             }
             @if (locationSubcategories.length === 0 && siteDetailsForm.get('locationCategory')?.value) {
-              <mat-option disabled>No subcategories available</mat-option>
+              <mat-option disabled>{{ isRuralSubdivision ? 'No GPUs available' : 'No subcategories available' }}</mat-option>
             }
             @for (subcategory of locationSubcategories; track subcategory.id) {
               <mat-option [value]="subcategory.id">
@@ -112,11 +112,11 @@
                 <mat-option disabled>No blocks available</mat-option>
               }
               @if (blocks.length === 0 && !siteDetailsForm.get('locationSubcategory')?.value) {
-                <mat-option disabled>Please select location subcategory first</mat-option>
+                <mat-option disabled>Please select GPU first</mat-option>
               }
               @for (block of blocks; track block.id) {
                 <mat-option [value]="block.id">
-                  {{ block.blockName }}
+                  {{ block.blockName || block.gpuName }}
                 </mat-option>
               }
             </mat-select>
@@ -134,7 +134,7 @@
                 <mat-option disabled>No wards available</mat-option>
               }
               @if (wards.length === 0 && !siteDetailsForm.get('block')?.value) {
-                <mat-option disabled>Please select block first</mat-option>
+                <mat-option disabled>Please select Block first</mat-option>
               }
             } @else {
               @if (wards.length === 0 && siteDetailsForm.get('locationSubcategory')?.value) {

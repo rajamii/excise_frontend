@@ -227,6 +227,13 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     police_station: 'Police Station',
     locationcategory: 'Location Category',
     location_category: 'Location Category',
+    location_category_name: 'Location Category',
+    location_subcategory: 'Location Subcategory',
+    location_subcategory_name: 'Location Subcategory',
+    block: 'Block',
+    block_name: 'Block',
+    gpu: 'GPU',
+    gpu_name: 'GPU',
     locationname: 'Location Name',
     location_name: 'Location Name',
     wardname: 'Ward Name',
@@ -405,6 +412,8 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     this.cacheMasterDataIfMissing('locationSubcategories', () => this.masterService.getLocationSubcategories());
     this.cacheMasterDataIfMissing('locations', () => this.masterService.getLocations());
     this.cacheMasterDataIfMissing('wards', () => this.masterService.getWards());
+    this.cacheMasterDataIfMissing('blocks', () => this.masterService.getBlocks());
+    this.cacheMasterDataIfMissing('ruralWards', () => this.masterService.getRuralWards());
   }
 
   private cacheMasterDataIfMissing(key: string, loader: () => any): void {
@@ -421,7 +430,23 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     });
   }
 
-  private getSafeLabel(key: string): string {
+  private getSafeLabel(key: string, data?: Record<string, any>): string {
+    const isRural = data ? (
+      String(data['location_category_name'] || '').toLowerCase().includes('rural') ||
+      String(data['location_category'] || '').toLowerCase().includes('rural') ||
+      Number(data['location_category']) === 2
+    ) : false;
+
+    if (isRural) {
+      const norm = key.toLowerCase().replace(/_/g, '');
+      if (norm === 'locationsubcategory' || norm === 'locationsubcategoryname') {
+        return 'GPU';
+      }
+      if (norm === 'block' || norm === 'blockname' || norm === 'gpu' || norm === 'gpuname') {
+        return 'Block';
+      }
+    }
+
     const normalized = key.toLowerCase().replace(/_/g, '');
     return this.licenseApplicationLabels[key]
       || this.licenseApplicationLabels[normalized]
@@ -450,7 +475,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
         return true;
       })
       .map(([k, v]) => {
-        const label = this.getSafeLabel(k);
+        const label = this.getSafeLabel(k, data);
         const displayValue = this.getDisplayValue(k, v, data);
 
         return { key: label, value: displayValue };
@@ -544,6 +569,12 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
         displayField = 'locationDescription';
       } else if (normalized === 'ward') {
         masterKey = 'wards';
+        displayField = 'wardName';
+      } else if (normalized === 'block' || normalized === 'gpu') {
+        masterKey = 'blocks';
+        displayField = 'blockName';
+      } else if (normalized === 'ruralward') {
+        masterKey = 'ruralWards';
         displayField = 'wardName';
       } else if (normalized === 'sitetype') {
         masterKey = 'siteTypes';
