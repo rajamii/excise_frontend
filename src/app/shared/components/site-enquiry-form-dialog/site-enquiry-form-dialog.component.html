@@ -15,7 +15,7 @@
 </div>
 
 <mat-dialog-content class="dialog-content">
-  <div class="revert-banner" *ngIf="isReverted">
+  <div class="revert-banner" *ngIf="isReverted || (revertHistory && revertHistory.length > 0)">
     <div class="banner-icon-col">
       <mat-icon>assignment_late</mat-icon>
     </div>
@@ -23,9 +23,51 @@
       <div class="banner-top-row">
         <span class="badge">REVERTED BACK</span>
         <span class="title">Joint Commissioner Remarks</span>
+        <button type="button" class="btn-toggle-reverts" *ngIf="revertHistory.length > 1" (click)="toggleRevertHistory()">
+          <mat-icon class="toggle-icon">{{ showAllReverts ? 'expand_less' : 'history' }}</mat-icon>
+          <span>{{ showAllReverts ? 'Hide Revert History' : 'View Reverted Details (' + revertHistory.length + ' Reverts)' }}</span>
+        </button>
       </div>
-      <div class="remarks" *ngIf="revertedRemarks; else noRemarks">{{ revertedRemarks }}</div>
+      <div class="remarks" *ngIf="revertedRemarks; else noRemarks">
+        <div class="remarks-header-row" *ngIf="revertHistory.length > 1 || latestRevertedOn || latestRevertedBy">
+          <span class="remarks-label">Latest Remarks</span>
+          <span class="revert-meta-pill" *ngIf="latestRevertedOn">
+            <mat-icon class="meta-icon">schedule</mat-icon>
+            {{ formatRevertDate(latestRevertedOn) }}
+          </span>
+          <span class="revert-meta-pill officer" *ngIf="latestRevertedBy">
+            <mat-icon class="meta-icon">person</mat-icon>
+            By: {{ latestRevertedBy }}
+          </span>
+        </div>
+        <div class="remarks-text">{{ revertedRemarks }}</div>
+      </div>
       <ng-template #noRemarks><div class="remarks muted">No remarks provided.</div></ng-template>
+
+      <!-- PREVIOUS REVERTS LIST -->
+      <div class="previous-reverts-container" *ngIf="showAllReverts && revertHistory.length > 1">
+        <div class="previous-reverts-title">
+          <mat-icon>history</mat-icon> Revert History Details ({{ revertHistory.length }} entries):
+        </div>
+        <div class="revert-history-list">
+          <div class="revert-history-card" *ngFor="let rev of revertHistory; let idx = index" [class.is-latest]="idx === 0">
+            <div class="revert-card-header">
+              <span class="revert-num-badge">{{ idx === 0 ? 'Latest Revert' : ('Revert #' + (revertHistory.length - idx)) }}</span>
+              <span class="revert-date" *ngIf="rev.reverted_on">
+                <mat-icon class="clock-icon">schedule</mat-icon>
+                {{ formatRevertDate(rev.reverted_on) }}
+              </span>
+              <span class="revert-officer" *ngIf="rev.reverted_by">
+                <mat-icon class="officer-icon">person</mat-icon>
+                By: {{ rev.reverted_by }}
+              </span>
+            </div>
+            <div class="revert-card-body">
+              {{ rev.remarks || 'No remarks provided' }}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <form [formGroup]="form">
@@ -260,14 +302,31 @@
         </mat-form-field>
       </div>
 
-      <!-- Upload shop image -->
-      <div class="question">
-        <div class="label">Upload shop image document</div>
-        <input type="file" (change)="onFileSelected($event)" accept="image/*,.pdf">
-        <div class="file-name" *ngIf="selectedFileName">{{ selectedFileName }}</div>
-        <a class="existing-doc" *ngIf="existingShopImageUrl" [href]="existingShopImageUrl" target="_blank" rel="noopener">
-          View existing document
-        </a>
+      <!-- Upload shop image document (PDF only) -->
+      <div class="question file-upload-card">
+        <div class="label d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <span>Upload shop image document</span>
+          <span class="pdf-format-badge"><mat-icon class="badge-icon">picture_as_pdf</mat-icon> PDF Only (Max 5MB)</span>
+        </div>
+        <div class="upload-control-box">
+          <input type="file" id="shopImagePdfInput" (change)="onFileSelected($event)" accept="application/pdf,.pdf" class="file-input-native">
+          <div class="upload-actions-row">
+            <label for="shopImagePdfInput" class="btn-choose-pdf">
+              <mat-icon>upload_file</mat-icon>
+              <span>Choose PDF File</span>
+            </label>
+            <div class="selected-pdf-chip" *ngIf="selectedFileName">
+              <mat-icon class="pdf-icon">picture_as_pdf</mat-icon>
+              <span class="pdf-name">{{ selectedFileName }}</span>
+            </div>
+            <span class="no-file-hint" *ngIf="!selectedFileName && !existingShopImageUrl">No PDF file selected</span>
+          </div>
+          <div class="existing-pdf-row" *ngIf="existingShopImageUrl">
+            <a class="existing-doc" [href]="existingShopImageUrl" target="_blank" rel="noopener">
+              <mat-icon>open_in_new</mat-icon> View current uploaded document ({{ existingShopImageName || 'Document' }})
+            </a>
+          </div>
+        </div>
       </div>
 
       <!-- 6. Comments from Enquiry Officer -->

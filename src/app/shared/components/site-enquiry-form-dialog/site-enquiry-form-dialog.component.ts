@@ -34,20 +34,53 @@ interface SiteEnquiryDialogData {
 })
 export class SiteEnquiryFormDialogComponent implements OnInit {
   private readonly maxFileSizeBytes = 5 * 1024 * 1024;
-  private readonly allowedFileExtensions = ['jpg', 'jpeg', 'png', 'webp', 'pdf'];
-  private readonly allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+  private readonly allowedFileExtensions = ['pdf'];
+  private readonly allowedMimeTypes = ['application/pdf'];
 
   readonly form: FormGroup;
   readonly applicationId: string;
   selectedFileName = '';
   isReverted = false;
   revertedRemarks = '';
+  latestRevertedOn: string | null = null;
+  latestRevertedBy: string = '';
+  revertHistory: Array<{
+    id: number;
+    remarks: string;
+    reverted_on?: string;
+    reverted_by?: string;
+    stage?: string;
+  }> = [];
+  showAllReverts = false;
   existingShopImageUrl = '';
   existingShopImageName = '';
   isLocating = false;
   locationMessage = '';
   locationError = '';
   private readonly existingReport: any | null;
+
+  toggleRevertHistory(): void {
+    this.showAllReverts = !this.showAllReverts;
+    this.cdr.markForCheck();
+  }
+
+  formatRevertDate(isoDate?: string | null): string {
+    if (!isoDate) return '';
+    try {
+      const d = new Date(isoDate);
+      if (isNaN(d.getTime())) return isoDate;
+      return d.toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch {
+      return isoDate;
+    }
+  }
 
   constructor(
     private fb: FormBuilder,
@@ -134,6 +167,34 @@ export class SiteEnquiryFormDialogComponent implements OnInit {
       (typeof rawRevertFlag === 'string' && rawRevertFlag.trim().toLowerCase() === 'true');
 
     this.revertedRemarks = String(report?.reverted_remarks ?? report?.revertedRemarks ?? '').trim();
+    this.latestRevertedOn = report?.reverted_at ?? report?.revertedAt ?? null;
+    this.latestRevertedBy = report?.reverted_by ?? report?.revertedBy ?? 'Joint Commissioner';
+
+    const rawReverts = report?.revert_history ?? report?.revertHistory;
+    if (Array.isArray(rawReverts) && rawReverts.length > 0) {
+      this.revertHistory = rawReverts.map((r: any) => ({
+        id: r.id,
+        remarks: r.remarks || '',
+        reverted_on: r.reverted_on || r.reverted_at || r.revertedAt || r.revertedOn,
+        reverted_by: r.reverted_by || r.revertedBy || 'Joint Commissioner',
+        stage: r.stage || 'Site Enquiry Officer'
+      }));
+      if (!this.latestRevertedOn && this.revertHistory[0]?.reverted_on) {
+        this.latestRevertedOn = this.revertHistory[0].reverted_on;
+      }
+      if (this.revertHistory[0]?.reverted_by) {
+        this.latestRevertedBy = this.revertHistory[0].reverted_by;
+      }
+    } else if (this.revertedRemarks) {
+      this.revertHistory = [
+        {
+          id: 1,
+          remarks: this.revertedRemarks,
+          reverted_on: this.latestRevertedOn || undefined,
+          reverted_by: this.latestRevertedBy || 'Joint Commissioner'
+        }
+      ];
+    }
 
     const booleanKeys = new Set([
       'has_traditional_place',
@@ -228,7 +289,7 @@ export class SiteEnquiryFormDialogComponent implements OnInit {
       allowedExtensions: this.allowedFileExtensions,
       allowedMimeTypes: this.allowedMimeTypes,
       maxFileSizeBytes: this.maxFileSizeBytes,
-      label: 'Shop image document'
+      label: 'Shop image document (PDF only)'
     });
 
     if (validationError) {
