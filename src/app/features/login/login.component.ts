@@ -526,7 +526,7 @@ export class LoginComponent extends BaseComponent {
       next: (response) => {
         this.otpSent = true;
         this.otpIndex = response.otpId ?? response.otp_id ?? null;
-        this.loginOtpPreview = response.otp ? String(response.otp) : null;
+        this.loginOtpPreview = null;
         this.isSendingOtp = false;
       },
       error: (err) => {

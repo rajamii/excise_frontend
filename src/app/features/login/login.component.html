@@ -226,13 +226,6 @@
                   </ng-otp-input>
                 </div>
 
-                @if (loginOtpPreview) {
-                  <div class="otp-preview">
-                    <span class="otp-preview-label">Your OTP:</span>
-                    <span class="otp-preview-value">{{ loginOtpPreview }}</span>
-                  </div>
-                }
-
                 @if (loginError) {
                   <div class="alert-box alert-error">
                     <mat-icon>error_outline</mat-icon>
