@@ -146,17 +146,45 @@ export class UnifiedDashboardService {
   private inferEnabledTypesFromConfig(config?: DashboardConfig): UnifiedApplication['type'][] {
     if (!config) return this.allTypes.slice();
 
+    const roleId = Number((config as any)?.roleId || (config as any)?.role?.id || 0);
+
+    // Explicit role-based overrides to guarantee required modules are always enabled
+    if (roleId === 4) {
+      // District User handles New License, License Renewal, Salesman/Barman, and Dry Day Permit
+      return ['new-license', 'license-renewal', 'salesman-barman', 'special-permit'];
+    }
+    if (roleId === 8 || roleId === 9) {
+      // Site Inquiry Officer (8), Joint Commissioner (9)
+      return ['new-license', 'license-renewal', 'salesman-barman'];
+    }
+    if (roleId === 5) {
+      // Permit Section
+      return ['new-license', 'company-registration', 'company-collaboration'];
+    }
+    if (roleId === 6 || roleId === 7) {
+      // IT Cell (6), OIC (7)
+      return ['new-license'];
+    }
+    if (roleId === 10 || roleId === 1 || roleId === 2 || roleId === 3 || roleId === 11 || roleId === 16) {
+      // Commissioner, Admin, Licensee, Single Window, Secretary, Distributor
+      return this.allTypes.slice();
+    }
+
     const haystack = this.flattenNavigation(config.navigation)
       .map((x) => `${x?.label || ''} ${x?.route || ''}`.toLowerCase())
       .join(' | ');
 
     const enabled = new Set<UnifiedApplication['type']>();
     if (/(license[_ -]?application|renewal|licen[cs]e[_ -]?renewal)/.test(haystack)) enabled.add('license-renewal');
-    if (/(new[_ -]?license|new[_ -]?licen[cs]e|new_license_application)/.test(haystack)) enabled.add('new-license');
+    if (/(new[_ -]?license|new[_ -]?licen[cs]e|new_license_application)/.test(haystack)) {
+      enabled.add('new-license');
+      enabled.add('license-renewal');
+    }
     if (/(salesman|barman|salesman_barman)/.test(haystack)) enabled.add('salesman-barman');
     if (/(company|company[_ -]?registration|company-registration)/.test(haystack)) enabled.add('company-registration');
     if (/(collaboration|company[_ -]?collaboration|company-collaboration)/.test(haystack)) enabled.add('company-collaboration');
     if (/(special[_ -]?permit|special_permit|dry_day|dry-day)/.test(haystack)) enabled.add('special-permit');
+    if (/(label[_ -]?registration|label-registration)/.test(haystack)) enabled.add('label-registration');
 
     return enabled.size ? Array.from(enabled) : this.allTypes.slice();
   }
@@ -266,9 +294,9 @@ export class UnifiedDashboardService {
       map((results) =>
         results.reduce(
           (acc, cur) => {
-            const curApplied = (cur.applied != null)
+            const curApplied = (cur.applied != null && cur.applied > 0)
               ? cur.applied
-              : (cur as any).total != null
+              : (cur as any).total != null && (cur as any).total > 0
                 ? (cur as any).total
                 : ((cur.pending || 0) + (cur.approved || 0) + (cur.objection || 0) + (cur.rejected || 0));
             return {
@@ -348,8 +376,8 @@ export class UnifiedDashboardService {
       map((res) => {
         const getApplied = (c: DashboardCount) => {
           if (!c) return 0;
-          if (c.applied != null) return c.applied;
-          if ((c as any).total != null) return (c as any).total;
+          if (c.applied != null && c.applied > 0) return c.applied;
+          if ((c as any).total != null && (c as any).total > 0) return (c as any).total;
           return (c.pending || 0) + (c.approved || 0) + (c.objection || 0) + (c.rejected || 0);
         };
 
