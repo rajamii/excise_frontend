@@ -1,14 +1,21 @@
 <div class="captcha-section">
-<div class="captcha-header">
-  <button mat-icon-button class="refresh-captcha-btn" (click)="refreshCaptcha($event)">
-    <mat-icon>refresh</mat-icon>
-  </button>
+  <div class="captcha-display-row">
+    <div class="captcha-image-wrapper">
+      <img *ngIf="captchaImageUrl" [src]="captchaImageUrl" alt="Captcha" class="captcha-img"/>
+      <div *ngIf="!captchaImageUrl" class="captcha-loading">
+        <mat-spinner diameter="18"></mat-spinner>
+        <span>Loading captcha...</span>
+      </div>
+    </div>
+    <button type="button" mat-icon-button class="refresh-captcha-btn" (click)="refreshCaptcha($event)" title="Refresh Captcha" aria-label="Refresh Captcha">
+      <mat-icon>refresh</mat-icon>
+    </button>
+  </div>
 
-  <img *ngIf="captchaImageUrl" [src]="captchaImageUrl" alt="Captcha" class="captcha-img"/>
-</div>
-
-  <!-- Add formGroup directive here -->
-  <div [formGroup]="formGroup" class = "input-container">
-    <input formControlName="response" placeholder="Captcha" (input)="onResponseChange($event)" />
+  <div [formGroup]="formGroup" class="captcha-input-group">
+    <div class="captcha-input-box">
+      <mat-icon class="input-icon">verified_user</mat-icon>
+      <input formControlName="response" placeholder="Enter Captcha" (input)="onResponseChange($event)" autocomplete="off" />
+    </div>
   </div>
 </div>
