@@ -1,6 +1,6 @@
 export const environment = {
-  production: true,
-  apiBaseUrl: '',
+  production: false,
+  apiBaseUrl: 'http://127.0.0.1:8000',
 
   payment: {
     

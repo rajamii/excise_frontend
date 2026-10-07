@@ -173,7 +173,15 @@
                                  <span class="badge bg-danger">Objection</span>
                                  <span class="badge bg-light text-dark ms-2">{{ unresolvedObjectionCount() }} pending</span>
                              </div>
-                            <p class="mt-2" *ngIf="!isSalesmanOrRenewal()"><strong>BR Amount:</strong> ₹{{ applicationData.brAmount }}</p>
+                            <p class="mt-2" *ngIf="!isSalesmanOrRenewal()">
+                                <strong>BR Amount:</strong>
+                                <ng-container *ngIf="isNewLicense() && !isNewLicenseFeeSet()">
+                                    <span class="badge bg-warning text-dark ms-1">Pending</span>
+                                </ng-container>
+                                <ng-container *ngIf="!isNewLicense() || isNewLicenseFeeSet()">
+                                    ₹{{ applicationData.brAmount }}
+                                </ng-container>
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -1310,7 +1318,14 @@
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Yearly License Fee</td>
-                                    <td class="text-success fw-bold">Rs {{ applicationData.yearly_license_fee || applicationData.yearlyLicenseFee || applicationData.brAmount || 0 }}</td>
+                                    <td [class.text-success]="!isNewLicense() || isNewLicenseFeeSet()" class="fw-bold">
+                                        <ng-container *ngIf="isNewLicense() && !isNewLicenseFeeSet()">
+                                            <span class="badge bg-warning text-dark">Pending</span>
+                                        </ng-container>
+                                        <ng-container *ngIf="!isNewLicense() || isNewLicenseFeeSet()">
+                                            Rs {{ applicationData.yearly_license_fee || applicationData.yearlyLicenseFee || applicationData.brAmount || 0 }}
+                                        </ng-container>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>

@@ -5116,6 +5116,41 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
             (stageName.includes('awaiting') && stageName.includes('payment'));
     }
 
+    isNewLicenseFeeSet(): boolean {
+        if (!this.isNewLicense() || !this.applicationData) return true;
+        const raw: any = this.applicationData;
+        const isFeeCalc = raw['is_fee_calculated'] ?? raw['isFeeCalculated'];
+        if (isFeeCalc === true || isFeeCalc === 'true' || isFeeCalc === 1 || isFeeCalc === '1') {
+            return true;
+        }
+        const stageName = String(
+            raw['current_stage_name'] ??
+            raw['currentStageName'] ??
+            raw['current_stage'] ??
+            raw.status ??
+            ''
+        ).toLowerCase();
+        const stageId = Number(
+            raw?.current_stage?.id ||
+            raw?.current_stage_id ||
+            raw?.currentStage ||
+            0
+        );
+        if (
+            (stageName.includes('commissioner') && !stageName.includes('joint')) ||
+            stageName.includes('awaiting_payment') ||
+            stageName.includes('awaiting payment') ||
+            stageName.includes('approved') ||
+            raw['is_license_fee_paid'] ||
+            raw['is_approved'] ||
+            stageId === 23 ||
+            stageId === 5
+        ) {
+            return true;
+        }
+        return false;
+    }
+
     handleMakePaymentClick(): void {
         if (this.isCompanyRegistration()) {
             this.openCompanyRegistrationPaymentConfirmationModal();
