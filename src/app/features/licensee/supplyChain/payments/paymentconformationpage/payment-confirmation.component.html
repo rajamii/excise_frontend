@@ -353,7 +353,7 @@
               <td>{{ item.txnId }}</td>
               <td>{{ item.type }}</td>
               <td>{{ item.paymentFor }}</td>
-              <td class="text-end">Rs {{ item.amount | number:'1.2-2' }}</td>
+              <td class="text-end">₹ {{ item.amount | number:'1.2-2' }}</td>
               <td>{{ item.reference }}</td>
               <td><span [class]="getStatusClass(item.status)">{{ item.status }}</span></td>
               <td>{{ item.dateTime | date:'dd-MM-yyyy HH:mm:ss' }}</td>
@@ -400,7 +400,7 @@
               <td>{{ item.txnId }}</td>
               <td>{{ item.type }}</td>
               <td>{{ item.paymentFor }}</td>
-              <td class="text-end">Rs {{ item.amount | number:'1.2-2' }}</td>
+              <td class="text-end">₹ {{ item.amount | number:'1.2-2' }}</td>
               <td>{{ item.reference }}</td>
               <td><span [class]="getStatusClass(item.status)">{{ item.status }}</span></td>
               <td>{{ item.dateTime | date:'dd-MM-yyyy HH:mm:ss' }}</td>
@@ -447,7 +447,7 @@
               <td>{{ item.txnId }}</td>
               <td>{{ item.type }}</td>
               <td>{{ item.paymentFor }}</td>
-              <td class="text-end">Rs {{ item.amount | number:'1.2-2' }}</td>
+              <td class="text-end">₹ {{ item.amount | number:'1.2-2' }}</td>
               <td>{{ item.reference }}</td>
               <td><span [class]="getStatusClass(item.status)">{{ item.status }}</span></td>
               <td>{{ item.dateTime | date:'dd-MM-yyyy HH:mm:ss' }}</td>
@@ -494,7 +494,7 @@
               <td>{{ item.txnId }}</td>
               <td>{{ item.type }}</td>
               <td>{{ item.paymentFor }}</td>
-              <td class="text-end">Rs {{ item.amount | number:'1.2-2' }}</td>
+              <td class="text-end">₹ {{ item.amount | number:'1.2-2' }}</td>
               <td>{{ item.reference }}</td>
               <td><span [class]="getStatusClass(item.status)">{{ item.status }}</span></td>
               <td>{{ item.dateTime | date:'dd-MM-yyyy HH:mm:ss' }}</td>
@@ -542,7 +542,7 @@
               <td>{{ item.txnId }}</td>
               <td>{{ item.type }}</td>
               <td>{{ item.paymentFor }}</td>
-              <td class="text-end">Rs {{ item.amount | number:'1.2-2' }}</td>
+              <td class="text-end">₹ {{ item.amount | number:'1.2-2' }}</td>
               <td>{{ item.reference }}</td>
               <td><span [class]="getStatusClass(item.status)">{{ item.status }}</span></td>
               <td class="text-end">
@@ -598,7 +598,7 @@
               <td>{{ item.txnId }}</td>
               <td>{{ item.type }}</td>
               <td>{{ item.paymentFor }}</td>
-              <td class="text-end">Rs {{ item.amount | number:'1.2-2' }}</td>
+              <td class="text-end">₹ {{ item.amount | number:'1.2-2' }}</td>
               <td>{{ item.reference }}</td>
               <td><span [class]="getStatusClass(item.status)">{{ item.status }}</span></td>
               <td>{{ item.dateTime | date:'dd-MM-yyyy HH:mm:ss' }}</td>
@@ -646,7 +646,7 @@
               <td>{{ item.txnId }}</td>
               <td>{{ item.type }}</td>
               <td>{{ item.paymentFor }}</td>
-              <td class="text-end">Rs {{ item.amount | number:'1.2-2' }}</td>
+              <td class="text-end">₹ {{ item.amount | number:'1.2-2' }}</td>
               <td>{{ item.reference }}</td>
               <td><span [class]="getStatusClass(item.status)">{{ item.status }}</span></td>
               <td>{{ item.dateTime | date:'dd-MM-yyyy HH:mm:ss' }}</td>
@@ -793,21 +793,21 @@
       <div class="wallet-deduction-grid">
         <div class="wallet-balance-card current">
           <span class="wallet-balance-caption">Current Balance</span>
-          <span class="wallet-balance-amount">Rs {{ preview.currentBalance | number:'1.2-2' }}</span>
+          <span class="wallet-balance-amount">₹ {{ preview.currentBalance | number:'1.2-2' }}</span>
         </div>
         <div class="wallet-balance-card deduct">
           <span class="wallet-balance-caption">Deduction On Proceed</span>
-          <span class="wallet-balance-amount">- Rs {{ preview.deductionAmount | number:'1.2-2' }}</span>
+          <span class="wallet-balance-amount">- ₹ {{ preview.deductionAmount | number:'1.2-2' }}</span>
         </div>
         <div class="wallet-balance-card after" [class.insufficient]="preview.shortfall > 0">
           <span class="wallet-balance-caption">Balance After Proceed</span>
-          <span class="wallet-balance-amount">Rs {{ preview.balanceAfter | number:'1.2-2' }}</span>
+          <span class="wallet-balance-amount">₹ {{ preview.balanceAfter | number:'1.2-2' }}</span>
         </div>
       </div>
 
       <div class="alert alert-danger wallet-deduction-alert" *ngIf="preview.shortfall > 0">
         <i class="bi bi-exclamation-triangle-fill me-2"></i>
-        Insufficient balance. Add Rs {{ preview.shortfall | number:'1.2-2' }} more to continue.
+        Insufficient balance. Add ₹ {{ preview.shortfall | number:'1.2-2' }} more to continue.
       </div>
 
       <div class="alert alert-info wallet-deduction-alert" *ngIf="preview.shortfall <= 0">

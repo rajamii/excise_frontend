@@ -207,41 +207,6 @@ export class PaymentReceiptComponent implements OnInit {
     window.print();
   }
 
-  downloadReceipt(): void {
-    // Create a printable version and trigger download
-    const printContent = document.querySelector('.receipt-container')?.innerHTML;
-    if (printContent) {
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write(`
-          <html>
-            <head>
-              <title>Payment Receipt - ${this.receiptData.transactionId}</title>
-              <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-              <style>
-                body { font-family: Arial, sans-serif; margin: 20px; }
-                .receipt-container { max-width: 800px; margin: 0 auto; }
-                @media print { body { margin: 0; } }
-              </style>
-            </head>
-            <body>
-              <div class="receipt-container">
-                <div class="text-center mb-4">
-                  <h2>Excise Department</h2>
-                  <h3>Payment Receipt</h3>
-                </div>
-                ${printContent}
-              </div>
-            </body>
-          </html>
-        `);
-        printWindow.document.close();
-        printWindow.print();
-        printWindow.close();
-      }
-    }
-  }
-
   backToHome(): void {
     // Navigate back to payment confirmation page
     this.router.navigate(['/dashboard'], {
