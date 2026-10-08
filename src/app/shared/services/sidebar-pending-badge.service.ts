@@ -198,7 +198,7 @@ export class SidebarPendingBadgeService {
         );
 
         return {
-          total: awaitingPayment + objection,
+          total: objection,
           payment: awaitingPayment
         };
       }),
@@ -219,7 +219,7 @@ export class SidebarPendingBadgeService {
         }
         const objection = Number(counts?.objection || 0);
         const awaitingPayment = Number(counts?.awaitingPayment ?? counts?.awaiting_payment ?? 0);
-        return { total: awaitingPayment + objection, payment: awaitingPayment };
+        return { total: objection, payment: awaitingPayment };
       }),
       catchError(() => of({ total: 0, payment: 0 }))
     );

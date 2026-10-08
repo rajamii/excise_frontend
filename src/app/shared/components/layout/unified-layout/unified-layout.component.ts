@@ -575,7 +575,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       // Build the sections list dynamically from the DB-backed navigation routes
       // so we only call badge APIs for tabs the user actually has.
       // Previously this was a hardcoded list that fired every API for every licensee.
-      const licenseeSections: string[] = [];
+      const licenseeSections: string[] = ['new-license', 'license-renewal'];
 
       // Map of route patterns to section keys
       const routeToSection: Array<{ pattern: RegExp; section: string }> = [
@@ -600,9 +600,16 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         }
       }
 
+      if (this.showSpecialPermitMenu && !licenseeSections.includes('special-permit')) {
+        licenseeSections.push('special-permit');
+      }
+      if (this.showDistributorPermitMenu && !licenseeSections.includes('distributor-permit')) {
+        licenseeSections.push('distributor-permit');
+      }
+
       // Distillery licensees: always include ENA requisition badge
       if (this.showDistilleryMenus || dbRoutesList.some(r => /requisition|ena|bulk[_-]?spirit/.test(r))) {
-        licenseeSections.push('requisition');
+        if (!licenseeSections.includes('requisition')) licenseeSections.push('requisition');
       }
       // Brewery/distillery: include hologram badge
       if (this.showBreweryOrDistilleryMenus || dbRoutesList.some(r => /hologram/.test(r))) {
