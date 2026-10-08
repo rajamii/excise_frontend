@@ -1218,8 +1218,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
             ? 'An objection has been raised on this application. Please resolve all objections before the countdown expires.'
             : 'License Fee & Security Deposit payment is pending. Please complete both payments before the countdown expires.';
         const rejectionStage = isObjection
-            ? 'Stage 166 – Rejected: No Action Taken on Objection'
-            : 'Stage 180 – Rejected: No Action Taken by User at Payment Stage';
+            ? 'Rejected: No Action Taken on Objection'
+            : 'Rejected: No Action Taken at Payment Stage';
 
         if (diffMs <= 0) {
             if (!this.timerExpiredTriggered && appId) {

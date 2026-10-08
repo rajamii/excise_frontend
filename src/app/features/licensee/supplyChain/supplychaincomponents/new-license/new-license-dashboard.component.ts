@@ -1338,8 +1338,8 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
     const label = isObjection ? 'Objection Timer' : 'Payment Timer';
     const title = isObjection ? 'Time Remaining (Objection)' : 'Time Remaining (Payment)';
     const rejectionStage = isObjection
-      ? 'Stage 166 – Rejected: No Action Taken on Objection'
-      : 'Stage 180 – Rejected: No Action Taken by User at Payment Stage';
+      ? 'Rejected: No Action Taken on Objection'
+      : 'Rejected: No Action Taken at Payment Stage';
 
     if (diffMs <= 0) {
       if (!this.expiredTriggeredIds.has(row.applicationId)) {
@@ -1376,8 +1376,8 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
     }
 
     const warningText = isObjection
-      ? 'Auto-rejects to Stage 166 on expiry'
-      : 'Auto-rejects to Stage 180 on expiry';
+      ? 'Auto-rejects on expiry'
+      : 'Auto-rejects on expiry';
 
     return {
       timerType,
