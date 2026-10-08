@@ -8,6 +8,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MatRadioModule } from '@angular/material/radio';
 import { catchError, forkJoin, map, of } from 'rxjs';
 import Swal from 'sweetalert2';
 import { Objection } from '../../../../../../core/models/license-application.model';
@@ -15,6 +19,7 @@ import { FormDataUtil } from '../../../../../../shared/utils/form-data.util';
 import { environment } from '../../../../../../../environments/environment';
 import { UnifiedDashboardService } from '../../../../../../core/services/unified-dashboard.service';
 import { LicenseApplicationService } from '../../../../../../core/services/license-application.service';
+import { MasterService } from '../../../../../../core/services/master.service';
 import { PatternConstants } from '../../../../../../shared/constants/pattern.constants';
 import { validateUploadedFile } from '../../../../../../shared/utils/file-upload-validation';
 
@@ -23,6 +28,11 @@ export interface ResolveObjectionsDialogData {
 }
 
 type DeadlineUrgency = 'ok' | 'warn' | 'critical' | 'expired';
+
+export interface SelectOption {
+  label: string;
+  value: any;
+}
 
 @Component({
   selector: 'app-resolve-objections-dialog',
@@ -35,6 +45,10 @@ type DeadlineUrgency = 'ok' | 'warn' | 'critical' | 'expired';
     MatIconModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
+    MatRadioModule,
     MatProgressSpinnerModule
   ],
   templateUrl: './resolve-objections-dialog.component.html',
@@ -60,16 +74,81 @@ export class ResolveObjectionsDialogComponent implements OnInit, OnDestroy {
 
   form = new FormGroup({});
 
+  // Master collections for dynamic dropdowns
+  districts: any[] = [];
+  subdivisions: any[] = [];
+  policeStations: any[] = [];
+  locationCategories: any[] = [];
+  locationSubcategories: any[] = [];
+  licenseCategories: any[] = [];
+  licenseSubcategories: any[] = [];
+
   /** Earliest deadline among unresolved objections. */
   objectionDeadline: Date | null = null;
   deadlineCountdown = '';
   deadlineUrgency: DeadlineUrgency = 'ok';
   private _countdownInterval: ReturnType<typeof setInterval> | null = null;
 
+  // Static options matching application steps
+  private readonly coiRcSsOptions: SelectOption[] = [
+    { label: 'Certificate of Identification (COI)', value: 'COI' },
+    { label: 'Residential Certificate (RC)', value: 'RC' },
+    { label: 'Sikkim Subject Certificate (SS)', value: 'SS' }
+  ];
+
+  private readonly genderOptions: SelectOption[] = [
+    { label: 'Male', value: 'Male' },
+    { label: 'Female', value: 'Female' }
+  ];
+
+  private readonly nationalityOptions: SelectOption[] = [
+    { label: 'Indian', value: 'Indian' },
+    { label: 'Foreign', value: 'Foreign' }
+  ];
+
+  private readonly maritalStatusOptions: SelectOption[] = [
+    { label: 'Single', value: 'Single' },
+    { label: 'Married', value: 'Married' },
+    { label: 'Divorced', value: 'Divorced' }
+  ];
+
+  private readonly residentialStatusOptions: SelectOption[] = [
+    { label: 'Resident', value: 'Resident' },
+    { label: 'Non-Resident', value: 'Non-Resident' }
+  ];
+
+  private readonly modeOfOperationOptions: SelectOption[] = [
+    { label: 'Self', value: 'Self' },
+    { label: 'Salesman', value: 'Salesman' },
+    { label: 'Barman', value: 'Barman' }
+  ];
+
+  private readonly constructionTypeOptions: SelectOption[] = [
+    { label: 'RCC', value: 'RCC' },
+    { label: 'Wooden Structure', value: 'Wooden Structure' }
+  ];
+
+  private readonly siteTypeOptions: SelectOption[] = [
+    { label: 'New Site', value: 'New Site' },
+    { label: 'Existing Site', value: 'Existing Site' }
+  ];
+
+  private readonly yesNoOptions: SelectOption[] = [
+    { label: 'Yes', value: 'Yes' },
+    { label: 'No', value: 'No' }
+  ];
+
+  private readonly brandTypeOptions: SelectOption[] = [
+    { label: 'Manufactured in Sikkim', value: 'Manufactured in Sikkim' },
+    { label: 'Imported from other States/Country', value: 'Imported from other States/Country' },
+    { label: 'Bottled in Sikkim (Collaboration)', value: 'Bottled in Sikkim (Collaboration)' }
+  ];
+
   constructor(
     private http: HttpClient,
     private unifiedService: UnifiedDashboardService,
     private licenseAppService: LicenseApplicationService,
+    private masterService: MasterService,
     private dialogRef: MatDialogRef<ResolveObjectionsDialogComponent, boolean>,
     @Inject(MAT_DIALOG_DATA) public data: ResolveObjectionsDialogData
   ) {}
@@ -83,19 +162,53 @@ export class ResolveObjectionsDialogComponent implements OnInit, OnDestroy {
     }
 
     const encodedId = encodeURIComponent(appId);
-
     const authUrl = `${environment.apiBaseUrl}/auth/${encodedId}/objections/`;
 
     const objections$ = this.fetchJsonLenient(authUrl).pipe(catchError(() => of([])));
-
     const application$ = this.unifiedService.getApplicationDetail(appId, 'new-license').pipe(
       catchError(() => of(null))
     );
 
-    forkJoin({ objections: objections$, application: application$ }).subscribe({
-      next: ({ objections, application }) => {
+    const districts$ = this.masterService.getDistricts().pipe(catchError(() => of([])));
+    const subdivisions$ = this.masterService.getSubdivisions().pipe(catchError(() => of([])));
+    const policeStations$ = this.masterService.getPoliceStations().pipe(catchError(() => of([])));
+    const locationCategories$ = this.masterService.getLocationCategories().pipe(catchError(() => of([])));
+    const locationSubcategories$ = this.masterService.getLocationSubcategories().pipe(catchError(() => of([])));
+    const licenseCategories$ = this.masterService.getLicenseCategories().pipe(catchError(() => of([])));
+    const licenseSubcategories$ = this.masterService.getLicenseSubcategories().pipe(catchError(() => of([])));
+
+    forkJoin({
+      objections: objections$,
+      application: application$,
+      districts: districts$,
+      subdivisions: subdivisions$,
+      policeStations: policeStations$,
+      locationCategories: locationCategories$,
+      locationSubcategories: locationSubcategories$,
+      licenseCategories: licenseCategories$,
+      licenseSubcategories: licenseSubcategories$
+    }).subscribe({
+      next: ({
+        objections,
+        application,
+        districts,
+        subdivisions,
+        policeStations,
+        locationCategories,
+        locationSubcategories,
+        licenseCategories,
+        licenseSubcategories
+      }) => {
         this.application = application;
         this.objections = this.normalizeObjections(objections) as any;
+
+        this.districts = this.toArray(districts);
+        this.subdivisions = this.toArray(subdivisions);
+        this.policeStations = this.toArray(policeStations);
+        this.locationCategories = this.toArray(locationCategories);
+        this.locationSubcategories = this.toArray(locationSubcategories);
+        this.licenseCategories = this.toArray(licenseCategories);
+        this.licenseSubcategories = this.toArray(licenseSubcategories);
 
         const unresolved = this.unresolvedObjections;
         const group: Record<string, FormControl<any>> = {};
@@ -105,7 +218,7 @@ export class ResolveObjectionsDialogComponent implements OnInit, OnDestroy {
             group[obj.fieldName] = new FormControl<File | null>(null, { validators: [Validators.required] });
           } else {
             // Force licensee to provide a corrected value explicitly (don't auto-fill with current value).
-            group[obj.fieldName] = new FormControl<any>('', { validators: this.validatorsForField(obj.fieldName) });
+            group[obj.fieldName] = new FormControl<any>(null, { validators: this.validatorsForField(obj.fieldName) });
           }
         }
 
@@ -120,6 +233,12 @@ export class ResolveObjectionsDialogComponent implements OnInit, OnDestroy {
     });
   }
 
+  private toArray(val: any): any[] {
+    if (Array.isArray(val)) return val;
+    if (Array.isArray(val?.results)) return val.results;
+    return [];
+  }
+
   ngOnDestroy(): void {
     if (this._countdownInterval !== null) {
       clearInterval(this._countdownInterval);
@@ -127,7 +246,7 @@ export class ResolveObjectionsDialogComponent implements OnInit, OnDestroy {
     }
   }
 
-  // â”€â”€ Deadline countdown helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Deadline countdown helpers ─────────────────────────────────────────────
 
   private _initDeadline(): void {
     const deadlines = this.unresolvedObjections
@@ -177,7 +296,9 @@ export class ResolveObjectionsDialogComponent implements OnInit, OnDestroy {
       const parts = raw.split('::');
       const key = parts[0];
       const indexStr = parts[1];
+      const subKey = parts[2] || '';
       const idx = parseInt(indexStr, 10);
+      const subLabel = subKey ? ` - ${this.humanizeLabel(subKey)}` : '';
       if (!isNaN(idx) && this.application) {
         const arr = this.pickValue(key, this.application);
         if (Array.isArray(arr) && arr[idx]) {
@@ -188,14 +309,38 @@ export class ResolveObjectionsDialogComponent implements OnInit, OnDestroy {
           if (name) labelParts.push(name);
           if (desig) labelParts.push(`(${desig})`);
           return labelParts.length > 0
-            ? `Member Details [${idx + 1}]: ${labelParts.join(' ')}`
-            : `Member Details [${idx + 1}]`;
+            ? `Member Details [${idx + 1}]: ${labelParts.join(' ')}${subLabel}`
+            : `Member Details [${idx + 1}]${subLabel}`;
         }
       }
-      return `Member Details [${idx + 1}]`;
+      return `Member Details [${idx + 1}]${subLabel}`;
     }
 
-    return String(fieldName || '')
+    return this.humanizeLabel(raw);
+  }
+
+  private humanizeLabel(raw: string): string {
+    const lower = raw.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (lower === 'dob' || lower === 'dateofbirth') return 'Date of Birth';
+    if (lower === 'coircss' || lower === 'coircssdocumenttype') return 'Certificate Type (COI / RC / SS)';
+    if (lower === 'hassikkimcertificate') return 'Holds Sikkim Certificate';
+    if (lower === 'hasexciselicense') return 'Holds Excise License';
+    if (lower === 'familyexciselicense') return 'Family Member Holds License';
+    if (lower === 'criminalconviction') return 'Convicted by Criminal Court';
+    if (lower === 'siteowned') return 'Site Owned by Applicant';
+    if (lower === 'nocobtained') return 'NOC Obtained';
+    if (lower === 'tradelicensecovered') return 'Trade License Covered';
+    if (lower === 'sitedistrict') return 'Site District';
+    if (lower === 'sitesubdivision') return 'Site Subdivision';
+    if (lower === 'policestation') return 'Police Station';
+    if (lower === 'constructiontype') return 'Construction Type';
+    if (lower === 'modeofoperation') return 'Mode of Operation';
+    if (lower === 'locationcategory') return 'Location Category';
+    if (lower === 'locationsubcategory') return 'Location Subcategory';
+    if (lower === 'licensecategory' || lower === 'licensecategoryid') return 'License Category';
+    if (lower === 'licensesubcategory' || lower === 'licensesubcategoryid') return 'License Subcategory';
+
+    return String(raw || '')
       .replace(/[_\-]+/g, ' ')
       .replace(/([a-z])([A-Z])/g, '$1 $2')
       .replace(/\s+/g, ' ')
@@ -212,11 +357,15 @@ export class ResolveObjectionsDialogComponent implements OnInit, OnDestroy {
       const parts = raw.split('::');
       const key = parts[0];
       const indexStr = parts[1];
+      const subKey = parts[2];
       const idx = parseInt(indexStr, 10);
       if (!isNaN(idx) && this.application) {
         const arr = this.pickValue(key, this.application);
         if (Array.isArray(arr) && arr[idx]) {
           const m = arr[idx];
+          if (subKey && m[subKey] !== undefined) {
+            return m[subKey];
+          }
           const name = m.name || m.memberName || m.member_name || '';
           const desig = m.designation || m.memberDesignation || m.member_designation || '';
           const mob = m.mobile || m.mobileNumber || m.memberMobileNumber || m.member_mobile_number || '';
@@ -237,22 +386,187 @@ export class ResolveObjectionsDialogComponent implements OnInit, OnDestroy {
     return this.pickValue(fieldName, this.application);
   }
 
-  isFileField(fieldName: string, value: unknown): boolean {
+  // ── Field Type Classifiers ───────────────────────────────────────────────────
+
+  isDateField(fieldName: string): boolean {
+    const key = String(fieldName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    return (
+      key.includes('dob') ||
+      key.includes('dateofbirth') ||
+      key.includes('birthdate') ||
+      key.includes('incorporationdate') ||
+      key.includes('commencementdate') ||
+      key.includes('issuedate') ||
+      key.includes('expirydate') ||
+      (key.endsWith('date') && !key.includes('candidate') && !key.includes('update') && !key.includes('mandate'))
+    );
+  }
+
+  isSelectField(fieldName: string): boolean {
+    return this.getSelectOptions(fieldName).length > 0;
+  }
+
+  getSelectOptions(fieldName: string): SelectOption[] {
+    const key = String(fieldName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    // Certificate Type
+    if (key.includes('coircss') || key.includes('certificatetype') || key.includes('coi') || key.includes('rcss')) {
+      return this.coiRcSsOptions;
+    }
+
+    // Gender
+    if (key === 'gender') {
+      return this.genderOptions;
+    }
+
+    // Nationality
+    if (key === 'nationality') {
+      return this.nationalityOptions;
+    }
+
+    // Marital Status
+    if (key.includes('maritalstatus') || key.includes('marital')) {
+      return this.maritalStatusOptions;
+    }
+
+    // Residential Status
+    if (key.includes('residentialstatus')) {
+      return this.residentialStatusOptions;
+    }
+
+    // Mode of Operation
+    if (key.includes('modeofoperation')) {
+      return this.modeOfOperationOptions;
+    }
+
+    // Construction Type
+    if (key.includes('constructiontype') || key.includes('construction')) {
+      return this.constructionTypeOptions;
+    }
+
+    // Site Type
+    if (key === 'sitetype') {
+      return this.siteTypeOptions;
+    }
+
+    // Brand Source Type
+    if (key.includes('brandtype')) {
+      return this.brandTypeOptions;
+    }
+
+    // Boolean / Yes-No Questions
+    if (
+      key.includes('hassikkimcertificate') ||
+      key.includes('hasexciselicense') ||
+      key.includes('familyexciselicense') ||
+      key.includes('criminalconviction') ||
+      key.includes('siteowned') ||
+      key.includes('nocobtained') ||
+      key.includes('tradelicensecovered') ||
+      key.includes('sikkimsubject') ||
+      key.startsWith('is') ||
+      key.startsWith('has')
+    ) {
+      return this.yesNoOptions;
+    }
+
+    // District
+    if (key === 'sitedistrict' || key === 'district' || key === 'districtid') {
+      return this.districts.map(d => ({
+        label: d.districtName || d.name || d.district_name || `District ${d.id}`,
+        value: d.id ?? d.districtCode ?? d.name
+      }));
+    }
+
+    // Subdivision
+    if (key === 'sitesubdivision' || key === 'subdivision' || key === 'subdivisionid') {
+      return this.subdivisions.map(s => ({
+        label: s.subdivisionName || s.name || s.subdivision_name || `Subdivision ${s.id}`,
+        value: s.id ?? s.subdivisionCode ?? s.name
+      }));
+    }
+
+    // Police Station
+    if (key === 'policestation' || key === 'policestationid') {
+      return this.policeStations.map(p => ({
+        label: p.policeStationName || p.name || p.police_station_name || `Police Station ${p.id}`,
+        value: p.id ?? p.name
+      }));
+    }
+
+    // Location Category
+    if (key === 'locationcategory' || key === 'locationcategoryid') {
+      return this.locationCategories.map(lc => ({
+        label: lc.categoryName || lc.name || lc.category_name || `Category ${lc.id}`,
+        value: lc.id ?? lc.name
+      }));
+    }
+
+    // Location Subcategory
+    if (key === 'locationsubcategory' || key === 'locationsubcategoryid') {
+      return this.locationSubcategories.map(ls => ({
+        label: ls.subcategoryName || ls.name || ls.subcategory_name || `Subcategory ${ls.id}`,
+        value: ls.id ?? ls.name
+      }));
+    }
+
+    // License Category
+    if (
+      key === 'licensecategory' ||
+      key === 'licensecategoryid' ||
+      key === 'existinglicensecategoryid' ||
+      key === 'familylicensecategoryid'
+    ) {
+      return this.licenseCategories.map(c => ({
+        label: c.licenseCategory || c.name || c.license_category || `License Category ${c.id}`,
+        value: c.id ?? c.licenseCategory
+      }));
+    }
+
+    // License Subcategory
+    if (key === 'licensesubcategory' || key === 'licensesubcategoryid') {
+      return this.licenseSubcategories.map(sc => ({
+        label: sc.subCategory || sc.name || sc.sub_category || `License Subcategory ${sc.id}`,
+        value: sc.id ?? sc.subCategory
+      }));
+    }
+
+    return [];
+  }
+
+  isTextareaField(fieldName: string): boolean {
+    const key = String(fieldName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    return (
+      key.includes('address') ||
+      key.includes('details') ||
+      key.includes('remarks') ||
+      key.includes('description') ||
+      key.includes('reason')
+    );
+  }
+
+  isFileField(fieldName: string, value?: unknown): boolean {
     const key = String(fieldName || '').toLowerCase();
-    if (key.includes('photo') || key.includes('certificate') || key.includes('document') || key.endsWith('_doc')) return true;
+    if (
+      key.includes('photo') ||
+      key.includes('certificate') ||
+      key.includes('document') ||
+      key.endsWith('_doc') ||
+      key.endsWith('_file') ||
+      key.endsWith('_proof') ||
+      key.includes('parcha') ||
+      key.includes('noc') ||
+      key.includes('pan_card') ||
+      key.includes('trade_license') ||
+      key.includes('blueprint') ||
+      key.includes('site_plan') ||
+      key.includes('building_plan')
+    ) {
+      return true;
+    }
 
     if (typeof value !== 'string') return false;
-    const v = value.toLowerCase();
-    return (
-      v.includes('/media/') ||
-      v.endsWith('.pdf') ||
-      v.endsWith('.jpg') ||
-      v.endsWith('.jpeg') ||
-      v.endsWith('.png') ||
-      v.endsWith('.webp') ||
-      v.endsWith('.doc') ||
-      v.endsWith('.docx')
-    );
+    return this.isDocumentPath(value);
   }
 
   isDocumentPath(value: unknown): boolean {
@@ -278,6 +592,28 @@ export class ResolveObjectionsDialogComponent implements OnInit, OnDestroy {
     const base = String(environment.apiBaseUrl || '').replace(/\/+$/, '');
     const path = url.startsWith('/') ? url : `/${url}`;
     return `${base}${path}`;
+  }
+
+  formatCurrentDisplay(fieldName: string, value: any): string {
+    if (value === null || value === undefined || value === '') return '';
+
+    if (this.isDateField(fieldName)) {
+      try {
+        const d = new Date(value);
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+      } catch {}
+      return String(value);
+    }
+
+    if (this.isSelectField(fieldName)) {
+      const opts = this.getSelectOptions(fieldName);
+      const matched = opts.find(o => String(o.value).toLowerCase() === String(value).toLowerCase());
+      if (matched) return matched.label;
+    }
+
+    return String(value);
   }
 
   onFileSelected(fieldName: string, event: Event): void {
@@ -321,13 +657,20 @@ export class ResolveObjectionsDialogComponent implements OnInit, OnDestroy {
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      void Swal.fire('Required', 'Please fill all objection fields.', 'warning');
+      void Swal.fire('Required', 'Please fill all objection fields correctly.', 'warning');
       return;
     }
 
     const payload: Record<string, any> = {};
     for (const obj of this.unresolvedObjections) {
-      payload[obj.fieldName] = (this.form.get(obj.fieldName) as FormControl<any>)?.value;
+      let val = (this.form.get(obj.fieldName) as FormControl<any>)?.value;
+      if (val instanceof Date) {
+        const year = val.getFullYear();
+        const month = String(val.getMonth() + 1).padStart(2, '0');
+        const day = String(val.getDate()).padStart(2, '0');
+        val = `${year}-${month}-${day}`;
+      }
+      payload[obj.fieldName] = val;
     }
 
     const formData = FormDataUtil.buildFormData(payload);
@@ -345,7 +688,6 @@ export class ResolveObjectionsDialogComponent implements OnInit, OnDestroy {
         const raw = err?.error;
 
         if (typeof raw === 'string' && raw.trim().startsWith('<')) {
-          // Backend returned an HTML error page (typically 403/CSRF, login page, or proxy).
           const hint = status === 403
             ? 'Not authorized (403). Please login again, then retry.'
             : 'Request blocked. Please login again, then retry.';
@@ -396,7 +738,7 @@ export class ResolveObjectionsDialogComponent implements OnInit, OnDestroy {
     // Require that every objection field has a non-empty value (and differs from current for non-file).
     for (const obj of this.unresolvedObjections) {
       const ctrl = this.form.get(obj.fieldName) as FormControl<any> | null;
-      const v = ctrl?.value;
+      let v = ctrl?.value;
       const current = this.pickValue(obj.fieldName, this.application);
 
       if (this.isFileField(obj.fieldName, current)) {
@@ -404,10 +746,24 @@ export class ResolveObjectionsDialogComponent implements OnInit, OnDestroy {
         continue;
       }
 
+      if (v === null || v === undefined) return false;
+
+      if (v instanceof Date) {
+        if (isNaN(v.getTime())) return false;
+        const year = v.getFullYear();
+        const month = String(v.getMonth() + 1).padStart(2, '0');
+        const day = String(v.getDate()).padStart(2, '0');
+        v = `${year}-${month}-${day}`;
+      }
+
       const next = String(v ?? '').trim();
       if (!next) return false;
-      const cur = String(current ?? '').trim();
-      if (cur && next === cur) return false;
+
+      let cur = String(current ?? '').trim();
+      if (this.isDateField(obj.fieldName) && cur.includes('T')) {
+        cur = cur.split('T')[0];
+      }
+      if (cur && next.toLowerCase() === cur.toLowerCase()) return false;
     }
 
     return true;
@@ -439,6 +795,7 @@ export class ResolveObjectionsDialogComponent implements OnInit, OnDestroy {
     if (key.includes('aadhaar') || key.includes('aadhar')) return 'tel';
     if (key.includes('pan')) return 'text';
     if (key.includes('pin')) return 'tel';
+    if (key.includes('capacity') || key.includes('quantity') || key.includes('area') || key.includes('length') || key.includes('breadth')) return 'number';
     return 'text';
   }
 
@@ -453,16 +810,15 @@ export class ResolveObjectionsDialogComponent implements OnInit, OnDestroy {
 
   private validatorsForField(fieldName: string): ValidatorFn[] {
     const raw = String(fieldName || '').trim();
-    const key = raw.toLowerCase();
+    const key = raw.toLowerCase().replace(/[^a-z0-9]/g, '');
     const validators: ValidatorFn[] = [Validators.required];
 
-    // Common, cross-module patterns (best-effort mapping).
     if (key.includes('email')) {
       validators.push(Validators.pattern(PatternConstants.EMAIL));
       return validators;
     }
 
-    if (key.endsWith('pan') || key.includes('_pan') || key.includes('pan_')) {
+    if (key.endsWith('pan') || key.includes('pannumber')) {
       validators.push(Validators.pattern(PatternConstants.PAN));
       return validators;
     }
@@ -487,6 +843,11 @@ export class ResolveObjectionsDialogComponent implements OnInit, OnDestroy {
       return validators;
     }
 
+    if (key.includes('gst')) {
+      validators.push(Validators.pattern(PatternConstants.GST));
+      return validators;
+    }
+
     if (key.includes('url') || key.includes('website')) {
       validators.push(Validators.pattern(PatternConstants.WEBSITE));
       return validators;
@@ -497,7 +858,7 @@ export class ResolveObjectionsDialogComponent implements OnInit, OnDestroy {
       return validators;
     }
 
-    if (key.includes('name')) {
+    if (key.includes('name') && !key.includes('road') && !key.includes('file')) {
       validators.push(Validators.pattern(PatternConstants.NAME));
       return validators;
     }
