@@ -536,6 +536,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         return false;
     }
 
+    isLicenseeUser(): boolean {
+        return this.roleService.isLicenseeRole();
+    }
+
     // Dynamic service configuration
     private get serviceConfigs(): { [key in ApplicationType]: ServiceConfig } {
         const isImflRequisition = this.isImflDistributorPermitSource() && this.applicationType === 'requisition';
@@ -1146,7 +1150,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     }
 
     private computeDetailCountdown(): any {
-        if (!this.applicationData) return null;
+        if (!this.applicationData || !this.isLicenseeUser()) return null;
         if (this.applicationType !== 'new-license' && !this.isNewLicenseOrRenewal()) return null;
 
         const rawData: any = this.applicationData;

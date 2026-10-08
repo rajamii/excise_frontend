@@ -49,10 +49,10 @@
         </div>
 
         <!-- Header Right: Wallet Toggle + Countdown Widget + Action Button -->
-        <div class="header-right" *ngIf="showHeaderAction() || shouldShowWalletViewToggle() || selectedSupplyChainSection === 'officer-activity' || (selectedSupplyChainSection === 'new-license' && newLicenseActiveTimers.length > 0)">
+        <div class="header-right" *ngIf="showHeaderAction() || shouldShowWalletViewToggle() || selectedSupplyChainSection === 'officer-activity' || (isLicenseeUser() && selectedSupplyChainSection === 'new-license' && newLicenseActiveTimers.length > 0)">
           
-          <!-- Prominent Header Countdown Timer Widget for New License (shown beside Apply button) -->
-          <div *ngIf="selectedSupplyChainSection === 'new-license' && newLicenseActiveTimers.length > 0"
+          <!-- Prominent Header Countdown Timer Widget for New License (shown beside Apply button, licensee only) -->
+          <div *ngIf="isLicenseeUser() && selectedSupplyChainSection === 'new-license' && newLicenseActiveTimers.length > 0"
                class="header-countdown-widget"
                [class.critical]="newLicenseActiveTimers[0]?.activeTimer?.urgency === 'critical'"
                [class.expired]="newLicenseActiveTimers[0]?.activeTimer?.urgency === 'expired'">

@@ -780,7 +780,8 @@ export class UnifiedDashboardService {
         if (!raw) return {};
         if (raw.startsWith('<')) return { _raw: raw };
         try { return JSON.parse(raw); } catch { return { _raw: raw }; }
-      })
+      }),
+      tap(() => this.clearUnifiedAppsCache())
     );
   }
 

@@ -239,8 +239,8 @@
                   </div>
                 </div>
 
-                <!-- Prominent Countdown Timer Box for Active Objection or Payment -->
-                <div *ngIf="row.activeTimer" class="countdown-timer-box" [ngClass]="row.activeTimer.timerType + ' urgency-' + row.activeTimer.urgency">
+                <!-- Prominent Countdown Timer Box for Active Objection or Payment (Shown only to licensee) -->
+                <div *ngIf="isLicenseeUser() && row.activeTimer" class="countdown-timer-box" [ngClass]="row.activeTimer.timerType + ' urgency-' + row.activeTimer.urgency">
                   <div class="timer-box-head">
                     <span class="timer-pulse-dot"></span>
                     <i class="bi bi-stopwatch-fill me-1"></i>

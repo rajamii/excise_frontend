@@ -1,8 +1,9 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Injector } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, BehaviorSubject, finalize, map, of, shareReplay, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ReadApiCacheInterceptor } from '../interceptors/read-api-cache.interceptor';
+import { UnifiedDashboardService } from './unified-dashboard.service';
 
 @Injectable({
   providedIn: 'root'
@@ -34,7 +35,7 @@ export class LicenseApplicationService {
     return this.activeNewLicenseTimersSubject.getValue();
   }
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient, private injector: Injector) { }
 
   private getCurrentUserKey(): string {
     try {
@@ -98,10 +99,22 @@ export class LicenseApplicationService {
 
   public invalidateNewLicenseDashboardCache(): void {
     this.invalidateCache('new-license:dashboard-counts', 'new-license:list-by-status');
+    try {
+      const unifiedDashboard = this.injector.get(UnifiedDashboardService, null);
+      if (unifiedDashboard) {
+        unifiedDashboard.clearUnifiedAppsCache();
+      }
+    } catch {}
   }
 
   public invalidateRenewalDashboardCache(): void {
     this.invalidateCache('license-renewal:dashboard-counts', 'license-renewal:list-by-status');
+    try {
+      const unifiedDashboard = this.injector.get(UnifiedDashboardService, null);
+      if (unifiedDashboard) {
+        unifiedDashboard.clearUnifiedAppsCache();
+      }
+    } catch {}
   }
 
   public invalidateAllDashboardCaches(): void {
@@ -110,6 +123,12 @@ export class LicenseApplicationService {
     this.responseCache.clear();
     this.inflightRequests.clear();
     ReadApiCacheInterceptor.clearCache();
+    try {
+      const unifiedDashboard = this.injector.get(UnifiedDashboardService, null);
+      if (unifiedDashboard) {
+        unifiedDashboard.clearUnifiedAppsCache();
+      }
+    } catch {}
   }
 
   getPassPhoto(): File | null {

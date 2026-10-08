@@ -1247,6 +1247,14 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
 
   updateAllCountdowns(): void {
     const nowMs = Date.now();
+    if (!this.isLicenseeUser()) {
+      this.licenseApplicationService.setActiveNewLicenseTimers([]);
+      for (const row of this.rows) {
+        row.activeTimer = null;
+      }
+      return;
+    }
+
     for (const row of this.rows) {
       row.activeTimer = this.computeRowTimer(row, nowMs);
     }
@@ -1270,6 +1278,11 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
   }
 
   computeRowTimer(row: NewLicenseItem, nowMs: number): ActiveCountdownTimer | null {
+    // Timers are strictly shown ONLY to licensee users who need to take action
+    if (!this.isLicenseeUser()) {
+      return null;
+    }
+
     // Timer is strictly shown ONLY for active Objection or Payment stages
     if (row.statusGroup === 'approved' || row.statusGroup === 'rejected') {
       return null;

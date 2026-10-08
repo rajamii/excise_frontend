@@ -20,6 +20,7 @@ import { environment } from '../../../../../../../environments/environment';
 import { UnifiedDashboardService } from '../../../../../../core/services/unified-dashboard.service';
 import { LicenseApplicationService } from '../../../../../../core/services/license-application.service';
 import { MasterService } from '../../../../../../core/services/master.service';
+import { SidebarPendingBadgeService } from '../../../../../../shared/services/sidebar-pending-badge.service';
 import { PatternConstants } from '../../../../../../shared/constants/pattern.constants';
 import { validateUploadedFile } from '../../../../../../shared/utils/file-upload-validation';
 
@@ -149,6 +150,7 @@ export class ResolveObjectionsDialogComponent implements OnInit, OnDestroy {
     private unifiedService: UnifiedDashboardService,
     private licenseAppService: LicenseApplicationService,
     private masterService: MasterService,
+    private sidebarPendingBadgeService: SidebarPendingBadgeService,
     private dialogRef: MatDialogRef<ResolveObjectionsDialogComponent, boolean>,
     @Inject(MAT_DIALOG_DATA) public data: ResolveObjectionsDialogData
   ) {}
@@ -679,6 +681,9 @@ export class ResolveObjectionsDialogComponent implements OnInit, OnDestroy {
     this.licenseAppService.resolveNewLicenseObjections(appId, formData).subscribe({
       next: () => {
         this.isLoading = false;
+        this.unifiedService.clearUnifiedAppsCache();
+        this.licenseAppService.invalidateAllDashboardCaches();
+        this.sidebarPendingBadgeService.triggerRefresh();
         void Swal.fire('Success', 'Corrections submitted successfully.', 'success');
         this.dialogRef.close(true);
       },
