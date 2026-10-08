@@ -83,7 +83,14 @@
             } @else if (isDateField(obj.fieldName)) {
               <mat-form-field appearance="outline" class="field-input">
                 <mat-label>Select {{ label(obj.fieldName) }}</mat-label>
-                <input matInput [matDatepicker]="datePicker" [formControlName]="obj.fieldName" placeholder="DD/MM/YYYY" readonly (click)="datePicker.open()" />
+                <input matInput
+                       [matDatepicker]="datePicker"
+                       [max]="maxDateFor(obj.fieldName)"
+                       [min]="minDateFor(obj.fieldName)"
+                       [formControlName]="obj.fieldName"
+                       placeholder="DD/MM/YYYY"
+                       readonly
+                       (click)="datePicker.open()" />
                 <mat-datepicker-toggle matIconSuffix [for]="datePicker"></mat-datepicker-toggle>
                 <mat-datepicker #datePicker></mat-datepicker>
                 <mat-error *ngIf="form.get(obj.fieldName)?.touched && form.get(obj.fieldName)?.invalid">

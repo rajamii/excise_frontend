@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, Inject, OnDestroy, OnInit } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
+import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -799,12 +799,93 @@ export class ResolveObjectionsDialogComponent implements OnInit, OnDestroy {
     return 'text';
   }
 
+  maxDateFor(fieldName: string): Date | null {
+    const key = String(fieldName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const today = new Date();
+    if (key.includes('dob') || key.includes('dateofbirth') || key.includes('birthdate')) {
+      return new Date(today.getFullYear() - 21, today.getMonth(), today.getDate());
+    }
+    if (key.includes('incorporationdate') || key.includes('commencementdate') || key.endsWith('date')) {
+      return today;
+    }
+    return null;
+  }
+
+  minDateFor(fieldName: string): Date | null {
+    const key = String(fieldName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const today = new Date();
+    if (key.includes('dob') || key.includes('dateofbirth') || key.includes('birthdate')) {
+      return new Date(today.getFullYear() - 100, today.getMonth(), today.getDate());
+    }
+    return null;
+  }
+
+  private ageValidator(): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      if (!control.value) return null;
+      const dob = new Date(control.value);
+      if (isNaN(dob.getTime())) return { matDatepickerParse: true };
+      const today = new Date();
+      let age = today.getFullYear() - dob.getFullYear();
+      const monthDiff = today.getMonth() - dob.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+        age--;
+      }
+      if (age < 21) {
+        return { minAge: true };
+      }
+      if (age > 100) {
+        return { maxAge: true };
+      }
+      return null;
+    };
+  }
+
+  private noFutureDateValidator(): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      if (!control.value) return null;
+      const d = new Date(control.value);
+      if (isNaN(d.getTime())) return { matDatepickerParse: true };
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      if (d.getTime() > today.getTime()) {
+        return { futureDate: true };
+      }
+      return null;
+    };
+  }
+
   errorText(fieldName: string): string {
     const ctrl = this.form.get(fieldName);
     if (!ctrl) return 'Invalid value';
-    if (ctrl.hasError('required')) return 'Required';
-    if (ctrl.hasError('pattern')) return 'Invalid format';
-    if (ctrl.hasError('email')) return 'Invalid email';
+    if (ctrl.hasError('required')) return 'This field is required';
+    if (ctrl.hasError('minAge')) return 'Applicant must be at least 21 years old';
+    if (ctrl.hasError('maxAge')) return 'Age cannot exceed 100 years';
+    if (ctrl.hasError('futureDate')) return 'Date cannot be in the future';
+    if (ctrl.hasError('matDatepickerParse')) return 'Invalid date format';
+    if (ctrl.hasError('matDatepickerMax')) {
+      const key = String(fieldName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (key.includes('dob') || key.includes('dateofbirth') || key.includes('birthdate')) {
+        return 'Applicant must be at least 21 years old';
+      }
+      return 'Date exceeds maximum allowed date';
+    }
+    if (ctrl.hasError('matDatepickerMin')) return 'Date is before minimum allowed date';
+    if (ctrl.hasError('email')) return 'Invalid email address';
+
+    if (ctrl.hasError('pattern')) {
+      const key = String(fieldName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (key.endsWith('pan') || key.includes('pannumber')) return 'Invalid PAN format (e.g. ABCDE1234F)';
+      if (key.includes('email')) return 'Invalid email address';
+      if (key.includes('mobile') || key.includes('phone')) return 'Must be a 10-digit mobile number';
+      if (key.includes('pin') || key.includes('pincode')) return 'Must be a 6-digit PIN code';
+      if (key.includes('aadhaar') || key.includes('aadhar')) return 'Must be a 12-digit Aadhaar number';
+      if (key.includes('gst')) return 'Invalid GST format (15 characters)';
+      if (key.includes('cin')) return 'Invalid CIN format';
+      if (key.includes('name')) return 'Only letters and spaces allowed';
+      return 'Invalid format';
+    }
+
     return 'Invalid value';
   }
 
@@ -812,6 +893,16 @@ export class ResolveObjectionsDialogComponent implements OnInit, OnDestroy {
     const raw = String(fieldName || '').trim();
     const key = raw.toLowerCase().replace(/[^a-z0-9]/g, '');
     const validators: ValidatorFn[] = [Validators.required];
+
+    if (key.includes('dob') || key.includes('dateofbirth') || key.includes('birthdate')) {
+      validators.push(this.ageValidator());
+      return validators;
+    }
+
+    if (this.isDateField(fieldName)) {
+      validators.push(this.noFutureDateValidator());
+      return validators;
+    }
 
     if (key.includes('email')) {
       validators.push(Validators.pattern(PatternConstants.EMAIL));
