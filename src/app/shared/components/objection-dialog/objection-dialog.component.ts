@@ -349,7 +349,7 @@ export class ObjectionDialogComponent implements OnInit {
 
     const keyLower = key.toLowerCase();
 
-    // 1. Strictly exclude system/fee/payment/status/audit fields
+    // 1. Strictly exclude system/fee/payment/status/audit/additional charge fields
     if (
       keyLower.includes('fee') ||
       keyLower.includes('charge') ||
@@ -367,6 +367,11 @@ export class ObjectionDialogComponent implements OnInit {
       keyLower.includes('status') ||
       keyLower.includes('stage') ||
       keyLower.includes('workflow') ||
+      keyLower.includes('pachwai') ||
+      keyLower.includes('draught_beer') ||
+      keyLower.includes('draughtbeer') ||
+      keyLower.includes('mini_bar') ||
+      keyLower.includes('minibar') ||
       keyLower.startsWith('is_') ||
       /^is[A-Z]/.test(key)
     ) {
@@ -382,10 +387,6 @@ export class ObjectionDialogComponent implements OnInit {
       keyLower === 'licensesubcategory' || keyLower === 'license_sub_category' ||
       keyLower === 'establishmentname' || keyLower === 'establishment_name' ||
       keyLower === 'sitetype' || keyLower === 'site_type' ||
-      keyLower === 'pachwai' || keyLower === 'pachwai_flag' || keyLower === 'pachwai_selected' ||
-      keyLower === 'draughtbeer' || keyLower === 'draught_beer' ||
-      keyLower === 'minibar' || keyLower === 'mini_bar' ||
-      keyLower === 'minibarquantity' || keyLower === 'mini_bar_quantity' ||
       keyLower === 'existingsitelicense' || keyLower === 'existing_site_license' ||
       keyLower === 'brandname' || keyLower === 'brand_name' ||
       keyLower === 'spirittype' || keyLower === 'spirit_type' ||
@@ -606,6 +607,9 @@ export class ObjectionDialogComponent implements OnInit {
       'renewalOfLicenseId', 'renewal_of_license_id',
       'applicationFeePaymentStatus', 'application_fee_payment_status',
       'applicationFeePaymentStatusDisplay', 'application_fee_payment_status_display',
+      'pachwai', 'pachwai_flag', 'pachwai_selected', 'pachwai_included', 'pachwaiIncluded',
+      'draught_beer', 'draughtbeer', 'draught_beer_flag', 'draught_beer_included', 'draughtBeerIncluded', 'draughtBeer',
+      'mini_bar', 'minibar', 'mini_bar_flag', 'mini_bar_included', 'miniBarIncluded', 'miniBar', 'mini_bar_quantity', 'minibarquantity', 'miniBarQuantity',
     ]);
 
     const rawCandidates: Array<{ field: string; label: string; value: string; section: string; sectionIcon: string; sectionOrder: number; isUpload: boolean }> = [];
