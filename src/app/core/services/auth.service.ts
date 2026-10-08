@@ -99,9 +99,6 @@ export class AuthService {
     return this.http.post(`${environment.apiBaseUrl}/auth/users/register/licensee/`, data);
   }
 
-  /**
-   * ✅ Login and load user profile
-   */
   login(data: any): Observable<any> {
     if (this.isBlockedByUsername(String(data?.username || ''))) {
       return this.blockedUserError();
@@ -113,14 +110,12 @@ export class AuthService {
         if (response?.authenticated_user?.access) {
           localStorage.setItem('access', response.authenticated_user.access);
           localStorage.setItem('refresh', response.authenticated_user.refresh);
-          console.log('✅ Login successful, tokens saved');
         }
       }),
-      // ✅ Load user profile after login
+      // Load user profile after login
       switchMap((response: any) => {
-        console.log('✅ Login successful, loading user profile...');
         return this.accountService.identity(true).pipe(
-          tap(() => console.log('✅ User profile loaded after login')),
+          tap(() => console.log('User profile loaded after login')),
           catchError(err => {
             console.warn('⚠️ Login successful but failed to load profile:', err);
             return throwError(() => err);
@@ -130,6 +125,10 @@ export class AuthService {
       }),
       catchError(error => throwError(() => error))
     );
+  }
+
+  changePassword(data: { old_password: string; new_password: string }): Observable<any> {
+    return this.http.post(`${this.baseUrl}/change-password/`, data);
   }
 
   logout(): Observable<any> {

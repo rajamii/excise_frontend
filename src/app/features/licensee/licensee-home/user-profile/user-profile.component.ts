@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
 import { MatDialogRef, MatDialog } from '@angular/material/dialog';
 import { Subscription, catchError, throwError } from 'rxjs';
 import { CommonModule } from '@angular/common';
@@ -21,19 +21,6 @@ import { BaseComponent } from '../../../../base/base.components';
 import { BaseDependency } from '../../../../base/dependency/base.dependency';
 import { MyLicensesComponent } from '../../my-licenses/my-licenses.component';
 
-/**
- * UserProfileComponent
- *
- * Dialog component for viewing and editing licensee profiles.
- *
- * Backend endpoints used:
- *   GET    /user/licensee-profiles/me/          → load current user's profile
- *   POST   /user/licensee-profiles/             → create new profile
- *   PATCH  /user/licensee-profiles/<pk>/update/ → update existing profile
- *
- * Immutable fields (locked after first save): pan_number, father_name, dob, gender, nationality
- * Mutable fields (editable anytime):          marital_status, residential_status
- */
 @Component({
   selector: 'app-user-profile',
   standalone: true,
@@ -55,23 +42,16 @@ import { MyLicensesComponent } from '../../my-licenses/my-licenses.component';
 })
 export class UserProfileComponent extends BaseComponent implements OnInit, OnDestroy {
 
-  // =========================================================================
-  // DEPENDENCY INJECTION
-  // =========================================================================
-
   private fb = inject(FormBuilder);
   private mastersService = inject(MasterService);
   public dialogRef = inject(MatDialogRef<UserProfileComponent>);
   private dialog = inject(MatDialog);
 
-  // =========================================================================
-  // STATE
-  // =========================================================================
-
   loaded = false;
   user: any = null;
   licenseeProfile: any = null;
 
+  // Profile Edit State
   profileForm!: FormGroup;
   showEditForm = false;
   isNewProfile = true;
@@ -80,13 +60,18 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
   saveSuccess = false;
   saveError = '';
 
+  // Password Edit State
+  passwordForm!: FormGroup;
+  showPasswordForm = false;
+  isSavingPassword = false;
+  passwordSuccess = false;
+  passwordError = '';
+  hideOld = true;
+  hideNew = true;
+  hideConfirm = true;
+
   resolvedRoleName = 'Licensee';
-
   private subscriptions = new Subscription();
-
-  // =========================================================================
-  // DROPDOWN OPTIONS  (mirror backend choices)
-  // =========================================================================
 
   genderOptions = [
     { value: 'M', label: 'Male' },
@@ -107,17 +92,9 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
     { value: 'OCI', label: 'Overseas Citizen of India' }
   ];
 
-  // =========================================================================
-  // CONSTRUCTOR
-  // =========================================================================
-
   constructor(public override baseDependency: BaseDependency) {
     super(baseDependency);
   }
-
-  // =========================================================================
-  // LIFECYCLE HOOKS
-  // =========================================================================
 
   ngOnInit(): void {
     this.initializeForm();
@@ -129,32 +106,34 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
     this.subscriptions.unsubscribe();
   }
 
-  // =========================================================================
-  // FORM INITIALIZATION
-  // =========================================================================
-
   private initializeForm(): void {
+    // 1. Profile Form
     this.profileForm = this.fb.group({
-      // ── Immutable after creation ──────────────────────────────────────────
-      // pan_number is collected at signup and cannot be changed — not in this form
-      father_name: [
-        '',
-        [Validators.required, Validators.minLength(2), Validators.maxLength(100),
-        Validators.pattern(/^[a-zA-Z\s]+$/)]
-      ],
+      father_name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100), Validators.pattern(/^[a-zA-Z\s]+$/)]],
       dob: ['', Validators.required],
       gender: ['', Validators.required],
       nationality: ['Indian', [Validators.required, Validators.maxLength(50)]],
-
-      // ── Mutable anytime ───────────────────────────────────────────────────
       marital_status: ['', Validators.required],
       residential_status: ['', Validators.required]
     });
+
+    // 2. Password Form
+    this.passwordForm = this.fb.group({
+      oldPassword: ['', Validators.required],
+      newPassword: ['', [Validators.required, Validators.minLength(8)]],
+      confirmPassword: ['', Validators.required]
+    }, { validators: this.passwordMatchValidator });
   }
 
-  // =========================================================================
-  // DATA LOADING
-  // =========================================================================
+  passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
+    const newPwd = control.get('newPassword')?.value;
+    const confirmPwd = control.get('confirmPassword')?.value;
+    if (newPwd && confirmPwd && newPwd !== confirmPwd) {
+      control.get('confirmPassword')?.setErrors({ passwordMismatch: true });
+      return { passwordMismatch: true };
+    }
+    return null;
+  }
 
   private loadUserData(): void {
     const sub = this.accountService.getAuthenticationState().subscribe(account => {
@@ -168,57 +147,26 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
 
   private resolveRoleName(account: any): string {
     const role = account?.role;
-
-    if (!role) {
-      return 'Licensee';
-    }
-
-    if (typeof role === 'string') {
-      const name = role.trim();
-      return name ? name : 'Licensee';
-    }
-
-    if (typeof role === 'number') {
-      return role === 2 ? 'Licensee' : `Role ${role}`;
-    }
-
+    if (!role) return 'Licensee';
+    if (typeof role === 'string') return role.trim() || 'Licensee';
+    if (typeof role === 'number') return role === 2 ? 'Licensee' : `Role ${role}`;
     if (typeof role === 'object') {
-      const candidate =
-        String(role?.displayName || '').trim() ||
-        String(role?.name || '').trim() ||
-        String(role?.roleName || '').trim() ||
-        String(role?.label || '').trim();
-
-      if (candidate) {
-        return candidate;
-      }
-
+      const candidate = String(role?.displayName || '').trim() || String(role?.name || '').trim() || String(role?.roleName || '').trim() || String(role?.label || '').trim();
+      if (candidate) return candidate;
       const id = Number(role?.id);
-      if (Number.isFinite(id) && id > 0) {
-        return id === 2 ? 'Licensee' : `Role ${id}`;
-      }
+      if (Number.isFinite(id) && id > 0) return id === 2 ? 'Licensee' : `Role ${id}`;
     }
-
     return 'Licensee';
   }
 
-  /**
-   * Fetch the current user's licensee profile using the /me/ endpoint.
-   * Falls back gracefully when no profile exists yet (404).
-   */
   private loadUserProfile(): void {
     this.profileLoading = true;
     this.loaded = false;
 
-    // Use getMyLicenseeProfile() → GET /user/licensee-profiles/me/
     const sub = this.mastersService.getMyLicenseeProfile().subscribe({
       next: (profile: any) => {
-        console.log('🔍 RAW API RESPONSE:', profile);
-        console.log('📋 Profile fields:', Object.keys(profile || {}));
-
         if (profile) {
           this.licenseeProfile = this.enrichProfileWithDisplayValues(profile);
-          console.log('✨ ENRICHED PROFILE:', this.licenseeProfile);
           this.isNewProfile = false;
           this.populateForm();
         } else {
@@ -228,8 +176,6 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
         this.loaded = true;
       },
       error: (error: any) => {
-        console.error('❌ Error loading profile:', error);
-        // 404 = no profile yet; anything else is a real error
         if (error.status === 404) {
           this.isNewProfile = true;
         }
@@ -240,38 +186,17 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
     this.subscriptions.add(sub);
   }
 
-  /**
-   * Add display values for gender, marital_status, and residential_status
-   * so the template can show human-readable labels.
-   */
   private enrichProfileWithDisplayValues(profile: any): any {
-    console.log('🔄 Enriching profile with display values...');
-    console.log('  gender:', profile.gender);
-    console.log('  maritalStatus:', profile.maritalStatus);
-    console.log('  residentialStatus:', profile.residentialStatus);
-    console.log('  fatherName:', profile.fatherName);
-    console.log('  panNumber:', profile.panNumber);
-
-    const enriched = {
+    return {
       ...profile,
-      // Use backend field names (camelCase) but also add snake_case aliases for template
       gender_display: this.getGenderDisplay(profile.gender),
       marital_status_display: this.getMaritalStatusDisplay(profile.maritalStatus),
       residential_status_display: this.getResidentialStatusDisplay(profile.residentialStatus),
-      // Add snake_case aliases for other fields
       father_name: profile.fatherName,
       pan_number: profile.panNumber,
       marital_status: profile.maritalStatus,
       residential_status: profile.residentialStatus
     };
-
-    console.log('  → gender_display:', enriched.gender_display);
-    console.log('  → marital_status_display:', enriched.marital_status_display);
-    console.log('  → residential_status_display:', enriched.residential_status_display);
-    console.log('  → father_name:', enriched.father_name);
-    console.log('  → pan_number:', enriched.pan_number);
-
-    return enriched;
   }
 
   private getGenderDisplay(value: string): string {
@@ -289,10 +214,6 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
     return option ? option.label : value || '';
   }
 
-  /**
-   * Populate edit form with existing profile data from the backend.
-   * Backend uses camelCase field names (panNumber, fatherName, etc.).
-   */
   private populateForm(): void {
     if (!this.licenseeProfile || !this.profileForm) return;
 
@@ -304,37 +225,19 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
       marital_status: this.licenseeProfile.maritalStatus ?? '',
       residential_status: this.licenseeProfile.residentialStatus ?? ''
     });
-
-    // Lock immutable fields when editing an existing profile
-    // if (!this.isNewProfile) {
-    //   ['father_name', 'dob', 'gender', 'nationality'].forEach(field => {
-    //     this.profileForm.get(field)?.disable();
-    //   });
-    // }
   }
 
-  // =========================================================================
-  // FORM CONTROL ACCESS
-  // =========================================================================
-
-  get f() {
-    return this.profileForm.controls;
-  }
-
-  // =========================================================================
-  // DIALOG ACTIONS
-  // =========================================================================
+  get f() { return this.profileForm.controls; }
 
   closeDialog(): void {
     this.dialogRef.close();
   }
 
-  // =========================================================================
-  // EDIT MODE ACTIONS
-  // =========================================================================
+  // --- Profile Edit Actions ---
 
   openEditForm(): void {
     this.showEditForm = true;
+    this.showPasswordForm = false;
     this.saveError = '';
     this.saveSuccess = false;
   }
@@ -346,11 +249,6 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
     this.populateForm();
   }
 
-  /**
-   * Save profile.
-   *   Create → POST   /user/licensee-profiles/
-   *   Update → PATCH  /user/licensee-profiles/<pk>/update/
-   */
   saveProfile(): void {
     if (this.profileForm.invalid) {
       this.markFormGroupTouched(this.profileForm);
@@ -362,16 +260,11 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
     this.saveError = '';
     this.saveSuccess = false;
 
-    const payload = this.isNewProfile
-      ? this.formatCreatePayload()
-      : this.formatUpdatePayload();
+    const payload = this.isNewProfile ? this.formatCreatePayload() : this.formatUpdatePayload();
 
     const save$ = this.isNewProfile
       ? this.mastersService.createLicenseeProfile(payload)
-      : this.mastersService
-        .patchLicenseeProfile(this.licenseeProfile.id, payload)
-        .pipe(
-          // Some backends only allow self-updates at /me/ and reject id-based update with 403.
+      : this.mastersService.patchLicenseeProfile(this.licenseeProfile.id, payload).pipe(
           catchError((error: any) => {
             if ([403, 404, 405].includes(error?.status)) {
               return this.mastersService.patchMyLicenseeProfile(payload);
@@ -387,7 +280,6 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
         this.licenseeProfile = this.enrichProfileWithDisplayValues(response);
         this.isNewProfile = false;
 
-        // Lock immutable fields after successful creation
         ['father_name', 'dob', 'gender', 'nationality'].forEach(field => {
           this.profileForm.get(field)?.disable();
         });
@@ -399,14 +291,9 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
       },
       error: (error: any) => {
         this.isSaving = false;
-
-        // Try to surface the most useful error message from the backend
         if (error.error && typeof error.error === 'object') {
           const messages = Object.entries(error.error)
-            .map(([field, msgs]) => {
-              const msgStr = Array.isArray(msgs) ? msgs.join(', ') : String(msgs);
-              return `${field}: ${msgStr}`;
-            })
+            .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : String(msgs)}`)
             .join('\n');
           this.saveError = messages || 'Failed to save profile. Please try again.';
         } else if (error.error?.detail) {
@@ -420,9 +307,55 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
     this.subscriptions.add(sub);
   }
 
-  // =========================================================================
-  // NAVIGATION
-  // =========================================================================
+  // --- Password Edit Actions ---
+
+  openPasswordForm(): void {
+    this.showPasswordForm = true;
+    this.showEditForm = false; 
+    this.passwordForm.reset();
+    this.passwordSuccess = false;
+    this.passwordError = '';
+  }
+
+  cancelPasswordEdit(): void {
+    this.showPasswordForm = false;
+    this.passwordSuccess = false;
+    this.passwordError = '';
+  }
+
+  savePassword(): void {
+    if (this.passwordForm.invalid) {
+      this.markFormGroupTouched(this.passwordForm);
+      return;
+    }
+
+    this.isSavingPassword = true;
+    this.passwordError = '';
+    this.passwordSuccess = false;
+
+    const payload = {
+      old_password: this.passwordForm.value.oldPassword,
+      new_password: this.passwordForm.value.newPassword
+    };
+
+    const sub = this.authService.changePassword(payload).subscribe({
+      next: () => {
+        this.isSavingPassword = false;
+        this.passwordSuccess = true;
+        setTimeout(() => this.cancelPasswordEdit(), 2000);
+      },
+      error: (err: any) => {
+        this.isSavingPassword = false;
+        this.passwordError = err.error?.old_password?.[0] 
+          || err.error?.new_password?.[0] 
+          || 'Failed to update password. Please check your current password.';
+      }
+    });
+
+    this.subscriptions.add(sub);
+  }
+
+  // --- Utilities ---
 
   openMyLicenses(): void {
     this.dialogRef.close();
@@ -433,13 +366,6 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
     });
   }
 
-  // =========================================================================
-  // UTILITIES
-  // =========================================================================
-
-  /**
-   * Format Date object to YYYY-MM-DD string for the backend.
-   */
   private formatDate(date: any): string {
     if (!date) return '';
     const d = new Date(date);
@@ -449,33 +375,19 @@ export class UserProfileComponent extends BaseComponent implements OnInit, OnDes
     return `${year}-${month}-${day}`;
   }
 
-  /**
-   * Build create payload using camelCase to match backend API convention.
-   */
   private formatCreatePayload(): any {
     const v = this.profileForm.getRawValue();
     return {
-      fatherName: v.father_name,
-      dob: this.formatDate(v.dob),
-      gender: v.gender,
-      nationality: v.nationality,
-      maritalStatus: v.marital_status,
-      residentialStatus: v.residential_status
+      fatherName: v.father_name, dob: this.formatDate(v.dob), gender: v.gender,
+      nationality: v.nationality, maritalStatus: v.marital_status, residentialStatus: v.residential_status
     };
   }
 
-  /**
-   * Build update payload with mutable fields only.
-   */
   private formatUpdatePayload(): any {
     const v = this.profileForm.getRawValue();
     return {
-      fatherName: v.father_name,
-      dob: this.formatDate(v.dob),
-      gender: v.gender,
-      nationality: v.nationality,
-      maritalStatus: v.marital_status,
-      residentialStatus: v.residential_status
+      fatherName: v.father_name, dob: this.formatDate(v.dob), gender: v.gender,
+      nationality: v.nationality, maritalStatus: v.marital_status, residentialStatus: v.residential_status
     };
   }
 
