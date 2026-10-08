@@ -146,7 +146,6 @@
             <tr>
               <th>Sl.</th>
               <th>Fee Description</th>
-              <th>Module Code</th>
               <th>Head of Account</th>
               <th class="text-end">Amount (₹)</th>
             </tr>
@@ -158,14 +157,13 @@
                 <strong>New License Application Processing Fee</strong>
                 <div class="text-muted small">Standard mandatory non-refundable application scrutiny fee</div>
               </td>
-              <td><code>001</code></td>
               <td><code>{{ slipData.hoa || '0039-00-800-45-02' }}</code></td>
               <td class="text-end fw-bold">₹ {{ slipData.amount | number:'1.2-2' }}</td>
             </tr>
           </tbody>
           <tfoot>
             <tr class="total-row">
-              <td colspan="4" class="text-end total-label">Total Amount Paid:</td>
+              <td colspan="3" class="text-end total-label">Total Amount Paid:</td>
               <td class="text-end total-amount">₹ {{ slipData.amount | number:'1.2-2' }}</td>
             </tr>
           </tfoot>
