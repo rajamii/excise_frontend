@@ -2040,3 +2040,38 @@
         .clock-val { color: #475569; }
     }
 }
+
+.reverted-details-btn {
+    background-color: #ffc107 !important;
+    background: #ffc107 !important;
+    border: 1px solid #d97706 !important;
+    color: #1f2937 !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    border-radius: 6px !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+    transition: all 0.2s ease-in-out !important;
+
+    i, span {
+        color: #1f2937 !important;
+    }
+
+    &:hover {
+        background-color: #eab308 !important;
+        background: #eab308 !important;
+        border-color: #b45309 !important;
+        color: #111827 !important;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+        transform: translateY(-1px);
+
+        i, span {
+            color: #111827 !important;
+        }
+    }
+
+    &:active {
+        background-color: #ca8a04 !important;
+        background: #ca8a04 !important;
+        transform: translateY(0);
+    }
+}

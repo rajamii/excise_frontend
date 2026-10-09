@@ -72,6 +72,7 @@ export interface UnifiedApplicationData {
     isRevertedByCommissioner?: boolean;
     commissionerRevertRemarks?: string;
     latestRevert?: any;
+    revertHistory?: any[];
 
     // Common computed fields (properly typed)
     distilleryName?: string;
@@ -1022,7 +1023,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
             allowedActionConfigs,
             isRevertedByCommissioner: apiData.isRevertedByCommissioner ?? apiData.is_reverted_by_commissioner ?? false,
             commissionerRevertRemarks: apiData.commissionerRevertRemarks ?? apiData.commissioner_revert_remarks ?? '',
-            latestRevert: apiData.latestRevert ?? apiData.latest_revert ?? null
+            latestRevert: apiData.latestRevert ?? apiData.latest_revert ?? null,
+            revertHistory: apiData.revertHistory ?? apiData.revert_history ?? []
         };
 
         // For workflows where backend often sends generic "PENDING" or a raw stage ID,
@@ -2170,6 +2172,27 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         }
 
         return false;
+    }
+
+    showAllReverts: boolean = false;
+
+    toggleRevertHistory(): void {
+        this.showAllReverts = !this.showAllReverts;
+    }
+
+    getRevertHistory(): any[] {
+        const history = this.applicationData?.revertHistory || this.applicationData?.['revert_history'] || [];
+        if (Array.isArray(history) && history.length > 0) {
+            return history;
+        }
+        const latest = this.applicationData?.latestRevert || this.applicationData?.['latest_revert'];
+        const remarks = this.applicationData?.commissionerRevertRemarks || this.applicationData?.['commissioner_revert_remarks'];
+        if (latest) {
+            return [latest];
+        } else if (remarks) {
+            return [{ remarks }];
+        }
+        return [];
     }
 
     onUnifiedAction(event: { action: string, item: any }): void {

@@ -48,17 +48,61 @@
 
         <!-- Revert Remarks Alert from Commissioner -->
         <div class="alert alert-danger mb-4 shadow-sm border-start border-danger border-4 no-print" 
-             *ngIf="isCommissionerOrJointCommissioner() && (applicationData.isRevertedByCommissioner || applicationData['is_reverted_by_commissioner'])"
+             *ngIf="isCommissionerOrJointCommissioner() && (applicationData.latestRevert || applicationData['latest_revert'] || applicationData.isRevertedByCommissioner || applicationData['is_reverted_by_commissioner'] || (getRevertHistory().length > 0))"
              style="background-color: #fff5f5; border-radius: 8px; padding: 16px;">
             <div class="d-flex gap-3 align-items-start">
                 <div style="background-color: #fee2e2; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                     <i class="bi bi-arrow-counterclockwise text-danger" style="font-size: 20px;"></i>
                 </div>
                 <div style="flex-grow: 1;">
-                    <h5 class="alert-heading text-danger fw-bold mb-1" style="font-size: 16px; margin: 0 0 4px 0;">Application Reverted by Commissioner</h5>
-                    <p class="mb-0 text-dark fw-medium" style="font-size: 14px; line-height: 1.5; margin: 0;">
-                        <strong>Remarks:</strong> {{ applicationData.commissionerRevertRemarks || applicationData['commissioner_revert_remarks'] }}
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-1">
+                        <h5 class="alert-heading text-danger fw-bold mb-0" style="font-size: 16px;">
+                            Application Reverted {{ (applicationData.latestRevert || applicationData['latest_revert']) ? 'by ' + ((applicationData.latestRevert || applicationData['latest_revert'])?.revertedByRole || (applicationData.latestRevert || applicationData['latest_revert'])?.reverted_by_role) : 'by Commissioner' }}
+                        </h5>
+                        <button type="button" class="btn btn-sm reverted-details-btn d-inline-flex align-items-center gap-1 py-1 px-2.5 fw-semibold"
+                                style="background-color: #ffc107 !important; color: #1f2937 !important; border: 1px solid #d97706 !important; font-weight: 600;"
+                                *ngIf="getRevertHistory().length > 1"
+                                (click)="toggleRevertHistory()">
+                            <i class="bi" [ngClass]="showAllReverts ? 'bi-chevron-up' : 'bi-clock-history'" style="color: #1f2937 !important;"></i>
+                            <span style="color: #1f2937 !important;">{{ showAllReverts ? 'Hide Reverted Details' : 'Reverted Details (' + getRevertHistory().length + ')' }}</span>
+                        </button>
+                    </div>
+                    <p class="mb-1 text-dark fw-medium" style="font-size: 14px; line-height: 1.5; margin: 0;">
+                        <strong>Remarks:</strong> {{ (applicationData.latestRevert || applicationData['latest_revert'])?.remarks || applicationData.commissionerRevertRemarks || applicationData['commissioner_revert_remarks'] }}
                     </p>
+                    <small class="text-muted d-block" style="font-size: 12px;" *ngIf="applicationData.latestRevert || applicationData['latest_revert']">
+                        Reverted on: {{ ((applicationData.latestRevert || applicationData['latest_revert'])?.revertedOn || (applicationData.latestRevert || applicationData['latest_revert'])?.reverted_on) | date:'medium' }} by {{ (applicationData.latestRevert || applicationData['latest_revert'])?.revertedBy || (applicationData.latestRevert || applicationData['latest_revert'])?.reverted_by }}
+                    </small>
+
+                    <!-- Previous Reverts Expandable List -->
+                    <div class="mt-3 pt-3 border-top border-danger border-opacity-25" *ngIf="showAllReverts && getRevertHistory().length > 1">
+                        <div class="d-flex align-items-center gap-2 mb-2 text-danger fw-semibold" style="font-size: 13px;">
+                            <i class="bi bi-clock-history"></i>
+                            <span>Revert History Records ({{ getRevertHistory().length }} Reverts)</span>
+                        </div>
+                        <div class="d-flex flex-column gap-2">
+                            <div class="card p-2 border border-danger border-opacity-25 bg-white shadow-none"
+                                 *ngFor="let rev of getRevertHistory(); let idx = index"
+                                 [style.border-left]="idx === 0 ? '4px solid #c04d4d !important' : '4px solid #6c757d !important'">
+                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-1 mb-1">
+                                    <span class="badge" [ngClass]="idx === 0 ? 'bg-danger text-white' : 'bg-secondary text-white'" style="font-size: 11px;">
+                                        {{ idx === 0 ? 'Latest Revert' : ('Revert #' + (getRevertHistory().length - idx)) }}
+                                    </span>
+                                    <div class="d-flex align-items-center gap-2 text-muted" style="font-size: 12px;">
+                                        <span *ngIf="rev.reverted_on || rev.revertedOn">
+                                            <i class="bi bi-clock me-1"></i>{{ (rev.reverted_on || rev.revertedOn) | date:'dd MMM yyyy, hh:mm a' }}
+                                        </span>
+                                        <span *ngIf="rev.reverted_by || rev.revertedBy">
+                                            <i class="bi bi-person me-1"></i>By: {{ rev.reverted_by || rev.revertedBy }} {{ (rev.reverted_by_role || rev.revertedByRole) ? '(' + (rev.reverted_by_role || rev.revertedByRole) + ')' : '' }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="text-dark" style="font-size: 13px; white-space: pre-wrap;">
+                                    <strong>Remarks:</strong> {{ rev.remarks || 'No remarks provided' }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2338,22 +2382,61 @@
 
         <!-- Bottom Revert Remarks Alert -->
         <div class="alert alert-danger mt-4 mb-4 shadow-sm border-start border-danger border-4 no-print mx-4" 
-             *ngIf="applicationData && isCommissionerOrJointCommissioner() && (applicationData.latestRevert || applicationData['latest_revert'] || applicationData.commissionerRevertRemarks || applicationData.isRevertedByCommissioner)"
+             *ngIf="applicationData && isCommissionerOrJointCommissioner() && (applicationData.latestRevert || applicationData['latest_revert'] || applicationData.commissionerRevertRemarks || applicationData.isRevertedByCommissioner || (getRevertHistory().length > 0))"
              style="background-color: #fff5f5; border-radius: 8px; padding: 16px;">
             <div class="d-flex gap-3 align-items-start">
                 <div style="background-color: #fee2e2; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                     <i class="bi bi-arrow-counterclockwise text-danger" style="font-size: 20px;"></i>
                 </div>
                 <div style="flex-grow: 1;">
-                    <h5 class="alert-heading text-danger fw-bold mb-1" style="font-size: 16px; margin: 0 0 4px 0;">
-                        Application Reverted {{ (applicationData.latestRevert || applicationData['latest_revert']) ? 'by ' + ((applicationData.latestRevert || applicationData['latest_revert'])?.revertedByRole || (applicationData.latestRevert || applicationData['latest_revert'])?.reverted_by_role) : '' }}
-                    </h5>
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-1">
+                        <h5 class="alert-heading text-danger fw-bold mb-0" style="font-size: 16px;">
+                            Application Reverted {{ (applicationData.latestRevert || applicationData['latest_revert']) ? 'by ' + ((applicationData.latestRevert || applicationData['latest_revert'])?.revertedByRole || (applicationData.latestRevert || applicationData['latest_revert'])?.reverted_by_role) : 'by Commissioner' }}
+                        </h5>
+                        <button type="button" class="btn btn-sm reverted-details-btn d-inline-flex align-items-center gap-1 py-1 px-2.5 fw-semibold"
+                                style="background-color: #ffc107 !important; color: #1f2937 !important; border: 1px solid #d97706 !important; font-weight: 600;"
+                                *ngIf="getRevertHistory().length > 1"
+                                (click)="toggleRevertHistory()">
+                            <i class="bi" [ngClass]="showAllReverts ? 'bi-chevron-up' : 'bi-clock-history'" style="color: #1f2937 !important;"></i>
+                            <span style="color: #1f2937 !important;">{{ showAllReverts ? 'Hide Reverted Details' : 'Reverted Details (' + getRevertHistory().length + ')' }}</span>
+                        </button>
+                    </div>
                     <p class="mb-1 text-dark fw-medium" style="font-size: 14px; line-height: 1.5; margin: 0;">
                         <strong>Remarks:</strong> {{ (applicationData.latestRevert || applicationData['latest_revert'])?.remarks || applicationData.commissionerRevertRemarks || applicationData['commissioner_revert_remarks'] }}
                     </p>
-                    <small class="text-muted" style="font-size: 12px;" *ngIf="applicationData.latestRevert || applicationData['latest_revert']">
+                    <small class="text-muted d-block" style="font-size: 12px;" *ngIf="applicationData.latestRevert || applicationData['latest_revert']">
                         Reverted on: {{ ((applicationData.latestRevert || applicationData['latest_revert'])?.revertedOn || (applicationData.latestRevert || applicationData['latest_revert'])?.reverted_on) | date:'medium' }} by {{ (applicationData.latestRevert || applicationData['latest_revert'])?.revertedBy || (applicationData.latestRevert || applicationData['latest_revert'])?.reverted_by }}
                     </small>
+
+                    <!-- Previous Reverts Expandable List -->
+                    <div class="mt-3 pt-3 border-top border-danger border-opacity-25" *ngIf="showAllReverts && getRevertHistory().length > 1">
+                        <div class="d-flex align-items-center gap-2 mb-2 text-danger fw-semibold" style="font-size: 13px;">
+                            <i class="bi bi-clock-history"></i>
+                            <span>Revert History Records ({{ getRevertHistory().length }} Reverts)</span>
+                        </div>
+                        <div class="d-flex flex-column gap-2">
+                            <div class="card p-2 border border-danger border-opacity-25 bg-white shadow-none"
+                                 *ngFor="let rev of getRevertHistory(); let idx = index"
+                                 [style.border-left]="idx === 0 ? '4px solid #dc3545 !important' : '4px solid #6c757d !important'">
+                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-1 mb-1">
+                                    <span class="badge" [ngClass]="idx === 0 ? 'bg-danger text-white' : 'bg-secondary text-white'" style="font-size: 11px;">
+                                        {{ idx === 0 ? 'Latest Revert' : ('Revert #' + (getRevertHistory().length - idx)) }}
+                                    </span>
+                                    <div class="d-flex align-items-center gap-2 text-muted" style="font-size: 12px;">
+                                        <span *ngIf="rev.reverted_on || rev.revertedOn">
+                                            <i class="bi bi-clock me-1"></i>{{ (rev.reverted_on || rev.revertedOn) | date:'dd MMM yyyy, hh:mm a' }}
+                                        </span>
+                                        <span *ngIf="rev.reverted_by || rev.revertedBy">
+                                            <i class="bi bi-person me-1"></i>By: {{ rev.reverted_by || rev.revertedBy }} {{ (rev.reverted_by_role || rev.revertedByRole) ? '(' + (rev.reverted_by_role || rev.revertedByRole) + ')' : '' }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="text-dark" style="font-size: 13px; white-space: pre-wrap;">
+                                    <strong>Remarks:</strong> {{ rev.remarks || 'No remarks provided' }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
