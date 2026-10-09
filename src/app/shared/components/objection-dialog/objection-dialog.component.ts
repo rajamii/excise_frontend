@@ -8,8 +8,10 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { forkJoin, catchError, of } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { DocumentPreviewDialogComponent } from '../document-preview-dialog/document-preview-dialog.component';
+import { MasterService } from '../../../core/services/master.service';
 
 export interface ObjectionDialogResult {
   objections: Array<{ field: string; remarks: string }>;
@@ -61,6 +63,15 @@ export class ObjectionDialogComponent implements OnInit {
   searchQuery: string = '';
   activeSectionFilter: string = 'ALL';
 
+  masterDistricts: any[] = [];
+  masterSubdivisions: any[] = [];
+  masterPoliceStations: any[] = [];
+  masterLicenseCategories: any[] = [];
+  masterLicenseSubcategories: any[] = [];
+  masterLicenseTypes: any[] = [];
+  masterLocationCategories: any[] = [];
+  masterLocationSubcategories: any[] = [];
+
   get rows(): FormArray {
     return this.form.get('rows') as FormArray;
   }
@@ -73,10 +84,14 @@ export class ObjectionDialogComponent implements OnInit {
     private fb: FormBuilder,
     private dialog: MatDialog,
     private dialogRef: MatDialogRef<ObjectionDialogComponent, ObjectionDialogResult | null>,
+    private masterService: MasterService,
     @Inject(MAT_DIALOG_DATA) public data: { application: any; title?: string }
   ) { }
 
   ngOnInit(): void {
+    this.loadMastersFromSession();
+    this.loadMastersFromService();
+
     this.allCandidates = this.buildCandidates(this.data?.application);
 
     this.form = this.fb.group({
@@ -87,6 +102,86 @@ export class ObjectionDialogComponent implements OnInit {
     if (this.allCandidates.length === 0) {
       this.form.get('generalRemarks')?.addValidators([Validators.required]);
       this.form.get('generalRemarks')?.updateValueAndValidity({ emitEvent: false });
+    }
+  }
+
+  private getParsedSession<T = any[]>(key: string): T | null {
+    try {
+      const stored = sessionStorage.getItem(key);
+      return stored ? (JSON.parse(stored) as T) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private loadMastersFromSession(): void {
+    const sDistricts = this.getParsedSession('districts') || this.getParsedSession('masterDistricts');
+    if (Array.isArray(sDistricts) && sDistricts.length) this.masterDistricts = sDistricts;
+
+    const sSubdivisions = this.getParsedSession('subdivisions') || this.getParsedSession('masterSubdivisions');
+    if (Array.isArray(sSubdivisions) && sSubdivisions.length) this.masterSubdivisions = sSubdivisions;
+
+    const sPS = this.getParsedSession('policeStations') || this.getParsedSession('masterPoliceStations');
+    if (Array.isArray(sPS) && sPS.length) this.masterPoliceStations = sPS;
+
+    const sCats = this.getParsedSession('licenseCategories') || this.getParsedSession('masterLicenseCategories');
+    if (Array.isArray(sCats) && sCats.length) this.masterLicenseCategories = sCats;
+
+    const sSubcats = this.getParsedSession('licenseSubcategories') || this.getParsedSession('masterLicenseSubcategories');
+    if (Array.isArray(sSubcats) && sSubcats.length) this.masterLicenseSubcategories = sSubcats;
+
+    const sTypes = this.getParsedSession('licenseTypes') || this.getParsedSession('masterLicenseTypes');
+    if (Array.isArray(sTypes) && sTypes.length) this.masterLicenseTypes = sTypes;
+
+    const sLocCats = this.getParsedSession('locationCategories') || this.getParsedSession('masterLocationCategories');
+    if (Array.isArray(sLocCats) && sLocCats.length) this.masterLocationCategories = sLocCats;
+
+    const sLocSubcats = this.getParsedSession('locationSubcategories') || this.getParsedSession('masterLocationSubcategories');
+    if (Array.isArray(sLocSubcats) && sLocSubcats.length) this.masterLocationSubcategories = sLocSubcats;
+  }
+
+  private loadMastersFromService(): void {
+    if (!this.masterService) return;
+
+    forkJoin({
+      districts: this.masterDistricts.length ? of(this.masterDistricts) : this.masterService.getDistricts().pipe(catchError(() => of([]))),
+      subdivisions: this.masterSubdivisions.length ? of(this.masterSubdivisions) : this.masterService.getSubdivisions().pipe(catchError(() => of([]))),
+      policeStations: this.masterPoliceStations.length ? of(this.masterPoliceStations) : this.masterService.getPoliceStations().pipe(catchError(() => of([]))),
+      licenseCategories: this.masterLicenseCategories.length ? of(this.masterLicenseCategories) : this.masterService.getLicenseCategories().pipe(catchError(() => of([]))),
+      licenseSubcategories: this.masterLicenseSubcategories.length ? of(this.masterLicenseSubcategories) : this.masterService.getLicenseSubcategories().pipe(catchError(() => of([]))),
+      licenseTypes: this.masterLicenseTypes.length ? of(this.masterLicenseTypes) : this.masterService.getLicenseTypes().pipe(catchError(() => of([]))),
+      locationCategories: this.masterLocationCategories.length ? of(this.masterLocationCategories) : this.masterService.getLocationCategories().pipe(catchError(() => of([]))),
+      locationSubcategories: this.masterLocationSubcategories.length ? of(this.masterLocationSubcategories) : this.masterService.getLocationSubcategories().pipe(catchError(() => of([])))
+    }).subscribe(res => {
+      let updated = false;
+      if (Array.isArray(res.districts) && res.districts.length) { this.masterDistricts = res.districts; updated = true; }
+      if (Array.isArray(res.subdivisions) && res.subdivisions.length) { this.masterSubdivisions = res.subdivisions; updated = true; }
+      if (Array.isArray(res.policeStations) && res.policeStations.length) { this.masterPoliceStations = res.policeStations; updated = true; }
+      if (Array.isArray(res.licenseCategories) && res.licenseCategories.length) { this.masterLicenseCategories = res.licenseCategories; updated = true; }
+      if (Array.isArray(res.licenseSubcategories) && res.licenseSubcategories.length) { this.masterLicenseSubcategories = res.licenseSubcategories; updated = true; }
+      if (Array.isArray(res.licenseTypes) && res.licenseTypes.length) { this.masterLicenseTypes = res.licenseTypes; updated = true; }
+      if (Array.isArray(res.locationCategories) && res.locationCategories.length) { this.masterLocationCategories = res.locationCategories; updated = true; }
+      if (Array.isArray(res.locationSubcategories) && res.locationSubcategories.length) { this.masterLocationSubcategories = res.locationSubcategories; updated = true; }
+
+      if (updated) {
+        this.refreshCandidatesDisplayValues();
+      }
+    });
+  }
+
+  private refreshCandidatesDisplayValues(): void {
+    const source = this.data?.application?.raw && typeof this.data.application.raw === 'object'
+      ? this.data.application.raw
+      : this.data?.application;
+    if (!source) return;
+
+    for (const candidate of this.allCandidates) {
+      if (!candidate.isUpload && !candidate.field.includes('::')) {
+        const rawVal = source[candidate.field];
+        if (rawVal !== undefined && rawVal !== null) {
+          candidate.value = this.resolveDisplayValue(candidate.field, rawVal, source);
+        }
+      }
     }
   }
 
@@ -506,14 +601,203 @@ export class ObjectionDialogComponent implements OnInit {
     return null;
   }
 
+  private getCompanionKeys(key: string): string[] {
+    const cleanKey = key.toLowerCase().replace(/[_\-\s]/g, '');
+    const companions: string[] = [];
+
+    if (cleanKey.includes('district')) {
+      companions.push('site_district_name', 'siteDistrictName', 'district_name', 'districtName', 'site_district_display');
+    }
+    if (cleanKey.includes('subdivision')) {
+      companions.push('site_subdivision_name', 'siteSubdivisionName', 'subdivision_name', 'subdivisionName', 'site_subdivision_display');
+    }
+    if (cleanKey.includes('policestation')) {
+      companions.push('police_station_name', 'policeStationName', 'police_station_display', 'policeStationDisplay');
+    }
+    if (cleanKey.includes('licensetype')) {
+      companions.push('license_type_name', 'licenseTypeName', 'license_type_display');
+    }
+    if (cleanKey.includes('licensesubcategory')) {
+      companions.push('license_sub_category_name', 'licenseSubCategoryName', 'license_subcategory_name', 'licenseSubcategoryName');
+    } else if (cleanKey.includes('licensecategory')) {
+      companions.push('license_category_name', 'licenseCategoryName', 'license_category_display');
+    }
+    if (cleanKey.includes('locationcategory')) {
+      companions.push('location_category_name', 'locationCategoryName', 'location_name', 'locationName');
+    }
+    if (cleanKey.includes('locationsubcategory')) {
+      companions.push('location_subcategory_name', 'locationSubcategoryName');
+    }
+
+    companions.push(`${key}_name`, `${key}Name`, `${key}_display`, `${key}Display`);
+    return companions;
+  }
+
+  private resolveDisplayValue(key: string, value: any, source: any): string {
+    if (value === null || value === undefined) return '';
+
+    const cleanKey = key.toLowerCase().replace(/[_\-\s]/g, '');
+
+    // 1. Companion name field lookup on source
+    const companionKeys = this.getCompanionKeys(key);
+    for (const cKey of companionKeys) {
+      if (source && source[cKey] !== undefined && source[cKey] !== null) {
+        const cVal = String(source[cKey]).trim();
+        if (cVal && !/^\d+$/.test(cVal)) {
+          return cVal;
+        }
+      }
+    }
+
+    // 2. If value is an object, extract name/district/police_station/etc.
+    if (typeof value === 'object') {
+      for (const prop of ['police_station', 'policeStation', 'district', 'districtName', 'subdivision', 'subdivisionName', 'license_category', 'licenseCategory', 'license_type', 'licenseType', 'description', 'name', 'label', 'title']) {
+        if (value && value[prop] !== undefined && value[prop] !== null) {
+          const v = String(value[prop]).trim();
+          if (v && !/^\d+$/.test(v)) return v;
+        }
+      }
+    }
+
+    const valStr = typeof value === 'string' ? value.trim() : String(value);
+    const valLower = valStr.toLowerCase();
+
+    // 3. Known Enums and Choice Lookups
+    if (cleanKey.includes('modeofoperation')) {
+      if (valStr === '1' || valLower === 'self') return 'Self';
+      if (valStr === '2' || valLower === 'salesman') return 'Salesman';
+      if (valStr === '3' || valLower === 'barman') return 'Barman';
+      return valStr;
+    }
+
+    if (cleanKey === 'siteowned' || cleanKey === 'siteownership') {
+      if (valLower === 'yes' || valLower === 'true' || valStr === '1' || valLower === 'owned') return 'Owned';
+      if (valLower === 'no' || valLower === 'false' || valStr === '0' || valLower === 'rented' || valLower === 'leased') return 'Rented / Leased';
+      return valStr;
+    }
+
+    if (
+      cleanKey.includes('hassikkimcertificate') ||
+      cleanKey.includes('hasexciselicense') ||
+      cleanKey.includes('familyexciselicense') ||
+      cleanKey.includes('criminalconviction') ||
+      cleanKey.includes('nocobtained') ||
+      cleanKey.includes('tradelicensecovered') ||
+      cleanKey.includes('sikkimsubject') ||
+      cleanKey.startsWith('has')
+    ) {
+      if (valLower === 'yes' || valLower === 'true' || valStr === '1') return 'Yes';
+      if (valLower === 'no' || valLower === 'false' || valStr === '0') return 'No';
+    }
+
+    if (cleanKey === 'gender' || cleanKey === 'membergender') {
+      if (valLower === 'm' || valLower === 'male') return 'Male';
+      if (valLower === 'f' || valLower === 'female') return 'Female';
+      if (valLower === 'o' || valLower === 'other') return 'Other';
+    }
+
+    if (cleanKey === 'maritalstatus' || cleanKey === 'membermaritalstatus') {
+      if (valLower === 'married') return 'Married';
+      if (valLower === 'unmarried' || valLower === 'single') return 'Single';
+      if (valLower === 'divorced') return 'Divorced';
+      if (valLower === 'widowed') return 'Widowed';
+    }
+
+    if (cleanKey === 'residentialstatus') {
+      if (valLower === 'resident') return 'Resident';
+      if (valLower === 'non-resident' || valLower === 'nonresident') return 'Non-Resident';
+    }
+
+    if (cleanKey === 'coircss' || cleanKey === 'coircssdocumenttype') {
+      if (valLower === 'coi') return 'Certificate of Identification (COI)';
+      if (valLower === 'rc') return 'Residential Certificate (RC)';
+      if (valLower === 'ss') return 'Sikkim Subject (SS)';
+    }
+
+    if (cleanKey === 'constructiontype') {
+      if (valLower === 'rcc') return 'RCC (Reinforced Concrete)';
+      if (valLower === 'assam_type' || valLower === 'assam type') return 'Assam Type';
+      if (valLower === 'pucca') return 'Pucca';
+      if (valLower === 'kutcha') return 'Kutcha';
+    }
+
+    // 4. Master Data Lookups (Districts, Subdivisions, Police Stations, License Categories/Types, etc.)
+    if (cleanKey.includes('district')) {
+      const found = this.masterDistricts.find(d =>
+        String(d.district_code ?? d.districtCode ?? d.id) === valStr ||
+        String(d.district ?? d.name ?? '').toLowerCase() === valLower
+      );
+      if (found) return found.district || found.name || found.districtName || valStr;
+    }
+
+    if (cleanKey.includes('policestation')) {
+      const found = this.masterPoliceStations.find(ps =>
+        String(ps.police_station_code ?? ps.policeStationCode ?? ps.id) === valStr ||
+        String(ps.police_station ?? ps.policeStation ?? ps.name ?? '').toLowerCase() === valLower
+      );
+      if (found) return found.police_station || found.policeStation || found.name || valStr;
+    }
+
+    if (cleanKey.includes('subdivision')) {
+      const found = this.masterSubdivisions.find(s =>
+        String(s.subdivision_code ?? s.subdivisionCode ?? s.id) === valStr ||
+        String(s.subdivision ?? s.name ?? '').toLowerCase() === valLower
+      );
+      if (found) return found.subdivision || found.name || found.subdivisionName || valStr;
+    }
+
+    if (cleanKey.includes('licensecategory') || cleanKey.includes('categoryid')) {
+      const found = this.masterLicenseCategories.find(c =>
+        String(c.id) === valStr ||
+        String(c.license_category ?? c.licenseCategory ?? c.name ?? '').toLowerCase() === valLower
+      );
+      if (found) return found.license_category || found.licenseCategory || found.name || valStr;
+    }
+
+    if (cleanKey.includes('licensesubcategory') || cleanKey.includes('subcategoryid')) {
+      const found = this.masterLicenseSubcategories.find(sc =>
+        String(sc.id) === valStr ||
+        String(sc.description ?? sc.license_subcategory ?? sc.name ?? '').toLowerCase() === valLower
+      );
+      if (found) return found.description || found.license_subcategory || found.name || valStr;
+    }
+
+    if (cleanKey.includes('licensetype')) {
+      const found = this.masterLicenseTypes.find(t =>
+        String(t.id) === valStr ||
+        String(t.license_type ?? t.licenseType ?? t.name ?? '').toLowerCase() === valLower
+      );
+      if (found) return found.license_type || found.licenseType || found.name || valStr;
+    }
+
+    if (cleanKey === 'locationcategory') {
+      const found = this.masterLocationCategories.find(lc =>
+        String(lc.id) === valStr ||
+        String(lc.category_name ?? lc.categoryName ?? lc.name ?? '').toLowerCase() === valLower
+      );
+      if (found) return found.category_name || found.categoryName || found.name || valStr;
+    }
+
+    if (cleanKey === 'locationsubcategory') {
+      const found = this.masterLocationSubcategories.find(lsc =>
+        String(lsc.id) === valStr ||
+        String(lsc.subcategory_name ?? lsc.subcategoryName ?? lsc.name ?? '').toLowerCase() === valLower
+      );
+      if (found) return found.subcategory_name || found.subcategoryName || found.name || valStr;
+    }
+
+    return this.stringifyValue(value);
+  }
+
   private stringifyValue(value: any): string {
     if (value === null || value === undefined) return '';
     if (typeof value === 'string') return value.trim();
-    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    if (typeof value === 'number') return String(value);
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
     if (value instanceof Date) return value.toISOString();
     if (typeof value === 'object') {
-      for (const key of ['name', 'label', 'district', 'licenseCategory', 'license_category', 'id']) {
-        if (value && typeof value[key] !== 'undefined' && value[key] !== null) {
+      for (const key of ['district', 'police_station', 'subdivision', 'license_category', 'licenseCategory', 'license_type', 'licenseType', 'description', 'name', 'label', 'id']) {
+        if (value && value[key] !== undefined && value[key] !== null) {
           const v = this.stringifyValue(value[key]);
           if (v) return v;
         }
@@ -610,6 +894,14 @@ export class ObjectionDialogComponent implements OnInit {
       'pachwai', 'pachwai_flag', 'pachwai_selected', 'pachwai_included', 'pachwaiIncluded',
       'draught_beer', 'draughtbeer', 'draught_beer_flag', 'draught_beer_included', 'draughtBeerIncluded', 'draughtBeer',
       'mini_bar', 'minibar', 'mini_bar_flag', 'mini_bar_included', 'miniBarIncluded', 'miniBar', 'mini_bar_quantity', 'minibarquantity', 'miniBarQuantity',
+      'site_district_name', 'siteDistrictName', 'district_name', 'districtName', 'site_district_display',
+      'site_subdivision_name', 'siteSubdivisionName', 'subdivision_name', 'subdivisionName', 'site_subdivision_display',
+      'police_station_name', 'policeStationName', 'police_station_display', 'policeStationDisplay',
+      'license_type_name', 'licenseTypeName', 'license_type_display',
+      'license_category_name', 'licenseCategoryName', 'license_category_display',
+      'license_sub_category_name', 'licenseSubCategoryName', 'license_subcategory_name', 'licenseSubcategoryName',
+      'location_category_name', 'locationCategoryName',
+      'location_subcategory_name', 'locationSubcategoryName',
     ]);
 
     const rawCandidates: Array<{ field: string; label: string; value: string; section: string; sectionIcon: string; sectionOrder: number; isUpload: boolean }> = [];
@@ -623,7 +915,7 @@ export class ObjectionDialogComponent implements OnInit {
           value.forEach((m: any, idx: number) => {
             const name = m.name || m.memberName || m.member_name || '';
             const desig = m.designation || m.memberDesignation || m.member_designation || '';
-            
+
             const identParts = [];
             if (name) identParts.push(name);
             if (desig && desig.toLowerCase() !== name.toLowerCase()) {
@@ -671,27 +963,9 @@ export class ObjectionDialogComponent implements OnInit {
       }
 
       const isUpload = this.isFilePath(value);
-
-      if (value && typeof value === 'object') {
-        const display = this.stringifyValue(value);
-        if (!display) continue;
-        const sectionInfo = this.resolveSection(key, display, isUpload);
-        if (sectionInfo) {
-          rawCandidates.push({
-            field: key,
-            label: this.formatFieldLabel(key),
-            value: display,
-            section: sectionInfo.section,
-            sectionIcon: sectionInfo.icon,
-            sectionOrder: sectionInfo.order,
-            isUpload
-          });
-        }
-        continue;
-      }
-
-      const display = this.stringifyValue(value);
+      const display = this.resolveDisplayValue(key, value, source);
       if (!display) continue;
+
       const sectionInfo = this.resolveSection(key, display, isUpload);
       if (sectionInfo) {
         rawCandidates.push({
