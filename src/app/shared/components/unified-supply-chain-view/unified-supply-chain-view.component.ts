@@ -2134,6 +2134,44 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         return this.getUserContext() === USER_CONTEXTS.LICENSEE;
     }
 
+    isCommissionerOrJointCommissioner(): boolean {
+        if (this.isLicenseeContext()) return false;
+
+        // 1. Check RoleService role IDs (9: Joint Commissioner, 10: Commissioner, 11: Secretary)
+        if (this.roleService.hasRole(9) || this.roleService.hasRole(10) || this.roleService.hasRole(11)) {
+            return true;
+        }
+
+        // 2. Check current user role from RoleService
+        const currentUser = this.roleService.getCurrentUser();
+        const userRoleId = Number(currentUser?.roleId || (currentUser?.role as any)?.id || 0);
+        if (userRoleId === 9 || userRoleId === 10 || userRoleId === 11) {
+            return true;
+        }
+
+        const roleName = String(currentUser?.role?.name || currentUser?.role?.displayName || '').toLowerCase().trim();
+        if (roleName === 'commissioner' || roleName === 'joint_commissioner' || roleName === 'joint commissioner' || roleName === 'secretary') {
+            return true;
+        }
+
+        // 3. Check localStorage / sessionStorage stored role strictly
+        try {
+            const storedRole = String(localStorage.getItem('role') || sessionStorage.getItem('role') || '').toLowerCase().trim();
+            if (storedRole === 'commissioner' || storedRole === 'joint_commissioner' || storedRole === 'joint commissioner' || storedRole === 'secretary') {
+                return true;
+            }
+
+            const storedRoleId = Number(localStorage.getItem('role_id') || sessionStorage.getItem('role_id') || 0);
+            if (storedRoleId === 9 || storedRoleId === 10 || storedRoleId === 11) {
+                return true;
+            }
+        } catch {
+            // ignore
+        }
+
+        return false;
+    }
+
     onUnifiedAction(event: { action: string, item: any }): void {
         const context = this.getUserContext();
         const action = (event.action || '').toUpperCase();
