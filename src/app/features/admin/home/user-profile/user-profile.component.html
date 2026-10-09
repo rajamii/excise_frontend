@@ -13,71 +13,155 @@
         </div>
       </div>
 
-      <div class="hero-name">
-        {{ user?.firstName }} {{ user?.middleName }} {{ user?.lastName }}
-      </div>
-      <div class="hero-meta">
-        <span class="role-chip">
-          <mat-icon>verified_user</mat-icon>
-          {{ resolvedRoleName }}
-        </span>
-        <span class="username-chip">
-          <mat-icon>alternate_email</mat-icon>
-          {{ user?.username }}
-        </span>
-      </div>
+      @if (!showPasswordForm) {
+        <div class="hero-name">
+          {{ user?.firstName }} {{ user?.middleName }} {{ user?.lastName }}
+        </div>
+        <div class="hero-meta">
+          <span class="role-chip">
+            <mat-icon>verified_user</mat-icon>
+            {{ resolvedRoleName }}
+          </span>
+          <span class="username-chip">
+            <mat-icon>alternate_email</mat-icon>
+            {{ user?.username }}
+          </span>
+        </div>
+      } @else {
+        <div class="hero-name">Change Password</div>
+        <div class="hero-subtitle">Update your security credentials</div>
+      }
     </div>
 
-    <!-- ── Info Grid ─────────────────────────────────────────────── -->
+    <!-- ── Body ─────────────────────────────────────────────── -->
     @if (user) {
       <div class="profile-body">
 
-        <div class="section-title">
-          <mat-icon>contact_page</mat-icon>
-          Account Information
-        </div>
+        @if (!showPasswordForm) {
+          <div class="section-title">
+            <mat-icon>contact_page</mat-icon>
+            Account Information
+          </div>
 
-        <div class="info-grid">
-          <div class="info-card">
-            <div class="info-icon contact"><mat-icon>email</mat-icon></div>
-            <div class="info-content">
-              <span class="info-label">Email</span>
-              <span class="info-value">{{ user.email || '—' }}</span>
+          <div class="info-grid">
+            <div class="info-card">
+              <div class="info-icon contact"><mat-icon>email</mat-icon></div>
+              <div class="info-content">
+                <span class="info-label">Email</span>
+                <span class="info-value">{{ user.email || '—' }}</span>
+              </div>
+            </div>
+
+            <div class="info-card">
+              <div class="info-icon phone"><mat-icon>phone</mat-icon></div>
+              <div class="info-content">
+                <span class="info-label">Phone</span>
+                <span class="info-value">{{ user.phoneNumber || '—' }}</span>
+              </div>
+            </div>
+
+            <div class="info-card">
+              <div class="info-icon location"><mat-icon>location_city</mat-icon></div>
+              <div class="info-content">
+                <span class="info-label">District</span>
+                <span class="info-value">{{ user.district?.name || '—' }}</span>
+              </div>
+            </div>
+
+            <div class="info-card">
+              <div class="info-icon location"><mat-icon>map</mat-icon></div>
+              <div class="info-content">
+                <span class="info-label">Subdivision</span>
+                <span class="info-value">{{ user.subdivision?.name || '—' }}</span>
+              </div>
+            </div>
+
+            <div class="info-card full-span">
+              <div class="info-icon address"><mat-icon>home</mat-icon></div>
+              <div class="info-content">
+                <span class="info-label">Address</span>
+                <span class="info-value">{{ user.address || '—' }}</span>
+              </div>
             </div>
           </div>
 
-          <div class="info-card">
-            <div class="info-icon phone"><mat-icon>phone</mat-icon></div>
-            <div class="info-content">
-              <span class="info-label">Phone</span>
-              <span class="info-value">{{ user.phoneNumber || '—' }}</span>
-            </div>
+          <div class="action-buttons">
+            <button mat-raised-button class="change-password-btn" (click)="openPasswordForm()">
+              <mat-icon>lock_reset</mat-icon>
+              Change Password
+            </button>
           </div>
 
-          <div class="info-card">
-            <div class="info-icon location"><mat-icon>location_city</mat-icon></div>
-            <div class="info-content">
-              <span class="info-label">District</span>
-              <span class="info-value">{{ user.district?.name || '—' }}</span>
-            </div>
-          </div>
+        } @else {
 
-          <div class="info-card">
-            <div class="info-icon location"><mat-icon>map</mat-icon></div>
-            <div class="info-content">
-              <span class="info-label">Subdivision</span>
-              <span class="info-value">{{ user.subdivision?.name || '—' }}</span>
+          <!-- ══ CHANGE PASSWORD FORM ══════════════════════════════════ -->
+          <form [formGroup]="passwordForm" (ngSubmit)="savePassword()" class="profile-form" novalidate>
+    
+            @if (passwordSuccess) {
+              <div class="alert alert-success">
+                <mat-icon>check_circle</mat-icon>
+                Password updated successfully!
+              </div>
+            }
+    
+            @if (passwordError) {
+              <div class="alert alert-error">
+                <mat-icon>error_outline</mat-icon>
+                <span>{{ passwordError }}</span>
+              </div>
+            }
+    
+            <div class="form-section-label">
+              <mat-icon>security</mat-icon>
+              Security Credentials
             </div>
-          </div>
-
-          <div class="info-card full-span">
-            <div class="info-icon address"><mat-icon>home</mat-icon></div>
-            <div class="info-content">
-              <span class="info-label">Address</span>
-              <span class="info-value">{{ user.address || '—' }}</span>
+    
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Current Password</mat-label>
+              <input matInput [type]="hideOld ? 'password' : 'text'" formControlName="oldPassword" />
+              <button type="button" mat-icon-button matSuffix (click)="hideOld = !hideOld">
+                <mat-icon>{{ hideOld ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+            </mat-form-field>
+    
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>New Password</mat-label>
+              <input matInput [type]="hideNew ? 'password' : 'text'" formControlName="newPassword" />
+              <button type="button" mat-icon-button matSuffix (click)="hideNew = !hideNew">
+                <mat-icon>{{ hideNew ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+              <mat-error *ngIf="passwordForm.get('newPassword')?.hasError('minlength')">
+                Password must be at least 8 characters.
+              </mat-error>
+            </mat-form-field>
+    
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Confirm New Password</mat-label>
+              <input matInput [type]="hideConfirm ? 'password' : 'text'" formControlName="confirmPassword" />
+              <button type="button" mat-icon-button matSuffix (click)="hideConfirm = !hideConfirm">
+                <mat-icon>{{ hideConfirm ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+              <mat-error *ngIf="passwordForm.get('confirmPassword')?.hasError('passwordMismatch')">
+                Passwords do not match.
+              </mat-error>
+            </mat-form-field>
+    
+            <div class="form-actions">
+              <button mat-stroked-button type="button" (click)="cancelPasswordEdit()" [disabled]="isSavingPassword">
+                <mat-icon>cancel</mat-icon>
+                Cancel
+              </button>
+              <button mat-raised-button type="submit" class="save-btn" [disabled]="isSavingPassword || passwordForm.invalid">
+                @if (isSavingPassword) {
+                  <mat-spinner diameter="20"></mat-spinner>
+                } @else {
+                  <mat-icon>save</mat-icon>
+                }
+                {{ isSavingPassword ? 'Updating…' : 'Update Password' }}
+              </button>
             </div>
-          </div>
-        </div>
+          </form>
+        }
 
       </div>
     }
