@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { forkJoin, of, Subject } from 'rxjs';
-import { catchError, debounceTime, distinctUntilChanged, timeout } from 'rxjs/operators';
+import { catchError, debounceTime, distinctUntilChanged, takeUntil, timeout } from 'rxjs/operators';
 import { Router, ActivatedRoute } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { environment } from '../../../../../../environments/environment';
@@ -138,6 +138,7 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
   activeSummaryFilter: NewLicenseItem['statusGroup'] | '' = '';
 
   private searchSubject = new Subject<string>();
+  private destroy$ = new Subject<void>();
 
   get approvedLicenseNumbers(): string[] {
     if (!this.isLicenseeUser()) return [];
@@ -153,7 +154,8 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.searchSubject.pipe(
       debounceTime(350),
-      distinctUntilChanged()
+      distinctUntilChanged(),
+      takeUntil(this.destroy$)
     ).subscribe((term) => {
       this.searchFilter = term;
       this.pageIndex = 0;
@@ -161,13 +163,18 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
     });
 
     this.loadData();
-    this.sidebarPendingBadgeService.refreshNeeded$.subscribe(() => {
+    this.sidebarPendingBadgeService.refreshNeeded$.pipe(
+      debounceTime(300),
+      takeUntil(this.destroy$)
+    ).subscribe(() => {
       console.log('🔄 NewLicenseDashboardComponent: Refreshing data due to refreshNeeded signal');
       this.loadData();
     });
   }
 
   ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
     if (this.countdownInterval) {
       clearInterval(this.countdownInterval);
       this.countdownInterval = null;
