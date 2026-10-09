@@ -429,18 +429,20 @@
         <textarea matInput rows="2" formControlName="worker_proposal_comments"></textarea>
       </mat-form-field>
 
-      <!-- 7. Worker Docs -->
-      <div class="question">
-        <div class="label">7. Whether the document submitted by applicant for Salesman/Barman are found to be in order.</div>
-        <mat-radio-group formControlName="worker_docs_valid" class="radio-row">
-          <mat-radio-button [value]="true">Yes</mat-radio-button>
-          <mat-radio-button [value]="false">No</mat-radio-button>
-        </mat-radio-group>
+      <!-- 7. Worker Docs (Only active and displayed when Question 6 is Yes) -->
+      <div *ngIf="form.get('proposes_barman_or_salesman')?.value === true">
+        <div class="question">
+          <div class="label">7. Whether the document submitted by applicant for Salesman/Barman are found to be in order.</div>
+          <mat-radio-group formControlName="worker_docs_valid" class="radio-row">
+            <mat-radio-button [value]="true">Yes</mat-radio-button>
+            <mat-radio-button [value]="false">No</mat-radio-button>
+          </mat-radio-group>
+        </div>
+        <mat-form-field appearance="outline" *ngIf="shouldShow('worker_docs_valid', false)">
+          <mat-label>Worker docs comments</mat-label>
+          <textarea matInput rows="2" formControlName="worker_docs_comments"></textarea>
+        </mat-form-field>
       </div>
-      <mat-form-field appearance="outline" *ngIf="shouldShow('worker_docs_valid', false)">
-        <mat-label>Worker docs comments</mat-label>
-        <textarea matInput rows="2" formControlName="worker_docs_comments"></textarea>
-      </mat-form-field>
 
       <!-- 8. Recommendation -->
       <div class="question">

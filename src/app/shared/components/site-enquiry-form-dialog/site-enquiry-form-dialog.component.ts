@@ -139,7 +139,7 @@ export class SiteEnquiryFormDialogComponent implements OnInit {
       trade_license_comments: [''],
       proposes_barman_or_salesman: [null, Validators.required],
       worker_proposal_comments: [''],
-      worker_docs_valid: [null, Validators.required],
+      worker_docs_valid: [null],
       worker_docs_comments: [''],
       license_recommendation: [null, Validators.required],
       recommendation_comments: [''],
@@ -149,9 +149,31 @@ export class SiteEnquiryFormDialogComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.form.get('proposes_barman_or_salesman')?.valueChanges.subscribe((val) => {
+      this.updateWorkerDocsValidation(val);
+    });
+
     if (this.existingReport) {
       this.prefillFromExistingReport(this.existingReport);
     }
+  }
+
+  private updateWorkerDocsValidation(val: any): void {
+    const isYes = val === true || val === 'true';
+    const isNo = val === false || val === 'false';
+    const workerDocsCtrl = this.form.get('worker_docs_valid');
+    const workerDocsCommentsCtrl = this.form.get('worker_docs_comments');
+
+    if (isYes) {
+      workerDocsCtrl?.setValidators([Validators.required]);
+    } else {
+      workerDocsCtrl?.clearValidators();
+      if (isNo) {
+        workerDocsCtrl?.setValue(null, { emitEvent: false });
+        workerDocsCommentsCtrl?.setValue('', { emitEvent: false });
+      }
+    }
+    workerDocsCtrl?.updateValueAndValidity({ emitEvent: false });
   }
 
   private prefillFromExistingReport(report: any): void {
@@ -280,6 +302,7 @@ export class SiteEnquiryFormDialogComponent implements OnInit {
     });
 
     this.form.patchValue(patch, { emitEvent: false });
+    this.updateWorkerDocsValidation(this.form.get('proposes_barman_or_salesman')?.value);
   }
 
   onFileSelected(event: Event): void {
@@ -423,6 +446,13 @@ export class SiteEnquiryFormDialogComponent implements OnInit {
           formData.append(key, fieldValue);
         }
         return;
+      }
+      if (key === 'worker_docs_valid') {
+        const isProposesYes = value.proposes_barman_or_salesman === true || value.proposes_barman_or_salesman === 'true';
+        if (!isProposesYes) {
+          formData.append(key, 'true');
+          return;
+        }
       }
       if (fieldValue === null || fieldValue === undefined) {
         return;

@@ -3845,12 +3845,14 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                         'proposes_barman_or_salesman',
                         'worker_proposal_comments'
                     ),
-                    makeDocItem(
-                        '7',
-                        'Whether the document submitted by applicant for Salesman/Barman are found to be in order.',
-                        'worker_docs_valid',
-                        'worker_docs_comments'
-                    ),
+                    ...(isTrue('proposes_barman_or_salesman') ? [
+                        makeDocItem(
+                            '7',
+                            'Whether the document submitted by applicant for Salesman/Barman are found to be in order.',
+                            'worker_docs_valid',
+                            'worker_docs_comments'
+                        )
+                    ] : []),
                     {
                         number: '8',
                         question: 'Whether the proposal for grant of license is recommended:',
