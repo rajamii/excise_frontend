@@ -124,6 +124,25 @@ interface HologramSlipRow {
   payment_details: any;
 }
 
+interface SalesmanBarmanSlipRow {
+  id: number | string;
+  reference_no: string;
+  submission_date: string;
+  applicant_name: string;
+  role: string;
+  license_category: string;
+  district: string;
+  status: string;
+  amount: number;
+  payment_method: string;
+  transaction_id?: string;
+  wallet_type?: string;
+  head_of_account?: string;
+  mobile_number?: string;
+  email?: string;
+  license_id?: string;
+}
+
 @Component({
   selector: 'app-unified-payment-slip-view',
   standalone: true,
@@ -147,6 +166,11 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   revalidationRow: RevalidationSlipRow | null = null;
   cancellationRow: CancellationSlipRow | null = null;
   hologramRow: HologramSlipRow | null = null;
+  salesmanBarmanRow: SalesmanBarmanSlipRow | null = null;
+
+  get isSalesmanBarman(): boolean {
+    return this.moduleType === 'salesman-barman' || this.moduleType === 'salesman-barman-registration';
+  }
 
   showAllTransactionIds = false;
   showAllWalletTxns = false;
@@ -245,6 +269,13 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
     if (this.moduleType === 'hologram') {
       console.log('🔍 PAYMENT SLIP VIEW: Loading hologram slip...');
       this.loadHologramSlip();
+      return;
+    }
+
+    if (this.isSalesmanBarman) {
+      console.log('🔍 PAYMENT SLIP VIEW: Loading salesman/barman slip...');
+      this.pageTitle = 'Salesman / Barman Registration Payment Slip';
+      this.loadSalesmanBarmanSlip();
       return;
     }
 
@@ -363,6 +394,25 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   }
 
   goBack(): void {
+    if (this.isSalesmanBarman) {
+      const id = this.referenceNo || this.applicationId;
+      if (this.source === 'supply-chain' || this.source === 'licensee') {
+        this.router.navigate(['/supply-chain-view'], {
+          queryParams: {
+            type: 'salesman-barman-registration',
+            id: id,
+            ref: id,
+            source: this.source || 'licensee'
+          }
+        });
+        return;
+      }
+      this.router.navigate(['/dashboard'], {
+        queryParams: { section: 'salesman-barman-registration' }
+      });
+      return;
+    }
+
     if (this.isImfl()) {
       const tabParam = this.moduleType === 'cancellation' ? 'cancellation' : (this.moduleType === 'revalidation' ? 'revalidation' : 'requisition');
       this.router.navigate(['/dashboard'], {
@@ -757,6 +807,10 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
       );
       return { total: amount, excise: amount, cess: 0, addl: 0, bottlingFee: 0 };
     }
+    if (this.isSalesmanBarman) {
+      const amount = Number(this.salesmanBarmanRow?.amount || 0);
+      return { total: amount, excise: amount, cess: 0, addl: 0, bottlingFee: 0 };
+    }
 
     const total = this.transitRows.reduce((sum, row) => sum + Number(row.total_amount || 0), 0);
     const excise = this.transitRows.reduce((sum, row) => sum + Number(row.total_excise_duty || 0), 0);
@@ -786,6 +840,9 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   }
 
   get currentStatus(): string {
+    if (this.isSalesmanBarman) {
+      return String(this.salesmanBarmanRow?.status || 'PAID').trim();
+    }
     if (this.moduleType === 'requisition') {
       return String(this.requisitionRow?.status || '').trim() || 'N/A';
     }
@@ -803,7 +860,7 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   }
 
   get isRefundCase(): boolean {
-    if (this.moduleType === 'requisition' || this.moduleType === 'revalidation') {
+    if (this.isSalesmanBarman || this.moduleType === 'requisition' || this.moduleType === 'revalidation') {
       return false;
     }
     if (this.moduleType === 'cancellation') {
@@ -815,6 +872,9 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   }
 
   get refundAmountTotal(): number {
+    if (this.isSalesmanBarman) {
+      return 0;
+    }
     if (this.moduleType === 'requisition') {
       return Number(this.requisitionRow?.amount || 0);
     }
@@ -839,7 +899,7 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
 
   get statusClass(): string {
     const value = this.currentStatus.toLowerCase();
-    if (value.includes('approved')) return 'approved';
+    if (value.includes('approved') || value.includes('paid')) return 'approved';
     if (value.includes('rejected') || value.includes('cancelled') || value.includes('refund')) return 'rejected';
     if (value.includes('payment') || value.includes('pending')) return 'pending';
     return 'neutral';
@@ -899,14 +959,15 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   }
 
   get showRefundSummaryCard(): boolean {
-    return this.moduleType !== 'revalidation' && this.moduleType !== 'cancellation';
+    return !this.isSalesmanBarman && this.moduleType !== 'revalidation' && this.moduleType !== 'cancellation';
   }
 
   get showCountSummaryCard(): boolean {
-    return this.moduleType !== 'revalidation';
+    return !this.isSalesmanBarman && this.moduleType !== 'revalidation';
   }
 
   get primarySummaryLabel(): string {
+    if (this.isSalesmanBarman) return 'Registration Fee Paid';
     if (this.moduleType === 'requisition') return 'Total Requisition Amount';
     if (this.moduleType === 'revalidation') return 'Revalidation Fee Paid';
     if (this.moduleType === 'hologram') return 'Total Hologram Amount';
@@ -1994,6 +2055,72 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
       },
       error: () => {
         this.errorMessage = 'Unable to load cancellation payment slip details.';
+        this.isLoading = false;
+      }
+    });
+  }
+
+  private loadSalesmanBarmanSlip(): void {
+    const appId = this.referenceNo || this.applicationId;
+    console.log('🔍 SALESMAN BARMAN SLIP: Starting load with:', {
+      appId,
+      referenceNo: this.referenceNo,
+      applicationId: this.applicationId
+    });
+
+    if (!appId) {
+      this.errorMessage = 'Application ID or reference number is required to view payment slip.';
+      this.isLoading = false;
+      return;
+    }
+
+    const detailUrl = `${environment.apiBaseUrl}/transactional/salesman_barman/detail/${encodeURIComponent(appId)}/`;
+
+    this.http.get<any>(detailUrl).pipe(
+      catchError((error) => {
+        console.error('❌ SALESMAN BARMAN SLIP: Fetch error:', error);
+        return of(null);
+      })
+    ).subscribe({
+      next: (data) => {
+        if (!data) {
+          this.errorMessage = `No Salesman/Barman record found for reference ${appId}.`;
+          this.isLoading = false;
+          return;
+        }
+
+        const applicantName = [data.firstName, data.middleName, data.lastName].filter(Boolean).join(' ').trim() ||
+                              data.applicant_full_name || data.applicant_username || 'Applicant';
+        const paymentDetails = data.payment_details || {};
+        const feeAmount = Number(paymentDetails.amount ?? data.payment_amount ?? data.fee ?? 3000);
+        const txnId = paymentDetails.transaction_id || `TXN-${String(data.application_id || appId).replace(/[^a-zA-Z0-9]/g, '')}`;
+
+        this.salesmanBarmanRow = {
+          id: data.application_id || appId,
+          reference_no: data.application_id || appId,
+          submission_date: paymentDetails.created_at || data.updated_at || data.created_at || new Date().toISOString(),
+          applicant_name: applicantName,
+          role: String(data.role || 'Salesman').toUpperCase(),
+          license_category: data.license_category_name || data.license_category || 'Excise License',
+          district: data.excise_district_name || data.excise_district || '',
+          status: 'PAID',
+          amount: feeAmount,
+          payment_method: paymentDetails.payment_method || 'Wallet (License Fee)',
+          transaction_id: txnId,
+          wallet_type: paymentDetails.wallet_type || 'License Fee',
+          head_of_account: paymentDetails.head_of_account || '0039-00-105-00-00',
+          mobile_number: data.mobileNumber || data.mobile_number || '',
+          email: data.emailId || data.email || '',
+          license_id: data.license_id || data.license_id_display || ''
+        };
+
+        if (!this.referenceNo) {
+          this.referenceNo = String(data.application_id || appId);
+        }
+        this.isLoading = false;
+      },
+      error: () => {
+        this.errorMessage = 'Unable to load Salesman/Barman payment slip details.';
         this.isLoading = false;
       }
     });

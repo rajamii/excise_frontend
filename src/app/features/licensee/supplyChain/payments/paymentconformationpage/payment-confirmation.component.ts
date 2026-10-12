@@ -1247,20 +1247,40 @@ private initializeWalletContextAndLoadData(): void {
       return 'Dry Day Permit Fee Paid';
     }
 
+    if (
+      reference.startsWith('SBM/') ||
+      reference.startsWith('SB/') ||
+      reference.startsWith('RSBM/') ||
+      sourceModule.includes('salesman') ||
+      sourceModule.includes('barman') ||
+      remarks.includes('salesman') ||
+      remarks.includes('barman')
+    ) {
+      return isRefund ? 'Salesman/Barman Registration Fee Refund' : 'Salesman/Barman Registration Fee Paid';
+    }
+
     // Prefer explicit wallet type when available (fixes license/security utilization rows
     // incorrectly showing "Wallet Recharge" in those tabs).
     if (walletType === 'license_fee') {
+      if (
+        reference.startsWith('SBM/') ||
+        reference.startsWith('SB/') ||
+        reference.startsWith('RSBM/') ||
+        sourceModule.includes('salesman') ||
+        sourceModule.includes('barman') ||
+        remarks.includes('salesman') ||
+        remarks.includes('barman')
+      ) {
+        return 'Salesman/Barman Registration Fee Paid';
+      }
       if (reference.startsWith('CCOL/') || sourceModule.includes('collaboration') || remarks.includes('collaboration') || remarks.includes('collab')) {
         return 'Company Collaboration Licensee Fee Paid';
       }
-      if (reference.startsWith('COMP/') || sourceModule.includes('registration') || remarks.includes('company registration') || remarks.includes('comp_reg') || remarks.includes('registration fee')) {
+      if (reference.startsWith('COMP/') || sourceModule.includes('company_registration') || remarks.includes('company registration') || remarks.includes('comp_reg')) {
         return 'Company Registration Licensee Fee Paid';
       }
       if (reference.startsWith('RCOL/') || reference.startsWith('CC/1101/')) {
         return 'Company Collaboration Renewal Fee Paid';
-      }
-      if (reference.startsWith('SB/') || sourceModule.includes('salesman') || sourceModule.includes('barman') || remarks.includes('salesman') || remarks.includes('barman')) {
-        return 'Salesman/Barman Registration Fee Paid';
       }
       if (reference.startsWith('NLI/') || reference.startsWith('NA/')) {
         return 'New License Fee Paid';
@@ -1287,10 +1307,21 @@ private initializeWalletContextAndLoadData(): void {
       return 'Security Paid';
     }
     if (sourceModule.includes('license') && sourceModule.includes('fee')) {
+      if (
+        reference.startsWith('SBM/') ||
+        reference.startsWith('SB/') ||
+        reference.startsWith('RSBM/') ||
+        sourceModule.includes('salesman') ||
+        sourceModule.includes('barman') ||
+        remarks.includes('salesman') ||
+        remarks.includes('barman')
+      ) {
+        return 'Salesman/Barman Registration Fee Paid';
+      }
       if (reference.startsWith('CCOL/') || remarks.includes('collaboration') || remarks.includes('collab')) {
         return 'Company Collaboration Licensee Fee Paid';
       }
-      if (reference.startsWith('COMP/') || remarks.includes('registration')) {
+      if (reference.startsWith('COMP/') || remarks.includes('company registration') || remarks.includes('comp_reg')) {
         return 'Company Registration Licensee Fee Paid';
       }
       return 'Licensee Fee Paid';

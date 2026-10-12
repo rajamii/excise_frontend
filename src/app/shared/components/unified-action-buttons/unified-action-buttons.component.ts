@@ -1543,8 +1543,8 @@ private getTransitRejectSummary(): {
     // Emit to parent so parent can handle if needed
     this.actionClicked.emit({ action: 'VIEW_PAYMENT_SLIP', item: this.item });
     
-    const id = this.item?.id ?? this.item?.['pk'] ?? '';
-    const refNo = this.item?.referenceNo ?? this.item?.['refNo'] ?? '';
+    const id = this.item?.['application_id'] ?? this.item?.['applicationId'] ?? this.item?.id ?? this.item?.['pk'] ?? '';
+    const refNo = this.item?.['application_id'] ?? this.item?.['applicationId'] ?? this.item?.referenceNo ?? this.item?.['refNo'] ?? '';
     
     const params = new URLSearchParams();
     if (id !== undefined && id !== null && id !== '') params.set('id', String(id));
@@ -1636,7 +1636,9 @@ private getTransitRejectSummary(): {
       requisition: '/unified-letter-view/requisition',
       revalidation: '/unified-letter-view/revalidation',
       transit: '/unified-letter-view/transit',
-      hologram: '/payment-slip-view'
+      hologram: '/payment-slip-view',
+      'salesman-barman': '/payment-slip-view',
+      'salesman-barman-registration': '/payment-slip-view'
     };
     const route = routeByType[String(this.itemType || '').toLowerCase()] || '/payment-slip-view';
     const finalUrl = query ? `${route}?${query}` : route;

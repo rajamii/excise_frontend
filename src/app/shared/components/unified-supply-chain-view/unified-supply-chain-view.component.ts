@@ -2199,6 +2199,11 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         const context = this.getUserContext();
         const action = (event.action || '').toUpperCase();
 
+        if (action === 'VIEW_PAYMENT_SLIP') {
+            this.openPaymentSlipView();
+            return;
+        }
+
         if (action === 'PAY' || action === 'FORCE_PAY' || action === 'MAKE_PAYMENT') {
             if (this.isCompanyRegistration() || this.applicationType === 'company-registration') {
                 this.openCompanyRegistrationPaymentConfirmationModal(event.item);
@@ -4304,6 +4309,21 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     }
 
     canViewPaymentSlip(): boolean {
+        if (this.isSalesmanBarmanRegistration()) {
+            if (this.isSalesmanBarmanAwaitingPayment()) {
+                return false;
+            }
+            const stage = String(this.applicationData?.['status'] || this.applicationData?.['current_stage']?.['name'] || this.applicationData?.['currentStage'] || '').toLowerCase();
+            const isApproved = this.isApprovedApplication() || this.applicationData?.['is_approved'] === true || this.applicationData?.['isApproved'] === true;
+            const isFeePaid = this.applicationData?.['is_print_fee_paid'] === true || this.applicationData?.['isPrintFeePaid'] === true;
+
+            if (stage.includes('reject') || stage.includes('cancel')) {
+                return false;
+            }
+
+            return isApproved || isFeePaid || stage.includes('approv') || stage.includes('paid');
+        }
+
         if (!this.isRequisition()) {
             return false;
         }
@@ -4386,12 +4406,27 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     }
 
     openPaymentSlipView(): void {
-        const id = String(this.applicationData?.['id'] ?? this.applicationData?.['pk'] ?? this.route.snapshot.queryParamMap.get('id') ?? '').trim();
-        const ref = String(this.applicationData?.['referenceNo'] ?? this.applicationData?.['reference_no'] ?? this.route.snapshot.queryParamMap.get('ref') ?? '').trim();
+        const isSb = this.isSalesmanBarmanRegistration();
+        const id = String(
+            this.applicationData?.['application_id'] ??
+            this.applicationData?.['applicationId'] ??
+            this.applicationData?.['id'] ??
+            this.applicationData?.['pk'] ??
+            this.route.snapshot.queryParamMap.get('id') ??
+            ''
+        ).trim();
+        const ref = String(
+            this.applicationData?.['referenceNo'] ??
+            this.applicationData?.['reference_no'] ??
+            this.applicationData?.['application_id'] ??
+            this.applicationData?.['applicationId'] ??
+            this.route.snapshot.queryParamMap.get('ref') ??
+            ''
+        ).trim();
         const source = this.getUserContext();
         const queryParams: any = {
             id: id || undefined,
-            type: 'requisition',
+            type: isSb ? 'salesman-barman' : 'requisition',
             refNo: ref || undefined,
             ref: ref || undefined,
             referenceNo: ref || undefined,
@@ -6921,10 +6956,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     isSalesmanBarmanPaymentAgreed = false;
     isSubmittingSalesmanBarmanPayment = false;
     salesmanBarmanLicenseFeeCurrentBalance = 0;
-    salesmanBarmanFeeAmount = 500;
+    salesmanBarmanFeeAmount = 3000;
 
     get totalSalesmanBarmanPayableAmount(): number {
-        return this.salesmanBarmanFeeAmount || 500;
+        return this.salesmanBarmanFeeAmount || 3000;
     }
 
     get isSalesmanBarmanPaymentBalanceInsufficient(): boolean {
@@ -6957,8 +6992,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         } else {
             this.paymentIntegrationService.getPaymentModule('012').subscribe({
                 next: (res: any) => {
-                    const fetchedFee = Number(res?.license_fee ?? res?.licenseFee ?? res?.licenseFeeAmount ?? res?.amount ?? 500);
-                    this.salesmanBarmanFeeAmount = fetchedFee > 0 ? fetchedFee : 500;
+                    const fetchedFee = Number(res?.license_fee ?? res?.licenseFee ?? res?.licenseFeeAmount ?? res?.amount ?? 3000);
+                    this.salesmanBarmanFeeAmount = fetchedFee > 0 ? fetchedFee : 3000;
                     this.loadLiveLicenseFeeWalletBalance((lfBal) => {
                         this.salesmanBarmanLicenseFeeCurrentBalance = lfBal;
                         this.showSalesmanBarmanPaymentConfirmationModal = true;
@@ -6966,7 +7001,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                     });
                 },
                 error: () => {
-                    this.salesmanBarmanFeeAmount = 500;
+                    this.salesmanBarmanFeeAmount = 3000;
                     this.loadLiveLicenseFeeWalletBalance((lfBal) => {
                         this.salesmanBarmanLicenseFeeCurrentBalance = lfBal;
                         this.showSalesmanBarmanPaymentConfirmationModal = true;
