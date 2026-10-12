@@ -288,12 +288,20 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
             text: `Your Application ID: ${this.applicationId}`,
             confirmButtonText: 'OK',
             confirmButtonColor: '#1C2B78'
+          }).then(() => {
+            this.goToDashboard();
           });
           this.isSubmitting = false;
         },
         error: (err) => {
-          const msg = err?.error?.detail || err?.error?.message || 'Failed to submit application.';
-          Swal.fire('Error', msg, 'error');
+          let msg = err?.error?.detail || err?.error?.message;
+          if (!msg && typeof err?.error === 'string' && !err.error.includes('<html') && !err.error.includes('<!DOCTYPE')) {
+            msg = err.error;
+          }
+          if (!msg && err?.statusText && err.statusText !== 'OK') {
+            msg = `Server error (${err.status}): ${err.statusText}`;
+          }
+          Swal.fire('Error', msg || 'Failed to submit application. Please check your inputs and try again.', 'error');
           this.isSubmitting = false;
         }
       });
