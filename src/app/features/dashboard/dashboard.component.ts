@@ -986,8 +986,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         ? of(prefetched.hologram)
         : this.hologramService.getProcurements(forceRefresh).pipe(catchError(() => of([])));
 
-    // Company registration — only for Permit Section
-    const comp$ = isPermitSection
+    // Company registration — for Permit Section and Licensee
+    const comp$ = (isPermitSection || this.isLicenseeUser())
       ? this.companyRegistrationService.getDashboardCounts().pipe(catchError(() => of(null)))
       : of(null as any);
 
@@ -1266,21 +1266,25 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           this.recalculateOicStats(month, year);
         }
 
-        // ── COMPANY REGISTRATION (Permit Section only) ────────────────────────
-        if (isPermitSection && comp) {
+        // ── COMPANY REGISTRATION ────────────────────────
+        if ((isPermitSection || this.isLicenseeUser()) && comp) {
           const compApplied = Number(comp?.applied ?? 0);
           const compPending = Number(comp?.pending ?? 0);
           const compApproved = Number(comp?.approved ?? 0);
           const compObjection = Number(comp?.objection ?? 0);
           const compRejected = Number(comp?.rejected ?? 0);
+          const compAwaiting = Number(comp?.awaiting_payment ?? comp?.awaitingPayment ?? 0);
           this.supplyChainModuleCounts['company'] = {
-            applied: compApplied || (compPending + compApproved + compObjection + compRejected),
+            applied: compApplied || (compPending + compApproved + compObjection + compRejected + compAwaiting),
             pending: compPending,
             approved: compApproved,
             objection: compObjection,
             rejected: compRejected
           };
-          this.detailedCounts.company = { ...this.supplyChainModuleCounts['company'] };
+          this.detailedCounts.company = {
+            ...this.supplyChainModuleCounts['company'],
+            awaitingPayment: compAwaiting
+          };
         }
 
         // ── COMPANY COLLABORATION (Permit Section + Commissioner) ─────────────
@@ -1458,15 +1462,16 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
           const roleId = this.getCurrentRoleId();
           const isDistrictUser = roleId === 4;
           const isScopedOfficer = roleId === 8 || roleId === 9;
-          if (this.isDistributorUser()) {
+          if (this.isDistributorUser() || this.isLicenseeUser()) {
             const allowed = [
               res.newLicense,
               res.renewal,
               res.company,
               res.companyCollaboration,
               res.salesman,
-              res.labelRegistration
-            ];
+              res.labelRegistration,
+              res.specialPermit
+            ].filter(Boolean);
             const getAppCount = (item: any) => {
               if (!item) return 0;
               if (item.applied != null && item.applied > 0) return item.applied;

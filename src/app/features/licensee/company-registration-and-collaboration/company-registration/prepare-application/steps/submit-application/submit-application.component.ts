@@ -4,6 +4,8 @@ import { Company, CompanyDocuments } from '../../../../../../../core/models/comp
 import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
 import { CompanyRegistrationService } from '../../../../../../../core/services/company-registration.service';
+import { UnifiedDashboardService } from '../../../../../../../core/services/unified-dashboard.service';
+import { SidebarPendingBadgeService } from '../../../../../../../shared/services/sidebar-pending-badge.service';
 import { Router } from '@angular/router';
 
 // ── MemberEntry matches the interface in member-details.component.ts ──────────
@@ -73,6 +75,8 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
 
   constructor(
     private companyRegistrationService: CompanyRegistrationService,
+    private unifiedDashboardService: UnifiedDashboardService,
+    private sidebarPendingBadgeService: SidebarPendingBadgeService,
     private router: Router
   ) {}
 
@@ -321,6 +325,9 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
   goToDashboard() {
     sessionStorage.clear();
     this.companyRegistrationService.clearCompanyDocuments();
+    this.companyRegistrationService.clearCache();
+    this.unifiedDashboardService.clearUnifiedAppsCache();
+    this.sidebarPendingBadgeService.triggerRefresh();
     this.router.navigate(['/dashboard']);
   }
 
