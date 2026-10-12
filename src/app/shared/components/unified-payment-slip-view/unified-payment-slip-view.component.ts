@@ -2340,10 +2340,11 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
           return;
         }
 
-        const paymentDetails = data.payment_details || {};
+        const app = (data && (data.data || data.application || data.result)) ? (data.data || data.application || data.result) : data;
+        const paymentDetails = app.payment_details || data.payment_details || {};
         let feeAmount = Number(paymentDetails.amount);
         if (!feeAmount || isNaN(feeAmount)) {
-          const feeStruct = data.fee_structure || {};
+          const feeStruct = app.fee_structure || data.fee_structure || {};
           feeAmount = Number(
             feeStruct.collaborationFee ||
             feeStruct.collaboration_fee ||
@@ -2352,33 +2353,34 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
             25000
           );
         }
-        const txnId = paymentDetails.transaction_id || `TXN-${String(data.application_id || appId).replace(/[^a-zA-Z0-9]/g, '')}`;
-        const selectedBrands = Array.isArray(data.selected_brands) ? data.selected_brands : [];
+        const effectiveAppId = app.application_id || app.applicationId || data.application_id || appId;
+        const txnId = paymentDetails.transaction_id || `TXN-${String(effectiveAppId).replace(/[^a-zA-Z0-9]/g, '')}`;
+        const selectedBrands = Array.isArray(app.selected_brands) ? app.selected_brands : (Array.isArray(data.selected_brands) ? data.selected_brands : []);
 
         this.companyCollabRow = {
-          id: data.application_id || appId,
-          reference_no: data.application_id || appId,
-          submission_date: paymentDetails.created_at || data.updated_at || data.created_at || new Date().toISOString(),
-          brand_owner: data.brand_owner || 'N/A',
-          brand_owner_name: data.brand_owner_name || data.brand_owner || 'N/A',
-          brand_owner_pan: data.brand_owner_pan || '',
-          licensee_name: data.licensee_name || 'N/A',
-          licensee_address: data.licensee_address || '',
-          license_number: data.license_number || 'N/A',
+          id: effectiveAppId,
+          reference_no: effectiveAppId,
+          submission_date: paymentDetails.created_at || app.updated_at || app.created_at || data.updated_at || data.created_at || new Date().toISOString(),
+          brand_owner: app.brand_owner || app.brandOwner || app.brand_owner_name || app.brandOwnerName || 'N/A',
+          brand_owner_name: app.brand_owner_name || app.brandOwnerName || app.brand_owner || app.brandOwner || 'N/A',
+          brand_owner_pan: app.brand_owner_pan || app.brandOwnerPan || '',
+          licensee_name: app.licensee_name || app.licenseeName || 'N/A',
+          licensee_address: app.licensee_address || app.licenseeAddress || '',
+          license_number: app.license_number || app.licenseNumber || 'N/A',
           status: 'PAID',
           amount: feeAmount || 25000,
           payment_method: paymentDetails.payment_method || 'Wallet (License Fee)',
           transaction_id: txnId,
           wallet_type: paymentDetails.wallet_type || 'License Fee',
-          head_of_account: paymentDetails.head_of_account || '0039-00-105-00-00',
-          mobile_number: data.brand_owner_mobile || '',
-          email: data.brand_owner_email || '',
+          head_of_account: paymentDetails.head_of_account || '0039-00-800-45-02',
+          mobile_number: app.brand_owner_mobile || app.brandOwnerMobile || '',
+          email: app.brand_owner_email || app.brandOwnerEmail || '',
           brands_count: selectedBrands.length,
           selected_brands: selectedBrands
         };
 
         if (!this.referenceNo) {
-          this.referenceNo = String(data.application_id || appId);
+          this.referenceNo = String(effectiveAppId);
         }
         this.isLoading = false;
       },

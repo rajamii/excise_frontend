@@ -1818,20 +1818,15 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                 mappedData['distilleryName'] =
                     this.extractFieldValue(apiData, ['licensee_name', 'licenseeName', 'brand_owner_name', 'brandOwnerName']) ||
                     'Not specified';
-                mappedData['brAmount'] = this.parseNumericValue(
-                    overviewSummary?.totalAmount ??
-                    overviewSummary?.total_amount ??
-                    feeStructure?.totalAmount ??
-                    feeStructure?.total_amount,
-                    this.parseNumericValue(feeStructure?.applicationFee) +
-                    this.parseNumericValue(feeStructure?.application_fee) +
-                    this.parseNumericValue(feeStructure?.collaborationFee) +
-                    this.parseNumericValue(feeStructure?.collaboration_fee) +
-                    this.parseNumericValue(feeStructure?.collaborationFees) +
-                    this.parseNumericValue(feeStructure?.collaboration_fees) +
-                    this.parseNumericValue(feeStructure?.securityDeposit) +
-                    this.parseNumericValue(feeStructure?.security_deposit)
+                const collabFeeVal = this.parseNumericValue(
+                    feeStructure?.collaborationFee ??
+                    feeStructure?.collaboration_fee ??
+                    feeStructure?.collaborationFees ??
+                    feeStructure?.collaboration_fees ??
+                    apiData?.payment_details?.amount,
+                    25000
                 );
+                mappedData['brAmount'] = collabFeeVal > 0 ? collabFeeVal : 25000;
                 mappedData['is_license_fee_paid'] = Boolean(apiData?.is_license_fee_paid ?? apiData?.isLicenseFeePaid);
                 mappedData['is_paid'] = Boolean(apiData?.is_paid ?? apiData?.isPaid);
                 if (apiData?.payment_details) {
