@@ -163,6 +163,28 @@ interface CompanySlipRow {
   email?: string;
 }
 
+interface CompanyCollaborationSlipRow {
+  id: number | string;
+  reference_no: string;
+  submission_date: string;
+  brand_owner: string;
+  brand_owner_name: string;
+  brand_owner_pan?: string;
+  licensee_name: string;
+  licensee_address: string;
+  license_number: string;
+  status: string;
+  amount: number;
+  payment_method: string;
+  transaction_id?: string;
+  wallet_type?: string;
+  head_of_account?: string;
+  mobile_number?: string;
+  email?: string;
+  brands_count?: number;
+  selected_brands?: any[];
+}
+
 @Component({
   selector: 'app-unified-payment-slip-view',
   standalone: true,
@@ -188,6 +210,7 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   hologramRow: HologramSlipRow | null = null;
   salesmanBarmanRow: SalesmanBarmanSlipRow | null = null;
   companyRow: CompanySlipRow | null = null;
+  companyCollabRow: CompanyCollaborationSlipRow | null = null;
 
   get isSalesmanBarman(): boolean {
     return this.moduleType === 'salesman-barman' || this.moduleType === 'salesman-barman-registration';
@@ -195,6 +218,10 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
 
   get isCompany(): boolean {
     return this.moduleType === 'company-registration' || this.moduleType === 'company';
+  }
+
+  get isCompanyCollaboration(): boolean {
+    return this.moduleType === 'company-collaboration' || this.moduleType === 'company-collab';
   }
 
   showAllTransactionIds = false;
@@ -294,6 +321,13 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
     if (this.moduleType === 'hologram') {
       console.log('🔍 PAYMENT SLIP VIEW: Loading hologram slip...');
       this.loadHologramSlip();
+      return;
+    }
+
+    if (this.isCompanyCollaboration) {
+      console.log('🔍 PAYMENT SLIP VIEW: Loading company collaboration slip...');
+      this.pageTitle = 'Company Collaboration Payment Slip';
+      this.loadCompanyCollaborationSlip();
       return;
     }
 
@@ -426,6 +460,25 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   }
 
   goBack(): void {
+    if (this.isCompanyCollaboration) {
+      const id = this.referenceNo || this.applicationId;
+      if (this.source === 'supply-chain' || this.source === 'licensee') {
+        this.router.navigate(['/supply-chain-view'], {
+          queryParams: {
+            type: 'company-collaboration',
+            id: id,
+            ref: id,
+            source: this.source || 'licensee'
+          }
+        });
+        return;
+      }
+      this.router.navigate(['/dashboard'], {
+        queryParams: { section: 'company-collaboration' }
+      });
+      return;
+    }
+
     if (this.isCompany) {
       const id = this.referenceNo || this.applicationId;
       if (this.source === 'supply-chain' || this.source === 'licensee') {
@@ -858,6 +911,10 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
       );
       return { total: amount, excise: amount, cess: 0, addl: 0, bottlingFee: 0 };
     }
+    if (this.isCompanyCollaboration) {
+      const amount = Number(this.companyCollabRow?.amount || 0);
+      return { total: amount, excise: amount, cess: 0, addl: 0, bottlingFee: 0 };
+    }
     if (this.isCompany) {
       const amount = Number(this.companyRow?.amount || 0);
       return { total: amount, excise: amount, cess: 0, addl: 0, bottlingFee: 0 };
@@ -895,6 +952,9 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   }
 
   get currentStatus(): string {
+    if (this.isCompanyCollaboration) {
+      return String(this.companyCollabRow?.status || 'PAID').trim();
+    }
     if (this.isCompany) {
       return String(this.companyRow?.status || 'PAID').trim();
     }
@@ -918,7 +978,7 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   }
 
   get isRefundCase(): boolean {
-    if (this.isCompany || this.isSalesmanBarman || this.moduleType === 'requisition' || this.moduleType === 'revalidation') {
+    if (this.isCompanyCollaboration || this.isCompany || this.isSalesmanBarman || this.moduleType === 'requisition' || this.moduleType === 'revalidation') {
       return false;
     }
     if (this.moduleType === 'cancellation') {
@@ -930,7 +990,7 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   }
 
   get refundAmountTotal(): number {
-    if (this.isCompany || this.isSalesmanBarman) {
+    if (this.isCompanyCollaboration || this.isCompany || this.isSalesmanBarman) {
       return 0;
     }
     if (this.moduleType === 'requisition') {
@@ -1017,14 +1077,15 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   }
 
   get showRefundSummaryCard(): boolean {
-    return !this.isCompany && !this.isSalesmanBarman && this.moduleType !== 'revalidation' && this.moduleType !== 'cancellation';
+    return !this.isCompanyCollaboration && !this.isCompany && !this.isSalesmanBarman && this.moduleType !== 'revalidation' && this.moduleType !== 'cancellation';
   }
 
   get showCountSummaryCard(): boolean {
-    return !this.isCompany && !this.isSalesmanBarman && this.moduleType !== 'revalidation';
+    return !this.isCompanyCollaboration && !this.isCompany && !this.isSalesmanBarman && this.moduleType !== 'revalidation';
   }
 
   get primarySummaryLabel(): string {
+    if (this.isCompanyCollaboration) return 'Collaboration Fee Paid';
     if (this.isCompany) return 'Company Registration Fee Paid';
     if (this.isSalesmanBarman) return 'Registration Fee Paid';
     if (this.moduleType === 'requisition') return 'Total Requisition Amount';
@@ -2245,6 +2306,84 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
       },
       error: () => {
         this.errorMessage = 'Unable to load Company Registration payment slip details.';
+        this.isLoading = false;
+      }
+    });
+  }
+
+  private loadCompanyCollaborationSlip(): void {
+    const appId = this.referenceNo || this.applicationId;
+    console.log('🔍 COMPANY COLLABORATION SLIP: Starting load with:', {
+      appId,
+      referenceNo: this.referenceNo,
+      applicationId: this.applicationId
+    });
+
+    if (!appId) {
+      this.errorMessage = 'Application ID or reference number is required to view payment slip.';
+      this.isLoading = false;
+      return;
+    }
+
+    const detailUrl = `${environment.apiBaseUrl}/transactional/company-collaboration/detail/${encodeURIComponent(appId)}/`;
+
+    this.http.get<any>(detailUrl).pipe(
+      catchError((error) => {
+        console.error('❌ COMPANY COLLABORATION SLIP: Fetch error:', error);
+        return of(null);
+      })
+    ).subscribe({
+      next: (data) => {
+        if (!data) {
+          this.errorMessage = `No Company Collaboration record found for reference ${appId}.`;
+          this.isLoading = false;
+          return;
+        }
+
+        const paymentDetails = data.payment_details || {};
+        let feeAmount = Number(paymentDetails.amount);
+        if (!feeAmount || isNaN(feeAmount)) {
+          const feeStruct = data.fee_structure || {};
+          feeAmount = Number(
+            feeStruct.collaborationFee ||
+            feeStruct.collaboration_fee ||
+            feeStruct.collaborationFees ||
+            feeStruct.collaboration_fees ||
+            25000
+          );
+        }
+        const txnId = paymentDetails.transaction_id || `TXN-${String(data.application_id || appId).replace(/[^a-zA-Z0-9]/g, '')}`;
+        const selectedBrands = Array.isArray(data.selected_brands) ? data.selected_brands : [];
+
+        this.companyCollabRow = {
+          id: data.application_id || appId,
+          reference_no: data.application_id || appId,
+          submission_date: paymentDetails.created_at || data.updated_at || data.created_at || new Date().toISOString(),
+          brand_owner: data.brand_owner || 'N/A',
+          brand_owner_name: data.brand_owner_name || data.brand_owner || 'N/A',
+          brand_owner_pan: data.brand_owner_pan || '',
+          licensee_name: data.licensee_name || 'N/A',
+          licensee_address: data.licensee_address || '',
+          license_number: data.license_number || 'N/A',
+          status: 'PAID',
+          amount: feeAmount || 25000,
+          payment_method: paymentDetails.payment_method || 'Wallet (License Fee)',
+          transaction_id: txnId,
+          wallet_type: paymentDetails.wallet_type || 'License Fee',
+          head_of_account: paymentDetails.head_of_account || '0039-00-105-00-00',
+          mobile_number: data.brand_owner_mobile || '',
+          email: data.brand_owner_email || '',
+          brands_count: selectedBrands.length,
+          selected_brands: selectedBrands
+        };
+
+        if (!this.referenceNo) {
+          this.referenceNo = String(data.application_id || appId);
+        }
+        this.isLoading = false;
+      },
+      error: () => {
+        this.errorMessage = 'Unable to load Company Collaboration payment slip details.';
         this.isLoading = false;
       }
     });

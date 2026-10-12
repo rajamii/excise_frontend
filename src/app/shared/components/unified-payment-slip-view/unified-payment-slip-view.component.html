@@ -48,7 +48,7 @@
           <div class="card-icon">₹</div>
           <div class="card-content">
             <p class="card-label">{{ primarySummaryLabel }}</p>
-            <h3 class="card-value">₹{{ (isCompany ? (companyRow?.amount || 0) : (isSalesmanBarman ? (salesmanBarmanRow?.amount || 0) : transitSummary.total)) | number:'1.2-2' }}</h3>
+            <h3 class="card-value">₹{{ (isCompanyCollaboration ? (companyCollabRow?.amount || 0) : (isCompany ? (companyRow?.amount || 0) : (isSalesmanBarman ? (salesmanBarmanRow?.amount || 0) : transitSummary.total))) | number:'1.2-2' }}</h3>
           </div>
         </div>
 
@@ -308,24 +308,109 @@
             </div>
           </ng-container>
 
-          <div class="info-item" *ngIf="moduleType !== 'requisition' && moduleType !== 'revalidation' && moduleType !== 'cancellation' && moduleType !== 'hologram' && !isSalesmanBarman && !isCompany">
+          <!-- Company Collaboration Payment Information -->
+          <ng-container *ngIf="isCompanyCollaboration && companyCollabRow">
+            <div class="info-item">
+              <span class="info-label">Brand Owner Company</span>
+              <span class="info-value fw-bold">{{ companyCollabRow.brand_owner_name }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Bottler / Licensee</span>
+              <span class="info-value">{{ companyCollabRow.licensee_name }}</span>
+            </div>
+            <div class="info-item" *ngIf="companyCollabRow.license_number">
+              <span class="info-label">License Number</span>
+              <span class="info-value">{{ companyCollabRow.license_number }}</span>
+            </div>
+            <div class="info-item" *ngIf="companyCollabRow.brand_owner_pan">
+              <span class="info-label">PAN Number</span>
+              <span class="info-value">{{ companyCollabRow.brand_owner_pan }}</span>
+            </div>
+            <div class="info-item" *ngIf="companyCollabRow.brands_count">
+              <span class="info-label">Brands Count</span>
+              <span class="info-value"><span class="badge bg-primary text-white" style="font-size: 11px; padding: 4px 8px;">{{ companyCollabRow.brands_count }} Brands</span></span>
+            </div>
+            <div class="info-item" *ngIf="companyCollabRow.mobile_number">
+              <span class="info-label">Mobile Number</span>
+              <span class="info-value">{{ companyCollabRow.mobile_number }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Payment Date & Time</span>
+              <span class="info-value">{{ companyCollabRow.submission_date | date:'dd-MM-yyyy, hh:mm a' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Payment Method</span>
+              <span class="info-value"><span class="badge bg-success text-white" style="font-size: 11px; padding: 4px 8px;">{{ companyCollabRow.payment_method }}</span></span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Head of Account</span>
+              <span class="info-value font-monospace">{{ companyCollabRow.head_of_account }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Transaction ID</span>
+              <span class="info-value font-monospace fw-bold text-primary">{{ companyCollabRow.transaction_id }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Collaboration Fee Paid</span>
+              <span class="info-value amount" style="font-size: 17px; font-weight: 800;">₹{{ companyCollabRow.amount | number:'1.2-2' }}</span>
+            </div>
+          </ng-container>
+
+          <div class="info-item" *ngIf="moduleType !== 'requisition' && moduleType !== 'revalidation' && moduleType !== 'cancellation' && moduleType !== 'hologram' && !isSalesmanBarman && !isCompany && !isCompanyCollaboration">
             <span class="info-label">Excise Duty</span>
             <span class="info-value amount">₹{{ transitSummary.excise | number:'1.2-2' }}</span>
           </div>
-          <div class="info-item" *ngIf="moduleType !== 'requisition' && moduleType !== 'revalidation' && moduleType !== 'cancellation' && moduleType !== 'hologram' && !isSalesmanBarman && !isCompany">
+          <div class="info-item" *ngIf="moduleType !== 'requisition' && moduleType !== 'revalidation' && moduleType !== 'cancellation' && moduleType !== 'hologram' && !isSalesmanBarman && !isCompany && !isCompanyCollaboration">
             <span class="info-label">Education Cess</span>
             <span class="info-value amount">₹{{ transitSummary.cess | number:'1.2-2' }}</span>
           </div>
-          <div class="info-item" *ngIf="moduleType !== 'requisition' && moduleType !== 'revalidation' && moduleType !== 'cancellation' && moduleType !== 'hologram' && !isSalesmanBarman && !isCompany">
+          <div class="info-item" *ngIf="moduleType !== 'requisition' && moduleType !== 'revalidation' && moduleType !== 'cancellation' && moduleType !== 'hologram' && !isSalesmanBarman && !isCompany && !isCompanyCollaboration">
             <span class="info-label">Additional Excise</span>
             <span class="info-value amount">₹{{ transitSummary.addl | number:'1.2-2' }}</span>
           </div>
-          <div class="info-item" *ngIf="moduleType !== 'requisition' && moduleType !== 'revalidation' && moduleType !== 'cancellation' && moduleType !== 'hologram' && !isSalesmanBarman && !isCompany">
+          <div class="info-item" *ngIf="moduleType !== 'requisition' && moduleType !== 'revalidation' && moduleType !== 'cancellation' && moduleType !== 'hologram' && !isSalesmanBarman && !isCompany && !isCompanyCollaboration">
             <span class="info-label">Bottling Fee</span>
             <span class="info-value amount">₹{{ transitSummary.bottlingFee | number:'1.2-2' }}</span>
           </div>
         </div>
       </section>
+    </div>
+
+    <!-- Company Collaboration Details Table -->
+    <div *ngIf="!isLoading && isCompanyCollaboration && companyCollabRow" class="details-section">
+      <h2 class="section-title">Fee Breakdown & Details</h2>
+      <div class="table-container">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th>Sl. No.</th>
+              <th>Fee Description</th>
+              <th>Brand Owner</th>
+              <th>Head of Account</th>
+              <th>Transaction ID</th>
+              <th>Payment Status</th>
+              <th style="text-align: right;">Amount (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td>Company Collaboration Fee</td>
+              <td>{{ companyCollabRow.brand_owner_name }}</td>
+              <td class="font-monospace">{{ companyCollabRow.head_of_account }}</td>
+              <td class="font-monospace">{{ companyCollabRow.transaction_id }}</td>
+              <td><span class="status-badge" style="background: #10b981; color: white;">PAID</span></td>
+              <td style="text-align: right; font-weight: 700; color: #059669;">₹{{ companyCollabRow.amount | number:'1.2-2' }}</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr style="background: #f8fafc; font-weight: 800;">
+              <td colspan="6" style="text-align: right;">Total Paid:</td>
+              <td style="text-align: right; color: #059669; font-size: 14px;">₹{{ companyCollabRow.amount | number:'1.2-2' }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
     </div>
 
     <!-- Company Registration Details Table -->

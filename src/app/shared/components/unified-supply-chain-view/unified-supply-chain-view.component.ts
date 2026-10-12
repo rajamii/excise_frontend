@@ -1832,6 +1832,11 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                     this.parseNumericValue(feeStructure?.securityDeposit) +
                     this.parseNumericValue(feeStructure?.security_deposit)
                 );
+                mappedData['is_license_fee_paid'] = Boolean(apiData?.is_license_fee_paid ?? apiData?.isLicenseFeePaid);
+                mappedData['is_paid'] = Boolean(apiData?.is_paid ?? apiData?.isPaid);
+                if (apiData?.payment_details) {
+                    mappedData['payment_details'] = apiData.payment_details;
+                }
                 break;
             case 'label-registration':
                 const labelProductDetails = apiData?.product_details ?? apiData?.productDetails ?? {};
@@ -4309,6 +4314,48 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     }
 
     canViewPaymentSlip(): boolean {
+        if (this.isCompanyCollaboration()) {
+            if (this.isCompanyCollabAwaitingPayment()) {
+                return false;
+            }
+            const stage = String(
+                this.applicationData?.['status'] ||
+                this.applicationData?.['current_stage_name'] ||
+                this.applicationData?.['currentStageName'] ||
+                (this.applicationData?.['current_stage'] as any)?.['name'] ||
+                this.applicationData?.['currentStage'] ||
+                ''
+            ).toLowerCase();
+            const stageId = Number(
+                (this.applicationData as any)?.current_stage?.id ||
+                (this.applicationData as any)?.current_stage_id ||
+                (this.applicationData as any)?.currentStage ||
+                0
+            );
+
+            if (stage.includes('reject') || stage.includes('cancel')) {
+                return false;
+            }
+
+            const isCollabPaid =
+                this.applicationData?.['is_license_fee_paid'] === true ||
+                this.applicationData?.['isLicenseFeePaid'] === true ||
+                this.applicationData?.['is_paid'] === true ||
+                this.applicationData?.['isPaid'] === true ||
+                Boolean(this.applicationData?.['payment_details']);
+
+            const isPostPaymentStage =
+                stageId === 144 ||
+                stage.includes('final_commissioner') ||
+                stage.includes('final commissioner') ||
+                stage.includes('approv') ||
+                stage.includes('paid');
+
+            const isApproved = this.isApprovedApplication() || this.applicationData?.['is_approved'] === true || this.applicationData?.['isApproved'] === true;
+
+            return isCollabPaid || isPostPaymentStage || isApproved;
+        }
+
         if (this.isCompanyRegistration()) {
             if (this.isCompanyRegistrationAwaitingPayment()) {
                 return false;
@@ -4423,6 +4470,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     openPaymentSlipView(): void {
         const isSb = this.isSalesmanBarmanRegistration();
         const isComp = this.isCompanyRegistration();
+        const isCollab = this.isCompanyCollaboration();
         const id = String(
             this.applicationData?.['application_id'] ??
             this.applicationData?.['applicationId'] ??
@@ -4440,7 +4488,14 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
             ''
         ).trim();
         const source = this.getUserContext();
-        const slipType = isComp ? 'company-registration' : (isSb ? 'salesman-barman' : 'requisition');
+        let slipType = 'requisition';
+        if (isCollab) {
+            slipType = 'company-collaboration';
+        } else if (isComp) {
+            slipType = 'company-registration';
+        } else if (isSb) {
+            slipType = 'salesman-barman';
+        }
         const queryParams: any = {
             id: id || undefined,
             type: slipType,
