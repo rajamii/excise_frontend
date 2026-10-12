@@ -48,7 +48,7 @@
           <div class="card-icon">₹</div>
           <div class="card-content">
             <p class="card-label">{{ primarySummaryLabel }}</p>
-            <h3 class="card-value">₹{{ (isSalesmanBarman ? (salesmanBarmanRow?.amount || 0) : transitSummary.total) | number:'1.2-2' }}</h3>
+            <h3 class="card-value">₹{{ (isCompany ? (companyRow?.amount || 0) : (isSalesmanBarman ? (salesmanBarmanRow?.amount || 0) : transitSummary.total)) | number:'1.2-2' }}</h3>
           </div>
         </div>
 
@@ -216,6 +216,54 @@
             <span class="info-value">{{ hologramRow?.payment_details?.wallet_history?.[0]?.transaction_id || '-' }}</span>
           </div>
 
+          <!-- Company Registration Payment Information -->
+          <ng-container *ngIf="isCompany && companyRow">
+            <div class="info-item">
+              <span class="info-label">Company Name</span>
+              <span class="info-value fw-bold">{{ companyRow.company_name }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Brand Type</span>
+              <span class="info-value"><span class="badge bg-primary text-white" style="font-size: 11px; padding: 4px 8px;">{{ companyRow.brand_type }}</span></span>
+            </div>
+            <div class="info-item" *ngIf="companyRow.license">
+              <span class="info-label">License</span>
+              <span class="info-value">{{ companyRow.license }}</span>
+            </div>
+            <div class="info-item" *ngIf="companyRow.applicant_name">
+              <span class="info-label">Member / Applicant</span>
+              <span class="info-value">{{ companyRow.applicant_name }}</span>
+            </div>
+            <div class="info-item" *ngIf="companyRow.state">
+              <span class="info-label">State</span>
+              <span class="info-value">{{ companyRow.state }}</span>
+            </div>
+            <div class="info-item" *ngIf="companyRow.mobile_number">
+              <span class="info-label">Mobile Number</span>
+              <span class="info-value">{{ companyRow.mobile_number }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Payment Date & Time</span>
+              <span class="info-value">{{ companyRow.submission_date | date:'dd-MM-yyyy, hh:mm a' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Payment Method</span>
+              <span class="info-value"><span class="badge bg-success text-white" style="font-size: 11px; padding: 4px 8px;">{{ companyRow.payment_method }}</span></span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Head of Account</span>
+              <span class="info-value font-monospace">{{ companyRow.head_of_account }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Transaction ID</span>
+              <span class="info-value font-monospace fw-bold text-primary">{{ companyRow.transaction_id }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Registration Fee Paid</span>
+              <span class="info-value amount" style="font-size: 17px; font-weight: 800;">₹{{ companyRow.amount | number:'1.2-2' }}</span>
+            </div>
+          </ng-container>
+
           <!-- Salesman/Barman Payment Information -->
           <ng-container *ngIf="isSalesmanBarman && salesmanBarmanRow">
             <div class="info-item">
@@ -260,24 +308,61 @@
             </div>
           </ng-container>
 
-          <div class="info-item" *ngIf="moduleType !== 'requisition' && moduleType !== 'revalidation' && moduleType !== 'cancellation' && moduleType !== 'hologram' && !isSalesmanBarman">
+          <div class="info-item" *ngIf="moduleType !== 'requisition' && moduleType !== 'revalidation' && moduleType !== 'cancellation' && moduleType !== 'hologram' && !isSalesmanBarman && !isCompany">
             <span class="info-label">Excise Duty</span>
             <span class="info-value amount">₹{{ transitSummary.excise | number:'1.2-2' }}</span>
           </div>
-          <div class="info-item" *ngIf="moduleType !== 'requisition' && moduleType !== 'revalidation' && moduleType !== 'cancellation' && moduleType !== 'hologram' && !isSalesmanBarman">
+          <div class="info-item" *ngIf="moduleType !== 'requisition' && moduleType !== 'revalidation' && moduleType !== 'cancellation' && moduleType !== 'hologram' && !isSalesmanBarman && !isCompany">
             <span class="info-label">Education Cess</span>
             <span class="info-value amount">₹{{ transitSummary.cess | number:'1.2-2' }}</span>
           </div>
-          <div class="info-item" *ngIf="moduleType !== 'requisition' && moduleType !== 'revalidation' && moduleType !== 'cancellation' && moduleType !== 'hologram' && !isSalesmanBarman">
+          <div class="info-item" *ngIf="moduleType !== 'requisition' && moduleType !== 'revalidation' && moduleType !== 'cancellation' && moduleType !== 'hologram' && !isSalesmanBarman && !isCompany">
             <span class="info-label">Additional Excise</span>
             <span class="info-value amount">₹{{ transitSummary.addl | number:'1.2-2' }}</span>
           </div>
-          <div class="info-item" *ngIf="moduleType !== 'requisition' && moduleType !== 'revalidation' && moduleType !== 'cancellation' && moduleType !== 'hologram' && !isSalesmanBarman">
+          <div class="info-item" *ngIf="moduleType !== 'requisition' && moduleType !== 'revalidation' && moduleType !== 'cancellation' && moduleType !== 'hologram' && !isSalesmanBarman && !isCompany">
             <span class="info-label">Bottling Fee</span>
             <span class="info-value amount">₹{{ transitSummary.bottlingFee | number:'1.2-2' }}</span>
           </div>
         </div>
       </section>
+    </div>
+
+    <!-- Company Registration Details Table -->
+    <div *ngIf="!isLoading && isCompany && companyRow" class="details-section">
+      <h2 class="section-title">Fee Breakdown & Details</h2>
+      <div class="table-container">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th>Sl. No.</th>
+              <th>Fee Description</th>
+              <th>Brand Type</th>
+              <th>Head of Account</th>
+              <th>Transaction ID</th>
+              <th>Payment Status</th>
+              <th style="text-align: right;">Amount (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td>Company Registration Fee</td>
+              <td>{{ companyRow.brand_type }}</td>
+              <td class="font-monospace">{{ companyRow.head_of_account }}</td>
+              <td class="font-monospace">{{ companyRow.transaction_id }}</td>
+              <td><span class="status-badge" style="background: #10b981; color: white;">PAID</span></td>
+              <td style="text-align: right; font-weight: 700; color: #059669;">₹{{ companyRow.amount | number:'1.2-2' }}</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr style="background: #f8fafc; font-weight: 800;">
+              <td colspan="6" style="text-align: right;">Total Paid:</td>
+              <td style="text-align: right; color: #059669; font-size: 14px;">₹{{ companyRow.amount | number:'1.2-2' }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
     </div>
 
     <!-- Salesman/Barman Details Table -->

@@ -143,6 +143,26 @@ interface SalesmanBarmanSlipRow {
   license_id?: string;
 }
 
+interface CompanySlipRow {
+  id: number | string;
+  reference_no: string;
+  submission_date: string;
+  company_name: string;
+  brand_type: string;
+  license: string;
+  applicant_name: string;
+  factory_address: string;
+  state: string;
+  status: string;
+  amount: number;
+  payment_method: string;
+  transaction_id?: string;
+  wallet_type?: string;
+  head_of_account?: string;
+  mobile_number?: string;
+  email?: string;
+}
+
 @Component({
   selector: 'app-unified-payment-slip-view',
   standalone: true,
@@ -167,9 +187,14 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   cancellationRow: CancellationSlipRow | null = null;
   hologramRow: HologramSlipRow | null = null;
   salesmanBarmanRow: SalesmanBarmanSlipRow | null = null;
+  companyRow: CompanySlipRow | null = null;
 
   get isSalesmanBarman(): boolean {
     return this.moduleType === 'salesman-barman' || this.moduleType === 'salesman-barman-registration';
+  }
+
+  get isCompany(): boolean {
+    return this.moduleType === 'company-registration' || this.moduleType === 'company';
   }
 
   showAllTransactionIds = false;
@@ -269,6 +294,13 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
     if (this.moduleType === 'hologram') {
       console.log('🔍 PAYMENT SLIP VIEW: Loading hologram slip...');
       this.loadHologramSlip();
+      return;
+    }
+
+    if (this.isCompany) {
+      console.log('🔍 PAYMENT SLIP VIEW: Loading company registration slip...');
+      this.pageTitle = 'Company Registration Payment Slip';
+      this.loadCompanySlip();
       return;
     }
 
@@ -394,6 +426,25 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   }
 
   goBack(): void {
+    if (this.isCompany) {
+      const id = this.referenceNo || this.applicationId;
+      if (this.source === 'supply-chain' || this.source === 'licensee') {
+        this.router.navigate(['/supply-chain-view'], {
+          queryParams: {
+            type: 'company-registration',
+            id: id,
+            ref: id,
+            source: this.source || 'licensee'
+          }
+        });
+        return;
+      }
+      this.router.navigate(['/dashboard'], {
+        queryParams: { section: 'company-registration' }
+      });
+      return;
+    }
+
     if (this.isSalesmanBarman) {
       const id = this.referenceNo || this.applicationId;
       if (this.source === 'supply-chain' || this.source === 'licensee') {
@@ -807,6 +858,10 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
       );
       return { total: amount, excise: amount, cess: 0, addl: 0, bottlingFee: 0 };
     }
+    if (this.isCompany) {
+      const amount = Number(this.companyRow?.amount || 0);
+      return { total: amount, excise: amount, cess: 0, addl: 0, bottlingFee: 0 };
+    }
     if (this.isSalesmanBarman) {
       const amount = Number(this.salesmanBarmanRow?.amount || 0);
       return { total: amount, excise: amount, cess: 0, addl: 0, bottlingFee: 0 };
@@ -840,6 +895,9 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   }
 
   get currentStatus(): string {
+    if (this.isCompany) {
+      return String(this.companyRow?.status || 'PAID').trim();
+    }
     if (this.isSalesmanBarman) {
       return String(this.salesmanBarmanRow?.status || 'PAID').trim();
     }
@@ -860,7 +918,7 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   }
 
   get isRefundCase(): boolean {
-    if (this.isSalesmanBarman || this.moduleType === 'requisition' || this.moduleType === 'revalidation') {
+    if (this.isCompany || this.isSalesmanBarman || this.moduleType === 'requisition' || this.moduleType === 'revalidation') {
       return false;
     }
     if (this.moduleType === 'cancellation') {
@@ -872,7 +930,7 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   }
 
   get refundAmountTotal(): number {
-    if (this.isSalesmanBarman) {
+    if (this.isCompany || this.isSalesmanBarman) {
       return 0;
     }
     if (this.moduleType === 'requisition') {
@@ -959,14 +1017,15 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   }
 
   get showRefundSummaryCard(): boolean {
-    return !this.isSalesmanBarman && this.moduleType !== 'revalidation' && this.moduleType !== 'cancellation';
+    return !this.isCompany && !this.isSalesmanBarman && this.moduleType !== 'revalidation' && this.moduleType !== 'cancellation';
   }
 
   get showCountSummaryCard(): boolean {
-    return !this.isSalesmanBarman && this.moduleType !== 'revalidation';
+    return !this.isCompany && !this.isSalesmanBarman && this.moduleType !== 'revalidation';
   }
 
   get primarySummaryLabel(): string {
+    if (this.isCompany) return 'Company Registration Fee Paid';
     if (this.isSalesmanBarman) return 'Registration Fee Paid';
     if (this.moduleType === 'requisition') return 'Total Requisition Amount';
     if (this.moduleType === 'revalidation') return 'Revalidation Fee Paid';
@@ -2121,6 +2180,71 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
       },
       error: () => {
         this.errorMessage = 'Unable to load Salesman/Barman payment slip details.';
+        this.isLoading = false;
+      }
+    });
+  }
+
+  private loadCompanySlip(): void {
+    const appId = this.referenceNo || this.applicationId;
+    console.log('🔍 COMPANY REGISTRATION SLIP: Starting load with:', {
+      appId,
+      referenceNo: this.referenceNo,
+      applicationId: this.applicationId
+    });
+
+    if (!appId) {
+      this.errorMessage = 'Application ID or reference number is required to view payment slip.';
+      this.isLoading = false;
+      return;
+    }
+
+    const detailUrl = `${environment.apiBaseUrl}/transactional/company-registration/detail/${encodeURIComponent(appId)}/`;
+
+    this.http.get<any>(detailUrl).pipe(
+      catchError((error) => {
+        console.error('❌ COMPANY REGISTRATION SLIP: Fetch error:', error);
+        return of(null);
+      })
+    ).subscribe({
+      next: (data) => {
+        if (!data) {
+          this.errorMessage = `No Company Registration record found for reference ${appId}.`;
+          this.isLoading = false;
+          return;
+        }
+
+        const paymentDetails = data.payment_details || {};
+        const feeAmount = Number(paymentDetails.amount ?? data.payment_amount ?? 5000);
+        const txnId = paymentDetails.transaction_id || `TXN-${String(data.application_id || appId).replace(/[^a-zA-Z0-9]/g, '')}`;
+
+        this.companyRow = {
+          id: data.application_id || appId,
+          reference_no: data.application_id || appId,
+          submission_date: paymentDetails.created_at || data.updated_at || data.created_at || new Date().toISOString(),
+          company_name: data.company_name || 'N/A',
+          brand_type: data.brand_type || 'N/A',
+          license: data.license || 'N/A',
+          applicant_name: data.member_name || data.applicant_name || 'Applicant',
+          factory_address: data.factory_address || '',
+          state: data.state || '',
+          status: 'PAID',
+          amount: feeAmount,
+          payment_method: paymentDetails.payment_method || 'Wallet (License Fee)',
+          transaction_id: txnId,
+          wallet_type: paymentDetails.wallet_type || 'License Fee',
+          head_of_account: paymentDetails.head_of_account || '0039-00-105-00-00',
+          mobile_number: data.company_mobile_number || data.member_mobile_number || '',
+          email: data.company_email_id || data.member_email_id || ''
+        };
+
+        if (!this.referenceNo) {
+          this.referenceNo = String(data.application_id || appId);
+        }
+        this.isLoading = false;
+      },
+      error: () => {
+        this.errorMessage = 'Unable to load Company Registration payment slip details.';
         this.isLoading = false;
       }
     });

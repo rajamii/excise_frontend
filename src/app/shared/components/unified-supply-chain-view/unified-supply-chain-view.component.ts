@@ -4309,6 +4309,21 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     }
 
     canViewPaymentSlip(): boolean {
+        if (this.isCompanyRegistration()) {
+            if (this.isCompanyRegistrationAwaitingPayment()) {
+                return false;
+            }
+            const stage = String(this.applicationData?.['status'] || this.applicationData?.['current_stage']?.['name'] || this.applicationData?.['currentStage'] || '').toLowerCase();
+            const isApproved = this.isApprovedApplication() || this.applicationData?.['is_approved'] === true || this.applicationData?.['isApproved'] === true;
+            const hasPayment = Boolean(this.applicationData?.['payment_amount'] || this.applicationData?.['payment_details']);
+
+            if (stage.includes('reject') || stage.includes('cancel')) {
+                return false;
+            }
+
+            return isApproved || hasPayment || stage.includes('approv') || stage.includes('paid');
+        }
+
         if (this.isSalesmanBarmanRegistration()) {
             if (this.isSalesmanBarmanAwaitingPayment()) {
                 return false;
@@ -4407,6 +4422,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
 
     openPaymentSlipView(): void {
         const isSb = this.isSalesmanBarmanRegistration();
+        const isComp = this.isCompanyRegistration();
         const id = String(
             this.applicationData?.['application_id'] ??
             this.applicationData?.['applicationId'] ??
@@ -4424,9 +4440,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
             ''
         ).trim();
         const source = this.getUserContext();
+        const slipType = isComp ? 'company-registration' : (isSb ? 'salesman-barman' : 'requisition');
         const queryParams: any = {
             id: id || undefined,
-            type: isSb ? 'salesman-barman' : 'requisition',
+            type: slipType,
             refNo: ref || undefined,
             ref: ref || undefined,
             referenceNo: ref || undefined,
