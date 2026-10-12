@@ -203,6 +203,18 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         this.loadLicenseeMenuAccess(true);
       });
 
+    // Listen to manual badge updates pushed from components (e.g. licensee dashboard)
+    this.sidebarPendingBadgeService.manualBadgeCounts$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((manualCounts) => {
+        if (!manualCounts || Object.keys(manualCounts).length === 0) return;
+        this.pendingBadgeCounts = {
+          ...this.pendingBadgeCounts,
+          ...manualCounts
+        };
+        this.triggerUiRefresh();
+      });
+
     if (typeof window !== 'undefined') {
       window.addEventListener('licensee-menu-access-refresh', () => {
         if (!this.accountService.isAuthenticated()) return;
@@ -439,6 +451,34 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     if (count > 0) return count;
 
     if (
+      key === 'salesman-barman-registration:payment' ||
+      key === 'salesman-barman:payment' ||
+      key === 'salesman_barman:payment'
+    ) {
+      return Number(
+        this.pendingBadgeCounts?.['salesman-barman-registration:payment'] ||
+        this.pendingBadgeCounts?.['salesman-barman:payment'] ||
+        this.pendingBadgeCounts?.['salesman_barman:payment'] ||
+        this.sidebarPendingBadgeService.getManualCount('salesman-barman-registration:payment') ||
+        this.sidebarPendingBadgeService.getManualCount('salesman-barman:payment') ||
+        0
+      );
+    }
+    if (
+      key === 'salesman-barman-registration' ||
+      key === 'salesman-barman' ||
+      key === 'salesman_barman'
+    ) {
+      return Number(
+        this.pendingBadgeCounts?.['salesman-barman-registration'] ||
+        this.pendingBadgeCounts?.['salesman-barman'] ||
+        this.pendingBadgeCounts?.['salesman_barman'] ||
+        this.sidebarPendingBadgeService.getManualCount('salesman-barman-registration') ||
+        this.sidebarPendingBadgeService.getManualCount('salesman-barman') ||
+        0
+      );
+    }
+    if (
       key === 'distributor-permit' ||
       key === 'imfl-permit' ||
       key === 'distributor-permit-requisition' ||
@@ -516,6 +556,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         0
       );
     }
+
+    const manualFallback = this.sidebarPendingBadgeService.getManualCount(key);
+    if (manualFallback > 0) return manualFallback;
+
     return count;
   }
 
@@ -575,7 +619,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       // Build the sections list dynamically from the DB-backed navigation routes
       // so we only call badge APIs for tabs the user actually has.
       // Previously this was a hardcoded list that fired every API for every licensee.
-      const licenseeSections: string[] = ['new-license', 'license-renewal'];
+      const licenseeSections: string[] = ['new-license', 'license-renewal', 'salesman-barman-registration'];
 
       // Map of route patterns to section keys
       const routeToSection: Array<{ pattern: RegExp; section: string }> = [
@@ -600,6 +644,15 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         }
       }
 
+      if (this.showSalesmanBarmanRegistrationNav && !licenseeSections.includes('salesman-barman-registration')) {
+        licenseeSections.push('salesman-barman-registration');
+      }
+      if (this.showCompanyRegistrationNav && !licenseeSections.includes('company-registration')) {
+        licenseeSections.push('company-registration');
+      }
+      if (this.showCompanyCollaborationNav && !licenseeSections.includes('company-collaboration')) {
+        licenseeSections.push('company-collaboration');
+      }
       if (this.showSpecialPermitMenu && !licenseeSections.includes('special-permit')) {
         licenseeSections.push('special-permit');
       }

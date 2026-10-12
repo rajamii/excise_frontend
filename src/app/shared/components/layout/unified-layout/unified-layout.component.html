@@ -244,8 +244,8 @@
             <button class="nav-item salesman-barman-registration-nav-item" *ngIf="showSalesmanBarmanRegistrationNav" (click)="navigateToLicenseeRegistration('salesman-barman')" [class.active]="isDashboardSectionActive('salesman-barman-registration')">
               <mat-icon class="nav-icon">badge</mat-icon>
               <span class="nav-text">Salesman/Barman Registration</span>
-              <span class="nav-badge" *ngIf="getPendingCount('salesman-barman-registration') as pending">{{ pending }}</span>
-              <span class="nav-badge nav-badge--payment" *ngIf="getPendingCount('salesman-barman-registration:payment') as payCount" title="Awaiting Payment"><mat-icon>payment</mat-icon></span>
+              <span class="nav-badge" *ngIf="(getPendingCount('salesman-barman-registration') || getPendingCount('salesman-barman')) as pending">{{ pending }}</span>
+              <span class="nav-badge nav-badge--payment" *ngIf="(getPendingCount('salesman-barman-registration:payment') || getPendingCount('salesman-barman:payment')) as payCount" title="Awaiting Payment"><mat-icon>payment</mat-icon></span>
             </button>
             <button class="nav-item label-registration-nav-item" *ngIf="showLabelRegistrationNav" (click)="navigateToLicenseeRegistration('label')" [class.active]=
             "isDashboardSectionActive('label-registration')">

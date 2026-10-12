@@ -429,6 +429,15 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
             requisition: Number(this.supplyChainPendingCounts?.['requisition:payment'] || this.awaitingPaymentBreakdown?.requisition || 0)
           };
 
+          this.sidebarPendingBadgeService.updateBadgeCounts({
+            'salesman-barman:payment': this.awaitingPaymentBreakdown.salesmanBarman,
+            'salesman-barman-registration:payment': this.awaitingPaymentBreakdown.salesmanBarman,
+            'new-license:payment': this.awaitingPaymentBreakdown.newLicense,
+            'license-renewal:payment': this.awaitingPaymentBreakdown.licenseRenewal,
+            'company-registration:payment': this.awaitingPaymentBreakdown.companyRegistration,
+            'special-permit:payment': this.awaitingPaymentBreakdown.specialPermit
+          });
+
           // console.log(`📊 Dashboard Counts - Applied: ${this.dashboardCounts.applied} (${approvedWithRenewal.length} renewals), Pending: ${this.dashboardCounts.pending}, Awaiting Payment: ${this.dashboardCounts.awaitingPayment}, Approved: ${this.dashboardCounts.approved}, Rejected: ${this.dashboardCounts.rejected}`);
 
           // Update datasources

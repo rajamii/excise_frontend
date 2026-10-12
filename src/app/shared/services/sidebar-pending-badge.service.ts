@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, forkJoin, of, Subject } from 'rxjs';
+import { Observable, forkJoin, of, Subject, BehaviorSubject } from 'rxjs';
 import { catchError, map, tap, shareReplay, switchMap } from 'rxjs/operators';
 
 import { EnaRequisitionService } from '../../core/services/ena-requisition.service';
@@ -26,6 +26,18 @@ export class SidebarPendingBadgeService {
 
   private refreshNeededSource = new Subject<void>();
   refreshNeeded$ = this.refreshNeededSource.asObservable();
+
+  private manualBadgeCountsSubject = new BehaviorSubject<Record<string, number>>({});
+  manualBadgeCounts$ = this.manualBadgeCountsSubject.asObservable();
+
+  updateBadgeCounts(partialCounts: Record<string, number>): void {
+    const current = this.manualBadgeCountsSubject.getValue();
+    this.manualBadgeCountsSubject.next({ ...current, ...partialCounts });
+  }
+
+  getManualCount(key: string): number {
+    return Number(this.manualBadgeCountsSubject.getValue()?.[key] || 0);
+  }
 
   clearCache(): void {
     this.countsCache.clear();
@@ -132,6 +144,13 @@ export class SidebarPendingBadgeService {
 
         tasks[section] = detail$.pipe(map(d => d.total));
         tasks[`${section}:payment`] = detail$.pipe(map(d => d.payment));
+
+        if (section === 'salesman-barman-registration' || section === 'salesman-barman') {
+          tasks['salesman-barman'] = detail$.pipe(map(d => d.total));
+          tasks['salesman-barman:payment'] = detail$.pipe(map(d => d.payment));
+          tasks['salesman-barman-registration'] = detail$.pipe(map(d => d.total));
+          tasks['salesman-barman-registration:payment'] = detail$.pipe(map(d => d.payment));
+        }
       } else {
         // For requisition and hologram we need both a pending count and a payment count.
         // Share a single HTTP fetch via shareReplay(1) so the two derived tasks don't
@@ -168,6 +187,16 @@ export class SidebarPendingBadgeService {
     }
 
     return forkJoin(tasks).pipe(
+      map((counts) => {
+        const manual = this.manualBadgeCountsSubject.getValue() || {};
+        const combined = { ...counts };
+        for (const [k, v] of Object.entries(manual)) {
+          if (v !== undefined && v !== null && (combined[k] === undefined || combined[k] === 0)) {
+            combined[k] = v;
+          }
+        }
+        return combined;
+      }),
       tap((counts) => {
         this.countsCache.set(key, {
           counts,
