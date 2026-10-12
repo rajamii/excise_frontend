@@ -2982,6 +2982,48 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       }));
   }
 
+  getPaymentAmount(log: any): number {
+    if (!log) return 0;
+    const meta = log?.metadata || {};
+    for (const key of ['amount', 'fee_amount', 'paid_amount', 'total_amount', 'payment_amount']) {
+      const val = meta[key];
+      if (val !== undefined && val !== null) {
+        const num = Number(val);
+        if (!isNaN(num) && num > 0) return num;
+      }
+    }
+    if (log?.amount !== undefined && log?.amount !== null) {
+      const num = Number(log.amount);
+      if (!isNaN(num) && num > 0) return num;
+    }
+    // Check if matching wallet debit transaction exists in current logs
+    const appId = String(log?.application_id || log?.app_id || log?.object_id || '').trim();
+    if (appId && Array.isArray(this.adminActionLogs)) {
+      const relatedDebit = this.adminActionLogs.find((l: any) =>
+        (l?.application_id === appId || l?.app_id === appId) &&
+        (l?.action === 'WALLET_DEBIT' || String(l?.action || '').includes('DEBIT')) &&
+        (l?.metadata?.amount || l?.metadata?.fee_amount)
+      );
+      if (relatedDebit) {
+        const debitAmt = Number(relatedDebit.metadata?.amount || relatedDebit.metadata?.fee_amount || 0);
+        if (!isNaN(debitAmt) && debitAmt > 0) return debitAmt;
+      }
+    }
+    // Fallback: parse from remarks
+    const remarks = String(log?.remarks || '');
+    const matchRupee = remarks.match(/₹\s*([\d,]+(?:\.\d+)?)/);
+    if (matchRupee && matchRupee[1]) {
+      const num = parseFloat(matchRupee[1].replace(/,/g, ''));
+      if (!isNaN(num) && num > 0) return num;
+    }
+    const matchParen = remarks.match(/\(([\d,]+(?:\.\d+)?)\)/);
+    if (matchParen && matchParen[1]) {
+      const num = parseFloat(matchParen[1].replace(/,/g, ''));
+      if (!isNaN(num) && num > 0) return num;
+    }
+    return 0;
+  }
+
   getMetadataEntries(log: any): Array<{ key: string; label: string; value: any }> {
     if (!this.hasMetadataDetails(log)) return [];
     const meta = log.metadata;

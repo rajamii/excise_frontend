@@ -548,7 +548,7 @@
                         <div class="act-summary-card act-summary-card--payment" *ngIf="log?.action && (log.action.startsWith('PAY_') || log.action === 'PAY')">
                           <div class="act-summary-badge act-summary-badge--payment">
                             <mat-icon>payments</mat-icon>
-                            <span>Payment Completed &bull; ₹{{ (log?.metadata?.amount || log?.metadata?.fee_amount || 0) | number:'1.2-2' }}</span>
+                            <span>Payment Completed &bull; ₹{{ (getPaymentAmount(log) || log?.metadata?.amount || log?.metadata?.fee_amount || 0) | number:'1.2-2' }}</span>
                           </div>
                           <div class="act-remarks-text" *ngIf="log?.remarks">{{ log?.remarks }}</div>
                         </div>
