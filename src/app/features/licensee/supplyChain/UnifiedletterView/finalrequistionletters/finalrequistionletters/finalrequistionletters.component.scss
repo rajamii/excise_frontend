@@ -7,6 +7,27 @@ $requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   padding: 20px;
 }
 
+.sample-watermark,
+.sample-diagonal-watermark {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important; // Completely straight, horizontal & centered
+  font-family: Arial, Helvetica, sans-serif !important;
+  font-size: 88px !important;
+  font-weight: 900 !important;
+  letter-spacing: 20px !important;
+  margin-right: -20px !important;
+  color: rgba(220, 38, 38, 0.12) !important;
+  text-transform: uppercase !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  z-index: 2 !important;
+  white-space: nowrap !important;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
 // Chrome/Edge can repaint SVG watermark layers on mouse move when there are many stacked pages.
 // Keep watermark for print, but disable it for permit copies on screen to avoid flicker.
 @media screen {
@@ -847,6 +868,26 @@ $requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 // Print adjustments for permits
 @media print {
+  .sample-watermark,
+  .sample-diagonal-watermark {
+    display: block !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important; // Completely straight & centered
+    font-size: 80px !important;
+    font-weight: 900 !important;
+    letter-spacing: 18px !important;
+    margin-right: -18px !important;
+    color: rgba(220, 38, 38, 0.12) !important;
+    z-index: 2 !important;
+    pointer-events: none !important;
+    user-select: none !important;
+    white-space: nowrap !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   .main {
     border: 2px solid #000 !important;
     box-shadow: none !important;

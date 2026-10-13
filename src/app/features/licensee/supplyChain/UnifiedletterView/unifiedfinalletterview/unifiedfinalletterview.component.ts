@@ -932,6 +932,26 @@ export class UnifiedfinalletterviewComponent implements OnInit {
           border-top: 1px solid #cbd5e1 !important;
           padding-top: 8px !important;
         }
+        .sample-diagonal-watermark {
+          display: block !important;
+          position: absolute !important;
+          top: 50% !important;
+          left: 50% !important;
+          transform: translate(-50%, -50%) !important;
+          font-family: Arial, sans-serif !important;
+          font-size: 85px !important;
+          font-weight: 900 !important;
+          letter-spacing: 20px !important;
+          margin-right: -20px !important;
+          color: rgba(220, 38, 38, 0.12) !important;
+          text-transform: uppercase !important;
+          z-index: 0 !important;
+          pointer-events: none !important;
+          user-select: none !important;
+          white-space: nowrap !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
         .print-watermark {
           position: absolute;
           inset: 3mm;
@@ -952,7 +972,7 @@ export class UnifiedfinalletterviewComponent implements OnInit {
           width: 100%;
           text-align: center;
           font-family: Arial, sans-serif;
-          font-size: 9px;
+          font-size: 8px;
           font-weight: 700;
           letter-spacing: 0;
           line-height: 1;
