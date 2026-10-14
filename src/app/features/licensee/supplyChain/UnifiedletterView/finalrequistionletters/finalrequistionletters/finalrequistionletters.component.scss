@@ -351,10 +351,45 @@ $requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 }
 
 .signature-section {
-  margin-top: 50px;
-  text-align: right;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 40px;
   margin-right: 20px;
   font-size: 14px;
+  page-break-inside: avoid;
+  break-inside: avoid;
+
+  .signature-holder {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    min-width: 220px;
+
+    .signature-image {
+      max-height: 48px;
+      width: auto;
+      object-fit: contain;
+      display: block;
+      margin: 0 auto 4px auto;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .sig-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #000;
+      line-height: 1.35;
+    }
+
+    .sig-dept {
+      font-size: 14px;
+      font-weight: 700;
+      color: #000;
+      line-height: 1.35;
+    }
+  }
 
   p {
     margin-bottom: 5px;
@@ -456,6 +491,22 @@ $requisition-watermark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
   .letter-content {
     text-align: left !important;
+  }
+
+  .signature-section {
+    display: flex !important;
+    justify-content: flex-end !important;
+    margin-top: 25px !important;
+    margin-right: 15px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+
+    .signature-holder {
+      .signature-image {
+        max-height: 46px !important;
+        display: block !important;
+      }
+    }
   }
 
   // Hide non-printable elements
