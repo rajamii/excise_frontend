@@ -149,6 +149,27 @@ export class FinaltransitpermitComponent implements OnInit {
                 display: flex;
                 flex-direction: column;
               }
+
+              .sample-watermark {
+                display: block !important;
+                position: absolute !important;
+                top: 50% !important;
+                left: 50% !important;
+                transform: translate(-50%, -50%) !important;
+                font-family: Arial, Helvetica, sans-serif !important;
+                font-size: 88px !important;
+                font-weight: 900 !important;
+                letter-spacing: 20px !important;
+                margin-right: -20px !important;
+                color: rgba(220, 38, 38, 0.14) !important;
+                text-transform: uppercase !important;
+                pointer-events: none !important;
+                user-select: none !important;
+                z-index: 10 !important;
+                white-space: nowrap !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
               
               .bill-type {
                 position: absolute;
@@ -410,6 +431,12 @@ export class FinaltransitpermitComponent implements OnInit {
                 body {
                   margin: 0 !important;
                   padding: 0 !important;
+                }
+                .sample-watermark {
+                  display: block !important;
+                  color: rgba(220, 38, 38, 0.14) !important;
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
                 }
               }
             </style>
