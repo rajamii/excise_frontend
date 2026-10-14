@@ -106,21 +106,8 @@ export class HologramMonthlyReportComponent implements OnInit {
   selectedManufacturingUnit: string = '';
   commissionerMode = false;
   manufacturingUnits: string[] = [];
-  distilleryUnits: string[] = [
-    'ABC Distilleries Limited',
-    'Lahag Spirits Private Limited',
-    'Mount Distilleries Limited',
-    'Ms Denzong Albrew Pvt Limited',
-    'Ms Mayall & Fraser Pvt Ltd',
-    'Sikkim Distillery Limited',
-    'distq'
-  ];
-  breweryUnits: string[] = [
-    'Doe Breweries Limited',
-    'Ms Denzong Albrew Pvt Ltd',
-    'Yuksom Breweries Limited',
-    'brew test'
-  ];
+  distilleryUnits: string[] = [];
+  breweryUnits: string[] = [];
   private licenseeIdByNormalizedName = new Map<string, string>();
 
   // Date filter for table rows
@@ -132,19 +119,7 @@ export class HologramMonthlyReportComponent implements OnInit {
   approvedEntriesCount: number = 0;
   isLoading: boolean = false;
   establishmentLine: string = '';
-  private createdDistilleryBreweryNames: string[] = [
-    'ABC Distilleries Limited',
-    'Doe Breweries Limited',
-    'Lahag Spirits Private Limited',
-    'Mount Distilleries Limited',
-    'Ms Denzong Albrew Pvt Ltd',
-    'Ms Denzong Albrew Pvt Limited',
-    'Ms Mayall & Fraser Pvt Ltd',
-    'Sikkim Distillery Limited',
-    'Yuksom Breweries Limited',
-    'distq',
-    'brew test'
-  ];
+  private createdDistilleryBreweryNames: string[] = [];
   private oicMappedEstablishmentNames: string[] = [];
   private hologramRequestLicenseeNames: string[] = [];
 
@@ -759,9 +734,8 @@ export class HologramMonthlyReportComponent implements OnInit {
               }
             }
 
-            // OIC: keep same roll in one box even if multiple partial ranges are used.
-            // Commissioner: keep roll+range key to preserve per-assignment color mapping.
-            const assignmentKey = this.commissionerMode ? `${rollLabel}|${from}-${to}` : rollLabel;
+            // Keep same roll in one box even if multiple partial ranges are used.
+            const assignmentKey = rollLabel;
 
             if (!rollAssignmentMap.has(assignmentKey)) {
               rollAssignmentMap.set(assignmentKey, nextAssignmentIndex++);
@@ -1535,11 +1509,14 @@ export class HologramMonthlyReportComponent implements OnInit {
     const uniqueRolls = new Set<string>();
     details.forEach(detail => {
       // Only count rolls that have actual quantity > 0
-      const totalQty = detail.ranges.reduce((sum, range) => sum + (range.qty || 0), 0);
+      const totalQty = (detail.ranges || []).reduce((sum, range) => sum + (range.qty || 0), 0);
       if (totalQty > 0) {
-        // Use rollAssignmentKey if available to ensure we count unique roll assignments, not just roll names
-        const rollKey = (detail as any).rollAssignmentKey || detail.rollName;
-        uniqueRolls.add(rollKey);
+        // Strip range suffix if present so we count unique physical rolls
+        const rawKey = String((detail as any).rollAssignmentKey || detail.rollName || '').trim();
+        const rollKey = rawKey.includes('|') ? rawKey.split('|')[0] : rawKey;
+        if (rollKey) {
+          uniqueRolls.add(rollKey);
+        }
       }
     });
     return uniqueRolls.size;
@@ -1633,7 +1610,7 @@ export class HologramMonthlyReportComponent implements OnInit {
         for (const assigned of assignedRolls) {
           const range = `${assigned.fromSerial || '-'}-${assigned.toSerial || '-'}`;
           const rollLabel = String(assigned.rollLabel || 'Unknown').trim() || 'Unknown';
-          const rawAssignmentKey = this.commissionerMode ? `${rollLabel}|${range}` : rollLabel;
+          const rawAssignmentKey = rollLabel;
           const rollName = this.getRollDisplayName(rollLabel);
           if (!assignmentIndexByKey.has(rawAssignmentKey)) {
             assignmentIndexByKey.set(rawAssignmentKey, nextIndex++);
@@ -1665,7 +1642,7 @@ export class HologramMonthlyReportComponent implements OnInit {
           for (const fallback of fallbackRanges) {
             const range = `${String(fallback.fromSerial || '').trim() || '-'}-${String(fallback.toSerial || '').trim() || '-'}`;
             const fallbackRollLabel = String(fallback.rollLabel || rawAssignmentKey || 'Unknown').trim() || 'Unknown';
-            const fallbackAssignmentKey = this.commissionerMode ? `${fallbackRollLabel}|${range}` : fallbackRollLabel;
+            const fallbackAssignmentKey = fallbackRollLabel;
             const fallbackRollName = this.getRollDisplayName(fallbackRollLabel);
             if (!assignmentIndexByKey.has(fallbackAssignmentKey)) {
               assignmentIndexByKey.set(fallbackAssignmentKey, nextIndex++);
@@ -1692,7 +1669,7 @@ export class HologramMonthlyReportComponent implements OnInit {
 
       for (const b of bounds) {
         const range = `${b.from || '-'}-${b.to || '-'}`;
-        const assignmentKey = this.commissionerMode ? `${rawAssignmentKey}|${range}` : rawAssignmentKey;
+        const assignmentKey = rawAssignmentKey;
         if (!assignmentIndexByKey.has(assignmentKey)) {
           assignmentIndexByKey.set(assignmentKey, nextIndex++);
         }
@@ -1755,9 +1732,8 @@ export class HologramMonthlyReportComponent implements OnInit {
         : null;
       const rangeKey = `${String(firstRange?.from ?? '').trim() || '-'}-${String(firstRange?.to ?? '').trim() || '-'}`;
       const explicitKey = String(detail.rollAssignmentKey || '').trim();
-      const groupKey = this.commissionerMode
-        ? (explicitKey.includes('|') ? explicitKey : `${detail.rollName}|${rangeKey}`)
-        : (explicitKey || detail.rollName);
+      const baseKey = explicitKey.includes('|') ? explicitKey.split('|')[0] : explicitKey;
+      const groupKey = baseKey || detail.rollName;
       const rollDisplayName = this.getRollDisplayName(detail.rollName);
       
       if (!rollsMap.has(groupKey)) {
@@ -1857,15 +1833,46 @@ export class HologramMonthlyReportComponent implements OnInit {
   }
 
   private loadDropdownSources(): void {
+    this.loadProfileManufacturingUnits();
     this.loadOicMappedEstablishments();
     this.loadCreatedDistilleryBreweryNames();
     this.loadHologramRequestLicensees();
   }
 
+  private loadProfileManufacturingUnits(): void {
+    this.http.get<any>(`${environment.apiBaseUrl}/masters/supply_chain/user-profile/units/`).subscribe({
+      next: (payload) => {
+        const rows = this.extractRows(payload);
+        for (const row of rows) {
+          const name = String(row?.name || row?.manufacturing_unit_name || '').trim();
+          if (name && this.isDistilleryOrBreweryUnitName(name)) {
+            if (!this.createdDistilleryBreweryNames.includes(name)) {
+              this.createdDistilleryBreweryNames.push(name);
+            }
+            const normalized = this.normalizeManufacturingUnitName(name);
+            const licId = String(row?.licensee_id || row?.license_id || '').trim();
+            if (normalized && licId) {
+              this.licenseeIdByNormalizedName.set(normalized, licId);
+            }
+          }
+        }
+        this.updateManufacturingUnits();
+      },
+      error: () => {}
+    });
+  }
+
   private isDistilleryOrBreweryUnitName(name: string): boolean {
     if (!name || !name.trim()) return false;
     const lower = name.trim().toLowerCase();
-    if (lower.includes('distributor') || lower.includes('wholesaler') || lower.includes('retailer')) {
+    if (
+      lower === 'distq' ||
+      lower === 'brew test' ||
+      lower === 'test' ||
+      lower.includes('distributor') ||
+      lower.includes('wholesaler') ||
+      lower.includes('retailer')
+    ) {
       return false;
     }
     return true;
@@ -2096,7 +2103,7 @@ export class HologramMonthlyReportComponent implements OnInit {
       return true;
     }
 
-    const currentUnitName = this.extractManufacturingUnitName(entity);
+    let currentUnitName = this.extractManufacturingUnitName(entity);
 
     if (selected === 'Distillery') {
       return this.isDistilleryUnit(currentUnitName, entity);
@@ -2107,13 +2114,40 @@ export class HologramMonthlyReportComponent implements OnInit {
     }
 
     const normalizedSelected = this.normalizeManufacturingUnitName(selected);
-    const normalizedCurrent = this.normalizeManufacturingUnitName(currentUnitName);
-
-    if (!normalizedSelected || !normalizedCurrent) {
+    if (!normalizedSelected) {
       return true;
     }
 
-    return normalizedCurrent === normalizedSelected || normalizedCurrent.startsWith(normalizedSelected) || normalizedSelected.startsWith(normalizedCurrent);
+    // If unit name is not directly on entity, try to resolve via license_id or licensee
+    if (!currentUnitName) {
+      const licId = this.extractLicenseeId(entity);
+      if (licId) {
+        const selectedLicId = this.licenseeIdByNormalizedName.get(normalizedSelected);
+        if (selectedLicId && selectedLicId === licId) {
+          return true;
+        }
+        for (const [normName, id] of this.licenseeIdByNormalizedName.entries()) {
+          if (id === licId) {
+            currentUnitName = normName;
+            break;
+          }
+        }
+      }
+    }
+
+    const normalizedCurrent = this.normalizeManufacturingUnitName(currentUnitName);
+
+    // CRITICAL FIX: If a specific unit is selected, an entity without a matching unit must return false
+    // so data from other units (e.g. Mount Distilleries) does not leak into this unit.
+    if (!normalizedCurrent) {
+      return false;
+    }
+
+    return (
+      normalizedCurrent === normalizedSelected ||
+      normalizedCurrent.startsWith(normalizedSelected) ||
+      normalizedSelected.startsWith(normalizedCurrent)
+    );
   }
 
   private extractManufacturingUnitName(row: any): string {
@@ -2128,6 +2162,8 @@ export class HologramMonthlyReportComponent implements OnInit {
       row?.manufacturingUnitName ||
       row?.establishment_name ||
       row?.establishmentName ||
+      row?.licensee?.manufacturing_unit_name ||
+      row?.procurement?.manufacturing_unit ||
       ''
     ).trim();
   }
