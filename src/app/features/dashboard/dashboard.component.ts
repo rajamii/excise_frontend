@@ -508,6 +508,15 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             if (moduleName === 'distributor-permit-hologram-procurement') {
               this.supplyChainModuleCounts['imfl-hologram-procurement'] = parsed;
             }
+            if (moduleName === 'distributor-permit-cancellation') {
+              this.supplyChainModuleCounts['imfl-cancellation'] = parsed;
+            }
+            if (moduleName === 'distributor-permit-revalidation') {
+              this.supplyChainModuleCounts['imfl-revalidation'] = parsed;
+            }
+            if (moduleName === 'distributor-permit-requisition') {
+              this.supplyChainModuleCounts['imfl-requisition'] = parsed;
+            }
             this.updateSingleWindowChart();
           }
         },
@@ -523,6 +532,50 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
             const rejected = Number(counts.rejected ?? 0);
             const applied = Number(counts.applied || counts.total || 0) || (pending + approved + objection + rejected);
             this.supplyChainModuleCounts['requisition'] = {
+              applied,
+              pending,
+              approved,
+              objection,
+              rejected,
+              awaitingPayment: Number(counts.awaitingPayment ?? counts.awaiting_payment ?? 0)
+            };
+            this.updateSingleWindowChart();
+          }
+        },
+        error: () => {}
+      });
+    } else if (moduleName === 'revalidation') {
+      this.supplyChainService.getRevalidationCounts().subscribe({
+        next: (counts: any) => {
+          if (counts) {
+            const pending = Number(counts.pending ?? 0);
+            const approved = Number(counts.approved ?? 0);
+            const objection = Number(counts.objection ?? 0);
+            const rejected = Number(counts.rejected ?? 0);
+            const applied = Number(counts.applied || counts.total || 0) || (pending + approved + objection + rejected);
+            this.supplyChainModuleCounts['revalidation'] = {
+              applied,
+              pending,
+              approved,
+              objection,
+              rejected,
+              awaitingPayment: Number(counts.awaitingPayment ?? counts.awaiting_payment ?? 0)
+            };
+            this.updateSingleWindowChart();
+          }
+        },
+        error: () => {}
+      });
+    } else if (moduleName === 'cancellation') {
+      this.supplyChainService.getCancellationCounts().subscribe({
+        next: (counts: any) => {
+          if (counts) {
+            const pending = Number(counts.pending ?? 0);
+            const approved = Number(counts.approved ?? 0);
+            const objection = Number(counts.objection ?? 0);
+            const rejected = Number(counts.rejected ?? 0);
+            const applied = Number(counts.applied || counts.total || 0) || (pending + approved + objection + rejected);
+            this.supplyChainModuleCounts['cancellation'] = {
               applied,
               pending,
               approved,
@@ -3626,6 +3679,26 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.loadDashboardStatsLight(forceRefresh);
   }
 
+  get combinedModuleCounts(): Record<string, any> {
+    return {
+      ...this.supplyChainModuleCounts,
+      newLicense: this.detailedCounts?.newLicense || { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+      'new-license': this.detailedCounts?.newLicense || { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+      renewal: this.detailedCounts?.renewal || { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+      'license-renewal': this.detailedCounts?.renewal || { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+      salesman: this.detailedCounts?.salesman || { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+      'salesman-barman': this.detailedCounts?.salesman || { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+      specialPermit: this.detailedCounts?.specialPermit || { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+      'special-permit': this.detailedCounts?.specialPermit || { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+      company: this.supplyChainModuleCounts['company'] || this.detailedCounts?.company || { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+      'company-registration': this.supplyChainModuleCounts['company'] || this.detailedCounts?.company || { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+      'company-collaboration': this.supplyChainModuleCounts['company-collaboration'] || this.detailedCounts?.companyCollaboration || { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+      companyCollaboration: this.supplyChainModuleCounts['company-collaboration'] || this.detailedCounts?.companyCollaboration || { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+      'label-registration': this.detailedCounts?.labelRegistration || { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 },
+      labelRegistration: this.detailedCounts?.labelRegistration || { applied: 0, pending: 0, approved: 0, objection: 0, rejected: 0 }
+    };
+  }
+
   getSupplyChainPendingCount(section: string): number {
     const key = String(section || '').trim().toLowerCase();
     const sidebarPending = Number(this.supplyChainPendingCounts?.[key] || 0);
@@ -4790,7 +4863,7 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     // Roles that have their own full dashboard component (SPA-like)
-    return roleId ? [5, 6, 7].includes(roleId) : false;
+    return roleId ? [5, 6, 7, 10].includes(roleId) : false;
   }
 
   isLicenseeUser(): boolean {

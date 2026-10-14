@@ -1368,6 +1368,33 @@ export class CommissionerDashboardComponent implements OnInit {
       if (!mc && (this.selectedModule === 'imfl-requisition' || this.selectedModule === 'distributor-permit-requisition' || this.selectedModule === 'distributor-permit')) {
         mc = this.moduleCounts?.['distributor-permit-requisition'] || this.moduleCounts?.['distributor-permit'] || this.moduleCounts?.['imfl-requisition'];
       }
+      if (!mc && (this.selectedModule === 'imfl-revalidation' || this.selectedModule === 'distributor-permit-revalidation')) {
+        mc = this.moduleCounts?.['distributor-permit-revalidation'] || this.moduleCounts?.['imfl-revalidation'];
+      }
+      if (!mc && (this.selectedModule === 'imfl-cancellation' || this.selectedModule === 'distributor-permit-cancellation')) {
+        mc = this.moduleCounts?.['distributor-permit-cancellation'] || this.moduleCounts?.['imfl-cancellation'];
+      }
+      if (!mc && (this.selectedModule === 'newLicense' || this.selectedModule === 'new-license')) {
+        mc = this.moduleCounts?.['newLicense'] || this.moduleCounts?.['new-license'];
+      }
+      if (!mc && (this.selectedModule === 'renewal' || this.selectedModule === 'license-renewal')) {
+        mc = this.moduleCounts?.['renewal'] || this.moduleCounts?.['license-renewal'];
+      }
+      if (!mc && (this.selectedModule === 'salesman' || this.selectedModule === 'salesman-barman')) {
+        mc = this.moduleCounts?.['salesman'] || this.moduleCounts?.['salesman-barman'];
+      }
+      if (!mc && (this.selectedModule === 'specialPermit' || this.selectedModule === 'special-permit')) {
+        mc = this.moduleCounts?.['specialPermit'] || this.moduleCounts?.['special-permit'];
+      }
+      if (!mc && (this.selectedModule === 'company' || this.selectedModule === 'companyRegistration')) {
+        mc = this.moduleCounts?.['company'] || this.moduleCounts?.['companyRegistration'];
+      }
+      if (!mc && (this.selectedModule === 'company-collaboration' || this.selectedModule === 'companyCollaboration')) {
+        mc = this.moduleCounts?.['company-collaboration'] || this.moduleCounts?.['companyCollaboration'];
+      }
+      if (!mc && (this.selectedModule === 'label-registration' || this.selectedModule === 'labelRegistration')) {
+        mc = this.moduleCounts?.['label-registration'] || this.moduleCounts?.['labelRegistration'];
+      }
       if (mc) {
         return {
           applied: Number(mc.applied ?? mc.total ?? 0),
@@ -1377,6 +1404,54 @@ export class CommissionerDashboardComponent implements OnInit {
           rejected: Number(mc.rejected || 0)
         };
       }
+
+      // Check allApplications fallback if this module corresponds to an application type in list
+      const typeMap: Record<string, string> = {
+        'distributor-permit-requisition': 'imfl-requisition',
+        'distributor-permit-revalidation': 'imfl-revalidation',
+        'distributor-permit-cancellation': 'imfl-cancellation',
+        'imfl-requisition': 'imfl-requisition',
+        'imfl-revalidation': 'imfl-revalidation',
+        'imfl-cancellation': 'imfl-cancellation',
+        'requisition': 'requisition',
+        'revalidation': 'revalidation',
+        'cancellation': 'cancellation',
+        'transit': 'transit',
+        'hologram': 'hologram'
+      };
+      const appType = typeMap[this.selectedModule] || this.selectedModule;
+      const moduleApps = this.allApplications.filter(a => a.type === appType);
+      if (moduleApps.length > 0) {
+        const approvedCount = moduleApps.filter(a => {
+          const s = String(a.status || '').toLowerCase();
+          return s.includes('approv');
+        }).length;
+        const rejectedCount = moduleApps.filter(a => {
+          const s = String(a.status || '').toLowerCase();
+          return s.includes('reject') || s.includes('cancel');
+        }).length;
+        const pendingCount = moduleApps.filter(a => {
+          const s = String(a.status || '').toLowerCase();
+          if (s.includes('approv') || s.includes('reject') || s.includes('cancel')) return false;
+          return true;
+        }).length;
+        return {
+          applied: moduleApps.length,
+          pending: pendingCount,
+          objection: 0,
+          approved: approvedCount,
+          rejected: rejectedCount
+        };
+      }
+
+      // Specific module selected with no data: return zeros instead of falling back to all totals
+      return {
+        applied: 0,
+        pending: 0,
+        objection: 0,
+        approved: 0,
+        rejected: 0
+      };
     }
 
     // Non-hologram actionable pending (requisitions, revalidations, etc.)
@@ -1415,7 +1490,7 @@ export class CommissionerDashboardComponent implements OnInit {
     const totalPending = effectiveHologramPending + otherPending;
 
     return {
-      applied: this.getStatusCount('APPLIED') + this.getStatusCount('SUBMITTED') + (this.unifiedCounts?.applied || 0) + this.allApplications.length,
+      applied: this.allApplications.length + (this.unifiedCounts?.applied || 0),
       pending: totalPending + (this.unifiedCounts?.pending || 0),
       objection: this.getStatusCount('OBJECTION') + (this.unifiedCounts?.objection || 0),
       approved: this.getStatusCount('APPROVED') + this.getStatusCount('APPROVED_BY_COMMISSIONER') + (this.unifiedCounts?.approved || 0),

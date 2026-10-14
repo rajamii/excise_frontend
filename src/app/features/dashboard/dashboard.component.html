@@ -18,7 +18,7 @@
       <!-- Commissioner Dashboard -->
       <app-commissioner-dashboard *ngIf="currentUser?.roleId === 10"
         [selectedModule]="selectedChartModule"
-        [moduleCounts]="supplyChainModuleCounts">
+        [moduleCounts]="combinedModuleCounts">
       </app-commissioner-dashboard>
 
       <!-- IT Cell Dashboard -->
