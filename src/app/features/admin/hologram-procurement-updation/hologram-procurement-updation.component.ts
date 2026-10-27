@@ -446,6 +446,161 @@ export class HologramProcurementUpdationComponent implements OnInit {
     return currentId !== undefined && currentId === estId;
   }
 
+  selectedEntryForDetails: any = null;
+
+  openDetailsModal(entry: any): void {
+    this.selectedEntryForDetails = entry;
+  }
+
+  closeDetailsModal(): void {
+    this.selectedEntryForDetails = null;
+  }
+
+  getEntryRefNo(entry: any): string {
+    if (!entry) return '---';
+    return entry.refNo || entry.ref_no || entry.referenceNo || entry.reference_no || ('MANUAL/1101/' + (entry.id || '---'));
+  }
+
+  getEntryEstName(entry: any): string {
+    if (!entry) return 'Establishment';
+    return entry.establishmentName || entry.establishment_name || entry.manufacturingUnit || entry.manufacturing_unit || entry.licenseeName || entry.licensee_name || entry.establishment || 'Establishment';
+  }
+
+  getEntryLicenseNo(entry: any): string {
+    if (!entry) return '';
+    return entry.licenseNumber || entry.license_number || entry.licenseNo || entry.license_no || '';
+  }
+
+  getEntryTotalHolograms(entry: any): number {
+    if (!entry) return 0;
+    const val = entry.totalHolograms ?? entry.total_holograms ?? entry.totalQty ?? entry.total_qty ?? entry.quantity;
+    if (val !== undefined && val !== null && !isNaN(Number(val))) {
+      const num = Number(val);
+      if (num > 0) return num;
+    }
+    const rolls = this.getEntryRolls(entry);
+    if (rolls && rolls.length > 0) {
+      return rolls.reduce((sum, r) => sum + this.getRollCount(r), 0);
+    }
+    return 0;
+  }
+
+  getEntryTotalRolls(entry: any): number {
+    if (!entry) return 0;
+    const rolls = this.getEntryRolls(entry);
+    if (rolls && rolls.length > 0) {
+      return rolls.length;
+    }
+    return entry.totalRolls ?? entry.total_rolls ?? entry.rollsCount ?? entry.rolls_count ?? 0;
+  }
+
+  getEntryCartonsCount(entry: any): number {
+    if (!entry) return 1;
+    if (entry.cartonsCount !== undefined && entry.cartonsCount !== null) return entry.cartonsCount;
+    if (entry.cartons_count !== undefined && entry.cartons_count !== null) return entry.cartons_count;
+    const grouped = this.getGroupedCartons(entry);
+    return grouped.length > 0 ? grouped.length : 1;
+  }
+
+  getEntryDate(entry: any): string {
+    if (!entry) return '';
+    return entry.createdAt || entry.created_at || entry.date || entry.created_on || '';
+  }
+
+  getEntryRolls(entry: any): any[] {
+    if (!entry) return [];
+    if (entry.rolls && Array.isArray(entry.rolls) && entry.rolls.length > 0) {
+      return entry.rolls;
+    }
+    const rawCartons = entry.cartonDetails || entry.carton_details;
+    if (rawCartons && Array.isArray(rawCartons) && rawCartons.length > 0) {
+      return rawCartons;
+    }
+    return [];
+  }
+
+  getRollCode(roll: any, index: number = 0): string {
+    if (!roll) return `Roll ${index + 1}`;
+    return roll.cartonNumber || roll.carton_number || roll.cartoonNumber || roll.cartoon_number || `Roll ${index + 1}`;
+  }
+
+  getRollFromSerial(roll: any): string {
+    if (!roll) return '—';
+    const s = roll.fromSerial ?? roll.from_serial ?? roll.from;
+    return s !== undefined && s !== null && s !== '' ? String(s) : '—';
+  }
+
+  getRollToSerial(roll: any): string {
+    if (!roll) return '—';
+    const s = roll.toSerial ?? roll.to_serial ?? roll.to;
+    return s !== undefined && s !== null && s !== '' ? String(s) : '—';
+  }
+
+  getRollCount(roll: any): number {
+    if (!roll) return 0;
+    const c = roll.totalCount ?? roll.total_count ?? roll.numberOfHolograms ?? roll.count;
+    if (c !== undefined && c !== null && !isNaN(Number(c)) && Number(c) > 0) {
+      return Number(c);
+    }
+    const from = parseInt(this.getRollFromSerial(roll), 10);
+    const to = parseInt(this.getRollToSerial(roll), 10);
+    if (!isNaN(from) && !isNaN(to) && to >= from) {
+      return to - from + 1;
+    }
+    return 0;
+  }
+
+  getRollAvailable(roll: any): number {
+    if (!roll) return 0;
+    const a = roll.available ?? roll.availableCount ?? roll.available_qty;
+    if (a !== undefined && a !== null && !isNaN(Number(a))) {
+      return Number(a);
+    }
+    return this.getRollCount(roll);
+  }
+
+  getRollType(roll: any): string {
+    if (!roll) return 'LOCAL';
+    return roll.type || this.selectedEntryForDetails?.type || 'LOCAL';
+  }
+
+  getRollStatus(roll: any): string {
+    if (!roll) return 'AVAILABLE';
+    return roll.status || 'AVAILABLE';
+  }
+
+  getGroupedCartons(entry: any): Array<{ cartonName: string; type: string; totalHolograms: number; rolls: any[] }> {
+    const rolls = this.getEntryRolls(entry);
+    if (!rolls || rolls.length === 0) return [];
+
+    const map = new Map<string, { cartonName: string; type: string; totalHolograms: number; rolls: any[] }>();
+
+    for (let i = 0; i < rolls.length; i++) {
+      const roll = rolls[i];
+      const rollCode = this.getRollCode(roll, i);
+      let baseCartonName = rollCode;
+      const suffixMatch = rollCode.match(/^(.*?)\([a-zA-Z0-9]+\)$/);
+      if (suffixMatch && suffixMatch[1]) {
+        baseCartonName = suffixMatch[1].trim();
+      }
+
+      if (!map.has(baseCartonName)) {
+        map.set(baseCartonName, {
+          cartonName: baseCartonName,
+          type: this.getRollType(roll),
+          totalHolograms: 0,
+          rolls: []
+        });
+      }
+
+      const group = map.get(baseCartonName)!;
+      group.rolls.push(roll);
+      group.totalHolograms += this.getRollCount(roll);
+    }
+
+    return Array.from(map.values());
+  }
+
   resetForm(): void {
     this.cartons = [];
     this.selectedEstablishment = null;

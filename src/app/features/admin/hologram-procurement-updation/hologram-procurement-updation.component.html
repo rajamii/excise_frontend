@@ -381,50 +381,196 @@
             <th>Total Holograms</th>
             <th>Date</th>
             <th>Status</th>
+            <th>Carton Details</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let entry of manualEntries">
             <td class="hpu__td-ref">
               <span class="hpu__ref-code">
-                {{ entry.ref_no || entry.reference_no || entry.entry_number || ('MANUAL/1101/' + (entry.id || '---')) }}
+                {{ getEntryRefNo(entry) }}
               </span>
             </td>
             <td>
               <div class="hpu__td-est-name">
-                {{ entry.licensee_name || entry.establishment_name || entry.licensee?.name || entry.establishment || '---' }}
+                {{ getEntryEstName(entry) }}
               </div>
-              <div class="hpu__td-est-sub" *ngIf="entry.license_number || entry.licensee?.license_number">
-                {{ entry.license_number || entry.licensee?.license_number }}
+              <div class="hpu__td-est-sub" *ngIf="getEntryLicenseNo(entry)">
+                {{ getEntryLicenseNo(entry) }}
               </div>
             </td>
             <td>
               <span class="hpu__badge hpu__badge--info">
-                {{ entry.cartons_count || (entry.cartons ? entry.cartons.length : 1) }} Carton(s)
+                {{ getEntryCartonsCount(entry) }} Carton(s)
               </span>
               <span class="hpu__badge hpu__badge--subtle" *ngIf="entry.type">
                 {{ entry.type }}
               </span>
             </td>
             <td>
-              <strong>{{ entry.total_rolls || entry.rolls_count || (entry.rolls ? entry.rolls.length : '—') }}</strong> rolls
+              <strong>{{ getEntryTotalRolls(entry) }}</strong> rolls
             </td>
             <td>
               <span class="hpu__total-pill">
-                {{ (entry.total_holograms || entry.quantity || 0) | number }}
+                {{ getEntryTotalHolograms(entry) | number }}
               </span>
             </td>
             <td class="hpu__td-date">
-              {{ entry.created_at || entry.date || entry.created_on || '---' }}
+              {{ getEntryDate(entry) | date:'mediumDate' }}
             </td>
             <td>
               <span class="hpu__badge hpu__badge--success">
-                {{ entry.status || 'RECORDED' }}
+                {{ entry.status || 'AVAILABLE' }}
               </span>
+            </td>
+            <td>
+              <button
+                type="button"
+                class="hpu__btn hpu__btn--sm hpu__btn--outline"
+                (click)="openDetailsModal(entry)"
+                title="View carton and rolls details"
+              >
+                👁 View Details
+              </button>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
   </section>
+
+  <!-- Carton & Rolls Details Popup Modal -->
+  <div *ngIf="selectedEntryForDetails" class="hpu__modal-overlay" (click)="closeDetailsModal()">
+    <div class="hpu__modal-dialog" (click)="$event.stopPropagation()">
+      <div class="hpu__modal-header">
+        <div class="hpu__modal-title-group">
+          <span class="hpu__modal-icon">📦</span>
+          <div>
+            <h3 class="hpu__modal-title">Carton &amp; Hologram Roll Details</h3>
+            <p class="hpu__modal-subtitle">
+              Ref: <strong>{{ getEntryRefNo(selectedEntryForDetails) }}</strong>
+              • {{ getEntryEstName(selectedEntryForDetails) }}
+              <span *ngIf="getEntryLicenseNo(selectedEntryForDetails)">• {{ getEntryLicenseNo(selectedEntryForDetails) }}</span>
+            </p>
+          </div>
+        </div>
+        <button type="button" class="hpu__modal-close" (click)="closeDetailsModal()" aria-label="Close modal">×</button>
+      </div>
+
+      <div class="hpu__modal-body">
+        <!-- Quick Stats Cards in Modal -->
+        <div class="hpu__modal-stats">
+          <div class="hpu__modal-stat-card">
+            <span class="hpu__modal-stat-label">Establishment</span>
+            <strong class="hpu__modal-stat-value">{{ getEntryEstName(selectedEntryForDetails) }}</strong>
+            <span class="hpu__modal-stat-sub">{{ getEntryLicenseNo(selectedEntryForDetails) || 'Manufacturing Unit' }}</span>
+          </div>
+          <div class="hpu__modal-stat-card">
+            <span class="hpu__modal-stat-label">Total Holograms</span>
+            <strong class="hpu__modal-stat-value hpu__modal-stat-value--green">
+              {{ getEntryTotalHolograms(selectedEntryForDetails) | number }}
+            </strong>
+            <span class="hpu__modal-stat-sub">
+              {{ getEntryTotalRolls(selectedEntryForDetails) }} Roll(s)
+            </span>
+          </div>
+          <div class="hpu__modal-stat-card">
+            <span class="hpu__modal-stat-label">Carton Count</span>
+            <strong class="hpu__modal-stat-value">
+              {{ getEntryCartonsCount(selectedEntryForDetails) }}
+            </strong>
+            <span class="hpu__badge hpu__badge--info">{{ selectedEntryForDetails.type || 'LOCAL' }}</span>
+          </div>
+          <div class="hpu__modal-stat-card">
+            <span class="hpu__modal-stat-label">Number of Rolls</span>
+            <strong class="hpu__modal-stat-value hpu__modal-stat-value--green">
+              {{ getEntryTotalRolls(selectedEntryForDetails) }} Roll(s)
+            </strong>
+            <span class="hpu__modal-stat-sub">{{ getEntryDate(selectedEntryForDetails) | date:'mediumDate' }}</span>
+          </div>
+        </div>
+
+        <!-- Carton-by-Carton Details -->
+        <div class="hpu__modal-table-header-row">
+          <h4 class="hpu__modal-section-title">
+            Cartons &amp; Rolls in this Entry ({{ getEntryTotalRolls(selectedEntryForDetails) }} Total Rolls)
+          </h4>
+        </div>
+
+        <!-- Grouped by Carton -->
+        <div
+          *ngFor="let group of getGroupedCartons(selectedEntryForDetails); let cIdx = index"
+          class="hpu__modal-carton-card"
+        >
+          <!-- Carton Box Subheader -->
+          <div class="hpu__modal-carton-header">
+            <div class="hpu__modal-carton-title">
+              <span class="hpu__modal-carton-icon">📦</span>
+              <span class="hpu__modal-carton-name">
+                Carton / Box: <strong>{{ group.cartonName }}</strong>
+              </span>
+              <span class="hpu__badge hpu__badge--info">{{ group.type }}</span>
+            </div>
+            <div class="hpu__modal-carton-summary">
+              <span class="hpu__badge hpu__badge--info"><strong>{{ group.rolls.length }}</strong> roll(s) in this carton</span>
+              <span class="hpu__stat-divider">|</span>
+              <span class="hpu__total-pill"><strong>{{ group.totalHolograms | number }}</strong> holograms</span>
+            </div>
+          </div>
+
+          <!-- Rolls Table for this Carton -->
+          <div class="hpu__modal-table-wrapper">
+            <table class="hpu__table hpu__modal-table">
+              <thead>
+                <tr>
+                  <th style="width: 45px; text-align: center;">#</th>
+                  <th>Roll Code</th>
+                  <th style="text-align: center;">Roll Number</th>
+                  <th>Type</th>
+                  <th style="text-align: center;">From Serial</th>
+                  <th style="text-align: center; width: 30px;">→</th>
+                  <th style="text-align: center;">To Serial</th>
+                  <th style="text-align: right;">Total Holograms</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let roll of group.rolls; let rIdx = index">
+                  <td style="text-align: center; color: #64748b; font-weight: 600;">{{ rIdx + 1 }}</td>
+                  <td>
+                    <span class="hpu__roll-code-badge">{{ getRollCode(roll, rIdx) }}</span>
+                  </td>
+                  <td style="text-align: center;">
+                    <span class="hpu__badge hpu__badge--info">
+                      Roll {{ rIdx + 1 }} of {{ group.rolls.length }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="hpu__badge hpu__badge--subtle">{{ getRollType(roll) }}</span>
+                  </td>
+                  <td style="text-align: center;">
+                    <span class="hpu__serial-badge hpu__serial-badge--from">
+                      {{ getRollFromSerial(roll) }}
+                    </span>
+                  </td>
+                  <td style="text-align: center; color: #94a3b8; font-weight: bold;">→</td>
+                  <td style="text-align: center;">
+                    <span class="hpu__serial-badge hpu__serial-badge--to">
+                      {{ getRollToSerial(roll) }}
+                    </span>
+                  </td>
+                  <td style="text-align: right;">
+                    <strong style="color: #0f4c5c; font-size: 14px;">{{ getRollCount(roll) | number }}</strong>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="hpu__modal-footer">
+        <button type="button" class="hpu__btn hpu__btn--secondary" (click)="closeDetailsModal()">Close</button>
+      </div>
+    </div>
+  </div>
 </div>
