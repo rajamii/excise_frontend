@@ -305,8 +305,8 @@ export class SingleWindowComponent implements OnInit {
   }
 
   executeSearch(query: string) {
-    const trimmed = query.trim();
-    if (!trimmed) {
+    const raw = (query || '').trim();
+    if (!raw) {
       this.searchResults = [];
       this.filteredResults = [];
       this.latestUsers = [];
@@ -315,6 +315,15 @@ export class SingleWindowComponent implements OnInit {
       this.hasSearched = false;
       return;
     }
+
+    // Sanitize query: strip emojis (e.g. 📋), brackets/braces ({}), quotes, and label prefixes
+    const clean = raw
+      .replace(/[\u{10000}-\u{10FFFF}\u{2000}-\u{32FF}\u{FE00}-\u{FEFF}\u{2600}-\u{27BF}]/gu, '')
+      .replace(/^[{\[\("“'`\s]+|[}\]\)"”'`?\.,!\s]+$/g, '')
+      .replace(/^(?:ref(?:\s*no)?|license(?:\s*no)?|lic(?:\s*no)?|application(?:\s*no)?|app(?:\s*no)?|no)[\s:\-]+/i, '')
+      .trim();
+
+    const trimmed = clean || raw;
 
     this.isLoading = true;
     this.error = null;
