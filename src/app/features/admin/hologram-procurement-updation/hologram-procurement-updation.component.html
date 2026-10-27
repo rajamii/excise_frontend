@@ -298,6 +298,15 @@
       </div>
     </div>
 
+    <!-- Inline Error Alert inside Step 2 -->
+    <div *ngIf="saveError" class="hpu__alert hpu__alert--error" style="margin-top: 16px;">
+      <div class="hpu__alert-icon">⚠</div>
+      <div class="hpu__alert-body">
+        <strong>Cannot Save:</strong> {{ saveError }}
+      </div>
+      <button type="button" class="hpu__alert-close" (click)="saveError = ''">×</button>
+    </div>
+
     <!-- Summary Bar & Save Action -->
     <div class="hpu__summary-bar">
       <div class="hpu__summary-stats">
@@ -330,7 +339,7 @@
           type="button"
           class="hpu__btn hpu__btn--primary"
           (click)="saveEntry()"
-          [disabled]="!canSave() || isSaving"
+          [disabled]="isSaving"
         >
           <span *ngIf="isSaving" class="hpu__spinner hpu__spinner--sm"></span>
           <span>💾 {{ isSaving ? 'Saving...' : 'Save to Inventory' }}</span>

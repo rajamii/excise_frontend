@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
+import Swal from 'sweetalert2';
 
 export interface Roll {
   from_serial: string;
@@ -231,33 +232,125 @@ export class HologramProcurementUpdationComponent implements OnInit {
   }
 
   canSave(): boolean {
-    if (!this.selectedEstablishment) {
-      return false;
-    }
-    if (!this.cartons || this.cartons.length === 0) {
-      return false;
-    }
-
+    if (!this.selectedEstablishment) return false;
+    if (!this.cartons || this.cartons.length === 0) return false;
     for (const carton of this.cartons) {
-      if (!carton.carton_number || !carton.carton_number.trim()) {
-        return false;
-      }
-      if (!carton.rolls || carton.rolls.length === 0) {
-        return false;
-      }
+      if (!carton.carton_number || !carton.carton_number.trim()) return false;
+      if (!carton.rolls || carton.rolls.length === 0) return false;
       for (const roll of carton.rolls) {
-        if (!this.isRollValid(roll)) {
-          return false;
-        }
+        if (!this.isRollValid(roll)) return false;
       }
     }
-
     return true;
   }
 
   saveEntry(): void {
-    if (!this.canSave() || this.isSaving) {
+    if (this.isSaving) return;
+
+    if (!this.selectedEstablishment) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Select Establishment',
+        text: 'Please select a distillery or brewery first.',
+        confirmButtonColor: '#0f4c5c'
+      });
       return;
+    }
+
+    if (!this.cartons || this.cartons.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Cartons Added',
+        text: 'Please add at least one carton with rolls.',
+        confirmButtonColor: '#0f4c5c'
+      });
+      return;
+    }
+
+    for (let cIdx = 0; cIdx < this.cartons.length; cIdx++) {
+      const carton = this.cartons[cIdx];
+      const boxName = carton.carton_number?.trim();
+      if (!boxName) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Missing Box Number',
+          text: `Please enter Box Number for Carton #${cIdx + 1}.`,
+          confirmButtonColor: '#0f4c5c'
+        });
+        return;
+      }
+
+      if (!carton.rolls || carton.rolls.length === 0) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'No Rolls in Carton',
+          text: `Carton "${boxName}" has no rolls. Click "⚡ Generate Rolls" or "+ Add Roll" to add rolls.`,
+          confirmButtonColor: '#0f4c5c'
+        });
+        return;
+      }
+
+      for (let rIdx = 0; rIdx < carton.rolls.length; rIdx++) {
+        const roll = carton.rolls[rIdx];
+        const rollName = this.getRollSuffix(carton, rIdx);
+
+        if (!roll.from_serial || String(roll.from_serial).trim() === '' || !roll.to_serial || String(roll.to_serial).trim() === '') {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Incomplete Serial Range',
+            text: `Please enter both From Serial and To Serial for ${rollName} in Carton "${boxName}".`,
+            confirmButtonColor: '#0f4c5c'
+          });
+          return;
+        }
+
+        const from = parseInt(String(roll.from_serial).trim(), 10);
+        const to = parseInt(String(roll.to_serial).trim(), 10);
+
+        if (isNaN(from) || isNaN(to) || from <= 0) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Invalid Serial Number',
+            text: `Serial numbers must be positive numbers for ${rollName}.`,
+            confirmButtonColor: '#0f4c5c'
+          });
+          return;
+        }
+
+        if (to < from) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Invalid Serial Range',
+            text: `For ${rollName}, To Serial (${to}) cannot be less than From Serial (${from}).`,
+            confirmButtonColor: '#0f4c5c'
+          });
+          return;
+        }
+      }
+    }
+
+    // Check for internal serial range overlap before submitting
+    const allRollsWithRanges: { label: string; from: number; to: number }[] = [];
+    for (const carton of this.cartons) {
+      for (let rIdx = 0; rIdx < carton.rolls.length; rIdx++) {
+        const roll = carton.rolls[rIdx];
+        const label = this.getRollSuffix(carton, rIdx);
+        const from = parseInt(String(roll.from_serial).trim(), 10);
+        const to = parseInt(String(roll.to_serial).trim(), 10);
+
+        for (const existing of allRollsWithRanges) {
+          if (Math.max(from, existing.from) <= Math.min(to, existing.to)) {
+            Swal.fire({
+              icon: 'error',
+              title: 'Overlapping Serial Numbers',
+              html: `Roll <strong>"${label}"</strong> (${from} – ${to}) overlaps with Roll <strong>"${existing.label}"</strong> (${existing.from} – ${existing.to}).<br><br>Each roll must have unique, non-overlapping serial numbers.`,
+              confirmButtonColor: '#dc2626'
+            });
+            return;
+          }
+        }
+        allRollsWithRanges.push({ label, from, to });
+      }
     }
 
     this.isSaving = true;
@@ -265,6 +358,9 @@ export class HologramProcurementUpdationComponent implements OnInit {
     this.saveError = '';
 
     const licenseeId = this.selectedEstablishment.id ?? this.selectedEstablishment.licensee_id;
+    const estName = this.getEstablishmentName(this.selectedEstablishment);
+    const totalRolls = this.calculateTotalRolls();
+    const totalHolograms = this.calculateTotalHolograms();
 
     const payload = {
       licensee_id: licenseeId,
@@ -283,16 +379,34 @@ export class HologramProcurementUpdationComponent implements OnInit {
         this.isSaving = false;
         this.saveSuccess = true;
         this.saveError = '';
+
+        // Reset the form and empty Enter Carton Details box
         this.cartons = [];
         this.selectedEstablishment = null;
+
+        // Reload data
         this.loadManualEntries();
         this.loadEstablishments();
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Stock Updated Successfully!',
+          html: `<strong>${totalRolls} roll(s)</strong> (${totalHolograms.toLocaleString()} holograms) have been added directly to <strong>${estName}</strong>'s Hologram Inventory.`,
+          confirmButtonColor: '#10b981'
+        });
       },
       error: (err) => {
         this.isSaving = false;
         this.saveSuccess = false;
         const msg = err?.error?.detail || err?.error?.message || err?.error?.error || err?.message || 'Failed to save inventory entry. Please verify details and try again.';
         this.saveError = typeof msg === 'string' ? msg : JSON.stringify(msg);
+
+        Swal.fire({
+          icon: 'error',
+          title: 'Cannot Save to Inventory',
+          text: this.saveError,
+          confirmButtonColor: '#dc2626'
+        });
       }
     });
   }
