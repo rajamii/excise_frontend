@@ -156,7 +156,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     { section: 'stock-inventory', label: 'Stock Inventory', icon: 'inventory' },
     { section: 'single-window', label: 'User Details', icon: 'manage_search', hideForSiteAdmin: true, hideForOic: true },
     { section: 'payment-transactions', label: 'Transactions', icon: 'receipt_long', hideForSiteAdmin: true, hideForOic: true },
-    { section: 'hologram-procurement-updation', label: 'Hologram Procurement Updation', icon: 'inventory', hideForSiteAdmin: false, hideForOic: true },
+    { section: 'hologram-procurement-updation', label: 'Hologram Procurement Updation', icon: 'inventory', hideForSiteAdmin: true, hideForOic: true },
     { section: 'officer-activity', label: 'Officer Activity', icon: 'assignment', hideForSiteAdmin: true }
   ];
 
@@ -793,7 +793,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     showOnlyForCommissioner?: boolean;
   }): boolean {
     if (item.section === 'hologram-procurement-updation') {
-      return this.isSingleWindowUser() || this.isSiteAdminUser();
+      return this.isSingleWindowUser();
     }
     if (this.isJointCommissionerUser()) {
       if (['secretary-timeline', 'secretary-revenue', 'single-window', 'payment-transactions'].includes(item.section)) {
@@ -2466,7 +2466,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     }
 
     if (section === 'hologram-procurement-updation') {
-      return this.isSingleWindowUser() || this.isSiteAdminUser();
+      return this.isSingleWindowUser();
     }
 
     if (section === 'company-registration') {
