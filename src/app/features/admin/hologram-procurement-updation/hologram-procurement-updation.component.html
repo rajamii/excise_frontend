@@ -1,0 +1,428 @@
+<div class="hpu">
+  <!-- Page Header -->
+  <header class="hpu__header">
+    <div class="hpu__header-icon">📦</div>
+    <div class="hpu__header-text">
+      <h1 class="hpu__title">Hologram Procurement Updation</h1>
+      <p class="hpu__subtitle">Manual inventory update for distilleries &amp; breweries</p>
+    </div>
+  </header>
+
+  <!-- Alerts -->
+  <div *ngIf="saveSuccess" class="hpu__alert hpu__alert--success" role="alert">
+    <div class="hpu__alert-icon">✓</div>
+    <div class="hpu__alert-body">
+      <strong>Success!</strong> Inventory updated successfully. The manual hologram procurement entry has been saved.
+    </div>
+    <button type="button" class="hpu__alert-close" (click)="saveSuccess = false" aria-label="Close">×</button>
+  </div>
+
+  <div *ngIf="saveError" class="hpu__alert hpu__alert--error" role="alert">
+    <div class="hpu__alert-icon">⚠</div>
+    <div class="hpu__alert-body">
+      <strong>Error:</strong> {{ saveError }}
+    </div>
+    <button type="button" class="hpu__alert-close" (click)="saveError = ''" aria-label="Close">×</button>
+  </div>
+
+  <!-- Step 1: Select Establishment -->
+  <section class="hpu__card">
+    <div class="hpu__card-header hpu__card-header--between">
+      <div class="hpu__step-header-left">
+        <div class="hpu__step-badge">1</div>
+        <div>
+          <h2 class="hpu__card-title">Select Establishment</h2>
+          <p class="hpu__card-desc">Choose a distillery or brewery to update hologram inventory</p>
+        </div>
+      </div>
+      <div class="hpu__est-count" *ngIf="!isLoading">
+        <span class="hpu__badge hpu__badge--neutral">
+          {{ establishments.length }} {{ establishments.length === 1 ? 'Establishment' : 'Establishments' }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Search/Filter -->
+    <div class="hpu__search-box">
+      <div class="hpu__search-input-wrapper">
+        <span class="hpu__search-prefix-icon">🔍</span>
+        <input
+          type="text"
+          class="hpu__input hpu__search-input"
+          placeholder="Search by establishment name, license number, or type..."
+          [(ngModel)]="searchTerm"
+        />
+        <button
+          *ngIf="searchTerm"
+          type="button"
+          class="hpu__search-clear"
+          (click)="searchTerm = ''"
+          title="Clear search"
+          aria-label="Clear search"
+        >
+          ×
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="hpu__loading-state">
+      <div class="hpu__spinner"></div>
+      <span>Loading establishments...</span>
+    </div>
+
+    <!-- Establishment Cards Container -->
+    <div *ngIf="!isLoading" class="hpu__est-container">
+      <div
+        *ngFor="let est of filteredEstablishments"
+        class="hpu__est-card"
+        [class.hpu__est-card--selected]="isSelectedEstablishment(est)"
+        (click)="selectEstablishment(est)"
+        tabindex="0"
+        role="button"
+        (keyup.enter)="selectEstablishment(est)"
+      >
+        <div class="hpu__est-card-main">
+          <div class="hpu__est-name-row">
+            <span class="hpu__est-icon">{{ (est.type || est.license_type) === 'Brewery' ? '🍺' : '🏭' }}</span>
+            <span class="hpu__est-name">{{ est.manufacturing_unit_name || est.name || getEstablishmentName(est) }}</span>
+            <span class="hpu__badge" [ngClass]="(est.type || est.license_type) === 'Brewery' ? 'hpu__badge--brewery' : 'hpu__badge--distillery'">
+              {{ est.type || est.license_type || getEstablishmentType(est) }}
+            </span>
+          </div>
+          <div class="hpu__est-meta">
+            <span class="hpu__est-code">
+              📋 {{ est.licensee_id || est.license_number || getEstablishmentCode(est) }}
+            </span>
+            <span class="hpu__est-rolls" *ngIf="est.total_rolls !== undefined && est.total_rolls > 0">
+              📦 {{ est.total_rolls }} rolls ({{ est.available_holograms | number }} holograms)
+            </span>
+            <span class="hpu__est-rolls-empty" *ngIf="est.total_rolls === 0">
+              ⚠️ No holograms in inventory yet
+            </span>
+          </div>
+        </div>
+        <div class="hpu__est-check" *ngIf="isSelectedEstablishment(est)">
+          <span class="hpu__check-icon">✓</span>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="filteredEstablishments.length === 0" class="hpu__empty-list">
+        <p *ngIf="searchTerm">No establishments matching "<strong>{{ searchTerm }}</strong>"</p>
+        <p *ngIf="!searchTerm">No establishments available.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 2: Enter Carton Details (shown when establishment is selected) -->
+  <section *ngIf="selectedEstablishment" class="hpu__card">
+    <div class="hpu__card-header hpu__card-header--between">
+      <div class="hpu__step-header-left">
+        <div class="hpu__step-badge">2</div>
+        <div>
+          <h2 class="hpu__card-title">Enter Carton Details</h2>
+          <div class="hpu__selected-est-pill">
+            <span class="hpu__pill-label">Selected:</span>
+            <strong class="hpu__pill-name">{{ getEstablishmentName(selectedEstablishment) }}</strong>
+            <span *ngIf="getEstablishmentCode(selectedEstablishment)" class="hpu__pill-code">
+              • {{ getEstablishmentCode(selectedEstablishment) }}
+            </span>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="hpu__btn hpu__btn--secondary" (click)="addCarton()">
+        + Add Carton
+      </button>
+    </div>
+
+    <!-- Carton Cards List -->
+    <div class="hpu__cartons-list">
+      <div *ngIf="cartons.length === 0" class="hpu__carton-empty">
+        <p>No cartons added yet. Click <strong>+ Add Carton</strong> to begin entering inventory details.</p>
+      </div>
+
+      <div
+        *ngFor="let carton of cartons; let cIndex = index"
+        class="hpu__carton-card"
+      >
+        <div class="hpu__carton-header">
+          <div class="hpu__carton-title">
+            <span class="hpu__carton-badge">Carton #{{ cIndex + 1 }}</span>
+            <span *ngIf="carton.carton_number" class="hpu__carton-num-label">
+              Box: <strong>{{ carton.carton_number }}</strong>
+            </span>
+            <span class="hpu__badge hpu__badge--info">{{ carton.type }}</span>
+          </div>
+          <button
+            type="button"
+            class="hpu__btn hpu__btn--danger hpu__btn--sm"
+            (click)="removeCarton(cIndex)"
+            title="Remove this carton"
+          >
+            × Remove
+          </button>
+        </div>
+
+        <!-- Carton Parameters -->
+        <div class="hpu__carton-inputs">
+          <div class="hpu__form-group">
+            <label class="hpu__label">Box Number <span class="hpu__required">*</span></label>
+            <input
+              type="text"
+              class="hpu__input"
+              placeholder="e.g. BX-101"
+              [(ngModel)]="carton.carton_number"
+            />
+          </div>
+
+          <div class="hpu__form-group">
+            <label class="hpu__label">Type <span class="hpu__required">*</span></label>
+            <select class="hpu__select" [(ngModel)]="carton.type">
+              <option *ngFor="let opt of typeOptions" [value]="opt">{{ opt }}</option>
+            </select>
+          </div>
+
+          <div class="hpu__form-group">
+            <label class="hpu__label">Number of Rolls</label>
+            <input
+              type="number"
+              class="hpu__input"
+              min="1"
+              max="100"
+              [(ngModel)]="carton.num_rolls"
+            />
+          </div>
+
+          <div class="hpu__form-group">
+            <label class="hpu__label">Starting Serial</label>
+            <input
+              type="number"
+              class="hpu__input"
+              placeholder="e.g. 1"
+              min="1"
+              [(ngModel)]="carton.starting_serial"
+            />
+          </div>
+
+          <div class="hpu__form-group hpu__form-group--action">
+            <label class="hpu__label">&nbsp;</label>
+            <button
+              type="button"
+              class="hpu__btn hpu__btn--teal"
+              (click)="generateRolls(cIndex)"
+              title="Auto-calculate roll serial numbers based on starting serial"
+            >
+              ⚡ Generate Rolls
+            </button>
+          </div>
+        </div>
+
+        <!-- Rolls Section -->
+        <div class="hpu__rolls-section">
+          <div class="hpu__rolls-header">
+            <div class="hpu__rolls-title">
+              <span>Rolls in Carton ({{ carton.rolls.length }})</span>
+              <span class="hpu__rolls-info">• 20,000 holograms per roll</span>
+            </div>
+            <button
+              type="button"
+              class="hpu__btn hpu__btn--sm hpu__btn--secondary"
+              (click)="addRoll(cIndex)"
+            >
+              + Add Roll
+            </button>
+          </div>
+
+          <!-- Rolls Table -->
+          <div *ngIf="carton.rolls.length > 0" class="hpu__rolls-table">
+            <div class="hpu__rolls-table-header">
+              <span class="hpu__col-roll">Roll</span>
+              <span class="hpu__col-from">From Serial</span>
+              <span class="hpu__col-sep"></span>
+              <span class="hpu__col-to">To Serial</span>
+              <span class="hpu__col-count">Holograms</span>
+              <span class="hpu__col-action">Action</span>
+            </div>
+
+            <div
+              *ngFor="let roll of carton.rolls; let rIndex = index"
+              class="hpu__roll-row"
+              [class.hpu__roll-row--invalid]="!isRollValid(roll)"
+            >
+              <div class="hpu__col-roll">
+                <span class="hpu__roll-index">Roll {{ rIndex + 1 }}</span>
+              </div>
+              <div class="hpu__col-from">
+                <input
+                  type="number"
+                  class="hpu__input hpu__input--sm"
+                  [(ngModel)]="roll.from_serial"
+                  placeholder="From"
+                  min="1"
+                />
+              </div>
+              <div class="hpu__col-sep">–</div>
+              <div class="hpu__col-to">
+                <input
+                  type="number"
+                  class="hpu__input hpu__input--sm"
+                  [(ngModel)]="roll.to_serial"
+                  placeholder="To"
+                  min="1"
+                />
+              </div>
+              <div class="hpu__col-count">
+                <span class="hpu__roll-badge" [class.hpu__roll-badge--warn]="!isRollValid(roll)">
+                  {{ getRollHolograms(roll) | number }} holograms
+                </span>
+              </div>
+              <div class="hpu__col-action">
+                <button
+                  type="button"
+                  class="hpu__btn-icon hpu__btn-icon--danger"
+                  (click)="removeRoll(cIndex, rIndex)"
+                  title="Remove this roll"
+                  aria-label="Remove roll"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty Rolls Notice -->
+          <div *ngIf="carton.rolls.length === 0" class="hpu__rolls-empty">
+            Enter Starting Serial and click <strong>Generate Rolls</strong>, or click <strong>+ Add Roll</strong> to add individually.
+          </div>
+
+          <!-- Carton Subtotal -->
+          <div *ngIf="carton.rolls.length > 0" class="hpu__carton-subtotal">
+            <span>Carton Subtotal:</span>
+            <strong>{{ getCartonHolograms(carton) | number }}</strong> holograms in <strong>{{ carton.rolls.length }}</strong> roll(s)
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary Bar & Save Action -->
+    <div class="hpu__summary-bar">
+      <div class="hpu__summary-stats">
+        <div class="hpu__stat-item">
+          <span class="hpu__stat-label">Total Cartons:</span>
+          <span class="hpu__stat-value">{{ cartons.length }}</span>
+        </div>
+        <div class="hpu__stat-divider">|</div>
+        <div class="hpu__stat-item">
+          <span class="hpu__stat-label">Total Rolls:</span>
+          <span class="hpu__stat-value">{{ calculateTotalRolls() }}</span>
+        </div>
+        <div class="hpu__stat-divider">|</div>
+        <div class="hpu__stat-item hpu__stat-item--highlight">
+          <span class="hpu__stat-label">Total Holograms:</span>
+          <span class="hpu__stat-value">{{ calculateTotalHolograms() | number }}</span>
+        </div>
+      </div>
+
+      <div class="hpu__summary-actions">
+        <button
+          type="button"
+          class="hpu__btn hpu__btn--secondary"
+          (click)="resetForm()"
+          [disabled]="isSaving"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="hpu__btn hpu__btn--primary"
+          (click)="saveEntry()"
+          [disabled]="!canSave() || isSaving"
+        >
+          <span *ngIf="isSaving" class="hpu__spinner hpu__spinner--sm"></span>
+          <span>💾 {{ isSaving ? 'Saving...' : 'Save to Inventory' }}</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Previously Saved Manual Entries -->
+  <section class="hpu__card">
+    <div class="hpu__card-header hpu__card-header--between">
+      <div>
+        <h2 class="hpu__card-title">Previously Saved Manual Entries</h2>
+        <p class="hpu__card-desc">History of manual hologram procurement updates</p>
+      </div>
+      <button
+        type="button"
+        class="hpu__btn hpu__btn--sm hpu__btn--secondary"
+        (click)="loadManualEntries()"
+        title="Refresh entries"
+      >
+        ↻ Refresh
+      </button>
+    </div>
+
+    <div *ngIf="manualEntries.length === 0" class="hpu__entries-empty">
+      <div class="hpu__empty-icon">📋</div>
+      <p>No manual entries found yet.</p>
+    </div>
+
+    <div *ngIf="manualEntries.length > 0" class="hpu__table-responsive">
+      <table class="hpu__table">
+        <thead>
+          <tr>
+            <th>Reference No</th>
+            <th>Establishment</th>
+            <th>Cartons / Type</th>
+            <th>Rolls</th>
+            <th>Total Holograms</th>
+            <th>Date</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let entry of manualEntries">
+            <td class="hpu__td-ref">
+              <span class="hpu__ref-code">
+                {{ entry.ref_no || entry.reference_no || entry.entry_number || ('MANUAL/1101/' + (entry.id || '---')) }}
+              </span>
+            </td>
+            <td>
+              <div class="hpu__td-est-name">
+                {{ entry.licensee_name || entry.establishment_name || entry.licensee?.name || entry.establishment || '---' }}
+              </div>
+              <div class="hpu__td-est-sub" *ngIf="entry.license_number || entry.licensee?.license_number">
+                {{ entry.license_number || entry.licensee?.license_number }}
+              </div>
+            </td>
+            <td>
+              <span class="hpu__badge hpu__badge--info">
+                {{ entry.cartons_count || (entry.cartons ? entry.cartons.length : 1) }} Carton(s)
+              </span>
+              <span class="hpu__badge hpu__badge--subtle" *ngIf="entry.type">
+                {{ entry.type }}
+              </span>
+            </td>
+            <td>
+              <strong>{{ entry.total_rolls || entry.rolls_count || (entry.rolls ? entry.rolls.length : '—') }}</strong> rolls
+            </td>
+            <td>
+              <span class="hpu__total-pill">
+                {{ (entry.total_holograms || entry.quantity || 0) | number }}
+              </span>
+            </td>
+            <td class="hpu__td-date">
+              {{ entry.created_at || entry.date || entry.created_on || '---' }}
+            </td>
+            <td>
+              <span class="hpu__badge hpu__badge--success">
+                {{ entry.status || 'RECORDED' }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

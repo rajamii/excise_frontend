@@ -102,7 +102,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     hologram: 'New Procurement',
     'distributor-permit': 'Import Permit',
     'officer-activity': 'Admin Activity',
-    'secretary-bulk-spirit': 'Bulk Spirit Overview'
+    'secretary-bulk-spirit': 'Bulk Spirit Overview',
+    'hologram-procurement-updation': 'Hologram Procurement Updation'
   };
   private dbNavigationRoutes = new Set<string>();
   private dbPermissionTokens = new Set<string>();
@@ -155,6 +156,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     { section: 'stock-inventory', label: 'Stock Inventory', icon: 'inventory' },
     { section: 'single-window', label: 'User Details', icon: 'manage_search', hideForSiteAdmin: true, hideForOic: true },
     { section: 'payment-transactions', label: 'Transactions', icon: 'receipt_long', hideForSiteAdmin: true, hideForOic: true },
+    { section: 'hologram-procurement-updation', label: 'Hologram Procurement Updation', icon: 'inventory', hideForSiteAdmin: false, hideForOic: true },
     { section: 'officer-activity', label: 'Officer Activity', icon: 'assignment', hideForSiteAdmin: true }
   ];
 
@@ -790,6 +792,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     showOnlyForOic?: boolean;
     showOnlyForCommissioner?: boolean;
   }): boolean {
+    if (item.section === 'hologram-procurement-updation') {
+      return this.isSingleWindowUser() || this.isSiteAdminUser();
+    }
     if (this.isJointCommissionerUser()) {
       if (['secretary-timeline', 'secretary-revenue', 'single-window', 'payment-transactions'].includes(item.section)) {
         return false;
@@ -2373,6 +2378,14 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return this.getNormalizedRoleName().includes('itcell');
   }
 
+  isSingleWindowUser(): boolean {
+    const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
+    if (roleId === 3) {
+      return true;
+    }
+    return this.getNormalizedRoleName().includes('singlewindow');
+  }
+
   isSecretaryUser(): boolean {
     const roleId = Number(this.currentUser?.roleId || this.user?.role?.id || 0);
     if (roleId === 11) {
@@ -2450,6 +2463,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         return false;
       }
       return !this.isLicenseeUser();
+    }
+
+    if (section === 'hologram-procurement-updation') {
+      return this.isSingleWindowUser() || this.isSiteAdminUser();
     }
 
     if (section === 'company-registration') {

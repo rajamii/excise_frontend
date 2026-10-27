@@ -99,6 +99,7 @@ import { DistributorPermitService } from '../../core/services/distributor-permit
 import { SingleWindowComponent } from '../single-window/single-window.component';
 import { SingleWindowDetailComponent } from '../single-window/single-window-detail.component';
 import { PaymentTransactionsComponent } from '../admin/payment-transactions/payment-transactions.component';
+import { HologramProcurementUpdationComponent } from '../admin/hologram-procurement-updation/hologram-procurement-updation.component';
 
 /** Module-level constant — created once, never reassigned, so ng2-charts never triggers re-render loops */
 const CHART_BAR_LABELS_PLUGIN = [{
@@ -195,7 +196,8 @@ const CHART_BAR_LABELS_PLUGIN = [{
     SecretaryLicensesComponent,
     SecretaryImflComponent,
     SecretaryRevenueComponent,
-    SecretaryTimelineComponent
+    SecretaryTimelineComponent,
+    HologramProcurementUpdationComponent
   ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
@@ -5654,7 +5656,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       'secretary-monthly': 'Monthly View Details Management',
       'monthly': 'Monthly View Details Management',
       'secretary-admin-activity': 'Admin Activity Management',
-      'admin-activity': 'Admin Activity Management'
+      'admin-activity': 'Admin Activity Management',
+      'hologram-procurement-updation': 'Hologram Procurement Updation'
     };
 
     return titles[this.selectedSupplyChainSection || ''] || 'Management';
