@@ -426,9 +426,9 @@
 
   // Inputs Grid for Carton
   &__carton-inputs {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
     margin-bottom: 18px;
     align-items: flex-end;
   }
@@ -438,9 +438,52 @@
     flex-direction: column;
     gap: 6px;
 
+    &--box {
+      flex: 1 1 200px;
+    }
+
+    &--type {
+      flex: 0 1 180px;
+    }
+
+    &--rolls {
+      flex: 1 1 260px;
+    }
+
     &--action {
       justify-content: flex-end;
     }
+  }
+
+  &__num-rolls-action {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    input {
+      width: 90px;
+      flex-shrink: 0;
+    }
+
+    button {
+      flex: 1;
+      white-space: nowrap;
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+
+  &__roll-suffix-tag {
+    font-size: 11px;
+    font-family: monospace;
+    font-weight: 600;
+    background: #0f4c5c;
+    color: #ffffff;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
   }
 
   &__label {

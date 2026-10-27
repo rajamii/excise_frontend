@@ -165,8 +165,9 @@
         </div>
 
         <!-- Carton Parameters -->
+        <!-- Carton Parameters -->
         <div class="hpu__carton-inputs">
-          <div class="hpu__form-group">
+          <div class="hpu__form-group hpu__form-group--box">
             <label class="hpu__label">Box Number <span class="hpu__required">*</span></label>
             <input
               type="text"
@@ -176,45 +177,33 @@
             />
           </div>
 
-          <div class="hpu__form-group">
+          <div class="hpu__form-group hpu__form-group--type">
             <label class="hpu__label">Type <span class="hpu__required">*</span></label>
             <select class="hpu__select" [(ngModel)]="carton.type">
               <option *ngFor="let opt of typeOptions" [value]="opt">{{ opt }}</option>
             </select>
           </div>
 
-          <div class="hpu__form-group">
-            <label class="hpu__label">Number of Rolls</label>
-            <input
-              type="number"
-              class="hpu__input"
-              min="1"
-              max="100"
-              [(ngModel)]="carton.num_rolls"
-            />
-          </div>
-
-          <div class="hpu__form-group">
-            <label class="hpu__label">Starting Serial</label>
-            <input
-              type="number"
-              class="hpu__input"
-              placeholder="e.g. 1"
-              min="1"
-              [(ngModel)]="carton.starting_serial"
-            />
-          </div>
-
-          <div class="hpu__form-group hpu__form-group--action">
-            <label class="hpu__label">&nbsp;</label>
-            <button
-              type="button"
-              class="hpu__btn hpu__btn--teal"
-              (click)="generateRolls(cIndex)"
-              title="Auto-calculate roll serial numbers based on starting serial"
-            >
-              ⚡ Generate Rolls
-            </button>
+          <div class="hpu__form-group hpu__form-group--rolls">
+            <label class="hpu__label">Number of Rolls <span class="hpu__required">*</span></label>
+            <div class="hpu__num-rolls-action">
+              <input
+                type="number"
+                class="hpu__input"
+                min="1"
+                max="50"
+                placeholder="5"
+                [(ngModel)]="carton.num_rolls"
+              />
+              <button
+                type="button"
+                class="hpu__btn hpu__btn--teal"
+                (click)="generateRolls(cIndex)"
+                title="Generate rolls for this carton"
+              >
+                ⚡ Generate Rolls
+              </button>
+            </div>
           </div>
         </div>
 
@@ -223,7 +212,7 @@
           <div class="hpu__rolls-header">
             <div class="hpu__rolls-title">
               <span>Rolls in Carton ({{ carton.rolls.length }})</span>
-              <span class="hpu__rolls-info">• 20,000 holograms per roll</span>
+              <span class="hpu__rolls-info">• Enter From &amp; To Serial for each roll</span>
             </div>
             <button
               type="button"
@@ -237,11 +226,11 @@
           <!-- Rolls Table -->
           <div *ngIf="carton.rolls.length > 0" class="hpu__rolls-table">
             <div class="hpu__rolls-table-header">
-              <span class="hpu__col-roll">Roll</span>
-              <span class="hpu__col-from">From Serial</span>
+              <span class="hpu__col-roll">Roll &amp; Box Code</span>
+              <span class="hpu__col-from">From Serial *</span>
               <span class="hpu__col-sep"></span>
-              <span class="hpu__col-to">To Serial</span>
-              <span class="hpu__col-count">Holograms</span>
+              <span class="hpu__col-to">To Serial *</span>
+              <span class="hpu__col-count">Holograms Count</span>
               <span class="hpu__col-action">Action</span>
             </div>
 
@@ -252,13 +241,17 @@
             >
               <div class="hpu__col-roll">
                 <span class="hpu__roll-index">Roll {{ rIndex + 1 }}</span>
+                <span class="hpu__roll-suffix-tag" *ngIf="carton.carton_number">
+                  {{ getRollSuffix(carton, rIndex) }}
+                </span>
               </div>
               <div class="hpu__col-from">
                 <input
                   type="number"
                   class="hpu__input hpu__input--sm"
                   [(ngModel)]="roll.from_serial"
-                  placeholder="From"
+                  (ngModelChange)="onFromSerialChange(roll)"
+                  placeholder="From Serial"
                   min="1"
                 />
               </div>

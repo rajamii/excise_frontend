@@ -13,7 +13,6 @@ export interface Carton {
   carton_number: string;
   type: string;
   num_rolls: number;
-  starting_serial: string;
   rolls: Roll[];
 }
 
@@ -107,12 +106,16 @@ export class HologramProcurementUpdationComponent implements OnInit {
   }
 
   addCarton(): void {
+    const defaultRollsCount = 5;
+    const initialRolls: Roll[] = [];
+    for (let i = 0; i < defaultRollsCount; i++) {
+      initialRolls.push({ from_serial: '', to_serial: '' });
+    }
     this.cartons.push({
       carton_number: '',
       type: 'LOCAL',
-      num_rolls: 5,
-      starting_serial: '',
-      rolls: []
+      num_rolls: defaultRollsCount,
+      rolls: initialRolls
     });
   }
 
@@ -127,34 +130,20 @@ export class HologramProcurementUpdationComponent implements OnInit {
     if (!carton) return;
 
     const numRolls = parseInt(String(carton.num_rolls), 10);
-    const startSerial = parseInt(String(carton.starting_serial).trim(), 10);
-
     if (isNaN(numRolls) || numRolls <= 0) {
       this.saveError = `Please enter a valid number of rolls for Carton #${cartonIndex + 1}.`;
       return;
     }
-
-    if (isNaN(startSerial) || startSerial < 1) {
-      this.saveError = `Please enter a valid starting serial number (greater than 0) for Carton #${cartonIndex + 1}.`;
-      return;
-    }
-
     this.saveError = '';
 
-    const ROLL_SIZE = 20000;
     const rolls: Roll[] = [];
-    let currentStart = startSerial;
-
     for (let i = 0; i < numRolls; i++) {
-      const from = currentStart;
-      const to = currentStart + ROLL_SIZE - 1;
-      rolls.push({
-        from_serial: String(from),
-        to_serial: String(to)
-      });
-      currentStart = to + 1;
+      if (carton.rolls && carton.rolls[i]) {
+        rolls.push(carton.rolls[i]);
+      } else {
+        rolls.push({ from_serial: '', to_serial: '' });
+      }
     }
-
     carton.rolls = rolls;
   }
 
@@ -166,26 +155,24 @@ export class HologramProcurementUpdationComponent implements OnInit {
       carton.rolls = [];
     }
 
-    let nextFrom = 1;
-    if (carton.rolls.length > 0) {
-      const lastRoll = carton.rolls[carton.rolls.length - 1];
-      const lastTo = parseInt(String(lastRoll.to_serial), 10);
-      if (!isNaN(lastTo)) {
-        nextFrom = lastTo + 1;
-      }
-    } else if (carton.starting_serial) {
-      const start = parseInt(String(carton.starting_serial), 10);
-      if (!isNaN(start)) {
-        nextFrom = start;
-      }
-    }
-
-    const nextTo = nextFrom + 20000 - 1;
-    carton.rolls.push({
-      from_serial: String(nextFrom),
-      to_serial: String(nextTo)
-    });
+    carton.rolls.push({ from_serial: '', to_serial: '' });
     carton.num_rolls = carton.rolls.length;
+  }
+
+  onFromSerialChange(roll: Roll): void {
+    if (!roll.from_serial) return;
+    const from = parseInt(String(roll.from_serial).trim(), 10);
+    if (!isNaN(from) && from > 0 && (!roll.to_serial || String(roll.to_serial).trim() === '')) {
+      roll.to_serial = String(from + 20000 - 1);
+    }
+  }
+
+  getRollSuffix(carton: Carton, index: number): string {
+    const box = (carton.carton_number || '').trim();
+    if (!box) return `Roll ${index + 1}`;
+    if ((carton.rolls?.length || 0) <= 1) return box;
+    const suffix = String.fromCharCode(97 + (index % 26));
+    return `${box}(${suffix})`;
   }
 
   removeRoll(cartonIndex: number, rollIndex: number): void {
