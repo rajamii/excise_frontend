@@ -58,10 +58,9 @@ export class HologramComponent {
     date: '',
     companyName: '',
     supplierId: null,
-    // Prefill sample data so the user can see how inputs look
-    localQtyLakh: 0,
-    exportQtyLakh: 0,
-    defenceQtyLakh: 0
+    localQtyLakh: null,
+    exportQtyLakh: null,
+    defenceQtyLakh: null
   };
 
   private isBrowser = false;
@@ -265,14 +264,19 @@ export class HologramComponent {
   }
 
   onSeriesQuantityChange(series: SeriesKey): void {
-    const normalizedCurrent = this.sanitizeQuantity(this.getSeriesQuantity(series));
-    this.setSeriesQuantity(series, normalizedCurrent);
+    const rawValue = this.getSeriesQuantity(series);
+    if (rawValue === null || rawValue === undefined || (typeof rawValue === 'string' && (rawValue as string).trim() === '')) {
+      this.setSeriesQuantity(series, null as any);
+      return;
+    }
+    const normalizedCurrent = this.sanitizeQuantity(rawValue);
+    this.setSeriesQuantity(series, normalizedCurrent > 0 ? normalizedCurrent : (null as any));
 
-    if (normalizedCurrent > 0) {
+    if (normalizedCurrent && normalizedCurrent > 0) {
       const otherSeries: SeriesKey[] = ['local', 'export', 'defence'].filter(
         (key): key is SeriesKey => key !== series
       );
-      otherSeries.forEach((key) => this.setSeriesQuantity(key, 0));
+      otherSeries.forEach((key) => this.setSeriesQuantity(key, null as any));
     }
   }
 
@@ -322,10 +326,7 @@ export class HologramComponent {
       return false;
     }
 
-    // Quantity must be >= 1,00,000 and in increments of 1,00,000 only.
-    // Quantity must be >= 1,00,000 and in increments of 1,00,000 only.
-    // Commented out as requested - allow user to enter any desired quantity (will activate later)
-    /*
+    // Quantity must be >= 1,00,000 and in increments of 1,00,000 only (e.g. 100000, 200000, etc.).
     const selectedQty = localQty > 0 ? localQty : exportQty > 0 ? exportQty : defenceQty;
     if (selectedQty < this.qtyStep) {
       this.errorMessage = `Minimum quantity is ${this.qtyStep.toLocaleString('en-IN')}.`;
@@ -335,8 +336,6 @@ export class HologramComponent {
       this.errorMessage = `Quantity must be in multiples of ${this.qtyStep.toLocaleString('en-IN')} (e.g. 100000, 200000, 300000).`;
       return false;
     }
-
-    */
 
     this.errorMessage = '';
     return true;
