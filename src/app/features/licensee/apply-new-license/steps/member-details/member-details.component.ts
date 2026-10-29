@@ -30,6 +30,42 @@ interface MemberDocumentUpload {
   required: boolean;
   file: File | null;
   fileUrl: string;
+  errorMessage?: string;
+}
+
+function parseLocalDate(dateStr: string | Date | null | undefined): Date | null {
+  if (!dateStr) return null;
+  if (dateStr instanceof Date) {
+    return isNaN(dateStr.getTime()) ? null : dateStr;
+  }
+  if (typeof dateStr === 'string') {
+    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      const year = parseInt(match[1], 10);
+      const month = parseInt(match[2], 10) - 1;
+      const day = parseInt(match[3], 10);
+      return new Date(year, month, day);
+    }
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+}
+
+function formatLocalDate(date: Date | string | null | undefined): string | null {
+  if (!date) return null;
+  if (typeof date === 'string') {
+    const match = date.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      return `${match[1]}-${match[2]}-${match[3]}`;
+    }
+  }
+  const d = parseLocalDate(date);
+  if (!d) return null;
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 interface MemberDetailsSessionData {
@@ -109,6 +145,17 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
     sikkimSubject: signal('')
   };
 
+  readonly maxDobDate: Date = (() => {
+    const today = new Date();
+    return new Date(today.getFullYear() - 21, today.getMonth(), today.getDate());
+  })();
+
+  get dobStartAt(): Date {
+    const currentValue = this.memberDetailsForm?.get('dob')?.value;
+    const parsed = parseLocalDate(currentValue);
+    return parsed || this.maxDobDate;
+  }
+
   constructor(
     private fb: FormBuilder,
     private licenseApplicationService: LicenseApplicationService,
@@ -124,7 +171,7 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
       lastName: new FormControl(storedValues.lastName ?? '', [Validators.required, Validators.pattern(PatternConstants.NAME)]),
       fatherHusbandName: new FormControl(storedValues.fatherHusbandName ?? storedValues.father_husband_name ?? '', [Validators.required, Validators.pattern(PatternConstants.NAME)]),
       gender: new FormControl(storedValues.gender ?? null, [Validators.required]),
-      dob: new FormControl(storedValues.dob ?? '', [Validators.required]),
+      dob: new FormControl(storedValues.dob ? parseLocalDate(storedValues.dob) : '', [Validators.required]),
       nationality: new FormControl(storedValues.nationality ?? 'Indian', [Validators.required]),
       address: new FormControl(storedValues.address ?? '', [Validators.required]),
       pan: new FormControl(storedValues.pan ?? '', [Validators.required, Validators.pattern(PatternConstants.PAN)]),
@@ -233,7 +280,7 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
         fillData.fatherHusbandName = licenseeProfile.fatherName;
       }
       if (!this.memberDetailsForm.get('dob')?.value && licenseeProfile.dob) {
-        fillData.dob = new Date(licenseeProfile.dob);
+        fillData.dob = parseLocalDate(licenseeProfile.dob) || new Date(licenseeProfile.dob);
       }
       if (!this.memberDetailsForm.get('gender')?.value && licenseeProfile.gender) {
         const mappedGender = GENDER_MAP[licenseeProfile.gender];
@@ -273,7 +320,7 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
 
     const enrichedData = {
       ...formData,
-      dob: formData.dob ? new Date(formData.dob).toISOString().split('T')[0] : null,
+      dob: formData.dob ? formatLocalDate(formData.dob) : null,
       member_name: memberName,
       father_husband_name: formData.fatherHusbandName,
       member_mobile_number: formData.mobileNumber ? String(formData.mobileNumber).replace(/\D/g, '') : null,
@@ -300,6 +347,8 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
     if (!file) {
       return;
     }
+    document.errorMessage = '';
+
     const allowedExtensions = document.accept
       .split(',')
       .map((value) => value.trim().replace(/^\./, '').toLowerCase())
@@ -314,8 +363,10 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
       label: document.name
     });
     if (validationError) {
+      document.errorMessage = validationError;
       alert(validationError);
       input.value = '';
+      this.cdr.detectChanges();
       return;
     }
 
@@ -325,6 +376,7 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
 
     document.file = file;
     document.fileUrl = URL.createObjectURL(file);
+    document.errorMessage = '';
     this.licenseApplicationService.setSiteDocument(document.key, file);
     this.cdr.detectChanges();
   }

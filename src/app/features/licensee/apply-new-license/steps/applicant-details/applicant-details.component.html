@@ -45,9 +45,9 @@
 
         <mat-form-field appearance="outline">
           <mat-label>Date of Birth</mat-label>
-          <input matInput [matDatepicker]="dobPicker" formControlName="dob" placeholder="Select Date of Birth" aria-label="Date of Birth" required />
+          <input matInput [matDatepicker]="dobPicker" [max]="maxDobDate" formControlName="dob" placeholder="Select Date of Birth" aria-label="Date of Birth" required />
           <mat-datepicker-toggle matIconSuffix [for]="dobPicker"></mat-datepicker-toggle>
-          <mat-datepicker #dobPicker></mat-datepicker>
+          <mat-datepicker #dobPicker [startAt]="dobStartAt"></mat-datepicker>
           <mat-error *ngIf="f.dob.touched && f.dob.invalid">
             {{ getErrorMessage('dob') }}
           </mat-error>
@@ -328,7 +328,10 @@
                   {{ getDocumentLabel(doc) }}
                   @if (doc.required) { <span class="required">*</span> }
                 </span>
-                <span class="document-formats">Supported File Formats: {{ doc.formats }}</span>
+                <span class="document-formats">Supported File Formats: {{ doc.formats }} (Max: 5MB)</span>
+                @if (doc.errorMessage) {
+                  <span class="document-error">{{ doc.errorMessage }}</span>
+                }
               </div>
               <div class="document-actions">
                 <input

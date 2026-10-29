@@ -31,6 +31,42 @@ interface DocumentUpload {
   fileUrl: string;
   required: boolean;
   formats: string;
+  errorMessage?: string;
+}
+
+function parseLocalDate(dateStr: string | Date | null | undefined): Date | null {
+  if (!dateStr) return null;
+  if (dateStr instanceof Date) {
+    return isNaN(dateStr.getTime()) ? null : dateStr;
+  }
+  if (typeof dateStr === 'string') {
+    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      const year = parseInt(match[1], 10);
+      const month = parseInt(match[2], 10) - 1;
+      const day = parseInt(match[3], 10);
+      return new Date(year, month, day);
+    }
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+}
+
+function formatLocalDate(date: Date | string | null | undefined): string | null {
+  if (!date) return null;
+  if (typeof date === 'string') {
+    const match = date.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      return `${match[1]}-${match[2]}-${match[3]}`;
+    }
+  }
+  const d = parseLocalDate(date);
+  if (!d) return null;
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 interface ModeOfOperation {
@@ -194,6 +230,17 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
     criminalConviction: signal('')
   };
 
+  readonly maxDobDate: Date = (() => {
+    const today = new Date();
+    return new Date(today.getFullYear() - 21, today.getMonth(), today.getDate());
+  })();
+
+  get dobStartAt(): Date {
+    const currentValue = this.applicantDetailsForm?.get('dob')?.value;
+    const parsed = parseLocalDate(currentValue);
+    return parsed || this.maxDobDate;
+  }
+
   constructor(
     private fb: FormBuilder,
     private licenseSrv: LicenseApplicationService,
@@ -208,7 +255,7 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
       middleName: [stored.middleName ?? ''],
       lastName: [stored.lastName ?? '', [Validators.required, Validators.pattern(PatternConstants.NAME)]],
       fatherHusbandName: [stored.fatherHusbandName ?? stored.father_husband_name ?? '', [Validators.required, Validators.pattern(PatternConstants.NAME)]],
-      dob: [stored.dob ?? '', [Validators.required]],
+      dob: [stored.dob ? parseLocalDate(stored.dob) : '', [Validators.required]],
       gender: [stored.gender ?? null, Validators.required],
       nationality: [stored.nationality ?? 'Indian', Validators.required],
       maritalStatus: [stored.maritalStatus ?? stored.marital_status ?? 'Single', Validators.required],
@@ -462,7 +509,7 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
         fillData.fatherHusbandName = licensee.fatherName;
       }
       if (!this.applicantDetailsForm.get('dob')?.value && licensee.dob) {
-        fillData.dob = new Date(licensee.dob);
+        fillData.dob = parseLocalDate(licensee.dob) || new Date(licensee.dob);
       }
       if (!this.applicantDetailsForm.get('gender')?.value && licensee.gender) {
         const mappedGender = GENDER_MAP[licensee.gender];
@@ -556,7 +603,7 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
         : null;
 
       if (raw.dob) {
-        raw.dob = new Date(raw.dob).toISOString().split('T')[0];
+        raw.dob = formatLocalDate(raw.dob);
       }
       raw.marital_status = raw.maritalStatus || null;
       raw.residential_status = raw.residentialStatus || null;
@@ -813,9 +860,15 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     const document = this.documents.find((item) => item.name === docName);
-    if (!file || !document) {
+    if (!document) {
       return;
     }
+    if (!file) {
+      return;
+    }
+
+    document.errorMessage = '';
+
     const allowedExtensions = document.formats
       .split(',')
       .map((format) => format.trim().replace(/^\./, '').toLowerCase())
@@ -830,8 +883,10 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
       label: document.label
     });
     if (validationError) {
+      document.errorMessage = validationError;
       alert(validationError);
       input.value = '';
+      this.cdr.detectChanges();
       return;
     }
 
@@ -841,6 +896,7 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
 
     document.file = file;
     document.fileUrl = URL.createObjectURL(file);
+    document.errorMessage = '';
 
     if (docName === 'passportPhoto') {
       this.licenseSrv.setPassPhoto(file);
@@ -863,6 +919,7 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
 
     document.file = null;
     document.fileUrl = '';
+    document.errorMessage = '';
 
     if (docName === 'passportPhoto') {
       this.licenseSrv.clearPassPhoto();
@@ -894,7 +951,10 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const dob = new Date(dobControl.value);
+    const dob = parseLocalDate(dobControl.value);
+    if (!dob) {
+      return;
+    }
     const today = new Date();
     let age = today.getFullYear() - dob.getFullYear();
     const monthDifference = today.getMonth() - dob.getMonth();
@@ -908,7 +968,7 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const { minAge, ...otherErrors } = dobControl.errors ?? {};
+    const { minAge, matDatepickerMax, ...otherErrors } = dobControl.errors ?? {};
     dobControl.setErrors(Object.keys(otherErrors).length ? otherErrors : null);
     this.errorMessages.dob.set(dobControl.hasError('required') ? 'This field is required' : '');
   }
@@ -933,7 +993,7 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
       this.errorMessages[field].set(message);
     } else if (control.hasError('maxlength')) {
       this.errorMessages[field].set('Maximum 100 characters allowed');
-    } else if (control.hasError('minAge')) {
+    } else if (control.hasError('minAge') || control.hasError('matDatepickerMax')) {
       this.errorMessages[field].set('Applicant must be at least 21 years old');
     } else {
       this.errorMessages[field].set('');

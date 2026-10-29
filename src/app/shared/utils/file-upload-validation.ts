@@ -28,7 +28,9 @@ export function validateUploadedFile(file: File | null | undefined, options: Fil
   }
 
   if (file.size > options.maxFileSizeBytes) {
-    return `${label} must be smaller than ${Math.floor(options.maxFileSizeBytes / (1024 * 1024))} MB.`;
+    const maxMb = (options.maxFileSizeBytes / (1024 * 1024)).toFixed(0);
+    const fileMb = (file.size / (1024 * 1024)).toFixed(2);
+    return `${label} must be smaller than ${maxMb} MB. (Selected file is ${fileMb} MB)`;
   }
 
   const segments = name.split('.').filter(Boolean);
@@ -50,7 +52,25 @@ export function validateUploadedFile(file: File | null | undefined, options: Fil
   if (file.type) {
     const mimeType = file.type.toLowerCase();
     const allowedMimeTypes = options.allowedMimeTypes.map((type) => type.toLowerCase());
-    if (!allowedMimeTypes.includes(mimeType)) {
+    const expandedAllowed = new Set(allowedMimeTypes);
+
+    // Expand common mime type synonyms for images and pdfs
+    if (allowedMimeTypes.some((t) => t.includes('jpeg') || t.includes('jpg')) || allowedExtensions.some((e) => ['jpg', 'jpeg'].includes(e))) {
+      expandedAllowed.add('image/jpeg');
+      expandedAllowed.add('image/jpg');
+      expandedAllowed.add('image/pjpeg');
+      expandedAllowed.add('image/jfif');
+    }
+    if (allowedMimeTypes.some((t) => t.includes('png')) || allowedExtensions.includes('png')) {
+      expandedAllowed.add('image/png');
+      expandedAllowed.add('image/x-png');
+    }
+    if (allowedMimeTypes.some((t) => t.includes('pdf')) || allowedExtensions.includes('pdf')) {
+      expandedAllowed.add('application/pdf');
+      expandedAllowed.add('application/x-pdf');
+    }
+
+    if (!expandedAllowed.has(mimeType)) {
       return `${label} has an unsupported file type.`;
     }
   }

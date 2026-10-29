@@ -50,9 +50,9 @@
 
         <mat-form-field appearance="outline">
           <mat-label>Date of Birth</mat-label>
-          <input matInput [matDatepicker]="memberDobPicker" formControlName="dob" placeholder="Select Date of Birth" aria-label="Date of Birth" required />
+          <input matInput [matDatepicker]="memberDobPicker" [max]="maxDobDate" formControlName="dob" placeholder="Select Date of Birth" aria-label="Date of Birth" required />
           <mat-datepicker-toggle matIconSuffix [for]="memberDobPicker"></mat-datepicker-toggle>
-          <mat-datepicker #memberDobPicker></mat-datepicker>
+          <mat-datepicker #memberDobPicker [startAt]="dobStartAt"></mat-datepicker>
           @if (memberDetailsForm.controls['dob'].touched && memberDetailsForm.controls['dob'].invalid) {
             <mat-error>{{ getErrorMessage('dob') }}</mat-error>
           }
@@ -133,7 +133,10 @@
                 {{ doc.name }}
                 @if (doc.required) { <span class="required">*</span> }
               </span>
-              <span class="document-formats">Supported File Formats: {{ doc.format }}</span>
+              <span class="document-formats">Supported File Formats: {{ doc.format }} (Max: 5MB)</span>
+              @if (doc.errorMessage) {
+                <span class="document-error">{{ doc.errorMessage }}</span>
+              }
             </div>
             <div class="document-actions">
               <input
