@@ -21,6 +21,7 @@ import { LicenseApplicationService } from '../../../../../core/services/license-
 import { AccountService } from '../../../../../core/services/account.service';
 import { validateUploadedFile } from '../../../../../shared/utils/file-upload-validation';
 import { MasterService } from '../../../../../core/services/master.service';
+import Swal from 'sweetalert2';
 
 interface MemberDocumentUpload {
   key: string;
@@ -364,7 +365,13 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
     });
     if (validationError) {
       document.errorMessage = validationError;
-      alert(validationError);
+      void Swal.fire({
+        icon: 'error',
+        title: validationError.includes('smaller than') ? 'File Size Exceeded' : 'Invalid File',
+        text: validationError,
+        confirmButtonColor: '#1C2B78',
+        confirmButtonText: 'OK'
+      });
       input.value = '';
       this.cdr.detectChanges();
       return;
@@ -430,9 +437,21 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
 
     this.memberDetailsForm.markAllAsTouched();
     if (!this.areDocumentsUploaded()) {
-      alert('Please upload all required documents before proceeding.');
+      void Swal.fire({
+        icon: 'warning',
+        title: 'Documents Required',
+        text: 'Please upload all required documents before proceeding.',
+        confirmButtonColor: '#1C2B78',
+        confirmButtonText: 'OK'
+      });
     } else {
-      alert('Please complete all required fields before proceeding.');
+      void Swal.fire({
+        icon: 'warning',
+        title: 'Incomplete Details',
+        text: 'Please complete all required fields before proceeding.',
+        confirmButtonColor: '#1C2B78',
+        confirmButtonText: 'OK'
+      });
     }
   }
 

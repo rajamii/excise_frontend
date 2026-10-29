@@ -11,6 +11,7 @@ import { LicenseApplicationService } from '../../../../../core/services/license-
 import { DatePipe } from '@angular/common';
 import { MatStepper } from '@angular/material/stepper';
 import { validateUploadedFile } from '../../../../../shared/utils/file-upload-validation';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-unit-details',
@@ -277,7 +278,13 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
       Object.keys(this.unitDetailsForm.controls)
         .forEach(key => this.unitDetailsForm.get(key)?.markAsTouched());
       if (!this.isPanCardUploaded()) {
-        alert('Please upload the PAN Card document before proceeding.');
+        void Swal.fire({
+          icon: 'warning',
+          title: 'PAN Card Required',
+          text: 'Please upload the PAN Card document before proceeding.',
+          confirmButtonColor: '#1C2B78',
+          confirmButtonText: 'OK'
+        });
       }
     }
   }
@@ -388,7 +395,13 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
       label: this.panCardDoc.label
     });
     if (validationError) {
-      alert(validationError);
+      void Swal.fire({
+        icon: 'error',
+        title: validationError.includes('smaller than') ? 'File Size Exceeded' : 'Invalid File',
+        text: validationError,
+        confirmButtonColor: '#1C2B78',
+        confirmButtonText: 'OK'
+      });
       input.value = '';
       return;
     }

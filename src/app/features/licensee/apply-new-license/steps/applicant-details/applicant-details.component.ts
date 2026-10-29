@@ -23,6 +23,7 @@ import { AccountService } from '../../../../../core/services/account.service';
 import { MasterService } from '../../../../../core/services/master.service';
 import { LicenseCategory } from '../../../../../core/models/license-category.model';
 import { validateUploadedFile } from '../../../../../shared/utils/file-upload-validation';
+import Swal from 'sweetalert2';
 
 interface DocumentUpload {
   name: string;
@@ -884,7 +885,13 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
     });
     if (validationError) {
       document.errorMessage = validationError;
-      alert(validationError);
+      void Swal.fire({
+        icon: 'error',
+        title: validationError.includes('smaller than') ? 'File Size Exceeded' : 'Invalid File',
+        text: validationError,
+        confirmButtonColor: '#1C2B78',
+        confirmButtonText: 'OK'
+      });
       input.value = '';
       this.cdr.detectChanges();
       return;
@@ -1020,7 +1027,13 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
       .forEach((key) => this.applicantDetailsForm.get(key)?.markAsTouched());
 
     if (!this.areRequiredDocumentsUploaded()) {
-      alert('Please upload all required documents before proceeding.');
+      void Swal.fire({
+        icon: 'warning',
+        title: 'Documents Required',
+        text: 'Please upload all required documents before proceeding.',
+        confirmButtonColor: '#1C2B78',
+        confirmButtonText: 'OK'
+      });
     }
   }
 

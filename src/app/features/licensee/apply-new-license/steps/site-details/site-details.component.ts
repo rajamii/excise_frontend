@@ -17,6 +17,7 @@ import { Ward } from '../../../../../core/models/ward.model';
 import { Block } from '../../../../../core/models/block.model';
 import { RuralWard } from '../../../../../core/models/rural-ward.model';
 import { validateUploadedFile } from '../../../../../shared/utils/file-upload-validation';
+import Swal from 'sweetalert2';
 
 interface Location {
   id: number;
@@ -1220,7 +1221,13 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       label: doc.label
     });
     if (validationError) {
-      alert(validationError);
+      void Swal.fire({
+        icon: 'error',
+        title: validationError.includes('smaller than') ? 'File Size Exceeded' : 'Invalid File',
+        text: validationError,
+        confirmButtonColor: '#1C2B78',
+        confirmButtonText: 'OK'
+      });
       event.target.value = '';
       return;
     }
@@ -1424,7 +1431,13 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
         this.siteDetailsForm.get(key)?.markAsTouched();
       });
       if (!this.areRequiredDocumentsUploaded()) {
-        alert('Please upload all required documents before proceeding.');
+        void Swal.fire({
+          icon: 'warning',
+          title: 'Documents Required',
+          text: 'Please upload all required documents before proceeding.',
+          confirmButtonColor: '#1C2B78',
+          confirmButtonText: 'OK'
+        });
       }
     }
   }
