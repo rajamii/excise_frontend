@@ -221,8 +221,9 @@ export class ApplicationFeeSlipDialogComponent implements OnInit {
           modeOfOperation: res.modeOfOperation || res.mode_of_operation || this.slipData.modeOfOperation || 'Self',
           transactionId: txnId || this.slipData.transactionId || 'FORCE-NLI-' + appId.replace(/[^a-zA-Z0-9]/g, ''),
           paymentStatus: normalizedStatus,
-          paymentDate: pDate || this.slipData.paymentDate || this.slipData.submittedOn || new Date().toISOString(),
-          sbmApplicationId: res.sbmApplicationId || res.sbm_application_id || this.slipData.sbmApplicationId || '',
+          sbmApplicationId: (['salesman', 'barman'].includes(String(res.modeOfOperation || res.mode_of_operation || this.slipData.modeOfOperation || '').trim().toLowerCase()))
+            ? (res.sbmApplicationId || res.sbm_application_id || '')
+            : '',
           errorDescription: (normalizedStatus === 'Successful' ? '' : (res.applicationFeeError || res.application_fee_error || ''))
         };
 

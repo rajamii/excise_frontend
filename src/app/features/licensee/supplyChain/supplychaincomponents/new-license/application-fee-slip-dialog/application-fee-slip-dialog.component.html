@@ -189,7 +189,7 @@
             <span class="item-value">BillDesk Online Gateway (NetBanking/UPI/Card)</span>
           </div>
 
-          <div class="grid-item grid-item--full" *ngIf="slipData.sbmApplicationId">
+          <div class="grid-item grid-item--full" *ngIf="slipData.sbmApplicationId && (slipData.modeOfOperation === 'Salesman' || slipData.modeOfOperation === 'Barman')">
             <span class="item-label">Linked Salesman / Barman Application</span>
             <span class="item-value mono">
               {{ slipData.sbmApplicationId }}
