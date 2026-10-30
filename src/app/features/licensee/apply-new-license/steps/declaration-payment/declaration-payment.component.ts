@@ -43,10 +43,11 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
   private photoSub?: Subscription;
   feeAmount = 0;
   isSubmitting = false;
-  readonly canForceSubmit =
-    !environment.production ||
-    (typeof window !== 'undefined' &&
-      ['localhost', '127.0.0.1', '::1'].includes(String(window.location?.hostname || '').toLowerCase()));
+  get canForceSubmit(): boolean {
+    if (typeof window === 'undefined') return false;
+    const host = String(window.location?.hostname || '').toLowerCase();
+    return host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '[::1]';
+  }
   draftApplicationId: string | null = null;
   submittedApplicationId: string | null = null;
   sbmApplicationId: string | null = null;
@@ -139,6 +140,11 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       const sbmSubmitted = String(sessionStorage.getItem('new_license_sbm_submitted') || '').trim();
       if (sbmSubmitted) {
         this.sbmSubmitted = sbmSubmitted === '1';
+      }
+
+      const draftId = String(sessionStorage.getItem('new_license_draft_application_id') || '').trim();
+      if (draftId && !this.submittedApplicationId) {
+        this.draftApplicationId = draftId;
       }
     } catch {
       // no-op
@@ -1086,6 +1092,12 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
         FormDataBuilder.logFormData(formData, 'New License Application');
         console.groupEnd();
 
+        // If a draft application was already created for this session, reuse it directly to pay
+        if (this.draftApplicationId) {
+          this.onPayClick();
+          return;
+        }
+
         Swal.fire({
           title: 'Redirecting to BillDesk',
           text: 'Preparing application fee payment...',
@@ -1185,7 +1197,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     });
   }
 
-  forceSubmit(): void {
+  forceSubmit(statusKind: 'S' | 'F' | 'P' = 'S'): void {
     if (!this.canForceSubmit) {
       Swal.fire('Disabled', 'Force submit is only available in non-production builds.', 'info');
       return;
@@ -1207,12 +1219,26 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       return;
     }
 
+    let title = 'Force Submit (Success)?';
+    let text = 'This will bypass BillDesk and mark the application fee as paid and auto-submitted (localhost testing only).';
+    let confirmBtn = 'Force Submit';
+
+    if (statusKind === 'F') {
+      title = 'Simulate Failed Payment?';
+      text = 'This will simulate a failed payment from BillDesk and leave the application in "Application Not Submitted (Payment Failed)" (localhost testing only).';
+      confirmBtn = 'Simulate Failed';
+    } else if (statusKind === 'P') {
+      title = 'Simulate Pending Payment?';
+      text = 'This will simulate a pending transaction where BillDesk has not yet returned a response, leaving the application in "Application Not Submitted (Payment Pending)" (localhost testing only).';
+      confirmBtn = 'Simulate Pending';
+    }
+
     Swal.fire({
-      title: 'Force submit?',
-      text: 'This will bypass BillDesk and mark the application fee as paid (localhost testing only).',
+      title,
+      text,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: 'Force Submit',
+      confirmButtonText: confirmBtn,
       cancelButtonText: 'Cancel',
     }).then((confirm) => {
       if (!confirm.isConfirmed) return;
@@ -1220,23 +1246,40 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       this.isSubmitting = true;
 
       const doForce = (applicationId: string) => {
-        this.licenseAppService.forceSubmitNewLicenseApplication(applicationId).subscribe({
+        this.licenseAppService.forceSubmitNewLicenseApplication(applicationId, statusKind).subscribe({
           next: (res: any) => {
             const submittedId = String(res?.application_id || res?.applicationId || applicationId || '').trim();
-            this.submittedApplicationId = submittedId || applicationId;
             const sbmId = String(res?.sbm_application_id || '').trim();
-            try {
-              if (this.submittedApplicationId) {
-                sessionStorage.setItem('new_license_submitted_application_id', this.submittedApplicationId);
+            const isSuccess = statusKind === 'S';
+            const isPending = statusKind === 'P';
+
+            if (isSuccess) {
+              this.submittedApplicationId = submittedId || applicationId;
+              try {
+                if (this.submittedApplicationId) {
+                  sessionStorage.setItem('new_license_submitted_application_id', this.submittedApplicationId);
+                }
+                if (sbmId) sessionStorage.setItem('new_license_sbm_application_id', sbmId);
+                if (res?.sbm_submitted) sessionStorage.setItem('new_license_sbm_submitted', '1');
+              } catch {
+                // no-op
               }
-              if (sbmId) sessionStorage.setItem('new_license_sbm_application_id', sbmId);
-              if (res?.sbm_submitted) sessionStorage.setItem('new_license_sbm_submitted', '1');
-            } catch {
-              // no-op
+            } else {
+              // For failed/pending, keep draftApplicationId set so user can retry
+              this.draftApplicationId = submittedId || applicationId;
+              try {
+                sessionStorage.setItem('new_license_draft_application_id', this.draftApplicationId);
+                sessionStorage.removeItem('new_license_submitted_application_id');
+              } catch {
+                // no-op
+              }
             }
             this.isSubmitting = false;
 
-            // Redirect immediately to the success page to display the New License payment payslip
+            const receiptStatus = isSuccess ? 'success' : (isPending ? 'pending' : 'failed');
+            const paymentStatus = isSuccess ? 'S' : (isPending ? 'P' : 'F');
+
+            // Redirect to receipt view showing simulated payment status
             this.router.navigate(['/dashboard/new-license/application-fee/receipt'], {
               queryParams: {
                 payment_type: 'new_license_fee',
@@ -1246,13 +1289,13 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
                 application_id: submittedId,
                 applicationId: submittedId,
                 amount: res?.amount || this.feeAmount || 500,
-                status: 'success',
-                payment_status: 'S',
-                transaction_id: res?.transaction_id || `FORCE-${submittedId}`,
-                transactionId: res?.transaction_id || `FORCE-${submittedId}`,
+                status: receiptStatus,
+                payment_status: paymentStatus,
+                transaction_id: res?.transaction_id || `FORCE-${paymentStatus}-${submittedId}`,
+                transactionId: res?.transaction_id || `FORCE-${paymentStatus}-${submittedId}`,
                 hoa: res?.hoa || '0039-00-800-45-02',
-                auto_submitted: '1',
-                autoSubmitted: '1',
+                auto_submitted: isSuccess ? '1' : '0',
+                autoSubmitted: isSuccess ? '1' : '0',
                 mode_of_operation: res?.mode_of_operation || res?.application?.mode_of_operation || '',
                 modeOfOperation: res?.mode_of_operation || res?.application?.mode_of_operation || '',
                 establishment_name: res?.establishment_name || res?.application?.establishment_name || '',
@@ -1263,6 +1306,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
                 sbmApplicationId: sbmId,
                 sbm_submitted: res?.sbm_submitted ? '1' : '0',
                 sbmSubmitted: res?.sbm_submitted ? '1' : '0',
+                reason: isSuccess ? '' : (isPending ? 'Payment is awaiting confirmation from BillDesk (localhost simulation).' : 'Payment failed (localhost simulation).'),
                 createdAt: new Date().toISOString()
               }
             });
@@ -1273,7 +1317,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
               err?.error?.detail ||
               err?.error?.message ||
               err?.message ||
-              'Force submit failed.';
+              'Force simulation failed.';
             Swal.fire('Error', String(message), 'error');
           }
         });
@@ -1361,7 +1405,10 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
 
   private handlePaymentCallback(txn: any) {
     console.log("BillDesk Callback received. Status:", txn?.status);
-    const isSuccess = txn?.status === 'success' || txn?.status === '0300';
+    const rawStatus = String(txn?.status || '').trim().toLowerCase();
+    const isSuccess = rawStatus === 'success' || rawStatus === '0300';
+    const isPending = !isSuccess && (rawStatus === 'pending' || rawStatus === '0002' || rawStatus === 'p');
+
     if (isSuccess) {
       this.submittedApplicationId = this.draftApplicationId;
       try {
@@ -1373,6 +1420,9 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       }
     }
 
+    const receiptStatus = isSuccess ? 'success' : (isPending ? 'pending' : 'failed');
+    const paymentStatus = isSuccess ? 'S' : (isPending ? 'P' : 'F');
+
     this.router.navigate(['/dashboard/new-license/application-fee/receipt'], {
       queryParams: {
         payment_type: 'new_license_fee',
@@ -1382,14 +1432,14 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
         application_id: this.draftApplicationId,
         applicationId: this.draftApplicationId,
         amount: this.feeAmount || 500,
-        status: isSuccess ? 'success' : 'failed',
-        payment_status: isSuccess ? 'S' : 'F',
+        status: receiptStatus,
+        payment_status: paymentStatus,
         auto_submitted: isSuccess ? '1' : '0',
         autoSubmitted: isSuccess ? '1' : '0',
         transaction_id: txn?.transaction_id || txn?.txn_id || txn?.orderid || txn?.utr || '',
         transactionId: txn?.transaction_id || txn?.txn_id || txn?.orderid || txn?.utr || '',
         hoa: '0039-00-800-45-02',
-        reason: isSuccess ? '' : (txn?.error_desc || txn?.message || 'Payment could not be completed.'),
+        reason: isSuccess ? '' : (txn?.error_desc || txn?.message || (isPending ? 'Payment is awaiting confirmation from BillDesk.' : 'Payment could not be completed.')),
         createdAt: new Date().toISOString()
       }
     });

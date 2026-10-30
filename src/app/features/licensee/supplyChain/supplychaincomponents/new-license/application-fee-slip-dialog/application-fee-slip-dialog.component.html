@@ -4,11 +4,40 @@
     <i class="bi bi-x-lg"></i>
   </button>
 
+  <!-- Multi-Transaction Slip Switcher (No Print) -->
+  <div class="transaction-switcher-bar no-print" *ngIf="transactions.length > 1">
+    <div class="switcher-label">
+      <i class="bi bi-clock-history me-1"></i>
+      <span>Payment Attempts ({{ transactions.length }}) :</span>
+    </div>
+    <div class="switcher-pills">
+      <button
+        *ngFor="let tx of transactions; let idx = index"
+        type="button"
+        class="switcher-pill"
+        [class.active]="idx === selectedTxnIndex"
+        [class.pill-success]="isTxnSuccess(tx)"
+        [class.pill-failed]="isTxnFailed(tx)"
+        [class.pill-pending]="isTxnPending(tx)"
+        (click)="selectTransaction(idx)"
+        title="View slip for transaction {{ tx.transactionId || tx.transaction_id || tx.utr }}">
+        <i class="bi"
+          [ngClass]="{
+            'bi-check-circle-fill': isTxnSuccess(tx),
+            'bi-x-circle-fill': isTxnFailed(tx),
+            'bi-hourglass-split': isTxnPending(tx)
+          }"></i>
+        <span>Attempt #{{ transactions.length - idx }} - {{ getTxnStatusLabel(tx) }}</span>
+        <small class="pill-date" *ngIf="tx.transactionDate || tx.transaction_date">{{ (tx.transactionDate || tx.transaction_date) | date:'dd MMM, HH:mm' }}</small>
+      </button>
+    </div>
+  </div>
+
   <!-- 4-Border Framed Official Printable Slip Card -->
-  <div class="slip-card-frame" id="printableSlipFrame">
-    <div class="slip-card" id="printableSlipCard">
+  <div class="slip-card-frame" [ngClass]="{'frame-failed': isFailed, 'frame-pending': isPending}" id="printableSlipFrame">
+    <div class="slip-card" [ngClass]="{'card-failed': isFailed, 'card-pending': isPending}" id="printableSlipCard">
       <!-- Watermark of Sikkim Excise (Horizontal Repeating Rows Across Whole Page) -->
-      <div class="watermark-grid" aria-hidden="true">
+      <div class="watermark-grid" [ngClass]="{'watermark--failed': isFailed, 'watermark--pending': isPending}" aria-hidden="true">
         <div class="watermark-row" *ngFor="let r of watermarkRows">
           <span>SIKKIM EXCISE</span>
           <span class="dot">•</span>
@@ -33,8 +62,10 @@
           <h3 class="gov-title">GOVERNMENT OF SIKKIM</h3>
           <h4 class="dept-title">EXCISE DEPARTMENT</h4>
           <p class="portal-sub">Sikkim Excise Management System (SEMS)</p>
-          <div class="slip-type-badge">
-            <span>E-PAYMENT RECEIPT / APPLICATION CHALLAN</span>
+          <div class="slip-type-badge" [ngClass]="{'badge-failed': isFailed, 'badge-pending': isPending, 'badge-success': isSuccessful}">
+            <span *ngIf="isSuccessful">E-PAYMENT RECEIPT / APPLICATION CHALLAN</span>
+            <span *ngIf="isFailed">PAYMENT FAILURE ACKNOWLEDGEMENT / CHALLAN</span>
+            <span *ngIf="isPending">PAYMENT TRANSACTION PENDING CHALLAN</span>
           </div>
         </div>
         <div class="qr-box no-print">
@@ -43,22 +74,51 @@
         </div>
       </div>
 
-      <!-- Payment Status Banner -->
-      <div class="payment-status-banner">
+      <!-- Payment Status Banner (Dynamic: Green for Success, Red for Failed, Yellow for Pending) -->
+      <div class="payment-status-banner" [ngClass]="{'status-banner--failed': isFailed, 'status-banner--pending': isPending, 'status-banner--success': isSuccessful}">
         <div class="status-left">
           <div class="status-seal">
-            <i class="bi bi-check-circle-fill"></i>
+            <i class="bi" [ngClass]="{'bi-check-circle-fill': isSuccessful, 'bi-x-circle-fill': isFailed, 'bi-hourglass-split': isPending}"></i>
           </div>
           <div class="status-meta">
-            <div class="status-title">PAYMENT SUCCESSFUL</div>
-            <div class="status-subtitle">Application Processing Fee Confirmed</div>
+            <div class="status-title">
+              <span *ngIf="isSuccessful">PAYMENT SUCCESSFUL</span>
+              <span *ngIf="isFailed">PAYMENT FAILED / DECLINED</span>
+              <span *ngIf="isPending">PAYMENT PENDING CONFIRMATION</span>
+            </div>
+            <div class="status-subtitle">
+              <span *ngIf="isSuccessful">Application Processing Fee Confirmed & Received</span>
+              <span *ngIf="isFailed">Transaction Declined or Cancelled by Gateway/Bank</span>
+              <span *ngIf="isPending">Transaction Awaiting Settlement Response from BillDesk</span>
+            </div>
           </div>
         </div>
         <div class="status-right">
-          <div class="amount-pill">
+          <div class="amount-pill" [ngClass]="{'amount-pill--failed': isFailed, 'amount-pill--pending': isPending}">
             <span class="currency">₹</span>
             <span class="num">{{ slipData.amount | number:'1.2-2' }}</span>
           </div>
+        </div>
+      </div>
+
+      <!-- Error / Notice Box if Failed or Pending -->
+      <div *ngIf="isFailed" class="slip-notice-box notice-failed">
+        <div class="notice-head">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i>
+          <strong>Transaction Status Note (For Excise Double Check):</strong>
+        </div>
+        <div class="notice-body">
+          {{ slipData.errorDescription || 'The payment transaction could not be completed or was cancelled. No funds were credited to the Excise Department. The applicant may retry paying the application fee through the portal.' }}
+        </div>
+      </div>
+
+      <div *ngIf="isPending" class="slip-notice-box notice-pending">
+        <div class="notice-head">
+          <i class="bi bi-hourglass-split me-1"></i>
+          <strong>Transaction Status Note:</strong>
+        </div>
+        <div class="notice-body">
+          This payment attempt is currently in a <b>Pending</b> state awaiting settlement response from BillDesk. If money was debited from your bank account, please allow 15-30 minutes for automated reconciliation before attempting again.
         </div>
       </div>
 
@@ -81,9 +141,9 @@
 
           <div class="grid-item">
             <span class="item-label">Transaction Reference (UTR)</span>
-            <span class="item-value mono">
-              {{ slipData.transactionId || 'FORCE-NLI-' + slipData.applicationId }}
-              <button type="button" class="btn-copy no-print" (click)="copyToClipboard(slipData.transactionId || slipData.applicationId, 'txnId')" [title]="copiedField === 'txnId' ? 'Copied!' : 'Copy Transaction ID'">
+            <span class="item-value mono" [ngClass]="{'text-danger': isFailed, 'text-warning': isPending, 'text-success': isSuccessful}">
+              {{ slipData.transactionId || 'N/A' }}
+              <button *ngIf="slipData.transactionId" type="button" class="btn-copy no-print" (click)="copyToClipboard(slipData.transactionId, 'txnId')" [title]="copiedField === 'txnId' ? 'Copied!' : 'Copy Transaction ID'">
                 <i class="bi" [ngClass]="copiedField === 'txnId' ? 'bi-check-lg text-success' : 'bi-copy'"></i>
               </button>
             </span>
@@ -162,8 +222,12 @@
             </tr>
           </tbody>
           <tfoot>
-            <tr class="total-row">
-              <td colspan="3" class="text-end total-label">Total Amount Paid:</td>
+            <tr class="total-row" [ngClass]="{'total-row--failed': isFailed, 'total-row--pending': isPending}">
+              <td colspan="3" class="text-end total-label">
+                <span *ngIf="isSuccessful">Total Amount Paid:</span>
+                <span *ngIf="isFailed">Total Attempted Amount:</span>
+                <span *ngIf="isPending">Total Amount In-Flight:</span>
+              </td>
               <td class="text-end total-amount">₹ {{ slipData.amount | number:'1.2-2' }}</td>
             </tr>
           </tfoot>
@@ -178,14 +242,16 @@
         <div class="footer-terms">
           <p class="terms-text">
             <i class="bi bi-info-circle me-1"></i>
-            This is an electronically generated receipt issued under the authority of the Excise Department, Government of Sikkim.
-            This challan confirms the successful receipt of the application processing fee for departmental scrutiny.
+            This is an electronically generated document issued under the authority of the Excise Department, Government of Sikkim.
+            <span *ngIf="isSuccessful">This challan confirms the successful receipt of the application processing fee for departmental scrutiny.</span>
+            <span *ngIf="isFailed">This document records a failed payment attempt and can be presented to the Excise Department or your bank for verification.</span>
+            <span *ngIf="isPending">This document records a pending payment attempt currently awaiting gateway confirmation.</span>
           </p>
         </div>
         <div class="footer-stamp">
-          <div class="digital-seal">
-            <i class="bi bi-shield-check"></i>
-            <span>SEMS VERIFIED</span>
+          <div class="digital-seal" [ngClass]="{'seal-failed': isFailed, 'seal-pending': isPending}">
+            <i class="bi" [ngClass]="{'bi-shield-check': isSuccessful, 'bi-shield-x': isFailed, 'bi-shield-exclamation': isPending}"></i>
+            <span>{{ isSuccessful ? 'SEMS VERIFIED' : (isFailed ? 'SEMS RECORDED' : 'SEMS PENDING') }}</span>
             <small>GOVT OF SIKKIM</small>
           </div>
         </div>

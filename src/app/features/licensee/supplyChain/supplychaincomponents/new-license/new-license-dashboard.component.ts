@@ -82,6 +82,9 @@ interface NewLicenseItem {
   activeTimer?: ActiveCountdownTimer | null;
   rejectionReason?: string | null;
   isAutoRejected?: boolean;
+  isPaymentFailed?: boolean;
+  isPaymentPending?: boolean;
+  applicationFeeTransactions?: any[];
 }
 
 interface GroupedNewLicenseResponse {
@@ -108,7 +111,12 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
   private paymentIntegrationService = inject(PaymentIntegrationService);
   private licenseApplicationService = inject(LicenseApplicationService);
   private sidebarPendingBadgeService = inject(SidebarPendingBadgeService);
-  private readonly apiBase = `${environment.apiBaseUrl}/transactional/new_license_application`;
+  private readonly apiBase = `${String(environment.apiBaseUrl || '').replace(/\/+$/, '')}/transactional/new_license_application`;
+  get canForceSubmit(): boolean {
+    if (typeof window === 'undefined') return false;
+    const host = String(window.location?.hostname || '').toLowerCase();
+    return host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '[::1]';
+  }
 
   private countdownInterval: any = null;
   private expiredTriggeredIds = new Set<string>();
@@ -408,36 +416,269 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
     }
 
     const isPending = String(row.paymentStatus || '').trim().toLowerCase() === 'pending';
-    if (isPending) {
-      void Swal.fire({
-        title: 'Payment Pending',
-        html:
-          `Your last BillDesk payment attempt is still showing as <b>Pending</b>.<br/>` +
-          `There may be an issue with the payment response from BillDesk. You can try again later.`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Proceed',
-        cancelButtonText: 'Back',
-        allowOutsideClick: false,
-      }).then((res) => {
-        if (!res.isConfirmed) return;
-        this.startBilldeskInitiation(applicationId);
-      });
-      return;
-    }
+    const isFailed = String(row.paymentStatus || '').trim().toLowerCase() === 'failed';
+    const categoryName = String(row.licenseCategoryName || '').trim();
+    const subCategoryName = String(row.licenseSubCategoryName || '').trim();
+
+    const titleText = isFailed
+      ? 'Retry Application Fee Payment'
+      : (isPending ? 'Application Fee Payment (Pending)' : 'Pay Application Fee');
+
+    const modalHtml = `
+      <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; text-align:left;">
+        <!-- Header -->
+        <div style="display:flex; align-items:center; gap:14px; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid #e2e8f0;">
+          <div style="width:50px; height:50px; border-radius:12px; background:linear-gradient(135deg, #1d4ed8, #2563eb, #3b82f6); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(29, 78, 216, 0.25); flex-shrink:0;">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M21 7.28V5.5C21 4.67 20.33 4 19.5 4H4.5C3.67 4 3 4.67 3 5.5V18.5C3 19.33 3.67 20 4.5 20H19.5C20.33 20 21 19.33 21 18.5V16.72C21.61 16.36 22 15.73 22 15V9C22 8.27 21.61 7.64 21 7.28ZM20 9V15H17C16.45 15 16 14.55 16 14V10C16 9.45 16.45 9 17 9H20ZM5 6H19V7.28C18.39 7.64 18 8.27 18 9V15C18 15.73 18.39 16.36 19 16.72V18H5V6ZM10 14H13V12H10V14ZM8 10H10V8H8V10Z" fill="white"/>
+            </svg>
+          </div>
+          <div style="flex-grow:1;">
+            <div style="font-size:19px; font-weight:700; color:#0f172a; line-height:1.2;">
+              ${this.escapeHtml(titleText)}
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; margin-top:5px; flex-wrap:wrap;">
+              <span style="font-size:12px; font-weight:600; color:#1e40af; background:#dbeafe; padding:2px 8px; border-radius:4px;">
+                ${this.escapeHtml(applicationId)}
+              </span>
+              ${categoryName ? `<span style="font-size:12px; color:#475569; font-weight:500;">${this.escapeHtml(categoryName)}${subCategoryName ? ` - ${this.escapeHtml(subCategoryName)}` : ''}</span>` : ''}
+            </div>
+          </div>
+        </div>
+
+        <!-- Status & Retry Guidance Notice -->
+        ${isFailed ? `
+          <div style="background:#fef2f2; border:1px solid #fecaca; border-left:4px solid #ef4444; border-radius:8px; padding:12px 14px; margin-bottom:14px;">
+            <div style="display:flex; align-items:flex-start; gap:10px;">
+              <span style="font-size:18px; line-height:1; color:#ef4444;">&#9888;</span>
+              <div style="font-size:13px; color:#991b1b; line-height:1.45;">
+                <div style="font-weight:700; margin-bottom:3px;">Previous Payment Attempt Failed</div>
+                Your earlier payment attempt was not completed or got cancelled. No payment was credited towards this application.
+                <div style="margin-top:6px; color:#7f1d1d; font-weight:600;">
+                  &#10003; You can safely retry paying the application fee below. Your application will be submitted for departmental review once payment succeeds.
+                </div>
+              </div>
+            </div>
+          </div>
+        ` : (isPending ? `
+          <div style="background:#fffbeb; border:1px solid #fde68a; border-left:4px solid #f59e0b; border-radius:8px; padding:12px 14px; margin-bottom:14px;">
+            <div style="display:flex; align-items:flex-start; gap:10px;">
+              <span style="font-size:18px; line-height:1; color:#f59e0b;">&#9203;</span>
+              <div style="font-size:13px; color:#92400e; line-height:1.45;">
+                <div style="font-weight:700; margin-bottom:3px;">Payment Awaiting Gateway Response</div>
+                Your last attempt is currently awaiting confirmation from BillDesk. If money was debited from your account, please wait up to 15-30 minutes for automated reconciliation.
+                <div style="margin-top:6px; color:#78350f; font-weight:600;">
+                  &#10003; If no money was debited or you want to try again with a different payment mode, you can retry below.
+                </div>
+              </div>
+            </div>
+          </div>
+        ` : `
+          <div style="background:#f0f9ff; border:1px solid #bae6fd; border-left:4px solid #0284c7; border-radius:8px; padding:12px 14px; margin-bottom:14px;">
+            <div style="display:flex; align-items:flex-start; gap:10px;">
+              <span style="font-size:18px; line-height:1; color:#0284c7;">&#9432;</span>
+              <div style="font-size:13px; color:#0369a1; line-height:1.45;">
+                <div style="font-weight:700; margin-bottom:3px;">Application Processing Fee Required</div>
+                To submit your new license application for departmental scrutiny, an application fee of &#8377;500.00 is required.
+              </div>
+            </div>
+          </div>
+        `)}
+
+        <!-- Fee Breakdown Box -->
+        <div style="border-radius:10px; border:1px solid #e2e8f0; overflow:hidden; margin-bottom:14px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+          <div style="background:#f8fafc; padding:8px 14px; font-size:11px; font-weight:700; color:#475569; letter-spacing:0.5px; text-transform:uppercase; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between;">
+            <span>Fee Particulars</span>
+            <span>Amount</span>
+          </div>
+          <div style="padding:10px 14px; background:#ffffff;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 0; font-size:13px; color:#334155;">
+              <span>New License Application Fee (One-time)</span>
+              <span style="font-weight:600; color:#0f172a;">&#8377;500.00</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 0; font-size:13px; color:#64748b;">
+              <span>Gateway Charges (BillDesk)</span>
+              <span style="font-weight:600; color:#16a34a;">FREE (&#8377;0.00)</span>
+            </div>
+          </div>
+          <!-- Total -->
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; background:linear-gradient(135deg, #1e293b, #0f172a); border-top:1px solid #334155;">
+            <div>
+              <span style="color:#94a3b8; font-size:12px; font-weight:500; display:block;">Total Amount Payable</span>
+              <span style="color:#cbd5e1; font-size:11px;">(Inclusive of all taxes)</span>
+            </div>
+            <span style="color:#38bdf8; font-size:20px; font-weight:800; letter-spacing:0.5px;">&#8377;500.00</span>
+          </div>
+        </div>
+
+        <!-- Security Badge -->
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:9px 12px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0; font-size:12px; color:#64748b; margin-bottom:${this.canForceSubmit ? '14px' : '4px'};">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="color:#16a34a; font-size:14px;">&#128274;</span>
+            <span><b>256-Bit SSL Encrypted</b> BillDesk Gateway</span>
+          </div>
+          <span>UPI &#8226; NetBanking &#8226; Cards</span>
+        </div>
+
+        <!-- Dev Testing Panel (Localhost Only) -->
+        ${this.canForceSubmit ? `
+          <div style="border:1.5px dashed #f59e0b; border-radius:10px; padding:12px 14px; background:#fffbeb; margin-bottom:6px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+              <div style="font-size:12px; font-weight:700; color:#b45309; display:flex; align-items:center; gap:6px;">
+                <span>&#9881;</span>
+                <span>Developer Testing Tools (Localhost Simulation)</span>
+              </div>
+              <span style="font-size:10px; color:#92400e; background:#fef3c7; padding:2px 6px; border-radius:4px; font-weight:700;">DEV ONLY</span>
+            </div>
+            <p style="font-size:12px; color:#78350f; margin:0 0 10px 0; line-height:1.4;">
+              Simulate payment outcomes directly from this table popup to test retrying and status transitions:
+            </p>
+            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
+              <button id="dev-sim-success-btn" type="button"
+                style="padding:8px 8px; font-size:12px; font-weight:700; color:#ffffff; background:#16a34a; border:none; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.1);"
+                onmouseover="this.style.background='#15803d'" onmouseout="this.style.background='#16a34a'">
+                <span>&#10003;</span> Force Success
+              </button>
+              <button id="dev-sim-failed-btn" type="button"
+                style="padding:8px 8px; font-size:12px; font-weight:700; color:#ffffff; background:#dc2626; border:none; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.1);"
+                onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'">
+                <span>&#10007;</span> Force Failed
+              </button>
+              <button id="dev-sim-pending-btn" type="button"
+                style="padding:8px 8px; font-size:12px; font-weight:700; color:#78350f; background:#fde68a; border:1px solid #f59e0b; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.05);"
+                onmouseover="this.style.background='#fcd34d'" onmouseout="this.style.background='#fde68a'">
+                <span>&#9203;</span> Force Pending
+              </button>
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    `;
 
     void Swal.fire({
-      title: 'Retry Application Fee Payment?',
-      text: `Proceed to pay application fee for ${row.applicationId}?`,
-      icon: 'question',
+      title: '',
+      html: modalHtml,
       showCancelButton: true,
-      confirmButtonText: 'Pay Now',
+      confirmButtonText: '&#10148; &nbsp;Proceed to Pay via BillDesk (&#8377;500.00)',
       cancelButtonText: 'Cancel',
+      confirmButtonColor: '#1d4ed8',
+      cancelButtonColor: '#64748b',
+      width: '640px',
+      allowOutsideClick: false,
+      didOpen: (modalEl) => {
+        if (!this.canForceSubmit) return;
+        const btnSuccess = modalEl.querySelector('#dev-sim-success-btn');
+        if (btnSuccess) {
+          btnSuccess.addEventListener('click', () => {
+            Swal.close();
+            this.executeDevForceSubmit(applicationId, 'S');
+          });
+        }
+        const btnFailed = modalEl.querySelector('#dev-sim-failed-btn');
+        if (btnFailed) {
+          btnFailed.addEventListener('click', () => {
+            Swal.close();
+            this.executeDevForceSubmit(applicationId, 'F');
+          });
+        }
+        const btnPending = modalEl.querySelector('#dev-sim-pending-btn');
+        if (btnPending) {
+          btnPending.addEventListener('click', () => {
+            Swal.close();
+            this.executeDevForceSubmit(applicationId, 'P');
+          });
+        }
+      }
     }).then((res) => {
       if (!res.isConfirmed) return;
-
       this.startBilldeskInitiation(applicationId);
     });
+  }
+
+  executeDevForceSubmit(applicationId: string, statusKind: 'S' | 'F' | 'P'): void {
+    const isSuccess = statusKind === 'S';
+    const isPending = statusKind === 'P';
+
+    Swal.fire({
+      title: 'Simulating Payment...',
+      text: isSuccess
+        ? 'Processing simulated payment success and advancing workflow...'
+        : isPending
+        ? 'Recording simulated pending gateway transaction...'
+        : 'Recording simulated payment failure...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    this.licenseApplicationService.forceSubmitNewLicenseApplication(applicationId, statusKind).subscribe({
+      next: (res: any) => {
+        this.loadData();
+        if (isSuccess) {
+          Swal.fire({
+            icon: 'success',
+            title: 'Payment Successful (Dev Sim)',
+            html:
+              `<div style="font-family:'Segoe UI',sans-serif; text-align:center;">` +
+              `<p style="font-size:15px; color:#166534; font-weight:600; margin-bottom:8px;">` +
+              `Application Fee of &#8377;500.00 Paid Successfully!` +
+              `</p>` +
+              `<p style="font-size:13px; color:#475569;">` +
+              `Application <b>${this.escapeHtml(applicationId)}</b> has been submitted and moved to <b>District User</b> for initial review.` +
+              `</p>` +
+              `</div>`,
+            confirmButtonText: 'Done',
+            confirmButtonColor: '#16a34a'
+          });
+        } else if (isPending) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Payment Pending (Dev Sim)',
+            html:
+              `<div style="font-family:'Segoe UI',sans-serif; text-align:center;">` +
+              `<p style="font-size:15px; color:#9a3412; font-weight:600; margin-bottom:8px;">` +
+              `Payment Transaction Awaiting Response` +
+              `</p>` +
+              `<p style="font-size:13px; color:#475569;">` +
+              `Application <b>${this.escapeHtml(applicationId)}</b> is marked as <b>Awaiting Response</b>.<br/>` +
+              `Stage remains at <b>Applied</b>. You can test checking status or retrying payment.` +
+              `</p>` +
+              `</div>`,
+            confirmButtonText: 'Understood',
+            confirmButtonColor: '#d97706'
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Payment Failed (Dev Sim)',
+            html:
+              `<div style="font-family:'Segoe UI',sans-serif; text-align:center;">` +
+              `<p style="font-size:15px; color:#991b1b; font-weight:600; margin-bottom:8px;">` +
+              `Simulated Payment Failed` +
+              `</p>` +
+              `<p style="font-size:13px; color:#475569;">` +
+              `The transaction was declined or failed for <b>${this.escapeHtml(applicationId)}</b>.<br/>` +
+              `Stage remains at <b>Application Not Submitted (Payment Failed)</b>.<br/>` +
+              `You can now click <b>Pay Now</b> again from the table to test retrying payment!` +
+              `</p>` +
+              `</div>`,
+            confirmButtonText: 'Understood',
+            confirmButtonColor: '#dc2626'
+          });
+        }
+      },
+      error: (err: any) => {
+        this.loadData();
+        const msg = err?.error?.detail || err?.message || 'Failed to simulate payment.';
+        Swal.fire('Simulation Error', msg, 'error');
+      }
+    });
+  }
+
+  getStageBadgeClass(row: NewLicenseItem): string {
+    if (this.isRowTerminated(row)) return 'rejected';
+    if (row.isPaymentFailed) return 'payment-failed';
+    if (row.isPaymentPending) return 'payment-pending';
+    return row.statusGroup;
   }
 
   payLicenseFee(row: NewLicenseItem): void {
@@ -636,7 +877,8 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
                   const txResponse = txn.transaction_response || txn.auth_token || '';
                   formData.append('transaction_response', txResponse);
 
-                  this.http.post(`${environment.apiBaseUrl}/transactional/payment-gateway/billdesk/webhook/`, formData, { responseType: 'text' })
+                  const base = String(environment.apiBaseUrl || '').replace(/\/+$/, '');
+                  this.http.post(`${base}/transactional/payment-gateway/billdesk/webhook/`, formData, { responseType: 'text' })
                     .subscribe({
                       next: () => {
                         this.loadData();
@@ -652,6 +894,7 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
                     });
                 } else {
                   Swal.fire('Payment Incomplete', 'Payment was cancelled or declined.', 'info');
+                  this.loadData();
                 }
               });
             } catch (err) {
@@ -764,7 +1007,8 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
         paymentStatus: row.paymentStatus || 'Successful',
         transactionId: row.applicationFeeTransactionId || '',
         paymentDate: row.applicationFeePaymentDate || '',
-        amount: 500.00
+        amount: 500.00,
+        transactions: row.applicationFeeTransactions || []
       }
     });
   }
@@ -799,9 +1043,9 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
     const isTerminated = rawLower.includes('terminat') || rawLower.includes('forfeit') || rawLower.includes('cancel') || rawLower.includes('revoke') || rawLower.includes('suspend');
     const isRejected = rawStatusGroup === 'rejected' || rawLower.includes('reject') || isTerminated;
 
-    const canView = paymentStatus === 'Successful' || feePaid;
-    const canPayNow = this.isLicenseeUser() && !feePaid && paymentStatus !== 'Successful' && !isRejected;
     const isApplicationFeePaid = Boolean(feePaid || paymentStatus === 'Successful');
+    const canPayNow = this.isLicenseeUser() && !isApplicationFeePaid && !isRejected;
+    const canView = Boolean(item?.id || item?.application_id || item?.applicationId);
     const applicationFeeTransactionId = String(
       item?.application_fee_transaction_id ||
       item?.applicationFeeTransactionId ||
@@ -832,13 +1076,12 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
       const isAwaiting = 
         (rawLower.includes('awaiting') && rawLower.includes('payment')) ||
         (rawLower.includes('payment') && !rawLower.includes('reject') && !isTerminated) ||
-        canPayNow ||
         currentStageId === 23 ||
         currentStageId === '23';
 
       if (isAwaiting) {
         finalStatusGroup = 'awaiting-payment';
-      } else if (rawStatusGroup === 'applied' || rawLower.includes('initial') || !canView) {
+      } else if (rawStatusGroup === 'applied' || rawLower.includes('initial') || !isApplicationFeePaid) {
         finalStatusGroup = 'applied';
       } else {
         finalStatusGroup = 'pending';
@@ -848,9 +1091,25 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
     }
 
     // Licensee UX: a failed/unpaid application fee means the application is not submitted to workflow yet.
-    const currentStage = this.isLicenseeUser() && !canView
-      ? (paymentStatus === 'Failed' ? 'Application Not Submitted (Payment Failed)' : 'Application Not Submitted')
-      : this.computeCurrentStageLabel(item, finalStatusGroup, currentStageRaw);
+    const isPaymentFailed = this.isLicenseeUser() && !isApplicationFeePaid && paymentStatus === 'Failed';
+    const isPaymentPending = this.isLicenseeUser() && !isApplicationFeePaid && paymentStatus === 'Pending';
+
+    let currentStage = '';
+    if (this.isLicenseeUser()) {
+      if (!isApplicationFeePaid) {
+        if (paymentStatus === 'Failed') {
+          currentStage = 'Application Not Submitted (Payment Failed)';
+        } else if (paymentStatus === 'Pending') {
+          currentStage = 'Application Not Submitted (Payment Pending - Awaiting response from BillDesk)';
+        } else {
+          currentStage = String(item?.display_stage || item?.displayStage || 'Application Not Submitted');
+        }
+      } else {
+        currentStage = this.simplifyStageForLicensee(finalStatusGroup, currentStageRaw);
+      }
+    } else {
+      currentStage = String(item?.display_stage || item?.displayStage || this.computeCurrentStageLabel(item, finalStatusGroup, currentStageRaw));
+    }
 
     const transactions = Array.isArray(item?.transactions) ? item.transactions : [];
     const txnText = (t: any) => `${t?.action ?? ''} ${t?.remarks ?? ''} ${t?.to_stage ?? ''} ${t?.to_stageName ?? ''} ${t?.to_stage_name ?? ''}`;
@@ -969,7 +1228,12 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
       objectionTimeRemainingSeconds,
       activeTimer: null,
       rejectionReason,
-      isAutoRejected
+      isAutoRejected,
+      isPaymentFailed,
+      isPaymentPending,
+      applicationFeeTransactions: Array.isArray(item?.applicationFeeTransactions)
+        ? item.applicationFeeTransactions
+        : (Array.isArray(item?.application_fee_transactions) ? item.application_fee_transactions : [])
     };
   }
 

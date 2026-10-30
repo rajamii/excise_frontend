@@ -34,6 +34,101 @@
   }
 }
 
+/* Multi-Transaction Attempt Switcher (Screen only) */
+.transaction-switcher-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.65rem 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+
+  .switcher-label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+  }
+
+  .switcher-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
+  .switcher-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1.5px solid #cbd5e1;
+    background: #f8fafc;
+    color: #475569;
+    transition: all 0.2s ease;
+
+    .pill-date {
+      font-size: 0.68rem;
+      opacity: 0.8;
+      font-weight: 600;
+      margin-left: 0.2rem;
+    }
+
+    &:hover {
+      background: #f1f5f9;
+      border-color: #94a3b8;
+    }
+
+    &.pill-success {
+      color: #166534;
+      border-color: #86efac;
+      background: #f0fdf4;
+
+      &.active {
+        background: #16a34a;
+        color: #ffffff;
+        border-color: #16a34a;
+        box-shadow: 0 2px 6px rgba(22, 163, 74, 0.3);
+      }
+    }
+
+    &.pill-failed {
+      color: #991b1b;
+      border-color: #fca5a5;
+      background: #fef2f2;
+
+      &.active {
+        background: #dc2626;
+        color: #ffffff;
+        border-color: #dc2626;
+        box-shadow: 0 2px 6px rgba(220, 38, 38, 0.3);
+      }
+    }
+
+    &.pill-pending {
+      color: #92400e;
+      border-color: #fcd34d;
+      background: #fffbeb;
+
+      &.active {
+        background: #d97706;
+        color: #ffffff;
+        border-color: #d97706;
+        box-shadow: 0 2px 6px rgba(217, 119, 6, 0.3);
+      }
+    }
+  }
+}
+
 /* 4-Border Official Document Frame */
 .slip-card-frame {
   padding: 6px;
@@ -41,6 +136,17 @@
   border: 3px solid #0f766e;
   border-radius: 6px;
   box-shadow: 0 8px 24px rgba(15, 118, 110, 0.12);
+  transition: border-color 0.25s ease;
+
+  &.frame-failed {
+    border-color: #dc2626;
+    box-shadow: 0 8px 24px rgba(220, 38, 38, 0.15);
+  }
+
+  &.frame-pending {
+    border-color: #d97706;
+    box-shadow: 0 8px 24px rgba(217, 119, 6, 0.15);
+  }
 }
 
 .slip-card {
@@ -50,6 +156,15 @@
   padding: 1.75rem;
   background: #ffffff;
   overflow: hidden;
+  transition: border-color 0.25s ease;
+
+  &.card-failed {
+    border-color: #f87171;
+  }
+
+  &.card-pending {
+    border-color: #fbbf24;
+  }
 }
 
 /* Horizontal Straight-Line Repeating Watermark */
@@ -68,6 +183,14 @@
   padding: 1.25rem 0;
   opacity: 0.055;
   user-select: none;
+
+  &.watermark--failed .watermark-row {
+    color: #dc2626;
+  }
+
+  &.watermark--pending .watermark-row {
+    color: #d97706;
+  }
 
   .watermark-row {
     display: flex;
@@ -155,6 +278,18 @@
       font-weight: 800;
       color: #0d9488;
       letter-spacing: 0.5px;
+
+      &.badge-failed {
+        background: #fef2f2;
+        border-color: #fecaca;
+        color: #dc2626;
+      }
+
+      &.badge-pending {
+        background: #fffbeb;
+        border-color: #fde68a;
+        color: #d97706;
+      }
     }
   }
 
@@ -190,6 +325,40 @@
   border-radius: 8px;
   padding: 1rem 1.25rem;
   margin-bottom: 1.25rem;
+
+  &.status-banner--failed {
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    border-color: #fca5a5;
+
+    .status-left {
+      .status-seal {
+        color: #dc2626;
+      }
+      .status-title {
+        color: #991b1b;
+      }
+      .status-subtitle {
+        color: #b91c1c;
+      }
+    }
+  }
+
+  &.status-banner--pending {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border-color: #fcd34d;
+
+    .status-left {
+      .status-seal {
+        color: #d97706;
+      }
+      .status-title {
+        color: #92400e;
+      }
+      .status-subtitle {
+        color: #b45309;
+      }
+    }
+  }
 
   .status-left {
     display: flex;
@@ -229,10 +398,61 @@
       font-size: 1.3rem;
       box-shadow: 0 2px 6px rgba(21, 128, 61, 0.25);
 
+      &--failed {
+        background: #dc2626;
+        box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);
+      }
+
+      &--pending {
+        background: #d97706;
+        box-shadow: 0 2px 6px rgba(217, 119, 6, 0.25);
+      }
+
       .currency {
         font-size: 1rem;
         font-weight: 700;
       }
+    }
+  }
+}
+
+/* Error / Notice Box */
+.slip-notice-box {
+  position: relative;
+  z-index: 1;
+  padding: 0.85rem 1rem;
+  border-radius: 6px;
+  margin-bottom: 1.25rem;
+  font-size: 0.84rem;
+
+  .notice-head {
+    display: flex;
+    align-items: center;
+    font-weight: 800;
+    margin-bottom: 0.35rem;
+  }
+
+  .notice-body {
+    line-height: 1.45;
+  }
+
+  &.notice-failed {
+    background: #fef2f2;
+    border: 1.5px solid #fca5a5;
+    color: #991b1b;
+
+    .notice-head {
+      color: #dc2626;
+    }
+  }
+
+  &.notice-pending {
+    background: #fffbeb;
+    border: 1.5px solid #fde68a;
+    color: #92400e;
+
+    .notice-head {
+      color: #d97706;
     }
   }
 }
@@ -353,6 +573,21 @@
       border-top: 2px solid #0f766e;
     }
 
+    .total-row {
+      &--failed td {
+        border-top: 2px solid #dc2626 !important;
+      }
+      &--failed .total-amount {
+        color: #dc2626 !important;
+      }
+      &--pending td {
+        border-top: 2px solid #d97706 !important;
+      }
+      &--pending .total-amount {
+        color: #d97706 !important;
+      }
+    }
+
     .total-label {
       font-weight: 800;
       color: #0f172a;
@@ -410,6 +645,17 @@
       text-align: center;
       color: #0f766e;
       padding: 0.25rem;
+      transition: all 0.2s ease;
+
+      &.seal-failed {
+        border-color: #dc2626 !important;
+        color: #dc2626 !important;
+      }
+
+      &.seal-pending {
+        border-color: #d97706 !important;
+        color: #d97706 !important;
+      }
 
       i {
         font-size: 1.25rem;

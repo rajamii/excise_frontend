@@ -778,9 +778,10 @@ export class LicenseApplicationService {
     );
   }
 
-  forceSubmitNewLicenseApplication(applicationId: string): Observable<any> {
+  forceSubmitNewLicenseApplication(applicationId: string, statusKind?: string): Observable<any> {
     const encodedId = encodeURIComponent(String(applicationId || '').trim());
-    return this.http.post(`${this.newLicenseUrl}/force-submit/${encodedId}/`, {}).pipe(
+    const payload = statusKind ? { status: statusKind } : {};
+    return this.http.post(`${this.newLicenseUrl}/force-submit/${encodedId}/`, payload).pipe(
       tap(() => this.invalidateNewLicenseDashboardCache())
     );
   }

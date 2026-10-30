@@ -4,6 +4,23 @@ import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/materia
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../../../../environments/environment';
 
+export interface FeeTransactionItem {
+  utr?: string;
+  transaction_id?: string;
+  transactionId?: string;
+  payment_status?: string; // 'S' | 'F' | 'P'
+  paymentStatus?: string;
+  status_label?: string; // 'Successful' | 'Failed' | 'Pending'
+  statusLabel?: string;
+  amount?: number;
+  transaction_date?: string;
+  transactionDate?: string;
+  error_description?: string;
+  errorDescription?: string;
+  bank_ref_no?: string;
+  bankRefNo?: string;
+}
+
 export interface ApplicationFeeSlipDialogData {
   applicationId: string;
   applicantName?: string;
@@ -18,6 +35,8 @@ export interface ApplicationFeeSlipDialogData {
   hoa?: string;
   amount?: number;
   sbmApplicationId?: string;
+  errorDescription?: string;
+  transactions?: FeeTransactionItem[];
 }
 
 @Component({
@@ -32,6 +51,9 @@ export class ApplicationFeeSlipDialogComponent implements OnInit {
   copiedField: string | null = null;
   readonly watermarkRows = Array.from({ length: 11 }, (_, i) => i + 1);
 
+  transactions: FeeTransactionItem[] = [];
+  selectedTxnIndex = 0;
+
   slipData: ApplicationFeeSlipDialogData = {
     applicationId: '',
     applicantName: 'N/A',
@@ -45,7 +67,9 @@ export class ApplicationFeeSlipDialogComponent implements OnInit {
     paymentDate: '',
     hoa: '0039-00-800-45-02',
     amount: 500.00,
-    sbmApplicationId: ''
+    sbmApplicationId: '',
+    errorDescription: '',
+    transactions: []
   };
 
   constructor(
@@ -62,6 +86,10 @@ export class ApplicationFeeSlipDialogComponent implements OnInit {
         amount: Number(this.data.amount) > 0 ? Number(this.data.amount) : 500.00,
         hoa: this.data.hoa || '0039-00-800-45-02'
       };
+      if (Array.isArray(this.data.transactions) && this.data.transactions.length > 0) {
+        this.transactions = this.data.transactions;
+        this.selectTransaction(0);
+      }
     }
 
     const appId = String(this.data?.applicationId || '').trim();
@@ -70,48 +98,139 @@ export class ApplicationFeeSlipDialogComponent implements OnInit {
     }
   }
 
+  get isFailed(): boolean {
+    const s = String(this.slipData.paymentStatus || '').toLowerCase();
+    return s === 'failed' || s === 'f';
+  }
+
+  get isPending(): boolean {
+    const s = String(this.slipData.paymentStatus || '').toLowerCase();
+    return s === 'pending' || s === 'p';
+  }
+
+  get isSuccessful(): boolean {
+    return !this.isFailed && !this.isPending;
+  }
+
+  isTxnSuccess(tx: any): boolean {
+    if (!tx) return false;
+    const s = String(tx.paymentStatus || tx.payment_status || tx.status || '').trim().toUpperCase();
+    const l = String(tx.statusLabel || tx.status_label || tx.status || '').trim().toLowerCase();
+    const utr = String(tx.utr || tx.transactionId || tx.transaction_id || '').trim().toUpperCase();
+    if (s === 'S' || l.includes('success')) return true;
+    if (utr.startsWith('FORCE-NLI-') || (utr.includes('FORCE') && !utr.includes('FAIL') && !utr.includes('PEND'))) return true;
+    return false;
+  }
+
+  isTxnPending(tx: any): boolean {
+    if (!tx) return false;
+    const s = String(tx.paymentStatus || tx.payment_status || tx.status || '').trim().toUpperCase();
+    const l = String(tx.statusLabel || tx.status_label || tx.status || '').trim().toLowerCase();
+    const utr = String(tx.utr || tx.transactionId || tx.transaction_id || '').trim().toUpperCase();
+    if (s === 'P' || l.includes('pend')) return true;
+    if (utr.includes('PEND')) return true;
+    return false;
+  }
+
+  isTxnFailed(tx: any): boolean {
+    return !this.isTxnSuccess(tx) && !this.isTxnPending(tx);
+  }
+
+  getTxnStatusLabel(tx: any): string {
+    if (this.isTxnSuccess(tx)) return 'Successful';
+    if (this.isTxnPending(tx)) return 'Pending';
+    return 'Failed';
+  }
+
+  selectTransaction(index: number): void {
+    if (index < 0 || index >= this.transactions.length) return;
+    this.selectedTxnIndex = index;
+    const tx: any = this.transactions[index];
+    const isSuccess = this.isTxnSuccess(tx);
+    const isPend = this.isTxnPending(tx);
+    const statusLabel = isSuccess ? 'Successful' : (isPend ? 'Pending' : 'Failed');
+    const txnDate = tx?.transactionDate || tx?.transaction_date || this.slipData.paymentDate;
+    const txnId = tx?.transactionId || tx?.transaction_id || tx?.utr || this.slipData.transactionId;
+    const errDesc = tx?.errorDescription || tx?.error_description || '';
+
+    this.slipData = {
+      ...this.slipData,
+      transactionId: txnId,
+      paymentStatus: statusLabel,
+      paymentDate: txnDate,
+      amount: Number(tx?.amount) > 0 ? Number(tx.amount) : 500.00,
+      errorDescription: isSuccess ? '' : errDesc
+    };
+  }
+
   private fetchFullApplicationDetails(appId: string): void {
     this.isLoading = true;
     const encoded = encodeURIComponent(appId);
-    this.http.get<any>(`${environment.apiBaseUrl}/transactional/new_license_application/detail/${encoded}/`).subscribe({
+    const base = String(environment.apiBaseUrl || '').replace(/\/+$/, '');
+    this.http.get<any>(`${base}/transactional/new_license_application/detail/${encoded}/`).subscribe({
       next: (res: any) => {
         this.isLoading = false;
         if (!res) return;
 
-        const applicantName = res.applicant_name ||
+        const applicantName = res.applicantName || res.applicant_name ||
           (res.applicant ? `${res.applicant.first_name || ''} ${res.applicant.last_name || ''}`.trim() || res.applicant.username : '') ||
           this.slipData.applicantName;
 
-        const categoryName = res.license_category_name ||
-          res.license_category?.license_category ||
+        const categoryName = res.licenseCategoryName || res.license_category_name ||
+          res.licenseCategory?.name || res.license_category?.license_category ||
           res.license_category?.name ||
           this.slipData.licenseCategoryName;
 
-        const subCategoryName = res.license_sub_category_name ||
-          res.license_sub_category?.description ||
+        const subCategoryName = res.licenseSubCategoryName || res.license_sub_category_name ||
+          res.licenseSubCategory?.name || res.license_sub_category?.description ||
           res.license_sub_category?.name ||
           this.slipData.licenseSubCategoryName;
 
-        const txnId = res.application_fee_transaction_id ||
-          res.transaction_id ||
+        const txnId = res.applicationFeeTransactionId || res.application_fee_transaction_id ||
+          res.transactionId || res.transaction_id ||
           this.slipData.transactionId;
 
-        const pDate = res.application_fee_payment_date ||
-          res.payment_date ||
-          res.created_at ||
+        const pDate = res.applicationFeePaymentDate || res.application_fee_payment_date ||
+          res.paymentDate || res.payment_date ||
+          res.createdAt || res.created_at ||
           this.slipData.paymentDate;
+
+        const rawTxns = res.applicationFeeTransactions || res.application_fee_transactions || [];
+        if (Array.isArray(rawTxns) && rawTxns.length > 0) {
+          this.transactions = rawTxns;
+        }
+
+        const rawFeeStatus = String(
+          res.applicationFeePaymentStatus ||
+          res.application_fee_payment_status ||
+          res.paymentStatus ||
+          res.payment_status ||
+          ''
+        ).trim().toUpperCase();
+
+        const isFeeSuccess = rawFeeStatus === 'S' || rawFeeStatus.includes('SUCCESS') || Boolean(res.isApplicationFeePaid ?? res.is_application_fee_paid);
+        const isFeePending = rawFeeStatus === 'P' || rawFeeStatus.includes('PEND');
+        const normalizedStatus = isFeeSuccess ? 'Successful' : (isFeePending ? 'Pending' : 'Failed');
 
         this.slipData = {
           ...this.slipData,
           applicantName: applicantName || 'N/A',
-          establishmentName: res.establishment_name || this.slipData.establishmentName || 'N/A',
+          establishmentName: res.establishmentName || res.establishment_name || this.slipData.establishmentName || 'N/A',
           licenseCategoryName: categoryName || 'N/A',
           licenseSubCategoryName: subCategoryName || '',
-          modeOfOperation: res.mode_of_operation || this.slipData.modeOfOperation || 'Self',
+          modeOfOperation: res.modeOfOperation || res.mode_of_operation || this.slipData.modeOfOperation || 'Self',
           transactionId: txnId || this.slipData.transactionId || 'FORCE-NLI-' + appId.replace(/[^a-zA-Z0-9]/g, ''),
+          paymentStatus: normalizedStatus,
           paymentDate: pDate || this.slipData.paymentDate || this.slipData.submittedOn || new Date().toISOString(),
-          sbmApplicationId: res.sbm_application_id || this.slipData.sbmApplicationId || ''
+          sbmApplicationId: res.sbmApplicationId || res.sbm_application_id || this.slipData.sbmApplicationId || '',
+          errorDescription: (normalizedStatus === 'Successful' ? '' : (res.applicationFeeError || res.application_fee_error || ''))
         };
+
+        // If transactions exist, select the current or latest attempt
+        if (this.transactions.length > 0) {
+          const idxToSelect = (this.selectedTxnIndex >= 0 && this.selectedTxnIndex < this.transactions.length) ? this.selectedTxnIndex : 0;
+          this.selectTransaction(idxToSelect);
+        }
       },
       error: () => {
         this.isLoading = false;
@@ -477,15 +596,117 @@ export class ApplicationFeeSlipDialogComponent implements OnInit {
             color: #0f766e;
             font-size: 16px;
           }
-          .digital-seal span {
-            font-size: 7px;
-            font-weight: 900;
-            letter-spacing: 0.5px;
+          /* Frame and Card variants */
+          .slip-card-frame.frame-failed {
+            border-color: #dc2626 !important;
           }
-          .digital-seal small {
-            font-size: 6px;
-            font-weight: 700;
-            color: #475569;
+          .slip-card.card-failed {
+            border-color: #f87171 !important;
+          }
+          .slip-card-frame.frame-pending {
+            border-color: #d97706 !important;
+          }
+          .slip-card.card-pending {
+            border-color: #fbbf24 !important;
+          }
+          .watermark--failed .watermark-row {
+            color: #dc2626 !important;
+          }
+          .watermark--pending .watermark-row {
+            color: #d97706 !important;
+          }
+
+          /* Badges */
+          .slip-type-badge.badge-failed {
+            background: #fef2f2 !important;
+            border-color: #dc2626 !important;
+            color: #dc2626 !important;
+          }
+          .slip-type-badge.badge-pending {
+            background: #fffbeb !important;
+            border-color: #d97706 !important;
+            color: #d97706 !important;
+          }
+
+          /* Status Banner Variants */
+          .payment-status-banner.status-banner--failed {
+            background: #fef2f2 !important;
+            border-color: #dc2626 !important;
+          }
+          .status-banner--failed .status-seal {
+            color: #dc2626 !important;
+          }
+          .status-banner--failed .status-title {
+            color: #991b1b !important;
+          }
+          .status-banner--failed .status-subtitle {
+            color: #b91c1c !important;
+          }
+          .amount-pill--failed {
+            background: #dc2626 !important;
+          }
+
+          .payment-status-banner.status-banner--pending {
+            background: #fffbeb !important;
+            border-color: #d97706 !important;
+          }
+          .status-banner--pending .status-seal {
+            color: #d97706 !important;
+          }
+          .status-banner--pending .status-title {
+            color: #92400e !important;
+          }
+          .status-banner--pending .status-subtitle {
+            color: #b45309 !important;
+          }
+          .amount-pill--pending {
+            background: #d97706 !important;
+          }
+
+          /* Notice Box */
+          .slip-notice-box {
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            font-size: 11px;
+            line-height: 1.4;
+          }
+          .slip-notice-box.notice-failed {
+            background: #fef2f2 !important;
+            border: 1.5px solid #fca5a5 !important;
+            color: #991b1b !important;
+          }
+          .slip-notice-box.notice-failed .notice-head {
+            font-weight: 800;
+            margin-bottom: 3px;
+            color: #dc2626 !important;
+          }
+          .slip-notice-box.notice-pending {
+            background: #fffbeb !important;
+            border: 1.5px solid #fde68a !important;
+            color: #92400e !important;
+          }
+          .slip-notice-box.notice-pending .notice-head {
+            font-weight: 800;
+            margin-bottom: 3px;
+            color: #d97706 !important;
+          }
+
+          .total-row--failed .total-amount {
+            color: #dc2626 !important;
+          }
+          .total-row--pending .total-amount {
+            color: #d97706 !important;
+          }
+
+          /* Dynamic Seal */
+          .digital-seal.seal-failed {
+            border-color: #dc2626 !important;
+            color: #dc2626 !important;
+          }
+          .digital-seal.seal-pending {
+            border-color: #d97706 !important;
+            color: #d97706 !important;
           }
         </style>
       </head>

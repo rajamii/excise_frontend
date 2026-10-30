@@ -250,11 +250,30 @@
       @if (canForceSubmit) {
         <button
           mat-stroked-button
-          color="warn"
-          (click)="forceSubmit()"
+          color="accent"
+          (click)="forceSubmit('S')"
           [disabled]="!declarationForm.valid || isSubmitting"
+          title="Simulate successful payment & workflow submission (Localhost dev testing)"
           type="button">
-          <span>Force Submit Application</span>
+          <span>Force Submit (Success)</span>
+        </button>
+        <button
+          mat-stroked-button
+          color="warn"
+          (click)="forceSubmit('F')"
+          [disabled]="!declarationForm.valid || isSubmitting"
+          title="Simulate failed payment (Localhost dev testing)"
+          type="button">
+          <span>Force Failed (Dev)</span>
+        </button>
+        <button
+          mat-stroked-button
+          style="color: #b45309; border-color: #f59e0b;"
+          (click)="forceSubmit('P')"
+          [disabled]="!declarationForm.valid || isSubmitting"
+          title="Simulate pending payment awaiting response (Localhost dev testing)"
+          type="button">
+          <span>Force Pending (Dev)</span>
         </button>
       }
     } @else {
