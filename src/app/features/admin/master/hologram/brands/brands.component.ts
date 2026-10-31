@@ -187,7 +187,10 @@ export class BrandsComponent implements OnInit {
       if (!result.isConfirmed) return;
       this.brandWarehouseService.deleteBrandWarehouse(row.id as number).subscribe({
         next: () => { Swal.fire('Deleted!', 'Row deleted successfully.', 'success'); this.loadRows(); },
-        error: () => Swal.fire('Error', 'Failed to delete row.', 'error'),
+        error: (err: any) => {
+          const msg = err?.error?.message || err?.error?.error || 'Failed to delete row.';
+          Swal.fire('Error', msg, 'error');
+        },
       });
     });
   }

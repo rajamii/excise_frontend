@@ -359,7 +359,9 @@ export class BrandWarehouseService {
      * Delete brand warehouse entry
      */
     deleteBrandWarehouse(id: number): Observable<any> {
-        return this.http.delete<any>(`${this.baseUrl}/${id}/`).pipe(
+        return this.http.delete<any>(`${this.baseUrl}/${id}/`, {
+            params: { confirm_delete: 'true' }
+        }).pipe(
             catchError((error) => {
                 console.error('deleteBrandWarehouse error:', error);
                 throw error;
