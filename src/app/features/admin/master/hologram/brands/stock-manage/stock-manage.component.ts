@@ -158,8 +158,14 @@ export class StockManageComponent implements OnInit {
     }).then((result) => {
       if (!result.isConfirmed) return;
 
+      const selectedLic = this.manufacturingLicenses.find(
+        (l) => l.id === this.row.license_id || l.licenseeId === this.row.license_id
+      );
+
       const payload: any = {
         license_id: String(this.row.license_id || '').trim(),
+        factory_name: selectedLic?.establishmentName || undefined,
+        distillery_name: selectedLic?.establishmentName || undefined,
         brand_id: null,
         liquor_type: this.row.liquor_type || null,
         capacity_size: resolvedSize,

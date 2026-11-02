@@ -289,30 +289,6 @@ export class TransitPermitComponent implements OnInit {
           } 
         } 
         this.rebuildBrandCatalogFromWarehouse(); 
- 
-        // Fallback: if scoped warehouse endpoint returns empty on server due to license mapping,
-        // still populate the Brand dropdown using distillery-scoped master list.
-        if (this.brandOptions.length === 0 && this.activeManufacturingUnitName) { 
-          this.supplyChainService.getLiquorBrands(this.activeManufacturingUnitName).subscribe({ 
-            next: (rows: any[]) => { 
-              const normalized = Array.isArray(rows) ? rows : []; 
-              this.brandsData = normalized 
-                .map((row: any) => ({ 
-                  brandName: String(row?.brandName || row?.brand_name || '').trim(), 
-                  sizes: Array.isArray(row?.sizes) ? row.sizes.map((s: any) => Number(s)).filter((s: any) => Number.isFinite(s) && s > 0) : [] 
-                })) 
-                .filter((row: any) => !!row.brandName && row.sizes.length > 0) 
-                .sort((a: any, b: any) => a.brandName.localeCompare(b.brandName)); 
- 
-              this.brandOptions = this.brandsData 
-                .map((b: any) => ({ brandName: b.brandName, label: b.brandName })) 
-                .sort((a: any, b: any) => a.label.localeCompare(b.label)); 
-            }, 
-            error: () => { 
-              // keep existing empty state 
-            } 
-          }); 
-        } 
       }, 
       error: (error) => { 
         console.error('Failed to load establishment-scoped warehouse brands', error); 
