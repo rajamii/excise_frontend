@@ -1088,7 +1088,8 @@ private initializeWalletContextAndLoadData(): void {
   }
 
   private applyWalletRecharge(payload: any): void {
-    const rows = this.safeArray(payload?.results);
+    const rawRows = this.safeArray(payload?.results);
+    const rows = rawRows.filter((row: any) => this.isForActiveLicense(row));
 
     this.rechargeData = rows.map((row: any, index: number) => ({
       id: String(this.pickAny(row, ['wallet_transaction_id', 'walletTransactionId'], `${index + 1}`)),
@@ -5076,6 +5077,305 @@ private initializeWalletContextAndLoadData(): void {
     }
 
     return '';
+  }
+
+  get isLocalhost(): boolean {
+    if (typeof window === 'undefined') return false;
+    const host = String(window.location?.hostname || '').toLowerCase();
+    return host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '[::1]';
+  }
+
+  isPendingStatus(status: any): boolean {
+    const s = String(status || '').trim().toLowerCase();
+    return s === 'pending' || s === 'p';
+  }
+
+  get pendingRechargeCount(): number {
+    if (!this.rechargeData || this.rechargeData.length === 0) return 0;
+    const rows = this.getRowsForTab('recharge');
+    let count = 0;
+    for (const r of rows) {
+      if (this.isPendingStatus(r.status)) count++;
+    }
+    return count;
+  }
+
+  get pendingRechargeTotalAmount(): number {
+    if (!this.rechargeData || this.rechargeData.length === 0) return 0;
+    const rows = this.getRowsForTab('recharge');
+    let sum = 0;
+    for (const r of rows) {
+      if (this.isPendingStatus(r.status)) sum += (Number(r.amount) || 0);
+    }
+    return sum;
+  }
+
+  onForceSimulateWalletRecharge(event: { statusKind: 'S' | 'F' | 'P'; amount: number }): void {
+    if (!this.isLocalhost) {
+      console.warn('Simulation is disabled in production environment.');
+      return;
+    }
+
+    const context = this.selectedAddMoneyContext || this.modalContext;
+    const amount = Number(event?.amount || this.addMoneyAmount || this.paymentAmount || 0);
+    if (amount <= 0) {
+      Swal.fire('Invalid Amount', 'Please enter a valid recharge amount greater than 0.', 'warning');
+      return;
+    }
+
+    const licenseeId = String(this.activeLicenseeId || this.resolveActiveLicenseeIdFromSession() || '1101').trim();
+    const rawWalletType = context?.walletType || 'excise';
+    const walletType = this.mapAddMoneyWalletTypeToApi(rawWalletType as any);
+    const hoa = String(context?.hoa || this.walletHoaByType[rawWalletType as AddMoneyWalletType] || '').trim();
+    const txnId = String(this.addMoneyTransactionId || this.currentTxnId || `WLT-SIM-${Date.now()}`).trim();
+
+    this.closeUnifiedAddMoneyView();
+    this.closeAddMoneyModal();
+
+    Swal.fire({
+      title: 'Simulating Wallet Recharge...',
+      text: `Processing status ${event.statusKind} for ₹${amount.toLocaleString('en-IN')}`,
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    this.paymentIntegrationService.simulateWalletRecharge({
+      licensee_id: licenseeId,
+      wallet_type: walletType,
+      amount: amount,
+      transaction_id: txnId,
+      head_of_account: hoa,
+      status: event.statusKind
+    }).subscribe({
+      next: (res) => {
+        Swal.close();
+        this.refreshWalletData();
+        if (event.statusKind === 'S') {
+          Swal.fire({
+            icon: 'success',
+            title: 'Recharge Successful!',
+            html: `<p>Simulated credit of <strong>₹${amount.toLocaleString('en-IN')}</strong> to <strong>${this.getWalletTypeLabel(walletType)}</strong> completed.</p><p class="text-success fw-bold">Wallet balance updated.</p>`,
+            confirmButtonColor: '#198754'
+          });
+        } else if (event.statusKind === 'F') {
+          Swal.fire({
+            icon: 'error',
+            title: 'Recharge Failed',
+            text: `Transaction ${txnId} recorded as Failed as simulated.`,
+            confirmButtonColor: '#dc3545'
+          });
+        } else {
+          Swal.fire({
+            icon: 'info',
+            title: 'Recharge Pending',
+            html: `<p>Transaction <code>${txnId}</code> is recorded as <strong>Pending</strong>.</p><p class="small text-muted">You can test the <strong>"Retry (Check Status)"</strong> button in the table to reconcile it.</p>`,
+            confirmButtonColor: '#ffc107'
+          });
+        }
+      },
+      error: (err) => {
+        Swal.close();
+        console.error('Wallet recharge simulation error:', err);
+        Swal.fire('Simulation Error', err?.error?.message || err?.message || 'Could not simulate wallet recharge.', 'error');
+      }
+    });
+  }
+
+  checkWalletPendingStatus(item: any): void {
+    const txnId = String(item?.transactionId || item?.txnId || item?.id || '').trim();
+    if (!txnId || txnId === '-') {
+      Swal.fire('Error', 'Transaction ID not found for this record.', 'error');
+      return;
+    }
+
+    const amount = Number(item?.amount || 0);
+    const formattedAmount = amount > 0 ? `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '';
+    const walletLabel = this.getWalletTypeLabel(item?.walletType || item?.hoa);
+
+    if (this.isLocalhost) {
+      Swal.fire({
+        width: '520px',
+        showConfirmButton: false,
+        showCancelButton: true,
+        cancelButtonText: 'Cancel',
+        cancelButtonColor: '#64748b',
+        focusCancel: false,
+        html: `
+          <div class="text-center pt-2 pb-1">
+            <div class="d-inline-flex align-items-center justify-content-center rounded-circle p-3 mb-2 shadow-sm"
+                 style="width: 58px; height: 58px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);">
+              <i class="bi bi-arrow-repeat fs-2 text-dark"></i>
+            </div>
+            <h4 class="fw-bold mb-1" style="color: #0f172a; font-size: 1.3rem;">Reconcile Payment Status</h4>
+            <div class="text-muted small">Verify real-time transaction with BillDesk or simulate test status</div>
+          </div>
+
+          <div class="p-3 my-3 rounded-3 text-start shadow-xs" style="background-color: #f8fafc; border: 1px solid #e2e8f0;">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="text-muted small fw-semibold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.72rem;">Transaction ID</span>
+              <span class="badge bg-warning text-dark px-2 py-1 rounded-pill" style="font-size: 0.75rem;">
+                <i class="bi bi-clock-history me-1"></i>Pending
+              </span>
+            </div>
+            <div class="fw-bold font-monospace text-primary text-truncate mb-2" style="font-size: 0.95rem;">
+              ${txnId}
+            </div>
+            <div class="d-flex justify-content-between align-items-center pt-2 text-muted small" style="border-top: 1px dashed #cbd5e1;">
+              <span>Wallet: <strong class="text-dark">${walletLabel}</strong></span>
+              ${formattedAmount ? `<span>Amount: <strong class="text-dark">${formattedAmount}</strong></span>` : ''}
+            </div>
+          </div>
+
+          <div class="text-start mb-2">
+            <label class="form-label fw-bold text-secondary text-uppercase mb-2" style="font-size: 0.72rem; letter-spacing: 0.5px;">
+              Select Verification Action
+            </label>
+            <div class="d-flex flex-column gap-2" id="reconcileActionList">
+              <button type="button" class="btn text-start p-3 rounded-3 d-flex align-items-center justify-content-between reconcile-opt-btn"
+                      data-action="LIVE"
+                      style="background: #ffffff; border: 1.5px solid #cbd5e1; cursor: pointer; transition: all 0.15s ease;">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="rounded-circle d-flex align-items-center justify-content-center bg-primary-subtle text-primary" style="width: 38px; height: 38px; min-width: 38px;">
+                    <i class="bi bi-globe fs-5"></i>
+                  </div>
+                  <div>
+                    <div class="fw-bold text-dark" style="font-size: 0.92rem;">Query Live BillDesk Gateway</div>
+                    <div class="small text-muted" style="font-size: 0.8rem;">Direct status query via BillDesk API</div>
+                  </div>
+                </div>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1" style="font-size: 0.72rem;">Live Server</span>
+              </button>
+
+              <button type="button" class="btn text-start p-3 rounded-3 d-flex align-items-center justify-content-between reconcile-opt-btn"
+                      data-action="S"
+                      style="background: #ffffff; border: 1.5px solid #cbd5e1; cursor: pointer; transition: all 0.15s ease;">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="rounded-circle d-flex align-items-center justify-content-center bg-success-subtle text-success" style="width: 38px; height: 38px; min-width: 38px;">
+                    <i class="bi bi-check-circle-fill fs-5"></i>
+                  </div>
+                  <div>
+                    <div class="fw-bold text-dark" style="font-size: 0.92rem;">Simulate: Successful (Credit)</div>
+                    <div class="small text-muted" style="font-size: 0.8rem;">Mock 0300 Success & credit wallet balance</div>
+                  </div>
+                </div>
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1" style="font-size: 0.72rem;">Dev Credit</span>
+              </button>
+
+              <button type="button" class="btn text-start p-3 rounded-3 d-flex align-items-center justify-content-between reconcile-opt-btn"
+                      data-action="F"
+                      style="background: #ffffff; border: 1.5px solid #cbd5e1; cursor: pointer; transition: all 0.15s ease;">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="rounded-circle d-flex align-items-center justify-content-center bg-danger-subtle text-danger" style="width: 38px; height: 38px; min-width: 38px;">
+                    <i class="bi bi-x-circle-fill fs-5"></i>
+                  </div>
+                  <div>
+                    <div class="fw-bold text-dark" style="font-size: 0.92rem;">Simulate: Failed</div>
+                    <div class="small text-muted" style="font-size: 0.8rem;">Mock 0399 / payment declined by bank</div>
+                  </div>
+                </div>
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1" style="font-size: 0.72rem;">Dev Fail</span>
+              </button>
+
+              <button type="button" class="btn text-start p-3 rounded-3 d-flex align-items-center justify-content-between reconcile-opt-btn"
+                      data-action="P"
+                      style="background: #ffffff; border: 1.5px solid #cbd5e1; cursor: pointer; transition: all 0.15s ease;">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="rounded-circle d-flex align-items-center justify-content-center bg-warning-subtle text-warning" style="width: 38px; height: 38px; min-width: 38px;">
+                    <i class="bi bi-hourglass-split fs-5 text-dark"></i>
+                  </div>
+                  <div>
+                    <div class="fw-bold text-dark" style="font-size: 0.92rem;">Simulate: Still Pending</div>
+                    <div class="small text-muted" style="font-size: 0.8rem;">Mock 0002 awaiting clearance from bank</div>
+                  </div>
+                </div>
+                <span class="badge bg-warning-subtle text-dark border border-warning-subtle px-2 py-1" style="font-size: 0.72rem;">Dev Pending</span>
+              </button>
+            </div>
+          </div>
+        `,
+        didOpen: (popup) => {
+          const buttons = popup.querySelectorAll<HTMLButtonElement>('.reconcile-opt-btn');
+          buttons.forEach((btn) => {
+            btn.addEventListener('mouseenter', () => {
+              btn.style.borderColor = '#3b82f6';
+              btn.style.backgroundColor = '#f0f9ff';
+              btn.style.transform = 'translateY(-1px)';
+            });
+            btn.addEventListener('mouseleave', () => {
+              btn.style.borderColor = '#cbd5e1';
+              btn.style.backgroundColor = '#ffffff';
+              btn.style.transform = 'translateY(0)';
+            });
+            btn.addEventListener('click', () => {
+              const action = btn.getAttribute('data-action');
+              Swal.close();
+              const sim = action === 'LIVE' ? undefined : (action as 'S' | 'F' | 'P');
+              this.executeCheckWalletStatus(txnId, sim);
+            });
+          });
+        }
+      });
+      return;
+    }
+
+    // Production / Live server: directly query BillDesk
+    this.executeCheckWalletStatus(txnId);
+  }
+
+  executeCheckWalletStatus(transactionId: string, simulatedStatus?: 'S' | 'F' | 'P'): void {
+    Swal.fire({
+      title: 'Verifying with BillDesk',
+      text: 'Checking real-time transaction status...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    this.paymentIntegrationService.checkWalletPaymentStatus(transactionId, simulatedStatus).subscribe({
+      next: (res) => {
+        Swal.close();
+        this.refreshWalletData();
+        const status = String(res?.status || '').toUpperCase();
+        if (status === 'S') {
+          Swal.fire({
+            icon: 'success',
+            title: 'Payment Successful!',
+            html: `<p>Payment for <strong>₹${Number(res?.amount || 0).toLocaleString('en-IN')}</strong> has been confirmed by BillDesk.</p><p class="text-success fw-bold">Wallet balance has been credited successfully.</p>`,
+            confirmButtonColor: '#198754'
+          });
+        } else if (status === 'F') {
+          Swal.fire({
+            icon: 'error',
+            title: 'Payment Failed',
+            text: res?.message || 'Transaction was marked as Failed by the payment gateway.',
+            confirmButtonColor: '#dc3545'
+          });
+        } else if (status === 'P') {
+          Swal.fire({
+            icon: 'info',
+            title: 'Payment Still Pending',
+            text: res?.message || 'Transaction is still awaiting clearance from the bank/BillDesk. Please retry shortly.',
+            confirmButtonColor: '#ffc107'
+          });
+        } else {
+          Swal.fire({
+            icon: 'info',
+            title: 'Status Updated',
+            text: res?.message || `Transaction status: ${status}`,
+            confirmButtonColor: '#0d6efd'
+          });
+        }
+      },
+      error: (err) => {
+        Swal.close();
+        console.error('Wallet payment status check failed:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Status Verification Failed',
+          text: err?.error?.message || err?.message || 'Unable to communicate with BillDesk payment gateway.',
+          confirmButtonColor: '#dc3545'
+        });
+      }
+    });
   }
 }
 

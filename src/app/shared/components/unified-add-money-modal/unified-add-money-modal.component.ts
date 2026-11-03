@@ -34,6 +34,7 @@ export class UnifiedAddMoneyModalComponent implements OnInit, OnDestroy {
   @Output() amountChange = new EventEmitter<number>();
   @Output() proceed = new EventEmitter<number>();
   @Output() forcePay = new EventEmitter<void>();
+  @Output() simulate = new EventEmitter<{ statusKind: 'S' | 'F' | 'P'; amount: number }>();
   @Output() close = new EventEmitter<void>();
 
   constructor(private el: ElementRef) {}
@@ -60,12 +61,18 @@ export class UnifiedAddMoneyModalComponent implements OnInit, OnDestroy {
 
   get isLocalhost(): boolean {
     if (typeof window === 'undefined') return false;
-    const host = window.location.hostname;
-    return host === 'localhost' || host === '127.0.0.1';
+    const host = String(window.location?.hostname || '').toLowerCase();
+    return host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '[::1]';
   }
 
   onForcePayClick(): void {
     this.forcePay.emit();
+  }
+
+  onSimulateClick(statusKind: 'S' | 'F' | 'P'): void {
+    const amt = Number(this.amount);
+    if (!amt || amt <= 0) return;
+    this.simulate.emit({ statusKind, amount: amt });
   }
 
   onCloseClick(): void {

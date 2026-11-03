@@ -203,6 +203,27 @@ export class PaymentIntegrationService {
     return this.http.get<any>(`${this.gatewayUrl}/modules/${encodeURIComponent(String(moduleCode || '').trim())}/`);
   }
 
+  checkWalletPaymentStatus(transactionId: string, simulatedStatus?: 'S' | 'F' | 'P'): Observable<any> {
+    const encodedId = encodeURIComponent(String(transactionId || '').trim());
+    const payload = simulatedStatus ? { simulated_status: simulatedStatus } : {};
+    return this.http.post<any>(`${this.gatewayUrl}/billdesk/check-wallet-status/${encodedId}/`, payload).pipe(
+      tap(() => this.clearWalletCache())
+    );
+  }
+
+  simulateWalletRecharge(payload: {
+    licensee_id: string;
+    wallet_type: string;
+    amount: number;
+    transaction_id?: string;
+    head_of_account?: string;
+    status?: 'S' | 'F' | 'P';
+  }): Observable<any> {
+    return this.http.post<any>(`${this.gatewayUrl}/billdesk/simulate-wallet-recharge/`, payload).pipe(
+      tap(() => this.clearWalletCache())
+    );
+  }
+
   // Calls the Django endpoint to create the BillDesk order
   initiateNewLicenseFee(applicationId: string, amount?: number): Observable<any> {
     const payload = {

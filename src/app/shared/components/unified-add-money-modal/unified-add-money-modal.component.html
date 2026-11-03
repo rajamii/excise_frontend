@@ -64,6 +64,47 @@
             </tbody>
           </table>
         </div>
+
+        <!-- Dev Testing Panel (Strictly Localhost Only) -->
+        <div *ngIf="isLocalhost" class="mt-3 p-3 border border-warning rounded" style="background-color: #fffdf5; border-style: dashed !important;">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="fw-bold text-warning-emphasis d-flex align-items-center gap-1" style="font-size: 0.85rem;">
+              <i class="bi bi-gear-fill"></i>
+              <span>Developer Testing Tools (Localhost Simulation)</span>
+            </div>
+            <span class="badge bg-warning text-dark fw-bold" style="font-size: 0.65rem;">DEV ONLY</span>
+          </div>
+          <p class="text-muted mb-2" style="font-size: 0.78rem; line-height: 1.35;">
+            Simulate payment outcomes directly for this wallet recharge without connecting to gateway:
+          </p>
+          <div class="d-flex gap-2 flex-wrap">
+            <button
+              type="button"
+              class="btn btn-sm btn-success fw-bold flex-grow-1"
+              (click)="onSimulateClick('S')"
+              [disabled]="amount <= 0"
+              title="Simulate successful wallet recharge payment">
+              <i class="bi bi-check-circle-fill me-1"></i>Sim: Success (Credit)
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-danger fw-bold flex-grow-1"
+              (click)="onSimulateClick('F')"
+              [disabled]="amount <= 0"
+              title="Simulate failed payment">
+              <i class="bi bi-x-circle-fill me-1"></i>Sim: Failed
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-warning text-dark fw-bold flex-grow-1"
+              style="border-color: #f59e0b; background-color: #fef3c7;"
+              (click)="onSimulateClick('P')"
+              [disabled]="amount <= 0"
+              title="Simulate pending transaction (awaiting response)">
+              <i class="bi bi-hourglass-split me-1"></i>Sim: Pending
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="modal-footer justify-content-center gap-2">
