@@ -25,7 +25,10 @@
             <div class="bill-type">ORIGINAL</div>
             
             <div class="header">
-                <div class="form-number">FORM - IV</div>
+                <div class="form-number">
+                    <div>FORM - IV</div>
+                    <div class="form-date">Date: {{ (permitData.date || currentDate) | date:'dd-MM-yyyy' }}</div>
+                </div>
                 <h1>Government of Sikkim</h1>
                 <h2>Excise Department</h2>
                 <h3>(See rule 9 (2))</h3>
@@ -75,6 +78,7 @@
                             <th>Strength</th>
                             <th>Quantity (Cases)</th>
                             <th>Total Bottles</th>
+                            <th>Duty Paid (₹)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -85,6 +89,13 @@
                             <td class="text-center">{{ brand.strength || '42.8%' }}</td>
                             <td class="text-center">{{ brand.cases }}</td>
                             <td class="text-center">{{ (brand.cases || 0) * (brand.bottles_per_case || 12) }}</td>
+                            <td class="duty-col-cell">
+                                <div class="duty-val">₹{{ getBrandDuty(brand) | number:'1.2-2' }}</div>
+                                <div class="wallet-badge-wrap">
+                                    <span class="wallet-tag">Wallet Debited</span>
+                                    <div class="wallet-ref-id" *ngIf="getBrandTxnId(brand)">{{ getBrandTxnId(brand) }}</div>
+                                </div>
+                            </td>
                         </tr>
                     </tbody>
                     <tfoot>
@@ -92,6 +103,12 @@
                             <td colspan="4" class="text-right">Total:</td>
                             <td class="text-center">{{ getTotalCases() }}</td>
                             <td class="text-center">{{ getTotalBottles() }}</td>
+                            <td class="duty-col-cell">
+                                <div class="duty-val total-duty">₹{{ getTotalDuty() | number:'1.2-2' }}</div>
+                                <div class="wallet-badge-wrap">
+                                    <span class="wallet-verified-tag">✓ Verified</span>
+                                </div>
+                            </td>
                         </tr>
                     </tfoot>
                 </table>
@@ -100,24 +117,22 @@
             <div class="terms-section">
                 <p class="terms-header">This permit is granted under and subject to the provisions of the Sikkim Excise
                     (IMFL Manufactured in Sikkim) Licensing and Warehouse Rules, 2005.</p>
-                <div class="date-header-right">Date: <span>{{ permitData.date | date:'dd-MM-yyyy' }}</span></div>
 
                 <ol class="terms-list">
                     <li>The entire quantity of intoxicants shall be transported/exported in the consignment only and shall
                         not be broken in transit.</li>
                     <li>The licensee shall pay such cost of the excise or other cost, in any, as excise officer my decide.
                     </li>
-                    <li class="validity-line">This pass is valid upto <span class="handwritten">ONE DAY ONLY</span></li>
-                    <li class="vehicle-line">Vehicle No: <span class="vehicle-number-highlight">{{ permitData.vehicle_number }}</span>
-                    </li>
+                    <li class="validity-line">This pass is valid upto <strong>ONE DAY ONLY</strong></li>
+                    <li class="vehicle-line">Vehicle No: <strong>{{ permitData.vehicle_number }}</strong></li>
                 </ol>
 
                 <div class="place-line">
-                    Place: {{ permitData.depot_address }} <span class="tick-mark">✓</span>
+                    Place: <strong>{{ permitData.depot_address }}</strong>
                 </div>
 
                 <div class="date-bottom">
-                    Date: <span class="handwritten">{{ currentDate | date:'dd-MM-yyyy' }}</span>
+                    Date: <strong>{{ currentDate | date:'dd-MM-yyyy' }}</strong>
                 </div>
             </div>
 
@@ -127,12 +142,11 @@
                 </div>
 
                 <div class="signature-section">
-                    <img src="assets/EC_Sign_1.png" alt="Assistant Commissioner Signature" class="signature-image" style="max-height: 48px; max-width: 140px; height: 48px; width: auto; object-fit: contain; display: block; margin: 0 auto 2px auto;" />
+                    <div class="signature-space"></div>
                     <div class="signature-line"></div>
-                    <div class="designation">Assistant Commissioner</div>
+                    <div class="designation">Officer In-Charge</div>
                     <div class="dept">Excise Department</div>
                     <div class="gov">Government of Sikkim</div>
-                    <div class="role-label">Signature of Officer-in-Charge.</div>
                 </div>
             </div>
 
@@ -147,7 +161,10 @@
             <div class="bill-type">DUPLICATE</div>
             
             <div class="header">
-                <div class="form-number">FORM - IV</div>
+                <div class="form-number">
+                    <div>FORM - IV</div>
+                    <div class="form-date">Date: {{ (permitData.date || currentDate) | date:'dd-MM-yyyy' }}</div>
+                </div>
                 <h1>Government of Sikkim</h1>
                 <h2>Excise Department</h2>
                 <h3>(See rule 9 (2))</h3>
@@ -197,6 +214,7 @@
                             <th>Strength</th>
                             <th>Quantity (Cases)</th>
                             <th>Total Bottles</th>
+                            <th>Duty Paid (₹)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -207,6 +225,13 @@
                             <td class="text-center">{{ brand.strength || '42.8%' }}</td>
                             <td class="text-center">{{ brand.cases }}</td>
                             <td class="text-center">{{ (brand.cases || 0) * (brand.bottles_per_case || 12) }}</td>
+                            <td class="duty-col-cell">
+                                <div class="duty-val">₹{{ getBrandDuty(brand) | number:'1.2-2' }}</div>
+                                <div class="wallet-badge-wrap">
+                                    <span class="wallet-tag">Wallet Debited</span>
+                                    <div class="wallet-ref-id" *ngIf="getBrandTxnId(brand)">{{ getBrandTxnId(brand) }}</div>
+                                </div>
+                            </td>
                         </tr>
                     </tbody>
                     <tfoot>
@@ -214,6 +239,12 @@
                             <td colspan="4" class="text-right">Total:</td>
                             <td class="text-center">{{ getTotalCases() }}</td>
                             <td class="text-center">{{ getTotalBottles() }}</td>
+                            <td class="duty-col-cell">
+                                <div class="duty-val total-duty">₹{{ getTotalDuty() | number:'1.2-2' }}</div>
+                                <div class="wallet-badge-wrap">
+                                    <span class="wallet-verified-tag">✓ Verified</span>
+                                </div>
+                            </td>
                         </tr>
                     </tfoot>
                 </table>
@@ -222,24 +253,22 @@
             <div class="terms-section">
                 <p class="terms-header">This permit is granted under and subject to the provisions of the Sikkim Excise
                     (IMFL Manufactured in Sikkim) Licensing and Warehouse Rules, 2005.</p>
-                <div class="date-header-right">Date: <span>{{ permitData.date | date:'dd-MM-yyyy' }}</span></div>
 
                 <ol class="terms-list">
                     <li>The entire quantity of intoxicants shall be transported/exported in the consignment only and shall
                         not be broken in transit.</li>
                     <li>The licensee shall pay such cost of the excise or other cost, in any, as excise officer my decide.
                     </li>
-                    <li class="validity-line">This pass is valid upto <span class="handwritten">ONE DAY ONLY</span></li>
-                    <li class="vehicle-line">Vehicle No: <span class="vehicle-number-highlight">{{ permitData.vehicle_number }}</span>
-                    </li>
+                    <li class="validity-line">This pass is valid upto <strong>ONE DAY ONLY</strong></li>
+                    <li class="vehicle-line">Vehicle No: <strong>{{ permitData.vehicle_number }}</strong></li>
                 </ol>
 
                 <div class="place-line">
-                    Place: {{ permitData.depot_address }} <span class="tick-mark">✓</span>
+                    Place: <strong>{{ permitData.depot_address }}</strong>
                 </div>
 
                 <div class="date-bottom">
-                    Date: <span class="handwritten">{{ currentDate | date:'dd-MM-yyyy' }}</span>
+                    Date: <strong>{{ currentDate | date:'dd-MM-yyyy' }}</strong>
                 </div>
             </div>
 
@@ -249,12 +278,11 @@
                 </div>
 
                 <div class="signature-section">
-                    <img src="assets/EC_Sign_1.png" alt="Assistant Commissioner Signature" class="signature-image" style="max-height: 48px; max-width: 140px; height: 48px; width: auto; object-fit: contain; display: block; margin: 0 auto 2px auto;" />
+                    <div class="signature-space"></div>
                     <div class="signature-line"></div>
-                    <div class="designation">Assistant Commissioner</div>
+                    <div class="designation">Officer In-Charge</div>
                     <div class="dept">Excise Department</div>
                     <div class="gov">Government of Sikkim</div>
-                    <div class="role-label">Signature of Officer-in-Charge.</div>
                 </div>
             </div>
 
@@ -269,7 +297,10 @@
             <div class="bill-type">TRIPLICATE</div>
             
             <div class="header">
-                <div class="form-number">FORM - IV</div>
+                <div class="form-number">
+                    <div>FORM - IV</div>
+                    <div class="form-date">Date: {{ (permitData.date || currentDate) | date:'dd-MM-yyyy' }}</div>
+                </div>
                 <h1>Government of Sikkim</h1>
                 <h2>Excise Department</h2>
                 <h3>(See rule 9 (2))</h3>
@@ -319,6 +350,7 @@
                             <th>Strength</th>
                             <th>Quantity (Cases)</th>
                             <th>Total Bottles</th>
+                            <th>Duty Paid (₹)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -329,6 +361,13 @@
                             <td class="text-center">{{ brand.strength || '42.8%' }}</td>
                             <td class="text-center">{{ brand.cases }}</td>
                             <td class="text-center">{{ (brand.cases || 0) * (brand.bottles_per_case || 12) }}</td>
+                            <td class="duty-col-cell">
+                                <div class="duty-val">₹{{ getBrandDuty(brand) | number:'1.2-2' }}</div>
+                                <div class="wallet-badge-wrap">
+                                    <span class="wallet-tag">Wallet Debited</span>
+                                    <div class="wallet-ref-id" *ngIf="getBrandTxnId(brand)">{{ getBrandTxnId(brand) }}</div>
+                                </div>
+                            </td>
                         </tr>
                     </tbody>
                     <tfoot>
@@ -336,6 +375,12 @@
                             <td colspan="4" class="text-right">Total:</td>
                             <td class="text-center">{{ getTotalCases() }}</td>
                             <td class="text-center">{{ getTotalBottles() }}</td>
+                            <td class="duty-col-cell">
+                                <div class="duty-val total-duty">₹{{ getTotalDuty() | number:'1.2-2' }}</div>
+                                <div class="wallet-badge-wrap">
+                                    <span class="wallet-verified-tag">✓ Verified</span>
+                                </div>
+                            </td>
                         </tr>
                     </tfoot>
                 </table>
@@ -344,24 +389,22 @@
             <div class="terms-section">
                 <p class="terms-header">This permit is granted under and subject to the provisions of the Sikkim Excise
                     (IMFL Manufactured in Sikkim) Licensing and Warehouse Rules, 2005.</p>
-                <div class="date-header-right">Date: <span>{{ permitData.date | date:'dd-MM-yyyy' }}</span></div>
 
                 <ol class="terms-list">
                     <li>The entire quantity of intoxicants shall be transported/exported in the consignment only and shall
                         not be broken in transit.</li>
                     <li>The licensee shall pay such cost of the excise or other cost, in any, as excise officer my decide.
                     </li>
-                    <li class="validity-line">This pass is valid upto <span class="handwritten">ONE DAY ONLY</span></li>
-                    <li class="vehicle-line">Vehicle No: <span class="vehicle-number-highlight">{{ permitData.vehicle_number }}</span>
-                    </li>
+                    <li class="validity-line">This pass is valid upto <strong>ONE DAY ONLY</strong></li>
+                    <li class="vehicle-line">Vehicle No: <strong>{{ permitData.vehicle_number }}</strong></li>
                 </ol>
 
                 <div class="place-line">
-                    Place: {{ permitData.depot_address }} <span class="tick-mark">✓</span>
+                    Place: <strong>{{ permitData.depot_address }}</strong>
                 </div>
 
                 <div class="date-bottom">
-                    Date: <span class="handwritten">{{ currentDate | date:'dd-MM-yyyy' }}</span>
+                    Date: <strong>{{ currentDate | date:'dd-MM-yyyy' }}</strong>
                 </div>
             </div>
 
@@ -371,12 +414,11 @@
                 </div>
 
                 <div class="signature-section">
-                    <img src="assets/EC_Sign_1.png" alt="Assistant Commissioner Signature" class="signature-image" style="max-height: 48px; max-width: 140px; height: 48px; width: auto; object-fit: contain; display: block; margin: 0 auto 2px auto;" />
+                    <div class="signature-space"></div>
                     <div class="signature-line"></div>
-                    <div class="designation">Assistant Commissioner</div>
+                    <div class="designation">Officer In-Charge</div>
                     <div class="dept">Excise Department</div>
                     <div class="gov">Government of Sikkim</div>
-                    <div class="role-label">Signature of Officer-in-Charge.</div>
                 </div>
             </div>
 
@@ -391,7 +433,10 @@
             <div class="bill-type">QUADRUPLICATE</div>
             
             <div class="header">
-                <div class="form-number">FORM - IV</div>
+                <div class="form-number">
+                    <div>FORM - IV</div>
+                    <div class="form-date">Date: {{ (permitData.date || currentDate) | date:'dd-MM-yyyy' }}</div>
+                </div>
                 <h1>Government of Sikkim</h1>
                 <h2>Excise Department</h2>
                 <h3>(See rule 9 (2))</h3>
@@ -441,6 +486,7 @@
                             <th>Strength</th>
                             <th>Quantity (Cases)</th>
                             <th>Total Bottles</th>
+                            <th>Duty Paid (₹)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -451,6 +497,13 @@
                             <td class="text-center">{{ brand.strength || '42.8%' }}</td>
                             <td class="text-center">{{ brand.cases }}</td>
                             <td class="text-center">{{ (brand.cases || 0) * (brand.bottles_per_case || 12) }}</td>
+                            <td class="duty-col-cell">
+                                <div class="duty-val">₹{{ getBrandDuty(brand) | number:'1.2-2' }}</div>
+                                <div class="wallet-badge-wrap">
+                                    <span class="wallet-tag">Wallet Debited</span>
+                                    <div class="wallet-ref-id" *ngIf="getBrandTxnId(brand)">{{ getBrandTxnId(brand) }}</div>
+                                </div>
+                            </td>
                         </tr>
                     </tbody>
                     <tfoot>
@@ -458,6 +511,12 @@
                             <td colspan="4" class="text-right">Total:</td>
                             <td class="text-center">{{ getTotalCases() }}</td>
                             <td class="text-center">{{ getTotalBottles() }}</td>
+                            <td class="duty-col-cell">
+                                <div class="duty-val total-duty">₹{{ getTotalDuty() | number:'1.2-2' }}</div>
+                                <div class="wallet-badge-wrap">
+                                    <span class="wallet-verified-tag">✓ Verified</span>
+                                </div>
+                            </td>
                         </tr>
                     </tfoot>
                 </table>
@@ -466,24 +525,22 @@
             <div class="terms-section">
                 <p class="terms-header">This permit is granted under and subject to the provisions of the Sikkim Excise
                     (IMFL Manufactured in Sikkim) Licensing and Warehouse Rules, 2005.</p>
-                <div class="date-header-right">Date: <span>{{ permitData.date | date:'dd-MM-yyyy' }}</span></div>
 
                 <ol class="terms-list">
                     <li>The entire quantity of intoxicants shall be transported/exported in the consignment only and shall
                         not be broken in transit.</li>
                     <li>The licensee shall pay such cost of the excise or other cost, in any, as excise officer my decide.
                     </li>
-                    <li class="validity-line">This pass is valid upto <span class="handwritten">ONE DAY ONLY</span></li>
-                    <li class="vehicle-line">Vehicle No: <span class="vehicle-number-highlight">{{ permitData.vehicle_number }}</span>
-                    </li>
+                    <li class="validity-line">This pass is valid upto <strong>ONE DAY ONLY</strong></li>
+                    <li class="vehicle-line">Vehicle No: <strong>{{ permitData.vehicle_number }}</strong></li>
                 </ol>
 
                 <div class="place-line">
-                    Place: {{ permitData.depot_address }} <span class="tick-mark">✓</span>
+                    Place: <strong>{{ permitData.depot_address }}</strong>
                 </div>
 
                 <div class="date-bottom">
-                    Date: <span class="handwritten">{{ currentDate | date:'dd-MM-yyyy' }}</span>
+                    Date: <strong>{{ currentDate | date:'dd-MM-yyyy' }}</strong>
                 </div>
             </div>
 
@@ -493,12 +550,11 @@
                 </div>
 
                 <div class="signature-section">
-                    <img src="assets/EC_Sign_1.png" alt="Assistant Commissioner Signature" class="signature-image" style="max-height: 48px; max-width: 140px; height: 48px; width: auto; object-fit: contain; display: block; margin: 0 auto 2px auto;" />
+                    <div class="signature-space"></div>
                     <div class="signature-line"></div>
-                    <div class="designation">Assistant Commissioner</div>
+                    <div class="designation">Officer In-Charge</div>
                     <div class="dept">Excise Department</div>
                     <div class="gov">Government of Sikkim</div>
-                    <div class="role-label">Signature of Officer-in-Charge.</div>
                 </div>
             </div>
 

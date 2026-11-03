@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MaterialModule } from '../../../../../shared/material.module';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { SupplyChainService } from '../../services/supplychain.service';
 
 @Component({
@@ -18,6 +18,7 @@ export class FinaltransitpermitComponent implements OnInit {
   selectedColor: string = 'white';
 
   constructor(
+    private route: ActivatedRoute,
     private router: Router,
     private supplyChainService: SupplyChainService
   ) { }
@@ -33,32 +34,104 @@ export class FinaltransitpermitComponent implements OnInit {
   loadPermitData() {
     const data = localStorage.getItem('finalTransitPermitData');
     if (data) {
-      this.permitData = JSON.parse(data);
-      console.log('Loaded permit data:', this.permitData);
+      try {
+        this.permitData = JSON.parse(data);
+        console.log('Loaded permit data from localStorage:', this.permitData);
+      } catch (e) {
+        console.error('Failed to parse finalTransitPermitData', e);
+      }
+    }
 
-      // Fetch dynamic ML conversion data to ensure 'Total Bottles' is correct
-      this.supplyChainService.getBrandMlInCases().subscribe({
-        next: (mlData: any[]) => {
-          console.log('Fetched ML Data for View:', mlData);
-          if (this.permitData && this.permitData.brands) {
-            this.permitData.brands.forEach((brand: any) => {
-              const size = brand.size_ml || brand.sizeMl;
-              const mlConfig = mlData.find((m: any) => m.ml == size);
+    const ref = this.route.snapshot.queryParamMap.get('ref') ||
+      this.route.snapshot.queryParamMap.get('refNo') ||
+      this.route.snapshot.queryParamMap.get('billNo') ||
+      this.permitData?.bill_no;
 
-              if (mlConfig) {
-                brand.bottles_per_case = mlConfig.pieces_in_case || mlConfig.piecesInCase;
-                console.log(`Updated ${brand.brand} (${size}ml) to ${brand.bottles_per_case} bottles/case`);
-              }
-            });
+    if (ref) {
+      this.supplyChainService.getTransitPermits(ref, true).subscribe({
+        next: (permits: any[]) => {
+          if (permits && permits.length > 0) {
+            const first = permits[0];
+            const brands = permits.map(p => ({
+              ...p,
+              brand: p.brand || p.brand_name,
+              cases: Number(p.cases || 0),
+              size_ml: p.size_ml || p.sizeMl,
+              total_amount: Number(p.total_amount || 0),
+              total_excise_duty: Number(p.total_excise_duty || 0),
+              total_education_cess: Number(p.total_education_cess || 0),
+              total_additional_excise: Number(p.total_additional_excise || 0),
+              total_bottling_fee: Number(p.total_bottling_fee || 0),
+              excise_duty_rs_per_case: Number(p.excise_duty_rs_per_case || 0),
+              education_cess_rs_per_case: Number(p.education_cess_rs_per_case || 0),
+              additional_excise_duty_rs_per_case: Number(p.additional_excise_duty_rs_per_case || 0),
+              bottling_fee_rs_per_case: Number(p.bottling_fee_rs_per_case || 0),
+              wallet_transactions: p.wallet_transactions || []
+            }));
+
+            const calculatedTotal = brands.reduce((sum, b) => sum + (b.total_amount || 0), 0);
+
+            if (this.permitData) {
+              this.permitData = {
+                ...this.permitData,
+                bill_no: this.permitData.bill_no || first.bill_no || ref,
+                sole_distributor_name: this.permitData.sole_distributor_name || first.sole_distributor_name || '',
+                date: this.permitData.date || first.date || new Date().toISOString(),
+                depot_address: this.permitData.depot_address || first.depot_address || '',
+                vehicle_number: this.permitData.vehicle_number || first.vehicle_number || '',
+                total_amount: calculatedTotal > 0 ? calculatedTotal : (Number(this.permitData.total_amount) || 0),
+                brands: brands,
+                wallet_transactions: (first.wallet_transactions && first.wallet_transactions.length > 0)
+                  ? first.wallet_transactions
+                  : (this.permitData.wallet_transactions || [])
+              };
+            } else {
+              this.permitData = {
+                bill_no: first.bill_no || ref,
+                sole_distributor_name: first.sole_distributor_name || '',
+                date: first.date || new Date().toISOString(),
+                depot_address: first.depot_address || '',
+                vehicle_number: first.vehicle_number || '',
+                total_amount: calculatedTotal,
+                brands: brands,
+                wallet_transactions: first.wallet_transactions || []
+              };
+            }
+            try {
+              localStorage.setItem('finalTransitPermitData', JSON.stringify(this.permitData));
+            } catch (e) {
+              console.error('Failed to update localStorage with fresh permit data', e);
+            }
+            this.fetchMlData();
           }
         },
-        error: (err) => console.error('Failed to load ML data for permit view', err)
+        error: (err) => console.error('Failed to load transit permit by ref', err)
       });
-
-    } else {
-      console.error('No permit data found');
-      // this.router.navigate(['/dev-oic-transit-permit']); // Optional: redirect back if no data
+      return;
     }
+
+    if (this.permitData) {
+      this.fetchMlData();
+    }
+  }
+
+  private fetchMlData() {
+    // Fetch dynamic ML conversion data to ensure 'Total Bottles' is correct
+    this.supplyChainService.getBrandMlInCases().subscribe({
+      next: (mlData: any[]) => {
+        if (this.permitData && this.permitData.brands) {
+          this.permitData.brands.forEach((brand: any) => {
+            const size = brand.size_ml || brand.sizeMl;
+            const mlConfig = mlData.find((m: any) => m.ml == size);
+
+            if (mlConfig) {
+              brand.bottles_per_case = mlConfig.pieces_in_case || mlConfig.piecesInCase;
+            }
+          });
+        }
+      },
+      error: (err) => console.error('Failed to load ML data for permit view', err)
+    });
   }
 
   printPermit() {
@@ -220,8 +293,16 @@ export class FinaltransitpermitComponent implements OnInit {
                 position: absolute;
                 top: 40px;
                 right: 40px;
+                text-align: right;
                 font-weight: bold;
                 font-size: 14px;
+              }
+              
+              .form-number .form-date {
+                font-size: 13px;
+                font-weight: normal;
+                margin-top: 2px;
+                color: #000;
               }
               
               .permit-info-grid {
@@ -268,7 +349,7 @@ export class FinaltransitpermitComponent implements OnInit {
               
               th, td {
                 border: 1px solid #000;
-                padding: 4px;
+                padding: 5px;
                 text-align: left;
                 font-size: 12px;
               }
@@ -291,16 +372,57 @@ export class FinaltransitpermitComponent implements OnInit {
                 font-weight: bold;
                 background-color: #f9f9f9;
               }
-              
-              .amount-words {
-                margin: 15px 0;
+
+              .duty-col-cell {
+                text-align: right;
+                vertical-align: top;
+                white-space: nowrap;
+              }
+
+              .duty-val {
                 font-weight: bold;
-                font-style: italic;
-                font-size: 14px;
-                border: 1px solid #000;
-                padding: 8px;
-                text-align: center;
-                flex-shrink: 0;
+                font-size: 12px;
+                color: #000;
+              }
+
+              .duty-val.total-duty {
+                font-size: 13px;
+              }
+
+              .wallet-badge-wrap {
+                margin-top: 2px;
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+              }
+
+              .wallet-tag {
+                font-size: 9px;
+                font-weight: bold;
+                color: #1b5e20;
+                background: #e8f5e9;
+                padding: 1px 4px;
+                border-radius: 2px;
+                border: 1px solid #c8e6c9;
+                display: inline-block;
+              }
+
+              .wallet-ref-id {
+                font-size: 8.5px;
+                color: #555;
+                margin-top: 1px;
+                font-family: monospace;
+              }
+
+              .wallet-verified-tag {
+                font-size: 9px;
+                font-weight: bold;
+                color: #0d47a1;
+                background: #e3f2fd;
+                padding: 1px 5px;
+                border-radius: 2px;
+                border: 1px solid #bbdefb;
+                display: inline-block;
               }
               
               .terms-section {
@@ -312,22 +434,7 @@ export class FinaltransitpermitComponent implements OnInit {
               
               .terms-header {
                 margin-bottom: 5px;
-                padding-right: 150px;
                 line-height: 1.3;
-              }
-              
-              .date-header-right {
-                position: absolute;
-                top: 0;
-                right: 0;
-                font-weight: bold;
-                font-size: 16px;
-              }
-              
-              .date-header-right span {
-                font-family: 'Courier New', monospace;
-                border-bottom: 1px dotted #333;
-                padding: 0 5px;
               }
               
               .terms-list {
@@ -342,52 +449,29 @@ export class FinaltransitpermitComponent implements OnInit {
               }
               
               .validity-line, .vehicle-line {
+                font-weight: normal;
+                margin-top: 8px;
+              }
+
+              .validity-line strong, .vehicle-line strong {
                 font-weight: bold;
-                margin-top: 12px;
-              }
-              
-              .handwritten {
-                font-family: 'Brush Script MT', 'Cursive', sans-serif;
-                font-size: 1.1em;
-                color: #000080;
-                padding: 0 8px;
-                transform: rotate(-1deg);
-                display: inline-block;
               }
 
-              .vehicle-no-text {
-                font-weight: 800 !important;
-                font-size: 14px !important;
-                color: #000080 !important;
-                letter-spacing: 0.5px !important;
-                text-transform: uppercase !important;
-              }
-
-              .vehicle-number-highlight {
-                font-family: Arial, -apple-system, sans-serif !important;
-                font-size: 14px !important;
-                font-weight: 800 !important;
-                color: #000080 !important;
-                letter-spacing: 1px !important;
-                text-transform: uppercase !important;
-                border-bottom: 1.5px solid #000080 !important;
-                padding: 0 8px !important;
-                display: inline-block !important;
-              }
-              
               .place-line {
                 margin-top: 15px;
-                font-weight: bold;
+                font-weight: normal;
               }
-              
-              .tick-mark {
-                font-size: 20px;
-                color: #000080;
-                position: absolute;
+
+              .place-line strong {
+                font-weight: bold;
               }
               
               .date-bottom {
                 margin-top: 8px;
+                font-weight: normal;
+              }
+
+              .date-bottom strong {
                 font-weight: bold;
               }
               
@@ -406,17 +490,17 @@ export class FinaltransitpermitComponent implements OnInit {
               
               .signature-section {
                 text-align: center;
-                width: 250px;
+                width: 220px;
                 position: relative;
                 right: 20px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
               }
 
-              .signature-image {
-                max-height: 48px !important;
-                width: auto !important;
-                object-fit: contain !important;
-                display: block !important;
-                margin: 0 auto 2px auto !important;
+              .signature-space {
+                height: 52px;
+                width: 100%;
               }
               
               .signature-line {
@@ -432,13 +516,8 @@ export class FinaltransitpermitComponent implements OnInit {
                 font-size: 14px;
               }
               
-              .dept, .gov, .role-label {
+              .dept, .gov {
                 font-size: 12px;
-              }
-              
-              .role-label {
-                margin-top: 4px;
-                font-style: italic;
               }
               
               .footer-small-print {
@@ -499,7 +578,7 @@ export class FinaltransitpermitComponent implements OnInit {
   // Calculate total cases from brands if not available directly
   getTotalCases(): number {
     if (!this.permitData?.brands) return 0;
-    return this.permitData.brands.reduce((total: number, brand: any) => total + (brand.cases || 0), 0);
+    return this.permitData.brands.reduce((total: number, brand: any) => total + Number(brand.cases || 0), 0);
   }
 
   // Calculate total bottles from brands
@@ -511,8 +590,73 @@ export class FinaltransitpermitComponent implements OnInit {
     }, 0);
   }
 
+  // Get duty paid for a brand
+  getBrandDuty(brand: any): number {
+    if (!brand) return 0;
+
+    // 1. Check direct total_amount or variant properties
+    const directAmt = brand.total_amount ?? brand.totalAmount ?? brand.amount ?? brand.duty_paid ?? brand.total_duty;
+    if (directAmt !== undefined && directAmt !== null && !isNaN(Number(directAmt)) && Number(directAmt) > 0) {
+      return Number(directAmt);
+    }
+
+    // 2. Sum of total duty breakdown fields
+    const excise = Number(brand.total_excise_duty ?? brand.totalExciseDuty ?? 0);
+    const cess = Number(brand.total_education_cess ?? brand.totalEducationCess ?? 0);
+    const addl = Number(brand.total_additional_excise ?? brand.totalAdditionalExcise ?? 0);
+    const bottling = Number(brand.total_bottling_fee ?? brand.totalBottlingFee ?? 0);
+    const sumDuties = excise + cess + addl + bottling;
+    if (sumDuties > 0) return sumDuties;
+
+    // 3. Calculation from per-case rates
+    const cases = Number(brand.cases || 0);
+    const perCase = Number(brand.excise_duty_rs_per_case ?? brand.exciseDutyRsPerCase ?? 0) +
+      Number(brand.education_cess_rs_per_case ?? brand.educationCessRsPerCase ?? 0) +
+      Number(brand.additional_excise_duty_rs_per_case ?? brand.additionalExciseDutyRsPerCase ?? 0) +
+      Number(brand.bottling_fee_rs_per_case ?? brand.bottlingFeeRsPerCase ?? 0);
+    if (cases > 0 && perCase > 0) {
+      return cases * perCase;
+    }
+
+    // 4. Fallback if single brand on permit
+    const permitTotal = Number(this.permitData?.total_amount || 0);
+    if (this.permitData?.brands?.length === 1 && permitTotal > 0) {
+      return permitTotal;
+    }
+
+    // 5. Fallback if multiple brands: distribute proportionally by cases
+    const totalCases = this.getTotalCases();
+    if (cases > 0 && totalCases > 0 && permitTotal > 0) {
+      return (cases / totalCases) * permitTotal;
+    }
+
+    return 0;
+  }
+
   // Get total duty paid
   getTotalDuty(): number {
-    return this.permitData?.total_amount || 0;
+    if (this.permitData?.brands && Array.isArray(this.permitData.brands) && this.permitData.brands.length > 0) {
+      const brandSum = this.permitData.brands.reduce((sum: number, b: any) => sum + this.getBrandDuty(b), 0);
+      if (brandSum > 0) return brandSum;
+    }
+    if (this.permitData?.total_amount && Number(this.permitData.total_amount) > 0) {
+      return Number(this.permitData.total_amount);
+    }
+    return 0;
+  }
+
+  // Get wallet transaction ID for brand/permit
+  getBrandTxnId(brand?: any): string {
+    if (brand?.wallet_transactions && brand.wallet_transactions.length > 0) {
+      return brand.wallet_transactions[0]?.transaction_id || '';
+    }
+    if (this.permitData?.wallet_transactions && this.permitData.wallet_transactions.length > 0) {
+      return this.permitData.wallet_transactions[0]?.transaction_id || '';
+    }
+    if (brand?.transaction_id) return brand.transaction_id;
+    if (this.permitData?.transaction_id) return this.permitData.transaction_id;
+    const bill = this.permitData?.bill_no || brand?.bill_no;
+    if (!bill) return '';
+    return bill.startsWith('TRP') ? bill : `TRP-${bill}`;
   }
 }

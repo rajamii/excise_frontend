@@ -63,6 +63,7 @@ export interface GroupedTransitPermit {
   created_at: string;
   updated_at: string;
   allowed_actions?: string[];
+  wallet_transactions?: any[];
 }
 
 @Injectable({
@@ -152,6 +153,10 @@ export class OicTransitPermitService {
 
       const group = grouped.get(billNo)!;
       group.brands.push(permit);
+
+      if (permit.wallet_transactions && Array.isArray(permit.wallet_transactions) && permit.wallet_transactions.length > 0) {
+        group.wallet_transactions = permit.wallet_transactions;
+      }
 
       const amount = parseFloat(permit.total_amount || permit.totalAmount || '0');
       const cases = parseInt(permit.cases || '0', 10);
