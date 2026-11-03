@@ -180,6 +180,11 @@
         </div>
 
         <div id="applicationPrintSection" class="card shadow-sm border-0 printable-content">
+            <!-- Watermark of Sikkim Excise (Repeating Grid across entire document) -->
+            <div class="print-watermark" aria-hidden="true">
+                <span *ngFor="let row of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70]">SIKKIM EXCISE</span>
+            </div>
+
             <div class="application-header text-center fw-bold mb-3 fs-5">
                 <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
                     <img src="assets/icons/fav-icon-black.png" alt="Department Seal" class="dept-seal" />
@@ -2328,10 +2333,15 @@
                 </div>
                 }
             </div>
-                <div class="no-print d-flex justify-content-center mb-4" *ngIf="applicationData">
-        
-    </div>
-    
+
+            <!-- Official Print Footer (Appears at bottom of page inside the 4-sided frame) -->
+            <div class="print-only-footer">
+                <span>Government of Sikkim — Excise Department</span>
+                <span>Sikkim Excise Management System (SEMS)</span>
+            </div>
+
+            <div class="no-print d-flex justify-content-center mb-4" *ngIf="applicationData">
+            </div>
         </div>
 
 
