@@ -215,7 +215,17 @@ export class TransitComponent implements OnInit {
   // Unified action handler
   onUnifiedAction(event: { action: string, item: any }): void {
     const context = this.getUserContext();
-    const action = String(event.action || '').toUpperCase();
+    const action = String(event.action || '').toUpperCase().trim();
+
+    // Navigation actions — child component handles navigation; return early to avoid invoking workflow API
+    if (
+      action === 'VIEW' || action === 'VIEW_DETAILS' ||
+      action === 'VIEW_PAYMENT_SLIP' || action === 'VIEWPAYMENTSLIP' || action === 'PAYMENT_SLIP' ||
+      action === 'VIEW_SLIP' || action === 'VIEWSLIP' ||
+      action === 'VIEW_PERMIT_SLIP' || action === 'PERMIT_SLIP'
+    ) {
+      return;
+    }
 
     this.unifiedActionsService.executeAction(
       action,
@@ -508,26 +518,7 @@ export class TransitComponent implements OnInit {
   }
 
   getTransitIncludeActions(item: TableData): string[] {
-    const actions = ['VIEW'];
-    
-    // Show payment slip after payment is made
-    const hasPayment = this.hasPaymentBeenMade(item);
-    
-    console.log('🔍 getTransitIncludeActions:', {
-      itemId: item.id,
-      refNo: item.referenceNo,
-      status: item.status,
-      statusCode: item.statusCode,
-      hasPayment
-    });
-    
-    // Show "View Payment Slip" after payment is made
-    if (hasPayment) {
-      actions.push('VIEW_PAYMENT_SLIP');
-    }
-    
-    console.log('🔍 Final transit actions array:', actions);
-    return actions;
+    return ['VIEW'];
   }
 
   hasPaymentBeenMade(item: TableData): boolean {

@@ -460,6 +460,20 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   }
 
   goBack(): void {
+    const fromView = String(this.route.snapshot.queryParams['from'] || '').trim();
+    if (fromView === 'supply-chain-view') {
+      const ref = this.referenceNo || this.applicationId;
+      this.router.navigate(['/supply-chain-view'], {
+        queryParams: {
+          id: this.applicationId || undefined,
+          ref: ref || undefined,
+          type: this.moduleType || 'transit',
+          source: this.source || 'licensee'
+        }
+      });
+      return;
+    }
+
     if (this.isCompanyCollaboration) {
       const id = this.referenceNo || this.applicationId;
       if (this.source === 'supply-chain' || this.source === 'licensee') {

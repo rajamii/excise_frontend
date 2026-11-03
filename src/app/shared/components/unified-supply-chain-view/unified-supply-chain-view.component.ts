@@ -4381,6 +4381,37 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
             return isApproved || isFeePaid || stage.includes('approv') || stage.includes('paid');
         }
 
+        if (this.isTransit()) {
+            const status = String(
+                this.applicationData?.['status'] ||
+                this.applicationData?.['current_stage_name'] ||
+                this.applicationData?.['currentStageName'] ||
+                (this.applicationData?.['current_stage'] as any)?.['name'] ||
+                this.applicationData?.['currentStage'] ||
+                ''
+            ).toLowerCase().replace(/\s+/g, '');
+            const statusCode = String(
+                this.applicationData?.['status_code'] ||
+                this.applicationData?.['statusCode'] ||
+                ''
+            ).trim().toUpperCase();
+
+            return (
+                status.includes('forwarded') ||
+                status.includes('approved') ||
+                status.includes('paymentsuccessful') ||
+                status.includes('pending') ||
+                status.includes('paid') ||
+                status.includes('cancel') ||
+                status.includes('reject') ||
+                status.includes('refund') ||
+                statusCode === 'TRP_02' ||
+                statusCode === 'TRP_03' ||
+                statusCode === 'TRP_04' ||
+                Boolean(this.applicationData?.['billNo'] || this.applicationData?.['bill_no'])
+            );
+        }
+
         if (!this.isRequisition()) {
             return false;
         }
@@ -4466,6 +4497,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         const isSb = this.isSalesmanBarmanRegistration();
         const isComp = this.isCompanyRegistration();
         const isCollab = this.isCompanyCollaboration();
+        const isTransit = this.isTransit();
         const id = String(
             this.applicationData?.['application_id'] ??
             this.applicationData?.['applicationId'] ??
@@ -4475,6 +4507,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
             ''
         ).trim();
         const ref = String(
+            this.applicationData?.['billNo'] ??
+            this.applicationData?.['bill_no'] ??
             this.applicationData?.['referenceNo'] ??
             this.applicationData?.['reference_no'] ??
             this.applicationData?.['application_id'] ??
@@ -4490,14 +4524,18 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
             slipType = 'company-registration';
         } else if (isSb) {
             slipType = 'salesman-barman';
+        } else if (isTransit) {
+            slipType = 'transit';
         }
         const queryParams: any = {
             id: id || undefined,
             type: slipType,
+            billNo: isTransit ? (ref || undefined) : undefined,
             refNo: ref || undefined,
             ref: ref || undefined,
             referenceNo: ref || undefined,
-            source: source || undefined
+            source: source || undefined,
+            from: 'supply-chain-view'
         };
         this.router.navigate(['/payment-slip-view'], { queryParams });
     }
