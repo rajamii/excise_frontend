@@ -674,6 +674,192 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  checkPendingStatus(row: NewLicenseItem): void {
+    if (!row?.applicationId) return;
+    const applicationId = String(row.applicationId || '').trim();
+    if (!applicationId) return;
+
+    if (this.canForceSubmit) {
+      // Localhost dev testing dialog with simulation buttons
+      const modalHtml = `
+        <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; text-align:left;">
+          <!-- Header -->
+          <div style="display:flex; align-items:center; gap:14px; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid #e2e8f0;">
+            <div style="width:50px; height:50px; border-radius:12px; background:linear-gradient(135deg, #d97706, #f59e0b, #fbbf24); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(217, 119, 6, 0.25); flex-shrink:0;">
+              <span style="font-size:24px; color:#ffffff;">&#9203;</span>
+            </div>
+            <div style="flex-grow:1;">
+              <div style="font-size:18px; font-weight:700; color:#0f172a; line-height:1.2;">
+                Query BillDesk Payment Status
+              </div>
+              <div style="display:flex; align-items:center; gap:8px; margin-top:5px; flex-wrap:wrap;">
+                <span style="font-size:12px; font-weight:600; color:#b45309; background:#fef3c7; padding:2px 8px; border-radius:4px;">
+                  ${this.escapeHtml(applicationId)}
+                </span>
+                <span style="font-size:12px; color:#475569; font-weight:500;">Application Fee: &#8377;500.00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Explanation Notice -->
+          <div style="background:#fffbeb; border:1px solid #fde68a; border-left:4px solid #f59e0b; border-radius:8px; padding:12px 14px; margin-bottom:14px;">
+            <div style="font-size:13px; color:#92400e; line-height:1.45;">
+              <div style="font-weight:700; margin-bottom:3px;">Payment Status Reconciliation</div>
+              If money was debited from your account, clicking retry queries BillDesk to confirm payment without paying again.
+              If the gateway reports success, the application advances to District User. If failed, you can retry payment cleanly.
+            </div>
+          </div>
+
+          <!-- Dev Testing Tools (Localhost Only) -->
+          <div style="border:1.5px dashed #f59e0b; border-radius:10px; padding:14px; background:#fafaf9; margin-bottom:6px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+              <div style="font-size:12px; font-weight:700; color:#b45309; display:flex; align-items:center; gap:6px;">
+                <span>&#9881;</span>
+                <span>Developer Testing Tools (Localhost Simulation)</span>
+              </div>
+              <span style="font-size:10px; color:#92400e; background:#fef3c7; padding:2px 6px; border-radius:4px; font-weight:700;">DEV ONLY</span>
+            </div>
+            <p style="font-size:12px; color:#44403c; margin:0 0 10px 0; line-height:1.4;">
+              Simulate BillDesk's gateway query response to verify how the application updates:
+            </p>
+            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
+              <button id="dev-sim-retry-success-btn" type="button"
+                style="padding:9px 8px; font-size:12px; font-weight:700; color:#ffffff; background:#16a34a; border:none; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px;"
+                onmouseover="this.style.background='#15803d'" onmouseout="this.style.background='#16a34a'">
+                <span>&#10003;</span> Sim: Success (S)
+              </button>
+              <button id="dev-sim-retry-failed-btn" type="button"
+                style="padding:9px 8px; font-size:12px; font-weight:700; color:#ffffff; background:#dc2626; border:none; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px;"
+                onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'">
+                <span>&#10007;</span> Sim: Failed (F)
+              </button>
+              <button id="dev-sim-retry-pending-btn" type="button"
+                style="padding:9px 8px; font-size:12px; font-weight:700; color:#78350f; background:#fde68a; border:1px solid #f59e0b; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px;"
+                onmouseover="this.style.background='#fcd34d'" onmouseout="this.style.background='#fde68a'">
+                <span>&#9203;</span> Sim: Still Pending (P)
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      void Swal.fire({
+        title: '',
+        html: modalHtml,
+        showCancelButton: true,
+        confirmButtonText: '&#128269; &nbsp;Query Live BillDesk Gateway',
+        cancelButtonText: 'Close',
+        confirmButtonColor: '#1d4ed8',
+        cancelButtonColor: '#64748b',
+        width: '620px',
+        allowOutsideClick: false,
+        didOpen: (modalEl) => {
+          const btnSuccess = modalEl.querySelector('#dev-sim-retry-success-btn');
+          if (btnSuccess) {
+            btnSuccess.addEventListener('click', () => {
+              Swal.close();
+              this.executeCheckPaymentStatus(applicationId, 'S');
+            });
+          }
+          const btnFailed = modalEl.querySelector('#dev-sim-retry-failed-btn');
+          if (btnFailed) {
+            btnFailed.addEventListener('click', () => {
+              Swal.close();
+              this.executeCheckPaymentStatus(applicationId, 'F');
+            });
+          }
+          const btnPending = modalEl.querySelector('#dev-sim-retry-pending-btn');
+          if (btnPending) {
+            btnPending.addEventListener('click', () => {
+              Swal.close();
+              this.executeCheckPaymentStatus(applicationId, 'P');
+            });
+          }
+        }
+      }).then((res) => {
+        if (!res.isConfirmed) return;
+        this.executeCheckPaymentStatus(applicationId);
+      });
+    } else {
+      // Production live check
+      this.executeCheckPaymentStatus(applicationId);
+    }
+  }
+
+  executeCheckPaymentStatus(applicationId: string, simulatedStatus?: 'S' | 'F' | 'P'): void {
+    Swal.fire({
+      title: 'Checking BillDesk Status...',
+      text: 'Querying BillDesk transaction inquiry API to reconcile payment status for ' + applicationId + '...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    this.licenseApplicationService.checkNewLicensePaymentStatus(applicationId, simulatedStatus).subscribe({
+      next: (res: any) => {
+        this.loadData();
+        const st = String(res?.status || res?.payment_status || res?.paymentStatus || '').toUpperCase();
+        if (st === 'S') {
+          Swal.fire({
+            icon: 'success',
+            title: 'Payment Confirmed by BillDesk!',
+            html:
+              `<div style="font-family:'Segoe UI',sans-serif; text-align:center;">` +
+              `<p style="font-size:15px; color:#166534; font-weight:600; margin-bottom:8px;">` +
+              `Application Fee of &#8377;500.00 Verified Successfully!` +
+              `</p>` +
+              `<p style="font-size:13px; color:#475569;">` +
+              `BillDesk confirmed the transaction. Application <b>${this.escapeHtml(applicationId)}</b> ` +
+              `has been submitted and moved to <b>District User</b> for initial review.` +
+              `</p>` +
+              `</div>`,
+            confirmButtonText: 'Done',
+            confirmButtonColor: '#16a34a'
+          });
+        } else if (st === 'F') {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Payment Failed',
+            html:
+              `<div style="font-family:'Segoe UI',sans-serif; text-align:center;">` +
+              `<p style="font-size:15px; color:#991b1b; font-weight:600; margin-bottom:8px;">` +
+              `BillDesk Confirmed Transaction Failed` +
+              `</p>` +
+              `<p style="font-size:13px; color:#475569;">` +
+              `The transaction was declined or not completed for <b>${this.escapeHtml(applicationId)}</b>.<br/>` +
+              `Status has been updated to <b>Application Not Submitted (Payment Failed)</b>.<br/>` +
+              `You can now click the <b>Pay Now</b> button in the Action column to retry making the payment.` +
+              `</p>` +
+              `</div>`,
+            confirmButtonText: 'Understood',
+            confirmButtonColor: '#dc2626'
+          });
+        } else {
+          Swal.fire({
+            icon: 'info',
+            title: 'Payment Still Pending',
+            html:
+              `<div style="font-family:'Segoe UI',sans-serif; text-align:center;">` +
+              `<p style="font-size:15px; color:#9a3412; font-weight:600; margin-bottom:8px;">` +
+              `Awaiting Bank Clearance` +
+              `</p>` +
+              `<p style="font-size:13px; color:#475569;">` +
+              `BillDesk reports that this transaction is still clearing or awaiting settlement.<br/>` +
+              `If money was debited from your bank account, please wait up to 15-30 minutes and click <b>Retry (Check Status)</b> again.` +
+              `</p>` +
+              `</div>`,
+            confirmButtonText: 'Understood',
+            confirmButtonColor: '#d97706'
+          });
+        }
+      },
+      error: (err: any) => {
+        this.loadData();
+        const msg = err?.error?.detail || err?.message || 'Failed to check transaction status with BillDesk.';
+        Swal.fire('Check Status Error', msg, 'error');
+      }
+    });
+  }
+
   getStageBadgeClass(row: NewLicenseItem): string {
     if (this.isRowTerminated(row)) return 'rejected';
     if (row.isPaymentFailed) return 'payment-failed';

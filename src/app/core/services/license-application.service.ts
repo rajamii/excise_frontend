@@ -786,6 +786,20 @@ export class LicenseApplicationService {
     );
   }
 
+  checkNewLicensePaymentStatus(applicationId: string, simulatedStatus?: 'S' | 'F' | 'P', errorDesc?: string): Observable<any> {
+    const encodedId = encodeURIComponent(String(applicationId || '').trim());
+    const payload: any = {};
+    if (simulatedStatus) {
+      payload.simulated_status = simulatedStatus;
+    }
+    if (errorDesc) {
+      payload.error_desc = errorDesc;
+    }
+    return this.http.post(`${this.newLicenseUrl}/check-payment-status/${encodedId}/`, payload).pipe(
+      tap(() => this.invalidateNewLicenseDashboardCache())
+    );
+  }
+
   private formatDate(value: any): string {
     if (value instanceof Date) {
       const year = value.getFullYear();
