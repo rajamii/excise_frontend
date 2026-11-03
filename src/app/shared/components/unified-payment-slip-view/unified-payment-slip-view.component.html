@@ -372,6 +372,28 @@
             <span class="info-label">Bottling Fee</span>
             <span class="info-value amount">₹{{ transitSummary.bottlingFee | number:'1.2-2' }}</span>
           </div>
+          <div class="info-item full-width" *ngIf="moduleType === 'transit' || transitRows.length > 0">
+            <span class="info-label">Transaction ID(s)</span>
+            <div class="info-value d-flex flex-wrap align-items-center gap-1 justify-content-end" style="max-width: 75%;">
+              <ng-container *ngIf="allTransactionIds.length > 0; else noTxnTransit">
+                <span *ngFor="let txnId of displayedTransactionIds" class="badge bg-light text-primary border font-monospace" style="font-size: 11px; padding: 4px 6px; font-weight: 600;">
+                  {{ txnId }}
+                </span>
+                <button
+                  *ngIf="allTransactionIds.length > 3"
+                  type="button"
+                  class="btn btn-sm btn-outline-primary py-0 px-2 ms-1 no-print"
+                  style="font-size: 10.5px; border-radius: 12px;"
+                  (click)="showAllTransactionIds = !showAllTransactionIds"
+                >
+                  {{ showAllTransactionIds ? 'Show Less' : '+ ' + (allTransactionIds.length - 3) + ' More' }}
+                </button>
+              </ng-container>
+              <ng-template #noTxnTransit>
+                <span class="font-monospace text-muted">-</span>
+              </ng-template>
+            </div>
+          </div>
         </div>
       </section>
     </div>
@@ -815,6 +837,90 @@
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Transit Wallet Fee Deduction Breakdown Table -->
+    <div *ngIf="!isLoading && transitRows.length && (transitWalletTransactions.length || allTransactionIds.length)" class="details-section">
+      <h2 class="section-title">Wallet Fee Deduction Breakdown</h2>
+      <div class="table-container">
+        <table class="modern-table" *ngIf="transitWalletTransactions.length; else transitStaticFeeBreakdown">
+          <thead>
+            <tr>
+              <th>Sl. No.</th>
+              <th>Transaction ID</th>
+              <th>Fee Head / Description</th>
+              <th>Head of Account</th>
+              <th>Payment Mode</th>
+              <th style="text-align: right;">Amount Paid (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let tx of transitWalletTransactions; let i = index">
+              <td>{{ i + 1 }}</td>
+              <td><span class="font-monospace fw-bold text-primary">{{ tx.transaction_id }}</span></td>
+              <td>{{ tx.remarks || (tx.wallet_type | uppercase) }}</td>
+              <td><span class="font-monospace text-muted">{{ tx.head_of_account || '-' }}</span></td>
+              <td><span class="badge bg-success text-white">WALLET DEBIT</span></td>
+              <td style="text-align: right; font-weight: 700; color: #059669;">₹{{ (tx.amount || 0) | number:'1.2-2' }}</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr style="background: #f8fafc; font-weight: 800;">
+              <td colspan="5" style="text-align: right;">Total Amount Paid:</td>
+              <td style="text-align: right; color: #059669; font-size: 14px;">₹{{ transitSummary.total | number:'1.2-2' }}</td>
+            </tr>
+          </tfoot>
+        </table>
+        <ng-template #transitStaticFeeBreakdown>
+          <table class="modern-table">
+            <thead>
+              <tr>
+                <th>Sl. No.</th>
+                <th>Transaction ID</th>
+                <th>Fee Head / Description</th>
+                <th>Payment Mode</th>
+                <th style="text-align: right;">Amount Paid (₹)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngIf="transitSummary.excise > 0">
+                <td>1</td>
+                <td><span class="font-monospace fw-bold text-primary">TRP-{{ referenceNo }}-EXCISE_DUTY</span></td>
+                <td>Excise Duty</td>
+                <td><span class="badge bg-success text-white">WALLET DEBIT</span></td>
+                <td style="text-align: right; font-weight: 700; color: #059669;">₹{{ transitSummary.excise | number:'1.2-2' }}</td>
+              </tr>
+              <tr *ngIf="transitSummary.addl > 0">
+                <td>2</td>
+                <td><span class="font-monospace fw-bold text-primary">TRP-{{ referenceNo }}-ADDITIONAL_EXCISE</span></td>
+                <td>Additional Excise Duty</td>
+                <td><span class="badge bg-success text-white">WALLET DEBIT</span></td>
+                <td style="text-align: right; font-weight: 700; color: #059669;">₹{{ transitSummary.addl | number:'1.2-2' }}</td>
+              </tr>
+              <tr *ngIf="transitSummary.bottlingFee > 0">
+                <td>3</td>
+                <td><span class="font-monospace fw-bold text-primary">TRP-{{ referenceNo }}-BOTTLING_FEE</span></td>
+                <td>Bottling Fee</td>
+                <td><span class="badge bg-success text-white">WALLET DEBIT</span></td>
+                <td style="text-align: right; font-weight: 700; color: #059669;">₹{{ transitSummary.bottlingFee | number:'1.2-2' }}</td>
+              </tr>
+              <tr *ngIf="transitSummary.cess > 0">
+                <td>4</td>
+                <td><span class="font-monospace fw-bold text-primary">TRP-{{ referenceNo }}-EDUCATION</span></td>
+                <td>Education Cess</td>
+                <td><span class="badge bg-success text-white">WALLET DEBIT</span></td>
+                <td style="text-align: right; font-weight: 700; color: #059669;">₹{{ transitSummary.cess | number:'1.2-2' }}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr style="background: #f8fafc; font-weight: 800;">
+                <td colspan="4" style="text-align: right;">Total Amount Paid:</td>
+                <td style="text-align: right; color: #059669; font-size: 14px;">₹{{ transitSummary.total | number:'1.2-2' }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </ng-template>
       </div>
     </div>
 

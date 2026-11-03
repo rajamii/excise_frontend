@@ -93,7 +93,7 @@
                                 <div class="duty-val">₹{{ getBrandDuty(brand) | number:'1.2-2' }}</div>
                                 <div class="wallet-badge-wrap">
                                     <span class="wallet-tag">Wallet Debited</span>
-                                    <div class="wallet-ref-id" *ngIf="getBrandTxnId(brand)">{{ getBrandTxnId(brand) }}</div>
+                                    <div class="wallet-ref-id" *ngIf="getBrandTxnId(brand)" [title]="getBrandAllTxnIds(brand).join(', ')">{{ getBrandTxnId(brand) }}</div>
                                 </div>
                             </td>
                         </tr>
@@ -229,7 +229,7 @@
                                 <div class="duty-val">₹{{ getBrandDuty(brand) | number:'1.2-2' }}</div>
                                 <div class="wallet-badge-wrap">
                                     <span class="wallet-tag">Wallet Debited</span>
-                                    <div class="wallet-ref-id" *ngIf="getBrandTxnId(brand)">{{ getBrandTxnId(brand) }}</div>
+                                    <div class="wallet-ref-id" *ngIf="getBrandTxnId(brand)" [title]="getBrandAllTxnIds(brand).join(', ')">{{ getBrandTxnId(brand) }}</div>
                                 </div>
                             </td>
                         </tr>
@@ -365,7 +365,7 @@
                                 <div class="duty-val">₹{{ getBrandDuty(brand) | number:'1.2-2' }}</div>
                                 <div class="wallet-badge-wrap">
                                     <span class="wallet-tag">Wallet Debited</span>
-                                    <div class="wallet-ref-id" *ngIf="getBrandTxnId(brand)">{{ getBrandTxnId(brand) }}</div>
+                                    <div class="wallet-ref-id" *ngIf="getBrandTxnId(brand)" [title]="getBrandAllTxnIds(brand).join(', ')">{{ getBrandTxnId(brand) }}</div>
                                 </div>
                             </td>
                         </tr>
@@ -501,7 +501,7 @@
                                 <div class="duty-val">₹{{ getBrandDuty(brand) | number:'1.2-2' }}</div>
                                 <div class="wallet-badge-wrap">
                                     <span class="wallet-tag">Wallet Debited</span>
-                                    <div class="wallet-ref-id" *ngIf="getBrandTxnId(brand)">{{ getBrandTxnId(brand) }}</div>
+                                    <div class="wallet-ref-id" *ngIf="getBrandTxnId(brand)" [title]="getBrandAllTxnIds(brand).join(', ')">{{ getBrandTxnId(brand) }}</div>
                                 </div>
                             </td>
                         </tr>

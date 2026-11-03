@@ -71,6 +71,17 @@ export class FinaltransitpermitComponent implements OnInit {
 
             const calculatedTotal = brands.reduce((sum, b) => sum + (b.total_amount || 0), 0);
 
+            // Collect all wallet transactions across permit rows
+            const allTxns: any[] = [];
+            brands.forEach(b => {
+              if (Array.isArray(b.wallet_transactions) && b.wallet_transactions.length > 0) {
+                allTxns.push(...b.wallet_transactions);
+              }
+            });
+            const uniqueTxns = allTxns.length > 0
+              ? Array.from(new Map(allTxns.map(t => [t.transaction_id, t])).values())
+              : (this.permitData?.wallet_transactions || []);
+
             if (this.permitData) {
               this.permitData = {
                 ...this.permitData,
@@ -81,9 +92,7 @@ export class FinaltransitpermitComponent implements OnInit {
                 vehicle_number: this.permitData.vehicle_number || first.vehicle_number || '',
                 total_amount: calculatedTotal > 0 ? calculatedTotal : (Number(this.permitData.total_amount) || 0),
                 brands: brands,
-                wallet_transactions: (first.wallet_transactions && first.wallet_transactions.length > 0)
-                  ? first.wallet_transactions
-                  : (this.permitData.wallet_transactions || [])
+                wallet_transactions: uniqueTxns
               };
             } else {
               this.permitData = {
@@ -94,9 +103,27 @@ export class FinaltransitpermitComponent implements OnInit {
                 vehicle_number: first.vehicle_number || '',
                 total_amount: calculatedTotal,
                 brands: brands,
-                wallet_transactions: first.wallet_transactions || []
+                wallet_transactions: uniqueTxns
               };
             }
+
+            // Also directly fetch wallet transactions for this bill to guarantee real IDs are present
+            this.supplyChainService.getTransitWalletTransactions(ref).subscribe({
+              next: (txns) => {
+                if (txns && txns.length > 0) {
+                  this.permitData.wallet_transactions = txns;
+                  if (this.permitData.brands) {
+                    this.permitData.brands.forEach((b: any) => {
+                      b.wallet_transactions = txns;
+                    });
+                  }
+                  try {
+                    localStorage.setItem('finalTransitPermitData', JSON.stringify(this.permitData));
+                  } catch (e) { }
+                }
+              }
+            });
+
             try {
               localStorage.setItem('finalTransitPermitData', JSON.stringify(this.permitData));
             } catch (e) {
@@ -645,18 +672,66 @@ export class FinaltransitpermitComponent implements OnInit {
     return 0;
   }
 
-  // Get wallet transaction ID for brand/permit
+  // Get wallet transaction ID for brand/permit (displays the transaction_id, NOT reference number)
   getBrandTxnId(brand?: any): string {
-    if (brand?.wallet_transactions && brand.wallet_transactions.length > 0) {
-      return brand.wallet_transactions[0]?.transaction_id || '';
+    const bill = String(this.permitData?.bill_no || brand?.bill_no || '').trim();
+
+    // 1. From brand's wallet_transactions
+    const brandTxns = Array.isArray(brand?.wallet_transactions) ? brand.wallet_transactions : [];
+    if (brandTxns.length > 0) {
+      const match = brandTxns.find((t: any) => String(t.wallet_type || t.transaction_id || '').toLowerCase().includes('excise_duty')) || brandTxns[0];
+      const txnId = String(match?.transaction_id || match?.transactionId || '').trim();
+      if (txnId && txnId !== bill) return txnId;
     }
-    if (this.permitData?.wallet_transactions && this.permitData.wallet_transactions.length > 0) {
-      return this.permitData.wallet_transactions[0]?.transaction_id || '';
+
+    // 2. From permitData wallet_transactions
+    const permitTxns = Array.isArray(this.permitData?.wallet_transactions) ? this.permitData.wallet_transactions : [];
+    if (permitTxns.length > 0) {
+      const match = permitTxns.find((t: any) => String(t.wallet_type || t.transaction_id || '').toLowerCase().includes('excise_duty')) || permitTxns[0];
+      const txnId = String(match?.transaction_id || match?.transactionId || '').trim();
+      if (txnId && txnId !== bill) return txnId;
     }
-    if (brand?.transaction_id) return brand.transaction_id;
-    if (this.permitData?.transaction_id) return this.permitData.transaction_id;
-    const bill = this.permitData?.bill_no || brand?.bill_no;
-    if (!bill) return '';
-    return bill.startsWith('TRP') ? bill : `TRP-${bill}`;
+
+    // 3. Explicit transaction_id (if not equal to bill_no)
+    const bTxn = String(brand?.transaction_id || brand?.transactionId || '').trim();
+    if (bTxn && bTxn !== bill) return bTxn;
+
+    const pTxn = String(this.permitData?.transaction_id || this.permitData?.transactionId || '').trim();
+    if (pTxn && pTxn !== bill) return pTxn;
+
+    // 4. Fallback: Format the actual backend database transaction_id (f"TRP-{bill_no}-EXCISE_DUTY")
+    // Never show just the raw bill reference number!
+    if (bill) {
+      return `TRP-${bill}-EXCISE_DUTY`;
+    }
+
+    return '';
+  }
+
+  // Get all transaction IDs for this permit/brand
+  getBrandAllTxnIds(brand?: any): string[] {
+    const bill = String(this.permitData?.bill_no || brand?.bill_no || '').trim();
+    const set = new Set<string>();
+
+    const txns = Array.isArray(brand?.wallet_transactions) && brand.wallet_transactions.length > 0
+      ? brand.wallet_transactions
+      : (Array.isArray(this.permitData?.wallet_transactions) ? this.permitData.wallet_transactions : []);
+
+    txns.forEach((t: any) => {
+      const id = String(t?.transaction_id || t?.transactionId || '').trim();
+      if (id && id !== bill) set.add(id);
+    });
+
+    if (set.size > 0) return Array.from(set);
+
+    if (bill) {
+      return [
+        `TRP-${bill}-EXCISE_DUTY`,
+        `TRP-${bill}-ADDITIONAL_EXCISE`,
+        `TRP-${bill}-BOTTLING_FEE`,
+        `TRP-${bill}-EDUCATION`
+      ];
+    }
+    return [];
   }
 }

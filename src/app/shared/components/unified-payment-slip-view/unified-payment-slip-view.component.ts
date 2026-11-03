@@ -29,6 +29,8 @@ interface TransitPermitRow {
   total_bottling_fee?: number;
   bottling_fee_rs_per_case?: number;
   total_amount: number;
+  transaction_id?: string;
+  wallet_transactions?: any[];
 }
 
 interface TpCancellationRow {
@@ -226,14 +228,49 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
 
   showAllTransactionIds = false;
   showAllWalletTxns = false;
+  transitWalletTransactions: any[] = [];
 
   get allTransactionIds(): string[] {
-    if (this.requisitionRow?.transaction_ids && Array.isArray(this.requisitionRow.transaction_ids) && this.requisitionRow.transaction_ids.length > 0) {
-      return this.requisitionRow.transaction_ids.map(id => String(id).trim()).filter(Boolean);
+    if (this.moduleType === 'requisition') {
+      if (this.requisitionRow?.transaction_ids && Array.isArray(this.requisitionRow.transaction_ids) && this.requisitionRow.transaction_ids.length > 0) {
+        return this.requisitionRow.transaction_ids.map(id => String(id).trim()).filter(Boolean);
+      }
+      const raw = String(this.requisitionRow?.transaction_id || '').trim();
+      if (!raw || raw === '-') return [];
+      return raw.split(',').map(id => id.trim()).filter(Boolean);
     }
-    const raw = String(this.requisitionRow?.transaction_id || '').trim();
-    if (!raw || raw === '-') return [];
-    return raw.split(',').map(id => id.trim()).filter(Boolean);
+
+    if (this.moduleType === 'transit' || this.transitRows.length > 0) {
+      const ids = new Set<string>();
+      (this.transitWalletTransactions || []).forEach((tx: any) => {
+        const id = String(tx?.transaction_id || tx?.transactionId || '').trim();
+        if (id) ids.add(id);
+      });
+      this.transitRows.forEach((r: any) => {
+        (r?.wallet_transactions || []).forEach((tx: any) => {
+          const id = String(tx?.transaction_id || tx?.transactionId || '').trim();
+          if (id) ids.add(id);
+        });
+        if (r?.transaction_id && r.transaction_id !== r.bill_no) {
+          ids.add(String(r.transaction_id).trim());
+        }
+      });
+      if (ids.size > 0) {
+        return Array.from(ids);
+      }
+      const ref = String(this.referenceNo || this.transitRows[0]?.bill_no || '').trim();
+      if (ref) {
+        return [
+          `TRP-${ref}-EXCISE_DUTY`,
+          `TRP-${ref}-ADDITIONAL_EXCISE`,
+          `TRP-${ref}-BOTTLING_FEE`,
+          `TRP-${ref}-EDUCATION`
+        ];
+      }
+      return [];
+    }
+
+    return [];
   }
 
   get displayedTransactionIds(): string[] {
@@ -245,7 +282,9 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
   }
 
   get displayedWalletTransactions(): any[] {
-    const list = this.requisitionRow?.wallet_transactions || [];
+    const list = this.moduleType === 'requisition'
+      ? (this.requisitionRow?.wallet_transactions || [])
+      : (this.transitWalletTransactions || []);
     if (this.showAllWalletTxns || list.length <= 4) {
       return list;
     }
@@ -378,7 +417,37 @@ export class UnifiedPaymentSlipViewComponent implements OnInit {
           total_bottling_fee: Number(row.total_bottling_fee || row.totalBottlingFee || 0),
           bottling_fee_rs_per_case: Number(row.bottling_fee_rs_per_case || row.bottlingFeeRsPerCase || row.bottling_fee || row.bottlingFee || 0),
           total_amount: Number(row.total_amount || row.totalAmount || 0),
+          wallet_transactions: Array.isArray(row.wallet_transactions) ? row.wallet_transactions : []
         }));
+
+        // Collect wallet transactions from transitRows
+        const txnsFromTransit: any[] = [];
+        transitRows.forEach((r: any) => {
+          if (Array.isArray(r.wallet_transactions) && r.wallet_transactions.length > 0) {
+            txnsFromTransit.push(...r.wallet_transactions);
+          }
+        });
+        if (txnsFromTransit.length > 0) {
+          this.transitWalletTransactions = Array.from(
+            new Map(txnsFromTransit.map((t: any) => [t.transaction_id, t])).values()
+          );
+        }
+
+        // Fetch wallet transactions for transit reference to guarantee presence
+        if (this.referenceNo) {
+          this.supplyChainService.getTransitWalletTransactions(this.referenceNo).subscribe({
+            next: (txns) => {
+              if (txns && txns.length > 0) {
+                this.transitWalletTransactions = txns;
+                this.transitRows.forEach(r => {
+                  if (!r.wallet_transactions || r.wallet_transactions.length === 0) {
+                    r.wallet_transactions = txns;
+                  }
+                });
+              }
+            }
+          });
+        }
 
         const cancellationList = Array.isArray(cancellations?.results) ? cancellations.results : [];
         const fallbackTransitAmounts = this.transitRows.map((row) => Number(row.total_amount || 0));

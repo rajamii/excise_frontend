@@ -665,5 +665,25 @@ export class SupplyChainService {
       }) 
     ); 
   } 
+
+  getTransitWalletTransactions(billNo: string): Observable<any[]> {
+    const rawBill = String(billNo || '').trim();
+    if (!rawBill) return of([]);
+    const url = `${environment.apiBaseUrl}/transactional/supply_chain/transit-permits/`;
+    const params = new HttpParams().set('bill_no', rawBill);
+    return this.http.get<any[]>(url, { params }).pipe(
+      map((response: any) => {
+        const list = Array.isArray(response) ? response : (response?.results || []);
+        const txns: any[] = [];
+        list.forEach((p: any) => {
+          if (Array.isArray(p.wallet_transactions)) {
+            txns.push(...p.wallet_transactions);
+          }
+        });
+        return Array.from(new Map(txns.map(t => [t.transaction_id, t])).values());
+      }),
+      catchError(() => of([]))
+    );
+  }
 } 
 
