@@ -488,7 +488,8 @@
 
             .card {
                 box-shadow: none;
-                border: 1px solid #000;
+                border: 1.5px solid #000 !important;
+                border-radius: 0 !important;
 
                 .application-header {
                     background: white;
@@ -505,17 +506,40 @@
 
                 .application-content {
                     .info-card {
-                        background: #f0f0f0;
-                        border-left: 3px solid #000;
+                        background: #f8fafc;
+                        border: 1px solid #000;
+                        border-radius: 0;
                     }
 
                     .section-card {
-                        border: 1px solid #000;
+                        border: none;
                         box-shadow: none;
+                        padding: 0;
 
                         .section-title {
                             color: #000;
-                            border-bottom: 1px solid #000;
+                            border-bottom: none;
+                        }
+                    }
+
+                    table, .table {
+                        border: 1px solid #000 !important;
+                        border-collapse: collapse !important;
+
+                        th, thead th {
+                            background-color: #f1f5f9 !important;
+                            color: #000 !important;
+                            border: 1px solid #000 !important;
+                        }
+
+                        td, tbody td {
+                            border: 1px solid #000 !important;
+                            color: #000 !important;
+                        }
+
+                        .detail-label-cell, td.bg-light, td.fw-semibold {
+                            background-color: #f8fafc !important;
+                            border: 1px solid #000 !important;
                         }
                     }
 
