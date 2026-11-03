@@ -55,7 +55,7 @@
                     </div>
                     <div class="info-item">
                         <label>Vehicle No:</label>
-                        <span>{{ permitData.vehicle_number }}</span>
+                        <span class="vehicle-no-text">{{ permitData.vehicle_number }}</span>
                     </div>
                     <div class="info-item">
                         <label>Issue Date:</label>
@@ -71,7 +71,6 @@
                         <tr>
                             <th>Sl. No.</th>
                             <th>Brand Name</th>
-                            <th>Batch No.</th>
                             <th>Size (ml)</th>
                             <th>Strength</th>
                             <th>Quantity (Cases)</th>
@@ -82,7 +81,6 @@
                         <tr *ngFor="let brand of permitData.brands; let i = index">
                             <td class="text-center">{{ i + 1 }}</td>
                             <td>{{ brand.brand }}</td>
-                            <td class="text-center">{{ brand.batch_no || 'BATCH-' + ((i+1)*123) }}</td>
                             <td class="text-center">{{ brand.size_ml || brand.sizeMl }}</td>
                             <td class="text-center">{{ brand.strength || '42.8%' }}</td>
                             <td class="text-center">{{ brand.cases }}</td>
@@ -91,16 +89,12 @@
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="5" class="text-right">Total:</td>
+                            <td colspan="4" class="text-right">Total:</td>
                             <td class="text-center">{{ getTotalCases() }}</td>
-                            <td class="text-center">-</td>
+                            <td class="text-center">{{ getTotalBottles() }}</td>
                         </tr>
                     </tfoot>
                 </table>
-            </div>
-
-            <div class="amount-words">
-                Total Duty Paid: ₹{{ getTotalDuty() | number:'1.2-2' }}
             </div>
 
             <div class="terms-section">
@@ -114,7 +108,7 @@
                     <li>The licensee shall pay such cost of the excise or other cost, in any, as excise officer my decide.
                     </li>
                     <li class="validity-line">This pass is valid upto <span class="handwritten">ONE DAY ONLY</span></li>
-                    <li class="vehicle-line">Vehicle No: <span class="handwritten">{{ permitData.vehicle_number }}</span>
+                    <li class="vehicle-line">Vehicle No: <span class="vehicle-number-highlight">{{ permitData.vehicle_number }}</span>
                     </li>
                 </ol>
 
@@ -133,6 +127,7 @@
                 </div>
 
                 <div class="signature-section">
+                    <img src="assets/EC_Sign_1.png" alt="Assistant Commissioner Signature" class="signature-image" style="max-height: 48px; max-width: 140px; height: 48px; width: auto; object-fit: contain; display: block; margin: 0 auto 2px auto;" />
                     <div class="signature-line"></div>
                     <div class="designation">Assistant Commissioner</div>
                     <div class="dept">Excise Department</div>
@@ -182,7 +177,7 @@
                     </div>
                     <div class="info-item">
                         <label>Vehicle No:</label>
-                        <span>{{ permitData.vehicle_number }}</span>
+                        <span class="vehicle-no-text">{{ permitData.vehicle_number }}</span>
                     </div>
                     <div class="info-item">
                         <label>Issue Date:</label>
@@ -198,7 +193,6 @@
                         <tr>
                             <th>Sl. No.</th>
                             <th>Brand Name</th>
-                            <th>Batch No.</th>
                             <th>Size (ml)</th>
                             <th>Strength</th>
                             <th>Quantity (Cases)</th>
@@ -209,7 +203,6 @@
                         <tr *ngFor="let brand of permitData.brands; let i = index">
                             <td class="text-center">{{ i + 1 }}</td>
                             <td>{{ brand.brand }}</td>
-                            <td class="text-center">{{ brand.batch_no || 'BATCH-' + ((i+1)*123) }}</td>
                             <td class="text-center">{{ brand.size_ml || brand.sizeMl }}</td>
                             <td class="text-center">{{ brand.strength || '42.8%' }}</td>
                             <td class="text-center">{{ brand.cases }}</td>
@@ -218,16 +211,12 @@
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="5" class="text-right">Total:</td>
+                            <td colspan="4" class="text-right">Total:</td>
                             <td class="text-center">{{ getTotalCases() }}</td>
-                            <td class="text-center">-</td>
+                            <td class="text-center">{{ getTotalBottles() }}</td>
                         </tr>
                     </tfoot>
                 </table>
-            </div>
-
-            <div class="amount-words">
-                Total Duty Paid: ₹{{ getTotalDuty() | number:'1.2-2' }}
             </div>
 
             <div class="terms-section">
@@ -241,7 +230,7 @@
                     <li>The licensee shall pay such cost of the excise or other cost, in any, as excise officer my decide.
                     </li>
                     <li class="validity-line">This pass is valid upto <span class="handwritten">ONE DAY ONLY</span></li>
-                    <li class="vehicle-line">Vehicle No: <span class="handwritten">{{ permitData.vehicle_number }}</span>
+                    <li class="vehicle-line">Vehicle No: <span class="vehicle-number-highlight">{{ permitData.vehicle_number }}</span>
                     </li>
                 </ol>
 
@@ -260,6 +249,7 @@
                 </div>
 
                 <div class="signature-section">
+                    <img src="assets/EC_Sign_1.png" alt="Assistant Commissioner Signature" class="signature-image" style="max-height: 48px; max-width: 140px; height: 48px; width: auto; object-fit: contain; display: block; margin: 0 auto 2px auto;" />
                     <div class="signature-line"></div>
                     <div class="designation">Assistant Commissioner</div>
                     <div class="dept">Excise Department</div>
@@ -309,7 +299,7 @@
                     </div>
                     <div class="info-item">
                         <label>Vehicle No:</label>
-                        <span>{{ permitData.vehicle_number }}</span>
+                        <span class="vehicle-no-text">{{ permitData.vehicle_number }}</span>
                     </div>
                     <div class="info-item">
                         <label>Issue Date:</label>
@@ -325,7 +315,6 @@
                         <tr>
                             <th>Sl. No.</th>
                             <th>Brand Name</th>
-                            <th>Batch No.</th>
                             <th>Size (ml)</th>
                             <th>Strength</th>
                             <th>Quantity (Cases)</th>
@@ -336,7 +325,6 @@
                         <tr *ngFor="let brand of permitData.brands; let i = index">
                             <td class="text-center">{{ i + 1 }}</td>
                             <td>{{ brand.brand }}</td>
-                            <td class="text-center">{{ brand.batch_no || 'BATCH-' + ((i+1)*123) }}</td>
                             <td class="text-center">{{ brand.size_ml || brand.sizeMl }}</td>
                             <td class="text-center">{{ brand.strength || '42.8%' }}</td>
                             <td class="text-center">{{ brand.cases }}</td>
@@ -345,16 +333,12 @@
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="5" class="text-right">Total:</td>
+                            <td colspan="4" class="text-right">Total:</td>
                             <td class="text-center">{{ getTotalCases() }}</td>
-                            <td class="text-center">-</td>
+                            <td class="text-center">{{ getTotalBottles() }}</td>
                         </tr>
                     </tfoot>
                 </table>
-            </div>
-
-            <div class="amount-words">
-                Total Duty Paid: ₹{{ getTotalDuty() | number:'1.2-2' }}
             </div>
 
             <div class="terms-section">
@@ -368,7 +352,7 @@
                     <li>The licensee shall pay such cost of the excise or other cost, in any, as excise officer my decide.
                     </li>
                     <li class="validity-line">This pass is valid upto <span class="handwritten">ONE DAY ONLY</span></li>
-                    <li class="vehicle-line">Vehicle No: <span class="handwritten">{{ permitData.vehicle_number }}</span>
+                    <li class="vehicle-line">Vehicle No: <span class="vehicle-number-highlight">{{ permitData.vehicle_number }}</span>
                     </li>
                 </ol>
 
@@ -387,6 +371,7 @@
                 </div>
 
                 <div class="signature-section">
+                    <img src="assets/EC_Sign_1.png" alt="Assistant Commissioner Signature" class="signature-image" style="max-height: 48px; max-width: 140px; height: 48px; width: auto; object-fit: contain; display: block; margin: 0 auto 2px auto;" />
                     <div class="signature-line"></div>
                     <div class="designation">Assistant Commissioner</div>
                     <div class="dept">Excise Department</div>
@@ -436,7 +421,7 @@
                     </div>
                     <div class="info-item">
                         <label>Vehicle No:</label>
-                        <span>{{ permitData.vehicle_number }}</span>
+                        <span class="vehicle-no-text">{{ permitData.vehicle_number }}</span>
                     </div>
                     <div class="info-item">
                         <label>Issue Date:</label>
@@ -452,7 +437,6 @@
                         <tr>
                             <th>Sl. No.</th>
                             <th>Brand Name</th>
-                            <th>Batch No.</th>
                             <th>Size (ml)</th>
                             <th>Strength</th>
                             <th>Quantity (Cases)</th>
@@ -463,7 +447,6 @@
                         <tr *ngFor="let brand of permitData.brands; let i = index">
                             <td class="text-center">{{ i + 1 }}</td>
                             <td>{{ brand.brand }}</td>
-                            <td class="text-center">{{ brand.batch_no || 'BATCH-' + ((i+1)*123) }}</td>
                             <td class="text-center">{{ brand.size_ml || brand.sizeMl }}</td>
                             <td class="text-center">{{ brand.strength || '42.8%' }}</td>
                             <td class="text-center">{{ brand.cases }}</td>
@@ -472,16 +455,12 @@
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="5" class="text-right">Total:</td>
+                            <td colspan="4" class="text-right">Total:</td>
                             <td class="text-center">{{ getTotalCases() }}</td>
-                            <td class="text-center">-</td>
+                            <td class="text-center">{{ getTotalBottles() }}</td>
                         </tr>
                     </tfoot>
                 </table>
-            </div>
-
-            <div class="amount-words">
-                Total Duty Paid: ₹{{ getTotalDuty() | number:'1.2-2' }}
             </div>
 
             <div class="terms-section">
@@ -495,7 +474,7 @@
                     <li>The licensee shall pay such cost of the excise or other cost, in any, as excise officer my decide.
                     </li>
                     <li class="validity-line">This pass is valid upto <span class="handwritten">ONE DAY ONLY</span></li>
-                    <li class="vehicle-line">Vehicle No: <span class="handwritten">{{ permitData.vehicle_number }}</span>
+                    <li class="vehicle-line">Vehicle No: <span class="vehicle-number-highlight">{{ permitData.vehicle_number }}</span>
                     </li>
                 </ol>
 
@@ -514,6 +493,7 @@
                 </div>
 
                 <div class="signature-section">
+                    <img src="assets/EC_Sign_1.png" alt="Assistant Commissioner Signature" class="signature-image" style="max-height: 48px; max-width: 140px; height: 48px; width: auto; object-fit: contain; display: block; margin: 0 auto 2px auto;" />
                     <div class="signature-line"></div>
                     <div class="designation">Assistant Commissioner</div>
                     <div class="dept">Excise Department</div>

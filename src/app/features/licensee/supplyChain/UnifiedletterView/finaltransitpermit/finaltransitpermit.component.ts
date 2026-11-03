@@ -354,6 +354,26 @@ export class FinaltransitpermitComponent implements OnInit {
                 transform: rotate(-1deg);
                 display: inline-block;
               }
+
+              .vehicle-no-text {
+                font-weight: 800 !important;
+                font-size: 14px !important;
+                color: #000080 !important;
+                letter-spacing: 0.5px !important;
+                text-transform: uppercase !important;
+              }
+
+              .vehicle-number-highlight {
+                font-family: Arial, -apple-system, sans-serif !important;
+                font-size: 14px !important;
+                font-weight: 800 !important;
+                color: #000080 !important;
+                letter-spacing: 1px !important;
+                text-transform: uppercase !important;
+                border-bottom: 1.5px solid #000080 !important;
+                padding: 0 8px !important;
+                display: inline-block !important;
+              }
               
               .place-line {
                 margin-top: 15px;
@@ -390,12 +410,20 @@ export class FinaltransitpermitComponent implements OnInit {
                 position: relative;
                 right: 20px;
               }
+
+              .signature-image {
+                max-height: 48px !important;
+                width: auto !important;
+                object-fit: contain !important;
+                display: block !important;
+                margin: 0 auto 2px auto !important;
+              }
               
               .signature-line {
                 border-top: 1px solid #000;
                 margin-bottom: 5px;
                 width: 100%;
-                height: 30px;
+                height: 0;
                 margin-top: 0;
               }
               
@@ -440,6 +468,7 @@ export class FinaltransitpermitComponent implements OnInit {
                 }
               }
             </style>
+            <base href="${window.location.origin}/">
           </head>
           <body>
             ${permitContent.outerHTML.replace(/class="permit-container"/, `class="permit-container${this.selectedColor === 'yellow' ? ' yellow-bg' : ''}"`)}
@@ -471,6 +500,15 @@ export class FinaltransitpermitComponent implements OnInit {
   getTotalCases(): number {
     if (!this.permitData?.brands) return 0;
     return this.permitData.brands.reduce((total: number, brand: any) => total + (brand.cases || 0), 0);
+  }
+
+  // Calculate total bottles from brands
+  getTotalBottles(): number {
+    if (!this.permitData?.brands || !Array.isArray(this.permitData.brands)) return 0;
+    return this.permitData.brands.reduce((total: number, brand: any) => {
+      const bottles = brand.total_bottles ?? ((brand.cases || 0) * (brand.bottles_per_case || 12));
+      return total + Number(bottles || 0);
+    }, 0);
   }
 
   // Get total duty paid
