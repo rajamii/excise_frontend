@@ -253,6 +253,11 @@ export interface UnifiedApplicationData {
     checkpostExit?: string;
     driverLicense?: string;
     transporterName?: string;
+    soleDistributorName?: string;
+    distributorName?: string;
+    depotAddress?: string;
+    licenseeId?: string;
+    district?: string;
 
     // Product/Brand specific fields
     brand?: string;
@@ -343,7 +348,12 @@ interface FieldMapping {
     exciseDuty?: string[];
     additionalExcise?: string[];
     bottlingFee?: string[];
-    // Add more as needed dynamically
+    soleDistributorName?: string[];
+    distributorName?: string[];
+    depotAddress?: string[];
+    licenseeId?: string[];
+    district?: string[];
+    [key: string]: string[] | undefined;
 }
 
 interface SiteEnquiryReportField {
@@ -695,7 +705,12 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                     manufacturingUnit: ['manufacturingUnitName', 'manufacturing_unit_name'],
                     educationCess: ['totalEducationCess', 'total_education_cess'],
                     exciseDuty: ['totalExciseDuty', 'total_excise_duty'],
-                    additionalExcise: ['totalAdditionalExcise', 'total_additional_excise']
+                    additionalExcise: ['totalAdditionalExcise', 'total_additional_excise'],
+                    bottlingFee: ['totalBottlingFee', 'total_bottling_fee', 'bottlingFee', 'bottling_fee', 'bottling_fee_rs_per_case', 'bottlingFeeRsPerCase'],
+                    soleDistributorName: ['soleDistributorName', 'sole_distributor_name', 'distributorName', 'distributor_name', 'soleDistributor'],
+                    depotAddress: ['depotAddress', 'depot_address'],
+                    licenseeId: ['licenseeId', 'licensee_id', 'licenseId', 'license_id', 'license_no', 'licenseNo'],
+                    district: ['district', 'district_name', 'depotAddress', 'depot_address']
                 }
             },
             hologram: {
@@ -984,7 +999,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         this.supplyChainService.getTransitPermits(billNoToken).subscribe({
             next: (rows: any[]) => {
                 if (Array.isArray(rows) && rows.length > 0) {
-                    done({ ...apiData, products: rows });
+                    done({ ...rows[0], ...apiData, products: rows });
                 } else {
                     done(apiData);
                 }
@@ -1628,11 +1643,16 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                 mappedData['sizeML'] = this.parseNumericValue(this.extractFieldValue(apiData, ['sizeMl', 'size_ml']));
                 mappedData['bottleType'] = this.extractFieldValue(apiData, ['bottleType', 'bottle_type']);
                 mappedData['brandOwner'] = this.extractFieldValue(apiData, ['brandOwner', 'brand_owner']);
-                mappedData['manufacturingUnit'] = this.extractFieldValue(apiData, ['manufacturingUnitName', 'manufacturing_unit_name']);
-
+                mappedData['manufacturingUnit'] = this.extractFieldValue(apiData, ['manufacturingUnitName', 'manufacturing_unit_name', 'manufacturingUnit', 'manufacturing_unit']);
                 mappedData['educationCess'] = this.parseNumericValue(this.extractFieldValue(apiData, ['totalEducationCess', 'total_education_cess']));
                 mappedData['exciseDuty'] = this.parseNumericValue(this.extractFieldValue(apiData, ['totalExciseDuty', 'total_excise_duty']));
                 mappedData['additionalExcise'] = this.parseNumericValue(this.extractFieldValue(apiData, ['totalAdditionalExcise', 'total_additional_excise']));
+                mappedData['bottlingFee'] = this.parseNumericValue(this.extractFieldValue(apiData, ['totalBottlingFee', 'total_bottling_fee', 'bottlingFee', 'bottling_fee', 'bottling_fee_rs_per_case', 'bottlingFeeRsPerCase']));
+
+                mappedData['soleDistributorName'] = this.extractFieldValue(apiData, ['soleDistributorName', 'sole_distributor_name', 'distributorName', 'distributor_name', 'soleDistributor']);
+                mappedData['depotAddress'] = this.extractFieldValue(apiData, ['depotAddress', 'depot_address']);
+                mappedData['licenseeId'] = this.extractFieldValue(apiData, ['licenseeId', 'licensee_id', 'licenseId', 'license_id', 'license_no', 'licenseNo']);
+                mappedData['district'] = this.extractFieldValue(apiData, ['district', 'district_name', 'depotAddress', 'depot_address']);
 
                 const rawTransitProducts = this.extractFieldValue(apiData, [
                     'products',

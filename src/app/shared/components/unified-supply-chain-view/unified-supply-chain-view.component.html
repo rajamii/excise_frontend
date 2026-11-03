@@ -217,7 +217,7 @@
                                  <span class="badge bg-danger">Objection</span>
                                  <span class="badge bg-light text-dark ms-2">{{ unresolvedObjectionCount() }} pending</span>
                              </div>
-                            <p class="mt-2" *ngIf="!isSalesmanOrRenewal()">
+                            <p class="mt-2" *ngIf="!isSalesmanOrRenewal() && !isTransit()">
                                 <strong>BR Amount:</strong>
                                 <ng-container *ngIf="isNewLicense() && !isNewLicenseFeeSet()">
                                     <span class="badge bg-warning text-dark ms-1">Pending</span>
@@ -726,16 +726,12 @@
                                     <td>{{ applicationData.submissionDate | date: "dd-MM-yyyy" }}</td>
                                 </tr>
                                 <tr>
-                                    <td class="fw-semibold bg-light">Distillery</td>
-                                    <td>{{ applicationData.distilleryName }}</td>
+                                    <td class="fw-semibold bg-light">Distillery / Institute</td>
+                                    <td>{{ applicationData.distilleryName || applicationData.manufacturingUnit || 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Permit Type</td>
-                                    <td>{{ applicationData.permitType }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Permit Fee</td>
-                                    <td class="text-success fw-bold">₹{{ applicationData.brAmount }}</td>
+                                    <td>{{ applicationData.permitType || applicationData['liquor_type'] || 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Validity Status</td>
@@ -749,54 +745,61 @@
                 </div>
 
                 <div class="section-card mb-4">
-                    <h5 class="section-title">Route & Transport Information</h5>
+                    <h5 class="section-title">Institute & Transport Information</h5>
                     <div class="table-responsive">
                         <table class="table table-bordered">
                             <tbody>
                                 <tr>
-                                    <td class="fw-semibold bg-light detail-label-cell">From Location</td>
-                                    <td>{{ hasText(applicationData.fromLocation) ?
-                                        applicationData.fromLocation : 'Not specified' }}</td>
+                                    <td class="fw-semibold bg-light detail-label-cell">Institute / Manufacturing Unit</td>
+                                    <td>{{ applicationData.distilleryName || applicationData.manufacturingUnit || 'Not specified' }}</td>
                                 </tr>
                                 <tr>
-                                    <td class="fw-semibold bg-light">To Location</td>
-                                    <td>{{ hasText(applicationData.toLocation) ?
-                                        applicationData.toLocation : 'Not specified' }}</td>
+                                    <td class="fw-semibold bg-light">License No</td>
+                                    <td>{{ applicationData.licenseeId || applicationData['license_id'] || 'Not specified' }}</td>
                                 </tr>
                                 <tr>
-                                    <td class="fw-semibold bg-light">Route Details</td>
-                                    <td>{{ hasText(applicationData.routeDetails) ?
-                                        applicationData.routeDetails : 'Not specified' }}</td>
+                                    <td class="fw-semibold bg-light">Sole Distributor</td>
+                                    <td>{{ applicationData.soleDistributorName || applicationData.distributorName || applicationData['sole_distributor_name'] || applicationData['distributor_name'] || 'Not specified' }}</td>
                                 </tr>
                                 <tr>
-                                    <td class="fw-semibold bg-light">Entry Checkpost</td>
-                                    <td>{{ hasText(applicationData.checkpostEntry) ?
-                                        applicationData.checkpostEntry : 'Not specified' }}</td>
-                                </tr>
-                                <tr>
-                                    <td class="fw-semibold bg-light">Exit Checkpost</td>
-                                    <td>{{ hasText(applicationData.checkpostExit) ?
-                                        applicationData.checkpostExit : 'Not specified' }}</td>
+                                    <td class="fw-semibold bg-light">Depot Address / District</td>
+                                    <td>{{ applicationData.depotAddress || applicationData['depot_address'] || applicationData.district || 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Vehicle Number</td>
-                                    <td>{{ hasText(applicationData.vehicleNumber) ?
-                                        applicationData.vehicleNumber : 'Not specified' }}</td>
+                                    <td>{{ hasText(applicationData.vehicleNumber) ? applicationData.vehicleNumber : 'Not specified' }}</td>
                                 </tr>
-                                <tr>
+                                <tr *ngIf="hasText(applicationData.fromLocation) && applicationData.fromLocation !== applicationData.depotAddress">
+                                    <td class="fw-semibold bg-light">From Location</td>
+                                    <td>{{ applicationData.fromLocation }}</td>
+                                </tr>
+                                <tr *ngIf="hasText(applicationData.toLocation)">
+                                    <td class="fw-semibold bg-light">To Location</td>
+                                    <td>{{ applicationData.toLocation }}</td>
+                                </tr>
+                                <tr *ngIf="hasText(applicationData.routeDetails)">
+                                    <td class="fw-semibold bg-light">Route Details</td>
+                                    <td>{{ applicationData.routeDetails }}</td>
+                                </tr>
+                                <tr *ngIf="hasText(applicationData.checkpostEntry)">
+                                    <td class="fw-semibold bg-light">Entry Checkpost</td>
+                                    <td>{{ applicationData.checkpostEntry }}</td>
+                                </tr>
+                                <tr *ngIf="hasText(applicationData.checkpostExit)">
+                                    <td class="fw-semibold bg-light">Exit Checkpost</td>
+                                    <td>{{ applicationData.checkpostExit }}</td>
+                                </tr>
+                                <tr *ngIf="hasText(applicationData.driverName)">
                                     <td class="fw-semibold bg-light">Driver Name</td>
-                                    <td>{{ hasText(applicationData.driverName) ?
-                                        applicationData.driverName : 'Not specified' }}</td>
+                                    <td>{{ applicationData.driverName }}</td>
                                 </tr>
-                                <tr>
+                                <tr *ngIf="hasText(applicationData.driverLicense)">
                                     <td class="fw-semibold bg-light">Driver License</td>
-                                    <td>{{ hasText(applicationData.driverLicense) ?
-                                        applicationData.driverLicense : 'Not specified' }}</td>
+                                    <td>{{ applicationData.driverLicense }}</td>
                                 </tr>
-                                <tr>
+                                <tr *ngIf="hasText(applicationData.transporterName)">
                                     <td class="fw-semibold bg-light">Transporter Name</td>
-                                    <td>{{ hasText(applicationData.transporterName) ?
-                                        applicationData.transporterName : 'Not specified' }}</td>
+                                    <td>{{ applicationData.transporterName }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -832,7 +835,7 @@
                                     <td>{{ product.sizeML }}ml</td>
                                     <td>{{ product.bottleType }}</td>
                                     <td>{{ product.liquorType }}</td>
-                                    <td>{{ product.brandOwner }}</td>
+                                    <td>{{ product.brandOwner || '-' }}</td>
                                     <td>{{ product.manufacturingUnit }}</td>
                                     <td>{{ product.cases }}</td>
                                     <td>₹{{ product.educationCess }}</td>
@@ -848,9 +851,9 @@
                                     <td>{{ applicationData.brand }}</td>
                                     <td>{{ applicationData.sizeML }}ml</td>
                                     <td>{{ applicationData.bottleType }}</td>
-                                    <td>{{ applicationData.bulkSpiritType }}</td>
-                                    <td>{{ applicationData.brandOwner }}</td>
-                                    <td>{{ applicationData.manufacturingUnit }}</td>
+                                    <td>{{ applicationData.permitType || applicationData.bulkSpiritType }}</td>
+                                    <td>{{ applicationData.brandOwner || '-' }}</td>
+                                    <td>{{ applicationData.manufacturingUnit || applicationData.distilleryName }}</td>
                                     <td>{{ applicationData.quantity }}</td>
                                     <td>₹{{ applicationData.educationCess }}</td>
                                     <td>₹{{ applicationData.exciseDuty }}</td>
@@ -863,34 +866,34 @@
                         </table>
                     </div>
 
-                    <!-- Summary Totals -->
-                    <div class="row mt-3">
-                        <div class="col-md-2">
-                            <p><strong>Total Cases:</strong> <span class="text-info">{{ applicationData.quantity
-                                    }}</span></p>
-                        </div>
-                        <div class="col-md-2">
-                            <p><strong>Education Cess Total:</strong> <span class="text-info">₹{{
-                                    applicationData.educationCess }}</span></p>
-                        </div>
-                        <div class="col-md-3">
-                            <p><strong>Excise Duty Total:</strong> <span class="text-warning">₹{{
-                                    applicationData.exciseDuty }}</span></p>
-                        </div>
-                        <div class="col-md-3">
-                            <p><strong>Additional Excise Total:</strong> <span class="text-danger">₹{{
-                                    applicationData.additionalExcise }}</span></p>
-                        </div>
-                        <div class="col-md-2">
-                            <p><strong>Bottling Fee Total:</strong> <span class="text-secondary">₹{{
-                                    applicationData['bottlingFee'] || 0 }}</span></p>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-12 text-center">
-                            <h5><strong>Grand Total: <span class="text-success">₹{{ applicationData.brAmount
-                                        }}</span></strong></h5>
+                    <!-- Summary Totals (Each on a different line, Grand Total removed) -->
+                    <div class="row mt-4 justify-content-end">
+                        <div class="col-md-6 col-lg-5">
+                            <div class="card border bg-light rounded-3 p-3 shadow-sm">
+                                <h6 class="fw-bold mb-3 pb-2 border-bottom text-primary">
+                                    <i class="bi bi-calculator me-2"></i>Duty & Fee Breakdown
+                                </h6>
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                                    <span class="fw-semibold text-secondary">Total Cases:</span>
+                                    <span class="badge bg-primary fs-6">{{ applicationData.quantity }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                                    <span class="fw-semibold text-secondary">Education Cess Total:</span>
+                                    <span class="fw-bold text-dark">₹{{ applicationData.educationCess }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                                    <span class="fw-semibold text-secondary">Excise Duty Total:</span>
+                                    <span class="fw-bold text-dark">₹{{ applicationData.exciseDuty }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                                    <span class="fw-semibold text-secondary">Additional Excise Total:</span>
+                                    <span class="fw-bold text-dark">₹{{ applicationData.additionalExcise }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-2">
+                                    <span class="fw-semibold text-secondary">Bottling Fee Total:</span>
+                                    <span class="fw-bold text-dark">₹{{ applicationData['bottlingFee'] || 0 }}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
