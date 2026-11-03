@@ -1742,6 +1742,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                                 exciseDuty: exciseDutyPerCase,
                                 additionalExcise: additionalExcisePerCase,
                                 bottlingFee: bottlingFeePerCase,
+                                totalEducationCess: (cases || 0) * educationCessPerCase,
+                                totalExciseDuty: (cases || 0) * exciseDutyPerCase,
+                                totalAdditionalExcise: (cases || 0) * additionalExcisePerCase,
+                                totalBottlingFee: (cases || 0) * bottlingFeePerCase,
                                 totalAmount,
                             };
                         })

@@ -820,11 +820,10 @@
                                     <th>Brand Owner</th>
                                     <th>Manufacturing Unit</th>
                                     <th>Cases</th>
-                                    <th>Education Cess (₹ per case)</th>
-                                    <th>Excise Duty (₹ per case)</th>
-                                    <th>Additional Excise (₹ per case)</th>
-                                    <th>Bottling Fee (₹ per case)</th>
-                                    <th>Total Amount (₹)</th>
+                                    <th>Education Cess (₹)</th>
+                                    <th>Excise Duty (₹)</th>
+                                    <th>Additional Excise (₹)</th>
+                                    <th>Bottling Fee (₹)</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -838,11 +837,22 @@
                                     <td>{{ product.brandOwner || '-' }}</td>
                                     <td>{{ product.manufacturingUnit }}</td>
                                     <td>{{ product.cases }}</td>
-                                    <td>₹{{ product.educationCess }}</td>
-                                    <td>₹{{ product.exciseDuty }}</td>
-                                    <td>₹{{ product.additionalExcise }}</td>
-                                    <td>₹{{ product.bottlingFee || 0 }}</td>
-                                    <td class="fw-bold">₹{{ product.totalAmount }}</td>
+                                    <td>
+                                        <div class="text-nowrap text-muted">{{ product.cases }} * ₹{{ product.educationCess }}</div>
+                                        <div class="fw-bold text-dark text-nowrap">= ₹{{ (product.totalEducationCess ?? (product.cases * product.educationCess)) | number:'1.2-2' }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="text-nowrap text-muted">{{ product.cases }} * ₹{{ product.exciseDuty }}</div>
+                                        <div class="fw-bold text-dark text-nowrap">= ₹{{ (product.totalExciseDuty ?? (product.cases * product.exciseDuty)) | number:'1.2-2' }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="text-nowrap text-muted">{{ product.cases }} * ₹{{ product.additionalExcise }}</div>
+                                        <div class="fw-bold text-dark text-nowrap">= ₹{{ (product.totalAdditionalExcise ?? (product.cases * product.additionalExcise)) | number:'1.2-2' }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="text-nowrap text-muted">{{ product.cases }} * ₹{{ product.bottlingFee || 0 }}</div>
+                                        <div class="fw-bold text-dark text-nowrap">= ₹{{ (product.totalBottlingFee ?? (product.cases * (product.bottlingFee || 0))) | number:'1.2-2' }}</div>
+                                    </td>
                                 </tr>
                                 }
                                 } @else {
@@ -855,22 +865,33 @@
                                     <td>{{ applicationData.brandOwner || '-' }}</td>
                                     <td>{{ applicationData.manufacturingUnit || applicationData.distilleryName }}</td>
                                     <td>{{ applicationData.quantity }}</td>
-                                    <td>₹{{ applicationData.educationCess }}</td>
-                                    <td>₹{{ applicationData.exciseDuty }}</td>
-                                    <td>₹{{ applicationData.additionalExcise }}</td>
-                                    <td>₹{{ applicationData['bottlingFee'] || 0 }}</td>
-                                    <td class="fw-bold">₹{{ applicationData.brAmount }}</td>
+                                    <td>
+                                        <div class="text-nowrap text-muted">{{ applicationData.quantity }} * ₹{{ ((applicationData.educationCess || 0) / (applicationData.quantity || 1)) | number:'1.2-2' }}</div>
+                                        <div class="fw-bold text-dark text-nowrap">= ₹{{ applicationData.educationCess | number:'1.2-2' }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="text-nowrap text-muted">{{ applicationData.quantity }} * ₹{{ ((applicationData.exciseDuty || 0) / (applicationData.quantity || 1)) | number:'1.2-2' }}</div>
+                                        <div class="fw-bold text-dark text-nowrap">= ₹{{ applicationData.exciseDuty | number:'1.2-2' }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="text-nowrap text-muted">{{ applicationData.quantity }} * ₹{{ ((applicationData.additionalExcise || 0) / (applicationData.quantity || 1)) | number:'1.2-2' }}</div>
+                                        <div class="fw-bold text-dark text-nowrap">= ₹{{ applicationData.additionalExcise | number:'1.2-2' }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="text-nowrap text-muted">{{ applicationData.quantity }} * ₹{{ (((applicationData['bottlingFee'] || 0)) / (applicationData.quantity || 1)) | number:'1.2-2' }}</div>
+                                        <div class="fw-bold text-dark text-nowrap">= ₹{{ (applicationData['bottlingFee'] || 0) | number:'1.2-2' }}</div>
+                                    </td>
                                 </tr>
                                 }
                             </tbody>
                         </table>
                     </div>
 
-                    <!-- Summary Totals (Each on a different line, Grand Total removed) -->
-                    <div class="row mt-4 justify-content-end">
+                    <!-- Summary Totals (Left aligned, no box effect, each on a different line) -->
+                    <div class="row mt-4">
                         <div class="col-md-6 col-lg-5">
-                            <div class="card border bg-light rounded-3 p-3 shadow-sm">
-                                <h6 class="fw-bold mb-3 pb-2 border-bottom text-primary">
+                            <div class="py-2">
+                                <h6 class="fw-bold mb-3 text-primary">
                                     <i class="bi bi-calculator me-2"></i>Duty & Fee Breakdown
                                 </h6>
                                 <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
@@ -879,19 +900,19 @@
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
                                     <span class="fw-semibold text-secondary">Education Cess Total:</span>
-                                    <span class="fw-bold text-dark">₹{{ applicationData.educationCess }}</span>
+                                    <span class="fw-bold text-dark">₹{{ applicationData.educationCess | number:'1.2-2' }}</span>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
                                     <span class="fw-semibold text-secondary">Excise Duty Total:</span>
-                                    <span class="fw-bold text-dark">₹{{ applicationData.exciseDuty }}</span>
+                                    <span class="fw-bold text-dark">₹{{ applicationData.exciseDuty | number:'1.2-2' }}</span>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
                                     <span class="fw-semibold text-secondary">Additional Excise Total:</span>
-                                    <span class="fw-bold text-dark">₹{{ applicationData.additionalExcise }}</span>
+                                    <span class="fw-bold text-dark">₹{{ applicationData.additionalExcise | number:'1.2-2' }}</span>
                                 </div>
-                                <div class="d-flex justify-content-between align-items-center py-2">
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
                                     <span class="fw-semibold text-secondary">Bottling Fee Total:</span>
-                                    <span class="fw-bold text-dark">₹{{ applicationData['bottlingFee'] || 0 }}</span>
+                                    <span class="fw-bold text-dark">₹{{ (applicationData['bottlingFee'] || 0) | number:'1.2-2' }}</span>
                                 </div>
                             </div>
                         </div>
