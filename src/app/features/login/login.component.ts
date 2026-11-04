@@ -594,6 +594,27 @@ export class LoginComponent extends BaseComponent {
         this.otpIndex = response.otpId ?? response.otp_id ?? null;
         this.loginOtpPreview = null;
         this.isSendingOtp = false;
+
+        Swal.fire({
+          icon: 'success',
+          iconColor: '#0f766e',
+          title: 'OTP Sent Successfully!',
+          html: `
+            <div style="font-size: 15px; color: #374151; line-height: 1.5; margin-top: 6px;">
+              A 4-digit verification code has been sent to<br>
+              <strong style="color: #0f766e; font-size: 17px; letter-spacing: 0.5px;">+91 ${phoneNumber}</strong>
+            </div>
+            <div style="font-size: 13px; color: #6b7280; margin-top: 10px;">
+              Please enter the code to sign in.
+            </div>
+          `,
+          timer: 2500,
+          timerProgressBar: true,
+          showConfirmButton: false,
+          allowOutsideClick: true,
+          background: '#ffffff',
+          backdrop: 'rgba(13, 30, 38, 0.4)',
+        });
       },
       error: (err) => {
         console.error('Error sending OTP:', err);
@@ -634,6 +655,28 @@ export class LoginComponent extends BaseComponent {
         this.registrationOtpId = res.otpId;
         this.registrationOtpSent = true;
         this.isSendingOtp = false;
+
+        Swal.fire({
+          icon: 'success',
+          iconColor: '#0f766e',
+          title: 'OTP Sent Successfully!',
+          html: `
+            <div style="font-size: 15px; color: #374151; line-height: 1.5; margin-top: 6px;">
+              A 4-digit verification code has been sent to<br>
+              <strong style="color: #0f766e; font-size: 17px; letter-spacing: 0.5px;">+91 ${phoneNumber}</strong>
+            </div>
+            <div style="font-size: 13px; color: #6b7280; margin-top: 10px;">
+              Please enter the code to verify your phone number.
+            </div>
+          `,
+          timer: 2500,
+          timerProgressBar: true,
+          showConfirmButton: false,
+          allowOutsideClick: true,
+          background: '#ffffff',
+          backdrop: 'rgba(13, 30, 38, 0.4)',
+        });
+
         //debug log
         console.log('Registration OTP sent. OTP:', res.otp);
       },
