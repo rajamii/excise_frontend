@@ -199,21 +199,28 @@ export class FinaltransitpermitComponent implements OnInit {
               }
               
               .permit-container.yellow-bg .permit-page {
-                background: #ffff99 !important;
-                -webkit-print-color-adjust: exact;
-                color-adjust: exact;
+                background-color: #ffff99 !important;
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='330' height='160' viewBox='0 0 330 160'%3E%3Ctext x='6' y='72' font-family='Arial, sans-serif' font-size='32' font-weight='700' letter-spacing='2' fill='%23000000' fill-opacity='0.08'%3ESIKKIM EXCISE%3C/text%3E%3Ctext x='6' y='142' font-family='Arial, sans-serif' font-size='32' font-weight='700' letter-spacing='2' fill='%23000000' fill-opacity='0.08'%3ESIKKIM EXCISE%3C/text%3E%3C/svg%3E") !important;
+                background-repeat: repeat !important;
+                background-position: top center !important;
+                background-size: 330px 160px !important;
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+                print-color-adjust: exact !important;
               }
               
               .permit-container.yellow-bg .permit-content {
-                background: #ffff99 !important;
-                -webkit-print-color-adjust: exact;
-                color-adjust: exact;
+                background: transparent !important;
               }
               
               .permit-page {
                 width: 100%;
                 padding: 8mm;
-                background: white;
+                background-color: #ffffff !important;
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='330' height='160' viewBox='0 0 330 160'%3E%3Ctext x='6' y='72' font-family='Arial, sans-serif' font-size='32' font-weight='700' letter-spacing='2' fill='%23000000' fill-opacity='0.08'%3ESIKKIM EXCISE%3C/text%3E%3Ctext x='6' y='142' font-family='Arial, sans-serif' font-size='32' font-weight='700' letter-spacing='2' fill='%23000000' fill-opacity='0.08'%3ESIKKIM EXCISE%3C/text%3E%3C/svg%3E") !important;
+                background-repeat: repeat !important;
+                background-position: top center !important;
+                background-size: 330px 160px !important;
                 page-break-after: always;
                 page-break-inside: avoid;
                 height: 100vh;
@@ -221,32 +228,19 @@ export class FinaltransitpermitComponent implements OnInit {
                 max-height: 100vh;
                 overflow: hidden;
                 position: relative;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
               }
               
               .permit-page:last-child {
                 page-break-after: auto;
               }
               
-              .permit-page::before {
-                content: "";
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                z-index: 0;
-                pointer-events: none;
-                opacity: 0.2;
-                background-image: url("data:image/svg+xml,%3Csvg width='300' height='300' viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Cstyle%3E .watermark %7B font-size: 24px; font-weight: bold; fill: %23000; font-family: Arial, sans-serif; opacity: 0.5; %7D %3C/style%3E%3Ctext x='0' y='50' class='watermark'%3ESIKKIM EXCISE SIKKIM EXCISE%3C/text%3E%3Ctext x='0' y='100' class='watermark'%3ESIKKIM EXCISE SIKKIM EXCISE%3C/text%3E%3Ctext x='0' y='150' class='watermark'%3ESIKKIM EXCISE SIKKIM EXCISE%3C/text%3E%3Ctext x='0' y='200' class='watermark'%3ESIKKIM EXCISE SIKKIM EXCISE%3C/text%3E%3Ctext x='0' y='250' class='watermark'%3ESIKKIM EXCISE SIKKIM EXCISE%3C/text%3E%3C/svg%3E");
-                background-repeat: repeat;
-                background-size: 300px 300px;
-              }
-              
               .permit-content {
                 position: relative;
                 z-index: 1;
                 color: #000;
-                background: white;
+                background: transparent !important;
                 height: 100%;
                 display: flex;
                 flex-direction: column;
