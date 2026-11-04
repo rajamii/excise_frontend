@@ -456,7 +456,93 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     // Uploaded documents modal state
     docsModalOpen = false;
     activeDoc: { label: string; url: string; isImage: boolean } | null = null;
-    newLicenseUploads: Array<{ label: string; url: string; isImage: boolean }> = [];
+    newLicenseUploads: Array<{ label: string; url: string; isImage: boolean; isUploaded: boolean; fieldName?: string }> = [];
+    allNewLicenseDocSlots: Array<{ label: string; url: string; isImage: boolean; isUploaded: boolean; fieldName?: string; objectionState?: 'none' | 'unresolved' | 'resolved' }> = [];
+    docsCurrentPage = 0;
+    readonly docsPerPage = 4;
+
+    get totalDocsPages(): number {
+        return Math.max(1, Math.ceil(this.allNewLicenseDocSlots.length / this.docsPerPage));
+    }
+
+    get currentDocsPageSlots(): Array<{ label: string; url: string; isImage: boolean; isUploaded: boolean; fieldName?: string; objectionState?: 'none' | 'unresolved' | 'resolved' }> {
+        const start = this.docsCurrentPage * this.docsPerPage;
+        return this.allNewLicenseDocSlots.slice(start, start + this.docsPerPage);
+    }
+
+    get uploadedDocsCount(): number {
+        return this.allNewLicenseDocSlots.filter(doc => doc.isUploaded).length;
+    }
+
+    get hasNewLicenseUploads(): boolean {
+        return this.allNewLicenseDocSlots.length > 0;
+    }
+
+    get visibleDocsSlotsCount(): number {
+        const start = this.docsCurrentPage * this.docsPerPage;
+        const end = Math.min(start + this.docsPerPage, this.allNewLicenseDocSlots.length);
+        return Math.max(0, end - start);
+    }
+
+    isSlotVisibleOnPage(index: number): boolean {
+        return Math.floor(index / this.docsPerPage) === this.docsCurrentPage;
+    }
+
+    trackByDocSlot(index: number, doc: { label: string; fieldName?: string }): string {
+        return (doc.fieldName || doc.label || '') + '_' + index;
+    }
+
+    getDocsPageEnd(): number {
+        return Math.min((this.docsCurrentPage + 1) * this.docsPerPage, this.allNewLicenseDocSlots.length);
+    }
+
+    nextDocsPage(): void {
+        if (this.docsCurrentPage + 1 < this.totalDocsPages) {
+            this.docsCurrentPage++;
+        }
+    }
+
+    prevDocsPage(): void {
+        if (this.docsCurrentPage > 0) {
+            this.docsCurrentPage--;
+        }
+    }
+
+    openDocsModal(): void {
+        this.docsCurrentPage = 0;
+        this.preloadDocImages();
+        this.docsModalOpen = true;
+    }
+
+    private preloadDocImages(): void {
+        if (typeof window === 'undefined' || typeof Image === 'undefined') return;
+        for (const slot of this.allNewLicenseDocSlots) {
+            if (slot.isUploaded && slot.isImage && slot.url && slot.url !== '#') {
+                const img = new Image();
+                img.src = this.normalizeDocUrl(slot.url);
+            }
+        }
+    }
+    closeDocsModal(): void {
+        this.docsModalOpen = false;
+        this.activeDoc = null;
+        this.cdr.detectChanges();
+    }
+    openDocViewer(doc: { label: string; url: string; isImage: boolean; isUploaded?: boolean }): void {
+        if (doc.isUploaded === false || !doc.url || doc.url === '#') return;
+        const url = this.normalizeDocUrl(doc.url);
+        if (!doc.isImage) {
+            window.open(url, '_blank', 'noopener');
+            return;
+        }
+        this.activeDoc = {
+            ...doc,
+            url
+        };
+        this.cdr.detectChanges();
+    }
+    closeDocViewer(): void { this.activeDoc = null; this.cdr.detectChanges(); }
+
     siteEnquiryReportModalOpen = false;
     siteEnquiryReportLoading = false;
     siteEnquiryReportError = '';
@@ -476,22 +562,6 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     newLicenseFeeApprovalDetails: LicenseFee | null = null;
     pendingNewLicenseFeeApproval: PendingNewLicenseFeeApproval | null = null;
     readonly newLicenseFeeApprovalForm: FormGroup;
-
-    openDocsModal(): void { this.docsModalOpen = true; this.cdr.detectChanges(); }
-    closeDocsModal(): void { this.docsModalOpen = false; this.activeDoc = null; this.cdr.detectChanges(); }
-    openDocViewer(doc: { label: string; url: string; isImage: boolean }): void {
-        const url = this.normalizeDocUrl(doc.url);
-        if (!doc.isImage) {
-            window.open(url, '_blank', 'noopener');
-            return;
-        }
-        this.activeDoc = {
-            ...doc,
-            url
-        };
-        this.cdr.detectChanges();
-    }
-    closeDocViewer(): void { this.activeDoc = null; this.cdr.detectChanges(); }
 
     private readonly isBrowser: boolean;
 
@@ -1330,15 +1400,20 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     }
 
     objectionStateForDocLabel(label: string): 'none' | 'unresolved' | 'resolved' {
-        const byLabel: Record<string, string> = {
-            'Passport Photo': 'pass_photo',
-            'PAN Card': 'pan_card',
-            'Sikkim Certificate': 'sikkim_certificate',
-            'DOB Proof': 'dob_proof',
-            'NOC from Landlord': 'noc_landlord',
+        const byLabel: Record<string, string[]> = {
+            'Passport Photo': ['pass_photo', 'passPhoto', 'passport_photo', 'pass_photo_url'],
+            'PAN Card': ['pan_card', 'panCard', 'pan_card_url'],
+            'Sikkim Certificate': ['sikkim_certificate', 'sikkimCertificate', 'coi_rc_ss', 'sikkim_certificate_url'],
+            'DOB Proof': ['dob_proof', 'dobProof', 'dateof_birth_proof', 'dateofBirthProof', 'dob_proof_url'],
+            'Trade License': ['trade_license', 'tradeLicense', 'trade_license_url', 'trade_license_doc'],
+            'NOC from Landlord': ['noc_landlord', 'nocLandlord', 'noc', 'noc_landlord_url', 'noc_doc'],
+            'Land Document (Parcha)': ['parcha', 'parchaDocument', 'parcha_doc', 'land_document', 'landDocument', 'parcha_url'],
         };
-        const key = byLabel[String(label || '').trim()] || '';
-        return key ? this.objectionStateForField(key) : 'none';
+        const keys = byLabel[String(label || '').trim()];
+        if (keys && keys.length) {
+            return this.objectionStateForAny(keys);
+        }
+        return 'none';
     }
 
     objectionStateForAny(fields: string[]): 'none' | 'unresolved' | 'resolved' {
@@ -6150,31 +6225,38 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
 
     calculateNewLicenseUploads(): void {
         this.newLicenseUploads = [];
+        this.allNewLicenseDocSlots = [];
+        this.docsCurrentPage = 0;
         if (!this.applicationData) return;
 
-        let docFields: Array<{ label: string; keys: string[] }> = [];
+        let standardDocFields: Array<{ label: string; keys: string[] }> = [];
 
         const id = String(this.applicationData.referenceNo || this.applicationData.id || '').toUpperCase();
         const isSalesman = this.applicationType === 'salesman-barman-registration' || id.startsWith('RSBM/');
-        const isNewLicense = this.applicationType === 'new-license' || this.applicationType === 'license-renewal' || id.startsWith('LRA/');
+        const isNewLicense = this.applicationType === 'new-license' || this.applicationType === 'license-renewal' || id.startsWith('LRA/') || id.startsWith('NLI/') || this.isNewLicenseOrRenewal();
 
         if (isNewLicense) {
-            docFields = [
-                { label: 'Passport Photo', keys: ['pass_photo', 'passPhoto', 'passPhotoUrl'] },
-                { label: 'PAN Card', keys: ['pan_card', 'panCard', 'panCardUrl'] },
-                { label: 'Sikkim Certificate', keys: ['sikkim_certificate', 'sikkimCertificate', 'sikkimCertificateUrl'] },
-                { label: 'DOB Proof', keys: ['dob_proof', 'dobProof', 'dateofBirthProof', 'dateofBirthProofUrl'] },
-                { label: 'NOC from Landlord', keys: ['noc_landlord', 'nocLandlord', 'nocLandlordUrl'] }
+            standardDocFields = [
+                // Page 1: First 4 slots (Personal / Identity)
+                { label: 'Passport Photo', keys: ['pass_photo', 'passPhoto', 'passPhotoUrl', 'photo', 'passport_photo', 'passportPhotoUrl'] },
+                { label: 'PAN Card', keys: ['pan_card', 'panCard', 'panCardUrl', 'pan_card_doc'] },
+                { label: 'Sikkim Certificate', keys: ['sikkim_certificate', 'sikkimCertificate', 'sikkimCertificateUrl', 'coi_rc_ss_document', 'coi_rc_ss_doc', 'coi_rc_ss'] },
+                { label: 'DOB Proof', keys: ['dob_proof', 'dobProof', 'dateofBirthProof', 'dateofBirthProofUrl', 'dateof_birth_proof'] },
+
+                // Page 2: Next slots (Premises, Land & Business)
+                { label: 'Trade License', keys: ['trade_license', 'tradeLicense', 'tradeLicenseUrl', 'trade_license_doc', 'trade_license_file'] },
+                { label: 'NOC from Landlord', keys: ['noc_landlord', 'nocLandlord', 'nocLandlordUrl', 'noc', 'noc_doc', 'noc_file'] },
+                { label: 'Land Document (Parcha)', keys: ['parcha', 'parchaDocument', 'parcha_doc', 'parcha_document', 'land_document', 'landDocument', 'parchaUrl', 'land_ownership'] }
             ];
         } else if (isSalesman) {
-            docFields = [
+            standardDocFields = [
                 { label: 'Passport Photo', keys: ['pass_photo', 'passPhoto'] },
                 { label: 'Aadhaar Card', keys: ['aadhaar_card', 'aadhaarCard'] },
                 { label: 'Residential Certificate', keys: ['residential_certificate', 'residentialCertificate'] },
                 { label: 'Date of Birth Proof', keys: ['dateof_birth_proof', 'dateofBirthProof'] }
             ];
         } else if (this.applicationType === 'company-registration' || id.startsWith('COMP/')) {
-            docFields = [
+            standardDocFields = [
                 { label: 'Excise License issued by the Excise Authority', keys: ['exciseLicense', 'excise_license'] },
                 { label: 'Deed of Partnership', keys: ['deedOfPartnership', 'deed_of_partnership'] },
                 { label: 'Memorandum & Article of Association', keys: ['memorandumOfAssociation', 'memorandum_of_association'] },
@@ -6184,15 +6266,91 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
             return;
         }
 
-        for (const field of docFields) {
-            const rawValue = this.pickFirstValue(field.keys);
-            if (!this.isFilePath(rawValue)) continue;
-            this.newLicenseUploads.push({
-                label: field.label,
-                url: this.getFileUrl(rawValue),
-                isImage: this.isImagePath(rawValue)
-            });
+        const consumedKeys = new Set<string>();
+
+        for (const field of standardDocFields) {
+            let matchedKey: string | null = null;
+            let rawValue: unknown = null;
+            for (const key of field.keys) {
+                const candidate = (this.applicationData as any)?.[key];
+                if (this.isFilePath(candidate)) {
+                    matchedKey = key;
+                    rawValue = candidate;
+                    break;
+                }
+            }
+
+            if (matchedKey && rawValue) {
+                consumedKeys.add(matchedKey);
+                field.keys.forEach(k => consumedKeys.add(k));
+                const item = {
+                    label: field.label,
+                    url: this.getFileUrl(rawValue),
+                    isImage: this.isImagePath(rawValue),
+                    isUploaded: true,
+                    fieldName: matchedKey,
+                    objectionState: this.objectionStateForDocLabel(field.label)
+                };
+                this.allNewLicenseDocSlots.push(item);
+                this.newLicenseUploads.push(item);
+            } else {
+                // Not uploaded slot
+                this.allNewLicenseDocSlots.push({
+                    label: field.label,
+                    url: '',
+                    isImage: false,
+                    isUploaded: false,
+                    fieldName: field.keys[0],
+                    objectionState: 'none'
+                });
+            }
         }
+
+        // Add any additional uploaded documents not yet captured by standard slots
+        if (isNewLicense) {
+            const data: any = this.applicationData as any;
+            const extraDocKeys = [
+                'member_pass_photo',
+                'member_aadhaar_card',
+                'member_residential_certificate',
+                'member_dob_proof',
+                'blueprint',
+                'site_plan',
+                'building_plan'
+            ];
+            for (const key of extraDocKeys) {
+                if (consumedKeys.has(key)) continue;
+                const candidate = data?.[key];
+                if (this.isFilePath(candidate)) {
+                    consumedKeys.add(key);
+                    const formattedLabel = this.formatDocumentLabel(key);
+                    const item = {
+                        label: formattedLabel,
+                        url: this.getFileUrl(candidate),
+                        isImage: this.isImagePath(candidate),
+                        isUploaded: true,
+                        fieldName: key,
+                        objectionState: this.objectionStateForField(key)
+                    };
+                    this.allNewLicenseDocSlots.push(item);
+                    this.newLicenseUploads.push(item);
+                }
+            }
+        }
+    }
+
+    private formatDocumentLabel(key: string): string {
+        const labels: Record<string, string> = {
+            member_pass_photo: 'Member Passport Photo',
+            member_aadhaar_card: 'Member Aadhaar Card',
+            member_residential_certificate: 'Member Sikkim / Residential Certificate',
+            member_dob_proof: 'Member Date of Birth Proof',
+            blueprint: 'Premises Blueprint',
+            site_plan: 'Site Plan',
+            building_plan: 'Building Plan'
+        };
+        if (labels[key]) return labels[key];
+        return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     }
 
     printApplication(): void {
