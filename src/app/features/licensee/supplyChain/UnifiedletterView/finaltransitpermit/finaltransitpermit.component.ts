@@ -86,6 +86,7 @@ export class FinaltransitpermitComponent implements OnInit {
               this.permitData = {
                 ...this.permitData,
                 bill_no: this.permitData.bill_no || first.bill_no || ref,
+                manufacturing_unit_name: this.permitData.manufacturing_unit_name || first.manufacturing_unit_name || first.distillery_name || '',
                 sole_distributor_name: this.permitData.sole_distributor_name || first.sole_distributor_name || '',
                 date: this.permitData.date || first.date || new Date().toISOString(),
                 depot_address: this.permitData.depot_address || first.depot_address || '',
@@ -97,6 +98,7 @@ export class FinaltransitpermitComponent implements OnInit {
             } else {
               this.permitData = {
                 bill_no: first.bill_no || ref,
+                manufacturing_unit_name: first.manufacturing_unit_name || first.distillery_name || '',
                 sole_distributor_name: first.sole_distributor_name || '',
                 date: first.date || new Date().toISOString(),
                 depot_address: first.depot_address || '',
@@ -401,55 +403,23 @@ export class FinaltransitpermitComponent implements OnInit {
               }
 
               .duty-col-cell {
-                text-align: right;
-                vertical-align: top;
-                white-space: nowrap;
+                text-align: left;
+                vertical-align: middle;
+                padding: 4px 6px;
+                line-height: 1.3;
               }
 
-              .duty-val {
+              .duty-txn-text {
                 font-weight: bold;
-                font-size: 12px;
+                font-size: 11px;
                 color: #000;
+                word-break: break-all;
               }
 
-              .duty-val.total-duty {
-                font-size: 13px;
-              }
-
-              .wallet-badge-wrap {
+              .duty-txn-date {
+                font-size: 10px;
+                color: #333;
                 margin-top: 2px;
-                display: flex;
-                flex-direction: column;
-                align-items: flex-end;
-              }
-
-              .wallet-tag {
-                font-size: 9px;
-                font-weight: bold;
-                color: #1b5e20;
-                background: #e8f5e9;
-                padding: 1px 4px;
-                border-radius: 2px;
-                border: 1px solid #c8e6c9;
-                display: inline-block;
-              }
-
-              .wallet-ref-id {
-                font-size: 8.5px;
-                color: #555;
-                margin-top: 1px;
-                font-family: monospace;
-              }
-
-              .wallet-verified-tag {
-                font-size: 9px;
-                font-weight: bold;
-                color: #0d47a1;
-                background: #e3f2fd;
-                padding: 1px 5px;
-                border-radius: 2px;
-                border: 1px solid #bbdefb;
-                display: inline-block;
               }
               
               .terms-section {
@@ -734,4 +704,47 @@ export class FinaltransitpermitComponent implements OnInit {
     }
     return [];
   }
+
+  getManufacturerName(): string {
+    return this.permitData?.manufacturing_unit_name ||
+      this.permitData?.manufacturer_name ||
+      this.permitData?.brands?.[0]?.manufacturing_unit_name ||
+      this.permitData?.brands?.[0]?.manufacturingUnitName ||
+      this.permitData?.brands?.[0]?.brand_owner ||
+      'Mount Distilleries Limited';
+  }
+
+  getApprovedDate(): any {
+    return this.permitData?.approved_date ||
+      this.permitData?.date ||
+      this.permitData?.created_at ||
+      this.currentDate;
+  }
+
+  getBrandTxnDate(brand?: any): any {
+    const txns = (Array.isArray(brand?.wallet_transactions) && brand.wallet_transactions.length > 0)
+      ? brand.wallet_transactions
+      : (Array.isArray(this.permitData?.wallet_transactions) ? this.permitData.wallet_transactions : []);
+    if (txns.length > 0 && txns[0]?.created_at) {
+      return txns[0].created_at;
+    }
+    return this.permitData?.date || this.currentDate;
+  }
+
+  getPermitValidUptoDate(): any {
+    if (this.permitData?.valid_upto || this.permitData?.valid_up_to || this.permitData?.validity_date) {
+      return this.permitData.valid_upto || this.permitData.valid_up_to || this.permitData.validity_date;
+    }
+    const base = this.permitData?.date || this.permitData?.created_at;
+    if (base) {
+      const d = new Date(base);
+      if (!isNaN(d.getTime())) {
+        const nextDay = new Date(d);
+        nextDay.setDate(nextDay.getDate() + 1);
+        return nextDay;
+      }
+    }
+    return this.currentDate;
+  }
 }
+

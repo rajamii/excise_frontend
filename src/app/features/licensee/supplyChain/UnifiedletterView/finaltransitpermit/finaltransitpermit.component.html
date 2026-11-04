@@ -27,7 +27,6 @@
             <div class="header">
                 <div class="form-number">
                     <div>FORM - IV</div>
-                    <div class="form-date">Date: {{ (permitData.date || currentDate) | date:'dd-MM-yyyy' }}</div>
                 </div>
                 <h1>Government of Sikkim</h1>
                 <h2>Excise Department</h2>
@@ -42,27 +41,27 @@
                         <span>{{ permitData.bill_no }}</span>
                     </div>
                     <div class="info-item">
-                        <label>Date:</label>
-                        <span>{{ permitData.date | date:'dd-MM-yyyy' }}</span>
+                        <label>Name of Manufacturer:</label>
+                        <span>{{ getManufacturerName() }}</span>
                     </div>
                     <div class="info-item">
-                        <label>Name of Licensee:</label>
-                        <span>{{ permitData.sole_distributor_name }}</span>
+                        <label>Destination:</label>
+                        <span>{{ permitData.depot_address }}</span>
                     </div>
                 </div>
 
                 <div class="right-col">
                     <div class="info-item">
-                        <label>Destination:</label>
-                        <span>{{ permitData.depot_address }}</span>
+                        <label>Date:</label>
+                        <span>{{ (getApprovedDate() || permitData.date) | date:'dd-MM-yyyy' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Name of Distributor:</label>
+                        <span>{{ permitData.sole_distributor_name }}</span>
                     </div>
                     <div class="info-item">
                         <label>Vehicle No:</label>
                         <span class="vehicle-no-text">{{ permitData.vehicle_number }}</span>
-                    </div>
-                    <div class="info-item">
-                        <label>Issue Date:</label>
-                        <span>{{ currentDate | date:'dd-MM-yyyy' }}</span>
                     </div>
                 </div>
             </div>
@@ -75,10 +74,9 @@
                             <th>Sl. No.</th>
                             <th>Brand Name</th>
                             <th>Size (ml)</th>
-                            <th>Strength</th>
                             <th>Quantity (Cases)</th>
                             <th>Total Bottles</th>
-                            <th>Duty Paid (₹)</th>
+                            <th>Details of Duty Paid</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -86,28 +84,23 @@
                             <td class="text-center">{{ i + 1 }}</td>
                             <td>{{ brand.brand }}</td>
                             <td class="text-center">{{ brand.size_ml || brand.sizeMl }}</td>
-                            <td class="text-center">{{ brand.strength || '42.8%' }}</td>
                             <td class="text-center">{{ brand.cases }}</td>
                             <td class="text-center">{{ (brand.cases || 0) * (brand.bottles_per_case || 12) }}</td>
                             <td class="duty-col-cell">
-                                <div class="duty-val">₹{{ getBrandDuty(brand) | number:'1.2-2' }}</div>
-                                <div class="wallet-badge-wrap">
-                                    <span class="wallet-tag">Wallet Debited</span>
-                                    <div class="wallet-ref-id" *ngIf="getBrandTxnId(brand)" [title]="getBrandAllTxnIds(brand).join(', ')">{{ getBrandTxnId(brand) }}</div>
+                                <div class="duty-txn-text">Duty Paid via {{ getBrandTxnId(brand) }}</div>
+                                <div class="duty-txn-date" *ngIf="getBrandTxnDate(brand)">
+                                    Date: {{ getBrandTxnDate(brand) | date:'dd-MM-yyyy' }}
                                 </div>
                             </td>
                         </tr>
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="4" class="text-right">Total:</td>
+                            <td colspan="3" class="text-right">Total:</td>
                             <td class="text-center">{{ getTotalCases() }}</td>
                             <td class="text-center">{{ getTotalBottles() }}</td>
-                            <td class="duty-col-cell">
-                                <div class="duty-val total-duty">₹{{ getTotalDuty() | number:'1.2-2' }}</div>
-                                <div class="wallet-badge-wrap">
-                                    <span class="wallet-verified-tag">✓ Verified</span>
-                                </div>
+                            <td class="duty-col-cell text-center">
+                                <span class="text-muted">-</span>
                             </td>
                         </tr>
                     </tfoot>
@@ -132,7 +125,7 @@
                 </div>
 
                 <div class="date-bottom">
-                    Date: <strong>{{ currentDate | date:'dd-MM-yyyy' }}</strong>
+                    Permit Date Valid Upto: <strong>{{ getPermitValidUptoDate() | date:'dd-MM-yyyy' }}</strong>
                 </div>
             </div>
 
@@ -163,7 +156,6 @@
             <div class="header">
                 <div class="form-number">
                     <div>FORM - IV</div>
-                    <div class="form-date">Date: {{ (permitData.date || currentDate) | date:'dd-MM-yyyy' }}</div>
                 </div>
                 <h1>Government of Sikkim</h1>
                 <h2>Excise Department</h2>
@@ -178,27 +170,27 @@
                         <span>{{ permitData.bill_no }}</span>
                     </div>
                     <div class="info-item">
-                        <label>Date:</label>
-                        <span>{{ permitData.date | date:'dd-MM-yyyy' }}</span>
+                        <label>Name of Manufacturer:</label>
+                        <span>{{ getManufacturerName() }}</span>
                     </div>
                     <div class="info-item">
-                        <label>Name of Licensee:</label>
-                        <span>{{ permitData.sole_distributor_name }}</span>
+                        <label>Destination:</label>
+                        <span>{{ permitData.depot_address }}</span>
                     </div>
                 </div>
 
                 <div class="right-col">
                     <div class="info-item">
-                        <label>Destination:</label>
-                        <span>{{ permitData.depot_address }}</span>
+                        <label>Date:</label>
+                        <span>{{ (getApprovedDate() || permitData.date) | date:'dd-MM-yyyy' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Name of Distributor:</label>
+                        <span>{{ permitData.sole_distributor_name }}</span>
                     </div>
                     <div class="info-item">
                         <label>Vehicle No:</label>
                         <span class="vehicle-no-text">{{ permitData.vehicle_number }}</span>
-                    </div>
-                    <div class="info-item">
-                        <label>Issue Date:</label>
-                        <span>{{ currentDate | date:'dd-MM-yyyy' }}</span>
                     </div>
                 </div>
             </div>
@@ -211,10 +203,9 @@
                             <th>Sl. No.</th>
                             <th>Brand Name</th>
                             <th>Size (ml)</th>
-                            <th>Strength</th>
                             <th>Quantity (Cases)</th>
                             <th>Total Bottles</th>
-                            <th>Duty Paid (₹)</th>
+                            <th>Details of Duty Paid</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -222,28 +213,23 @@
                             <td class="text-center">{{ i + 1 }}</td>
                             <td>{{ brand.brand }}</td>
                             <td class="text-center">{{ brand.size_ml || brand.sizeMl }}</td>
-                            <td class="text-center">{{ brand.strength || '42.8%' }}</td>
                             <td class="text-center">{{ brand.cases }}</td>
                             <td class="text-center">{{ (brand.cases || 0) * (brand.bottles_per_case || 12) }}</td>
                             <td class="duty-col-cell">
-                                <div class="duty-val">₹{{ getBrandDuty(brand) | number:'1.2-2' }}</div>
-                                <div class="wallet-badge-wrap">
-                                    <span class="wallet-tag">Wallet Debited</span>
-                                    <div class="wallet-ref-id" *ngIf="getBrandTxnId(brand)" [title]="getBrandAllTxnIds(brand).join(', ')">{{ getBrandTxnId(brand) }}</div>
+                                <div class="duty-txn-text">Duty Paid via {{ getBrandTxnId(brand) }}</div>
+                                <div class="duty-txn-date" *ngIf="getBrandTxnDate(brand)">
+                                    Date: {{ getBrandTxnDate(brand) | date:'dd-MM-yyyy' }}
                                 </div>
                             </td>
                         </tr>
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="4" class="text-right">Total:</td>
+                            <td colspan="3" class="text-right">Total:</td>
                             <td class="text-center">{{ getTotalCases() }}</td>
                             <td class="text-center">{{ getTotalBottles() }}</td>
-                            <td class="duty-col-cell">
-                                <div class="duty-val total-duty">₹{{ getTotalDuty() | number:'1.2-2' }}</div>
-                                <div class="wallet-badge-wrap">
-                                    <span class="wallet-verified-tag">✓ Verified</span>
-                                </div>
+                            <td class="duty-col-cell text-center">
+                                <span class="text-muted">-</span>
                             </td>
                         </tr>
                     </tfoot>
@@ -268,7 +254,7 @@
                 </div>
 
                 <div class="date-bottom">
-                    Date: <strong>{{ currentDate | date:'dd-MM-yyyy' }}</strong>
+                    Permit Date Valid Upto: <strong>{{ getPermitValidUptoDate() | date:'dd-MM-yyyy' }}</strong>
                 </div>
             </div>
 
@@ -299,7 +285,6 @@
             <div class="header">
                 <div class="form-number">
                     <div>FORM - IV</div>
-                    <div class="form-date">Date: {{ (permitData.date || currentDate) | date:'dd-MM-yyyy' }}</div>
                 </div>
                 <h1>Government of Sikkim</h1>
                 <h2>Excise Department</h2>
@@ -314,27 +299,27 @@
                         <span>{{ permitData.bill_no }}</span>
                     </div>
                     <div class="info-item">
-                        <label>Date:</label>
-                        <span>{{ permitData.date | date:'dd-MM-yyyy' }}</span>
+                        <label>Name of Manufacturer:</label>
+                        <span>{{ getManufacturerName() }}</span>
                     </div>
                     <div class="info-item">
-                        <label>Name of Licensee:</label>
-                        <span>{{ permitData.sole_distributor_name }}</span>
+                        <label>Destination:</label>
+                        <span>{{ permitData.depot_address }}</span>
                     </div>
                 </div>
 
                 <div class="right-col">
                     <div class="info-item">
-                        <label>Destination:</label>
-                        <span>{{ permitData.depot_address }}</span>
+                        <label>Date:</label>
+                        <span>{{ (getApprovedDate() || permitData.date) | date:'dd-MM-yyyy' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Name of Distributor:</label>
+                        <span>{{ permitData.sole_distributor_name }}</span>
                     </div>
                     <div class="info-item">
                         <label>Vehicle No:</label>
                         <span class="vehicle-no-text">{{ permitData.vehicle_number }}</span>
-                    </div>
-                    <div class="info-item">
-                        <label>Issue Date:</label>
-                        <span>{{ currentDate | date:'dd-MM-yyyy' }}</span>
                     </div>
                 </div>
             </div>
@@ -347,10 +332,9 @@
                             <th>Sl. No.</th>
                             <th>Brand Name</th>
                             <th>Size (ml)</th>
-                            <th>Strength</th>
                             <th>Quantity (Cases)</th>
                             <th>Total Bottles</th>
-                            <th>Duty Paid (₹)</th>
+                            <th>Details of Duty Paid</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -358,28 +342,23 @@
                             <td class="text-center">{{ i + 1 }}</td>
                             <td>{{ brand.brand }}</td>
                             <td class="text-center">{{ brand.size_ml || brand.sizeMl }}</td>
-                            <td class="text-center">{{ brand.strength || '42.8%' }}</td>
                             <td class="text-center">{{ brand.cases }}</td>
                             <td class="text-center">{{ (brand.cases || 0) * (brand.bottles_per_case || 12) }}</td>
                             <td class="duty-col-cell">
-                                <div class="duty-val">₹{{ getBrandDuty(brand) | number:'1.2-2' }}</div>
-                                <div class="wallet-badge-wrap">
-                                    <span class="wallet-tag">Wallet Debited</span>
-                                    <div class="wallet-ref-id" *ngIf="getBrandTxnId(brand)" [title]="getBrandAllTxnIds(brand).join(', ')">{{ getBrandTxnId(brand) }}</div>
+                                <div class="duty-txn-text">Duty Paid via {{ getBrandTxnId(brand) }}</div>
+                                <div class="duty-txn-date" *ngIf="getBrandTxnDate(brand)">
+                                    Date: {{ getBrandTxnDate(brand) | date:'dd-MM-yyyy' }}
                                 </div>
                             </td>
                         </tr>
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="4" class="text-right">Total:</td>
+                            <td colspan="3" class="text-right">Total:</td>
                             <td class="text-center">{{ getTotalCases() }}</td>
                             <td class="text-center">{{ getTotalBottles() }}</td>
-                            <td class="duty-col-cell">
-                                <div class="duty-val total-duty">₹{{ getTotalDuty() | number:'1.2-2' }}</div>
-                                <div class="wallet-badge-wrap">
-                                    <span class="wallet-verified-tag">✓ Verified</span>
-                                </div>
+                            <td class="duty-col-cell text-center">
+                                <span class="text-muted">-</span>
                             </td>
                         </tr>
                     </tfoot>
@@ -404,7 +383,7 @@
                 </div>
 
                 <div class="date-bottom">
-                    Date: <strong>{{ currentDate | date:'dd-MM-yyyy' }}</strong>
+                    Permit Date Valid Upto: <strong>{{ getPermitValidUptoDate() | date:'dd-MM-yyyy' }}</strong>
                 </div>
             </div>
 
@@ -435,7 +414,6 @@
             <div class="header">
                 <div class="form-number">
                     <div>FORM - IV</div>
-                    <div class="form-date">Date: {{ (permitData.date || currentDate) | date:'dd-MM-yyyy' }}</div>
                 </div>
                 <h1>Government of Sikkim</h1>
                 <h2>Excise Department</h2>
@@ -450,27 +428,27 @@
                         <span>{{ permitData.bill_no }}</span>
                     </div>
                     <div class="info-item">
-                        <label>Date:</label>
-                        <span>{{ permitData.date | date:'dd-MM-yyyy' }}</span>
+                        <label>Name of Manufacturer:</label>
+                        <span>{{ getManufacturerName() }}</span>
                     </div>
                     <div class="info-item">
-                        <label>Name of Licensee:</label>
-                        <span>{{ permitData.sole_distributor_name }}</span>
+                        <label>Destination:</label>
+                        <span>{{ permitData.depot_address }}</span>
                     </div>
                 </div>
 
                 <div class="right-col">
                     <div class="info-item">
-                        <label>Destination:</label>
-                        <span>{{ permitData.depot_address }}</span>
+                        <label>Date:</label>
+                        <span>{{ (getApprovedDate() || permitData.date) | date:'dd-MM-yyyy' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Name of Distributor:</label>
+                        <span>{{ permitData.sole_distributor_name }}</span>
                     </div>
                     <div class="info-item">
                         <label>Vehicle No:</label>
                         <span class="vehicle-no-text">{{ permitData.vehicle_number }}</span>
-                    </div>
-                    <div class="info-item">
-                        <label>Issue Date:</label>
-                        <span>{{ currentDate | date:'dd-MM-yyyy' }}</span>
                     </div>
                 </div>
             </div>
@@ -483,10 +461,9 @@
                             <th>Sl. No.</th>
                             <th>Brand Name</th>
                             <th>Size (ml)</th>
-                            <th>Strength</th>
                             <th>Quantity (Cases)</th>
                             <th>Total Bottles</th>
-                            <th>Duty Paid (₹)</th>
+                            <th>Details of Duty Paid</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -494,28 +471,23 @@
                             <td class="text-center">{{ i + 1 }}</td>
                             <td>{{ brand.brand }}</td>
                             <td class="text-center">{{ brand.size_ml || brand.sizeMl }}</td>
-                            <td class="text-center">{{ brand.strength || '42.8%' }}</td>
                             <td class="text-center">{{ brand.cases }}</td>
                             <td class="text-center">{{ (brand.cases || 0) * (brand.bottles_per_case || 12) }}</td>
                             <td class="duty-col-cell">
-                                <div class="duty-val">₹{{ getBrandDuty(brand) | number:'1.2-2' }}</div>
-                                <div class="wallet-badge-wrap">
-                                    <span class="wallet-tag">Wallet Debited</span>
-                                    <div class="wallet-ref-id" *ngIf="getBrandTxnId(brand)" [title]="getBrandAllTxnIds(brand).join(', ')">{{ getBrandTxnId(brand) }}</div>
+                                <div class="duty-txn-text">Duty Paid via {{ getBrandTxnId(brand) }}</div>
+                                <div class="duty-txn-date" *ngIf="getBrandTxnDate(brand)">
+                                    Date: {{ getBrandTxnDate(brand) | date:'dd-MM-yyyy' }}
                                 </div>
                             </td>
                         </tr>
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="4" class="text-right">Total:</td>
+                            <td colspan="3" class="text-right">Total:</td>
                             <td class="text-center">{{ getTotalCases() }}</td>
                             <td class="text-center">{{ getTotalBottles() }}</td>
-                            <td class="duty-col-cell">
-                                <div class="duty-val total-duty">₹{{ getTotalDuty() | number:'1.2-2' }}</div>
-                                <div class="wallet-badge-wrap">
-                                    <span class="wallet-verified-tag">✓ Verified</span>
-                                </div>
+                            <td class="duty-col-cell text-center">
+                                <span class="text-muted">-</span>
                             </td>
                         </tr>
                     </tfoot>
@@ -540,7 +512,7 @@
                 </div>
 
                 <div class="date-bottom">
-                    Date: <strong>{{ currentDate | date:'dd-MM-yyyy' }}</strong>
+                    Permit Date Valid Upto: <strong>{{ getPermitValidUptoDate() | date:'dd-MM-yyyy' }}</strong>
                 </div>
             </div>
 
