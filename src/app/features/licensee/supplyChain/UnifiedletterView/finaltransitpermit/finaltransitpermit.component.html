@@ -28,6 +28,9 @@
                 <div class="form-number">
                     <div>FORM - IV</div>
                 </div>
+                <div class="govt-logo-center">
+                    <img src="assets/fav-icon-black.png" alt="Government of Sikkim" class="govt-logo-img" />
+                </div>
                 <h1>Government of Sikkim</h1>
                 <h2>Excise Department</h2>
                 <h3>(See rule 9 (2))</h3>
@@ -87,8 +90,8 @@
                             <td class="text-center">{{ brand.cases }}</td>
                             <td class="text-center">{{ (brand.cases || 0) * (brand.bottles_per_case || 12) }}</td>
                             <td class="duty-col-cell">
-                                <div class="duty-txn-text">Duty Paid via {{ getBrandTxnId(brand) }}</div>
-                                <div class="duty-txn-date" *ngIf="getBrandTxnDate(brand)">
+                                <div class="duty-txn-text">Duty Paid via Transaction_id - {{ getBrandTxnId(brand) }}</div>
+                                <div class="duty-txn-date" *ngIf="i === 0 && getBrandTxnDate(brand)">
                                     Date: {{ getBrandTxnDate(brand) | date:'dd-MM-yyyy' }}
                                 </div>
                             </td>
@@ -157,6 +160,9 @@
                 <div class="form-number">
                     <div>FORM - IV</div>
                 </div>
+                <div class="govt-logo-center">
+                    <img src="assets/fav-icon-black.png" alt="Government of Sikkim" class="govt-logo-img" />
+                </div>
                 <h1>Government of Sikkim</h1>
                 <h2>Excise Department</h2>
                 <h3>(See rule 9 (2))</h3>
@@ -216,8 +222,8 @@
                             <td class="text-center">{{ brand.cases }}</td>
                             <td class="text-center">{{ (brand.cases || 0) * (brand.bottles_per_case || 12) }}</td>
                             <td class="duty-col-cell">
-                                <div class="duty-txn-text">Duty Paid via {{ getBrandTxnId(brand) }}</div>
-                                <div class="duty-txn-date" *ngIf="getBrandTxnDate(brand)">
+                                <div class="duty-txn-text">Duty Paid via Transaction_id - {{ getBrandTxnId(brand) }}</div>
+                                <div class="duty-txn-date" *ngIf="i === 0 && getBrandTxnDate(brand)">
                                     Date: {{ getBrandTxnDate(brand) | date:'dd-MM-yyyy' }}
                                 </div>
                             </td>
@@ -286,6 +292,9 @@
                 <div class="form-number">
                     <div>FORM - IV</div>
                 </div>
+                <div class="govt-logo-center">
+                    <img src="assets/fav-icon-black.png" alt="Government of Sikkim" class="govt-logo-img" />
+                </div>
                 <h1>Government of Sikkim</h1>
                 <h2>Excise Department</h2>
                 <h3>(See rule 9 (2))</h3>
@@ -345,8 +354,8 @@
                             <td class="text-center">{{ brand.cases }}</td>
                             <td class="text-center">{{ (brand.cases || 0) * (brand.bottles_per_case || 12) }}</td>
                             <td class="duty-col-cell">
-                                <div class="duty-txn-text">Duty Paid via {{ getBrandTxnId(brand) }}</div>
-                                <div class="duty-txn-date" *ngIf="getBrandTxnDate(brand)">
+                                <div class="duty-txn-text">Duty Paid via Transaction_id - {{ getBrandTxnId(brand) }}</div>
+                                <div class="duty-txn-date" *ngIf="i === 0 && getBrandTxnDate(brand)">
                                     Date: {{ getBrandTxnDate(brand) | date:'dd-MM-yyyy' }}
                                 </div>
                             </td>
@@ -415,6 +424,9 @@
                 <div class="form-number">
                     <div>FORM - IV</div>
                 </div>
+                <div class="govt-logo-center">
+                    <img src="assets/fav-icon-black.png" alt="Government of Sikkim" class="govt-logo-img" />
+                </div>
                 <h1>Government of Sikkim</h1>
                 <h2>Excise Department</h2>
                 <h3>(See rule 9 (2))</h3>
@@ -474,8 +486,8 @@
                             <td class="text-center">{{ brand.cases }}</td>
                             <td class="text-center">{{ (brand.cases || 0) * (brand.bottles_per_case || 12) }}</td>
                             <td class="duty-col-cell">
-                                <div class="duty-txn-text">Duty Paid via {{ getBrandTxnId(brand) }}</div>
-                                <div class="duty-txn-date" *ngIf="getBrandTxnDate(brand)">
+                                <div class="duty-txn-text">Duty Paid via Transaction_id - {{ getBrandTxnId(brand) }}</div>
+                                <div class="duty-txn-date" *ngIf="i === 0 && getBrandTxnDate(brand)">
                                     Date: {{ getBrandTxnDate(brand) | date:'dd-MM-yyyy' }}
                                 </div>
                             </td>

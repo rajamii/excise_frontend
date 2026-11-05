@@ -282,12 +282,26 @@ export class FinaltransitpermitComponent implements OnInit {
                 box-shadow: 0 2px 4px rgba(0,0,0,0.1);
               }
               
+              .govt-logo-center {
+                margin: 0 auto 4px auto;
+                text-align: center;
+              }
+
+              .govt-logo-img {
+                height: 48px;
+                width: auto;
+                object-fit: contain;
+                display: inline-block;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+
               .header {
                 text-align: center;
-                margin-bottom: 20px;
-                margin-top: 60px;
+                margin-bottom: 15px;
+                margin-top: 25px;
                 border-bottom: 2px double #000;
-                padding-bottom: 15px;
+                padding-bottom: 12px;
                 flex-shrink: 0;
               }
               
