@@ -610,7 +610,7 @@
               </table>
 
               <!-- Pagination -->
-              <div class="act-pagination">
+              <div class="act-pagination" *ngIf="adminActionTotalCount > 0">
                 <div class="act-pagination__info">
                   Showing {{ (adminActionPage - 1) * adminActionPageSize + 1 }}–{{ adminActionPage * adminActionPageSize > adminActionTotalCount ? adminActionTotalCount : adminActionPage * adminActionPageSize }} of {{ adminActionTotalCount }} records
                 </div>
@@ -929,7 +929,7 @@
               <div class="act-filter-field">
                 <label>Month</label>
                 <select [(ngModel)]="activityFilterMonth"
-                        (ngModelChange)="loadUserActivities()"
+                        (ngModelChange)="onActivityFilterChange()"
                         aria-label="Activity month"
                         title="Activity month"
                         class="act-filter-select">
@@ -944,7 +944,7 @@
               <div class="act-filter-field">
                 <label>Date</label>
                 <input type="date" [(ngModel)]="activityFilterDate"
-                       (ngModelChange)="loadUserActivities()"
+                       (ngModelChange)="onActivityFilterChange()"
                        aria-label="Activity date"
                        title="Activity date"
                        class="act-filter-month" />
@@ -954,7 +954,7 @@
               <div class="act-filter-field">
                 <label>Action</label>
                 <select [(ngModel)]="activityFilterAction"
-                        (ngModelChange)="loadUserActivities()"
+                        (ngModelChange)="onActivityFilterChange()"
                         aria-label="Activity action"
                         title="Activity action"
                         class="act-filter-select">
@@ -965,7 +965,7 @@
               </div>
 
               <button class="act-clear-btn" type="button"
-                (click)="activityFilterMonth=''; activityFilterDate=''; activityFilterAction=''; activityFilterUserId=''; activityFilterType=''; loadUserActivities()">
+                (click)="clearActivityFilters()">
                 Clear
               </button>
             </div>
@@ -1049,7 +1049,7 @@
               </table>
 
               <!-- Pagination -->
-              <div class="act-pagination" *ngIf="activityTotalPages > 1">
+              <div class="act-pagination" *ngIf="activityTotalCount > 0">
                 <div class="act-pagination__info">
                   Showing {{ (activityPage - 1) * activityPageSize + 1 }}–{{ activityPage * activityPageSize > activityTotalCount ? activityTotalCount : activityPage * activityPageSize }} of {{ activityTotalCount }} records
                 </div>
@@ -1076,12 +1076,12 @@
                   </button>
 
                   <div class="act-page-size">
-                    <label>Per page</label>
-                    <select [(ngModel)]="activityPageSize" (change)="activityGoToPage(1)" aria-label="Activity records per page" title="Activity records per page">
-                      <option [value]="5">5</option>
-                      <option [value]="10">10</option>
-                      <option [value]="25">25</option>
-                      <option [value]="50">50</option>
+                    <span>Rows:</span>
+                    <select [(ngModel)]="activityPageSize" (ngModelChange)="onActivityPageSizeChange()" aria-label="Activity records per page" title="Activity records per page">
+                      <option [ngValue]="10">10</option>
+                      <option [ngValue]="25">25</option>
+                      <option [ngValue]="50">50</option>
+                      <option [ngValue]="100">100</option>
                     </select>
                   </div>
                 </div>

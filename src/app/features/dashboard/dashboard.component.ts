@@ -1717,7 +1717,6 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   userActivities: any[] = [];
   userActivityLoading = false;
   userActivityError: string | null = null;
-  userActivityLimit = 500;
   activityFilterType = '';
   activityFilterUserId = '';
   activityFilterMonth = '';       // YYYY-MM
@@ -1728,14 +1727,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   activityPage = 1;
   activityPageSize = 10;
   activityTotalCount = 0;
-
-  get activityTotalPages(): number {
-    return Math.max(1, Math.ceil(this.activityTotalCount / this.activityPageSize));
-  }
+  activityTotalPages = 1;
 
   get activityPagedRows(): any[] {
-    const start = (this.activityPage - 1) * Number(this.activityPageSize);
-    return this.userActivities.slice(start, start + Number(this.activityPageSize));
+    return this.userActivities;
   }
 
   get activityPageNumbers(): number[] {
@@ -1752,6 +1747,27 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   activityGoToPage(page: number): void {
     if (page < 1 || page > this.activityTotalPages) return;
     this.activityPage = page;
+    this.loadUserActivities();
+  }
+
+  onActivityPageSizeChange(): void {
+    this.activityPage = 1;
+    this.loadUserActivities();
+  }
+
+  onActivityFilterChange(): void {
+    this.activityPage = 1;
+    this.loadUserActivities();
+  }
+
+  clearActivityFilters(): void {
+    this.activityFilterMonth = '';
+    this.activityFilterDate = '';
+    this.activityFilterAction = '';
+    this.activityFilterUserId = '';
+    this.activityFilterType = '';
+    this.activityPage = 1;
+    this.loadUserActivities();
   }
 
   now = new Date();
@@ -2726,9 +2742,37 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.activityTab === 'action-logs') {
       this.loadAdminActionLogs();
       this.loadAdminActionMetadata();
+      this.loadUserActivityBadgeCount();
     } else {
       this.loadUserActivities();
+      this.loadAdminActionBadgeCount();
     }
+  }
+
+  loadUserActivityBadgeCount(): void {
+    if (!this.currentUser) return;
+    const params = new HttpParams().set('page', '1').set('page_size', '1');
+    this.http.get<any>(`${environment.apiBaseUrl}/transactional/logs/activities/`, { params })
+      .pipe(catchError(() => of({ count: 0 })))
+      .subscribe((res: any) => {
+        if (res && typeof res.count === 'number') {
+          this.activityTotalCount = res.count;
+          this.activityTotalPages = Math.max(1, Math.ceil(this.activityTotalCount / this.activityPageSize));
+        }
+      });
+  }
+
+  loadAdminActionBadgeCount(): void {
+    if (!this.currentUser) return;
+    const params = new HttpParams().set('page', '1').set('page_size', '1').set('scope', this.adminActionScope || 'mine');
+    this.http.get<any>(`${environment.apiBaseUrl}/transactional/logs/admin-logs/`, { params })
+      .pipe(catchError(() => of({ count: 0 })))
+      .subscribe((res: any) => {
+        if (res && typeof res.count === 'number') {
+          this.adminActionTotalCount = res.count;
+          this.adminActionTotalPages = Math.max(1, Math.ceil(this.adminActionTotalCount / this.adminActionPageSize));
+        }
+      });
   }
 
   loadAdminActionMetadata(): void {
@@ -3162,9 +3206,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
     this.userActivityLoading = true;
     this.userActivityError = null;
-    this.activityPage = 1; // reset to first page on every fresh load
 
-    let params = new HttpParams().set('limit', String(Number(this.userActivityLimit) || 500));
+    let params = new HttpParams()
+      .set('page', String(this.activityPage || 1))
+      .set('page_size', String(this.activityPageSize || 10));
 
     const type = String(this.activityFilterType || '').trim();
     if (type) {
@@ -3195,19 +3240,31 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       params = params.set('user_id', userId);
     }
 
-    this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/logs/activities/`, { params })
+    this.http.get<any>(`${environment.apiBaseUrl}/transactional/logs/activities/`, { params })
       .pipe(
         finalize(() => (this.userActivityLoading = false)),
         catchError((err) => {
           this.userActivityError = err?.error?.detail || 'Failed to load activity log.';
           this.userActivities = [];
           this.activityTotalCount = 0;
-          return of([]);
+          this.activityTotalPages = 1;
+          return of({ count: 0, results: [], total_pages: 1 });
         })
       )
-      .subscribe((rows: any[]) => {
-        this.userActivities = Array.isArray(rows) ? rows : [];
-        this.activityTotalCount = this.userActivities.length;
+      .subscribe((res: any) => {
+        if (res && Array.isArray(res.results)) {
+          this.userActivities = res.results;
+          this.activityTotalCount = Number(res.count) || 0;
+          this.activityTotalPages = Number(res.totalPages || res.total_pages) || Math.max(1, Math.ceil(this.activityTotalCount / this.activityPageSize));
+        } else if (Array.isArray(res)) {
+          this.userActivities = res;
+          this.activityTotalCount = res.length;
+          this.activityTotalPages = Math.max(1, Math.ceil(this.activityTotalCount / this.activityPageSize));
+        } else {
+          this.userActivities = [];
+          this.activityTotalCount = 0;
+          this.activityTotalPages = 1;
+        }
       });
   }
 
@@ -3323,6 +3380,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
    * Falls back to ignoring user_id when only one user's data is present (licensee view).
    */
   getSessionDuration(row: any): string | null {
+    if (row?.session_duration || row?.sessionDuration) {
+      return row.session_duration || row.sessionDuration;
+    }
+
     const code    = this.getActivityCode(row);
     const display = this.getActivityDisplay(row);
     const isLogin  = code === 'LOGIN'  || display === 'login';
