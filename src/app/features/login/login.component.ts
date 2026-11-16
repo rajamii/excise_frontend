@@ -100,7 +100,7 @@ export class LoginComponent extends BaseComponent {
         phoneNumber: ['', [Validators.required, Validators.pattern(PatternConstants.MOBILE)]],
         email: [''],
         panNumber: [''],
-        address: [''],
+        address: ['', [Validators.maxLength(100)]],
         district: [''],
         subdivision: [''],
         password: [''],
@@ -331,7 +331,11 @@ export class LoginComponent extends BaseComponent {
   private enableRemainingFields() {
     const fields = ['email', 'panNumber', 'address', 'district', 'subdivision', 'password', 'confirmPassword'];
     fields.forEach(field => {
-      this.registrationForm.get(field)?.setValidators(Validators.required);
+      if (field === 'address') {
+        this.registrationForm.get(field)?.setValidators([Validators.required, Validators.maxLength(100)]);
+      } else {
+        this.registrationForm.get(field)?.setValidators(Validators.required);
+      }
       this.registrationForm.get(field)?.updateValueAndValidity();
     });
   }
@@ -712,7 +716,7 @@ export class LoginComponent extends BaseComponent {
         // Validators for the remaining fields
         this.registrationForm.get('email')?.setValidators([Validators.required, Validators.email]);
         this.registrationForm.get('panNumber')?.setValidators(Validators.required);
-        this.registrationForm.get('address')?.setValidators(Validators.required);
+        this.registrationForm.get('address')?.setValidators([Validators.required, Validators.maxLength(100)]);
         this.registrationForm.get('district')?.setValidators(Validators.required);
         this.registrationForm.get('subdivision')?.setValidators(Validators.required);
         this.registrationForm.get('password')?.setValidators([Validators.required, Validators.minLength(8)]);
@@ -1148,7 +1152,8 @@ export class LoginComponent extends BaseComponent {
     if (this.registrationForm.get('district')?.invalid) messages.push('District is required.');
     if (this.registrationForm.get('subdivision')?.invalid) messages.push('Subdivision is required.');
     if (this.registrationForm.get('panNumber')?.invalid) messages.push('PAN number is required.');
-    if (this.registrationForm.get('address')?.invalid) messages.push('Address is required.');
+    if (this.registrationForm.get('address')?.hasError('required')) messages.push('Address is required.');
+    if (this.registrationForm.get('address')?.hasError('maxlength')) messages.push('Address cannot exceed 100 characters.');
     if (hashkey?.invalid || response?.invalid) messages.push('Captcha is required.');
 
     return messages.length > 0 ? Array.from(new Set(messages)) : ['Please check the form and try again.'];
