@@ -676,10 +676,6 @@ export class LoginComponent extends BaseComponent {
           background: '#ffffff',
           backdrop: 'rgba(13, 30, 38, 0.4)',
         });
-
-        if (res.otp) {
-          console.log('%c[Sign Up OTP]: %c' + res.otp, 'color: #047857; font-weight: bold; font-size: 14px;', 'color: #1d4ed8; font-weight: bold; font-size: 16px;');
-        }
       },
       error: (err) => {
         this.isSendingOtp = false;
