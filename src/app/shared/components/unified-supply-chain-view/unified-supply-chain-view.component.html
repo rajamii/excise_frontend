@@ -843,19 +843,19 @@
                                     <td>{{ product.manufacturingUnit }}</td>
                                     <td>{{ product.cases }}</td>
                                     <td>
-                                        <div class="text-nowrap text-muted">{{ product.cases }} * ₹{{ product.educationCess }}</div>
+                                        <div class="text-nowrap text-muted">{{ product.cases }} * ₹{{ product.educationCess | number:'1.2-2' }}</div>
                                         <div class="fw-bold text-dark text-nowrap">= ₹{{ (product.totalEducationCess ?? (product.cases * product.educationCess)) | number:'1.2-2' }}</div>
                                     </td>
                                     <td>
-                                        <div class="text-nowrap text-muted">{{ product.cases }} * ₹{{ product.exciseDuty }}</div>
+                                        <div class="text-nowrap text-muted">{{ product.cases }} * ₹{{ product.exciseDuty | number:'1.2-2' }}</div>
                                         <div class="fw-bold text-dark text-nowrap">= ₹{{ (product.totalExciseDuty ?? (product.cases * product.exciseDuty)) | number:'1.2-2' }}</div>
                                     </td>
                                     <td>
-                                        <div class="text-nowrap text-muted">{{ product.cases }} * ₹{{ product.additionalExcise }}</div>
+                                        <div class="text-nowrap text-muted">{{ product.cases }} * ₹{{ product.additionalExcise | number:'1.2-2' }}</div>
                                         <div class="fw-bold text-dark text-nowrap">= ₹{{ (product.totalAdditionalExcise ?? (product.cases * product.additionalExcise)) | number:'1.2-2' }}</div>
                                     </td>
                                     <td>
-                                        <div class="text-nowrap text-muted">{{ product.cases }} * ₹{{ product.bottlingFee || 0 }}</div>
+                                        <div class="text-nowrap text-muted">{{ product.cases }} * ₹{{ (product.bottlingFee || 0) | number:'1.2-2' }}</div>
                                         <div class="fw-bold text-dark text-nowrap">= ₹{{ (product.totalBottlingFee ?? (product.cases * (product.bottlingFee || 0))) | number:'1.2-2' }}</div>
                                     </td>
                                 </tr>

@@ -1754,52 +1754,89 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                                 this.extractFieldValue(p, ['cases', 'case', 'quantity', 'qty', 'no_of_cases', 'noOfCases'])
                             );
 
-                            // Per-case charges (best-effort); fallback to request totals if missing.
-                            const educationCessPerCase = this.parseNumericValue(
+                            // Per-case charges (best-effort) and total charges
+                            const totalEducationCessRaw = this.extractFieldValue(p, ['totalEducationCess', 'total_education_cess']);
+                            const totalExciseDutyRaw = this.extractFieldValue(p, ['totalExciseDuty', 'total_excise_duty']);
+                            const totalAdditionalExciseRaw = this.extractFieldValue(p, ['totalAdditionalExcise', 'total_additional_excise']);
+                            const totalBottlingFeeRaw = this.extractFieldValue(p, ['totalBottlingFee', 'total_bottling_fee']);
+
+                            let educationCessPerCase = this.parseNumericValue(
                                 this.extractFieldValue(p, [
+                                    'educationCessRsPerCase',
+                                    'education_cess_rs_per_case',
+                                    'educationCessPerCase',
+                                    'education_cess_per_case',
                                     'educationCess',
                                     'education_cess',
-                                    'education_cess_per_case',
-                                    'educationCessPerCase',
-                                    'education_cess_rs_per_case',
                                 ]),
-                                this.parseNumericValue(mappedData['educationCess'])
+                                0
                             );
-                            const exciseDutyPerCase = this.parseNumericValue(
+                            let exciseDutyPerCase = this.parseNumericValue(
                                 this.extractFieldValue(p, [
+                                    'exciseDutyRsPerCase',
+                                    'excise_duty_rs_per_case',
+                                    'exciseDutyPerCase',
+                                    'excise_duty_per_case',
                                     'exciseDuty',
                                     'excise_duty',
-                                    'excise_duty_per_case',
-                                    'exciseDutyPerCase',
-                                    'excise_duty_rs_per_case',
                                 ]),
-                                this.parseNumericValue(mappedData['exciseDuty'])
+                                0
                             );
-                            const additionalExcisePerCase = this.parseNumericValue(
+                            let additionalExcisePerCase = this.parseNumericValue(
                                 this.extractFieldValue(p, [
+                                    'additionalExciseDutyRsPerCase',
+                                    'additional_excise_duty_rs_per_case',
+                                    'additionalExciseDutyPerCase',
+                                    'additional_excise_duty_per_case',
+                                    'additionalExcisePerCase',
+                                    'additional_excise_per_case',
                                     'additionalExcise',
                                     'additional_excise',
-                                    'additional_excise_per_case',
-                                    'additionalExcisePerCase',
-                                    'additional_excise_duty_rs_per_case',
-                                    'additional_excise_duty_per_case',
                                 ]),
-                                this.parseNumericValue(mappedData['additionalExcise'])
+                                0
                             );
-                            const bottlingFeePerCase = this.parseNumericValue(
+                            let bottlingFeePerCase = this.parseNumericValue(
                                 this.extractFieldValue(p, [
+                                    'bottlingFeeRsPerCase',
+                                    'bottling_fee_rs_per_case',
+                                    'bottlingFeePerCase',
+                                    'bottling_fee_per_case',
                                     'bottlingFee',
                                     'bottling_fee',
-                                    'bottling_fee_per_case',
-                                    'bottlingFeePerCase',
-                                    'bottling_fee_rs_per_case',
                                 ]),
-                                this.parseNumericValue(mappedData['bottlingFee'])
+                                0
                             );
+
+                            // If per-case rate is missing/0 but total is available and cases > 0, calculate rate per case
+                            if (educationCessPerCase === 0 && totalEducationCessRaw !== null && totalEducationCessRaw !== undefined && (cases || 0) > 0) {
+                                educationCessPerCase = this.parseNumericValue(totalEducationCessRaw) / cases;
+                            }
+                            if (exciseDutyPerCase === 0 && totalExciseDutyRaw !== null && totalExciseDutyRaw !== undefined && (cases || 0) > 0) {
+                                exciseDutyPerCase = this.parseNumericValue(totalExciseDutyRaw) / cases;
+                            }
+                            if (additionalExcisePerCase === 0 && totalAdditionalExciseRaw !== null && totalAdditionalExciseRaw !== undefined && (cases || 0) > 0) {
+                                additionalExcisePerCase = this.parseNumericValue(totalAdditionalExciseRaw) / cases;
+                            }
+                            if (bottlingFeePerCase === 0 && totalBottlingFeeRaw !== null && totalBottlingFeeRaw !== undefined && (cases || 0) > 0) {
+                                bottlingFeePerCase = this.parseNumericValue(totalBottlingFeeRaw) / cases;
+                            }
+
+                            const totalEducationCess = totalEducationCessRaw !== null && totalEducationCessRaw !== undefined
+                                ? this.parseNumericValue(totalEducationCessRaw)
+                                : (educationCessPerCase * (cases || 0));
+                            const totalExciseDuty = totalExciseDutyRaw !== null && totalExciseDutyRaw !== undefined
+                                ? this.parseNumericValue(totalExciseDutyRaw)
+                                : (exciseDutyPerCase * (cases || 0));
+                            const totalAdditionalExcise = totalAdditionalExciseRaw !== null && totalAdditionalExciseRaw !== undefined
+                                ? this.parseNumericValue(totalAdditionalExciseRaw)
+                                : (additionalExcisePerCase * (cases || 0));
+                            const totalBottlingFee = totalBottlingFeeRaw !== null && totalBottlingFeeRaw !== undefined
+                                ? this.parseNumericValue(totalBottlingFeeRaw)
+                                : (bottlingFeePerCase * (cases || 0));
 
                             const totalAmount = this.parseNumericValue(
                                 this.extractFieldValue(p, ['totalAmount', 'total_amount', 'amount', 'brAmount', 'br_amount']),
-                                (educationCessPerCase + exciseDutyPerCase + additionalExcisePerCase + bottlingFeePerCase) * (cases || 0)
+                                totalEducationCess + totalExciseDuty + totalAdditionalExcise + totalBottlingFee
                             );
 
                             return {
@@ -1817,10 +1854,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                                 exciseDuty: exciseDutyPerCase,
                                 additionalExcise: additionalExcisePerCase,
                                 bottlingFee: bottlingFeePerCase,
-                                totalEducationCess: (cases || 0) * educationCessPerCase,
-                                totalExciseDuty: (cases || 0) * exciseDutyPerCase,
-                                totalAdditionalExcise: (cases || 0) * additionalExcisePerCase,
-                                totalBottlingFee: (cases || 0) * bottlingFeePerCase,
+                                totalEducationCess,
+                                totalExciseDuty,
+                                totalAdditionalExcise,
+                                totalBottlingFee,
                                 totalAmount,
                             };
                         })
@@ -1831,23 +1868,104 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                     const totalCases = normalizedProducts.reduce((sum: number, p: any) => sum + (Number(p?.cases || 0) || 0), 0);
                     mappedData['quantity'] = totalCases;
                     mappedData['educationCess'] = normalizedProducts.reduce(
-                        (sum: number, p: any) => sum + (Number(p?.educationCess || 0) || 0) * (Number(p?.cases || 0) || 0),
+                        (sum: number, p: any) => sum + (Number(p?.totalEducationCess ?? ((p?.educationCess || 0) * (p?.cases || 0))) || 0),
                         0
                     );
                     mappedData['exciseDuty'] = normalizedProducts.reduce(
-                        (sum: number, p: any) => sum + (Number(p?.exciseDuty || 0) || 0) * (Number(p?.cases || 0) || 0),
+                        (sum: number, p: any) => sum + (Number(p?.totalExciseDuty ?? ((p?.exciseDuty || 0) * (p?.cases || 0))) || 0),
                         0
                     );
                     mappedData['additionalExcise'] = normalizedProducts.reduce(
-                        (sum: number, p: any) => sum + (Number(p?.additionalExcise || 0) || 0) * (Number(p?.cases || 0) || 0),
+                        (sum: number, p: any) => sum + (Number(p?.totalAdditionalExcise ?? ((p?.additionalExcise || 0) * (p?.cases || 0))) || 0),
                         0
                     );
                     mappedData['bottlingFee'] = normalizedProducts.reduce(
-                        (sum: number, p: any) => sum + (Number(p?.bottlingFee || 0) || 0) * (Number(p?.cases || 0) || 0),
+                        (sum: number, p: any) => sum + (Number(p?.totalBottlingFee ?? ((p?.bottlingFee || 0) * (p?.cases || 0))) || 0),
                         0
                     );
                     mappedData['brAmount'] = normalizedProducts.reduce((sum: number, p: any) => sum + (Number(p?.totalAmount || 0) || 0), 0);
                 } else {
+                    const cases = this.parseNumericValue(mappedData['quantity']) || 1;
+
+                    const totalEducationCessRaw = this.extractFieldValue(apiData, ['totalEducationCess', 'total_education_cess']);
+                    const totalExciseDutyRaw = this.extractFieldValue(apiData, ['totalExciseDuty', 'total_excise_duty']);
+                    const totalAdditionalExciseRaw = this.extractFieldValue(apiData, ['totalAdditionalExcise', 'total_additional_excise']);
+                    const totalBottlingFeeRaw = this.extractFieldValue(apiData, ['totalBottlingFee', 'total_bottling_fee']);
+
+                    let educationCessPerCase = this.parseNumericValue(
+                        this.extractFieldValue(apiData, [
+                            'educationCessRsPerCase',
+                            'education_cess_rs_per_case',
+                            'educationCessPerCase',
+                            'education_cess_per_case',
+                            'educationCess',
+                            'education_cess',
+                        ]),
+                        0
+                    );
+                    let exciseDutyPerCase = this.parseNumericValue(
+                        this.extractFieldValue(apiData, [
+                            'exciseDutyRsPerCase',
+                            'excise_duty_rs_per_case',
+                            'exciseDutyPerCase',
+                            'excise_duty_per_case',
+                            'exciseDuty',
+                            'excise_duty',
+                        ]),
+                        0
+                    );
+                    let additionalExcisePerCase = this.parseNumericValue(
+                        this.extractFieldValue(apiData, [
+                            'additionalExciseDutyRsPerCase',
+                            'additional_excise_duty_rs_per_case',
+                            'additionalExciseDutyPerCase',
+                            'additional_excise_duty_per_case',
+                            'additionalExcisePerCase',
+                            'additional_excise_per_case',
+                            'additionalExcise',
+                            'additional_excise',
+                        ]),
+                        0
+                    );
+                    let bottlingFeePerCase = this.parseNumericValue(
+                        this.extractFieldValue(apiData, [
+                            'bottlingFeeRsPerCase',
+                            'bottling_fee_rs_per_case',
+                            'bottlingFeePerCase',
+                            'bottling_fee_per_case',
+                            'bottlingFee',
+                            'bottling_fee',
+                        ]),
+                        0
+                    );
+
+                    // If per-case rate is missing/0 but total is available and cases > 0, calculate rate per case
+                    if (educationCessPerCase === 0 && totalEducationCessRaw !== null && totalEducationCessRaw !== undefined && cases > 0) {
+                        educationCessPerCase = this.parseNumericValue(totalEducationCessRaw) / cases;
+                    }
+                    if (exciseDutyPerCase === 0 && totalExciseDutyRaw !== null && totalExciseDutyRaw !== undefined && cases > 0) {
+                        exciseDutyPerCase = this.parseNumericValue(totalExciseDutyRaw) / cases;
+                    }
+                    if (additionalExcisePerCase === 0 && totalAdditionalExciseRaw !== null && totalAdditionalExciseRaw !== undefined && cases > 0) {
+                        additionalExcisePerCase = this.parseNumericValue(totalAdditionalExciseRaw) / cases;
+                    }
+                    if (bottlingFeePerCase === 0 && totalBottlingFeeRaw !== null && totalBottlingFeeRaw !== undefined && cases > 0) {
+                        bottlingFeePerCase = this.parseNumericValue(totalBottlingFeeRaw) / cases;
+                    }
+
+                    const totalEducationCess = totalEducationCessRaw !== null && totalEducationCessRaw !== undefined
+                        ? this.parseNumericValue(totalEducationCessRaw)
+                        : (educationCessPerCase * cases);
+                    const totalExciseDuty = totalExciseDutyRaw !== null && totalExciseDutyRaw !== undefined
+                        ? this.parseNumericValue(totalExciseDutyRaw)
+                        : (exciseDutyPerCase * cases);
+                    const totalAdditionalExcise = totalAdditionalExciseRaw !== null && totalAdditionalExciseRaw !== undefined
+                        ? this.parseNumericValue(totalAdditionalExciseRaw)
+                        : (additionalExcisePerCase * cases);
+                    const totalBottlingFee = totalBottlingFeeRaw !== null && totalBottlingFeeRaw !== undefined
+                        ? this.parseNumericValue(totalBottlingFeeRaw)
+                        : (bottlingFeePerCase * cases);
+
                     const transitProduct = {
                         id: mappedData.id,
                         brand: mappedData['brand'],
@@ -1857,11 +1975,15 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                         brandOwner: mappedData['brandOwner'],
                         manufacturingUnit: mappedData['manufacturingUnit'],
                         cases: mappedData['quantity'],
-                        educationCess: mappedData['educationCess'],
-                        exciseDuty: mappedData['exciseDuty'],
-                        additionalExcise: mappedData['additionalExcise'],
-                        bottlingFee: mappedData['bottlingFee'] || 0,
-                        totalAmount: mappedData['brAmount']
+                        educationCess: educationCessPerCase,
+                        exciseDuty: exciseDutyPerCase,
+                        additionalExcise: additionalExcisePerCase,
+                        bottlingFee: bottlingFeePerCase,
+                        totalEducationCess,
+                        totalExciseDuty,
+                        totalAdditionalExcise,
+                        totalBottlingFee,
+                        totalAmount: mappedData['brAmount'] || (totalEducationCess + totalExciseDuty + totalAdditionalExcise + totalBottlingFee)
                     };
                     mappedData['transitProducts'] = [transitProduct];
                 }
