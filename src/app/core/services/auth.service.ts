@@ -60,6 +60,10 @@ export class AuthService {
     return this.http.post(`${this.baseUrl}/check-username/`, { username });
   }
 
+  checkEmailExists(email: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/check-email/`, { email });
+  }
+
   sendRegistrationOtp(request: { phoneNumber: string; purpose?: 'register' }): Observable<any> {
     return this.http.post(`${environment.apiBaseUrl}/auth/users/otp/`, request);
   }

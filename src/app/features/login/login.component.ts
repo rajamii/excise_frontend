@@ -65,6 +65,13 @@ export class LoginComponent extends BaseComponent {
   loginError = false;
   loginErrorMessages: string[] = [];
 
+  // Form submission and backend error state
+  registrationSubmitted = false;
+  registrationBackendErrors: Record<string, string> = {};
+  loginSubmitted = false;
+  loginBackendErrors: Record<string, string> = {};
+  isCheckingEmail = false;
+
   isRightPanelActive = false;
 
   districts: District[] = [];
@@ -278,10 +285,14 @@ export class LoginComponent extends BaseComponent {
 
   switchToSignUp() {
     this.isRightPanelActive = true;
+    this.registrationSubmitted = false;
+    this.loginSubmitted = false;
   }
 
   switchToSignIn() {
     this.isRightPanelActive = false;
+    this.registrationSubmitted = false;
+    this.loginSubmitted = false;
   }
 
   goToHome(): void {
@@ -310,6 +321,8 @@ export class LoginComponent extends BaseComponent {
     this.usernameChecked = false;
     this.isCheckingUsername = false;
     this.usernameNotFound = false;
+    this.loginSubmitted = false;
+    this.loginBackendErrors = {};
     this.loginForm.reset();
     this.clearLoginErrors();
     this.setValidators();
@@ -333,6 +346,12 @@ export class LoginComponent extends BaseComponent {
     fields.forEach(field => {
       if (field === 'address') {
         this.registrationForm.get(field)?.setValidators([Validators.required, Validators.maxLength(100)]);
+      } else if (field === 'panNumber') {
+        this.registrationForm.get(field)?.setValidators([Validators.required, Validators.pattern(PatternConstants.PAN)]);
+      } else if (field === 'email') {
+        this.registrationForm.get(field)?.setValidators([Validators.required, Validators.pattern(PatternConstants.EMAIL)]);
+      } else if (field === 'password') {
+        this.registrationForm.get(field)?.setValidators([Validators.required, Validators.minLength(8)]);
       } else {
         this.registrationForm.get(field)?.setValidators(Validators.required);
       }
@@ -357,13 +376,19 @@ export class LoginComponent extends BaseComponent {
 
     const targetForm = form === 'registration' ? this.registrationForm : this.loginForm;
     targetForm.get('phoneNumber')?.setValue(sanitizedValue, { emitEvent: true });
-    targetForm.get('phoneNumber')?.markAsDirty();
+    // Keep untouched while user is actively typing so incomplete numbers do not prematurely show red errors
+    targetForm.get('phoneNumber')?.markAsUntouched();
     targetForm.get('phoneNumber')?.updateValueAndValidity();
 
     // Clear stale login errors as the user types a new number
     if (form === 'login') {
       this.clearLoginErrors();
+      this.loginSubmitted = false;
+    } else {
+      this.registrationSubmitted = false;
+      delete this.registrationBackendErrors['phoneNumber'];
     }
+    this.cdr.markForCheck();
   }
 
   onOtpPhoneEnter(event: Event): void {
@@ -513,12 +538,16 @@ export class LoginComponent extends BaseComponent {
   checkUsername(): void {
     const username = String(this.loginForm.value.username || '').trim();
     if (!username) {
+      this.loginSubmitted = true;
+      this.loginBackendErrors['username'] = 'User ID is required.';
       this.usernameNotFound = true;
+      this.cdr.markForCheck();
       return;
     }
     if (this.isLocallyBlockedByUsername(username)) {
       this.usernameNotFound = true;
       this.usernameChecked = false;
+      this.loginBackendErrors['username'] = 'This user has been deleted and cannot log in.';
       return;
     }
     this.isCheckingUsername = true;
@@ -544,6 +573,7 @@ export class LoginComponent extends BaseComponent {
         if (err?.status === 404) {
           this.usernameNotFound = true;
           this.usernameChecked = false;
+          this.loginBackendErrors['username'] = 'User ID not found. Please sign up first.';
         } else if (err?.status === 403) {
           this.usernameNotFound = false;
           this.usernameChecked = false;
@@ -570,6 +600,7 @@ export class LoginComponent extends BaseComponent {
       return;
     }
 
+    this.loginSubmitted = true;
     const phoneControl = this.loginForm.controls['phoneNumber'];
     const sanitizedPhoneNumber = String(phoneControl.value || '').replace(/\D/g, '').slice(0, 10);
 
@@ -577,12 +608,14 @@ export class LoginComponent extends BaseComponent {
     if (sanitizedPhoneNumber.length < 10 || !/^[6-9]/.test(sanitizedPhoneNumber)) {
       this.loginError = true;
       this.loginErrorMessages = ['Enter a valid mobile number: 10 digits, starting with 6, 7, 8, or 9.'];
+      this.loginBackendErrors['phoneNumber'] = 'Enter a valid mobile number: 10 digits, starting with 6, 7, 8, or 9.';
       return;
     }
 
     if (this.isLocallyBlockedByPhone(sanitizedPhoneNumber)) {
       this.loginError = true;
       this.loginErrorMessages = ['This user has been deleted and is not allowed to log in from this system.'];
+      this.loginBackendErrors['phoneNumber'] = 'This user has been deleted and cannot log in.';
       return;
     }
 
@@ -598,6 +631,7 @@ export class LoginComponent extends BaseComponent {
         this.otpIndex = response.otpId ?? response.otp_id ?? null;
         this.loginOtpPreview = null;
         this.isSendingOtp = false;
+        this.loginSubmitted = false;
 
         Swal.fire({
           icon: 'success',
@@ -628,6 +662,11 @@ export class LoginComponent extends BaseComponent {
         this.loginErrorMessages = messages;
         this.loginOtpPreview = null;
         this.isSendingOtp = false;
+        const text = messages.join(' ').toLowerCase();
+        if (text.includes('not registered') || text.includes('sign up')) {
+          this.loginBackendErrors['phoneNumber'] = 'This mobile number is not registered. Please sign up first.';
+        }
+        this.cdr.markForCheck();
       },
     });
   }
@@ -637,20 +676,25 @@ export class LoginComponent extends BaseComponent {
   }
 
   sendRegistrationOtp() {
+    this.registrationSubmitted = true;
     const phoneControl = this.registrationForm.get('phoneNumber');
     const sanitizedPhoneNumber = String(phoneControl?.value || '').replace(/\D/g, '').slice(0, 10);
     if (phoneControl?.value !== sanitizedPhoneNumber) {
       phoneControl?.setValue(sanitizedPhoneNumber);
     }
 
-    if (this.registrationForm.invalid) {
+    if (this.registrationForm.get('firstName')?.invalid ||
+        this.registrationForm.get('lastName')?.invalid ||
+        this.registrationForm.get('phoneNumber')?.invalid) {
       this.registrationError = true;
       this.registrationErrorMessages = this.getRegistrationValidationErrors();
+      this.cdr.markForCheck();
       return;
     }
     const phoneNumber = sanitizedPhoneNumber;
     this.isSendingOtp = true;
     this.registrationError = false;
+    delete this.registrationBackendErrors['phoneNumber'];
     this.authService.sendRegistrationOtp({
       phoneNumber: phoneNumber,
       purpose: 'register'
@@ -659,6 +703,7 @@ export class LoginComponent extends BaseComponent {
         this.registrationOtpId = res.otpId;
         this.registrationOtpSent = true;
         this.isSendingOtp = false;
+        this.registrationSubmitted = false;
 
         Swal.fire({
           icon: 'success',
@@ -684,7 +729,13 @@ export class LoginComponent extends BaseComponent {
       error: (err) => {
         this.isSendingOtp = false;
         this.registrationError = true;
-        this.registrationErrorMessages = this.mapRegistrationErrors(err, 'sendOtp');
+        const msgs = this.mapRegistrationErrors(err, 'sendOtp');
+        this.registrationErrorMessages = msgs;
+        const text = msgs.join(' ').toLowerCase();
+        if (text.includes('already registered') || text.includes('already exists')) {
+          this.registrationBackendErrors['phoneNumber'] = 'This mobile number is already registered. Please sign in instead.';
+        }
+        this.cdr.markForCheck();
       }
     });
   }
@@ -711,11 +762,12 @@ export class LoginComponent extends BaseComponent {
       next: () => {
         this.otpVerified = true;
         this.registrationError = false;
+        this.registrationSubmitted = false;
         this.enableRemainingFields();
 
         // Validators for the remaining fields
-        this.registrationForm.get('email')?.setValidators([Validators.required, Validators.email]);
-        this.registrationForm.get('panNumber')?.setValidators(Validators.required);
+        this.registrationForm.get('email')?.setValidators([Validators.required, Validators.pattern(PatternConstants.EMAIL)]);
+        this.registrationForm.get('panNumber')?.setValidators([Validators.required, Validators.pattern(PatternConstants.PAN)]);
         this.registrationForm.get('address')?.setValidators([Validators.required, Validators.maxLength(100)]);
         this.registrationForm.get('district')?.setValidators(Validators.required);
         this.registrationForm.get('subdivision')?.setValidators(Validators.required);
@@ -750,6 +802,7 @@ export class LoginComponent extends BaseComponent {
   }
 
   onRegister() {
+    this.registrationSubmitted = true;
     if (!this.otpVerified) {
       this.registrationError = true;
       this.registrationErrorMessages = ['Verify OTP before completing registration.'];
@@ -759,6 +812,7 @@ export class LoginComponent extends BaseComponent {
     if (this.registrationForm.invalid) {
       this.registrationError = true;
       this.registrationErrorMessages = this.getRegistrationValidationErrors();
+      this.cdr.markForCheck();
       return;
     }
 
@@ -798,28 +852,32 @@ export class LoginComponent extends BaseComponent {
         this.isRegistering = false;
         this.registrationError = true;
         this.registrationErrorMessages = this.mapRegistrationErrors(err, 'register');
-        console.error('Registration error response:', err.error); // ← Check this in console
+        console.error('Registration error response:', err.error);
+        const fieldErrors = err?.error?.errors || err?.error;
+        if (fieldErrors && typeof fieldErrors === 'object') {
+          const mapped = this.mapBackendFieldErrors(fieldErrors);
+          this.registrationBackendErrors = { ...this.registrationBackendErrors, ...mapped };
+        }
+        this.cdr.markForCheck();
       }
     });
   }
 
   // Resets the registration process
   resetRegistration() {
+    this.registrationSubmitted = false;
+    this.registrationBackendErrors = {};
     this.registrationOtpSent = false;
     this.otpVerified = false;
     this.registrationOtpId = null;
     this.registrationOtpControl.reset();
-    this.registrationForm.patchValue({
-      phoneNumber: '',
-      firstName: '',
-      middleName: '',
-      lastName: ''
-    });
+    this.registrationForm.reset();
     // Clear validators for later fields
     ['email', 'panNumber', 'address', 'district', 'subdivision', 'password', 'confirmPassword', 'hashkey', 'response'].forEach(field => {
       this.registrationForm.get(field)?.clearValidators();
       this.registrationForm.get(field)?.updateValueAndValidity();
     });
+    this.cdr.markForCheck();
   }
   // Handles login submission
   onLogin(): void {
@@ -835,6 +893,7 @@ export class LoginComponent extends BaseComponent {
   }
 
   private loginWithPassword(): void {
+    this.loginSubmitted = true;
     if (this.loginForm.invalid) {
       this.setLoginErrors(['Enter valid user ID, password, and captcha to continue.']);
       return;
@@ -853,7 +912,13 @@ export class LoginComponent extends BaseComponent {
       },
       error: (err) => {
         console.error('Login error:', err);
-        this.setLoginErrors(this.mapLoginErrors(err, 'password'));
+        const msgs = this.mapLoginErrors(err, 'password');
+        this.setLoginErrors(msgs);
+        const text = msgs.join(' ').toLowerCase();
+        if (text.includes('incorrect user id or password') || text.includes('invalid credentials')) {
+          this.loginBackendErrors['password'] = 'Incorrect password.';
+        }
+        this.cdr.markForCheck();
       },
     });
   }
@@ -1026,6 +1091,7 @@ export class LoginComponent extends BaseComponent {
   private clearLoginErrors(): void {
     this.loginError = false;
     this.loginErrorMessages = [];
+    this.loginBackendErrors = {};
   }
 
   private setLoginErrors(messages: string[]): void {
@@ -1141,19 +1207,24 @@ export class LoginComponent extends BaseComponent {
     if (lastName?.invalid) messages.push('Last name is required.');
     if (phoneNumber?.hasError('required')) messages.push('Mobile number is required.');
     if (phoneNumber?.hasError('pattern')) messages.push('Enter a valid mobile number: 10 digits, starting with 6, 7, 8, or 9.');
+    if (this.registrationBackendErrors['phoneNumber']) messages.push(this.registrationBackendErrors['phoneNumber']);
     if (email?.hasError('required')) messages.push('Email address is required.');
-    if (email?.hasError('email')) messages.push('Enter a valid email address.');
+    if (email?.hasError('email') || email?.hasError('pattern')) messages.push('Enter a valid email address.');
+    if (this.registrationBackendErrors['email']) messages.push(this.registrationBackendErrors['email']);
+    if (this.registrationForm.get('panNumber')?.hasError('required')) messages.push('PAN number is required.');
+    if (this.registrationForm.get('panNumber')?.hasError('pattern')) messages.push('Enter a valid 10-character PAN (e.g. ABCDE1234F).');
+    if (this.registrationBackendErrors['panNumber']) messages.push(this.registrationBackendErrors['panNumber']);
+    if (this.registrationForm.get('address')?.hasError('required')) messages.push('Address is required.');
+    if (this.registrationForm.get('address')?.hasError('maxlength')) messages.push('Address cannot exceed 100 characters.');
+    if (this.registrationBackendErrors['address']) messages.push(this.registrationBackendErrors['address']);
+    if (this.registrationForm.get('district')?.invalid) messages.push('District is required.');
+    if (this.registrationForm.get('subdivision')?.invalid) messages.push('Subdivision is required.');
     if (password?.hasError('required')) messages.push('Password is required.');
     if (password?.hasError('minlength')) messages.push('Password must be at least 8 characters long.');
     if (confirmPassword?.hasError('required')) messages.push('Confirm password is required.');
     if (confirmPassword?.hasError('mismatch') || this.registrationForm.hasError('mismatch')) {
       messages.push('Password and confirm password must match.');
     }
-    if (this.registrationForm.get('district')?.invalid) messages.push('District is required.');
-    if (this.registrationForm.get('subdivision')?.invalid) messages.push('Subdivision is required.');
-    if (this.registrationForm.get('panNumber')?.invalid) messages.push('PAN number is required.');
-    if (this.registrationForm.get('address')?.hasError('required')) messages.push('Address is required.');
-    if (this.registrationForm.get('address')?.hasError('maxlength')) messages.push('Address cannot exceed 100 characters.');
     if (hashkey?.invalid || response?.invalid) messages.push('Captcha is required.');
 
     return messages.length > 0 ? Array.from(new Set(messages)) : ['Please check the form and try again.'];
@@ -1202,5 +1273,235 @@ export class LoginComponent extends BaseComponent {
     }
 
     return ['Something went wrong during signup. Please try again.'];
+  }
+
+  // ── Inline Validation Helper Methods ─────────────────────────
+
+  isRegistrationFieldInvalid(field: string): boolean {
+    if (this.registrationBackendErrors[field]) {
+      return true;
+    }
+    const control = this.registrationForm.get(field);
+    if (!control) return false;
+
+    if (this.registrationSubmitted) {
+      return control.invalid;
+    }
+
+    // Address: show limit exceeded error as soon as user types or pastes more than 100 characters
+    if (field === 'address') {
+      if (control.hasError('maxlength')) {
+        return true;
+      }
+      return control.invalid && control.touched;
+    }
+
+    // Phone number: when all 10 numbers have been entered, show error if invalid; while < 10, don't show before completion unless blurred
+    if (field === 'phoneNumber') {
+      const val = String(control.value || '').replace(/\D/g, '');
+      if (val.length === 10) {
+        return control.invalid;
+      }
+      if (control.touched && val.length > 0) {
+        return true;
+      }
+      return false;
+    }
+
+    // PAN number: when all 10 characters entered, show error if invalid; while < 10, only if blurred
+    if (field === 'panNumber') {
+      const val = String(control.value || '').trim();
+      if (val.length === 10) {
+        return control.invalid;
+      }
+      if (control.touched && val.length > 0) {
+        return true;
+      }
+      return false;
+    }
+
+    // For other fields (name, email, password, etc.), only show if blurred
+    return control.invalid && control.touched;
+  }
+
+  getRegistrationFieldError(field: string): string | null {
+    if (this.registrationBackendErrors[field]) {
+      return this.registrationBackendErrors[field];
+    }
+    const control = this.registrationForm.get(field);
+    if (!control || !control.errors) return null;
+
+    if (control.hasError('required')) {
+      switch (field) {
+        case 'firstName': return 'First name is required.';
+        case 'lastName': return 'Last name is required.';
+        case 'phoneNumber': return 'Mobile number is required.';
+        case 'email': return 'Email address is required.';
+        case 'panNumber': return 'PAN number is required.';
+        case 'address': return 'Address is required.';
+        case 'district': return 'District is required.';
+        case 'subdivision': return 'Subdivision is required.';
+        case 'password': return 'Password is required.';
+        case 'confirmPassword': return 'Confirm password is required.';
+        default: return 'This field is required.';
+      }
+    }
+
+    if (control.hasError('pattern')) {
+      if (field === 'phoneNumber') return 'Enter a valid mobile number: 10 digits, starting with 6, 7, 8, or 9.';
+      if (field === 'panNumber') return 'Enter a valid 10-character PAN (e.g. ABCDE1234F).';
+      if (field === 'email') return 'Enter a valid email address.';
+    }
+
+    if (control.hasError('maxlength') && field === 'address') {
+      return 'Address cannot exceed 100 characters.';
+    }
+
+    if (control.hasError('email') && field === 'email') {
+      return 'Enter a valid email address.';
+    }
+
+    if (control.hasError('minlength') && field === 'password') {
+      return 'Password must be at least 8 characters long.';
+    }
+
+    if ((control.hasError('mismatch') || this.registrationForm.hasError('mismatch')) && (field === 'confirmPassword' || field === 'password')) {
+      return 'Password and confirm password must match.';
+    }
+
+    return 'Invalid value.';
+  }
+
+  clearFieldBackendError(form: 'registration' | 'login', fieldName: string): void {
+    const targetForm = form === 'registration' ? this.registrationForm : this.loginForm;
+    targetForm.get(fieldName)?.markAsUntouched();
+
+    if (form === 'registration') {
+      this.registrationSubmitted = false;
+      if (this.registrationBackendErrors[fieldName]) {
+        delete this.registrationBackendErrors[fieldName];
+      }
+    } else {
+      this.loginSubmitted = false;
+      if (this.loginBackendErrors[fieldName]) {
+        delete this.loginBackendErrors[fieldName];
+      }
+    }
+    this.cdr.markForCheck();
+  }
+
+  isLoginFieldInvalid(field: string): boolean {
+    if (this.loginBackendErrors[field]) {
+      return true;
+    }
+    const control = this.loginForm.get(field);
+    if (!control) return false;
+
+    if (this.loginSubmitted) {
+      return control.invalid;
+    }
+
+    if (field === 'phoneNumber') {
+      const val = String(control.value || '').replace(/\D/g, '');
+      // If all 10 digits have been entered, show error if format is invalid (e.g. doesn't start with 6-9)
+      if (val.length === 10) {
+        return control.invalid;
+      }
+      // While typing less than 10 digits, do NOT show error before completion unless blurred (touched)
+      if (control.touched && val.length > 0) {
+        return true;
+      }
+      return false;
+    }
+
+    // Only show if user blurred the field
+    return control.invalid && control.touched;
+  }
+
+  getLoginFieldError(field: string): string | null {
+    if (this.loginBackendErrors[field]) {
+      return this.loginBackendErrors[field];
+    }
+    const control = this.loginForm.get(field);
+    if (!control || !control.errors) return null;
+
+    if (control.hasError('required')) {
+      if (field === 'username') return 'User ID is required.';
+      if (field === 'password') return 'Password is required.';
+      if (field === 'phoneNumber') return 'Mobile number is required.';
+      if (field === 'otp') return 'OTP is required.';
+      return 'This field is required.';
+    }
+
+    if (control.hasError('pattern') && field === 'phoneNumber') {
+      return 'Enter a valid mobile number: 10 digits, starting with 6, 7, 8, or 9.';
+    }
+
+    return 'Invalid value.';
+  }
+
+  checkEmailAvailability(): void {
+    const emailControl = this.registrationForm.get('email');
+    const emailVal = String(emailControl?.value || '').trim();
+    if (!emailVal) return;
+    if (emailControl?.hasError('email') || emailControl?.hasError('pattern')) return;
+
+    this.isCheckingEmail = true;
+    this.authService.checkEmailExists(emailVal).subscribe({
+      next: (res: any) => {
+        this.isCheckingEmail = false;
+        if (res?.exists) {
+          this.registrationBackendErrors['email'] = 'This email is already registered.';
+        } else {
+          delete this.registrationBackendErrors['email'];
+        }
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.isCheckingEmail = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  onPanInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input) {
+      const upper = input.value.toUpperCase();
+      if (input.value !== upper) {
+        input.value = upper;
+      }
+      this.registrationForm.get('panNumber')?.setValue(upper, { emitEvent: true });
+      this.registrationForm.get('panNumber')?.markAsUntouched();
+    }
+    this.registrationSubmitted = false;
+    this.clearFieldBackendError('registration', 'panNumber');
+  }
+
+  private mapBackendFieldErrors(errors: any): Record<string, string> {
+    const result: Record<string, string> = {};
+    if (!errors || typeof errors !== 'object') return result;
+
+    const keyMap: Record<string, string> = {
+      pan_number: 'panNumber',
+      phone_number: 'phoneNumber',
+      first_name: 'firstName',
+      last_name: 'lastName',
+      middle_name: 'middleName',
+    };
+
+    for (const [rawKey, val] of Object.entries(errors)) {
+      const key = keyMap[rawKey] || rawKey;
+      let message = '';
+      if (Array.isArray(val) && val.length > 0) {
+        message = String(val[0]);
+      } else if (typeof val === 'string') {
+        message = val;
+      }
+      if (message) {
+        result[key] = message;
+      }
+    }
+    return result;
   }
 }

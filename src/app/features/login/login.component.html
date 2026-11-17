@@ -100,10 +100,17 @@
               @if (!usernameChecked) {
                 <div class="field-group">
                   <label>User ID</label>
-                  <div class="input-box">
+                  <div class="input-box" [class.has-error]="isLoginFieldInvalid('username')">
                     <mat-icon class="input-icon">person</mat-icon>
-                    <input formControlName="username" placeholder="Enter your User ID" autocomplete="username" />
+                    <input formControlName="username" placeholder="Enter your User ID" autocomplete="username"
+                      (input)="clearFieldBackendError('login', 'username'); usernameNotFound = false;" />
                   </div>
+                  @if (isLoginFieldInvalid('username')) {
+                    <span class="field-error">
+                      <mat-icon>error_outline</mat-icon>
+                      {{ getLoginFieldError('username') }}
+                    </span>
+                  }
                 </div>
 
                 @if (usernameNotFound) {
@@ -135,14 +142,21 @@
 
                 <div class="field-group">
                   <label>Password</label>
-                  <div class="input-box">
+                  <div class="input-box" [class.has-error]="isLoginFieldInvalid('password')">
                     <mat-icon class="input-icon">lock</mat-icon>
                     <input [type]="hidePassword ? 'password' : 'text'" formControlName="password"
-                      placeholder="Enter your password" autocomplete="current-password" />
+                      placeholder="Enter your password" autocomplete="current-password"
+                      (input)="clearFieldBackendError('login', 'password')" />
                     <button type="button" class="eye-btn" (click)="togglePasswordVisibility()">
                       <mat-icon>{{ hidePassword ? 'visibility' : 'visibility_off' }}</mat-icon>
                     </button>
                   </div>
+                  @if (isLoginFieldInvalid('password')) {
+                    <span class="field-error">
+                      <mat-icon>error_outline</mat-icon>
+                      {{ getLoginFieldError('password') }}
+                    </span>
+                  }
                 </div>
 
                 <app-captcha [formGroup]="loginForm"></app-captcha>
@@ -172,13 +186,19 @@
               @if (!otpSent) {
                 <div class="field-group">
                   <label>Mobile Number</label>
-                  <div class="input-box">
+                  <div class="input-box" [class.has-error]="isLoginFieldInvalid('phoneNumber')">
                     <mat-icon class="input-icon">phone_android</mat-icon>
                     <input formControlName="phoneNumber" placeholder="10-digit mobile number"
                       maxlength="10" inputmode="numeric" autocomplete="tel"
-                      (input)="sanitizePhoneNumberInput('login', $event)"
+                      (input)="sanitizePhoneNumberInput('login', $event); clearFieldBackendError('login', 'phoneNumber');"
                       (keydown.enter)="onOtpPhoneEnter($event)" />
                   </div>
+                  @if (isLoginFieldInvalid('phoneNumber')) {
+                    <span class="field-error">
+                      <mat-icon>error_outline</mat-icon>
+                      {{ getLoginFieldError('phoneNumber') }}
+                    </span>
+                  }
                 </div>
 
                 @if (loginError) {
@@ -362,33 +382,60 @@
               <div class="name-row">
                 <div class="field-group">
                   <label>First Name <span class="req">*</span></label>
-                  <div class="input-box">
-                    <input formControlName="firstName" placeholder="First name" />
+                  <div class="input-box" [class.has-error]="isRegistrationFieldInvalid('firstName')">
+                    <input formControlName="firstName" placeholder="First name"
+                      (input)="clearFieldBackendError('registration', 'firstName')" />
                   </div>
+                  @if (isRegistrationFieldInvalid('firstName')) {
+                    <span class="field-error">
+                      <mat-icon>error_outline</mat-icon>
+                      {{ getRegistrationFieldError('firstName') }}
+                    </span>
+                  }
                 </div>
                 <div class="field-group">
                   <label>Last Name <span class="req">*</span></label>
-                  <div class="input-box">
-                    <input formControlName="lastName" placeholder="Last name" />
+                  <div class="input-box" [class.has-error]="isRegistrationFieldInvalid('lastName')">
+                    <input formControlName="lastName" placeholder="Last name"
+                      (input)="clearFieldBackendError('registration', 'lastName')" />
                   </div>
+                  @if (isRegistrationFieldInvalid('lastName')) {
+                    <span class="field-error">
+                      <mat-icon>error_outline</mat-icon>
+                      {{ getRegistrationFieldError('lastName') }}
+                    </span>
+                  }
                 </div>
               </div>
 
               <div class="field-group">
                 <label>Middle Name</label>
-                <div class="input-box">
-                  <input formControlName="middleName" placeholder="Middle name (optional)" />
+                <div class="input-box" [class.has-error]="isRegistrationFieldInvalid('middleName')">
+                  <input formControlName="middleName" placeholder="Middle name (optional)"
+                    (input)="clearFieldBackendError('registration', 'middleName')" />
                 </div>
+                @if (isRegistrationFieldInvalid('middleName')) {
+                  <span class="field-error">
+                    <mat-icon>error_outline</mat-icon>
+                    {{ getRegistrationFieldError('middleName') }}
+                  </span>
+                }
               </div>
 
               <div class="field-group">
                 <label>Mobile Number <span class="req">*</span></label>
-                <div class="input-box">
+                <div class="input-box" [class.has-error]="isRegistrationFieldInvalid('phoneNumber')">
                   <mat-icon class="input-icon">phone_android</mat-icon>
                   <input formControlName="phoneNumber" placeholder="10-digit mobile number"
                     type="text" maxlength="10" inputmode="numeric"
-                    (input)="sanitizePhoneNumberInput('registration', $event)" />
+                    (input)="sanitizePhoneNumberInput('registration', $event); clearFieldBackendError('registration', 'phoneNumber')" />
                 </div>
+                @if (isRegistrationFieldInvalid('phoneNumber')) {
+                  <span class="field-error">
+                    <mat-icon>error_outline</mat-icon>
+                    {{ getRegistrationFieldError('phoneNumber') }}
+                  </span>
+                }
               </div>
 
               @if (registrationError) {
@@ -450,68 +497,116 @@
 
               <div class="field-group">
                 <label>Email <span class="req">*</span></label>
-                <div class="input-box">
+                <div class="input-box" [class.has-error]="isRegistrationFieldInvalid('email')">
                   <mat-icon class="input-icon">email</mat-icon>
-                  <input formControlName="email" type="email" placeholder="Email address" />
+                  <input formControlName="email" type="email" placeholder="Email address"
+                    (blur)="checkEmailAvailability()"
+                    (input)="clearFieldBackendError('registration', 'email')" />
                 </div>
+                @if (isRegistrationFieldInvalid('email')) {
+                  <span class="field-error">
+                    <mat-icon>error_outline</mat-icon>
+                    {{ getRegistrationFieldError('email') }}
+                  </span>
+                }
               </div>
 
               <div class="field-group">
                 <label>PAN Number <span class="req">*</span></label>
-                <div class="input-box">
-                  <input formControlName="panNumber" placeholder="e.g. ABCDE1234F" />
+                <div class="input-box" [class.has-error]="isRegistrationFieldInvalid('panNumber')">
+                  <input formControlName="panNumber" placeholder="e.g. ABCDE1234F" maxlength="10"
+                    (input)="onPanInput($event)" />
                 </div>
+                @if (isRegistrationFieldInvalid('panNumber')) {
+                  <span class="field-error">
+                    <mat-icon>error_outline</mat-icon>
+                    {{ getRegistrationFieldError('panNumber') }}
+                  </span>
+                }
               </div>
 
               <div class="field-group">
                 <label>Address <span class="req">*</span></label>
-                <div class="input-box">
-                  <input formControlName="address" placeholder="Full address" maxlength="100" />
+                <div class="input-box" [class.has-error]="isRegistrationFieldInvalid('address')">
+                  <input formControlName="address" placeholder="Full address (up to 100 characters)" maxlength="120"
+                    (input)="clearFieldBackendError('registration', 'address')" />
                 </div>
+                @if (isRegistrationFieldInvalid('address')) {
+                  <span class="field-error">
+                    <mat-icon>error_outline</mat-icon>
+                    {{ getRegistrationFieldError('address') }}
+                  </span>
+                }
               </div>
 
               <div class="field-group">
                 <label>District <span class="req">*</span></label>
-                <div class="select-box" [class.has-value]="registrationForm.get('district')?.value">
+                <div class="select-box" [class.has-error]="isRegistrationFieldInvalid('district')" [class.has-value]="registrationForm.get('district')?.value">
                   <mat-icon class="input-icon">location_city</mat-icon>
-                  <mat-select formControlName="district" placeholder="Select District" (selectionChange)="onDistrictChange($event.value)">
+                  <mat-select formControlName="district" placeholder="Select District" (selectionChange)="onDistrictChange($event.value); clearFieldBackendError('registration', 'district')">
                     <mat-option *ngFor="let d of districts" [value]="d.districtCode">{{ d.district }}</mat-option>
                   </mat-select>
                 </div>
+                @if (isRegistrationFieldInvalid('district')) {
+                  <span class="field-error">
+                    <mat-icon>error_outline</mat-icon>
+                    {{ getRegistrationFieldError('district') }}
+                  </span>
+                }
               </div>
 
               <div class="field-group">
                 <label>Subdivision <span class="req">*</span></label>
-                <div class="select-box" [class.disabled]="!registrationForm.get('district')?.value || subdivisions.length === 0" [class.has-value]="registrationForm.get('subdivision')?.value">
+                <div class="select-box" [class.has-error]="isRegistrationFieldInvalid('subdivision')" [class.disabled]="!registrationForm.get('district')?.value || subdivisions.length === 0" [class.has-value]="registrationForm.get('subdivision')?.value">
                   <mat-icon class="input-icon">map</mat-icon>
-                  <mat-select formControlName="subdivision" [placeholder]="!registrationForm.get('district')?.value ? 'Select District First' : (subdivisions.length === 0 ? 'No Subdivisions Found' : 'Select Subdivision')" [disabled]="!registrationForm.get('district')?.value || subdivisions.length === 0">
+                  <mat-select formControlName="subdivision" [placeholder]="!registrationForm.get('district')?.value ? 'Select District First' : (subdivisions.length === 0 ? 'No Subdivisions Found' : 'Select Subdivision')" [disabled]="!registrationForm.get('district')?.value || subdivisions.length === 0" (selectionChange)="clearFieldBackendError('registration', 'subdivision')">
                     <mat-option *ngFor="let s of subdivisions" [value]="s.subdivisionCode">{{ s.subdivision }}</mat-option>
                   </mat-select>
                 </div>
+                @if (isRegistrationFieldInvalid('subdivision')) {
+                  <span class="field-error">
+                    <mat-icon>error_outline</mat-icon>
+                    {{ getRegistrationFieldError('subdivision') }}
+                  </span>
+                }
               </div>
 
               <div class="field-group">
                 <label>Password <span class="req">*</span></label>
-                <div class="input-box">
+                <div class="input-box" [class.has-error]="isRegistrationFieldInvalid('password')">
                   <mat-icon class="input-icon">lock</mat-icon>
                   <input [type]="hideRegPassword ? 'password' : 'text'" formControlName="password"
-                    placeholder="Min 8 characters" />
+                    placeholder="Min 8 characters"
+                    (input)="clearFieldBackendError('registration', 'password')" />
                   <button type="button" class="eye-btn" (click)="hideRegPassword = !hideRegPassword">
                     <mat-icon>{{ hideRegPassword ? 'visibility' : 'visibility_off' }}</mat-icon>
                   </button>
                 </div>
+                @if (isRegistrationFieldInvalid('password')) {
+                  <span class="field-error">
+                    <mat-icon>error_outline</mat-icon>
+                    {{ getRegistrationFieldError('password') }}
+                  </span>
+                }
               </div>
 
               <div class="field-group">
                 <label>Confirm Password <span class="req">*</span></label>
-                <div class="input-box">
+                <div class="input-box" [class.has-error]="isRegistrationFieldInvalid('confirmPassword')">
                   <mat-icon class="input-icon">lock_reset</mat-icon>
                   <input [type]="hideConfirmPassword ? 'password' : 'text'" formControlName="confirmPassword"
-                    placeholder="Re-enter password" />
+                    placeholder="Re-enter password"
+                    (input)="clearFieldBackendError('registration', 'confirmPassword')" />
                   <button type="button" class="eye-btn" (click)="hideConfirmPassword = !hideConfirmPassword">
                     <mat-icon>{{ hideConfirmPassword ? 'visibility' : 'visibility_off' }}</mat-icon>
                   </button>
                 </div>
+                @if (isRegistrationFieldInvalid('confirmPassword')) {
+                  <span class="field-error">
+                    <mat-icon>error_outline</mat-icon>
+                    {{ getRegistrationFieldError('confirmPassword') }}
+                  </span>
+                }
               </div>
 
               <app-captcha [formGroup]="registrationForm"></app-captcha>
