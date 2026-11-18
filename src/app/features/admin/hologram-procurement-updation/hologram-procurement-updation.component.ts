@@ -33,6 +33,32 @@ export class HologramProcurementUpdationComponent implements OnInit {
   saveError = '';
   manualEntries: any[] = [];
 
+  // Active Tab: 'hologram' for hologram rolls entry, 'wallet' for establishment wallets
+  activeTab: 'hologram' | 'wallet' = 'hologram';
+
+  // Wallets state
+  wallets: any[] = [];
+  walletTransactions: any[] = [];
+  allWalletTransactions: any[] = [];
+  txFilter: 'single_window' | 'all' = 'single_window';
+  totalWalletBalance: number = 0;
+  isLoadingWallets = false;
+  isCreditingWallet = false;
+  walletError = '';
+
+  // Credit Wallet Modal state
+  showCreditModal = false;
+  selectedWalletForCredit: any = null;
+  creditForm = {
+    wallet_type: '',
+    amount: null as number | null,
+    remarks: '',
+    previewTxnId: ''
+  };
+
+  // Quick amount suggestions (INR)
+  readonly quickAmounts: number[] = [10000, 25000, 50000, 100000, 500000];
+
   // Form for adding cartons
   cartons: Carton[] = [];
 
@@ -103,6 +129,9 @@ export class HologramProcurementUpdationComponent implements OnInit {
     this.saveError = '';
     if (this.cartons.length === 0) {
       this.addCarton();
+    }
+    if (this.activeTab === 'wallet' && est) {
+      this.loadEstablishmentWallets(est);
     }
   }
 
@@ -606,5 +635,249 @@ export class HologramProcurementUpdationComponent implements OnInit {
     this.selectedEstablishment = null;
     this.saveSuccess = false;
     this.saveError = '';
+  }
+
+  switchTab(tab: 'hologram' | 'wallet'): void {
+    this.activeTab = tab;
+    if (tab === 'wallet' && this.selectedEstablishment) {
+      this.loadEstablishmentWallets(this.selectedEstablishment);
+    }
+  }
+
+  openWalletTabFor(est: any, event?: MouseEvent): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.selectEstablishment(est);
+    this.switchTab('wallet');
+  }
+
+  loadEstablishmentWallets(est?: any): void {
+    const target = est || this.selectedEstablishment;
+    if (!target) return;
+
+    const lid = target.licensee_id || target.license_number || target.id;
+    if (!lid) return;
+
+    this.isLoadingWallets = true;
+    this.walletError = '';
+
+    // Fetch with all=true to get both singleWindowTransactions and allTransactions
+    this.http.get<any>(`${this.apiBaseUrl}/wallets/?licensee_id=${encodeURIComponent(lid)}&all=true`).subscribe({
+      next: (res) => {
+        this.isLoadingWallets = false;
+        this.wallets = res?.wallets || [];
+        this.totalWalletBalance = res?.totalWalletBalance ?? res?.total_wallet_balance ?? 0;
+        
+        const swTxs = res?.singleWindowTransactions ?? res?.single_window_transactions;
+        const allTxs = res?.allTransactions ?? res?.all_transactions ?? res?.transactions ?? [];
+
+        if (Array.isArray(swTxs)) {
+          this.walletTransactions = swTxs;
+        } else {
+          // Filter single window transactions
+          this.walletTransactions = allTxs.filter((tx: any) =>
+            tx.isSingleWindow ||
+            tx.is_single_window ||
+            (tx.transactionId || tx.transaction_id || '').toLowerCase().startsWith('admin_') ||
+            (tx.transactionId || tx.transaction_id || '').toLowerCase().startsWith('single_window') ||
+            (tx.sourceModule || tx.source_module || '').toLowerCase() === 'single_window'
+          );
+        }
+
+        this.allWalletTransactions = allTxs;
+
+        // Update establishment's cached balance in the list
+        if (target) {
+          target.total_wallet_balance = this.totalWalletBalance;
+          target.totalWalletBalance = this.totalWalletBalance;
+          target.wallets_count = this.wallets.length;
+          target.walletsCount = this.wallets.length;
+        }
+      },
+      error: (err) => {
+        this.isLoadingWallets = false;
+        const msg = err?.error?.error || err?.error?.detail || err?.message || 'Failed to load establishment wallets.';
+        this.walletError = msg;
+        console.error('Failed to load wallets:', err);
+      }
+    });
+  }
+
+  get displayedTransactions(): any[] {
+    return this.txFilter === 'single_window' ? this.walletTransactions : this.allWalletTransactions;
+  }
+
+  setTxFilter(filter: 'single_window' | 'all'): void {
+    this.txFilter = filter;
+  }
+
+  getWalletTypeCode(w: any): string {
+    if (!w) return '';
+    if (typeof w === 'string') return w.trim().toLowerCase();
+    const code = w.wallet_type || w.walletType || w.code || w.type || '';
+    return String(code).trim().toLowerCase();
+  }
+
+  openCreditModal(wallet?: any): void {
+    this.selectedWalletForCredit = wallet || (this.wallets && this.wallets[0]) || null;
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const ts = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    const rnd = Math.floor(100 + Math.random() * 900);
+
+    const defaultType = this.getWalletTypeCode(this.selectedWalletForCredit) || this.getWalletTypeCode(this.wallets[0]) || 'hologram';
+
+    this.creditForm = {
+      wallet_type: defaultType,
+      amount: null,
+      remarks: '',
+      previewTxnId: `admin_${ts}_${rnd}`
+    };
+    this.showCreditModal = true;
+  }
+
+  closeCreditModal(): void {
+    this.showCreditModal = false;
+    this.selectedWalletForCredit = null;
+    this.creditForm = {
+      wallet_type: '',
+      amount: null,
+      remarks: '',
+      previewTxnId: ''
+    };
+  }
+
+  setQuickAmount(amount: number): void {
+    this.creditForm.amount = (this.creditForm.amount || 0) + amount;
+  }
+
+  submitCreditWallet(): void {
+    if (this.isCreditingWallet) return;
+
+    if (!this.selectedEstablishment) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Select Establishment',
+        text: 'Please select an establishment first.',
+        confirmButtonColor: '#0f4c5c'
+      });
+      return;
+    }
+
+    const wType = this.getWalletTypeCode(this.creditForm.wallet_type);
+    if (!wType || wType === 'undefined' || wType === 'null') {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Select Wallet',
+        text: 'Please choose which wallet to credit.',
+        confirmButtonColor: '#0f4c5c'
+      });
+      return;
+    }
+
+    const amt = Number(this.creditForm.amount);
+    if (!amt || isNaN(amt) || amt <= 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Invalid Amount',
+        text: 'Please enter a valid amount greater than zero.',
+        confirmButtonColor: '#0f4c5c'
+      });
+      return;
+    }
+
+    this.isCreditingWallet = true;
+    const lid = this.selectedEstablishment.licensee_id || this.selectedEstablishment.license_number || this.selectedEstablishment.id;
+    const estName = this.getEstablishmentName(this.selectedEstablishment);
+
+    const payload = {
+      licensee_id: lid,
+      licenseeId: lid,
+      wallet_type: wType,
+      walletType: wType,
+      amount: amt,
+      remarks: this.creditForm.remarks || ''
+    };
+
+    this.http.post<any>(`${this.apiBaseUrl}/wallets/credit/`, payload).subscribe({
+      next: (res) => {
+        this.isCreditingWallet = false;
+        const txnId = res?.transaction_id || res?.transactionId || this.creditForm.previewTxnId;
+        const walletName = res?.wallet_name || res?.walletName || this.getWalletName(wType);
+
+        this.closeCreditModal();
+        this.loadEstablishmentWallets(this.selectedEstablishment);
+        this.loadEstablishments();
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Wallet Credited Successfully!',
+          html: `
+            <div style="text-align: left; font-size: 14px; line-height: 1.6;">
+              <p style="margin: 0 0 8px;"><strong>Establishment:</strong> ${estName}</p>
+              <p style="margin: 0 0 8px;"><strong>Wallet:</strong> ${walletName}</p>
+              <p style="margin: 0 0 8px;"><strong>Amount Added:</strong> <span style="color: #10b981; font-weight: bold; font-size: 16px;">₹${amt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></p>
+              <div style="background: #f1f5f9; border-radius: 6px; padding: 10px; margin-top: 12px;">
+                <span style="font-size: 12px; color: #64748b; display: block;">Transaction Reference ID:</span>
+                <code style="font-size: 13px; font-weight: bold; color: #0f4c5c;">${txnId}</code>
+              </div>
+              <p style="font-size: 12px; color: #64748b; margin-top: 8px;"><em>This transaction was performed via Single Window and is recorded in user transaction history.</em></p>
+            </div>
+          `,
+          confirmButtonColor: '#10b981',
+          confirmButtonText: 'Done'
+        });
+      },
+      error: (err) => {
+        this.isCreditingWallet = false;
+        const msg = err?.error?.error || err?.error?.detail || err?.message || 'Failed to credit wallet. Please try again.';
+        Swal.fire({
+          icon: 'error',
+          title: 'Credit Failed',
+          text: msg,
+          confirmButtonColor: '#dc2626'
+        });
+      }
+    });
+  }
+
+  getWalletName(type: any): string {
+    const key = this.getWalletTypeCode(type);
+    const map: Record<string, string> = {
+      'excise': 'Excise / Additional Duty',
+      'additional_excise': 'Additional Excise Duty',
+      'education_cess': 'Education Cess',
+      'hologram': 'Hologram Fee',
+      'security_deposit': 'Security Deposit',
+      'license_fee': 'License Fees'
+    };
+    return map[key] || (key ? key.replace(/_/g, ' ').toUpperCase() : 'Wallet');
+  }
+
+  getWalletIcon(type: any): string {
+    const key = this.getWalletTypeCode(type);
+    const map: Record<string, string> = {
+      'excise': '🍷',
+      'additional_excise': '🍷',
+      'education_cess': '🎓',
+      'hologram': '🏷️',
+      'security_deposit': '🔒',
+      'license_fee': '📄'
+    };
+    return map[key] || '💳';
+  }
+
+  getWalletBadgeClass(type: any): string {
+    const key = this.getWalletTypeCode(type);
+    const map: Record<string, string> = {
+      'excise': 'hpu__wcard-badge--excise',
+      'additional_excise': 'hpu__wcard-badge--excise',
+      'education_cess': 'hpu__wcard-badge--cess',
+      'hologram': 'hpu__wcard-badge--hologram',
+      'security_deposit': 'hpu__wcard-badge--security',
+      'license_fee': 'hpu__wcard-badge--fee'
+    };
+    return map[key] || 'hpu__wcard-badge--default';
   }
 }

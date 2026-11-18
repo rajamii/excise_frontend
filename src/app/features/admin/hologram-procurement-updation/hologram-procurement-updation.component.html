@@ -100,10 +100,23 @@
             <span class="hpu__est-rolls-empty" *ngIf="est.total_rolls === 0">
               ⚠️ No holograms in inventory yet
             </span>
+            <span class="hpu__est-wallet" *ngIf="est.total_wallet_balance !== undefined">
+              💳 Wallets: <strong>₹{{ est.total_wallet_balance | number:'1.2-2' }}</strong>
+            </span>
           </div>
         </div>
-        <div class="hpu__est-check" *ngIf="isSelectedEstablishment(est)">
-          <span class="hpu__check-icon">✓</span>
+        <div class="hpu__est-side-actions">
+          <button
+            type="button"
+            class="hpu__btn-wallet-pill"
+            (click)="openWalletTabFor(est, $event)"
+            title="Open 5 Wallets for this establishment"
+          >
+            💳 Wallets
+          </button>
+          <div class="hpu__est-check" *ngIf="isSelectedEstablishment(est)">
+            <span class="hpu__check-icon">✓</span>
+          </div>
         </div>
       </div>
 
@@ -115,8 +128,35 @@
     </div>
   </section>
 
-  <!-- Step 2: Enter Carton Details (shown when establishment is selected) -->
-  <section *ngIf="selectedEstablishment" class="hpu__card">
+  <!-- Navigation Tabs: Hologram Inventory vs Establishment Wallets -->
+  <div class="hpu__tabs-nav">
+    <button
+      type="button"
+      class="hpu__tab-btn"
+      [class.hpu__tab-btn--active]="activeTab === 'hologram'"
+      (click)="switchTab('hologram')"
+    >
+      <span class="hpu__tab-icon">📦</span>
+      <span class="hpu__tab-label">Hologram Inventory Updation</span>
+    </button>
+    <button
+      type="button"
+      class="hpu__tab-btn"
+      [class.hpu__tab-btn--active]="activeTab === 'wallet'"
+      (click)="switchTab('wallet')"
+    >
+      <span class="hpu__tab-icon">💳</span>
+      <span class="hpu__tab-label">Establishment Wallets (5 Wallets)</span>
+      <span *ngIf="selectedEstablishment && totalWalletBalance > 0" class="hpu__tab-badge">
+        ₹{{ totalWalletBalance | number:'1.2-2' }}
+      </span>
+    </button>
+  </div>
+
+  <!-- TAB 1: Hologram Inventory Updation -->
+  <div *ngIf="activeTab === 'hologram'" class="hpu__tab-content">
+    <!-- Step 2: Enter Carton Details (shown when establishment is selected) -->
+    <section *ngIf="selectedEstablishment" class="hpu__card">
     <div class="hpu__card-header hpu__card-header--between">
       <div class="hpu__step-header-left">
         <div class="hpu__step-badge">2</div>
@@ -438,6 +478,389 @@
       </table>
     </div>
   </section>
+  </div> <!-- End Tab 1: Hologram Inventory Updation -->
+
+  <!-- TAB 2: Establishment Wallets (5 Wallets) -->
+  <div *ngIf="activeTab === 'wallet'" class="hpu__tab-content hpu__wallet-tab">
+    <!-- Unselected Prompt Banner -->
+    <div *ngIf="!selectedEstablishment" class="hpu__card hpu__wallet-empty-prompt">
+      <div class="hpu__wallet-empty-icon">💳</div>
+      <h3 class="hpu__wallet-empty-title">Select an Establishment to View &amp; Recharge Wallets</h3>
+      <p class="hpu__wallet-empty-desc">
+        Please choose a distillery or brewery above from <strong>Step 1</strong> to open all 5 wallets (Excise Duty, Education Cess, Hologram Fee, Security Deposit, License Fee), inspect current balances, and directly add funds via Single Window.
+      </p>
+    </div>
+
+    <!-- Selected Establishment Wallets View -->
+    <section *ngIf="selectedEstablishment" class="hpu__card">
+      <div class="hpu__card-header hpu__card-header--between">
+        <div class="hpu__step-header-left">
+          <div class="hpu__step-badge hpu__step-badge--wallet">💳</div>
+          <div>
+            <h2 class="hpu__card-title">Establishment Wallets</h2>
+            <div class="hpu__selected-est-pill">
+              <span class="hpu__pill-label">Establishment:</span>
+              <strong class="hpu__pill-name">{{ getEstablishmentName(selectedEstablishment) }}</strong>
+              <span *ngIf="getEstablishmentCode(selectedEstablishment)" class="hpu__pill-code">
+                • {{ getEstablishmentCode(selectedEstablishment) }}
+              </span>
+              <span class="hpu__badge" [ngClass]="(selectedEstablishment.type || selectedEstablishment.license_type) === 'Brewery' ? 'hpu__badge--brewery' : 'hpu__badge--distillery'">
+                {{ selectedEstablishment.type || selectedEstablishment.license_type || getEstablishmentType(selectedEstablishment) }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hpu__wallet-top-actions">
+          <button
+            type="button"
+            class="hpu__btn hpu__btn--secondary hpu__btn--sm"
+            (click)="loadEstablishmentWallets(selectedEstablishment)"
+            [disabled]="isLoadingWallets"
+            title="Refresh wallet balances"
+          >
+            ↻ Refresh
+          </button>
+          <button
+            type="button"
+            class="hpu__btn hpu__btn--primary hpu__btn--sm"
+            (click)="openCreditModal()"
+          >
+            + Add Amount to Wallet
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div *ngIf="isLoadingWallets" class="hpu__loading-state">
+        <div class="hpu__spinner"></div>
+        <span>Loading establishment wallets &amp; balances...</span>
+      </div>
+
+      <!-- Wallet Error -->
+      <div *ngIf="walletError && !isLoadingWallets" class="hpu__alert hpu__alert--error">
+        <div class="hpu__alert-icon">⚠</div>
+        <div class="hpu__alert-body">{{ walletError }}</div>
+        <button type="button" class="hpu__alert-close" (click)="walletError = ''">×</button>
+      </div>
+
+      <!-- Combined Total Balance Banner -->
+      <div *ngIf="!isLoadingWallets" class="hpu__wallet-summary-banner">
+        <div class="hpu__wsb-col">
+          <span class="hpu__wsb-label">Total Combined Balance</span>
+          <div class="hpu__wsb-val-wrap">
+            <span class="hpu__wsb-currency">₹</span>
+            <strong class="hpu__wsb-val">{{ totalWalletBalance | number:'1.2-2' }}</strong>
+          </div>
+          <span class="hpu__wsb-sub">Across all 5 distillery/brewery wallets</span>
+        </div>
+        <div class="hpu__wsb-divider"></div>
+        <div class="hpu__wsb-col">
+          <span class="hpu__wsb-label">Wallets Status</span>
+          <strong class="hpu__wsb-metric">{{ wallets.length }} of 5 Active</strong>
+          <span class="hpu__wsb-sub">Excise, Cess, Hologram, Security, License</span>
+        </div>
+        <div class="hpu__wsb-divider"></div>
+        <div class="hpu__wsb-col">
+          <span class="hpu__wsb-label">Single Window Mode</span>
+          <div>
+            <span class="hpu__badge hpu__badge--single-window">⚡ Admin Direct Credit</span>
+          </div>
+          <span class="hpu__wsb-sub">Generates tracked single_window_* transactions</span>
+        </div>
+      </div>
+
+      <!-- The 5 Wallet Cards Grid -->
+      <div *ngIf="!isLoadingWallets" class="hpu__wallets-grid">
+        <div
+          *ngFor="let w of wallets"
+          class="hpu__wcard"
+          [ngClass]="getWalletBadgeClass(w)"
+        >
+          <div class="hpu__wcard-header">
+            <div class="hpu__wcard-title-group">
+              <span class="hpu__wcard-icon">{{ w.icon || getWalletIcon(w) }}</span>
+              <div>
+                <h3 class="hpu__wcard-title">{{ w.name || w.walletName || w.wallet_name || getWalletName(w) }}</h3>
+                <span class="hpu__wcard-hoa">HOA: {{ w.headOfAccount || w.head_of_account || '0039-00-800' }}</span>
+              </div>
+            </div>
+            <span class="hpu__badge hpu__badge--success">Active</span>
+          </div>
+
+          <div class="hpu__wcard-body">
+            <div class="hpu__wcard-balance-block">
+              <span class="hpu__wcard-balance-label">Current Balance</span>
+              <div class="hpu__wcard-balance">
+                <span class="hpu__wcard-currency">₹</span>
+                <span class="hpu__wcard-amount">{{ (w.currentBalance ?? w.current_balance ?? 0) | number:'1.2-2' }}</span>
+              </div>
+            </div>
+
+            <div class="hpu__wcard-stats">
+              <div class="hpu__wcard-stat">
+                <span class="hpu__wcard-stat-label">Total Credited:</span>
+                <strong class="hpu__wcard-stat-val">₹{{ (w.totalCredit ?? w.total_credit ?? 0) | number:'1.2-2' }}</strong>
+              </div>
+              <div class="hpu__wcard-stat">
+                <span class="hpu__wcard-stat-label">Total Debited:</span>
+                <strong class="hpu__wcard-stat-val">₹{{ (w.totalDebit ?? w.total_debit ?? 0) | number:'1.2-2' }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="hpu__wcard-footer">
+            <button
+              type="button"
+              class="hpu__btn hpu__btn--primary hpu__btn--sm hpu__btn--block"
+              (click)="openCreditModal(w)"
+              title="Add amount to this wallet directly via Single Window"
+            >
+              + Add Amount
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Wallet Transaction History -->
+      <div *ngIf="!isLoadingWallets" class="hpu__wallet-history-section">
+        <div class="hpu__card-header hpu__card-header--between" style="margin-bottom: 14px; margin-top: 24px; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h3 class="hpu__card-title" style="font-size: 16px;">Wallet Transaction History</h3>
+            <p class="hpu__card-desc">Tracks wallet recharges entered via Single Window (shows empty until an amount is added)</p>
+          </div>
+          <div class="hpu__tx-filter-group" style="display: flex; gap: 8px; align-items: center;">
+            <button
+              type="button"
+              class="hpu__btn hpu__btn--sm"
+              [class.hpu__btn--primary]="txFilter === 'single_window'"
+              [class.hpu__btn--secondary]="txFilter !== 'single_window'"
+              (click)="setTxFilter('single_window')"
+              title="Show only transactions entered directly by Single Window"
+            >
+              ⚡ Single Window Added ({{ walletTransactions.length }})
+            </button>
+            <button
+              type="button"
+              class="hpu__btn hpu__btn--sm"
+              [class.hpu__btn--primary]="txFilter === 'all'"
+              [class.hpu__btn--secondary]="txFilter !== 'all'"
+              (click)="setTxFilter('all')"
+              title="Show all system wallet activity for this establishment"
+            >
+              All Activity ({{ allWalletTransactions.length }})
+            </button>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div *ngIf="displayedTransactions.length === 0" class="hpu__entries-empty" style="padding: 36px 16px; text-align: center; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px;">
+          <div style="font-size: 32px; margin-bottom: 8px;">💳</div>
+          <h4 style="font-size: 15px; font-weight: 600; color: #1e293b; margin-bottom: 6px;">
+            {{ txFilter === 'single_window' ? 'No Single Window Recharges Yet' : 'No Transactions Found' }}
+          </h4>
+          <p style="font-size: 13px; color: #64748b; margin-bottom: 16px; max-width: 480px; margin-left: auto; margin-right: auto;">
+            {{ txFilter === 'single_window' 
+                ? 'No funds have been added directly via Single Window for this establishment yet. Use "+ Add Amount" to credit any of the 5 wallets.' 
+                : 'No wallet transactions found for this establishment in the system.' }}
+          </p>
+          <button
+            type="button"
+            class="hpu__btn hpu__btn--primary hpu__btn--sm"
+            (click)="openCreditModal()"
+            *ngIf="txFilter === 'single_window'"
+          >
+            + Add Amount to Wallet
+          </button>
+        </div>
+
+        <!-- Transactions Table -->
+        <div *ngIf="displayedTransactions.length > 0" class="hpu__table-responsive">
+          <table class="hpu__table">
+            <thead>
+              <tr>
+                <th>Transaction ID / Reference</th>
+                <th>Wallet Type</th>
+                <th>Head of Account</th>
+                <th style="text-align: center;">Type</th>
+                <th style="text-align: right;">Amount</th>
+                <th style="text-align: right;">Balance After</th>
+                <th>Date &amp; Time</th>
+                <th>Remarks / Source</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let tx of displayedTransactions">
+                <td class="hpu__td-ref">
+                  <div class="hpu__tx-ref-wrap">
+                    <span
+                      *ngIf="tx.isSingleWindow || tx.is_single_window || (tx.transactionId || tx.transaction_id || '').startsWith('admin_') || (tx.transactionId || tx.transaction_id || '').startsWith('single_window')"
+                      class="hpu__badge hpu__badge--single-window"
+                      title="Credited by Admin"
+                    >
+                      ⚡ Admin Credit
+                    </span>
+                    <span class="hpu__ref-code" [class.hpu__ref-code--sw]="tx.isSingleWindow || tx.is_single_window || (tx.transactionId || tx.transaction_id || '').startsWith('admin_') || (tx.transactionId || tx.transaction_id || '').startsWith('single_window')">
+                      {{ tx.transactionId || tx.transaction_id || tx.referenceNo || tx.reference_no || '---' }}
+                    </span>
+                  </div>
+                </td>
+                <td>
+                  <span class="hpu__badge hpu__badge--subtle">
+                    {{ tx.walletName || tx.wallet_name || getWalletName(tx.walletType || tx.wallet_type) }}
+                  </span>
+                </td>
+                <td style="font-size: 12px; color: #64748b; font-family: monospace;">
+                  {{ tx.headOfAccount || tx.head_of_account || '0039-00-800' }}
+                </td>
+                <td style="text-align: center;">
+                  <span
+                    class="hpu__badge"
+                    [ngClass]="(tx.entryType || tx.entry_type) === 'CR' ? 'hpu__badge--success' : 'hpu__badge--warn'"
+                  >
+                    {{ tx.entryType || tx.entry_type || 'CR' }}
+                  </span>
+                </td>
+                <td style="text-align: right; font-weight: bold;" [style.color]="(tx.entryType || tx.entry_type) === 'CR' ? '#166534' : '#991b1b'">
+                  {{ (tx.entryType || tx.entry_type) === 'CR' ? '+' : '-' }}₹{{ (tx.amount || 0) | number:'1.2-2' }}
+                </td>
+                <td style="text-align: right; font-size: 13px; color: #334155; font-weight: 500;">
+                  ₹{{ (tx.balanceAfter ?? tx.balance_after ?? 0) | number:'1.2-2' }}
+                </td>
+                <td class="hpu__td-date">
+                  {{ (tx.createdAt || tx.created_at) ? ((tx.createdAt || tx.created_at) | date:'medium') : '---' }}
+                </td>
+                <td style="font-size: 12px; color: #64748b; max-width: 240px;" [title]="tx.remarks || ''">
+                  {{ tx.remarks || tx.sourceModule || tx.source_module || '---' }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Single Window Credit Wallet Modal -->
+  <div *ngIf="showCreditModal" class="hpu__modal-overlay" (click)="closeCreditModal()">
+    <div class="hpu__modal-dialog hpu__modal-dialog--credit" (click)="$event.stopPropagation()">
+      <div class="hpu__modal-header">
+        <div class="hpu__modal-title-group">
+          <span class="hpu__modal-icon">⚡</span>
+          <div>
+            <h3 class="hpu__modal-title">Single Window Wallet Recharge</h3>
+            <p class="hpu__modal-subtitle">
+              Add funds directly from Single Window to establishment wallet
+            </p>
+          </div>
+        </div>
+        <button type="button" class="hpu__modal-close" (click)="closeCreditModal()" aria-label="Close modal">×</button>
+      </div>
+
+      <div class="hpu__modal-body">
+        <!-- Target Establishment Banner -->
+        <div class="hpu__credit-est-banner">
+          <div class="hpu__credit-est-info">
+            <span class="hpu__credit-est-label">Establishment</span>
+            <strong class="hpu__credit-est-name">{{ getEstablishmentName(selectedEstablishment) }}</strong>
+            <span class="hpu__credit-est-lic">📋 {{ getEstablishmentCode(selectedEstablishment) }}</span>
+          </div>
+          <span class="hpu__badge" [ngClass]="(selectedEstablishment?.type || selectedEstablishment?.license_type) === 'Brewery' ? 'hpu__badge--brewery' : 'hpu__badge--distillery'">
+            {{ selectedEstablishment?.type || selectedEstablishment?.license_type || 'Distillery' }}
+          </span>
+        </div>
+
+        <!-- Wallet Selection -->
+        <div class="hpu__form-group">
+          <label class="hpu__label">Select Wallet <span class="hpu__required">*</span></label>
+          <select class="hpu__select" [(ngModel)]="creditForm.wallet_type">
+            <option *ngFor="let w of wallets" [value]="getWalletTypeCode(w)">
+              {{ w.icon || getWalletIcon(w) }} {{ w.name || w.walletName || w.wallet_name || getWalletName(w) }} (Current: ₹{{ (w.currentBalance ?? w.current_balance ?? 0) | number:'1.2-2' }})
+            </option>
+          </select>
+        </div>
+
+        <!-- Amount Input -->
+        <div class="hpu__form-group">
+          <label class="hpu__label">Amount to Credit (₹) <span class="hpu__required">*</span></label>
+          <div class="hpu__amount-input-wrapper">
+            <span class="hpu__currency-prefix">₹</span>
+            <input
+              type="number"
+              class="hpu__input hpu__amount-input"
+              [(ngModel)]="creditForm.amount"
+              placeholder="e.g. 50000"
+              min="1"
+            />
+          </div>
+
+          <!-- Quick Suggestion Chips -->
+          <div class="hpu__quick-chips">
+            <span class="hpu__chips-label">Quick Add:</span>
+            <button
+              *ngFor="let amt of quickAmounts"
+              type="button"
+              class="hpu__chip-btn"
+              (click)="setQuickAmount(amt)"
+            >
+              +₹{{ amt | number }}
+            </button>
+            <button
+              type="button"
+              class="hpu__chip-btn hpu__chip-btn--clear"
+              (click)="creditForm.amount = null"
+              *ngIf="creditForm.amount"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+
+        <!-- Auto-generated Transaction ID Preview -->
+        <div class="hpu__tx-preview-box">
+          <div class="hpu__tx-preview-header">
+            <span class="hpu__tx-preview-label">Generated Transaction Reference:</span>
+            <span class="hpu__badge hpu__badge--single-window">⚡ Admin Direct Credit</span>
+          </div>
+          <code class="hpu__tx-preview-code">{{ creditForm.previewTxnId }}</code>
+          <p class="hpu__tx-preview-note">
+            ✓ This reference starts with <code>admin_</code> to record that funds were added directly from admin side.
+          </p>
+        </div>
+
+        <!-- Remarks -->
+        <div class="hpu__form-group">
+          <label class="hpu__label">Remarks / Note (Optional)</label>
+          <input
+            type="text"
+            class="hpu__input"
+            [(ngModel)]="creditForm.remarks"
+            placeholder="e.g. Single window manual wallet credit approved"
+          />
+        </div>
+      </div>
+
+      <div class="hpu__modal-footer">
+        <button
+          type="button"
+          class="hpu__btn hpu__btn--secondary"
+          (click)="closeCreditModal()"
+          [disabled]="isCreditingWallet"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="hpu__btn hpu__btn--primary"
+          (click)="submitCreditWallet()"
+          [disabled]="isCreditingWallet || !creditForm.amount || creditForm.amount <= 0"
+        >
+          <span *ngIf="isCreditingWallet" class="hpu__spinner hpu__spinner--sm"></span>
+          <span>⚡ {{ isCreditingWallet ? 'Crediting Wallet...' : 'Confirm & Credit Wallet' }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Carton & Rolls Details Popup Modal -->
   <div *ngIf="selectedEntryForDetails" class="hpu__modal-overlay" (click)="closeDetailsModal()">
