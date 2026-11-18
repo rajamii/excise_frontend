@@ -51,10 +51,20 @@ export class SingleWindowDetailComponent implements OnInit, OnDestroy {
       const txId = (p.transaction_id || '').toLowerCase();
       const amt = (p.amount || '').toLowerCase();
       const date = (p.created_at || '').toLowerCase();
-      const remarks = (p.remarks || '').toLowerCase();
+      const remarks = this.formatPaymentRemarks(p).toLowerCase();
       const ptype = (p.payment_type || '').toLowerCase();
       return txId.includes(q) || amt.includes(q) || date.includes(q) || remarks.includes(q) || ptype.includes(q);
     });
+  }
+
+  formatPaymentRemarks(payment: any): string {
+    if (!payment) return '—';
+    const remarks = payment.remarks || '';
+    // Safeguard against any legacy cached remarks with contradictory "Failed (Error: Transaction Successful)"
+    if (payment.payment_status === 'Success' && remarks.includes('Failed')) {
+      return remarks.replace(/ - Failed \(Error: [^)]*\)/i, ' - Successful');
+    }
+    return remarks || '—';
   }
 
   getPagedPayments(): any[] {
