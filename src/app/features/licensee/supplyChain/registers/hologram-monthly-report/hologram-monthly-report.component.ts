@@ -85,6 +85,7 @@ interface StatementRow {
       rollName: string;
       range: string;
       rollAssignmentIndex: number;
+      quantity?: number;
     }>;
   };
 }
@@ -1837,12 +1838,12 @@ export class HologramMonthlyReportComponent implements OnInit {
    * This shows the original assigned ranges for each roll assignment (not just unique rolls)
    * Only show ONE entry per unique roll assignment, not per brand
    */
-  getAssignedRollsRanges(row: StatementRow): Array<{ rollName: string; range: string; rollAssignmentIndex: number }> {
+  getAssignedRollsRanges(row: StatementRow): Array<{ rollName: string; range: string; rollAssignmentIndex: number; quantity?: number }> {
     if (row.meta?.assignedRollRanges && row.meta.assignedRollRanges.length > 0) {
       return row.meta.assignedRollRanges;
     }
 
-    const rollsRanges: Array<{ rollName: string; range: string; rollAssignmentIndex: number }> = [];
+    const rollsRanges: Array<{ rollName: string; range: string; rollAssignmentIndex: number; quantity?: number }> = [];
     
     if (row.utilizationDetails && row.utilizationDetails.length > 0) {
       // Create a set to track unique roll assignments (not just roll names)
@@ -1863,10 +1864,14 @@ export class HologramMonthlyReportComponent implements OnInit {
           const rangeMatch = detail.rollName.match(/(\d+)\s*-\s*(\d+)/);
           
           if (rangeMatch) {
+            const fromNo = parseInt(rangeMatch[1], 10);
+            const toNo = parseInt(rangeMatch[2], 10);
+            const qty = (!isNaN(fromNo) && !isNaN(toNo) && toNo >= fromNo) ? (toNo - fromNo + 1) : 0;
             rollsRanges.push({
               rollName: rollName,
               range: `${rangeMatch[1]}-${rangeMatch[2]}`,
-              rollAssignmentIndex: assignmentIndex
+              rollAssignmentIndex: assignmentIndex,
+              quantity: qty
             });
           } else {
             // Fallback: use the ranges from detail.ranges
@@ -1888,7 +1893,8 @@ export class HologramMonthlyReportComponent implements OnInit {
                   rollsRanges.push({
                     rollName: rollName,
                     range: `${minFrom}-${maxTo}`,
-                    rollAssignmentIndex: assignmentIndex
+                    rollAssignmentIndex: assignmentIndex,
+                    quantity: maxTo - minFrom + 1
                   });
                 }
               }
@@ -1901,8 +1907,12 @@ export class HologramMonthlyReportComponent implements OnInit {
     return rollsRanges;
   }
 
-  private buildAssignedRollRangesFromEntries(entries: any[]): Array<{ rollName: string; range: string; rollAssignmentIndex: number }> {
-    const results: Array<{ rollName: string; range: string; rollAssignmentIndex: number }> = [];
+  getTotalAssignedQuantity(rollsRanges: Array<{ quantity?: number }>): number {
+    return (rollsRanges || []).reduce((sum, r) => sum + (r.quantity || 0), 0);
+  }
+
+  private buildAssignedRollRangesFromEntries(entries: any[]): Array<{ rollName: string; range: string; rollAssignmentIndex: number; quantity?: number }> {
+    const results: Array<{ rollName: string; range: string; rollAssignmentIndex: number; quantity?: number }> = [];
     const seen = new Set<string>();
     const assignmentIndexByKey = new Map<string, number>();
     let nextIndex = 0;
@@ -1919,12 +1929,20 @@ export class HologramMonthlyReportComponent implements OnInit {
             assignmentIndexByKey.set(rawAssignmentKey, nextIndex++);
           }
           const assignmentIndex = assignmentIndexByKey.get(rawAssignmentKey) ?? 0;
+          let quantity = Number(assigned.quantity || 0);
+          if (!quantity && assigned.fromSerial && assigned.toSerial) {
+            const fromNo = parseInt(String(assigned.fromSerial).replace(/\D/g, ''), 10);
+            const toNo = parseInt(String(assigned.toSerial).replace(/\D/g, ''), 10);
+            if (!isNaN(fromNo) && !isNaN(toNo) && toNo >= fromNo) {
+              quantity = toNo - fromNo + 1;
+            }
+          }
           const key = rawAssignmentKey;
           if (seen.has(key)) {
             continue;
           }
           seen.add(key);
-          results.push({ rollName, range, rollAssignmentIndex: assignmentIndex });
+          results.push({ rollName, range, rollAssignmentIndex: assignmentIndex, quantity });
         }
         continue;
       }
@@ -1952,6 +1970,14 @@ export class HologramMonthlyReportComponent implements OnInit {
               assignmentIndexByKey.set(fallbackAssignmentKey, nextIndex++);
             }
             const fallbackAssignmentIndex = assignmentIndexByKey.get(fallbackAssignmentKey) ?? 0;
+            let quantity = Number(fallback.quantity || 0);
+            if (!quantity && fallback.fromSerial && fallback.toSerial) {
+              const fromNo = parseInt(String(fallback.fromSerial).replace(/\D/g, ''), 10);
+              const toNo = parseInt(String(fallback.toSerial).replace(/\D/g, ''), 10);
+              if (!isNaN(fromNo) && !isNaN(toNo) && toNo >= fromNo) {
+                quantity = toNo - fromNo + 1;
+              }
+            }
             const key = fallbackAssignmentKey;
             if (seen.has(key)) {
               continue;
@@ -1960,7 +1986,8 @@ export class HologramMonthlyReportComponent implements OnInit {
             results.push({
               rollName: fallbackRollName,
               range,
-              rollAssignmentIndex: fallbackAssignmentIndex
+              rollAssignmentIndex: fallbackAssignmentIndex,
+              quantity
             });
           }
           continue;
@@ -1978,12 +2005,20 @@ export class HologramMonthlyReportComponent implements OnInit {
           assignmentIndexByKey.set(assignmentKey, nextIndex++);
         }
         const assignmentIndex = assignmentIndexByKey.get(assignmentKey) ?? 0;
+        let quantity = 0;
+        if (b.from && b.to) {
+          const fromNo = parseInt(String(b.from).replace(/\D/g, ''), 10);
+          const toNo = parseInt(String(b.to).replace(/\D/g, ''), 10);
+          if (!isNaN(fromNo) && !isNaN(toNo) && toNo >= fromNo) {
+            quantity = toNo - fromNo + 1;
+          }
+        }
         const key = `${assignmentKey}_${range}`;
         if (seen.has(key)) {
           continue;
         }
         seen.add(key);
-        results.push({ rollName, range, rollAssignmentIndex: assignmentIndex });
+        results.push({ rollName, range, rollAssignmentIndex: assignmentIndex, quantity });
       }
     }
 
