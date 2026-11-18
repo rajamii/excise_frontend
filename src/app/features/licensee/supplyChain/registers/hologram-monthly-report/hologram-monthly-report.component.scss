@@ -142,9 +142,10 @@
   border-color: #c3e6cb !important;
 }
 
-/* Roll-based styling for utilization and wastage boxes */
+/* Roll-based styling for utilization, wastage, and leftover boxes */
 .roll-utilization-box,
-.roll-wastage-box {
+.roll-wastage-box,
+.roll-leftover-box {
   transition: all 0.3s ease;
   border-width: 2px !important;
   
@@ -181,7 +182,8 @@
 }
 
 .total-utilization-summary,
-.total-wastage-summary {
+.total-wastage-summary,
+.total-leftover-summary {
   border-width: 3px !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }

@@ -20,6 +20,7 @@ interface StatementRow {
   wastageTo?: string;
   wastageQty?: number;
   leftOver?: number;
+  leftOverRollsCount?: number;
   freshArrival?: number;
   closingBalance?: number | null;
   utilizationDetails?: Array<{
@@ -42,6 +43,18 @@ interface StatementRow {
     brandNumber?: number; // NEW: Brand number within roll assignment (1, 2, 3...)
     brandName: string;
     bottleSize: string;
+    ranges: Array<{
+      from: string;
+      to: string;
+      qty: number;
+    }>;
+  }>;
+  leftoverDetails?: Array<{
+    rollName: string;
+    rollAssignmentKey?: string;
+    rollAssignmentIndex?: number;
+    totalQty: number;
+    isUnused?: boolean;
     ranges: Array<{
       from: string;
       to: string;
@@ -704,38 +717,68 @@ export class HologramMonthlyReportComponent implements OnInit {
             }>;
           }> = [];
           
+          // Compute assigned roll ranges for this transaction group first (master source for roll order & colors)
+          const assignedRollRanges = this.buildAssignedRollRangesFromEntries(allEntries);
+
           // Create a mapping of unique roll assignments to indices for color coding
-          // Each unique roll assignment (roll + range) gets a unique index
           const rollAssignmentMap = new Map<string, number>();
-          let nextAssignmentIndex = 0;
-          
-          // Also track brands per roll assignment for numbering (Brand 1, Brand 2, etc.)
           const brandsPerAssignment = new Map<string, Map<string, number>>();
+
+          // Seed mapping from assignedRollRanges so index 0 = Assignment #1 (Blue), index 1 = Assignment #2 (Green), etc.
+          assignedRollRanges.forEach(arr => {
+            const normKey = this.normalizeRollKey(arr.rollName);
+            if (normKey && !rollAssignmentMap.has(normKey)) {
+              rollAssignmentMap.set(normKey, arr.rollAssignmentIndex);
+              brandsPerAssignment.set(normKey, new Map<string, number>());
+            }
+          });
+          let nextAssignmentIndex = rollAssignmentMap.size;
           
           const getAssignmentInfo = (rollLabelRaw: any, fromRaw: any, toRaw: any, brandName: string, entry?: any) => {
             let rollLabel = String(rollLabelRaw || 'Unknown').trim() || 'Unknown';
             let from = String(fromRaw || '').trim() || '-';
             let to = String(toRaw || '').trim() || '-';
 
-            // If used/damaged range is empty, align color key with actual assigned roll range for this entry.
-            if ((from === '-' && to === '-') && entry) {
+            // 1. Try matching the serial number directly to the assigned rolls
+            const fromNum = parseInt(from.replace(/\D/g, ''), 10);
+            const toNum = parseInt(to.replace(/\D/g, ''), 10);
+            const checkNum = !isNaN(fromNum) && fromNum > 0 ? fromNum : (!isNaN(toNum) && toNum > 0 ? toNum : 0);
+
+            if (checkNum > 0 && entry) {
               const assignedRolls = this.getAssignedRollsForEntry(entry);
-              if (assignedRolls.length > 0) {
-                const requestedIndex = Number(entry?.brand_index ?? entry?.brandIndex ?? 0);
-                const selectedAssigned =
-                  Number.isInteger(requestedIndex) && requestedIndex >= 0 && requestedIndex < assignedRolls.length
-                    ? assignedRolls[requestedIndex]
-                    : assignedRolls[0];
-                if (selectedAssigned) {
-                  rollLabel = String(selectedAssigned.rollLabel || rollLabel).trim() || rollLabel;
-                  from = String(selectedAssigned.fromSerial || '').trim() || from;
-                  to = String(selectedAssigned.toSerial || '').trim() || to;
+              for (const ar of assignedRolls) {
+                const arFrom = parseInt(String(ar.fromSerial || '').replace(/\D/g, ''), 10);
+                const arTo = parseInt(String(ar.toSerial || '').replace(/\D/g, ''), 10);
+                if (!isNaN(arFrom) && !isNaN(arTo) && checkNum >= arFrom && checkNum <= arTo) {
+                  rollLabel = String(ar.rollLabel || rollLabel).trim();
+                  break;
+                }
+              }
+            } else if ((from === '-' && to === '-') && entry) {
+              // If used/damaged range is empty, resolve roll from entry
+              const entryDirectRoll = entry?.roll_range || entry?.rollRange || entry?.cartoon_number || entry?.cartoonNumber;
+              if (entryDirectRoll) {
+                rollLabel = this.getRollDisplayName(String(entryDirectRoll).trim());
+              } else {
+                const assignedRolls = this.getAssignedRollsForEntry(entry);
+                if (assignedRolls.length > 0) {
+                  const requestedIndex = Number(entry?.brand_index ?? entry?.brandIndex ?? 0);
+                  const selectedAssigned =
+                    Number.isInteger(requestedIndex) && requestedIndex >= 0 && requestedIndex < assignedRolls.length
+                      ? assignedRolls[requestedIndex]
+                      : assignedRolls[0];
+                  if (selectedAssigned) {
+                    rollLabel = String(selectedAssigned.rollLabel || rollLabel).trim() || rollLabel;
+                    from = String(selectedAssigned.fromSerial || '').trim() || from;
+                    to = String(selectedAssigned.toSerial || '').trim() || to;
+                  }
                 }
               }
             }
 
             // Keep same roll in one box even if multiple partial ranges are used.
-            const assignmentKey = rollLabel;
+            const normKey = this.normalizeRollKey(rollLabel);
+            const assignmentKey = normKey || rollLabel;
 
             if (!rollAssignmentMap.has(assignmentKey)) {
               rollAssignmentMap.set(assignmentKey, nextAssignmentIndex++);
@@ -748,7 +791,7 @@ export class HologramMonthlyReportComponent implements OnInit {
             }
 
             return {
-              rollName: rollLabel,
+              rollName: this.getRollDisplayName(rollLabel),
               assignmentKey,
               assignmentIndex: rollAssignmentMap.get(assignmentKey) ?? 0,
               brandNumber: brandsMap.get(brandName) ?? 1
@@ -934,7 +977,7 @@ export class HologramMonthlyReportComponent implements OnInit {
           
           const refNo = entry.ref_no || entry.refNo || 'N/A';
           const firstEntry = allEntries[0];
-          const assignedRollRanges = this.buildAssignedRollRangesFromEntries(allEntries);
+          const leftoverResult = this.calculateLeftoverDetails(allEntries, utilizationDetails, wastageDetails, assignedRollRanges);
           
           this.statementRows.push({
             rowType: 'UTILIZATION',
@@ -949,10 +992,12 @@ export class HologramMonthlyReportComponent implements OnInit {
             wastageFrom: firstEntry.wastage_from || firstEntry.wastageFrom || '-',
             wastageTo: firstEntry.wastage_to || firstEntry.wastageTo || '-',
             wastageQty: wastage,
-            leftOver: 0,
+            leftOver: leftoverResult.totalLeftover,
+            leftOverRollsCount: leftoverResult.rollsCount,
             closingBalance: runningBalance,
             utilizationDetails: utilizationDetails.length > 0 ? utilizationDetails : undefined,
             wastageDetails: wastageDetails.length > 0 ? wastageDetails : undefined,
+            leftoverDetails: leftoverResult.leftoverDetails.length > 0 ? leftoverResult.leftoverDetails : undefined,
             meta: {
               referenceNo: refNo,
               transactionDateTime: transaction.timestamp.toISOString(),
@@ -1310,10 +1355,13 @@ export class HologramMonthlyReportComponent implements OnInit {
       'Reference No',
       'Arrival Rolls',
       'Arrival Qty',
+      'Assigned Rolls',
       'Utilized Brands',
       'Utilized Qty',
       'Damaged Brands',
       'Damaged Qty',
+      'Leftover Rolls',
+      'Leftover Qty',
       'Opening Balance',
       'Closing Balance'
     ];
@@ -1343,6 +1391,9 @@ export class HologramMonthlyReportComponent implements OnInit {
           '',
           '',
           '',
+          '',
+          '',
+          '',
           opening,
           closing
         ].map(toCsvCell).join(','));
@@ -1352,15 +1403,22 @@ export class HologramMonthlyReportComponent implements OnInit {
       if (row.rowType === 'UTILIZATION') {
         const utilizationDetails = Array.isArray(row.utilizationDetails) ? row.utilizationDetails : [];
         const wastageDetails = Array.isArray(row.wastageDetails) ? row.wastageDetails : [];
+        const leftoverDetails = Array.isArray(row.leftoverDetails) ? row.leftoverDetails : [];
 
         const utilizedQty = Number(row.utilizationQty || 0);
         const damagedQty = Number(row.wastageQty || 0);
+        const leftoverQty = Number(row.leftOver || 0);
+
+        const assignedRollSummary = (row.meta?.assignedRollRanges || []).map(r => `${r.rollName} (${r.range})`).join(' | ');
         const utilizedBrands = utilizationDetails.length > 0
           ? joinUnique(utilizationDetails.map((d: any) => `${d?.brandName || ''} ${d?.bottleSize || ''}`.trim()))
           : String(row.brandDetails || '').trim();
         const damagedBrands = wastageDetails.length > 0
           ? joinUnique(wastageDetails.map((d: any) => `${d?.brandName || ''} ${d?.bottleSize || ''}`.trim()))
           : String(row.brandDetails || '').trim();
+        const leftoverSummary = leftoverDetails.length > 0
+          ? leftoverDetails.map(l => `${l.rollName}: ${l.ranges.map(r => `${r.from}-${r.to}`).join('; ')} (${l.totalQty})`).join(' | ')
+          : '';
 
         lines.push([
           'UTILIZATION',
@@ -1368,10 +1426,13 @@ export class HologramMonthlyReportComponent implements OnInit {
           refNo,
           '',
           '',
+          assignedRollSummary,
           utilizedBrands,
           utilizedQty || '',
           damagedBrands,
           damagedQty || '',
+          leftoverSummary,
+          leftoverQty || '',
           opening,
           closing
         ].map(toCsvCell).join(','));
@@ -1430,6 +1491,18 @@ export class HologramMonthlyReportComponent implements OnInit {
       return `${match[1]} → ${match[2]}`;
     }
     return 'N/A';
+  }
+
+  /**
+   * Normalize a roll key for strict equality comparison across assignments, details, and leftovers.
+   * Strips prefix/range/spaces/case: "Roll 329(a) - 377020001 - 377021000" -> "329(a)"
+   */
+  normalizeRollKey(raw: any): string {
+    const str = String(raw || '').trim();
+    if (!str || str === 'Unknown') return '';
+    const base = str.includes('|') ? str.split('|')[0].trim() : str;
+    const displayName = this.getRollDisplayName(base);
+    return displayName.replace(/^roll\s*/i, '').trim().toLowerCase();
   }
 
   /**
@@ -1523,6 +1596,236 @@ export class HologramMonthlyReportComponent implements OnInit {
   }
 
   /**
+   * Get count of rolls that have leftover holograms for a row
+   */
+  getLeftoverRollsCount(row: StatementRow): number {
+    if (row.leftOverRollsCount !== undefined) {
+      return row.leftOverRollsCount;
+    }
+    return (row.leftoverDetails || []).filter(d => d.totalQty > 0).length;
+  }
+
+  /**
+   * Calculate leftover ranges and quantities for all assigned rolls in a transaction group.
+   * Handles partially used rolls and rolls that were assigned but not used at all.
+   */
+  calculateLeftoverDetails(
+    allEntries: any[],
+    utilizationDetails: any[],
+    wastageDetails: any[],
+    assignedRollRanges?: any[]
+  ): {
+    leftoverDetails: Array<{
+      rollName: string;
+      rollAssignmentKey?: string;
+      rollAssignmentIndex?: number;
+      totalQty: number;
+      isUnused?: boolean;
+      ranges: Array<{ from: string; to: string; qty: number }>;
+    }>;
+    totalLeftover: number;
+    rollsCount: number;
+  } {
+    // 1. Collect all assigned rolls for this group
+    const assignedRollsList: Array<{
+      rollLabel: string;
+      fromSerial: string;
+      toSerial: string;
+      quantity: number;
+    }> = [];
+    const seenRollKeys = new Set<string>();
+
+    for (const entry of allEntries || []) {
+      const rolls = this.getAssignedRollsForEntry(entry);
+      for (const r of rolls) {
+        const key = `${r.rollLabel}|${r.fromSerial}|${r.toSerial}`;
+        if (!seenRollKeys.has(key)) {
+          seenRollKeys.add(key);
+          assignedRollsList.push(r);
+        }
+      }
+    }
+
+    // 2. Map of rollAssignmentIndex from assignedRollRanges and utilization/wastage details to maintain consistent coloring
+    const rollIndexMap = new Map<string, number>();
+
+    // Seed from assignedRollRanges (master source for roll order & colors)
+    (assignedRollRanges || []).forEach(arr => {
+      const norm = this.normalizeRollKey(arr.rollName);
+      if (norm && !rollIndexMap.has(norm) && arr.rollAssignmentIndex !== undefined) {
+        rollIndexMap.set(norm, arr.rollAssignmentIndex);
+      }
+    });
+
+    (utilizationDetails || []).forEach(d => {
+      const norm = this.normalizeRollKey(d.rollAssignmentKey || d.rollName);
+      if (norm && !rollIndexMap.has(norm) && d.rollAssignmentIndex !== undefined) {
+        rollIndexMap.set(norm, d.rollAssignmentIndex);
+      }
+      const rawKey = String(d.rollAssignmentKey || d.rollName || '').trim();
+      if (rawKey && !rollIndexMap.has(rawKey) && d.rollAssignmentIndex !== undefined) {
+        rollIndexMap.set(rawKey, d.rollAssignmentIndex);
+      }
+    });
+
+    (wastageDetails || []).forEach(d => {
+      const norm = this.normalizeRollKey(d.rollAssignmentKey || d.rollName);
+      if (norm && !rollIndexMap.has(norm) && d.rollAssignmentIndex !== undefined) {
+        rollIndexMap.set(norm, d.rollAssignmentIndex);
+      }
+      const rawKey = String(d.rollAssignmentKey || d.rollName || '').trim();
+      if (rawKey && !rollIndexMap.has(rawKey) && d.rollAssignmentIndex !== undefined) {
+        rollIndexMap.set(rawKey, d.rollAssignmentIndex);
+      }
+    });
+
+    const leftoverDetails: Array<{
+      rollName: string;
+      rollAssignmentKey?: string;
+      rollAssignmentIndex?: number;
+      totalQty: number;
+      isUnused?: boolean;
+      ranges: Array<{ from: string; to: string; qty: number }>;
+    }> = [];
+
+    let nextFallbackIndex = rollIndexMap.size;
+
+    // 3. For each assigned roll, perform interval subtraction
+    assignedRollsList.forEach(assigned => {
+      const rollLabel = String(assigned.rollLabel || 'Unknown').trim();
+      const rollName = this.getRollDisplayName(rollLabel);
+      const normKey = this.normalizeRollKey(rollLabel);
+
+      const assignmentIndex = (normKey && rollIndexMap.has(normKey))
+        ? rollIndexMap.get(normKey)!
+        : (rollIndexMap.has(rollLabel) ? rollIndexMap.get(rollLabel)! : nextFallbackIndex++);
+
+      const fromSerialRaw = String(assigned.fromSerial || '').trim();
+      const toSerialRaw = String(assigned.toSerial || '').trim();
+
+      const fromMatch = fromSerialRaw.match(/^([A-Za-z]*)(\d+)$/);
+      const toMatch = toSerialRaw.match(/^([A-Za-z]*)(\d+)$/);
+
+      if (!fromMatch || !toMatch) {
+        return;
+      }
+
+      const prefix = fromMatch[1];
+      const padLen = fromMatch[2].length;
+      const startNum = parseInt(fromMatch[2], 10);
+      const endNum = parseInt(toMatch[2], 10);
+
+      if (isNaN(startNum) || isNaN(endNum) || endNum < startNum) {
+        return;
+      }
+
+      // Collect all used and damaged ranges belonging to this roll
+      const excludedIntervals: Array<[number, number]> = [];
+
+      const collectIntervalsFromDetails = (detailsList: any[]) => {
+        (detailsList || []).forEach(d => {
+          const dRoll = String(d.rollAssignmentKey || d.rollName || '').trim();
+          const dNorm = this.normalizeRollKey(dRoll);
+          if (
+            (normKey && dNorm && dNorm === normKey) ||
+            dRoll === rollLabel ||
+            this.getRollDisplayName(dRoll) === rollName ||
+            dRoll.includes(rollLabel) ||
+            rollLabel.includes(dRoll)
+          ) {
+            (d.ranges || []).forEach((r: any) => {
+              const rFrom = String(r.from || '').replace(/\D/g, '');
+              const rTo = String(r.to || '').replace(/\D/g, '');
+              const uStart = parseInt(rFrom, 10);
+              const uEnd = parseInt(rTo, 10);
+              if (!isNaN(uStart) && !isNaN(uEnd) && uEnd >= uStart) {
+                const cStart = Math.max(startNum, uStart);
+                const cEnd = Math.min(endNum, uEnd);
+                if (cStart <= cEnd) {
+                  excludedIntervals.push([cStart, cEnd]);
+                }
+              }
+            });
+          }
+        });
+      };
+
+      collectIntervalsFromDetails(utilizationDetails);
+      collectIntervalsFromDetails(wastageDetails);
+
+      // Sort and merge excluded intervals
+      excludedIntervals.sort((a, b) => a[0] - b[0]);
+      const mergedExcluded: Array<[number, number]> = [];
+      for (const interval of excludedIntervals) {
+        if (mergedExcluded.length === 0) {
+          mergedExcluded.push([interval[0], interval[1]]);
+        } else {
+          const prev = mergedExcluded[mergedExcluded.length - 1];
+          if (interval[0] <= prev[1] + 1) {
+            prev[1] = Math.max(prev[1], interval[1]);
+          } else {
+            mergedExcluded.push([interval[0], interval[1]]);
+          }
+        }
+      }
+
+      // Compute complement (leftover ranges)
+      const leftoverRanges: Array<{ from: string; to: string; qty: number }> = [];
+      let curr = startNum;
+
+      for (const [exStart, exEnd] of mergedExcluded) {
+        if (exStart > curr) {
+          const rangeStart = curr;
+          const rangeEnd = exStart - 1;
+          const qty = rangeEnd - rangeStart + 1;
+          leftoverRanges.push({
+            from: `${prefix}${String(rangeStart).padStart(padLen, '0')}`,
+            to: `${prefix}${String(rangeEnd).padStart(padLen, '0')}`,
+            qty
+          });
+        }
+        curr = Math.max(curr, exEnd + 1);
+      }
+
+      if (curr <= endNum) {
+        const rangeStart = curr;
+        const rangeEnd = endNum;
+        const qty = rangeEnd - rangeStart + 1;
+        leftoverRanges.push({
+          from: `${prefix}${String(rangeStart).padStart(padLen, '0')}`,
+          to: `${prefix}${String(rangeEnd).padStart(padLen, '0')}`,
+          qty
+        });
+      }
+
+      const totalLeftoverForRoll = leftoverRanges.reduce((sum, r) => sum + r.qty, 0);
+      const isUnused = mergedExcluded.length === 0;
+
+      if (totalLeftoverForRoll > 0) {
+        leftoverDetails.push({
+          rollName,
+          rollAssignmentKey: rollLabel,
+          rollAssignmentIndex: assignmentIndex,
+          totalQty: totalLeftoverForRoll,
+          isUnused,
+          ranges: leftoverRanges
+        });
+      }
+    });
+
+    // Sort leftoverDetails by rollAssignmentIndex ascending
+    leftoverDetails.sort((a, b) => (a.rollAssignmentIndex ?? 0) - (b.rollAssignmentIndex ?? 0));
+
+    const totalLeftover = leftoverDetails.reduce((sum, d) => sum + d.totalQty, 0);
+
+    return {
+      leftoverDetails,
+      totalLeftover,
+      rollsCount: leftoverDetails.length
+    };
+  }
+
+  /**
    * Get total wastage quantity for a brand (sum of all ranges)
    */
   getTotalWastageForBrand(detail: { rollName: string; brandName: string; bottleSize: string; ranges: Array<{ from: string; to: string; qty: number }> }): number {
@@ -1608,9 +1911,9 @@ export class HologramMonthlyReportComponent implements OnInit {
       const assignedRolls = this.getAssignedRollsForEntry(entry);
       if (assignedRolls.length > 0) {
         for (const assigned of assignedRolls) {
-          const range = `${assigned.fromSerial || '-'}-${assigned.toSerial || '-'}`;
+          const range = `${assigned.fromSerial || '-'} - ${assigned.toSerial || '-'}`;
           const rollLabel = String(assigned.rollLabel || 'Unknown').trim() || 'Unknown';
-          const rawAssignmentKey = rollLabel;
+          const rawAssignmentKey = this.normalizeRollKey(rollLabel) || rollLabel;
           const rollName = this.getRollDisplayName(rollLabel);
           if (!assignmentIndexByKey.has(rawAssignmentKey)) {
             assignmentIndexByKey.set(rawAssignmentKey, nextIndex++);
@@ -1626,8 +1929,9 @@ export class HologramMonthlyReportComponent implements OnInit {
         continue;
       }
 
-      const rawAssignmentKey = String(this.resolveEntryRollName(entry) || 'Unknown').trim() || 'Unknown';
-      const rollName = this.getRollDisplayName(rawAssignmentKey);
+      const entryRollName = this.resolveEntryRollName(entry);
+      const rawAssignmentKey = this.normalizeRollKey(entryRollName) || 'Unknown';
+      const rollName = this.getRollDisplayName(entryRollName || 'Unknown');
       if (!assignmentIndexByKey.has(rawAssignmentKey)) {
         assignmentIndexByKey.set(rawAssignmentKey, nextIndex++);
       }
@@ -1640,9 +1944,9 @@ export class HologramMonthlyReportComponent implements OnInit {
         const fallbackRanges = this.getFallbackIssuedRangesFromEntry(entry);
         if (fallbackRanges.length > 0) {
           for (const fallback of fallbackRanges) {
-            const range = `${String(fallback.fromSerial || '').trim() || '-'}-${String(fallback.toSerial || '').trim() || '-'}`;
+            const range = `${String(fallback.fromSerial || '').trim() || '-'} - ${String(fallback.toSerial || '').trim() || '-'}`;
             const fallbackRollLabel = String(fallback.rollLabel || rawAssignmentKey || 'Unknown').trim() || 'Unknown';
-            const fallbackAssignmentKey = fallbackRollLabel;
+            const fallbackAssignmentKey = this.normalizeRollKey(fallbackRollLabel) || fallbackRollLabel;
             const fallbackRollName = this.getRollDisplayName(fallbackRollLabel);
             if (!assignmentIndexByKey.has(fallbackAssignmentKey)) {
               assignmentIndexByKey.set(fallbackAssignmentKey, nextIndex++);
@@ -1668,13 +1972,13 @@ export class HologramMonthlyReportComponent implements OnInit {
       }
 
       for (const b of bounds) {
-        const range = `${b.from || '-'}-${b.to || '-'}`;
+        const range = `${b.from || '-'} - ${b.to || '-'}`;
         const assignmentKey = rawAssignmentKey;
         if (!assignmentIndexByKey.has(assignmentKey)) {
           assignmentIndexByKey.set(assignmentKey, nextIndex++);
         }
         const assignmentIndex = assignmentIndexByKey.get(assignmentKey) ?? 0;
-        const key = `${assignmentKey}|${range}`;
+        const key = `${assignmentKey}_${range}`;
         if (seen.has(key)) {
           continue;
         }
@@ -1727,22 +2031,25 @@ export class HologramMonthlyReportComponent implements OnInit {
     let nextGroupIndex = 0;
     
     utilizationDetails.forEach(detail => {
-      const firstRange = Array.isArray(detail.ranges) && detail.ranges.length > 0
-        ? detail.ranges[0]
-        : null;
-      const rangeKey = `${String(firstRange?.from ?? '').trim() || '-'}-${String(firstRange?.to ?? '').trim() || '-'}`;
       const explicitKey = String(detail.rollAssignmentKey || '').trim();
       const baseKey = explicitKey.includes('|') ? explicitKey.split('|')[0] : explicitKey;
-      const groupKey = baseKey || detail.rollName;
+      const normKey = this.normalizeRollKey(baseKey || detail.rollName);
+      const groupKey = normKey || baseKey || detail.rollName;
       const rollDisplayName = this.getRollDisplayName(detail.rollName);
       
+      const assignmentIndex = detail.rollAssignmentIndex !== undefined
+        ? detail.rollAssignmentIndex
+        : (assignmentIndexByGroupKey.has(groupKey)
+            ? assignmentIndexByGroupKey.get(groupKey)!
+            : nextGroupIndex++);
+      if (!assignmentIndexByGroupKey.has(groupKey)) {
+        assignmentIndexByGroupKey.set(groupKey, assignmentIndex);
+      }
+
       if (!rollsMap.has(groupKey)) {
-        if (!assignmentIndexByGroupKey.has(groupKey)) {
-          assignmentIndexByGroupKey.set(groupKey, nextGroupIndex++);
-        }
         rollsMap.set(groupKey, {
           rollName: rollDisplayName,
-          rollAssignmentIndex: assignmentIndexByGroupKey.get(groupKey) ?? 0,
+          rollAssignmentIndex: assignmentIndex,
           brands: new Map()
         });
       }
@@ -1787,7 +2094,7 @@ export class HologramMonthlyReportComponent implements OnInit {
         totalQty: brandsArray.reduce((sum, brand) => sum + brand.totalQty, 0),
         brands: brandsArray
       };
-    });
+    }).sort((a, b) => a.rollAssignmentIndex - b.rollAssignmentIndex);
   }
 
   /**
@@ -2478,22 +2785,46 @@ export class HologramMonthlyReportComponent implements OnInit {
     const direct = String(
       entry?.cartoon_number ||
       entry?.cartoonNumber ||
-      entry?.roll_range ||
-      entry?.rollRange ||
       ''
     ).trim();
     if (direct) {
-      return direct;
+      return this.getRollDisplayName(direct);
     }
 
-    const assignedRoll = this.getAssignedRollsForEntry(entry)[0];
-    if (assignedRoll?.rollLabel) {
-      return String(assignedRoll.rollLabel).trim();
+    const rollRange = String(entry?.roll_range || entry?.rollRange || '').trim();
+    if (rollRange) {
+      return this.getRollDisplayName(rollRange);
+    }
+
+    const assignedRolls = this.getAssignedRollsForEntry(entry);
+    if (assignedRolls.length > 0) {
+      // Check if entry has serial bounds that fall within an assigned roll
+      const entryBounds = this.extractAllSerialBounds(entry);
+      for (const b of entryBounds) {
+        const fromNum = parseInt(String(b.from || '').replace(/\D/g, ''), 10);
+        const toNum = parseInt(String(b.to || '').replace(/\D/g, ''), 10);
+        const checkNum = !isNaN(fromNum) && fromNum > 0 ? fromNum : (!isNaN(toNum) && toNum > 0 ? toNum : 0);
+        if (checkNum > 0) {
+          for (const ar of assignedRolls) {
+            const arFrom = parseInt(String(ar.fromSerial || '').replace(/\D/g, ''), 10);
+            const arTo = parseInt(String(ar.toSerial || '').replace(/\D/g, ''), 10);
+            if (!isNaN(arFrom) && !isNaN(arTo) && checkNum >= arFrom && checkNum <= arTo) {
+              return this.getRollDisplayName(String(ar.rollLabel).trim());
+            }
+          }
+        }
+      }
+
+      const requestedIndex = Number(entry?.brand_index ?? entry?.brandIndex ?? -1);
+      if (Number.isInteger(requestedIndex) && requestedIndex >= 0 && requestedIndex < assignedRolls.length) {
+        return this.getRollDisplayName(String(assignedRolls[requestedIndex].rollLabel).trim());
+      }
+      return this.getRollDisplayName(String(assignedRolls[0].rollLabel).trim());
     }
 
     const fallbackRanges = this.getFallbackIssuedRangesFromEntry(entry);
     const firstLabel = String(fallbackRanges?.[0]?.rollLabel || '').trim();
-    return firstLabel || 'Unknown';
+    return this.getRollDisplayName(firstLabel || 'Unknown');
   }
 
   private getAssignedRollsForEntry(entry: any): Array<{
@@ -2573,6 +2904,44 @@ export class HologramMonthlyReportComponent implements OnInit {
           ]
         : [];
       resolvedRolls = extractFromItems(brandRolls);
+    }
+
+    if (resolvedRolls.length === 0) {
+      const allocFrom = String(entry?.allocated_from_serial || entry?.allocatedFromSerial || '').trim();
+      const allocTo = String(entry?.allocated_to_serial || entry?.allocatedToSerial || '').trim();
+      if (allocFrom && allocTo) {
+        const rollLabel = String(this.resolveEntryRollName(entry) || 'Unknown').trim();
+        const fromNum = parseInt(allocFrom.replace(/\D/g, ''), 10);
+        const toNum = parseInt(allocTo.replace(/\D/g, ''), 10);
+        const quantity = (!isNaN(fromNum) && !isNaN(toNum) && toNum >= fromNum) ? (toNum - fromNum + 1) : 0;
+        resolvedRolls.push({
+          rollLabel,
+          fromSerial: allocFrom,
+          toSerial: allocTo,
+          quantity
+        });
+      }
+    }
+
+    if (resolvedRolls.length === 0) {
+      const rollRangeStr = String(entry?.roll_range || entry?.rollRange || '').trim();
+      if (rollRangeStr) {
+        const match = rollRangeStr.match(/^([A-Za-z0-9()_\/\s-]+?)\s*-\s*([A-Za-z]*\d+)\s*-\s*([A-Za-z]*\d+)$/);
+        if (match) {
+          const rollLabel = match[1].trim();
+          const fromSerial = match[2].trim();
+          const toSerial = match[3].trim();
+          const fromNum = parseInt(fromSerial.replace(/\D/g, ''), 10);
+          const toNum = parseInt(toSerial.replace(/\D/g, ''), 10);
+          const quantity = (!isNaN(fromNum) && !isNaN(toNum) && toNum >= fromNum) ? (toNum - fromNum + 1) : 0;
+          resolvedRolls.push({
+            rollLabel,
+            fromSerial,
+            toSerial,
+            quantity
+          });
+        }
+      }
     }
 
     const dedup = new Map<string, { rollLabel: string; fromSerial: string; toSerial: string; quantity: number }>();
