@@ -473,54 +473,77 @@
             <!-- Section 1: Applicant + Application Info -->
             <div class="grid-layout" style="margin-bottom: 1.5rem;">
               <div class="profile-details-card shadow-sm">
-                <h3>Application & Applicant Details</h3>
-                <div class="details-table">
-                  <div class="table-row">
-                    <span class="label">NLA Application No.</span>
-                    <span class="value"><code>{{ detailData.application_id }}</code></span>
+                <div class="pdc-header">
+                  <div class="pdc-title-group">
+                    <span class="pdc-icon"><mat-icon>business</mat-icon></span>
+                    <div>
+                      <h3 style="margin:0; font-size: 1.05rem; font-weight: 700; color: #1e293b;">Application &amp; Establishment Particulars</h3>
+                      <span style="font-size: 0.78rem; color: #64748b;">Complete profile and registration data</span>
+                    </div>
                   </div>
+                  <span class="app-id-pill">
+                    <code>{{ detailData.application_id }}</code>
+                  </span>
+                </div>
+
+                <!-- Structured Section 1: Establishment Particulars -->
+                <div class="details-section-title">
+                  <mat-icon>storefront</mat-icon>
+                  <span>Establishment Details</span>
+                </div>
+                <div class="details-table details-table--clean">
                   <div class="table-row">
                     <span class="label">Establishment Name</span>
-                    <span class="value">{{ detailData.establishment_name }}</span>
+                    <span class="value font-semibold" style="color: #0f172a;">{{ detailData.establishment_name }}</span>
                   </div>
                   <div class="table-row">
                     <span class="label">License Category</span>
-                    <span class="value">{{ detailData.license_category }}</span>
-                  </div>
-                  <div class="table-row">
-                    <span class="label">Sub-Category</span>
-                    <span class="value">{{ detailData.license_sub_category }}</span>
+                    <span class="value">
+                      <span class="category-chip">{{ detailData.license_category }}</span>
+                      <span class="subcategory-chip" *ngIf="detailData.license_sub_category !== 'N/A'">{{ detailData.license_sub_category }}</span>
+                    </span>
                   </div>
                   <div class="table-row">
                     <span class="label">Excise District</span>
-                    <span class="value">{{ detailData.excise_district }}</span>
+                    <span class="value district-pill">
+                      <mat-icon style="font-size: 13px; width: 13px; height: 13px;">location_on</mat-icon>
+                      {{ detailData.excise_district }}
+                    </span>
                   </div>
                   <div class="table-row">
                     <span class="label">Business Address</span>
                     <span class="value">{{ detailData.shop_address }}</span>
                   </div>
                   <div class="table-row">
-                    <span class="label">Mobile Number</span>
-                    <span class="value">{{ detailData.phone_number }}</span>
-                  </div>
-                  <div class="table-row">
-                    <span class="label">PAN</span>
+                    <span class="label">PAN Number</span>
                     <span class="value"><code>{{ detailData.pan_number }}</code></span>
                   </div>
-                  <div class="table-row header-divider">
+                </div>
+
+                <!-- Structured Section 2: Applicant Profile -->
+                <div class="details-section-title" style="margin-top: 1rem;">
+                  <mat-icon>badge</mat-icon>
+                  <span>Applicant &amp; Submission Profile</span>
+                </div>
+                <div class="details-table details-table--clean">
+                  <div class="table-row">
                     <span class="label">Applicant Name</span>
-                    <span class="value">{{ detailData.applicant_name }}</span>
+                    <span class="value font-semibold">{{ detailData.applicant_name }}</span>
                   </div>
                   <div class="table-row">
                     <span class="label">Username</span>
                     <span class="value"><code>{{ detailData.applicant_username }}</code></span>
                   </div>
                   <div class="table-row">
-                    <span class="label">Email</span>
+                    <span class="label">Email Address</span>
                     <span class="value">{{ detailData.applicant_email }}</span>
                   </div>
                   <div class="table-row">
-                    <span class="label">Applied On</span>
+                    <span class="label">Mobile Number</span>
+                    <span class="value">{{ detailData.phone_number }}</span>
+                  </div>
+                  <div class="table-row">
+                    <span class="label">Applied Date</span>
                     <span class="value">{{ detailData.created_at }}</span>
                   </div>
                   <div class="table-row">
@@ -554,12 +577,26 @@
                 </div>
 
                 <h3 style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 4px;">
-                  <span>Fee & Payment Status</span>
+                  <span>Fee &amp; Payment Status</span>
                   <span style="font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: none;">
                     New License App: <code>{{ detailData.application_id }}</code>
                   </span>
                 </h3>
                 <div class="payment-check-list">
+                  <!-- 1. Application Fee Payment -->
+                  <div class="payment-check-item">
+                    <mat-icon [ngClass]="detailData.is_application_fee_paid ? 'paid' : 'unpaid'">
+                      {{ detailData.is_application_fee_paid ? 'check_circle' : 'pending' }}
+                    </mat-icon>
+                    <div class="payment-info">
+                      <span class="title">Application Fee Payment</span>
+                      <span class="status" [ngClass]="detailData.is_application_fee_paid ? 'paid' : 'unpaid'">
+                        {{ detailData.is_application_fee_paid ? 'COMPLETED / PAID (BillDesk ₹500)' : 'NOT PAID / PENDING' }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- 2. License Fee Payment -->
                   <div class="payment-check-item">
                     <mat-icon [ngClass]="detailData.is_license_fee_paid ? 'paid' : 'unpaid'">
                       {{ detailData.is_license_fee_paid ? 'check_circle' : 'pending' }}
@@ -899,7 +936,7 @@
         <div class="tab-padding">
 
           <div class="workflow-card shadow-sm">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
               <h3 style="margin: 0; border-left: 4px solid #10b981; padding-left: 0.75rem;">Department Workflow Route History</h3>
               <div class="lic-no" style="font-size: 0.85rem; font-weight: 700; color: #047857; background: rgba(16, 185, 129, 0.1); padding: 0.35rem 0.75rem; border-radius: 8px; border: 1.5px solid rgba(16, 185, 129, 0.2);" *ngIf="getWorkflowLicenseId()">
                 License Number: <code>{{ getWorkflowLicenseId() }}</code>
@@ -911,37 +948,255 @@
               <p>No transaction stage history logged for this application yet.</p>
             </div>
 
-            <!-- Vertical Government Timeline -->
+            <!-- Route Summary Header Bar -->
+            <div class="route-pipeline-bar" *ngIf="selectedWorkflowApp?.history && selectedWorkflowApp.history.length > 0">
+              <!-- Step 1: Applicant -->
+              <div class="pipeline-step pipeline-step--done">
+                <span class="step-circle"><mat-icon>how_to_reg</mat-icon></span>
+                <span class="step-label">Applicant (Licensee)</span>
+                <span class="step-state-tag state-tag--done">Submitted ✓</span>
+              </div>
+              <div class="pipeline-connector pipeline-connector--done"></div>
+
+              <!-- Step 2: District Office -->
+              <div class="pipeline-step pipeline-step--done">
+                <span class="step-circle"><mat-icon>domain</mat-icon></span>
+                <span class="step-label">District Office</span>
+                <span class="step-state-tag state-tag--done">Processed ✓</span>
+              </div>
+              <div class="pipeline-connector pipeline-connector--done"></div>
+
+              <!-- Step 3: Site Enquiry Officer -->
+              <div class="pipeline-step" [ngClass]="{
+                'pipeline-step--active': isPendingAt('Site Enquiry'),
+                'pipeline-step--done': !isPendingAt('Site Enquiry')
+              }">
+                <span class="step-circle">
+                  <mat-icon>{{ isPendingAt('Site Enquiry') ? 'hourglass_top' : 'travel_explore' }}</mat-icon>
+                </span>
+                <span class="step-label">Site Enquiry Officer</span>
+                <span class="step-state-tag" [ngClass]="isPendingAt('Site Enquiry') ? 'state-tag--active' : 'state-tag--done'">
+                  {{ isPendingAt('Site Enquiry') ? 'Pending Verification ⏳' : 'Verified ✓' }}
+                </span>
+              </div>
+              <div class="pipeline-connector" [class.pipeline-connector--done]="!isPendingAt('Site Enquiry')"></div>
+
+              <!-- Step 4: Joint Commissioner -->
+              <div class="pipeline-step" [ngClass]="{
+                'pipeline-step--active': isPendingAt('Joint Commissioner'),
+                'pipeline-step--waiting': !isPendingAt('Joint Commissioner')
+              }">
+                <span class="step-circle"><mat-icon>gavel</mat-icon></span>
+                <span class="step-label">Joint Commissioner</span>
+                <span class="step-state-tag" [ngClass]="isPendingAt('Joint Commissioner') ? 'state-tag--active' : 'state-tag--waiting'">
+                  {{ isPendingAt('Joint Commissioner') ? 'Pending Review ⏳' : 'Awaiting Report' }}
+                </span>
+              </div>
+              <div class="pipeline-connector" [class.pipeline-connector--done]="selectedWorkflowApp?.is_approved"></div>
+
+              <!-- Step 5: Commissioner -->
+              <div class="pipeline-step" [ngClass]="{
+                'pipeline-step--done': selectedWorkflowApp?.is_approved,
+                'pipeline-step--waiting': !selectedWorkflowApp?.is_approved
+              }">
+                <span class="step-circle"><mat-icon>{{ selectedWorkflowApp?.is_approved ? 'verified' : 'military_tech' }}</mat-icon></span>
+                <span class="step-label">Commissioner</span>
+                <span class="step-state-tag" [ngClass]="selectedWorkflowApp?.is_approved ? 'state-tag--done' : 'state-tag--waiting'">
+                  {{ selectedWorkflowApp?.is_approved ? 'Approved ✓' : 'Final Sanction' }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Current Stage Live Status Callout Banner -->
+            <div class="current-status-callout" *ngIf="!selectedWorkflowApp?.is_approved">
+              <div class="csc-icon-wrap">
+                <mat-icon>hourglass_top</mat-icon>
+              </div>
+              <div class="csc-content">
+                <div class="csc-title">
+                  Current Application Status: <strong>Pending with {{ getCurrentPendingRole() }}</strong>
+                </div>
+                <div class="csc-desc">
+                  <ng-container *ngIf="isPendingAt('Site Enquiry')">
+                    Joint Commissioner has instructed physical site inspection: <em>"For site verification, please"</em>. The application is actively pending with the <strong>Site Enquiry Officer</strong>. Once the verification report is submitted, the application returns to the <strong>Joint Commissioner</strong>.
+                  </ng-container>
+                  <ng-container *ngIf="isPendingAt('Joint Commissioner')">
+                    The application is actively pending review and processing by the <strong>Joint Commissioner</strong>.
+                  </ng-container>
+                  <ng-container *ngIf="!isPendingAt('Site Enquiry') && !isPendingAt('Joint Commissioner')">
+                    The application is currently with <strong>{{ getCurrentPendingRole() }}</strong> for department workflow review.
+                  </ng-container>
+                </div>
+              </div>
+              <div class="csc-badge">
+                <span class="pulse-indicator"></span> CURRENT STAGE
+              </div>
+            </div>
+
+            <!-- Vertical Route Timeline -->
             <div class="vertical-timeline" *ngIf="selectedWorkflowApp?.history && selectedWorkflowApp.history.length > 0">
-              <div class="timeline-item" *ngFor="let step of selectedWorkflowApp.history; let isLast = last">
-                <div class="timeline-line" *ngIf="!isLast"></div>
+              <div class="timeline-item" 
+                   *ngFor="let step of selectedWorkflowApp.history; let i = index; let isLast = last"
+                   [class.timeline-item--reverted]="step.is_reverted"
+                   [class.timeline-item--applied]="step.is_applied">
+                <div class="timeline-line"></div>
                 
                 <div class="timeline-marker">
-                  <div class="marker-dot"></div>
+                  <div class="marker-dot" 
+                       [class.marker-dot--reverted]="step.is_reverted"
+                       [class.marker-dot--applied]="step.is_applied">
+                    <mat-icon *ngIf="step.is_reverted">undo</mat-icon>
+                    <mat-icon *ngIf="step.is_applied">check</mat-icon>
+                    <mat-icon *ngIf="!step.is_reverted && !step.is_applied">arrow_downward</mat-icon>
+                  </div>
                 </div>
                 
-                <div class="timeline-content">
+                <div class="timeline-content" 
+                     [class.timeline-content--reverted]="step.is_reverted"
+                     [class.timeline-content--applied]="step.is_applied">
+                  
                   <div class="timeline-header">
-                    <div class="stage-transition">
-                      <span class="from-stage">{{ step.stage }}</span>
-                      <mat-icon class="arrow" *ngIf="step.forwarded_to !== 'N/A'">arrow_forward</mat-icon>
-                      <span class="to-stage" *ngIf="step.forwarded_to !== 'N/A'">→ {{ step.forwarded_to }}</span>
+                    <div class="header-left-cluster">
+                      <span class="step-seq-badge" [class.step-seq-badge--reverted]="step.is_reverted">
+                        Step {{ step.step_number || (i + 1) }}
+                      </span>
+
+                      <!-- Clear Route Flow: From Role -> To Role -->
+                      <div class="route-flow-container">
+                        <span class="route-role-badge route-role--from">
+                          <mat-icon class="badge-role-icon">person</mat-icon>
+                          {{ step.from_role || 'Applicant (Licensee)' }}
+                        </span>
+                        <span class="route-flow-arrow" [class.arrow--reverted]="step.is_reverted">
+                          <mat-icon>{{ step.is_reverted ? 'reply' : 'arrow_forward' }}</mat-icon>
+                        </span>
+                        <span class="route-role-badge route-role--to" [class.to--reverted]="step.is_reverted">
+                          <mat-icon class="badge-role-icon">{{ step.is_reverted ? 'assignment_return' : 'login' }}</mat-icon>
+                          {{ step.to_role || step.forwarded_to || step.stage }}
+                        </span>
+                      </div>
+
+                      <!-- Action Tag -->
+                      <span class="action-tag action-tag--reverted" *ngIf="step.is_reverted">
+                        <mat-icon>warning_amber</mat-icon> REVERTED
+                      </span>
+                      <span class="action-tag action-tag--verify" *ngIf="step.action_type === 'VERIFICATION REQUESTED'">
+                        <mat-icon>travel_explore</mat-icon> REFERRED FOR SITE VERIFICATION
+                      </span>
+                      <span class="action-tag action-tag--applied" *ngIf="step.is_applied && !step.is_reverted">
+                        <mat-icon>task_alt</mat-icon> APPLIED &amp; SUBMITTED
+                      </span>
+                      <span class="action-tag action-tag--approved" *ngIf="!step.is_applied && !step.is_reverted && step.action_type === 'APPROVED'">
+                        <mat-icon>verified</mat-icon> APPROVED &amp; FORWARDED
+                      </span>
+                      <span class="action-tag action-tag--forwarded" *ngIf="!step.is_applied && !step.is_reverted && step.action_type !== 'APPROVED' && step.action_type !== 'VERIFICATION REQUESTED'">
+                        <mat-icon>forward</mat-icon> {{ step.action_type || 'FORWARDED' }}
+                      </span>
                     </div>
+
                     <span class="timestamp">
                       <mat-icon>schedule</mat-icon>
                       {{ step.created_at }}
                     </span>
                   </div>
 
+                  <!-- Applied Step: Payment Confirmation Banner -->
+                  <div class="route-payment-box" *ngIf="step.is_applied && (step.payment_info || detailData?.is_application_fee_paid)">
+                    <div class="rpb-header">
+                      <div class="rpb-title-group">
+                        <span class="rpb-icon"><mat-icon>verified_user</mat-icon></span>
+                        <div>
+                          <div class="rpb-title">Application Fee Payment: <span class="rpb-success">SUCCESSFUL</span></div>
+                          <div class="rpb-sub">Payment received and verified via {{ step.payment_info?.gateway || 'BillDesk Online Gateway' }}</div>
+                        </div>
+                      </div>
+                      <span class="rpb-amt-chip">
+                        <mat-icon>check_circle</mat-icon> ₹{{ step.payment_info?.amount || '500.00' }} PAID
+                      </span>
+                    </div>
+                    <div class="rpb-grid" *ngIf="step.payment_info">
+                      <div class="rpb-item" *ngIf="step.payment_info.utr">
+                        <span class="rpb-label">Transaction / UTR:</span>
+                        <code class="rpb-val">{{ step.payment_info.utr }}</code>
+                      </div>
+                      <div class="rpb-item" *ngIf="step.payment_info.date">
+                        <span class="rpb-label">Payment Date:</span>
+                        <span class="rpb-val">{{ step.payment_info.date }}</span>
+                      </div>
+                      <div class="rpb-item">
+                        <span class="rpb-label">Payment Mode:</span>
+                        <span class="rpb-val">{{ step.payment_info.gateway || 'BillDesk Gateway' }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Reverted Step Callout Alert -->
+                  <div class="revert-banner" *ngIf="step.is_reverted">
+                    <mat-icon class="revert-icon">history</mat-icon>
+                    <div>
+                      <strong>Application Reverted</strong>: Returned from <strong>{{ step.from_role }}</strong> to <strong>{{ step.to_role }}</strong> for further review or rectification.
+                    </div>
+                  </div>
+
+                  <!-- Verification Request Callout Alert -->
+                  <div class="verify-banner" *ngIf="step.action_type === 'VERIFICATION REQUESTED'">
+                    <mat-icon class="verify-icon">travel_explore</mat-icon>
+                    <div>
+                      <strong>Site Verification Requested by Joint Commissioner</strong>: Application sent back from <strong>Joint Commissioner</strong> to <strong>Site Enquiry Officer</strong> with instructions: <em>"{{ step.remarks }}"</em>.
+                    </div>
+                  </div>
+
                   <div class="timeline-body">
-                    <p class="remarks">"{{ step.remarks }}"</p>
+                    <div class="remarks-card" [class.remarks-card--reverted]="step.is_reverted">
+                      <mat-icon class="remarks-quote-icon">format_quote</mat-icon>
+                      <span class="remarks-text">"{{ step.remarks }}"</span>
+                    </div>
                   </div>
 
                   <div class="timeline-footer">
                     <span class="actor">
-                      <mat-icon>person</mat-icon>
-                      Actioned by: <strong>{{ step.action_by_name }}</strong> ({{ step.action_by }})
+                      <mat-icon>account_circle</mat-icon>
+                      Actioned by: <strong>{{ step.action_by_name }}</strong> <code class="actor-code">({{ step.action_by }})</code>
                     </span>
+                    <span class="target-stage-tag" *ngIf="step.stage && step.stage !== 'N/A'">
+                      <mat-icon>folder_open</mat-icon> Target Stage: <strong>{{ step.stage }}</strong>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Final Live Node: Where Application is Actively Pending Right Now -->
+              <div class="timeline-item timeline-item--live" *ngIf="!selectedWorkflowApp?.is_approved">
+                <div class="timeline-marker">
+                  <div class="marker-dot marker-dot--live">
+                    <mat-icon>hourglass_top</mat-icon>
+                  </div>
+                </div>
+                <div class="timeline-content timeline-content--live">
+                  <div class="live-pending-card">
+                    <div class="lpc-header">
+                      <span class="live-badge">
+                        <span class="pulse-dot"></span> CURRENT ACTIVE STAGE
+                      </span>
+                      <span class="live-role-tag">
+                        <mat-icon>manage_accounts</mat-icon>
+                        Currently Pending with: <strong>{{ getCurrentPendingRole() }}</strong>
+                      </span>
+                    </div>
+                    <div class="lpc-body">
+                      <mat-icon class="lpc-icon">pending_actions</mat-icon>
+                      <div class="lpc-text">
+                        <ng-container *ngIf="isPendingAt('Site Enquiry')">
+                          The application is currently waiting for <strong>physical site inspection and verification report</strong> from the Site Enquiry Officer. Once verified, the report will be forwarded back to the <strong>Joint Commissioner</strong> for further review.
+                        </ng-container>
+                        <ng-container *ngIf="isPendingAt('Joint Commissioner')">
+                          The application is actively pending review and processing by the <strong>Joint Commissioner</strong>.
+                        </ng-container>
+                        <ng-container *ngIf="!isPendingAt('Site Enquiry') && !isPendingAt('Joint Commissioner')">
+                          Awaiting processing and action by <strong>{{ getCurrentPendingRole() }}</strong>.
+                        </ng-container>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

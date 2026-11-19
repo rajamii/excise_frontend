@@ -67,6 +67,35 @@ export class SingleWindowDetailComponent implements OnInit, OnDestroy {
     return remarks || '—';
   }
 
+  hasRevertInHistory(): boolean {
+    const history = this.selectedWorkflowApp?.history || [];
+    return history.some((h: any) => h.is_reverted);
+  }
+
+  getCurrentPendingRole(): string {
+    if (!this.selectedWorkflowApp) return 'N/A';
+    if (this.selectedWorkflowApp.is_approved) return 'Fully Approved';
+    const role = (this.selectedWorkflowApp.pending_at_role || this.selectedWorkflowApp.current_stage || '').toLowerCase();
+    if (role.includes('inquiry') || role.includes('enquiry') || role.includes('site')) {
+      return 'Site Enquiry Officer';
+    }
+    if (role.includes('joint commissioner')) {
+      return 'Joint Commissioner';
+    }
+    if (role.includes('district')) {
+      return 'District Office';
+    }
+    if (role.includes('commissioner')) {
+      return 'Excise Commissioner';
+    }
+    return this.selectedWorkflowApp.pending_at_role || this.selectedWorkflowApp.current_stage || 'Department Review';
+  }
+
+  isPendingAt(roleKey: string): boolean {
+    const current = this.getCurrentPendingRole().toLowerCase();
+    return current.includes(roleKey.toLowerCase());
+  }
+
   getPagedPayments(): any[] {
     const filtered = this.getFilteredPayments();
     const totalPages = Math.ceil(filtered.length / this.paymentPageSize);
