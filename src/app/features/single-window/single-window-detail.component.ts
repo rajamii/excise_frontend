@@ -113,9 +113,27 @@ export class SingleWindowDetailComponent implements OnInit, OnDestroy {
     return false;
   }
 
+  isAtFinalApprovalStage(): boolean {
+    if (!this.selectedWorkflowApp) return false;
+    if (this.selectedWorkflowApp.is_approved) return true;
+    const stage = (this.selectedWorkflowApp.current_stage || '').toLowerCase();
+    const pendingRole = (this.selectedWorkflowApp.pending_at_role || '').toLowerCase();
+    if (stage.includes('approved') || stage.includes('payment') || pendingRole.includes('fee') || pendingRole.includes('completed')) {
+      return true;
+    }
+    const history = this.selectedWorkflowApp.history || [];
+    return history.some((h: any) => {
+      const fromRole = (h.from_role || '').toLowerCase();
+      const actionType = (h.action_type || '').toUpperCase();
+      const st = (h.stage || '').toLowerCase();
+      const rem = (h.remarks || '').toLowerCase();
+      return (fromRole.includes('commissioner') && (actionType.includes('APPROV') || rem.includes('approv'))) || st.includes('payment');
+    });
+  }
+
   getWorkflowStageIndex(): number {
     if (!this.selectedWorkflowApp) return 0;
-    if (this.selectedWorkflowApp.is_approved) return 5;
+    if (this.selectedWorkflowApp.is_approved || this.isAtFinalApprovalStage()) return 5;
     if (this.isLicenseeStage()) return 0;
 
     const currentRole = this.getCurrentPendingRole().toLowerCase();
@@ -173,6 +191,35 @@ export class SingleWindowDetailComponent implements OnInit, OnDestroy {
       };
     }
     return null;
+  }
+
+  isFinalApprovalStep(step: any): boolean {
+    return false;
+  }
+
+  isBothPostApprovalFeesPaid(): boolean {
+    const target = this.selectedWorkflowApp || this.detailData;
+    if (!target) return false;
+    return !!(target.is_license_fee_paid && target.is_security_fee_paid);
+  }
+
+  getLicenseValidUpTo(): string {
+    const lic = this.selectedWorkflowApp?.issued_license || this.detailData?.issued_license;
+    if (lic && lic.valid_up_to && lic.valid_up_to !== 'N/A') {
+      return lic.valid_up_to;
+    }
+    if (this.detailData?.valid_up_to && this.detailData.valid_up_to !== 'N/A') {
+      return this.detailData.valid_up_to;
+    }
+    return '31-03-2027';
+  }
+
+  getIssuedLicenseId(): string {
+    const lic = this.selectedWorkflowApp?.issued_license || this.detailData?.issued_license;
+    if (lic && lic.license_id && lic.license_id !== 'N/A') {
+      return lic.license_id;
+    }
+    return this.getWorkflowLicenseId() || 'Pending Generation';
   }
 
   getPagedPayments(): any[] {

@@ -1041,7 +1041,7 @@
             </div>
 
             <!-- Current Stage Live Status Callout Banner -->
-            <div class="current-status-callout" *ngIf="!selectedWorkflowApp?.is_approved">
+            <div class="current-status-callout" *ngIf="!selectedWorkflowApp?.is_approved && !isAtFinalApprovalStage()">
               <div class="csc-icon-wrap">
                 <mat-icon>hourglass_top</mat-icon>
               </div>
@@ -1283,8 +1283,8 @@
                 </div>
               </div>
 
-              <!-- Final Live Node: Where Application is Actively Pending Right Now -->
-              <div class="timeline-item timeline-item--live" *ngIf="!selectedWorkflowApp?.is_approved">
+              <!-- Final Live Node: Where Application is Actively Pending Right Now (Stages before Final Approval) -->
+              <div class="timeline-item timeline-item--live" *ngIf="!isAtFinalApprovalStage()">
                 <div class="timeline-marker">
                   <div class="marker-dot marker-dot--live">
                     <mat-icon>hourglass_top</mat-icon>
@@ -1323,6 +1323,85 @@
                         <ng-container *ngIf="getWorkflowStageIndex() === 4">
                           The application is actively pending final sanction by the <strong>Excise Commissioner</strong>.
                         </ng-container>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Final Approval Milestone Node when application is fully approved / sanctioned: Green Box ONLY AT LAST -->
+              <div class="timeline-item timeline-item--approved" *ngIf="isAtFinalApprovalStage()">
+                <div class="timeline-marker">
+                  <div class="marker-dot marker-dot--approved">
+                    <mat-icon>verified</mat-icon>
+                  </div>
+                </div>
+                <div class="timeline-content timeline-content--approved">
+                  <div class="route-approval-box">
+                    <div class="rab-header">
+                      <div class="rab-title-group">
+                        <span class="rab-icon"><mat-icon>verified</mat-icon></span>
+                        <div>
+                          <div class="rab-title">Commissioner Sanction &amp; License Status: <span class="rab-status-highlight">APPROVED</span></div>
+                          <div class="rab-sub">Post-approval stage: Both License Fee &amp; Security Deposit must be completed for the license to be active.</div>
+                        </div>
+                      </div>
+                      <span class="rab-validity-chip" [class.rab-validity-chip--active]="isBothPostApprovalFeesPaid()">
+                        <mat-icon>{{ isBothPostApprovalFeesPaid() ? 'verified' : 'hourglass_top' }}</mat-icon>
+                        {{ isBothPostApprovalFeesPaid() ? 'LICENSE ACTIVE & VALID' : 'AWAITING FEES' }}
+                      </span>
+                    </div>
+
+                    <!-- Payment Status Grid: License Fee & Security Deposit -->
+                    <div class="rab-fees-grid">
+                      <!-- 1. License Fee Payment -->
+                      <div class="rab-fee-card" [class.rab-fee-card--paid]="selectedWorkflowApp?.is_license_fee_paid || detailData?.is_license_fee_paid">
+                        <div class="rfc-top">
+                          <span class="rfc-label">License Fee Payment</span>
+                          <span class="rfc-badge" [ngClass]="(selectedWorkflowApp?.is_license_fee_paid || detailData?.is_license_fee_paid) ? 'rfc-badge--paid' : 'rfc-badge--pending'">
+                            <mat-icon>{{ (selectedWorkflowApp?.is_license_fee_paid || detailData?.is_license_fee_paid) ? 'check_circle' : 'hourglass_empty' }}</mat-icon>
+                            {{ (selectedWorkflowApp?.is_license_fee_paid || detailData?.is_license_fee_paid) ? 'PAID / COMPLETED' : 'PENDING PAYMENT' }}
+                          </span>
+                        </div>
+                        <div class="rfc-desc">Official authorization and grant fee for the license category</div>
+                      </div>
+
+                      <!-- 2. Security Deposit -->
+                      <div class="rab-fee-card" [class.rab-fee-card--paid]="selectedWorkflowApp?.is_security_fee_paid || detailData?.is_security_fee_paid">
+                        <div class="rfc-top">
+                          <span class="rfc-label">Security Deposit</span>
+                          <span class="rfc-badge" [ngClass]="(selectedWorkflowApp?.is_security_fee_paid || detailData?.is_security_fee_paid) ? 'rfc-badge--paid' : 'rfc-badge--pending'">
+                            <mat-icon>{{ (selectedWorkflowApp?.is_security_fee_paid || detailData?.is_security_fee_paid) ? 'check_circle' : 'hourglass_empty' }}</mat-icon>
+                            {{ (selectedWorkflowApp?.is_security_fee_paid || detailData?.is_security_fee_paid) ? 'RECHARGED / PAID' : 'AWAITING WALLET RECHARGE' }}
+                          </span>
+                        </div>
+                        <div class="rfc-desc">Required security deposit held via portal wallet account</div>
+                      </div>
+                    </div>
+
+                    <!-- License Validity Section: If Both Payments Done -->
+                    <div class="rab-validity-banner rab-validity-banner--valid" *ngIf="isBothPostApprovalFeesPaid()">
+                      <div class="rvb-left">
+                        <mat-icon class="rvb-icon">event_available</mat-icon>
+                        <div>
+                          <div class="rvb-title">Both Payments Done — License Officially Valid</div>
+                          <div class="rvb-meta">
+                            <span>License Number: <strong><code>{{ getIssuedLicenseId() }}</code></strong></span>
+                            <span class="rvb-divider">•</span>
+                            <span>License Valid Till: <strong class="rvb-date">{{ getLicenseValidUpTo() }}</strong></span>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="rvb-badge">
+                        <mat-icon>task_alt</mat-icon> COMPLIANCE COMPLETE
+                      </div>
+                    </div>
+
+                    <!-- Notice if either payment is pending -->
+                    <div class="rab-validity-banner rab-validity-banner--pending" *ngIf="!isBothPostApprovalFeesPaid()">
+                      <mat-icon class="rvb-icon">warning_amber</mat-icon>
+                      <div class="rvb-text">
+                        <strong>Fee Clearance Required</strong>: Both License Fee and Security Deposit must be completed to activate the license. Once both payments are cleared, the license is valid till <strong>{{ getLicenseValidUpTo() }}</strong>.
                       </div>
                     </div>
                   </div>
