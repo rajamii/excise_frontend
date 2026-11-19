@@ -76,6 +76,9 @@ export class SingleWindowDetailComponent implements OnInit, OnDestroy {
     if (!this.selectedWorkflowApp) return 'N/A';
     if (this.selectedWorkflowApp.is_approved) return 'Fully Approved';
     const role = (this.selectedWorkflowApp.pending_at_role || this.selectedWorkflowApp.current_stage || '').toLowerCase();
+    if (role.includes('applied') || role.includes('licensee')) {
+      return 'Licensee';
+    }
     if (role.includes('inquiry') || role.includes('enquiry') || role.includes('site')) {
       return 'Site Enquiry Officer';
     }
@@ -94,6 +97,82 @@ export class SingleWindowDetailComponent implements OnInit, OnDestroy {
   isPendingAt(roleKey: string): boolean {
     const current = this.getCurrentPendingRole().toLowerCase();
     return current.includes(roleKey.toLowerCase());
+  }
+
+  isLicenseeStage(): boolean {
+    if (!this.selectedWorkflowApp) return false;
+    if (this.selectedWorkflowApp.is_approved) return false;
+    const role = (this.selectedWorkflowApp.pending_at_role || '').toLowerCase();
+    const stage = (this.selectedWorkflowApp.current_stage || '').toLowerCase();
+    if (role.includes('licensee') || role.includes('applicant') || stage.includes('applied')) {
+      const history = this.selectedWorkflowApp.history || [];
+      if (history.length === 0) return true;
+      if (history.length === 1 && !history[0].has_gone_to_next_stage) return true;
+      return history.every((h: any) => !h.has_gone_to_next_stage);
+    }
+    return false;
+  }
+
+  getWorkflowStageIndex(): number {
+    if (!this.selectedWorkflowApp) return 0;
+    if (this.selectedWorkflowApp.is_approved) return 5;
+    if (this.isLicenseeStage()) return 0;
+
+    const currentRole = this.getCurrentPendingRole().toLowerCase();
+    const stage = (this.selectedWorkflowApp.current_stage || '').toLowerCase();
+
+    if (currentRole.includes('licensee') || currentRole.includes('applicant') || stage.includes('applied')) {
+      return 0;
+    }
+    if (currentRole.includes('district')) {
+      return 1;
+    }
+    if (currentRole.includes('site') || currentRole.includes('enquiry') || currentRole.includes('inquiry')) {
+      return 2;
+    }
+    if (currentRole.includes('joint commissioner')) {
+      return 3;
+    }
+    if (currentRole.includes('commissioner')) {
+      return 4;
+    }
+
+    const history = this.selectedWorkflowApp.history || [];
+    if (history.length > 0) {
+      const last = history[history.length - 1];
+      const toRole = (last.to_role || last.stage || '').toLowerCase();
+      if (toRole.includes('district')) return 1;
+      if (toRole.includes('site') || toRole.includes('enquiry')) return 2;
+      if (toRole.includes('joint commissioner')) return 3;
+      if (toRole.includes('commissioner')) return 4;
+    }
+
+    return 1;
+  }
+
+  getApplicationPaymentInfo(): any {
+    const history = this.selectedWorkflowApp?.history || [];
+    for (const h of history) {
+      if (h.payment_info) return h.payment_info;
+    }
+    const payments = this.detailData?.payments || [];
+    const appPayment = payments.find((p: any) => (p.remarks || '').toLowerCase().includes('application fee'));
+    if (appPayment) {
+      const isSuccess = appPayment.payment_status === 'Success';
+      const isPending = appPayment.payment_status === 'Pending';
+      return {
+        status: appPayment.payment_status,
+        status_code: isSuccess ? 'S' : (isPending ? 'P' : 'F'),
+        is_success: isSuccess,
+        is_pending: isPending,
+        is_failed: !isSuccess && !isPending,
+        amount: appPayment.amount || '500.00',
+        utr: appPayment.transaction_id,
+        date: appPayment.created_at,
+        gateway: appPayment.payment_type || 'BillDesk Gateway'
+      };
+    }
+    return null;
   }
 
   getPagedPayments(): any[] {

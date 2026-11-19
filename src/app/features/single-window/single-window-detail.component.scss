@@ -584,7 +584,15 @@
     }
 
     &.unpaid {
-      color: #f59e0b;
+      color: #64748b;
+    }
+
+    &.pending-warn {
+      color: #d97706;
+    }
+
+    &.failed-warn {
+      color: #dc2626;
     }
   }
 
@@ -607,7 +615,15 @@
       }
 
       &.unpaid {
+        color: #64748b;
+      }
+
+      &.pending-warn {
         color: #b45309;
+      }
+
+      &.failed-warn {
+        color: #b91c1c;
       }
     }
   }
@@ -1143,6 +1159,12 @@
             border-color: #fde68a;
           }
         }
+
+        &.route-role--licensee-current {
+          background: #eff6ff;
+          color: #1d4ed8;
+          border: 1px solid #bfdbfe;
+        }
       }
 
       .route-flow-arrow {
@@ -1191,6 +1213,18 @@
         background: #ecfdf5;
         color: #047857;
         border: 1.5px solid #6ee7b7;
+      }
+
+      &.action-tag--licensee-held {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1.5px solid #cbd5e1;
+      }
+
+      &.action-tag--licensee {
+        background: #eff6ff;
+        color: #1d4ed8;
+        border: 1.5px solid #93c5fd;
       }
 
       &.action-tag--approved {
@@ -1334,6 +1368,80 @@
           padding: 0.15rem 0.4rem;
           border-radius: 4px;
           font-family: monospace;
+        }
+      }
+    }
+
+    &.route-payment-box--pending {
+      background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+      border: 1.5px solid #fcd34d;
+      box-shadow: 0 1px 4px rgba(217, 119, 6, 0.08);
+
+      .rpb-icon--pending {
+        background: #fde68a;
+        color: #d97706;
+      }
+
+      .rpb-pending-title {
+        font-weight: 800;
+        color: #b45309;
+        letter-spacing: 0.02em;
+      }
+
+      .rpb-amt-chip--pending {
+        background: #d97706;
+      }
+
+      .rpb-grid {
+        border-top: 1px dashed #fde68a;
+
+        .rpb-item {
+          .rpb-label {
+            color: #92400e;
+          }
+          .rpb-val {
+            color: #78350f;
+          }
+          code.rpb-val {
+            background: #fef3c7;
+          }
+        }
+      }
+    }
+
+    &.route-payment-box--failed {
+      background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+      border: 1.5px solid #fca5a5;
+      box-shadow: 0 1px 4px rgba(220, 38, 38, 0.08);
+
+      .rpb-icon--failed {
+        background: #fecaca;
+        color: #dc2626;
+      }
+
+      .rpb-failed-title {
+        font-weight: 800;
+        color: #b91c1c;
+        letter-spacing: 0.02em;
+      }
+
+      .rpb-amt-chip--failed {
+        background: #dc2626;
+      }
+
+      .rpb-grid {
+        border-top: 1px dashed #fca5a5;
+
+        .rpb-item {
+          .rpb-label {
+            color: #991b1b;
+          }
+          .rpb-val {
+            color: #7f1d1d;
+          }
+          code.rpb-val {
+            background: #fee2e2;
+          }
         }
       }
     }

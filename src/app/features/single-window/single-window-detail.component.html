@@ -585,13 +585,13 @@
                 <div class="payment-check-list">
                   <!-- 1. Application Fee Payment -->
                   <div class="payment-check-item">
-                    <mat-icon [ngClass]="detailData.is_application_fee_paid ? 'paid' : 'unpaid'">
-                      {{ detailData.is_application_fee_paid ? 'check_circle' : 'pending' }}
+                    <mat-icon [ngClass]="(detailData.is_application_fee_paid || getApplicationPaymentInfo()?.is_success) ? 'paid' : (getApplicationPaymentInfo()?.is_pending ? 'pending-warn' : (getApplicationPaymentInfo()?.is_failed ? 'failed-warn' : 'unpaid'))">
+                      {{ (detailData.is_application_fee_paid || getApplicationPaymentInfo()?.is_success) ? 'check_circle' : (getApplicationPaymentInfo()?.is_pending ? 'hourglass_top' : (getApplicationPaymentInfo()?.is_failed ? 'highlight_off' : 'pending')) }}
                     </mat-icon>
                     <div class="payment-info">
                       <span class="title">Application Fee Payment</span>
-                      <span class="status" [ngClass]="detailData.is_application_fee_paid ? 'paid' : 'unpaid'">
-                        {{ detailData.is_application_fee_paid ? 'COMPLETED / PAID (BillDesk ₹500)' : 'NOT PAID / PENDING' }}
+                      <span class="status" [ngClass]="(detailData.is_application_fee_paid || getApplicationPaymentInfo()?.is_success) ? 'paid' : (getApplicationPaymentInfo()?.is_pending ? 'pending-warn' : (getApplicationPaymentInfo()?.is_failed ? 'failed-warn' : 'unpaid'))">
+                        {{ (detailData.is_application_fee_paid || getApplicationPaymentInfo()?.is_success) ? 'COMPLETED / PAID (BillDesk ₹500)' : (getApplicationPaymentInfo()?.is_pending ? 'PENDING BANK CONFIRMATION (₹500)' : (getApplicationPaymentInfo()?.is_failed ? 'PAYMENT FAILED / DECLINED' : 'NOT PAID / PENDING')) }}
                       </span>
                     </div>
                   </div>
@@ -950,59 +950,92 @@
 
             <!-- Route Summary Header Bar -->
             <div class="route-pipeline-bar" *ngIf="selectedWorkflowApp?.history && selectedWorkflowApp.history.length > 0">
-              <!-- Step 1: Applicant -->
-              <div class="pipeline-step pipeline-step--done">
-                <span class="step-circle"><mat-icon>how_to_reg</mat-icon></span>
+              <!-- Step 1: Applicant (Licensee) -->
+              <div class="pipeline-step" [ngClass]="{
+                'pipeline-step--active': getWorkflowStageIndex() === 0,
+                'pipeline-step--done': getWorkflowStageIndex() > 0
+              }">
+                <span class="step-circle"><mat-icon>{{ getWorkflowStageIndex() === 0 ? 'hourglass_top' : 'how_to_reg' }}</mat-icon></span>
                 <span class="step-label">Applicant (Licensee)</span>
-                <span class="step-state-tag state-tag--done">Submitted ✓</span>
+                <span class="step-state-tag" [ngClass]="getWorkflowStageIndex() === 0 ? 'state-tag--active' : 'state-tag--done'">
+                  <ng-container *ngIf="getWorkflowStageIndex() === 0">
+                    {{ (getApplicationPaymentInfo()?.is_success || detailData?.is_application_fee_paid) ? 'Payment Done (At Licensee Stage)' : (getApplicationPaymentInfo()?.is_pending ? 'Payment Pending ⏳' : (getApplicationPaymentInfo()?.is_failed ? 'Payment Failed ⚠' : 'At Licensee Stage')) }}
+                  </ng-container>
+                  <ng-container *ngIf="getWorkflowStageIndex() > 0">Submitted ✓</ng-container>
+                </span>
               </div>
-              <div class="pipeline-connector pipeline-connector--done"></div>
+              <div class="pipeline-connector" [class.pipeline-connector--done]="getWorkflowStageIndex() >= 1"></div>
 
               <!-- Step 2: District Office -->
-              <div class="pipeline-step pipeline-step--done">
+              <div class="pipeline-step" [ngClass]="{
+                'pipeline-step--waiting': getWorkflowStageIndex() < 1,
+                'pipeline-step--active': getWorkflowStageIndex() === 1,
+                'pipeline-step--done': getWorkflowStageIndex() > 1
+              }">
                 <span class="step-circle"><mat-icon>domain</mat-icon></span>
                 <span class="step-label">District Office</span>
-                <span class="step-state-tag state-tag--done">Processed ✓</span>
+                <span class="step-state-tag" [ngClass]="{
+                  'state-tag--waiting': getWorkflowStageIndex() < 1,
+                  'state-tag--active': getWorkflowStageIndex() === 1,
+                  'state-tag--done': getWorkflowStageIndex() > 1
+                }">
+                  {{ getWorkflowStageIndex() < 1 ? 'Upcoming' : (getWorkflowStageIndex() === 1 ? 'Pending Review ⏳' : 'Processed ✓') }}
+                </span>
               </div>
-              <div class="pipeline-connector pipeline-connector--done"></div>
+              <div class="pipeline-connector" [class.pipeline-connector--done]="getWorkflowStageIndex() >= 2"></div>
 
               <!-- Step 3: Site Enquiry Officer -->
               <div class="pipeline-step" [ngClass]="{
-                'pipeline-step--active': isPendingAt('Site Enquiry'),
-                'pipeline-step--done': !isPendingAt('Site Enquiry')
+                'pipeline-step--waiting': getWorkflowStageIndex() < 2,
+                'pipeline-step--active': getWorkflowStageIndex() === 2,
+                'pipeline-step--done': getWorkflowStageIndex() > 2
               }">
                 <span class="step-circle">
-                  <mat-icon>{{ isPendingAt('Site Enquiry') ? 'hourglass_top' : 'travel_explore' }}</mat-icon>
+                  <mat-icon>{{ getWorkflowStageIndex() === 2 ? 'hourglass_top' : 'travel_explore' }}</mat-icon>
                 </span>
                 <span class="step-label">Site Enquiry Officer</span>
-                <span class="step-state-tag" [ngClass]="isPendingAt('Site Enquiry') ? 'state-tag--active' : 'state-tag--done'">
-                  {{ isPendingAt('Site Enquiry') ? 'Pending Verification ⏳' : 'Verified ✓' }}
+                <span class="step-state-tag" [ngClass]="{
+                  'state-tag--waiting': getWorkflowStageIndex() < 2,
+                  'state-tag--active': getWorkflowStageIndex() === 2,
+                  'state-tag--done': getWorkflowStageIndex() > 2
+                }">
+                  {{ getWorkflowStageIndex() < 2 ? 'Upcoming' : (getWorkflowStageIndex() === 2 ? 'Pending Verification ⏳' : 'Verified ✓') }}
                 </span>
               </div>
-              <div class="pipeline-connector" [class.pipeline-connector--done]="!isPendingAt('Site Enquiry')"></div>
+              <div class="pipeline-connector" [class.pipeline-connector--done]="getWorkflowStageIndex() >= 3"></div>
 
               <!-- Step 4: Joint Commissioner -->
               <div class="pipeline-step" [ngClass]="{
-                'pipeline-step--active': isPendingAt('Joint Commissioner'),
-                'pipeline-step--waiting': !isPendingAt('Joint Commissioner')
+                'pipeline-step--waiting': getWorkflowStageIndex() < 3,
+                'pipeline-step--active': getWorkflowStageIndex() === 3,
+                'pipeline-step--done': getWorkflowStageIndex() > 3
               }">
                 <span class="step-circle"><mat-icon>gavel</mat-icon></span>
                 <span class="step-label">Joint Commissioner</span>
-                <span class="step-state-tag" [ngClass]="isPendingAt('Joint Commissioner') ? 'state-tag--active' : 'state-tag--waiting'">
-                  {{ isPendingAt('Joint Commissioner') ? 'Pending Review ⏳' : 'Awaiting Report' }}
+                <span class="step-state-tag" [ngClass]="{
+                  'state-tag--waiting': getWorkflowStageIndex() < 3,
+                  'state-tag--active': getWorkflowStageIndex() === 3,
+                  'state-tag--done': getWorkflowStageIndex() > 3
+                }">
+                  {{ getWorkflowStageIndex() < 3 ? 'Upcoming' : (getWorkflowStageIndex() === 3 ? 'Pending Review ⏳' : 'Reviewed ✓') }}
                 </span>
               </div>
-              <div class="pipeline-connector" [class.pipeline-connector--done]="selectedWorkflowApp?.is_approved"></div>
+              <div class="pipeline-connector" [class.pipeline-connector--done]="getWorkflowStageIndex() >= 4"></div>
 
               <!-- Step 5: Commissioner -->
               <div class="pipeline-step" [ngClass]="{
-                'pipeline-step--done': selectedWorkflowApp?.is_approved,
-                'pipeline-step--waiting': !selectedWorkflowApp?.is_approved
+                'pipeline-step--waiting': getWorkflowStageIndex() < 4,
+                'pipeline-step--active': getWorkflowStageIndex() === 4,
+                'pipeline-step--done': getWorkflowStageIndex() >= 5
               }">
-                <span class="step-circle"><mat-icon>{{ selectedWorkflowApp?.is_approved ? 'verified' : 'military_tech' }}</mat-icon></span>
+                <span class="step-circle"><mat-icon>{{ getWorkflowStageIndex() >= 5 ? 'verified' : 'military_tech' }}</mat-icon></span>
                 <span class="step-label">Commissioner</span>
-                <span class="step-state-tag" [ngClass]="selectedWorkflowApp?.is_approved ? 'state-tag--done' : 'state-tag--waiting'">
-                  {{ selectedWorkflowApp?.is_approved ? 'Approved ✓' : 'Final Sanction' }}
+                <span class="step-state-tag" [ngClass]="{
+                  'state-tag--waiting': getWorkflowStageIndex() < 4,
+                  'state-tag--active': getWorkflowStageIndex() === 4,
+                  'state-tag--done': getWorkflowStageIndex() >= 5
+                }">
+                  {{ getWorkflowStageIndex() >= 5 ? 'Approved ✓' : (getWorkflowStageIndex() === 4 ? 'Pending Sanction ⏳' : 'Final Sanction') }}
                 </span>
               </div>
             </div>
@@ -1017,14 +1050,24 @@
                   Current Application Status: <strong>Pending with {{ getCurrentPendingRole() }}</strong>
                 </div>
                 <div class="csc-desc">
-                  <ng-container *ngIf="isPendingAt('Site Enquiry')">
-                    Joint Commissioner has instructed physical site inspection: <em>"For site verification, please"</em>. The application is actively pending with the <strong>Site Enquiry Officer</strong>. Once the verification report is submitted, the application returns to the <strong>Joint Commissioner</strong>.
+                  <ng-container *ngIf="getWorkflowStageIndex() === 0">
+                    The application is currently at the <strong>Licensee stage</strong>.
+                    <span *ngIf="getApplicationPaymentInfo()?.is_success || detailData?.is_application_fee_paid"> Application fee of <strong>₹{{ getApplicationPaymentInfo()?.amount || '500.00' }}</strong> has been <strong>successfully completed and verified</strong> via {{ getApplicationPaymentInfo()?.gateway || 'BillDesk' }}<span *ngIf="getApplicationPaymentInfo()?.utr"> (UTR: <code>{{ getApplicationPaymentInfo()?.utr }}</code>)</span>, but the application has <strong>not yet been forwarded to the next stage (District Office)</strong>.</span>
+                    <span *ngIf="getApplicationPaymentInfo()?.is_pending"> Application fee payment of <strong>₹{{ getApplicationPaymentInfo()?.amount || '500.00' }}</strong> via {{ getApplicationPaymentInfo()?.gateway || 'BillDesk' }} is <strong>pending confirmation from the bank</strong>. The application has not moved to the next stage.</span>
+                    <span *ngIf="getApplicationPaymentInfo()?.is_failed"> Application fee payment via {{ getApplicationPaymentInfo()?.gateway || 'BillDesk' }} was <strong>declined or failed</strong>. Please re-attempt payment to proceed.</span>
+                    <span *ngIf="!getApplicationPaymentInfo() && !detailData?.is_application_fee_paid"> Awaiting fee payment and submission to the District Office.</span>
                   </ng-container>
-                  <ng-container *ngIf="isPendingAt('Joint Commissioner')">
+                  <ng-container *ngIf="getWorkflowStageIndex() === 1">
+                    The application is actively pending review and scrutiny by the <strong>District Office</strong>.
+                  </ng-container>
+                  <ng-container *ngIf="getWorkflowStageIndex() === 2">
+                    Joint Commissioner has instructed physical site inspection. The application is actively pending with the <strong>Site Enquiry Officer</strong>. Once the verification report is submitted, the application returns to the <strong>Joint Commissioner</strong>.
+                  </ng-container>
+                  <ng-container *ngIf="getWorkflowStageIndex() === 3">
                     The application is actively pending review and processing by the <strong>Joint Commissioner</strong>.
                   </ng-container>
-                  <ng-container *ngIf="!isPendingAt('Site Enquiry') && !isPendingAt('Joint Commissioner')">
-                    The application is currently with <strong>{{ getCurrentPendingRole() }}</strong> for department workflow review.
+                  <ng-container *ngIf="getWorkflowStageIndex() === 4">
+                    The application is actively pending final sanction by the <strong>Excise Commissioner</strong>.
                   </ng-container>
                 </div>
               </div>
@@ -1062,7 +1105,7 @@
                       </span>
 
                       <!-- Clear Route Flow: From Role -> To Role -->
-                      <div class="route-flow-container">
+                      <div class="route-flow-container" *ngIf="step.has_gone_to_next_stage !== false">
                         <span class="route-role-badge route-role--from">
                           <mat-icon class="badge-role-icon">person</mat-icon>
                           {{ step.from_role || 'Applicant (Licensee)' }}
@@ -1076,6 +1119,17 @@
                         </span>
                       </div>
 
+                      <!-- Route Flow when application has NOT yet moved to next stage -->
+                      <div class="route-flow-container" *ngIf="step.has_gone_to_next_stage === false">
+                        <span class="route-role-badge route-role--from route-role--licensee-current">
+                          <mat-icon class="badge-role-icon">person</mat-icon>
+                          Applicant (Licensee)
+                        </span>
+                        <span class="action-tag action-tag--licensee-held">
+                          <mat-icon>pause_circle_outline</mat-icon> AT LICENSEE STAGE
+                        </span>
+                      </div>
+
                       <!-- Action Tag -->
                       <span class="action-tag action-tag--reverted" *ngIf="step.is_reverted">
                         <mat-icon>warning_amber</mat-icon> REVERTED
@@ -1083,13 +1137,17 @@
                       <span class="action-tag action-tag--verify" *ngIf="step.action_type === 'VERIFICATION REQUESTED'">
                         <mat-icon>travel_explore</mat-icon> REFERRED FOR SITE VERIFICATION
                       </span>
-                      <span class="action-tag action-tag--applied" *ngIf="step.is_applied && !step.is_reverted">
+                      <span class="action-tag action-tag--applied" *ngIf="step.is_applied && !step.is_reverted && step.has_gone_to_next_stage !== false">
                         <mat-icon>task_alt</mat-icon> APPLIED &amp; SUBMITTED
                       </span>
-                      <span class="action-tag action-tag--approved" *ngIf="!step.is_applied && !step.is_reverted && step.action_type === 'APPROVED'">
+                      <span class="action-tag action-tag--licensee" *ngIf="step.has_gone_to_next_stage === false">
+                        <mat-icon>{{ (step.payment_info?.is_success || detailData?.is_application_fee_paid) ? 'check_circle' : (step.payment_info?.is_pending ? 'hourglass_empty' : (step.payment_info?.is_failed ? 'highlight_off' : 'info')) }}</mat-icon>
+                        {{ (step.payment_info?.is_success || detailData?.is_application_fee_paid) ? 'PAYMENT DONE (HELD AT LICENSEE)' : (step.payment_info?.is_pending ? 'PAYMENT PENDING (HELD AT LICENSEE)' : (step.payment_info?.is_failed ? 'PAYMENT FAILED (HELD AT LICENSEE)' : 'HELD AT LICENSEE STAGE')) }}
+                      </span>
+                      <span class="action-tag action-tag--approved" *ngIf="!step.is_applied && !step.is_reverted && step.action_type === 'APPROVED' && step.has_gone_to_next_stage !== false">
                         <mat-icon>verified</mat-icon> APPROVED &amp; FORWARDED
                       </span>
-                      <span class="action-tag action-tag--forwarded" *ngIf="!step.is_applied && !step.is_reverted && step.action_type !== 'APPROVED' && step.action_type !== 'VERIFICATION REQUESTED'">
+                      <span class="action-tag action-tag--forwarded" *ngIf="!step.is_applied && !step.is_reverted && step.action_type !== 'APPROVED' && step.action_type !== 'VERIFICATION REQUESTED' && step.has_gone_to_next_stage !== false">
                         <mat-icon>forward</mat-icon> {{ step.action_type || 'FORWARDED' }}
                       </span>
                     </div>
@@ -1100,14 +1158,14 @@
                     </span>
                   </div>
 
-                  <!-- Applied Step: Payment Confirmation Banner -->
-                  <div class="route-payment-box" *ngIf="step.is_applied && (step.payment_info || detailData?.is_application_fee_paid)">
+                  <!-- Applied Step: Payment Confirmation Banner (Successful) -->
+                  <div class="route-payment-box route-payment-box--success" *ngIf="step.is_applied && (step.payment_info?.is_success || detailData?.is_application_fee_paid)">
                     <div class="rpb-header">
                       <div class="rpb-title-group">
                         <span class="rpb-icon"><mat-icon>verified_user</mat-icon></span>
                         <div>
                           <div class="rpb-title">Application Fee Payment: <span class="rpb-success">SUCCESSFUL</span></div>
-                          <div class="rpb-sub">Payment received and verified via {{ step.payment_info?.gateway || 'BillDesk Online Gateway' }}</div>
+                          <div class="rpb-sub">Payment received and verified via {{ step.payment_info?.gateway || 'BillDesk Gateway' }}</div>
                         </div>
                       </div>
                       <span class="rpb-amt-chip">
@@ -1125,6 +1183,66 @@
                       </div>
                       <div class="rpb-item">
                         <span class="rpb-label">Payment Mode:</span>
+                        <span class="rpb-val">{{ step.payment_info.gateway || 'BillDesk Gateway' }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Applied Step: Payment Box (Pending Confirmation) -->
+                  <div class="route-payment-box route-payment-box--pending" *ngIf="step.is_applied && step.payment_info?.is_pending && !detailData?.is_application_fee_paid">
+                    <div class="rpb-header">
+                      <div class="rpb-title-group">
+                        <span class="rpb-icon rpb-icon--pending"><mat-icon>hourglass_top</mat-icon></span>
+                        <div>
+                          <div class="rpb-title">Application Fee Payment: <span class="rpb-pending-title">PENDING CONFIRMATION</span></div>
+                          <div class="rpb-sub">Transaction initiated via {{ step.payment_info?.gateway || 'BillDesk Gateway' }} — Awaiting bank settlement</div>
+                        </div>
+                      </div>
+                      <span class="rpb-amt-chip rpb-amt-chip--pending">
+                        <mat-icon>hourglass_empty</mat-icon> ₹{{ step.payment_info?.amount || '500.00' }} PENDING
+                      </span>
+                    </div>
+                    <div class="rpb-grid" *ngIf="step.payment_info">
+                      <div class="rpb-item" *ngIf="step.payment_info.utr">
+                        <span class="rpb-label">Reference / UTR:</span>
+                        <code class="rpb-val">{{ step.payment_info.utr }}</code>
+                      </div>
+                      <div class="rpb-item" *ngIf="step.payment_info.date">
+                        <span class="rpb-label">Initiated On:</span>
+                        <span class="rpb-val">{{ step.payment_info.date }}</span>
+                      </div>
+                      <div class="rpb-item">
+                        <span class="rpb-label">Payment Mode:</span>
+                        <span class="rpb-val">{{ step.payment_info.gateway || 'BillDesk Gateway' }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Applied Step: Payment Box (Failed) -->
+                  <div class="route-payment-box route-payment-box--failed" *ngIf="step.is_applied && step.payment_info?.is_failed && !detailData?.is_application_fee_paid">
+                    <div class="rpb-header">
+                      <div class="rpb-title-group">
+                        <span class="rpb-icon rpb-icon--failed"><mat-icon>highlight_off</mat-icon></span>
+                        <div>
+                          <div class="rpb-title">Application Fee Payment: <span class="rpb-failed-title">PAYMENT FAILED</span></div>
+                          <div class="rpb-sub">{{ step.payment_info?.error_description || 'Transaction declined or cancelled by user/bank' }}</div>
+                        </div>
+                      </div>
+                      <span class="rpb-amt-chip rpb-amt-chip--failed">
+                        <mat-icon>error_outline</mat-icon> ₹{{ step.payment_info?.amount || '500.00' }} FAILED
+                      </span>
+                    </div>
+                    <div class="rpb-grid" *ngIf="step.payment_info">
+                      <div class="rpb-item" *ngIf="step.payment_info.utr">
+                        <span class="rpb-label">Reference / UTR:</span>
+                        <code class="rpb-val">{{ step.payment_info.utr }}</code>
+                      </div>
+                      <div class="rpb-item" *ngIf="step.payment_info.date">
+                        <span class="rpb-label">Attempt Date:</span>
+                        <span class="rpb-val">{{ step.payment_info.date }}</span>
+                      </div>
+                      <div class="rpb-item">
+                        <span class="rpb-label">Gateway:</span>
                         <span class="rpb-val">{{ step.payment_info.gateway || 'BillDesk Gateway' }}</span>
                       </div>
                     </div>
@@ -1186,14 +1304,24 @@
                     <div class="lpc-body">
                       <mat-icon class="lpc-icon">pending_actions</mat-icon>
                       <div class="lpc-text">
-                        <ng-container *ngIf="isPendingAt('Site Enquiry')">
+                        <ng-container *ngIf="getWorkflowStageIndex() === 0">
+                          The application is currently at the <strong>Licensee stage</strong>.
+                          <span *ngIf="getApplicationPaymentInfo()?.is_success || detailData?.is_application_fee_paid"> Application fee payment of <strong>₹{{ getApplicationPaymentInfo()?.amount || '500.00' }}</strong> has been verified. Awaiting submission/forwarding to the <strong>District Office</strong>.</span>
+                          <span *ngIf="getApplicationPaymentInfo()?.is_pending"> Application fee payment of <strong>₹{{ getApplicationPaymentInfo()?.amount || '500.00' }}</strong> is pending confirmation from the bank. The application has not moved to the next stage.</span>
+                          <span *ngIf="getApplicationPaymentInfo()?.is_failed"> Application fee payment via BillDesk was declined or failed. Please re-attempt payment to proceed.</span>
+                          <span *ngIf="!getApplicationPaymentInfo() && !detailData?.is_application_fee_paid"> Awaiting fee payment and submission to the District Office.</span>
+                        </ng-container>
+                        <ng-container *ngIf="getWorkflowStageIndex() === 1">
+                          Awaiting processing and initial scrutiny by the <strong>District Office</strong>.
+                        </ng-container>
+                        <ng-container *ngIf="getWorkflowStageIndex() === 2">
                           The application is currently waiting for <strong>physical site inspection and verification report</strong> from the Site Enquiry Officer. Once verified, the report will be forwarded back to the <strong>Joint Commissioner</strong> for further review.
                         </ng-container>
-                        <ng-container *ngIf="isPendingAt('Joint Commissioner')">
+                        <ng-container *ngIf="getWorkflowStageIndex() === 3">
                           The application is actively pending review and processing by the <strong>Joint Commissioner</strong>.
                         </ng-container>
-                        <ng-container *ngIf="!isPendingAt('Site Enquiry') && !isPendingAt('Joint Commissioner')">
-                          Awaiting processing and action by <strong>{{ getCurrentPendingRole() }}</strong>.
+                        <ng-container *ngIf="getWorkflowStageIndex() === 4">
+                          The application is actively pending final sanction by the <strong>Excise Commissioner</strong>.
                         </ng-container>
                       </div>
                     </div>
