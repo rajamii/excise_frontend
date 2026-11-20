@@ -24,6 +24,7 @@ interface HologramRoll {
   newUntil?: number;
   usageHistory?: any[]; // Add usage history for Rolls tab
   available_range?: string; // Available serial ranges (e.g., "1-49, 101-300")
+  license_id?: string;
 }
 
 interface SerialNumber {
@@ -493,6 +494,21 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     window.history.back();
   }
 
+  private getStorageKey(baseKey: string): string {
+    let scopeId = '';
+    try {
+      const storedUser = localStorage.getItem('currentUser');
+      if (storedUser) {
+        const u = JSON.parse(storedUser);
+        scopeId = (u?.username || u?.licensee_id || u?.id || '').toString().trim();
+      }
+    } catch (e) {}
+    if (!scopeId && this.establishmentLicenseeId) {
+      scopeId = this.establishmentLicenseeId.trim();
+    }
+    return scopeId ? `${baseKey}_${scopeId}` : baseKey;
+  }
+
   loadRollsData() {
     // Load data from API (database) first
     this.hologramService.getRollsDetails().subscribe({
@@ -500,7 +516,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
         console.log('✅ Loaded rolls from API:', apiRolls);
 
         // Transform API data to component format
-        this.rollsData = apiRolls.map((roll: any) => ({
+        let mappedRolls = apiRolls.map((roll: any) => ({
           id: roll.id,
           cartoonNumber: roll.cartonNumber || roll.carton_number,
           type: roll.type as 'LOCAL' | 'EXPORT' | 'DEFENCE',
@@ -526,8 +542,20 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
           isNew: roll.isNew || roll.is_new || false,
           newUntil: roll.newUntil || roll.new_until,
           usageHistory: roll.usageHistory || roll.usage_history || [],
-          available_range: roll.available_range || roll.availableRange // Add this field!
+          available_range: roll.available_range || roll.availableRange,
+          license_id: roll.license_id || roll.licenseId || roll.licensee_code || roll.licenseeCode || ''
         }));
+
+        // Strict License Isolation: ensure rolls belong strictly to the current establishment license
+        if (this.establishmentLicenseeId) {
+          const currentLic = this.establishmentLicenseeId.trim().toUpperCase();
+          mappedRolls = mappedRolls.filter((roll: any) => {
+            const rollLic = (roll.license_id || '').trim().toUpperCase();
+            return !rollLic || rollLic === currentLic;
+          });
+        }
+
+        this.rollsData = mappedRolls;
 
         // Sort by received date (oldest first) and then by ID (oldest first)
         this.rollsData.sort((a: any, b: any) => {
@@ -541,8 +569,8 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
           return (a.id || 0) - (b.id || 0); // Older ID first
         });
 
-        // Also sync to localStorage for offline capability
-        localStorage.setItem('hologramOverviewRolls', JSON.stringify(this.rollsData));
+        // Also sync to scoped localStorage for offline capability
+        localStorage.setItem(this.getStorageKey('hologramOverviewRolls'), JSON.stringify(this.rollsData));
         this.resolveEstablishmentFromRolls(this.rollsData);
 
         // Apply filters after loading
@@ -556,9 +584,22 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       error: (error) => {
         console.error('❌ Error loading rolls from API:', error);
 
-        // Fallback to localStorage if API fails
-        const savedRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
-        this.rollsData = savedRolls.sort((a: any, b: any) => {
+        // Fallback to scoped localStorage if API fails
+        const savedRolls = JSON.parse(
+          localStorage.getItem(this.getStorageKey('hologramOverviewRolls')) ||
+          localStorage.getItem('hologramOverviewRolls') ||
+          '[]'
+        );
+        let fallbackRolls = savedRolls;
+        if (this.establishmentLicenseeId) {
+          const currentLic = this.establishmentLicenseeId.trim().toUpperCase();
+          fallbackRolls = fallbackRolls.filter((roll: any) => {
+            const rollLic = (roll.license_id || '').trim().toUpperCase();
+            return !rollLic || rollLic === currentLic;
+          });
+        }
+
+        this.rollsData = fallbackRolls.sort((a: any, b: any) => {
           const dateA = new Date(a.receivedDate || '2024-01-01').getTime();
           const dateB = new Date(b.receivedDate || '2024-01-01').getTime();
 
@@ -591,6 +632,20 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
         this.establishmentName = (data.manufacturingUnitName || '').toString().trim();
         this.establishmentLicenseeId = (data.licenseeId || '').toString().trim();
         this.updateEstablishmentDisplay();
+
+        // If rolls were already loaded before profile returned, enforce license filtering
+        if (this.establishmentLicenseeId && this.rollsData?.length) {
+          const currentLic = this.establishmentLicenseeId.trim().toUpperCase();
+          const filtered = this.rollsData.filter((roll: any) => {
+            const rollLic = (roll.license_id || '').trim().toUpperCase();
+            return !rollLic || rollLic === currentLic;
+          });
+          if (filtered.length !== this.rollsData.length) {
+            this.rollsData = filtered;
+            this.applyRollsFilters();
+            this.loadAvailableData();
+          }
+        }
       },
       error: () => {
         // Fallback from login payload if profile endpoint is unavailable
@@ -612,6 +667,20 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
             user?.licensee_id ||
             this.establishmentLicenseeId
           ).toString().trim();
+          this.updateEstablishmentDisplay();
+
+          if (this.establishmentLicenseeId && this.rollsData?.length) {
+            const currentLic = this.establishmentLicenseeId.trim().toUpperCase();
+            const filtered = this.rollsData.filter((roll: any) => {
+              const rollLic = (roll.license_id || '').trim().toUpperCase();
+              return !rollLic || rollLic === currentLic;
+            });
+            if (filtered.length !== this.rollsData.length) {
+              this.rollsData = filtered;
+              this.applyRollsFilters();
+              this.loadAvailableData();
+            }
+          }
           this.updateEstablishmentDisplay();
         } catch {
           // no-op
@@ -752,7 +821,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       .sort((a, b) => a.id - b.id); // Sort by ID (oldest first)
 
     // Also sync to localStorage for offline capability
-    localStorage.setItem('hologramOverviewAvailable', JSON.stringify(this.availableData));
+    localStorage.setItem(this.getStorageKey('hologramOverviewAvailable'), JSON.stringify(this.availableData));
 
     this.applyAvailableFilters();
 
