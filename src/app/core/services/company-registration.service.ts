@@ -159,4 +159,9 @@ export class CompanyRegistrationService {
       tap(() => this.invalidateCache('company:list', 'company:root-list', 'company:dashboard-counts'))
     );
   }
+
+  // Get document download URL from MongoDB GridFS / DMS
+  getCompanyRegistrationDocumentDownloadUrl(applicationId: string, documentField: string): string {
+    return `${this.baseUrl}/${encodeURIComponent(applicationId)}/document/${documentField}/`;
+  }
 }
