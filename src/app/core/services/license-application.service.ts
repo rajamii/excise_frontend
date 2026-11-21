@@ -800,6 +800,13 @@ export class LicenseApplicationService {
     );
   }
 
+  getNewLicenseDocumentDownloadUrl(applicationId: string, documentField: string): string {
+    const encodedId = encodeURIComponent(String(applicationId || '').trim());
+    const encodedField = encodeURIComponent(String(documentField || '').trim());
+    return `${this.newLicenseUrl}/${encodedId}/document/${encodedField}/`;
+  }
+
+
   private formatDate(value: any): string {
     if (value instanceof Date) {
       const year = value.getFullYear();
