@@ -81,41 +81,50 @@ export class SecretaryTimelineComponent implements OnInit {
               rejected_applications: kpis.rejected_applications ?? kpis.rejectedApplications ?? 0,
               avg_processing_days: kpis.avg_processing_days ?? kpis.avgProcessingDays ?? '4.2 Days'
             },
-            timeline_records: records.map((r: any) => ({
-              application_id: r.application_id || r.applicationId || '',
-              applicant_name: r.applicant_name || r.applicantName || '',
-              mobile_no: r.mobile_no || r.mobileNo || r.mobile_number || r.mobileNumber || '',
-              establishment_name: r.establishment_name || r.establishmentName || '',
-              license_type: r.license_type || r.licenseType || '',
-              category: r.category || '',
-              current_status: r.current_status || r.currentStatus || '',
-              status_code: r.status_code || r.statusCode || 'PENDING',
-              days_elapsed: r.days_elapsed || r.daysElapsed || '1 Day',
-              approval_status: r.approval_status || r.approvalStatus || 'PENDING',
-              approved_by: r.approved_by || r.approvedBy || '',
-              approval_date: r.approval_date || r.approvalDate || '',
-              time_taken: r.time_taken || r.timeTaken || '',
-              current_stage: r.current_stage || r.currentStage || '',
-              pending_officer_name: r.pending_officer_name || r.pendingOfficerName || '',
-              steps: (r.steps || []).map((s: any) => ({
-                step_no: s.step_no ?? s.stepNo ?? 1,
-                icon: s.icon || '✓',
-                status_class: s.status_class || s.statusClass || 'completed',
-                badge_class: s.badge_class || s.badgeClass || 'status-completed',
-                event_title: s.event_title || s.eventTitle || '',
-                event_date: s.event_date || s.eventDate || '',
-                event_description: s.event_description || s.eventDescription || '',
-                user_details: s.user_details || s.userDetails || '',
-                forwarded_info: s.forwarded_info || s.forwardedInfo || null,
-                objection_info: s.objection_info || s.objectionInfo || null,
-                rejection_info: s.rejection_info || s.rejectionInfo || null,
-                payment_breakdown: this.normalizePaymentBreakdown(s.payment_breakdown || s.paymentBreakdown),
-                time_taken: s.time_taken || s.timeTaken || '',
-                status_text: s.status_text || s.statusText || 'Completed'
-              }))
-            })),
+            timeline_records: records.map((r: any) => {
+              const resLicNo = r.license_no || r.licenseNo || (r.application_id ? 'NA/' + r.application_id.replace(/^NL[IA]\//, '') : '');
+              return {
+                application_id: r.application_id || r.applicationId || '',
+                license_no: resLicNo,
+                licenseNo: resLicNo,
+                applicant_name: r.applicant_name || r.applicantName || '',
+                mobile_no: r.mobile_no || r.mobileNo || r.mobile_number || r.mobileNumber || '',
+                establishment_name: r.establishment_name || r.establishmentName || '',
+                license_type: r.license_type || r.licenseType || '',
+                category: r.category || '',
+                current_status: r.current_status || r.currentStatus || '',
+                status_code: r.status_code || r.statusCode || 'PENDING',
+                days_elapsed: r.days_elapsed || r.daysElapsed || '1 Day',
+                approval_status: r.approval_status || r.approvalStatus || 'PENDING',
+                approved_by: r.approved_by || r.approvedBy || '',
+                approval_date: r.approval_date || r.approvalDate || '',
+                time_taken: r.time_taken || r.timeTaken || '',
+                current_stage: r.current_stage || r.currentStage || '',
+                pending_officer_name: r.pending_officer_name || r.pendingOfficerName || '',
+                steps: (r.steps || []).map((s: any) => ({
+                  step_no: s.step_no ?? s.stepNo ?? 1,
+                  icon: s.icon || '✓',
+                  status_class: s.status_class || s.statusClass || 'completed',
+                  badge_class: s.badge_class || s.badgeClass || 'status-completed',
+                  event_title: s.event_title || s.eventTitle || '',
+                  event_date: s.event_date || s.eventDate || '',
+                  event_description: s.event_description || s.eventDescription || '',
+                  user_details: s.user_details || s.userDetails || '',
+                  forwarded_info: s.forwarded_info || s.forwardedInfo || null,
+                  objection_info: s.objection_info || s.objectionInfo || null,
+                  rejection_info: s.rejection_info || s.rejectionInfo || null,
+                  payment_breakdown: this.normalizePaymentBreakdown(s.payment_breakdown || s.paymentBreakdown),
+                  license_no: s.license_no || s.licenseNo || resLicNo,
+                  licenseNo: s.license_no || s.licenseNo || resLicNo,
+                  time_taken: s.time_taken || s.timeTaken || '',
+                  status_text: s.status_text || s.statusText || 'Completed'
+                }))
+              };
+            }),
             pending_queue: queue.map((p: any) => ({
               application_id: p.application_id || p.applicationId || '',
+              license_no: p.license_no || p.licenseNo || '',
+              licenseNo: p.license_no || p.licenseNo || '',
               applicant_name: p.applicant_name || p.applicantName || '',
               mobile_no: p.mobile_no || p.mobileNo || p.mobile_number || p.mobileNumber || '',
               establishment_name: p.establishment_name || p.establishmentName || '',
@@ -162,6 +171,8 @@ export class SecretaryTimelineComponent implements OnInit {
     } else {
       this.selectedApplication = {
         application_id: pending.application_id,
+        license_no: pending.license_no || (pending as any).licenseNo || '',
+        licenseNo: pending.license_no || (pending as any).licenseNo || '',
         applicant_name: pending.applicant_name,
         mobile_no: pending.mobile_no,
         establishment_name: pending.establishment_name,
@@ -318,6 +329,8 @@ export class SecretaryTimelineComponent implements OnInit {
         if (isMatch && !timelineMatches.some(t => t.application_id.toLowerCase() === p.application_id.toLowerCase())) {
           pendingMatches.push({
             application_id: p.application_id,
+            license_no: p.license_no || (p as any).licenseNo || '',
+            licenseNo: p.license_no || (p as any).licenseNo || '',
             applicant_name: p.applicant_name,
             mobile_no: p.mobile_no,
             establishment_name: p.establishment_name,

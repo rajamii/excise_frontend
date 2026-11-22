@@ -718,6 +718,8 @@ export interface SecretaryTimelineStep {
     };
   };
   paymentBreakdown?: any;
+  license_no?: string;
+  licenseNo?: string;
   time_taken?: string;
   status_text?: string;
 }
@@ -725,6 +727,7 @@ export interface SecretaryTimelineStep {
 export interface SecretaryTimelineItem {
   application_id: string;
   license_no?: string;
+  licenseNo?: string;
   applicant_name: string;
   mobile_no: string;
   establishment_name: string;
@@ -744,6 +747,8 @@ export interface SecretaryTimelineItem {
 
 export interface SecretaryPendingQueueItem {
   application_id: string;
+  license_no?: string;
+  licenseNo?: string;
   applicant_name: string;
   mobile_no: string;
   establishment_name: string;
