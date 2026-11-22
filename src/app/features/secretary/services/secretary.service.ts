@@ -736,6 +736,8 @@ export interface SecretaryTimelineItem {
   current_status: string;
   status_code: string;
   days_elapsed: string;
+  pending_duration?: string;
+  pendingDuration?: string;
   approval_status: string;
   approved_by: string;
   approval_date: string;
@@ -757,6 +759,8 @@ export interface SecretaryPendingQueueItem {
   current_stage: string;
   pending_officer_name: string;
   days_elapsed: string;
+  pending_duration?: string;
+  pendingDuration?: string;
   sla_status: string;
   submission_date: string;
 }

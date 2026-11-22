@@ -94,7 +94,9 @@ export class SecretaryTimelineComponent implements OnInit {
                 category: r.category || '',
                 current_status: r.current_status || r.currentStatus || '',
                 status_code: r.status_code || r.statusCode || 'PENDING',
-                days_elapsed: r.days_elapsed || r.daysElapsed || '1 Day',
+                days_elapsed: r.pending_duration || r.pendingDuration || r.days_elapsed || r.daysElapsed || '1 Day',
+                pending_duration: r.pending_duration || r.pendingDuration || '',
+                pendingDuration: r.pending_duration || r.pendingDuration || '',
                 approval_status: r.approval_status || r.approvalStatus || 'PENDING',
                 approved_by: r.approved_by || r.approvedBy || '',
                 approval_date: r.approval_date || r.approvalDate || '',
@@ -132,7 +134,9 @@ export class SecretaryTimelineComponent implements OnInit {
               category: p.category || '',
               current_stage: p.current_stage || p.currentStage || '',
               pending_officer_name: p.pending_officer_name || p.pendingOfficerName || '',
-              days_elapsed: p.days_elapsed || p.daysElapsed || '1 Day',
+              days_elapsed: p.pending_duration || p.pendingDuration || p.days_elapsed || p.daysElapsed || '1 Day',
+              pending_duration: p.pending_duration || p.pendingDuration || '',
+              pendingDuration: p.pending_duration || p.pendingDuration || '',
               sla_status: p.sla_status || p.slaStatus || 'On Track',
               submission_date: p.submission_date || p.submissionDate || ''
             }))
@@ -181,6 +185,8 @@ export class SecretaryTimelineComponent implements OnInit {
         current_status: pending.current_stage,
         status_code: 'PENDING',
         days_elapsed: pending.days_elapsed,
+        pending_duration: pending.pending_duration || (pending as any).pendingDuration || pending.days_elapsed || '',
+        pendingDuration: pending.pending_duration || (pending as any).pendingDuration || pending.days_elapsed || '',
         approval_status: 'PENDING',
         approved_by: `Pending with ${pending.pending_officer_name}`,
         approval_date: 'Awaiting Final Approval',
@@ -339,6 +345,8 @@ export class SecretaryTimelineComponent implements OnInit {
             current_status: p.current_stage,
             status_code: 'PENDING',
             days_elapsed: p.days_elapsed,
+            pending_duration: p.pending_duration || (p as any).pendingDuration || p.days_elapsed || '',
+            pendingDuration: p.pending_duration || (p as any).pendingDuration || p.days_elapsed || '',
             approval_status: 'PENDING',
             approved_by: `Pending with ${p.pending_officer_name}`,
             approval_date: 'Awaiting Final Approval',
@@ -392,8 +400,78 @@ export class SecretaryTimelineComponent implements OnInit {
     this.hasSearched = false;
   }
 
+  isApplicationPending(app: any): boolean {
+    if (!app) return false;
+    const status = (app.approval_status || app.approvalStatus || app.status_code || app.statusCode || '').toUpperCase();
+    if (status === 'APPROVED' || status === 'REJECTED') {
+      return false;
+    }
+    const stage = (app.current_stage || app.currentStage || app.current_status || app.currentStatus || '').toLowerCase();
+    if (stage.includes('reject') || stage.includes('approved')) {
+      return false;
+    }
+    return true;
+  }
+
+  getPendingDuration(app: any): string {
+    if (!app) return 'N/A';
+    if (!this.isApplicationPending(app)) return 'Completed';
+
+    const steps = app.steps || [];
+    let subStr = '';
+    if (steps.length > 0 && steps[0].event_date && !steps[0].event_date.includes('Awaiting')) {
+      subStr = steps[0].event_date;
+    } else if (app.submission_date || app.submissionDate) {
+      subStr = app.submission_date || app.submissionDate;
+    } else if (app.created_at || app.createdAt) {
+      subStr = app.created_at || app.createdAt;
+    }
+
+    if (subStr) {
+      try {
+        const cleanSub = subStr.trim().replace(/-/g, '/');
+        const subDt = new Date(cleanSub);
+        if (!isNaN(subDt.getTime())) {
+          const now = new Date();
+          const diffMs = now.getTime() - subDt.getTime();
+          if (diffMs > 0) {
+            const totalMins = Math.floor(diffMs / (1000 * 60));
+            const totalHours = Math.floor(totalMins / 60);
+            const days = Math.floor(totalHours / 24);
+            const hours = totalHours % 24;
+            const mins = totalMins % 60;
+
+            if (days > 0) {
+              if (hours > 0 && mins > 0) return `${days} Day${days > 1 ? 's' : ''} ${hours} Hr${hours > 1 ? 's' : ''} ${mins} Min${mins > 1 ? 's' : ''}`;
+              if (hours > 0) return `${days} Day${days > 1 ? 's' : ''} ${hours} Hr${hours > 1 ? 's' : ''}`;
+              if (mins > 0) return `${days} Day${days > 1 ? 's' : ''} ${mins} Min${mins > 1 ? 's' : ''}`;
+              return `${days} Day${days > 1 ? 's' : ''}`;
+            }
+            if (hours > 0) {
+              if (mins > 0) return `${hours} Hr${hours > 1 ? 's' : ''} ${mins} Min${mins > 1 ? 's' : ''}`;
+              return `${hours} Hr${hours > 1 ? 's' : ''}`;
+            }
+            if (mins > 0) {
+              return `${mins} Minute${mins > 1 ? 's' : ''}`;
+            }
+            return 'Less than 1 Minute';
+          }
+        }
+      } catch (e) {
+        // fallback
+      }
+    }
+
+    return app.pending_duration || app.pendingDuration || app.days_elapsed || app.daysElapsed || 'Pending Review';
+  }
+
   getExactCalculatedProcessingTime(app: any): string {
     if (!app) return 'N/A';
+
+    if (this.isApplicationPending(app)) {
+      const pendingDuration = this.getPendingDuration(app);
+      return `${pendingDuration} (Ongoing)`;
+    }
 
     const steps = app.steps || [];
     if (Array.isArray(steps) && steps.length > 0) {
