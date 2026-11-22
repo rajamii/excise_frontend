@@ -701,12 +701,23 @@ export interface SecretaryTimelineStep {
       paid_at?: string;
       status?: string;
     };
+    licenseFee?: {
+      amount?: number;
+      paidAt?: string;
+      status?: string;
+    };
     security_deposit?: {
       amount?: number;
       paid_at?: string;
       status?: string;
     };
+    securityDeposit?: {
+      amount?: number;
+      paidAt?: string;
+      status?: string;
+    };
   };
+  paymentBreakdown?: any;
   time_taken?: string;
   status_text?: string;
 }

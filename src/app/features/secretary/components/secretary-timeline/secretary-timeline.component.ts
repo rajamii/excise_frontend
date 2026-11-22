@@ -109,7 +109,7 @@ export class SecretaryTimelineComponent implements OnInit {
                 forwarded_info: s.forwarded_info || s.forwardedInfo || null,
                 objection_info: s.objection_info || s.objectionInfo || null,
                 rejection_info: s.rejection_info || s.rejectionInfo || null,
-                payment_breakdown: s.payment_breakdown || s.paymentBreakdown || null,
+                payment_breakdown: this.normalizePaymentBreakdown(s.payment_breakdown || s.paymentBreakdown),
                 time_taken: s.time_taken || s.timeTaken || '',
                 status_text: s.status_text || s.statusText || 'Completed'
               }))
@@ -205,6 +205,43 @@ export class SecretaryTimelineComponent implements OnInit {
       };
     }
     this.activeTab = 'timeline-search';
+  }
+
+  normalizePaymentBreakdown(pb: any): any {
+    if (!pb) return null;
+    const lf = pb.license_fee || pb.licenseFee || {};
+    const sd = pb.security_deposit || pb.securityDeposit || {};
+
+    const lfAmount = Number(lf.amount ?? lf.fee_amount ?? lf.feeAmount ?? 0);
+    const lfPaidAt = String(lf.paid_at || lf.paidAt || '');
+    const lfStatus = String(lf.status || 'Payment Completed (Online Wallet Settlement)');
+
+    const sdAmount = Number(sd.amount ?? sd.deposit_amount ?? sd.depositAmount ?? 0);
+    const sdPaidAt = String(sd.paid_at || sd.paidAt || '');
+    const sdStatus = String(sd.status || 'Security FD Escrow Deposit Verified');
+
+    return {
+      license_fee: {
+        amount: lfAmount,
+        paid_at: lfPaidAt,
+        status: lfStatus
+      },
+      licenseFee: {
+        amount: lfAmount,
+        paidAt: lfPaidAt,
+        status: lfStatus
+      },
+      security_deposit: {
+        amount: sdAmount,
+        paid_at: sdPaidAt,
+        status: sdStatus
+      },
+      securityDeposit: {
+        amount: sdAmount,
+        paidAt: sdPaidAt,
+        status: sdStatus
+      }
+    };
   }
 
   closeInspectedWorkflow(): void {
