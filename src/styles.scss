@@ -7,6 +7,31 @@
 // inline a very large font stylesheet into index.html on every first visit.
 * { font-family: Inter, 'Segoe UI', Roboto, Arial, sans-serif; }
 body{ background-color: #EDF7FE; }
+
+/*
+ * Keep custom application dialogs anchored to the browser viewport.
+ *
+ * A number of feature areas implement their own modal/backdrop classes instead
+ * of using one shared dialog component.  If one of those styles is overridden
+ * by a page layout, an absolute backdrop is positioned at the top of the
+ * document; users who have scrolled down then cannot see the dialog they just
+ * opened.  This safety net makes every custom modal overlay/backdrop behave
+ * like a real modal, independent of the document scroll position.
+ */
+.modal-overlay,
+.modal-backdrop,
+[class$='-modal-overlay'],
+[class*='-modal-overlay '],
+[class$='-modal-backdrop'],
+[class*='-modal-backdrop '] {
+  position: fixed !important;
+  inset: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  min-height: 100dvh;
+  overscroll-behavior: contain;
+}
+
 /* Login route gets the deep amber-charcoal factory atmosphere */
 body.login-page { background-color: #f8fafc; }
 
