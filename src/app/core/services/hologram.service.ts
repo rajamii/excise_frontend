@@ -22,6 +22,9 @@ export interface DailyRegisterEntry {
   deadline?: string;
   completionDate?: string;
   completionTime?: string;
+  completionDateTime?: string;
+  submissionDateTime?: string;
+  approvalDateTime?: string;
   officerName?: string;
   brandsEntered?: Array<{
     brand: string;

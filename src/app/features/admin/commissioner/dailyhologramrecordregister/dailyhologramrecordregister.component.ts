@@ -164,12 +164,12 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
     });
 
     this.approvalDeadlineBreaches = breaches;
-    // SLA rule for this screen: deadline is always 5:00 PM IST.
+    // SLA rule for this screen: deadline is always 5:00 PM IST on the next day (tomorrow).
     this.approvalDeadlineLabel = '5:00 PM';
     if (breaches.length > 0) {
       const sampleRefs = breaches.slice(0, 4).map((e) => e.referenceNo).join(', ');
       this.approvalDeadlineBreachMessage =
-        `${breaches.length} approved hologram request(s) not updated by ${this.approvalDeadlineLabel || 'deadline'}. ` +
+        `${breaches.length} approved hologram request(s) not updated by next-day ${this.approvalDeadlineLabel || '5:00 PM'} deadline. ` +
         (sampleRefs ? `Ref: ${sampleRefs}${breaches.length > 4 ? '…' : ''}` : '');
     } else {
       this.approvalDeadlineBreachMessage = '';
@@ -200,8 +200,9 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
 
   private isApprovalUpdateOverdue(entry: DailyRegisterEntry, now: Date): boolean {
     if (!entry) return false;
-    if (!entry.approvalDate) return false; // not approved yet
-    if (entry.status === 'COMPLETED') return false;
+    if (entry.status === 'COMPLETED' || entry.status === 'REJECTED') return false;
+
+    if (entry.isOverdue) return true;
 
     const deadline = this.getEntryDeadlineAt5Pm(entry);
     if (!deadline) return false;
@@ -669,6 +670,12 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
 
   getTimeRemaining(entry: DailyRegisterEntry): string {
     if (entry.status === 'APPLIED') {
+      const deadline = this.getEntryDeadlineAt5Pm(entry);
+      if (deadline && this.now.getTime() > deadline.getTime()) {
+        const absMs = Math.abs(deadline.getTime() - this.now.getTime());
+        const label = this.formatDuration(absMs);
+        return `Awaiting Approval (Overdue by ${label})`;
+      }
       return 'Awaiting Approval';
     }
 
@@ -697,6 +704,10 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
 
   getTimeRemainingClass(entry: DailyRegisterEntry): string {
     if (entry.status === 'APPLIED') {
+      const deadline = this.getEntryDeadlineAt5Pm(entry);
+      if (deadline && this.now.getTime() > deadline.getTime()) {
+        return 'text-danger fw-bold';
+      }
       return 'text-info';
     }
 
@@ -732,22 +743,39 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * SLA rule: deadline is always 5:00 PM local time on the "approval day".
-   * Why: backend often sends `deadline` as UTC (`...Z`), which becomes 10:30 PM in IST and shows wrong remaining time.
+   * SLA rule: deadline is next day (tomorrow) 5:00 PM IST from application/approval date.
    */
   private getEntryDeadlineAt5Pm(entry: DailyRegisterEntry): Date | null {
-    const dateParts =
-      this.extractYmdFromAny((entry as any)?.deadline) ||
+    if (!entry) return null;
+
+    // If backend sent deadline directly, it is already next-day 5:00 PM IST (in UTC format e.g. ...T11:30:00Z)
+    const rawDeadline = (entry as any)?.deadline;
+    if (rawDeadline) {
+      const parsed = new Date(rawDeadline);
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed;
+      }
+      const deadlineYmd = this.extractYmdFromAny(rawDeadline);
+      if (deadlineYmd) {
+        return new Date(Date.UTC(deadlineYmd.year, deadlineYmd.month - 1, deadlineYmd.day, this.IST_DEADLINE_UTC_HOUR, this.IST_DEADLINE_UTC_MINUTE, 0, 0));
+      }
+    }
+
+    // Fallback: Calculate Next Day (Tomorrow) at 5:00 PM IST from approvalDate or submissionDate
+    const baseDateParts =
       this.extractYmdFromAny(entry.approvalDate) ||
       this.extractYmdFromAny(entry.submissionDate) ||
       this.extractYmdFromAny((entry as any)?.usageDate);
 
-    // Fallback: if backend date fields are missing/unparseable, still compute deadline as 5 PM IST today.
-    const effective = dateParts ?? { year: this.now.getFullYear(), month: this.now.getMonth() + 1, day: this.now.getDate() };
+    const effective = baseDateParts ?? {
+      year: this.now.getFullYear(),
+      month: this.now.getMonth() + 1,
+      day: this.now.getDate()
+    };
 
     const { year, month, day } = effective;
-    // Always treat deadline as a fixed moment: 5:00 PM IST, regardless of the client's local timezone.
-    return new Date(Date.UTC(year, month - 1, day, this.IST_DEADLINE_UTC_HOUR, this.IST_DEADLINE_UTC_MINUTE, 0, 0));
+    // Add 1 day for next day / tomorrow 5:00 PM IST (11:30 UTC)
+    return new Date(Date.UTC(year, month - 1, day + 1, this.IST_DEADLINE_UTC_HOUR, this.IST_DEADLINE_UTC_MINUTE, 0, 0));
   }
 
   private extractYmdFromAny(value: any): { year: number; month: number; day: number } | null {
@@ -930,6 +958,14 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
   }
 
   private getLatestSavedDate(entry: DailyRegisterEntry): Date | null {
+    if (!entry) return null;
+
+    const rawCompletion = (entry as any)?.completionDateTime;
+    if (rawCompletion) {
+      const dt = new Date(rawCompletion);
+      if (!Number.isNaN(dt.getTime())) return dt;
+    }
+
     const dates: Date[] = [];
     const brands = Array.isArray((entry as any)?.brandsEntered) ? (entry as any).brandsEntered : [];
     for (const b of brands) {
@@ -950,9 +986,8 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
       this.extractYmdFromAny((entry as any)?.usageDate);
 
     if (completionHms && completionDateParts) {
-      // Backend often stores time as UTC. Convert to local time for display.
       const { year, month, day } = completionDateParts;
-      dates.push(new Date(Date.UTC(year, month - 1, day, completionHms.hour, completionHms.minute, completionHms.second, 0)));
+      dates.push(new Date(year, month - 1, day, completionHms.hour, completionHms.minute, completionHms.second, 0));
     }
 
     if (dates.length === 0) {
@@ -965,10 +1000,120 @@ export class DailyhologramrecordregisterComponent implements OnInit, OnDestroy {
   getEntrySavedTime(entry: DailyRegisterEntry): string | null {
     const latest = this.getLatestSavedDate(entry);
     if (latest) {
-      return latest.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+      return latest.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
     }
     const completionTimeRaw = String((entry as any)?.completionTime ?? '').trim();
     return completionTimeRaw || null;
+  }
+
+  getEntrySavedDateTime(entry: DailyRegisterEntry): string | null {
+    if (!entry) return null;
+    const latest = this.getLatestSavedDate(entry);
+    if (latest) {
+      return latest.toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
+    }
+    const completionTimeRaw = String((entry as any)?.completionTime ?? '').trim();
+    const completionDateRaw = String((entry as any)?.completionDate ?? '').trim();
+    if (completionDateRaw && completionTimeRaw) {
+      return `${completionDateRaw} ${completionTimeRaw}`;
+    }
+    return completionTimeRaw || null;
+  }
+
+  formatDateTime(value: any): string {
+    if (!value) return '-';
+    const dt = new Date(value);
+    if (Number.isNaN(dt.getTime())) return String(value);
+    return dt.toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+  }
+
+  getLifecycleBadgeClass(entry: DailyRegisterEntry): string {
+    if (!entry) return 'bg-secondary text-white';
+    if (entry.status === 'COMPLETED') {
+      return entry.completedOnTime !== false ? 'bg-success text-white' : 'bg-danger text-white';
+    }
+    if (entry.status === 'REJECTED') {
+      return 'bg-dark text-white';
+    }
+    if (entry.isOverdue) {
+      return 'bg-danger text-white';
+    }
+    if (entry.status === 'UNDER_PROCESS') {
+      return 'bg-warning text-dark';
+    }
+    return 'bg-info text-white';
+  }
+
+  getLifecycleBadgeText(entry: DailyRegisterEntry): string {
+    if (!entry) return '';
+    if (entry.status === 'COMPLETED') {
+      return entry.completedOnTime !== false ? 'COMPLETED ON TIME' : 'COMPLETED LATE';
+    }
+    if (entry.status === 'REJECTED') {
+      return entry.statusMessage || 'REJECTED';
+    }
+    if (entry.isOverdue) {
+      return 'OVERDUE';
+    }
+    if (entry.status === 'UNDER_PROCESS') {
+      return 'IN PROGRESS (UNDER PROCESS)';
+    }
+    if (entry.status === 'APPLIED') {
+      return 'AWAITING APPROVAL';
+    }
+    return entry.status;
+  }
+
+  getLifecycleSummaryText(entry: DailyRegisterEntry): string {
+    if (!entry) return '';
+    const subDt = this.formatDateTime(entry.submissionDate);
+    const deadlineDt = this.formatDateTime(entry.deadline);
+    const savedDt = this.getEntrySavedDateTime(entry);
+
+    if (entry.status === 'COMPLETED') {
+      if (entry.completedOnTime !== false) {
+        return `Application was submitted on ${subDt} and approved on ${this.formatDateTime(entry.approvalDate)}. OIC recorded and submitted the daily register on ${savedDt}, fulfilling the SLA well before the next-day 5:00 PM deadline (${deadlineDt}).`;
+      } else {
+        const lateBy = this.getLateByTime(entry);
+        return `Application was submitted on ${subDt} with SLA deadline of ${deadlineDt}. OIC submitted the daily register late on ${savedDt}${lateBy ? ` (delayed by ${lateBy})` : ''}.`;
+      }
+    }
+
+    if (entry.status === 'REJECTED') {
+      return `Application submitted on ${subDt} was not approved or rejected on usage date. No daily register submission is required.`;
+    }
+
+    if (entry.isOverdue) {
+      const timeRem = this.getTimeRemaining(entry);
+      return `Application was submitted on ${subDt} and approved on ${this.formatDateTime(entry.approvalDate)}. The next-day 5:00 PM deadline (${deadlineDt}) has passed without OIC submitting the daily register. Currently ${timeRem}. Immediate officer action is required.`;
+    }
+
+    if (entry.status === 'UNDER_PROCESS') {
+      const timeRem = this.getTimeRemaining(entry);
+      return `Application was submitted on ${subDt} and approved on ${this.formatDateTime(entry.approvalDate)}. Daily hologram usage register is due for submission by tomorrow 5:00 PM (${deadlineDt}). Status: ${timeRem}.`;
+    }
+
+    if (entry.status === 'APPLIED') {
+      return `Application was submitted on ${subDt} and is currently awaiting approval. Once approved, OIC must enter daily hologram register by next-day 5:00 PM (${deadlineDt}).`;
+    }
+
+    return '';
   }
 
   getLateByTime(entry: DailyRegisterEntry): string | null {
