@@ -243,11 +243,24 @@
                                 <div class="d-flex gap-1 align-items-center flex-wrap">
                                     <!-- Update Arrival Button driven by backend workflow action/stage -->
                                     @if (canUpdateRecord(record)) {
-                                    <button class="btn btn-success btn-sm" (click)="updateArrivalDetails(record)"
-                                        title="Update Arrival Details - Ready for Physical Arrival">
+                                    <button class="btn btn-sm" [ngClass]="isPartiallyArrived(record) ? 'btn-warning' : 'btn-success'"
+                                        (click)="updateArrivalDetails(record)"
+                                        [title]="isPartiallyArrived(record) ? 'Update Arrival - Continue entering remaining cartons' : 'Update Arrival Details - Ready for Physical Arrival'">
                                         <i class="bi bi-box-seam me-1"></i>
-                                        <span class="d-none d-lg-inline">Update Arrival</span>
-                                        <span class="d-lg-none">Update</span>
+                                        <span class="d-none d-lg-inline">
+                                            @if (isPartiallyArrived(record)) {
+                                            Update Arrival ({{ getAssignedCartonCount(record) }}/{{ getExpectedCartonCountForRecord(record) }})
+                                            } @else {
+                                            Update Arrival
+                                            }
+                                        </span>
+                                        <span class="d-lg-none">
+                                            @if (isPartiallyArrived(record)) {
+                                            Update ({{ getAssignedCartonCount(record) }}/{{ getExpectedCartonCountForRecord(record) }})
+                                            } @else {
+                                            Update
+                                            }
+                                        </span>
                                     </button>
                                     }
 
@@ -271,8 +284,14 @@
                                     </button>
                                     }
 
-                                    <!-- Status Badge (hide for pending arrival to avoid duplicate label under action buttons) -->
-                                    @if (!isPendingArrivalStage(record)) {
+                                    <!-- Status Badge -->
+                                    @if (isPartiallyArrived(record)) {
+                                    <span class="badge ms-1 bg-warning text-dark">
+                                        <i class="bi bi-hourglass-split me-1"></i>
+                                        <span class="d-none d-md-inline">Partially Arrived ({{ getAssignedCartonCount(record) }}/{{ getExpectedCartonCountForRecord(record) }} Cartons)</span>
+                                        <span class="d-md-none">Partial</span>
+                                    </span>
+                                    } @else if (!isPendingArrivalStage(record)) {
                                     <span class="badge ms-1" [class]="getStatusClass(record)">
                                         <i [class]="getStatusIcon(record)" class="me-1"></i>
                                         <span class="d-none d-md-inline">{{ getStatusLabel(record.status) }}</span>
@@ -436,8 +455,22 @@
                     <br>
                     <strong>Expected Quantity:</strong> {{ selectedRecordForUpdate?.numberOfHolograms | number }}
                     holograms
+                    @if (selectedRecordForUpdate && isExpectedQuantityLakhAligned()) {
+                        ({{ getExpectedCartonCount() }} Carton{{ getExpectedCartonCount() > 1 ? 's' : '' }})
+                    }
                     <br>
-                    <strong>Status:</strong> Ready for physical arrival update
+                    <strong>Status:</strong>
+                    @if (isPartiallyArrived(selectedRecordForUpdate)) {
+                        <span class="badge bg-warning text-dark ms-1">Partially Arrived ({{ getSavedCartonCount() }} of {{ getExpectedCartonCount() }} Cartons Saved)</span>
+                        <div class="small text-muted mt-1">
+                            <i class="bi bi-info-circle me-1"></i>
+                            You can enter cartons part-by-part as they arrive. When all {{ getExpectedCartonCount() }} cartons are entered, you can confirm full arrival.
+                        </div>
+                    } @else if (getSavedCartonCount() === getExpectedCartonCount() && getExpectedCartonCount() > 0) {
+                        <span class="badge bg-success ms-1">All {{ getExpectedCartonCount() }} Cartons Added - Ready for Full Arrival Confirmation</span>
+                    } @else {
+                        <span>Ready for physical arrival update (Enter carton details as received)</span>
+                    }
                 </div>
 
                 @if (selectedRecordForUpdate && !isExpectedQuantityLakhAligned()) {
@@ -458,15 +491,19 @@
                                 </h6>
                                 @if (selectedRecordForUpdate && isExpectedQuantityLakhAligned()) {
                                 <div class="d-flex align-items-center gap-2">
+                                    @if (getSavedCartonCount() < getExpectedCartonCount()) {
                                     <span class="badge bg-light text-dark">
                                         Carton {{ getSavedCartonCount() + 1 }} of {{ getExpectedCartonCount() }}
                                     </span>
-                                    @if (getSavedCartonCount() < getExpectedCartonCount()) {
                                     <select class="form-select form-select-sm w-auto"
                                         (change)="prepareNextCartonEntry(); $any($event.target).value = ''">
                                         <option value="">Carton actions</option>
                                         <option value="add">Add another carton details</option>
                                     </select>
+                                    } @else {
+                                    <span class="badge bg-success text-white">
+                                        <i class="bi bi-check-lg me-1"></i>All {{ getExpectedCartonCount() }} Cartons Added
+                                    </span>
                                     }
                                 </div>
                                 }
@@ -735,30 +772,37 @@
             }
 
             @if (savedCartons.length > 0 && selectedRecordForUpdate && totalCalculatedHolograms <
-                selectedRecordForUpdate.numberOfHolograms) { <div
-                class="alert alert-info d-flex align-items-center mt-3" role="alert">
+                selectedRecordForUpdate.numberOfHolograms) {
+            <div class="alert alert-info d-flex align-items-center mt-3" role="alert">
                 <i class="bi bi-info-circle-fill me-2"></i>
-                <div>📦 You have entered {{ getSavedCartonCount() }} carton(s) with {{ totalCalculatedHolograms | number
-                    }} holograms. Continue adding cartons to reach {{ selectedRecordForUpdate.numberOfHolograms | number
-                    }} holograms.</div>
-        </div>
-        }
-    </div>
-    <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" (click)="closeUpdateModal()">
-            <i class="bi bi-x-lg me-2"></i>
-            Cancel
-        </button>
-        <button type="button" class="btn btn-success btn-lg" (click)="saveArrivalUpdate()"
-            [disabled]="savedCartons.length === 0 || totalCalculatedHolograms !== selectedRecordForUpdate?.numberOfHolograms">
-            <i class="bi bi-check-circle me-2"></i>
-            @if (selectedRecordForUpdate && isExpectedQuantityLakhAligned()) {
-            Confirm Arrival ({{ getSavedCartonCount() }}/{{ getExpectedCartonCount() }} Carton{{ getExpectedCartonCount() > 1 ? 's' : '' }})
-            } @else {
-            Confirm Arrival ({{ getSavedCartonCount() }} Carton{{ getSavedCartonCount() > 1 ? 's' : '' }})
+                <div>
+                    📦 <strong>Partial Arrival:</strong> You have entered {{ getSavedCartonCount() }} of {{ getExpectedCartonCount() }} carton(s) ({{ totalCalculatedHolograms | number }} holograms).
+                    You can save this partial arrival now. You can re-open to add remaining {{ getExpectedCartonCount() - getSavedCartonCount() }} carton(s) whenever they arrive.
+                </div>
+            </div>
             }
-        </button>
-    </div>
+        </div>
+        <div class="modal-footer d-flex justify-content-between">
+            <button type="button" class="btn btn-outline-secondary" (click)="closeUpdateModal()">
+                <i class="bi bi-x-lg me-2"></i>
+                Cancel
+            </button>
+            <div class="d-flex gap-2">
+                @if (selectedRecordForUpdate && totalCalculatedHolograms < selectedRecordForUpdate.numberOfHolograms) {
+                <button type="button" class="btn btn-primary btn-lg" (click)="saveArrivalUpdate()"
+                    [disabled]="savedCartons.length === 0">
+                    <i class="bi bi-save me-2"></i>
+                    Save Partial Arrival ({{ getSavedCartonCount() }}/{{ getExpectedCartonCount() }} Carton{{ getSavedCartonCount() > 1 ? 's' : '' }})
+                </button>
+                } @else {
+                <button type="button" class="btn btn-success btn-lg" (click)="saveArrivalUpdate()"
+                    [disabled]="savedCartons.length === 0">
+                    <i class="bi bi-check-circle me-2"></i>
+                    Confirm Full Arrival ({{ getSavedCartonCount() }}/{{ getExpectedCartonCount() }} Carton{{ getExpectedCartonCount() > 1 ? 's' : '' }})
+                </button>
+                }
+            </div>
+        </div>
 </div>
 </div>
 </div>

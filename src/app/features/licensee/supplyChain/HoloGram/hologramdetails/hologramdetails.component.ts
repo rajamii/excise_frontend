@@ -551,15 +551,75 @@ export class HologramdetailsComponent implements OnInit {
 
 
 
+  // Total assigned holograms across rolls in record
+  getAssignedHolograms(record: HologramRecord | null | undefined): number {
+    if (!record?.carton_details || !Array.isArray(record.carton_details)) {
+      return 0;
+    }
+    return record.carton_details.reduce((sum, item) => {
+      let count = item.numberOfHolograms ?? item.number_of_holograms ?? item.total_count;
+      if (count === undefined || count === null) {
+        const from = this.extractSerialNumber(String(item.fromSerial || item.from_serial || ''));
+        const to = this.extractSerialNumber(String(item.toSerial || item.to_serial || ''));
+        if (from !== null && to !== null && to >= from) {
+          count = to - from + 1;
+        } else {
+          count = 0;
+        }
+      }
+      return sum + Number(count || 0);
+    }, 0);
+  }
+
+  // Count unique base cartons already assigned in record
+  getAssignedCartonCount(record: HologramRecord | null | undefined): number {
+    if (!record?.carton_details || !Array.isArray(record.carton_details)) {
+      return 0;
+    }
+    const cartonKeys = new Set<string>();
+    for (const item of record.carton_details) {
+      const key = this.normalizeCartonKey(
+        item.baseCartoonNumber || item.base_cartoon_number || item.cartoonNumber || item.cartoon_number || item.carton_number || ''
+      );
+      if (key) {
+        cartonKeys.add(key);
+      }
+    }
+    return cartonKeys.size;
+  }
+
+  getExpectedCartonCountForRecord(record: HologramRecord | null | undefined): number {
+    const expected = record?.numberOfHolograms || 0;
+    if (expected <= 0) return 0;
+    return Math.max(1, Math.floor(expected / this.cartonSize));
+  }
+
+  // Record is partially arrived if it has some cartons assigned, but not all
+  isPartiallyArrived(record: HologramRecord | null | undefined): boolean {
+    if (!record) return false;
+    const status = String(record.status || '').trim().toLowerCase();
+    if (status === 'cartoon assigned' || record.isFinalStage) {
+      return false;
+    }
+    if (!this.hasRollDetails(record)) {
+      return false;
+    }
+    return this.getAssignedHolograms(record) < record.numberOfHolograms;
+  }
+
   // Update arrival methods
-  canUpdateRecord(record: HologramRecord): boolean {
+  canUpdateRecord(record: HologramRecord | null | undefined): boolean {
+    if (!record) return false;
     if (this.isArrivedStage(record)) {
       return false;
+    }
+    if (this.isPartiallyArrived(record)) {
+      return true;
     }
     return this.isPaymentCompleted(record) || this.hasAllowedAction(record, 'assign_cartons');
   }
 
-  private hasAllowedAction(record: HologramRecord, action: string): boolean {
+  private hasAllowedAction(record: HologramRecord | null | undefined, action: string): boolean {
     const actions = record?.supplyChainData?.allowed_actions ?? record?.supplyChainData?.allowedActions ?? [];
     if (!Array.isArray(actions)) {
       return false;
@@ -567,27 +627,38 @@ export class HologramdetailsComponent implements OnInit {
     return actions.some((entry: any) => String(entry || '').trim().toLowerCase() === action.toLowerCase());
   }
 
-  isPendingArrivalStage(record: HologramRecord): boolean {
-    if (this.hasRollDetails(record)) {
+  isPendingArrivalStage(record: HologramRecord | null | undefined): boolean {
+    if (!record) return false;
+    if (this.isArrivedStage(record) || this.isPartiallyArrived(record)) {
       return false;
     }
     return this.isPaymentCompleted(record) || this.hasAllowedAction(record, 'assign_cartons');
   }
 
-  isPendingApprovalStage(record: HologramRecord): boolean {
+  isPendingApprovalStage(record: HologramRecord | null | undefined): boolean {
+    if (!record) return false;
     if (this.hasRollDetails(record) || this.isPaymentCompleted(record) || this.isPendingArrivalStage(record)) {
       return false;
     }
     return !record.isFinalStage;
   }
 
-  isArrivedStage(record: HologramRecord): boolean {
-    return this.hasRollDetails(record);
+  isArrivedStage(record: HologramRecord | null | undefined): boolean {
+    if (!record) return false;
+    const status = String(record.status || '').trim().toLowerCase();
+    if (status === 'cartoon assigned' || record.isFinalStage) {
+      return true;
+    }
+    if (this.hasRollDetails(record) && record.numberOfHolograms > 0) {
+      return this.getAssignedHolograms(record) >= record.numberOfHolograms;
+    }
+    return false;
   }
 
   // Check if payment has been COMPLETED for this hologram record
   // This is different from paymentSlipUploaded - payment must be actually made
-  private isPaymentCompleted(record: HologramRecord): boolean {
+  private isPaymentCompleted(record: HologramRecord | null | undefined): boolean {
+    if (!record) return false;
     if (record.supplyChainData) {
       if (record.supplyChainData.paymentCompleted === true) {
         return true;
@@ -707,22 +778,60 @@ export class HologramdetailsComponent implements OnInit {
 
   updateArrivalDetails(record: HologramRecord) {
     this.selectedRecordForUpdate = record;
-    // Reset saved cartons and current carton
-    this.savedCartons = [];
+    // Pre-load previously saved cartons if any exist for this record
+    this.savedCartons = this.loadSavedCartonsFromRecord(record);
+    this.calculateTotalFromSavedCartons();
+
     this.currentCarton = {
       cartoonNumber: '',
       fromSerial: '',
       toSerial: '',
       numberOfHolograms: 0,
-      type: ''
+      type: this.getDefaultHologramType()
     };
-    this.totalCalculatedHolograms = 0;
     this.serialRangeValidationError = '';
     this.autoGeneratedRollsPreview = [];
     // Reset legacy lock state
     this.lockedCartonNumber = '';
     this.cartonSuffixCounter = 0;
     this.showUpdateModal = true;
+  }
+
+  private loadSavedCartonsFromRecord(record: HologramRecord): SavedRoll[] {
+    if (!record?.carton_details || !Array.isArray(record.carton_details) || record.carton_details.length === 0) {
+      return [];
+    }
+    return record.carton_details.map((item: any) => {
+      const rawCarton = String(item.cartoonNumber || item.cartoon_number || item.carton_number || '').trim();
+      const baseCarton = String(
+        item.baseCartoonNumber || item.base_cartoon_number || this.extractBaseCartonName(rawCarton)
+      ).trim();
+      const fromSerial = String(item.fromSerial || item.from_serial || '').trim();
+      const toSerial = String(item.toSerial || item.to_serial || '').trim();
+      let numberOfHolograms = Number(item.numberOfHolograms || item.number_of_holograms || item.total_count || 0);
+      if (numberOfHolograms <= 0 && fromSerial && toSerial) {
+        const fromNum = this.extractSerialNumber(fromSerial);
+        const toNum = this.extractSerialNumber(toSerial);
+        if (fromNum !== null && toNum !== null && toNum >= fromNum) {
+          numberOfHolograms = toNum - fromNum + 1;
+        } else {
+          numberOfHolograms = this.rollSize;
+        }
+      }
+      return {
+        cartoonNumber: rawCarton,
+        baseCartoonNumber: baseCarton || rawCarton,
+        fromSerial,
+        toSerial,
+        numberOfHolograms: numberOfHolograms || this.rollSize,
+        type: item.type || this.getDefaultHologramType()
+      };
+    });
+  }
+
+  private extractBaseCartonName(raw: string): string {
+    const clean = this.getCleanCartoonNumber(raw);
+    return clean.replace(/\([a-z0-9]+\)$/i, '').trim();
   }
 
   // Calculate hologram count for current carton being entered
@@ -971,40 +1080,46 @@ export class HologramdetailsComponent implements OnInit {
     if (this.selectedRecordForUpdate && this.validateUpdateForm()) {
       // Capture the current timestamp when officer saves the arrival
       const currentTimestamp = new Date().toISOString();
+      const cartonCount = this.getSavedCartonCount();
+      const expectedCartonCount = this.getExpectedCartonCount();
+      const isPartial = cartonCount < expectedCartonCount;
       
       // Prepare payload for backend
-      // We need to send 'carton_details' which seems to be what we want to save
-      // The backend expects 'carton_details' JSON.
-      // IMPORTANT: Include type for each carton to support multi-type procurements
-
+      // IMPORTANT: Include baseCartoonNumber and type for each carton
       const cartonDetails = this.savedCartons.map(carton => ({
         cartoonNumber: carton.cartoonNumber,
+        baseCartoonNumber: carton.baseCartoonNumber || this.extractBaseCartonName(carton.cartoonNumber),
         fromSerial: carton.fromSerial,
         toSerial: carton.toSerial,
-        type: carton.type || this.getDefaultHologramType(),  // Include type for backend
+        numberOfHolograms: carton.numberOfHolograms,
+        type: carton.type || this.getDefaultHologramType(),
         arrivedDate: currentTimestamp, // Capture when officer saved this carton
         processedBy: this.currentOfficer.name, // Track which officer processed this
         processedAt: currentTimestamp // When it was processed
       }));
 
-      // We use 'assign_cartons' action as per views.py update or 'carton_assigned'
+      // We use 'assign_cartons' action as per views.py
       const action = 'assign_cartons';
-      const cartonCount = this.getSavedCartonCount();
-      const remarks = `Cartons Assigned: ${cartonCount} carton(s), Rolls: ${this.savedCartons.length}. Processed by ${this.currentOfficer.name} on ${new Date(currentTimestamp).toLocaleDateString('en-GB')}.`;
+      const remarks = isPartial
+        ? `Partial Cartons Assigned: ${cartonCount}/${expectedCartonCount} carton(s), Rolls: ${this.savedCartons.length}. Saved by ${this.currentOfficer.name} on ${new Date(currentTimestamp).toLocaleDateString('en-GB')}.`
+        : `Cartons Assigned: ${cartonCount}/${expectedCartonCount} carton(s), Rolls: ${this.savedCartons.length}. Processed by ${this.currentOfficer.name} on ${new Date(currentTimestamp).toLocaleDateString('en-GB')}.`;
 
       this.hologramService.performAction('procurement', this.selectedRecordForUpdate.id, action, remarks, { 
         carton_details: cartonDetails,
         arrival_processed_date: currentTimestamp, // Overall processing timestamp
-        processed_by_officer: this.currentOfficer.name
+        processed_by_officer: this.currentOfficer.name,
+        is_partial: isPartial
       })
         .subscribe({
           next: (res) => {
-            alert(`Hologram ${this.selectedRecordForUpdate?.ourRefNo} marked as arrived successfully with ${this.getSavedCartonCount()} carton(s)!`);
+            const successMsg = isPartial
+              ? `✅ Partial arrival saved! ${cartonCount} of ${expectedCartonCount} carton(s) entered for ${this.selectedRecordForUpdate?.ourRefNo}. You can add the remaining carton(s) when they arrive.`
+              : `🎉 Hologram procurement ${this.selectedRecordForUpdate?.ourRefNo} marked as fully arrived with all ${cartonCount} carton(s) assigned!`;
+            alert(successMsg);
             this.closeUpdateModal();
             this.loadHologramRecords(); // Refresh from backend
             
             // Notify monthly statement component to refresh after a short delay
-            // This ensures backend has finished processing the request
             setTimeout(() => {
               this.hologramService.notifyArrivalUpdate();
             }, 500);
@@ -1133,13 +1248,13 @@ export class HologramdetailsComponent implements OnInit {
   validateUpdateForm(): boolean {
     // Check if at least one carton exists
     if (this.savedCartons.length === 0) {
-      alert('Please add at least one carton');
+      alert('Please add at least one carton before saving.');
       return false;
     }
 
-    // Check if total matches expected quantity
-    if (this.selectedRecordForUpdate && this.totalCalculatedHolograms !== this.selectedRecordForUpdate.numberOfHolograms) {
-      alert(`Total holograms (${this.totalCalculatedHolograms.toLocaleString()}) must match expected quantity (${this.selectedRecordForUpdate.numberOfHolograms.toLocaleString()})`);
+    // Check if total exceeds expected quantity
+    if (this.selectedRecordForUpdate && this.totalCalculatedHolograms > this.selectedRecordForUpdate.numberOfHolograms) {
+      alert(`Total holograms (${this.totalCalculatedHolograms.toLocaleString()}) cannot exceed expected quantity (${this.selectedRecordForUpdate.numberOfHolograms.toLocaleString()})`);
       return false;
     }
 
@@ -1335,7 +1450,7 @@ export class HologramdetailsComponent implements OnInit {
   getExpectedCartonCount(): number {
     const expected = this.selectedRecordForUpdate?.numberOfHolograms || 0;
     if (!expected || expected <= 0) return 0;
-    return Math.floor(expected / this.cartonSize);
+    return Math.max(1, Math.floor(expected / this.cartonSize));
   }
 
   isExpectedQuantityLakhAligned(): boolean {
@@ -1675,7 +1790,8 @@ export class HologramdetailsComponent implements OnInit {
   }
 
   // Roll Details Methods
-  hasRollDetails(record: HologramRecord): boolean {
+  hasRollDetails(record: HologramRecord | null | undefined): boolean {
+    if (!record) return false;
     // Check if record has carton details with data
     const details = record.carton_details || [];
     return Array.isArray(details) && details.length > 0;

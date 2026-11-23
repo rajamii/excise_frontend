@@ -95,4 +95,107 @@ describe('HologramdetailsComponent', () => {
     expect(component.savedCartons.length).toBe(10);
     expect(component.totalCalculatedHolograms).toBe(200000);
   });
+
+  it('allows saving partial cartons and detects partial arrival status', () => {
+    spyOn(window, 'alert');
+
+    const record: any = {
+      id: 3,
+      date: '2026-04-17',
+      ourRefNo: 'HQR/1101/2026-27/0003',
+      fromSerial: '',
+      toSerial: '',
+      numberOfHolograms: 300000,
+      status: 'Payment Completed',
+      carton_details: [],
+      supplyChainData: { localQtyLakh: 300000 }
+    };
+
+    component.updateArrivalDetails(record);
+    component.currentCarton.cartoonNumber = 'C1';
+    component.currentCarton.fromSerial = '1';
+    component.onSerialInputChange();
+    component.saveCurrentCarton();
+
+    // 1 of 3 cartons saved (100,000 / 300,000)
+    expect(component.getSavedCartonCount()).toBe(1);
+    expect(component.getExpectedCartonCount()).toBe(3);
+    expect(component.totalCalculatedHolograms).toBe(100000);
+
+    // validateUpdateForm should pass for partial arrival
+    expect(component.validateUpdateForm()).toBeTrue();
+
+    // With 1 carton in carton_details, record should be detected as partially arrived
+    record.carton_details = component.savedCartons;
+    expect(component.isPartiallyArrived(record)).toBeTrue();
+    expect(component.canUpdateRecord(record)).toBeTrue();
+    expect(component.isArrivedStage(record)).toBeFalse();
+  });
+
+  it('pre-loads existing cartons when re-opening modal for remaining cartons', () => {
+    spyOn(window, 'alert');
+
+    const existingCartons = [
+      {
+        cartoonNumber: 'D1(a)',
+        baseCartoonNumber: 'D1',
+        fromSerial: '1',
+        toSerial: '20000',
+        numberOfHolograms: 20000,
+        type: 'LOCAL'
+      },
+      {
+        cartoonNumber: 'D1(b)',
+        baseCartoonNumber: 'D1',
+        fromSerial: '20001',
+        toSerial: '40000',
+        numberOfHolograms: 20000,
+        type: 'LOCAL'
+      },
+      {
+        cartoonNumber: 'D1(c)',
+        baseCartoonNumber: 'D1',
+        fromSerial: '40001',
+        toSerial: '60000',
+        numberOfHolograms: 20000,
+        type: 'LOCAL'
+      },
+      {
+        cartoonNumber: 'D1(d)',
+        baseCartoonNumber: 'D1',
+        fromSerial: '60001',
+        toSerial: '80000',
+        numberOfHolograms: 20000,
+        type: 'LOCAL'
+      },
+      {
+        cartoonNumber: 'D1(e)',
+        baseCartoonNumber: 'D1',
+        fromSerial: '80001',
+        toSerial: '100000',
+        numberOfHolograms: 20000,
+        type: 'LOCAL'
+      }
+    ];
+
+    const record: any = {
+      id: 4,
+      date: '2026-04-17',
+      ourRefNo: 'HQR/1101/2026-27/0004',
+      fromSerial: '',
+      toSerial: '',
+      numberOfHolograms: 200000,
+      status: 'Payment Completed',
+      carton_details: existingCartons,
+      supplyChainData: { localQtyLakh: 200000 }
+    };
+
+    component.updateArrivalDetails(record);
+
+    // Pre-loaded state
+    expect(component.getSavedCartonCount()).toBe(1);
+    expect(component.getExpectedCartonCount()).toBe(2);
+    expect(component.totalCalculatedHolograms).toBe(100000);
+    expect(component.savedCartons.length).toBe(5);
+  });
 });
