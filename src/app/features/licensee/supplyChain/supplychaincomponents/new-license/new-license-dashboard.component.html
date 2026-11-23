@@ -119,6 +119,7 @@
             <th>Submitted On</th>
             <th>Payment</th>
             <th>License Category</th>
+            <th>Site Details</th>
             <th *ngIf="!isLicenseeUser()">Applicant</th>
             <th>Fees Payment</th>
             <th>Current Stage</th>
@@ -180,6 +181,35 @@
               <small *ngIf="row.licenseSubCategoryName" class="text-muted d-block mt-1" style="font-size: 0.78rem;">
                 - {{ row.licenseSubCategoryName }}
               </small>
+            </td>
+            <!-- Site Details -->
+            <td class="site-details-col">
+              <div class="site-details-card">
+                <div class="site-details-card-header">
+                  <i class="bi bi-geo-alt-fill"></i>
+                  <span>Site Premises</span>
+                </div>
+                <div class="site-details-card-body">
+                  <div class="site-details-row">
+                    <span class="site-details-label">District</span>
+                    <span class="site-details-val" [title]="row.siteDistrict">{{ row.siteDistrict }}</span>
+                  </div>
+                  <div class="site-details-row">
+                    <span class="site-details-label">Address</span>
+                    <span class="site-details-val" [title]="row.siteAddress">{{ row.siteAddress }}</span>
+                  </div>
+                  <div class="site-details-row">
+                    <span class="site-details-label">Pin Code</span>
+                    <span class="site-details-val site-details-val--pin">
+                      <span class="site-pin-badge">{{ row.sitePinCode }}</span>
+                    </span>
+                  </div>
+                  <div class="site-details-row">
+                    <span class="site-details-label">Location</span>
+                    <span class="site-details-val" [title]="row.siteLocation">{{ row.siteLocation }}</span>
+                  </div>
+                </div>
+              </div>
             </td>
             <!-- Applicant (admin only) -->
             <td *ngIf="!isLicenseeUser()">{{ row.applicantName }}</td>

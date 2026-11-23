@@ -52,6 +52,10 @@ interface NewLicenseItem {
   establishmentName: string;
   licenseCategoryName: string;
   licenseSubCategoryName: string;
+  siteDistrict?: string;
+  siteAddress?: string;
+  sitePinCode?: string;
+  siteLocation?: string;
   submittedOn: string;
   paymentStatus: string;
   isApplicationFeePaid?: boolean;
@@ -1377,6 +1381,56 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
       }
     }
 
+    const rawDistrict =
+      item?.site_district_name ||
+      item?.siteDistrictName ||
+      item?.site_district?.district ||
+      item?.site_district ||
+      '';
+    const siteDistrict = (rawDistrict && String(rawDistrict).toLowerCase() !== 'none' && String(rawDistrict).toLowerCase() !== 'null')
+      ? String(rawDistrict).trim()
+      : 'N/A';
+
+    const rawAddress =
+      item?.business_address ||
+      item?.businessAddress ||
+      item?.company_address ||
+      item?.companyAddress ||
+      item?.permanent_address ||
+      item?.address ||
+      '';
+    const siteAddress = (rawAddress && String(rawAddress).toLowerCase() !== 'none' && String(rawAddress).toLowerCase() !== 'null')
+      ? String(rawAddress).trim()
+      : 'N/A';
+
+    const rawPin =
+      item?.pin_code ||
+      item?.pinCode ||
+      item?.pincode ||
+      '';
+    const sitePinCode = (rawPin && String(rawPin).toLowerCase() !== 'none' && String(rawPin).toLowerCase() !== 'null')
+      ? String(rawPin).trim()
+      : 'N/A';
+
+    let rawLocation = String(item?.location_name || item?.locationName || '').trim();
+    const rawWard = String(item?.ward_name || item?.wardName || '').trim();
+    const rawBlock = String(item?.block_name || item?.blockName || '').trim();
+    const rawRoad = String(item?.road_name || item?.roadName || '').trim();
+    const rawSubdiv = String(item?.site_subdivision_name || item?.siteSubdivisionName || item?.site_subdivision?.subdivision || '').trim();
+
+    if (!rawLocation || rawLocation.toLowerCase() === 'none' || rawLocation.toLowerCase() === 'null') {
+      rawLocation = (rawWard && rawWard.toLowerCase() !== 'none' && rawWard.toLowerCase() !== 'null')
+        ? rawWard
+        : ((rawBlock && rawBlock.toLowerCase() !== 'none' && rawBlock.toLowerCase() !== 'null')
+          ? rawBlock
+          : ((rawRoad && rawRoad.toLowerCase() !== 'none' && rawRoad.toLowerCase() !== 'null')
+            ? rawRoad
+            : ((rawSubdiv && rawSubdiv.toLowerCase() !== 'none' && rawSubdiv.toLowerCase() !== 'null')
+              ? rawSubdiv
+              : 'N/A')));
+    }
+    const siteLocation = rawLocation;
+
     return {
       id: applicationId,
       applicationId,
@@ -1387,6 +1441,10 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
       establishmentName: String(item?.establishment_name || item?.establishmentName || 'N/A'),
       licenseCategoryName: categoryName,
       licenseSubCategoryName: subCategoryName,
+      siteDistrict,
+      siteAddress,
+      sitePinCode,
+      siteLocation,
       submittedOn,
       paymentStatus,
       isApplicationFeePaid,
