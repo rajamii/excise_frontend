@@ -2813,9 +2813,17 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
 
                 this.newLicenseFeeApprovalOptionsLoading = false;
 
-                const preselectedCategory =
-                    this.resolvePreselectedCategory(initialCategoryId, initialCategoryName) ??
-                    this.injectSubmittedCategoryOption(initialCategoryId, initialCategoryName);
+                let preselectedCategory =
+                    this.resolvePreselectedCategory(initialCategoryId, initialCategoryName);
+
+                if (!preselectedCategory && this.newLicenseFeeApprovalCategories.length === 1) {
+                    preselectedCategory = this.newLicenseFeeApprovalCategories[0];
+                }
+
+                if (!preselectedCategory) {
+                    preselectedCategory = this.injectSubmittedCategoryOption(initialCategoryId, initialCategoryName);
+                }
+
                 const preselectedCategoryId =
                     typeof preselectedCategory?.id === 'number' && preselectedCategory.id > 0
                         ? preselectedCategory.id
@@ -2871,16 +2879,25 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
 
                 subcategoryControl?.enable({ emitEvent: false });
 
-                const preselectedSubcategory =
+                let preselectedSubcategory =
                     this.resolvePreselectedSubcategory(
                         preselectSubcategoryId,
                         preselectSubcategoryName
-                    ) ??
-                    this.injectSubmittedSubcategoryOption(
+                    );
+
+                // Auto-select if there's only 1 subcategory available
+                if (!preselectedSubcategory && this.newLicenseFeeApprovalFilteredSubcategories.length === 1) {
+                    preselectedSubcategory = this.newLicenseFeeApprovalFilteredSubcategories[0];
+                }
+
+                if (!preselectedSubcategory) {
+                    preselectedSubcategory = this.injectSubmittedSubcategoryOption(
                         categoryId,
                         preselectSubcategoryId,
                         preselectSubcategoryName
                     );
+                }
+
                 if (preselectedSubcategory) {
                     subcategoryControl?.setValue(preselectedSubcategory.id, { emitEvent: false });
                     this.loadAvailableLocations(
@@ -2925,17 +2942,26 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                     .map((item: any) => this.normalizeNewLicenseFeeApprovalLocation(item))
                     .filter((item: NewLicenseFeeApprovalLocationOption) => !!item.locationCode);
 
-                const preselectedLocation =
+                let preselectedLocation =
                     this.resolvePreselectedLocation(
                         preselectLocationCode,
                         preselectLocationName,
                         preselectDistrictName
-                    ) ??
-                    this.injectSubmittedLocationOption(
+                    );
+
+                // Auto-select if there is only 1 location available for this category and subcategory
+                if (!preselectedLocation && this.newLicenseFeeApprovalLocations.length === 1) {
+                    preselectedLocation = this.newLicenseFeeApprovalLocations[0];
+                }
+
+                if (!preselectedLocation) {
+                    preselectedLocation = this.injectSubmittedLocationOption(
                         preselectLocationCode,
                         preselectLocationName,
                         preselectDistrictName
                     );
+                }
+
                 if (preselectedLocation) {
                     locationControl?.setValue(preselectedLocation.locationCode, { emitEvent: false });
                     this.loadNewLicenseFeeApprovalDetailsIfReady();
@@ -3466,16 +3492,30 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
             item?.value ??
             '';
 
+        const rawCodeStr = String(locationCode ?? '').trim();
+        let desc = String(
+            item?.locationDescription ??
+            item?.location_description ??
+            item?.description ??
+            item?.name ??
+            item?.location ??
+            ''
+        ).trim();
+
+        if (!desc || desc.toLowerCase() === 'null' || desc.toLowerCase() === 'undefined' || desc.toLowerCase() === 'none') {
+            if (rawCodeStr === '0') {
+                desc = 'All Locations';
+            } else if (rawCodeStr) {
+                desc = `Location ${rawCodeStr}`;
+            } else {
+                desc = 'Default Location';
+            }
+        }
+
         return {
             id: this.parseNumericValue(item?.id) ?? undefined,
-            locationCode: String(locationCode).trim(),
-            locationDescription: String(
-                item?.locationDescription ??
-                item?.location_description ??
-                item?.description ??
-                item?.name ??
-                locationCode
-            ).trim(),
+            locationCode: rawCodeStr,
+            locationDescription: desc,
             districtName: String(
                 item?.districtName ??
                 item?.district_name ??

@@ -2580,7 +2580,7 @@
                                 {{ newLicenseFeeApprovalLocations.length ? 'Select location' : 'Select subcategory first' }}
                             </option>
                             <option *ngFor="let location of newLicenseFeeApprovalLocations" [ngValue]="location.locationCode">
-                                {{ location.locationDescription }}<ng-container *ngIf="location.locationCode && !location.isSynthetic"> ({{ location.locationCode }})</ng-container>
+                                {{ location.locationDescription || 'Location ' + location.locationCode }}<ng-container *ngIf="location.locationCode && !location.isSynthetic && location.locationCode !== '0'"> ({{ location.locationCode }})</ng-container>
                             </option>
                         </select>
                         <div class="license-fee-field__error" *ngIf="newLicenseFeeApprovalForm.get('locationCode')?.touched && newLicenseFeeApprovalForm.get('locationCode')?.invalid">
