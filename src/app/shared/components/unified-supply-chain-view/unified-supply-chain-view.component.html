@@ -2860,10 +2860,29 @@
                 No site enquiry report data found for this application.
             </div>
         </div>
-        <div class="site-enquiry-modal-footer" *ngIf="canRevertSiteEnquiryReport()">
-            <button type="button" class="btn site-enquiry-revert-btn" (click)="revertSiteEnquiryReportFromModal(); $event.stopPropagation()">
-                <i class="bi bi-arrow-counterclockwise me-2"></i>Revert Back
-            </button>
+        <div class="site-enquiry-modal-footer" *ngIf="canRevertSiteEnquiryReport() || siteEnquiryReportSections.length > 1">
+            <div class="site-enquiry-footer-left">
+                <button type="button" 
+                    class="btn site-enquiry-revert-btn" 
+                    *ngIf="canRevertSiteEnquiryReport()" 
+                    (click)="revertSiteEnquiryReportFromModal(); $event.stopPropagation()">
+                    <i class="bi bi-arrow-counterclockwise me-2"></i>Revert Back
+                </button>
+            </div>
+            <div class="site-enquiry-footer-right" *ngIf="siteEnquiryReportSections.length > 1">
+                <button type="button" 
+                    class="btn site-enquiry-prev-btn" 
+                    *ngIf="canSiteEnquiryGoPrev()" 
+                    (click)="prevSiteEnquiryTab(); $event.stopPropagation()">
+                    <i class="bi bi-arrow-left me-1"></i>Previous
+                </button>
+                <button type="button" 
+                    class="btn site-enquiry-next-btn" 
+                    [disabled]="!canSiteEnquiryGoNext()" 
+                    (click)="nextSiteEnquiryTab(); $event.stopPropagation()">
+                    <span>Next</span><i class="bi bi-arrow-right ms-2"></i>
+                </button>
+            </div>
         </div>
     </div>
 </div>

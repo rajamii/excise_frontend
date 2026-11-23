@@ -4448,6 +4448,44 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         return this.isNewLicense() && this.roleService.hasRole(9) && this.isPendingAtJointCommissionerStage();
     }
 
+    get currentSiteEnquirySectionIndex(): number {
+        return this.siteEnquiryReportSections.findIndex(sec => sec.id === this.siteEnquiryActiveTab);
+    }
+
+    canSiteEnquiryGoPrev(): boolean {
+        return this.currentSiteEnquirySectionIndex > 0;
+    }
+
+    canSiteEnquiryGoNext(): boolean {
+        const idx = this.currentSiteEnquirySectionIndex;
+        return idx >= 0 && idx < this.siteEnquiryReportSections.length - 1;
+    }
+
+    nextSiteEnquiryTab(): void {
+        const idx = this.currentSiteEnquirySectionIndex;
+        if (idx >= 0 && idx < this.siteEnquiryReportSections.length - 1) {
+            this.siteEnquiryActiveTab = this.siteEnquiryReportSections[idx + 1].id;
+            this.scrollSiteEnquiryBodyToTop();
+        }
+    }
+
+    prevSiteEnquiryTab(): void {
+        const idx = this.currentSiteEnquirySectionIndex;
+        if (idx > 0) {
+            this.siteEnquiryActiveTab = this.siteEnquiryReportSections[idx - 1].id;
+            this.scrollSiteEnquiryBodyToTop();
+        }
+    }
+
+    private scrollSiteEnquiryBodyToTop(): void {
+        if (typeof document !== 'undefined') {
+            const bodyEl = document.querySelector('.site-enquiry-modal-body');
+            if (bodyEl) {
+                bodyEl.scrollTop = 0;
+            }
+        }
+    }
+
     canRevertSiteEnquiryReport(): boolean {
         if (!this.canViewSiteEnquiryReport()) {
             return false;

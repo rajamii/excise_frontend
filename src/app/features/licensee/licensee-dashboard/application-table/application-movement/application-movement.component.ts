@@ -96,9 +96,80 @@ export class ApplicationMovementComponent {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
 
+  /** Checks if the transaction was forwarded or performed strictly by the Commissioner */
+  isCommissionerTransaction(element: any): boolean {
+    const isStrictCommissioner = (roleName: string): boolean => {
+      if (!roleName || roleName === '-') return false;
+      const lower = roleName.toLowerCase().trim();
+      if (lower.includes('joint') || lower.includes('deputy') || lower.includes('assistant') || lower.includes('sub')) {
+        return false;
+      }
+      return lower.includes('commissioner');
+    };
+
+    const forwardedBy = this.getForwardedByName(element);
+    if (isStrictCommissioner(forwardedBy)) {
+      return true;
+    }
+
+    const performedByRole = String(
+      element?.performed_by?.role?.name ||
+      element?.performed_by?.role_name ||
+      element?.performedBy?.role?.name ||
+      element?.performedBy?.roleName ||
+      ''
+    );
+    if (isStrictCommissioner(performedByRole)) {
+      return true;
+    }
+
+    const roleId = Number(
+      element?.forwarded_by?.id ||
+      element?.forwardedBy?.id ||
+      element?.performed_by?.role?.id ||
+      element?.performed_by?.role_id ||
+      element?.performedBy?.role?.id ||
+      0
+    );
+    if (roleId === 10) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /** Formats remarks according to business rule: only Commissioner shows as Approved, others show as Forwarded */
+  getDisplayRemarks(element: any): string {
+    const raw = String(element?.remarks || '').trim();
+    if (!raw) return 'No remarks recorded';
+
+    const lower = raw.toLowerCase();
+    const isApproval =
+      lower === 'approved' ||
+      lower === 'action: approve' ||
+      lower.startsWith('approved') ||
+      lower.startsWith('action: approve');
+
+    if (isApproval) {
+      if (this.isCommissionerTransaction(element)) {
+        return 'Approved';
+      }
+      return 'Forwarded';
+    }
+
+    return raw;
+  }
+
   /** Returns semantic category for remark badge */
-  getRemarkType(remarks: string | undefined | null): 'approved' | 'rejected' | 'objection' | 'forwarded' | 'neutral' {
-    if (!remarks) return 'neutral';
+  getRemarkType(elementOrRemarks: any): 'approved' | 'rejected' | 'objection' | 'forwarded' | 'neutral' {
+    let remarks: string;
+    if (typeof elementOrRemarks === 'string') {
+      remarks = elementOrRemarks;
+    } else {
+      remarks = this.getDisplayRemarks(elementOrRemarks);
+    }
+
+    if (!remarks || remarks === 'No remarks recorded') return 'neutral';
     const lower = remarks.toLowerCase();
     if (lower.includes('reject') || lower.includes('suspend') || lower.includes('terminat') || lower.includes('cancel')) {
       return 'rejected';
