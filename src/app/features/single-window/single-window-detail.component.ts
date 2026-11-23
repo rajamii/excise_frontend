@@ -127,7 +127,8 @@ export class SingleWindowDetailComponent implements OnInit, OnDestroy {
       const actionType = (h.action_type || '').toUpperCase();
       const st = (h.stage || '').toLowerCase();
       const rem = (h.remarks || '').toLowerCase();
-      return (fromRole.includes('commissioner') && (actionType.includes('APPROV') || rem.includes('approv'))) || st.includes('payment');
+      const isComm = fromRole.includes('commissioner') && !fromRole.includes('joint') && !fromRole.includes('deputy');
+      return (isComm && (actionType.includes('APPROV') || rem.includes('approv'))) || st.includes('payment');
     });
   }
 

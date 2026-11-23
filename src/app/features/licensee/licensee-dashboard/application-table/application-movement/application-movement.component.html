@@ -134,9 +134,9 @@
             </span>
           </th>
           <td mat-cell *matCellDef="let element" class="remarks-col">
-            <div class="remark-box" [ngClass]="'remark-' + getRemarkType(element.remarks)">
+            <div class="remark-box" [ngClass]="'remark-' + getRemarkType(element)">
               <div class="remark-indicator"></div>
-              <span class="remark-text">{{ element.remarks || 'No remarks recorded' }}</span>
+              <span class="remark-text">{{ getDisplayRemarks(element) }}</span>
             </div>
           </td>
         </ng-container>

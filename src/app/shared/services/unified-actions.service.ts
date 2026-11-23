@@ -428,8 +428,10 @@ export class UnifiedActionsService {
       case 'company-collaboration':
       case 'label-registration':
       case 'salesman-barman-registration':
-      case 'special-permit':
-        return this.executeWorkflowAdvance(item, 'approve', 'Approved', options?.workflowContextData);
+      case 'special-permit': {
+        const remark = this.isStrictCommissionerUser() ? 'Approved' : 'Forwarded';
+        return this.executeWorkflowAdvance(item, 'approve', remark, options?.workflowContextData);
+      }
 
       case 'license-renewal':
         return this.toActionResult(
@@ -1880,5 +1882,17 @@ export class UnifiedActionsService {
         message: error?.error?.detail || error?.error?.message || `Failed to ${action}`
       }))
     );
+  }
+
+  private isStrictCommissionerUser(): boolean {
+    const roleName = String(localStorage.getItem('role') ?? '').trim().toLowerCase();
+    if (roleName) {
+      if (roleName.includes('joint') || roleName.includes('deputy') || roleName.includes('assistant') || roleName.includes('sub')) {
+        return false;
+      }
+      return roleName.includes('commissioner');
+    }
+    const roleId = String(localStorage.getItem('role_id') ?? '').trim();
+    return roleId === '10';
   }
 }
