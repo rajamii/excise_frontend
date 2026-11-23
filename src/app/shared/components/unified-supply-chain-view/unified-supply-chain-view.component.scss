@@ -1472,8 +1472,16 @@
     border-top: 1px solid rgba(15, 23, 42, 0.08);
     background: #fff;
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
+    align-items: center;
     gap: 12px;
+}
+
+.site-enquiry-footer-left,
+.site-enquiry-footer-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .site-enquiry-revert-btn {
@@ -1510,6 +1518,84 @@
 
     &:focus-visible {
         outline: 3px solid rgba(249, 168, 37, 0.6);
+        outline-offset: 2px;
+    }
+}
+
+.site-enquiry-next-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 24px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: #fff;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 3px 10px rgba(37, 99, 235, 0.35);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+
+    i {
+        font-size: 1rem;
+    }
+
+    &:hover:not(:disabled) {
+        filter: brightness(1.08);
+        box-shadow: 0 5px 16px rgba(37, 99, 235, 0.45);
+        transform: translateY(-1px);
+        color: #fff;
+    }
+
+    &:active:not(:disabled) {
+        transform: translateY(0);
+        box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+    }
+
+    &:disabled {
+        background: #94a3b8;
+        box-shadow: none;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    &:focus-visible {
+        outline: 3px solid rgba(37, 99, 235, 0.6);
+        outline-offset: 2px;
+    }
+}
+
+.site-enquiry-prev-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 18px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: #475569;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    transition: all 0.15s ease;
+
+    i {
+        font-size: 1rem;
+    }
+
+    &:hover {
+        background: #e2e8f0;
+        color: #1e293b;
+        border-color: #94a3b8;
+    }
+
+    &:active {
+        background: #cbd5e1;
+    }
+
+    &:focus-visible {
+        outline: 3px solid rgba(148, 163, 184, 0.6);
         outline-offset: 2px;
     }
 }
