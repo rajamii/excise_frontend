@@ -223,7 +223,7 @@
                                  <span class="badge bg-light text-dark ms-2">{{ unresolvedObjectionCount() }} pending</span>
                              </div>
                             <p class="mt-2" *ngIf="!isSalesmanOrRenewal() && !isTransit()">
-                                <strong>BR Amount:</strong>
+                                <strong>{{ isNewLicense() ? 'License Fee:' : 'BR Amount:' }}</strong>
                                 <ng-container *ngIf="isNewLicense() && !isNewLicenseFeeSet()">
                                     <span class="badge bg-warning text-dark ms-1">Pending</span>
                                 </ng-container>
