@@ -34,6 +34,8 @@ interface SavedRoll {
   toSerial: string;
   numberOfHolograms: number;
   type?: string; // Hologram type (LOCAL, EXPORT, DEFENCE)
+  arrivedDate?: string;
+  processedAt?: string;
 }
 
 interface RollPreview extends SavedRoll {
@@ -824,7 +826,9 @@ export class HologramdetailsComponent implements OnInit {
         fromSerial,
         toSerial,
         numberOfHolograms: numberOfHolograms || this.rollSize,
-        type: item.type || this.getDefaultHologramType()
+        type: item.type || this.getDefaultHologramType(),
+        arrivedDate: item.arrivedDate || item.arrived_date || item.received_date || item.receivedDate || undefined,
+        processedAt: item.processedAt || item.processed_at || undefined
       };
     });
   }
@@ -1093,9 +1097,9 @@ export class HologramdetailsComponent implements OnInit {
         toSerial: carton.toSerial,
         numberOfHolograms: carton.numberOfHolograms,
         type: carton.type || this.getDefaultHologramType(),
-        arrivedDate: currentTimestamp, // Capture when officer saved this carton
+        arrivedDate: carton.arrivedDate || currentTimestamp, // Preserve previously saved arrival timestamp
         processedBy: this.currentOfficer.name, // Track which officer processed this
-        processedAt: currentTimestamp // When it was processed
+        processedAt: carton.processedAt || currentTimestamp // Preserve original processing timestamp
       }));
 
       // We use 'assign_cartons' action as per views.py
