@@ -1,8 +1,10 @@
-import { Component, EventEmitter, OnDestroy, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, OnDestroy, OnInit, Output, ChangeDetectorRef } from '@angular/core';
 import { LabelRegistrationUploadDetails } from '../../../../../../core/models/label-registration.model';
 import { LabelRegistrationService } from '../../../../../../core/services/label-registration.service';
+import { DmsDocumentService } from '../../../../../../core/services/dms-document.service';
 import { MaterialModule } from '../../../../../../shared/material.module';
 import { validateUploadedFile } from '../../../../../../shared/utils/file-upload-validation';
+import { environment } from '../../../../../../../environments/environment';
 
 type UploadDocumentRow = {
   key: string;
@@ -155,7 +157,11 @@ export class LabelRegistrationUploadDocumentsComponent implements OnInit, OnDest
     }
   ];
 
-  constructor(private labelRegistrationService: LabelRegistrationService) {}
+  constructor(
+    private labelRegistrationService: LabelRegistrationService,
+    private dmsService: DmsDocumentService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
     this.restoreDocumentState();
@@ -195,6 +201,12 @@ export class LabelRegistrationUploadDocumentsComponent implements OnInit, OnDest
 
     this.labelRegistrationService.setDraftDocument(document.key, file);
     this.saveToSessionStorage();
+
+    // Save to dms_temperary_uploads in pgAdmin and MongoDB GridFS
+    this.dmsService.uploadTemporaryDocument(file, 'label_registration', document.key).subscribe({
+      next: (res) => console.log(`[DMS TEMP] Uploaded label doc ${document.key}:`, res),
+      error: (err) => console.warn(`[DMS TEMP] Failed label doc upload:`, err)
+    });
   }
 
   viewFile(document: UploadDocumentRow): void {
@@ -259,6 +271,40 @@ export class LabelRegistrationUploadDocumentsComponent implements OnInit, OnDest
       document.fileName = storedDocument?.fileName || '';
       document.mimeType = storedDocument?.mimeType || '';
       document.uploadedAt = storedDocument?.uploadedAt || '';
+    });
+
+    this.dmsService.getTemporaryDocuments('label_registration').subscribe({
+      next: (res: any) => {
+        if (res?.documents?.length) {
+          const cleanBase = (environment.apiBaseUrl || '').replace(/\/+$/, '');
+          res.documents.forEach((d: any) => {
+            const rawField = String(d.documentField || d.document_field || '').trim();
+            const field = rawField.toLowerCase();
+            const doc = this.documents.find(
+              (item) => item.key.toLowerCase() === field || 
+                        (item.key.toLowerCase() === field.replace(/_/g, ''))
+            );
+
+            if (doc && !doc.file) {
+              const downloadPath = d.downloadUrl || d.download_url || '';
+              doc.fileUrl = downloadPath.startsWith('http') ? downloadPath : `${cleanBase}${downloadPath}`;
+              const filename = d.originalFilename || d.original_filename || `${doc.key}.pdf`;
+              const mime = d.mimeType || d.mime_type || 'application/pdf';
+              doc.file = new File([""], filename, { type: mime });
+              doc.fileName = filename;
+              doc.mimeType = mime;
+              doc.uploadedAt = d.updatedAt || d.updated_at || new Date().toISOString();
+              this.labelRegistrationService.setDraftDocument(doc.key, doc.file);
+            }
+          });
+
+          this.saveToSessionStorage();
+          this.cdr.detectChanges();
+        }
+      },
+      error: (err) => {
+        console.warn('Could not restore label temporary documents:', err);
+      }
     });
 
     this.saveToSessionStorage();

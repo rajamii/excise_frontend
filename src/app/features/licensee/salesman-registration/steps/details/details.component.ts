@@ -11,6 +11,8 @@ import { SalesmanBarmanRegistrationService } from '../../../../../core/services/
 import { AccountService } from '../../../../../core/services/account.service';
 import { MasterService } from '../../../../../core/services/master.service';
 import { validateUploadedFile } from '../../../../../shared/utils/file-upload-validation';
+import { DmsDocumentService } from '../../../../../core/services/dms-document.service';
+import { environment } from '../../../../../../environments/environment';
 
 @Component({
   selector: 'app-details',
@@ -69,7 +71,8 @@ export class DetailsComponent implements OnInit, OnDestroy {
     private accountService: AccountService,
     private masterService: MasterService,
     private datePipe: DatePipe,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private dmsService: DmsDocumentService
   ) {
     const storedValues = this.getFromSessionStorage();
 
@@ -267,7 +270,7 @@ export class DetailsComponent implements OnInit, OnDestroy {
     return this.errorMessages[field]();
   }
 
-  // Load previously uploaded documents from service
+  // Load previously uploaded documents from service and temporary database
   private loadSavedDocuments() {
     const savedDocs = this.salesmanBarmanService.getSalesmanBarmanDocuments();
 
@@ -276,6 +279,43 @@ export class DetailsComponent implements OnInit, OnDestroy {
       if (savedFile) {
         doc.file = savedFile;
         doc.fileUrl = URL.createObjectURL(savedFile);
+      }
+    });
+
+    this.dmsService.getTemporaryDocuments('salesman_barman').subscribe({
+      next: (res: any) => {
+        if (res?.documents?.length) {
+          const cleanBase = (environment.apiBaseUrl || '').replace(/\/+$/, '');
+          const updatedDocs = { ...this.salesmanBarmanService.getSalesmanBarmanDocuments() };
+
+          res.documents.forEach((d: any) => {
+            const rawField = String(d.documentField || d.document_field || '').trim();
+            const field = rawField.toLowerCase();
+            const doc = this.documents.find(
+              (item) => item.key.toLowerCase() === field || 
+                        (item.key.toLowerCase() === field.replace(/_/g, '')) ||
+                        (item.key === 'passPhoto' && (field === 'passportphoto' || field === 'pass_photo' || field === 'passport_photo' || field === 'photo')) ||
+                        (item.key === 'aadhaarCard' && (field === 'aadhaarcard' || field === 'aadhaar_card' || field === 'aadhar')) ||
+                        (item.key === 'residentialCertificate' && (field === 'residentialcertificate' || field === 'residential_certificate' || field === 'coi')) ||
+                        (item.key === 'dateofBirthProof' && (field === 'dateofbirthproof' || field === 'dob_proof' || field === 'dobproof'))
+            );
+
+            if (doc && !doc.file) {
+              const downloadPath = d.downloadUrl || d.download_url || '';
+              doc.fileUrl = downloadPath.startsWith('http') ? downloadPath : `${cleanBase}${downloadPath}`;
+              const filename = d.originalFilename || d.original_filename || `${doc.key}.pdf`;
+              const mime = d.mimeType || d.mime_type || 'application/pdf';
+              doc.file = new File([""], filename, { type: mime });
+              (updatedDocs as any)[doc.key] = doc.file;
+            }
+          });
+
+          this.salesmanBarmanService.setSalesmanBarmanDocuments(updatedDocs);
+          this.cdr.detectChanges();
+        }
+      },
+      error: (err) => {
+        console.warn('Could not restore salesman temporary documents:', err);
       }
     });
   }
@@ -316,6 +356,12 @@ export class DetailsComponent implements OnInit, OnDestroy {
 
       // Set all documents back to service
       this.salesmanBarmanService.setSalesmanBarmanDocuments(updatedDocs);
+
+      // Save to dms_temperary_uploads in pgAdmin and MongoDB GridFS
+      this.dmsService.uploadTemporaryDocument(file, 'salesman_barman', document.key).subscribe({
+        next: (res) => console.log(`[DMS TEMP] Uploaded salesman doc ${document.key}:`, res),
+        error: (err) => console.warn(`[DMS TEMP] Failed salesman doc upload:`, err)
+      });
     }
   }
 

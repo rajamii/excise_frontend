@@ -22,6 +22,7 @@ import { AccountService } from '../../../../../core/services/account.service';
 import { validateUploadedFile } from '../../../../../shared/utils/file-upload-validation';
 import { MasterService } from '../../../../../core/services/master.service';
 import Swal from 'sweetalert2';
+import { environment } from '../../../../../../environments/environment';
 
 interface MemberDocumentUpload {
   key: string;
@@ -340,6 +341,35 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
         document.fileUrl = URL.createObjectURL(storedDocument);
       }
     });
+
+    this.licenseApplicationService.getTemporaryDocuments('new_license').subscribe({
+      next: (res: any) => {
+        if (res?.documents?.length) {
+          const cleanBase = (environment.apiBaseUrl || '').replace(/\/+$/, '');
+          res.documents.forEach((d: any) => {
+            const rawField = String(d.documentField || d.document_field || '').trim();
+            const field = rawField.toLowerCase();
+            const doc = this.documents.find(
+              (item) => item.key.toLowerCase() === field || 
+                        (item.key.toLowerCase() === field.replace(/_/g, '')) ||
+                        (item.key === 'member_pass_photo' && (field === 'member_pass_photo' || field === 'memberpassphoto'))
+            );
+            if (doc && !doc.file) {
+              const downloadPath = d.downloadUrl || d.download_url || '';
+              doc.fileUrl = downloadPath.startsWith('http') ? downloadPath : `${cleanBase}${downloadPath}`;
+              const filename = d.originalFilename || d.original_filename || `${doc.key}.pdf`;
+              const mime = d.mimeType || d.mime_type || 'application/pdf';
+              doc.file = new File([""], filename, { type: mime });
+              this.licenseApplicationService.setSiteDocument(doc.key, doc.file);
+            }
+          });
+          this.cdr.detectChanges();
+        }
+      },
+      error: (err) => {
+        console.warn('Could not restore member temporary documents:', err);
+      }
+    });
   }
 
   onFileSelect(event: Event, document: MemberDocumentUpload): void {
@@ -385,6 +415,12 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
     document.fileUrl = URL.createObjectURL(file);
     document.errorMessage = '';
     this.licenseApplicationService.setSiteDocument(document.key, file);
+
+    this.licenseApplicationService.uploadTemporaryDocument(file, 'new_license', document.key).subscribe({
+      next: (res) => console.log(`[DMS TEMP] Uploaded member doc ${document.key}:`, res),
+      error: (err) => console.warn(`[DMS TEMP] Failed member doc upload:`, err)
+    });
+
     this.cdr.detectChanges();
   }
 

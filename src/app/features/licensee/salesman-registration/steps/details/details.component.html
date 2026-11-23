@@ -179,18 +179,21 @@
                      style="display:none"/>
               <label [for]="doc.key" mat-raised-button color="primary"
                      style="cursor:pointer;margin:0;display:inline-flex;align-items:center;">
-                <mat-icon style="margin-right:4px;">upload_file</mat-icon>
-                Choose File
+                <mat-icon style="margin-right:4px;">{{ (doc.file || doc.fileUrl) ? 'check_circle' : 'upload_file' }}</mat-icon>
+                {{ (doc.file || doc.fileUrl) ? 'Change File' : 'Choose File' }}
               </label>
 
               @if (doc.fileUrl) {
                 <button mat-icon-button color="accent"
-                        (click)="viewFile(doc)" type="button">
+                        (click)="viewFile(doc)" type="button" title="View uploaded document">
                   <mat-icon>visibility</mat-icon>
                 </button>
               }
               @if (doc.file) {
-                <span class="file-name">{{ doc.file.name }}</span>
+                <span class="file-name" [title]="doc.file.name">
+                  <mat-icon style="font-size: 16px; width: 16px; height: 16px; vertical-align: middle; color: #2e7d32;">check_circle</mat-icon>
+                  {{ doc.file.name }}
+                </span>
               }
             </div>
           </div>

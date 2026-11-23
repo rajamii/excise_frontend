@@ -172,6 +172,43 @@ export class LicenseApplicationService {
     this.siteDocumentsSubject.next(new Map());
   }
 
+  public uploadTemporaryDocument(file: File, applicationType: string, documentField: string): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('application_type', applicationType);
+    formData.append('document_field', documentField);
+    const username = this.getCurrentUserKey();
+    if (username && username !== 'anon') {
+      formData.append('username', username);
+    }
+
+    const cleanBase = (environment.apiBaseUrl || '').replace(/\/+$/, '');
+    const url = `${cleanBase}/transactional/dms/temporary-upload/`;
+    return this.http.post(url, formData);
+  }
+
+  public getTemporaryDocuments(applicationType: string): Observable<any> {
+    const cleanBase = (environment.apiBaseUrl || '').replace(/\/+$/, '');
+    const username = this.getCurrentUserKey();
+    let params = new HttpParams().set('application_type', applicationType);
+    if (username && username !== 'anon') {
+      params = params.set('username', username);
+    }
+    const url = `${cleanBase}/transactional/dms/temporary-documents/`;
+    return this.http.get(url, { params });
+  }
+
+  public deleteTemporaryDocument(applicationType: string, documentField: string): Observable<any> {
+    const cleanBase = (environment.apiBaseUrl || '').replace(/\/+$/, '');
+    const username = this.getCurrentUserKey();
+    let params = new HttpParams();
+    if (username && username !== 'anon') {
+      params = params.set('username', username);
+    }
+    const url = `${cleanBase}/transactional/dms/temporary-delete/${applicationType}/${documentField}/`;
+    return this.http.delete(url, { params });
+  }
+
   prepareOldLicenseFormData(): FormData {
     const formData = new FormData();
     console.group('📦 Preparing OLD LICENSE FormData');

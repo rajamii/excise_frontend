@@ -24,6 +24,7 @@ import { MasterService } from '../../../../../core/services/master.service';
 import { LicenseCategory } from '../../../../../core/models/license-category.model';
 import { validateUploadedFile } from '../../../../../shared/utils/file-upload-validation';
 import Swal from 'sweetalert2';
+import { environment } from '../../../../../../environments/environment';
 
 interface DocumentUpload {
   name: string;
@@ -846,6 +847,43 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
         document.fileUrl = URL.createObjectURL(storedDocument);
       }
     });
+
+    // Also restore any active draft documents saved in dms_temperary_uploads
+    this.licenseSrv.getTemporaryDocuments('new_license').subscribe({
+      next: (res: any) => {
+        if (res?.documents?.length) {
+          const cleanBase = (environment.apiBaseUrl || '').replace(/\/+$/, '');
+          res.documents.forEach((d: any) => {
+            const rawField = String(d.documentField || d.document_field || '').trim();
+            const field = rawField.toLowerCase();
+            const doc = this.documents.find(
+              (item) => item.name.toLowerCase() === field || 
+                        (item.name.toLowerCase() === field.replace(/_/g, '')) ||
+                        (item.name === 'passportPhoto' && (field === 'passportphoto' || field === 'pass_photo' || field === 'passport_photo' || field === 'photo')) ||
+                        (item.name === 'pan_card' && (field === 'pan_card' || field === 'pancard')) ||
+                        (item.name === 'sikkim_certificate' && (field === 'sikkim_certificate' || field === 'sikkimcertificate' || field === 'residential_certificate' || field === 'coi')) ||
+                        (item.name === 'dob_proof' && (field === 'dob_proof' || field === 'dobproof' || field === 'dateofbirthproof'))
+            );
+            if (doc && !doc.file) {
+              const downloadPath = d.downloadUrl || d.download_url || '';
+              doc.fileUrl = downloadPath.startsWith('http') ? downloadPath : `${cleanBase}${downloadPath}`;
+              const filename = d.originalFilename || d.original_filename || `${doc.name}.pdf`;
+              const mime = d.mimeType || d.mime_type || 'application/pdf';
+              doc.file = new File([""], filename, { type: mime });
+              if (doc.name === 'passportPhoto') {
+                this.licenseSrv.setPassPhoto(doc.file);
+              } else {
+                this.licenseSrv.setSiteDocument(doc.name, doc.file);
+              }
+            }
+          });
+          this.cdr.detectChanges();
+        }
+      },
+      error: (err) => {
+        console.warn('Could not restore temporary documents:', err);
+      }
+    });
   }
 
   private clearAllDocumentUrls(): void {
@@ -911,6 +949,16 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
       this.licenseSrv.setSiteDocument(docName, file);
     }
 
+    // Immediately save to dms_temperary_uploads in pgAdmin and MongoDB GridFS
+    this.licenseSrv.uploadTemporaryDocument(file, 'new_license', docName).subscribe({
+      next: (res) => {
+        console.log(`[DMS TEMP] Successfully saved temporary upload for ${docName}:`, res);
+      },
+      error: (err) => {
+        console.warn(`[DMS TEMP] Failed to save temporary upload for ${docName}:`, err);
+      }
+    });
+
     this.cdr.detectChanges();
   }
 
@@ -933,6 +981,16 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
     } else {
       this.licenseSrv.removeSiteDocument(docName);
     }
+
+    // Delete from temporary uploads
+    this.licenseSrv.deleteTemporaryDocument('new_license', docName).subscribe({
+      next: (res) => {
+        console.log(`[DMS TEMP] Deleted temporary upload for ${docName}:`, res);
+      },
+      error: (err) => {
+        console.warn(`[DMS TEMP] Failed to delete temporary upload for ${docName}:`, err);
+      }
+    });
   }
 
   viewDocument(document: DocumentUpload): void {
