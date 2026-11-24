@@ -43,6 +43,42 @@ interface RollPreview extends SavedRoll {
   type: string;
 }
 
+export interface CartonRollItem {
+  rollName: string;
+  fromSerial: string;
+  toSerial: string;
+  numberOfHolograms: number;
+  type?: string;
+  status?: string;
+}
+
+export interface CartonGroupDetail {
+  cartonNumber: string;
+  arrivedDate?: string;
+  processedBy?: string;
+  type?: string;
+  fromSerial?: string;
+  toSerial?: string;
+  totalHolograms: number;
+  rolls: CartonRollItem[];
+}
+
+export interface ArrivalBatchGroup {
+  batchIndex: number;
+  totalBatches: number;
+  batchLabel: string;
+  arrivedDate?: string;
+  processedBy?: string;
+  type?: string;
+  fromSerial?: string;
+  toSerial?: string;
+  totalHolograms: number;
+  totalCartons: number;
+  totalRolls: number;
+  cartonNames: string[];
+  cartons: CartonGroupDetail[];
+}
+
 
 
 @Component({
@@ -103,6 +139,8 @@ export class HologramdetailsComponent implements OnInit {
   showCartonNamesModal: boolean = false;
   selectedRecordForCartonNames: HologramRecord | null = null;
   selectedCartonNames: string[] = [];
+  selectedCartonGroups: CartonGroupDetail[] = [];
+  selectedArrivalBatches: ArrivalBatchGroup[] = [];
 
   // Saved cartons list
   savedCartons: SavedRoll[] = [];
@@ -1981,7 +2019,146 @@ export class HologramdetailsComponent implements OnInit {
     return Array.from(uniqueNumbers).sort();
   }
 
+  // Group carton details carton-wise with rolls, arrival dates, and serial ranges
+  getCartonGroupsForRecord(record: HologramRecord | null | undefined): CartonGroupDetail[] {
+    if (!record) return [];
+
+    const rawList = Array.isArray(record.carton_details) ? record.carton_details : [];
+    if (rawList.length === 0) {
+      if (record.cartoonNumber || record.fromSerial || record.toSerial) {
+        return [{
+          cartonNumber: this.getCleanCartoonNumber(record.cartoonNumber || 'Carton 1'),
+          arrivedDate: record.arrivedDate || record.approvedDate || record.date,
+          processedBy: undefined,
+          type: record.procurementType || 'Local',
+          fromSerial: record.fromSerial,
+          toSerial: record.toSerial,
+          totalHolograms: record.numberOfHolograms || 0,
+          rolls: [{
+            rollName: this.getCleanCartoonNumber(record.cartoonNumber || 'Roll 1'),
+            fromSerial: record.fromSerial,
+            toSerial: record.toSerial,
+            numberOfHolograms: record.numberOfHolograms || 0,
+            type: record.procurementType || 'Local'
+          }]
+        }];
+      }
+      return [];
+    }
+
+    const groupMap = new Map<string, CartonGroupDetail>();
+
+    for (const item of rawList) {
+      const rawName = String(
+        item.cartoonNumber || item.cartoon_number || item.carton_number || item.rollNumber || ''
+      ).trim();
+      const baseName = String(
+        item.baseCartoonNumber || item.base_cartoon_number || this.extractBaseCartonName(rawName) || rawName
+      ).trim();
+
+      const arrivedDate =
+        item.arrivedDate ||
+        item.arrived_date ||
+        item.receivedDate ||
+        item.received_date ||
+        item.processedAt ||
+        item.processed_at ||
+        record.arrivedDate ||
+        record.approvedDate ||
+        record.date ||
+        undefined;
+
+      const processedBy =
+        item.processedBy ||
+        item.processed_by ||
+        item.processed_by_officer ||
+        item.receivedBy ||
+        item.received_by ||
+        undefined;
+
+      const fromSerial = String(item.fromSerial || item.from_serial || '').trim();
+      const toSerial = String(item.toSerial || item.to_serial || '').trim();
+      const rawCount = Number(item.numberOfHolograms || item.number_of_holograms || item.total_count || item.quantity || 0);
+      let count = rawCount;
+      if (count <= 0 && fromSerial && toSerial) {
+        const f = this.extractSerialNumber(fromSerial);
+        const t = this.extractSerialNumber(toSerial);
+        if (f !== null && t !== null && t >= f) {
+          count = t - f + 1;
+        }
+      }
+
+      const rollName = this.getCleanCartoonNumber(rawName) || baseName;
+      const rollType = item.type || record.procurementType || 'Local';
+
+      if (!groupMap.has(baseName)) {
+        groupMap.set(baseName, {
+          cartonNumber: baseName,
+          arrivedDate,
+          processedBy,
+          type: rollType,
+          totalHolograms: 0,
+          rolls: []
+        });
+      }
+
+      const group = groupMap.get(baseName)!;
+      if (!group.arrivedDate && arrivedDate) {
+        group.arrivedDate = arrivedDate;
+      }
+      if (!group.processedBy && processedBy) {
+        group.processedBy = processedBy;
+      }
+
+      group.totalHolograms += count;
+      group.rolls.push({
+        rollName,
+        fromSerial,
+        toSerial,
+        numberOfHolograms: count,
+        type: rollType,
+        status: item.status || 'AVAILABLE'
+      });
+    }
+
+    const result = Array.from(groupMap.values());
+
+    for (const group of result) {
+      group.rolls.sort((a, b) => {
+        const aNum = this.extractSerialNumber(a.fromSerial) || 0;
+        const bNum = this.extractSerialNumber(b.fromSerial) || 0;
+        return aNum - bNum;
+      });
+
+      if (group.rolls.length > 0) {
+        const firstRoll = group.rolls[0];
+        const lastRoll = group.rolls[group.rolls.length - 1];
+        group.fromSerial = firstRoll.fromSerial;
+        group.toSerial = lastRoll.toSerial;
+      }
+    }
+
+    result.sort((a, b) => {
+      const timeA = a.arrivedDate ? new Date(a.arrivedDate).getTime() : 0;
+      const timeB = b.arrivedDate ? new Date(b.arrivedDate).getTime() : 0;
+      if (timeA !== timeB) return timeA - timeB;
+      return a.cartonNumber.localeCompare(b.cartonNumber);
+    });
+
+    return result;
+  }
+
+  getUniqueBaseCartonNames(record: HologramRecord): string[] {
+    const groups = this.getCartonGroupsForRecord(record);
+    return groups.map(g => g.cartonNumber);
+  }
+
   getCartonNamesPreview(record: HologramRecord, limit: number = 3): string {
+    const baseNames = this.getUniqueBaseCartonNames(record);
+    if (baseNames.length > 0) {
+      if (baseNames.length <= limit) return baseNames.join(', ');
+      return `${baseNames.slice(0, limit).join(', ')} ...`;
+    }
     const names = this.getUniqueCartoonNumbers(record);
     if (names.length === 0) return '';
     if (names.length <= limit) return names.join(', ');
@@ -1992,9 +2169,133 @@ export class HologramdetailsComponent implements OnInit {
     return this.getUniqueCartoonNumbers(record).length > limit;
   }
 
+  hasCartonDetails(record: HologramRecord): boolean {
+    return (Array.isArray(record?.carton_details) && record.carton_details.length > 0) || !!record?.cartoonNumber;
+  }
+
+  getCartonCount(record: HologramRecord): number {
+    return this.getCartonGroupsForRecord(record).length;
+  }
+
+  getRollCount(record: HologramRecord): number {
+    return Array.isArray(record?.carton_details) ? record.carton_details.length : (record?.cartoonNumber ? 1 : 0);
+  }
+
+  getTotalHologramsInModal(): number {
+    return this.selectedCartonGroups.reduce((sum, g) => sum + (g.totalHolograms || 0), 0);
+  }
+
+  getTotalRollsInModal(): number {
+    return this.selectedCartonGroups.reduce((sum, g) => sum + (g.rolls?.length || 0), 0);
+  }
+
+  getArrivalBatchesForRecord(record: HologramRecord): ArrivalBatchGroup[] {
+    const cartonGroups = this.getCartonGroupsForRecord(record);
+    if (cartonGroups.length === 0) return [];
+
+    const isManual = (record?.ourRefNo || '').toUpperCase().includes('MANUAL');
+
+    // Group carton groups into arrival batches based on arrival timestamp
+    const batchesOfCartons: CartonGroupDetail[][] = [];
+
+    if (isManual) {
+      // Manual inventory is always entered as one unified arrival
+      batchesOfCartons.push(cartonGroups);
+    } else {
+      // Sort chronologically by arrivedDate
+      const sortedCartons = [...cartonGroups].sort((a, b) => {
+        const timeA = a.arrivedDate ? new Date(a.arrivedDate).getTime() : 0;
+        const timeB = b.arrivedDate ? new Date(b.arrivedDate).getTime() : 0;
+        return timeA - timeB;
+      });
+
+      let currentBatch: CartonGroupDetail[] = [];
+      let currentBatchTime: number | null = null;
+
+      for (const carton of sortedCartons) {
+        const cTime = carton.arrivedDate ? new Date(carton.arrivedDate).getTime() : 0;
+
+        if (currentBatch.length === 0) {
+          currentBatch.push(carton);
+          currentBatchTime = cTime;
+        } else {
+          // If arrival timestamps are within 15 minutes (900,000 ms), they were entered in the same session
+          const diff = Math.abs(cTime - (currentBatchTime || 0));
+          if (cTime === 0 || currentBatchTime === 0 || diff <= 900000) {
+            currentBatch.push(carton);
+          } else {
+            batchesOfCartons.push(currentBatch);
+            currentBatch = [carton];
+            currentBatchTime = cTime;
+          }
+        }
+      }
+
+      if (currentBatch.length > 0) {
+        batchesOfCartons.push(currentBatch);
+      }
+    }
+
+    const totalBatches = batchesOfCartons.length;
+
+    return batchesOfCartons.map((cartonsInBatch, index) => {
+      const batchIndex = index + 1;
+      const firstCarton = cartonsInBatch[0];
+      const arrivedDate = firstCarton.arrivedDate;
+      const processedBy = cartonsInBatch.find(c => !!c.processedBy)?.processedBy || firstCarton.processedBy;
+      const type = cartonsInBatch.find(c => !!c.type)?.type || record.procurementType || 'Local';
+
+      const totalHolograms = cartonsInBatch.reduce((sum, c) => sum + (c.totalHolograms || 0), 0);
+      const totalRolls = cartonsInBatch.reduce((sum, c) => sum + (c.rolls?.length || 0), 0);
+      const cartonNames = cartonsInBatch.map(c => c.cartonNumber);
+
+      // Find overall serial range for this batch
+      let fromSerial: string | undefined = undefined;
+      let toSerial: string | undefined = undefined;
+
+      const allRolls: CartonRollItem[] = [];
+      for (const carton of cartonsInBatch) {
+        allRolls.push(...carton.rolls);
+      }
+
+      allRolls.sort((a, b) => {
+        const aNum = this.extractSerialNumber(a.fromSerial) || 0;
+        const bNum = this.extractSerialNumber(b.fromSerial) || 0;
+        return aNum - bNum;
+      });
+
+      if (allRolls.length > 0) {
+        fromSerial = allRolls[0].fromSerial;
+        toSerial = allRolls[allRolls.length - 1].toSerial;
+      }
+
+      const batchLabel = totalBatches === 1
+        ? (cartonsInBatch.length > 1 ? `Arrival Details (${cartonsInBatch.length} Cartons)` : `Carton Arrival Details`)
+        : `Arrival Session #${batchIndex} (Part ${batchIndex} of ${totalBatches})`;
+
+      return {
+        batchIndex,
+        totalBatches,
+        batchLabel,
+        arrivedDate,
+        processedBy,
+        type,
+        fromSerial,
+        toSerial,
+        totalHolograms,
+        totalCartons: cartonsInBatch.length,
+        totalRolls,
+        cartonNames,
+        cartons: cartonsInBatch
+      };
+    });
+  }
+
   openCartonNamesModal(record: HologramRecord): void {
     this.selectedRecordForCartonNames = record;
     this.selectedCartonNames = this.getUniqueCartoonNumbers(record);
+    this.selectedCartonGroups = this.getCartonGroupsForRecord(record);
+    this.selectedArrivalBatches = this.getArrivalBatchesForRecord(record);
     this.showCartonNamesModal = true;
   }
 
@@ -2002,6 +2303,8 @@ export class HologramdetailsComponent implements OnInit {
     this.showCartonNamesModal = false;
     this.selectedRecordForCartonNames = null;
     this.selectedCartonNames = [];
+    this.selectedCartonGroups = [];
+    this.selectedArrivalBatches = [];
   }
 
 

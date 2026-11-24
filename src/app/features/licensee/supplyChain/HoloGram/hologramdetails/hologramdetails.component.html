@@ -193,13 +193,14 @@
                             </td>
                             <td class="cartoon-no">
                                 <div class="d-flex align-items-center gap-2 flex-wrap">
-                                    <span class="cartoon-number">
+                                    <span class="cartoon-number fw-medium">
                                         {{ getCartonNamesPreview(record) || '-' }}
                                     </span>
-                                    @if (hasMoreCartonNames(record)) {
-                                    <button type="button" class="btn btn-link btn-sm p-0"
-                                        (click)="openCartonNamesModal(record)">
-                                        See all names ({{ getUniqueCartoonNumbers(record).length }})
+                                    @if (hasCartonDetails(record)) {
+                                    <button type="button" class="btn btn-sm py-0 px-2 rounded-pill text-decoration-none shadow-none carton-details-badge-btn"
+                                        (click)="openCartonNamesModal(record)"
+                                        title="View carton-wise arrival details and rolls">
+                                        <i class="bi bi-box-seam me-1"></i>See details ({{ getCartonCount(record) }} Ctn, {{ getRollCount(record) }} Rolls)
                                     </button>
                                     }
                                 </div>
@@ -383,47 +384,235 @@
 
 <!-- Carton Names Modal -->
 <div class="modal fade show" *ngIf="showCartonNamesModal"
-    style="display: block; background-color: rgba(0,0,0,0.5); z-index: 1060;" (click)="closeCartonNamesModal()">
-    <div class="modal-dialog modal-dialog-centered modal-lg" style="z-index: 1061;" (click)="$event.stopPropagation()">
-        <div class="modal-content" style="z-index: 1062;">
-            <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title">
-                    <i class="bi bi-list-ul me-2"></i>
-                    Carton Names ({{ selectedCartonNames.length }})
-                </h5>
-                <button type="button" class="btn-close btn-close-white" (click)="closeCartonNamesModal()"></button>
+    style="display: block; background-color: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); z-index: 1060;" (click)="closeCartonNamesModal()">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable" style="z-index: 1061; max-width: 1100px;" (click)="$event.stopPropagation()">
+        <div class="modal-content border-0 shadow-lg" style="z-index: 1062; border-radius: 16px; overflow: hidden;">
+            <!-- Modal Header -->
+            <div class="modal-header text-white px-4 py-3" style="background: linear-gradient(135deg, #07394a 0%, #0d5b92 100%);">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center bg-white bg-opacity-20" style="width: 44px; height: 44px;">
+                        <i class="bi bi-boxes fs-4 text-white"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0 text-white">
+                            Carton Arrival Details & Rolls
+                        </h5>
+                        <small class="text-white-50">
+                            Reference: <strong class="text-white font-monospace">{{ selectedRecordForCartonNames?.ourRefNo || '-' }}</strong>
+                            <span *ngIf="selectedRecordForCartonNames?.procurementType" class="badge bg-light text-dark ms-2">{{ selectedRecordForCartonNames?.procurementType }}</span>
+                        </small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white shadow-none" (click)="closeCartonNamesModal()"></button>
             </div>
-            <div class="modal-body">
-                <div class="alert alert-light mb-3">
-                    <strong>Reference:</strong> {{ selectedRecordForCartonNames?.ourRefNo || '-' }}
+
+            <!-- Modal Body -->
+            <div class="modal-body p-4 bg-light">
+                <!-- Summary Metrics Bar -->
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-md-3">
+                        <div class="p-3 bg-white rounded-3 border shadow-xs d-flex align-items-center gap-3 h-100">
+                            <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center flex-shrink-0" style="width: 42px; height: 42px;">
+                                <i class="bi bi-box-seam fs-5"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small fw-medium">Total Cartons</div>
+                                <div class="fs-5 fw-bold text-dark">{{ selectedCartonGroups.length }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="p-3 bg-white rounded-3 border shadow-xs d-flex align-items-center gap-3 h-100">
+                            <div class="rounded-circle bg-info bg-opacity-10 text-info d-flex align-items-center justify-content-center flex-shrink-0" style="width: 42px; height: 42px;">
+                                <i class="bi bi-disc fs-5"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small fw-medium">Total Rolls</div>
+                                <div class="fs-5 fw-bold text-dark">{{ getTotalRollsInModal() }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="p-3 bg-white rounded-3 border shadow-xs d-flex align-items-center gap-3 h-100">
+                            <div class="rounded-circle bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center flex-shrink-0" style="width: 42px; height: 42px;">
+                                <i class="bi bi-shield-check fs-5"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small fw-medium">Total Holograms</div>
+                                <div class="fs-5 fw-bold text-success">{{ getTotalHologramsInModal() | number }} <span class="small fw-normal text-muted">units</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="p-3 bg-white rounded-3 border shadow-xs d-flex align-items-center gap-3 h-100">
+                            <div class="rounded-circle bg-warning bg-opacity-10 text-warning d-flex align-items-center justify-content-center flex-shrink-0" style="width: 42px; height: 42px;">
+                                <i class="bi bi-clock-history fs-5"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small fw-medium">Arrival Status</div>
+                                <div>
+                                    <span class="badge rounded-pill" [ngClass]="isPartiallyArrived(selectedRecordForCartonNames) ? 'bg-warning-subtle text-warning border border-warning' : 'bg-success-subtle text-success border border-success'">
+                                        {{ isPartiallyArrived(selectedRecordForCartonNames) ? 'Partially Arrived' : 'Fully Arrived' }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                @if (selectedCartonNames.length > 0) {
-                <div class="table-responsive">
-                    <table class="table table-bordered table-hover mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th style="width: 80px;" class="text-center">Sl. No.</th>
-                                <th>Carton / Roll Name</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr *ngFor="let name of selectedCartonNames; let i = index">
-                                <td class="text-center">{{ i + 1 }}</td>
-                                <td class="font-monospace">{{ name }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <!-- Arrival Batches List (Single box if entered together, multiple boxes if distinct partial arrivals) -->
+                @if (selectedArrivalBatches.length > 0) {
+                <div class="d-flex flex-column gap-3">
+                    <div class="card border-0 shadow-sm rounded-3 overflow-hidden carton-detail-card" *ngFor="let batch of selectedArrivalBatches; let bIdx = index">
+                        <!-- Arrival Batch Header -->
+                        <div class="card-header bg-white border-bottom py-3 px-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="badge bg-primary px-3 py-2 rounded-pill fs-6 d-inline-flex align-items-center gap-2 shadow-xs">
+                                    <i class="bi bi-boxes"></i>
+                                    <span>{{ batch.batchLabel }}</span>
+                                </span>
+                                <span class="badge bg-secondary-subtle text-secondary px-2 py-1">
+                                    {{ batch.totalCartons }} Carton{{ batch.totalCartons > 1 ? 's' : '' }}
+                                </span>
+                                <span class="badge bg-secondary-subtle text-secondary px-2 py-1">
+                                    {{ batch.totalRolls }} Rolls
+                                </span>
+                                <span class="badge bg-success-subtle text-success px-2 py-1">
+                                    {{ batch.totalHolograms | number }} Holograms
+                                </span>
+                            </div>
+
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <!-- Arrival Date Pill -->
+                                <div class="d-inline-flex align-items-center gap-1 bg-light border rounded-pill px-3 py-1 small text-secondary" *ngIf="batch.arrivedDate">
+                                    <i class="bi bi-calendar-check text-success"></i>
+                                    <span class="fw-semibold text-dark">Arrival:</span>
+                                    <span>{{ batch.arrivedDate | date:'dd MMM yyyy, hh:mm a' }}</span>
+                                </div>
+                                <div class="d-inline-flex align-items-center gap-1 bg-light border rounded-pill px-3 py-1 small text-muted" *ngIf="!batch.arrivedDate">
+                                    <i class="bi bi-clock text-warning"></i>
+                                    <span>Arrival date pending</span>
+                                </div>
+
+                                <!-- Received By Pill -->
+                                <div class="d-inline-flex align-items-center gap-1 bg-light border rounded-pill px-3 py-1 small text-secondary" *ngIf="batch.processedBy">
+                                    <i class="bi bi-person-badge text-primary"></i>
+                                    <span class="fw-semibold text-dark">By:</span>
+                                    <span>{{ batch.processedBy }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Arrival Batch Body -->
+                        <div class="card-body p-3 p-md-4">
+                            <!-- Serial Range & Cartons summary banner -->
+                            <div class="d-flex flex-wrap align-items-center justify-content-between bg-light p-2 px-3 rounded-2 border mb-3 gap-2">
+                                <div class="small text-muted d-flex align-items-center gap-2 flex-wrap">
+                                    <span class="fw-bold text-dark"><i class="bi bi-upc-scan me-1 text-primary"></i>Serial Range:</span>
+                                    <span class="font-monospace text-primary fw-bold bg-white px-2 py-1 rounded border">{{ batch.fromSerial || '-' }}</span>
+                                    <i class="bi bi-arrow-right text-muted"></i>
+                                    <span class="font-monospace text-primary fw-bold bg-white px-2 py-1 rounded border">{{ batch.toSerial || '-' }}</span>
+                                </div>
+                                <div class="small text-muted d-flex align-items-center gap-2 flex-wrap">
+                                    <span class="fw-medium">Cartons:</span>
+                                    <span class="badge bg-white text-dark border font-monospace" *ngFor="let cName of batch.cartonNames">
+                                        {{ cName }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Single Carton Layout inside this Batch -->
+                            <div *ngIf="batch.cartons.length === 1">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <div class="text-uppercase text-muted fw-bold small" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+                                        <i class="bi bi-grid-3x3-gap me-1"></i>Rolls in Carton {{ batch.cartons[0].cartonNumber }} ({{ batch.cartons[0].rolls.length }})
+                                    </div>
+                                </div>
+                                <div class="carton-rolls-grid">
+                                    <div class="p-2 border rounded-3 bg-white shadow-xs roll-card" *ngFor="let roll of batch.cartons[0].rolls; let rIdx = index">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="badge bg-light text-dark border font-monospace fw-bold text-truncate" style="font-size: 0.8rem; max-width: 140px;" title="{{ roll.rollName }}">
+                                                <i class="bi bi-disc text-primary me-1"></i>{{ roll.rollName }}
+                                            </span>
+                                            <span class="text-muted small" style="font-size: 0.7rem;">#{{ rIdx + 1 }}</span>
+                                        </div>
+                                        <div class="small text-muted mb-1 font-monospace text-truncate" style="font-size: 0.73rem;" title="{{ roll.fromSerial }} &rarr; {{ roll.toSerial }}">
+                                            {{ roll.fromSerial }} &rarr; {{ roll.toSerial }}
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center mt-2 pt-1 border-top">
+                                            <span class="fw-semibold text-secondary" style="font-size: 0.72rem;">
+                                                {{ roll.numberOfHolograms | number }} units
+                                            </span>
+                                            <span class="badge" [ngClass]="roll.status === 'USED' ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'" style="font-size: 0.68rem;">
+                                                {{ roll.status || 'AVAILABLE' }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Multiple Cartons Entered Together (shown in this SAME single box) -->
+                            <div *ngIf="batch.cartons.length > 1" class="d-flex flex-column gap-3">
+                                <div class="p-3 bg-white rounded-3 border carton-section-inner" *ngFor="let carton of batch.cartons; let cIdx = index">
+                                    <div class="d-flex flex-wrap align-items-center justify-content-between mb-2 pb-2 border-bottom gap-2">
+                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                            <span class="badge bg-primary px-3 py-1 rounded-pill font-monospace fs-6">
+                                                <i class="bi bi-box-seam me-1"></i>Carton {{ cIdx + 1 }}: {{ carton.cartonNumber }}
+                                            </span>
+                                            <span class="badge bg-light text-dark border font-monospace">
+                                                {{ carton.fromSerial }} &rarr; {{ carton.toSerial }}
+                                            </span>
+                                            <span class="badge bg-success-subtle text-success">
+                                                {{ carton.totalHolograms | number }} units
+                                            </span>
+                                            <span class="badge bg-info-subtle text-info border border-info" *ngIf="carton.type">
+                                                {{ carton.type }}
+                                            </span>
+                                        </div>
+                                        <span class="badge bg-secondary-subtle text-secondary">{{ carton.rolls.length }} Rolls</span>
+                                    </div>
+
+                                    <div class="carton-rolls-grid">
+                                        <div class="p-2 border rounded-3 bg-light shadow-xs roll-card" *ngFor="let roll of carton.rolls; let rIdx = index">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span class="badge bg-white text-dark border font-monospace fw-bold text-truncate" style="font-size: 0.8rem; max-width: 140px;" title="{{ roll.rollName }}">
+                                                    <i class="bi bi-disc text-primary me-1"></i>{{ roll.rollName }}
+                                                </span>
+                                                <span class="text-muted small" style="font-size: 0.7rem;">#{{ rIdx + 1 }}</span>
+                                            </div>
+                                            <div class="small text-muted mb-1 font-monospace text-truncate" style="font-size: 0.73rem;" title="{{ roll.fromSerial }} &rarr; {{ roll.toSerial }}">
+                                                {{ roll.fromSerial }} &rarr; {{ roll.toSerial }}
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center mt-2 pt-1 border-top">
+                                                <span class="fw-semibold text-secondary" style="font-size: 0.72rem;">
+                                                    {{ roll.numberOfHolograms | number }} units
+                                                </span>
+                                                <span class="badge" [ngClass]="roll.status === 'USED' ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'" style="font-size: 0.68rem;">
+                                                    {{ roll.status || 'AVAILABLE' }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 } @else {
-                <div class="text-center text-muted py-4">
-                    <i class="bi bi-inbox" style="font-size: 3rem;"></i>
-                    <p class="mt-2 mb-0">No carton names available.</p>
+                <div class="text-center text-muted py-5 bg-white rounded-3 border">
+                    <i class="bi bi-box-seam text-secondary opacity-50" style="font-size: 3.5rem;"></i>
+                    <h6 class="mt-3 fw-bold text-dark">No Carton Details Available</h6>
+                    <p class="text-muted small mb-0">Arrival roll details have not been assigned or recorded for this procurement yet.</p>
                 </div>
                 }
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" (click)="closeCartonNamesModal()">
+
+            <!-- Modal Footer -->
+            <div class="modal-footer bg-white border-top px-4 py-3 d-flex justify-content-between align-items-center">
+                <div class="small text-muted">
+                    Showing <strong class="text-dark">{{ selectedCartonGroups.length }}</strong> Carton{{ selectedCartonGroups.length !== 1 ? 's' : '' }} &bull; <strong class="text-dark">{{ getTotalRollsInModal() }}</strong> Total Rolls &bull; <strong class="text-dark">{{ getTotalHologramsInModal() | number }}</strong> Holograms
+                </div>
+                <button type="button" class="btn btn-secondary px-4 rounded-pill" (click)="closeCartonNamesModal()">
                     <i class="bi bi-x-circle me-1"></i>
                     Close
                 </button>
