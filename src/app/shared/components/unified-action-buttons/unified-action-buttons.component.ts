@@ -1,5 +1,6 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -9,6 +10,7 @@ import { UnifiedActionsService } from '../../services/unified-actions.service';
 import { ApplicationType } from '../../constants/application.constants';
 import { PaymentIntegrationService } from '../../../core/services/payment-integration.service';
 import { AccountService } from '../../../core/services/account.service';
+import { environment } from '../../../../environments/environment';
 import Swal from 'sweetalert2';
 import { firstValueFrom } from 'rxjs';
 
@@ -169,7 +171,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
   @Input() includeActions: string[] | null = null;
   @Input() excludeActions: string[] | null = null;
 
-  @Output() actionClicked = new EventEmitter<{ action: string, item: ActionItem }>();
+  @Output() actionClicked = new EventEmitter<{ action: string, item: ActionItem, contextData?: any }>();
 
   public primaryActionButtons: ActionButtonConfig[] = [];
   public displayButtons: ActionButtonConfig[] = [];
@@ -182,7 +184,8 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     private unifiedActionsService: UnifiedActionsService,
     private router: Router,
     private paymentIntegrationService: PaymentIntegrationService,
-    private accountService: AccountService
+    private accountService: AccountService,
+    private http: HttpClient
   ) { }
 
   private isCurrentUserLicensee(): boolean {
@@ -478,8 +481,17 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     const normalizedButton: ActionButtonConfig = { ...button, action: normalizedAction };
 
     if (this.shouldRequireNewLicenseUploadsDeclaration(normalizedAction)) {
-      this.showNewLicenseUploadsDeclaration(normalizedButton).then((ok) => {
-        if (ok) this.continueActionAfterDeclaration(normalizedButton);
+      this.showNewLicenseUploadsDeclaration(normalizedButton).then((res: any) => {
+        if (res && res.confirmed) {
+          const contextData: any = {};
+          if (res.selectedOfficerId) {
+            contextData.site_enquiry_officer_id = res.selectedOfficerId;
+            if (this.item) {
+              (this.item as any).__selectedSiteEnquiryOfficerId = res.selectedOfficerId;
+            }
+          }
+          this.continueActionAfterDeclaration(normalizedButton, contextData);
+        }
       });
       return;
     }
@@ -487,22 +499,110 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     this.continueActionAfterDeclaration(normalizedButton);
   }
 
-  private continueActionAfterDeclaration(button: ActionButtonConfig): void {
+  private continueActionAfterDeclaration(button: ActionButtonConfig, contextData?: any): void {
     if (this.shouldBypassDetailedNewLicenseApproveConfirmation(button)) {
-      this.executeAction(button);
+      this.executeAction(button, contextData);
       return;
     }
 
     if (button.requiresConfirmation) {
-      this.showConfirmationDialog(button);
+      this.showConfirmationDialog(button, contextData);
     } else {
-      this.executeAction(button);
+      this.executeAction(button, contextData);
+    }
+  }
+
+  private isNewLicenseApplicationItem(): boolean {
+    if (this.itemType === 'new-license') return true;
+    const itemAny = this.item as any;
+    const idOrRef = String(
+      itemAny?.application_id ||
+      itemAny?.applicationId ||
+      itemAny?.referenceNo ||
+      itemAny?.refNo ||
+      itemAny?.id ||
+      ''
+    ).trim();
+    return idOrRef.startsWith('NLI/') || idOrRef.startsWith('NA/');
+  }
+
+  private isDistrictUserNewLicenseApproval(action: string): boolean {
+    const act = this.normalizeActionName(action);
+    if (act !== 'APPROVE') return false;
+
+    if (!this.isNewLicenseApplicationItem()) return false;
+
+    const itemAny = this.item as any;
+    const stageName = String(
+      itemAny?.currentStageName ??
+      itemAny?.current_stage_name ??
+      itemAny?.display_stage ??
+      itemAny?.currentStage ??
+      itemAny?.current_stage ??
+      itemAny?.status ??
+      ''
+    ).toLowerCase();
+
+    const isStageDistrictUser = stageName.includes('district user') || stageName.includes('district_user') || stageName === '2' || stageName.includes('stage 2');
+
+    const userRole = String(this.accountService.getUserProfileSync()?.role?.name ?? '').trim().toLowerCase();
+    const isUserDistrictRole = userRole.includes('district');
+
+    return isStageDistrictUser || isUserDistrictRole;
+  }
+
+  private getDistrictIdentifierForSiteEnquiry(): string | number | null {
+    const itemAny = this.item as any;
+    const idOrRef = String(
+      itemAny?.application_id ||
+      itemAny?.applicationId ||
+      itemAny?.referenceNo ||
+      itemAny?.refNo ||
+      itemAny?.id ||
+      ''
+    ).trim();
+
+    let districtId =
+      itemAny?.site_district ||
+      itemAny?.site_district_id ||
+      itemAny?.district ||
+      itemAny?.district_id ||
+      itemAny?.district_code ||
+      itemAny?.districtCode ||
+      itemAny?.site_district_name;
+
+    if (districtId && typeof districtId === 'object') {
+      districtId = districtId.id || districtId.district_code || districtId.districtCode || districtId.district;
+    }
+
+    if (!districtId && idOrRef && idOrRef.includes('/')) {
+      const parts = idOrRef.split('/');
+      if (parts.length >= 2 && /^\d+$/.test(parts[1])) {
+        districtId = parts[1];
+      }
+    }
+
+    return districtId || null;
+  }
+
+  private async fetchSiteEnquiryOfficersForDistrict(districtId: string | number): Promise<any> {
+    const baseUrl = String(environment.apiBaseUrl || '').replace(/\/+$/, '');
+    try {
+      const targetUrl = `${baseUrl}/masters/core/districts/${encodeURIComponent(String(districtId))}/site-enquiry-officers/`;
+      return await firstValueFrom(this.http.get<any>(targetUrl));
+    } catch {
+      try {
+        const fallbackUrl = `${baseUrl}/masters/districts/${encodeURIComponent(String(districtId))}/site-enquiry-officers/`;
+        return await firstValueFrom(this.http.get<any>(fallbackUrl));
+      } catch {
+        return null;
+      }
     }
   }
 
   private shouldBypassDetailedNewLicenseApproveConfirmation(button: ActionButtonConfig): boolean {
     return this.displayMode === 'detailed' &&
-      this.itemType === 'new-license' &&
+      this.isNewLicenseApplicationItem() &&
       this.context !== 'licensee' &&
       this.normalizeActionName(button?.action) === 'APPROVE';
   }
@@ -511,12 +611,33 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     const token = this.normalizeActionName(action);
     const isWorkflowDecision = token === 'APPROVE' || token === 'REJECT' || token === 'RAISE_OBJECTION';
     const isAdminContext = this.context !== 'licensee';
-    return this.itemType === 'new-license' && isAdminContext && isWorkflowDecision;
+    return this.isNewLicenseApplicationItem() && isAdminContext && isWorkflowDecision;
   }
 
-  private showNewLicenseUploadsDeclaration(button: ActionButtonConfig): Promise<boolean> {
+  private async showNewLicenseUploadsDeclaration(button: ActionButtonConfig): Promise<{ confirmed: boolean; selectedOfficerId?: number }> {
     const label = String(button?.label || button?.action || 'Proceed').trim();
     const action = this.normalizeActionName(button?.action);
+
+    const isDistrictApprove = this.isDistrictUserNewLicenseApproval(action);
+    let districtName = '';
+    let officers: any[] = [];
+    let hasMultipleOfficers = false;
+
+    if (isDistrictApprove) {
+      const districtId = this.getDistrictIdentifierForSiteEnquiry();
+      if (districtId) {
+        const data = await this.fetchSiteEnquiryOfficersForDistrict(districtId);
+        if (data) {
+          districtName = data.district_name || (this.item as any)?.site_district_name || 'District';
+          const multipleEnabled = !!data.multiple_site_enquiry;
+          const rawOfficers = Array.isArray(data.officers) ? data.officers : (Array.isArray(data.site_enquiry_officers) ? data.site_enquiry_officers : []);
+          if (multipleEnabled && rawOfficers.length > 1) {
+            officers = rawOfficers;
+            hasMultipleOfficers = true;
+          }
+        }
+      }
+    }
 
     const confirmationText =
       button?.confirmationMessage ||
@@ -526,19 +647,46 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
           ? 'Please confirm you have verified all the details and uploaded documents before rejecting.'
           : 'Please confirm you have verified all the details and uploaded documents before raising an objection.');
 
+    let officerDropdownHtml = '';
+    if (hasMultipleOfficers) {
+      const optionsHtml = officers.map(o => {
+        const extra = o.phone_number ? ` (Phone: ${o.phone_number})` : (o.email ? ` (${o.email})` : '');
+        return `<option value="${o.id}">${this.escapeHtml(o.name || o.username)}${this.escapeHtml(extra)}</option>`;
+      }).join('');
+
+      officerDropdownHtml = `
+        <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 12px 14px; margin-top: 14px; text-align: left;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <span style="font-size: 16px;">👤</span>
+            <label for="siteEnquiryOfficerSelect" style="margin: 0; font-size: 13px; font-weight: 600; color: #166534;">
+              Select Site Enquiry Officer (${this.escapeHtml(districtName)}): <span style="color: #dc2626;">*</span>
+            </label>
+          </div>
+          <p style="margin: 0 0 8px 0; font-size: 12px; color: #15803d; line-height: 1.35;">
+            District <strong>${this.escapeHtml(districtName)}</strong> has multiple Site Enquiry Officers enabled. Please choose which officer will conduct the inspection:
+          </p>
+          <select id="siteEnquiryOfficerSelect" style="display: block; width: 100%; box-sizing: border-box; margin: 0; padding: 8px 10px; font-size: 13px; border: 1px solid #86efac; border-radius: 6px; background: white; color: #1e293b; outline: none;">
+            <option value="">-- Choose Site Enquiry Officer --</option>
+            ${optionsHtml}
+          </select>
+        </div>
+      `;
+    }
+
     return Swal.fire({
-      title: 'Declaration',
+      title: hasMultipleOfficers ? 'Declaration & Site Enquiry Routing' : 'Declaration',
       html: `
         <div style="text-align:left;">
-          <div style="margin-bottom: 10px; color: #374151; font-size: 14px;">
+          <div style="margin-bottom: 12px; color: #374151; font-size: 14px;">
             ${this.escapeHtml(confirmationText)}
           </div>
-          <div style="display:flex; align-items:flex-start; gap:10px; padding: 10px; border: 1px solid #e5e7eb; border-radius: 10px; background: #f9fafb;">
-            <input type="checkbox" id="uploadsDeclaration" style="margin-top: 2px;" />
-            <label for="uploadsDeclaration" style="margin: 0; cursor: pointer; color: #111827; font-size: 14px; line-height: 1.35;">
+          <div style="display:flex; align-items:flex-start; gap:10px; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb;">
+            <input type="checkbox" id="uploadsDeclaration" style="margin-top: 2px; width: 16px; height: 16px; cursor: pointer;" />
+            <label for="uploadsDeclaration" style="margin: 0; cursor: pointer; color: #111827; font-size: 14px; line-height: 1.35; font-weight: 500;">
               I declare that I have checked all uploaded documents and they are correct.
             </label>
           </div>
+          ${officerDropdownHtml}
         </div>
       `,
       icon: 'warning',
@@ -553,12 +701,17 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
         if (confirmBtn) confirmBtn.disabled = true;
 
         const checkbox = document.getElementById('uploadsDeclaration') as HTMLInputElement | null;
-        if (!checkbox) return;
-        checkbox.addEventListener('change', () => {
-          const isChecked = !!checkbox.checked;
+        const select = document.getElementById('siteEnquiryOfficerSelect') as HTMLSelectElement | null;
+
+        const validateInputs = () => {
+          const isChecked = !!checkbox?.checked;
+          const isOfficerValid = hasMultipleOfficers ? !!select?.value : true;
           const btn = Swal.getConfirmButton();
-          if (btn) btn.disabled = !isChecked;
-        });
+          if (btn) btn.disabled = !(isChecked && isOfficerValid);
+        };
+
+        if (checkbox) checkbox.addEventListener('change', validateInputs);
+        if (select) select.addEventListener('change', validateInputs);
       },
       preConfirm: () => {
         const checkbox = document.getElementById('uploadsDeclaration') as HTMLInputElement | null;
@@ -566,19 +719,34 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
           Swal.showValidationMessage('Please accept the declaration to continue.');
           return false as any;
         }
-        return true;
+
+        if (hasMultipleOfficers) {
+          const select = document.getElementById('siteEnquiryOfficerSelect') as HTMLSelectElement | null;
+          if (!select?.value) {
+            Swal.showValidationMessage('Please select a Site Enquiry Officer to proceed.');
+            return false as any;
+          }
+          return { confirmed: true, selectedOfficerId: parseInt(select.value, 10) };
+        }
+
+        return { confirmed: true };
       }
-    }).then((result) => !!result.isConfirmed);
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        return result.value;
+      }
+      return { confirmed: false };
+    });
   }
 
-  private showConfirmationDialog(button: ActionButtonConfig): void {
+  private showConfirmationDialog(button: ActionButtonConfig, contextData?: any): void {
     const action = this.normalizeActionName(button?.action);
     if (action === 'REJECT') {
       if (this.shouldShowTransitOicRejectDeclaration(button)) {
         this.showTransitOicRejectDeclaration(button);
         return;
       }
-      this.executeAction(button);
+      this.executeAction(button, contextData);
       return;
     }
 
@@ -597,7 +765,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
           this.showTransitOicRejectDeclaration(button);
           return;
         }
-        this.executeAction(button);
+        this.executeAction(button, contextData);
       }
     });
   }
@@ -920,7 +1088,7 @@ private getTransitRejectSummary(): {
   /**
    * Execute the actual action - ALL ACTION LOGIC HERE
    */
-  private executeAction(button: ActionButtonConfig): void {
+  private executeAction(button: ActionButtonConfig, contextData?: any): void {
     switch (button.action) {
       case 'MAKE_PAYMENT':
         if (this.itemType === 'salesman-barman-registration' || this.itemType === 'company-registration' || this.itemType === 'company-collaboration') {
@@ -937,7 +1105,7 @@ private getTransitRejectSummary(): {
       case 'ISSUE':
       case 'COMPLETE':
       case 'ASSIGN_CARTONS':
-        this.handleWorkflowAction(button);
+        this.handleWorkflowAction(button, contextData);
         break;
 
       case 'PAY':
@@ -1461,10 +1629,10 @@ private getTransitRejectSummary(): {
     });
   }
 
-  private handleWorkflowAction(button: ActionButtonConfig): void {
-    console.log(`🔧 UNIFIED BUTTONS: Executing workflow action: ${button.action}`);
+  private handleWorkflowAction(button: ActionButtonConfig, contextData?: any): void {
+    console.log(`🔧 UNIFIED BUTTONS: Executing workflow action: ${button.action}`, contextData);
     // Real success/failure is handled in parent after API response.
-    this.actionClicked.emit({ action: button.action, item: this.item });
+    this.actionClicked.emit({ action: button.action, item: this.item, contextData });
   }
 
   private handlePaymentAction(): void {

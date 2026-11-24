@@ -938,10 +938,29 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     }
 
     private extractRouteParams() {
-        const type = this.route.snapshot.queryParamMap.get('type') as ApplicationType || 'requisition';
+        let type = this.route.snapshot.queryParamMap.get('type') as ApplicationType;
         const ref = this.route.snapshot.paramMap.get('ref') || this.route.snapshot.queryParamMap.get('ref');
         const id = this.route.snapshot.queryParamMap.get('id');
         const openSupplyLetter = String(this.route.snapshot.queryParamMap.get('openSupplyLetter') || '').trim();
+
+        const idOrRef = String(id || ref || '').trim();
+        if (idOrRef.startsWith('NLI/') || idOrRef.startsWith('NA/')) {
+            type = 'new-license';
+        } else if (idOrRef.startsWith('LRA/') || idOrRef.startsWith('LIC/')) {
+            type = 'license-renewal';
+        } else if (idOrRef.startsWith('RSBM/') || idOrRef.startsWith('SBM/')) {
+            type = 'salesman-barman-registration';
+        } else if (idOrRef.startsWith('COMP/')) {
+            type = 'company-registration';
+        } else if (idOrRef.startsWith('COLLAB/')) {
+            type = 'company-collaboration';
+        } else if (idOrRef.startsWith('LBL/')) {
+            type = 'label-registration';
+        }
+
+        if (!type) {
+            type = 'requisition';
+        }
 
         return { type, ref, id, openSupplyLetter };
     }
@@ -2086,6 +2105,9 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                 mappedData['numberOfPermits'] = permitsList.length;
             }
         }
+        mappedData['site_enquiry_officer_id'] = this.extractFieldValue(apiData, ['site_enquiry_officer_id', 'siteEnquiryOfficerId']);
+        mappedData['site_enquiry_officer_name'] = this.extractFieldValue(apiData, ['site_enquiry_officer_name', 'siteEnquiryOfficerName']);
+        mappedData['district_has_multiple_site_enquiry'] = Boolean(apiData?.district_has_multiple_site_enquiry ?? apiData?.districtHasMultipleSiteEnquiry);
     }
 
     isImflDistributorPermitSource(): boolean {
@@ -2416,9 +2438,15 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         return [];
     }
 
-    onUnifiedAction(event: { action: string, item: any }): void {
+    onUnifiedAction(event: { action: string, item: any, contextData?: any }): void {
         const context = this.getUserContext();
         const action = (event.action || '').toUpperCase();
+
+        const idOrRef = String(event.item?.application_id || event.item?.id || this.applicationData?.id || this.applicationData?.referenceNo || '').trim();
+        const isNewLicenseApp = this.applicationType === 'new-license' ||
+            this.isNewLicense() ||
+            idOrRef.startsWith('NLI/') ||
+            idOrRef.startsWith('NA/');
 
         if (action === 'VIEW_PAYMENT_SLIP') {
             this.openPaymentSlipView();
@@ -2448,7 +2476,24 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
             }
         }
 
-        if (action === 'APPROVE' && (this.applicationType === 'new-license' || this.applicationType === 'company-registration' || this.applicationType === 'company-collaboration' || this.applicationType === 'salesman-barman-registration' || this.applicationType === 'label-registration')) {
+        if (action === 'APPROVE' && (isNewLicenseApp || this.applicationType === 'company-registration' || this.applicationType === 'company-collaboration' || this.applicationType === 'salesman-barman-registration' || this.applicationType === 'label-registration')) {
+            const officerId = event.contextData?.site_enquiry_officer_id || event.item?.__selectedSiteEnquiryOfficerId;
+            if (isNewLicenseApp && officerId) {
+                const selectedOfficerId = parseInt(String(officerId), 10);
+                this.executeApproveAction(event.item, context, {
+                    workflowContextData: {
+                        site_enquiry_officer_id: selectedOfficerId,
+                        remarks: `Approved by District User and forwarded to Site Enquiry Officer`
+                    },
+                    successMessage: `Application approved and forwarded to Site Enquiry Officer.`
+                });
+                return;
+            }
+            this.handleApproveWithDynamicPrechecks(event.item, context);
+            return;
+        }
+
+        if (action === 'FORWARD' && this.isCurrentStageDistrictUser()) {
             this.handleApproveWithDynamicPrechecks(event.item, context);
             return;
         }
@@ -2506,8 +2551,21 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
             return;
         }
 
-        this.http.get<any[]>(`${environment.apiBaseUrl}/auth/${encodeURIComponent(applicationId)}/next-stages/`).subscribe({
+        // Direct handling for District User in New License Application:
+        // District User forwards application to Site Enquiry stage, allowing officer selection if multiple officers are enabled.
+        if (this.applicationType === 'new-license' && this.isCurrentStageDistrictUser(item)) {
+            this.handleDistrictUserApprovalToSiteEnquiry(item, context, applicationId);
+            return;
+        }
+
+        const baseUrl = String(environment.apiBaseUrl || '').replace(/\/+$/, '');
+        this.http.get<any[]>(`${baseUrl}/auth/${encodeURIComponent(applicationId)}/next-stages/`).subscribe({
             next: (stages: any[]) => {
+                if (this.isTransitionToSiteEnquiryFromDistrictUser(stages)) {
+                    this.handleDistrictUserApprovalToSiteEnquiry(item, context, applicationId);
+                    return;
+                }
+
                 if (this.hasApproveSiteEnquiryRequirement(stages)) {
                     this.openSiteEnquiryAndApprove(item, context, applicationId);
                     return;
@@ -2516,6 +2574,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                 this.continueApprovalWithOptionalNewLicenseFeeDialog(item, context, applicationId);
             },
             error: () => {
+                if (this.isCurrentStageDistrictUser(item)) {
+                    this.handleDistrictUserApprovalToSiteEnquiry(item, context, applicationId);
+                    return;
+                }
                 if (this.isCurrentStageSiteEnquiry()) {
                     this.openSiteEnquiryAndApprove(item, context, applicationId);
                     return;
@@ -2529,19 +2591,14 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         if (this.applicationType !== 'new-license') {
             return false;
         }
+        // If current stage is District User, they are moving TO Site Enquiry - NOT filling site enquiry report!
+        if (this.isCurrentStageDistrictUser()) {
+            return false;
+        }
         if (this.isCurrentStageSiteEnquiry()) {
             return true;
         }
-        if (!Array.isArray(stages) || stages.length === 0) {
-            return false;
-        }
-        return stages.some((stage: any) => {
-            const stageName = String(stage?.name || '').toLowerCase();
-            if (stageName.includes('site enquiry') || stageName.includes('site_enquiry') || stageName.includes('site-enquiry')) {
-                return this.isApproveLikeStage(stage);
-            }
-            return this.isApproveLikeStage(stage) && this.isSiteEnquiryCondition(stage?.condition);
-        });
+        return false;
     }
 
     private isApproveLikeStage(stage: any): boolean {
@@ -2583,6 +2640,220 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         ).toLowerCase();
 
         return stageName.includes('site enquiry') || stageName.includes('site_enquiry') || stageName.includes('site-enquiry');
+    }
+
+    private isCurrentStageDistrictUser(item?: any): boolean {
+        const source = item || this.applicationData;
+        const idOrRef = String(source?.application_id || source?.applicationId || source?.referenceNo || source?.refNo || source?.id || '').trim();
+        const isNewLicense = this.applicationType === 'new-license' || this.isNewLicense() || idOrRef.startsWith('NLI/') || idOrRef.startsWith('NA/');
+        if (!isNewLicense) {
+            return false;
+        }
+        const stageName = String(
+            source?.currentStageName ??
+            source?.current_stage_name ??
+            source?.currentStage ??
+            source?.current_stage ??
+            source?.status ??
+            this.applicationData?.currentStageName ??
+            (this.applicationData as any)?.current_stage_name ??
+            this.applicationData?.currentStage ??
+            (this.applicationData as any)?.current_stage ??
+            this.applicationData?.status ??
+            ''
+        ).toLowerCase();
+
+        return stageName.includes('district user') || stageName.includes('district_user') || stageName === '2' || stageName.includes('stage 2');
+    }
+
+    private isTransitionToSiteEnquiryFromDistrictUser(stages: any[]): boolean {
+        const idOrRef = String((this.applicationData as any)?.application_id || this.applicationData?.id || this.applicationData?.referenceNo || '').trim();
+        const isNewLicense = this.applicationType === 'new-license' || this.isNewLicense() || idOrRef.startsWith('NLI/') || idOrRef.startsWith('NA/');
+        if (!isNewLicense) return false;
+        if (this.isCurrentStageDistrictUser()) return true;
+        if (!Array.isArray(stages) || stages.length === 0) return false;
+        return stages.some((s: any) => {
+            const name = String(s?.name || s?.stage_name || '').toLowerCase();
+            return name.includes('site enquiry') || name.includes('site_enquiry') || s?.id === 3;
+        });
+    }
+
+    private handleDistrictUserApprovalToSiteEnquiry(item: any, context: UserContext, applicationId: string): void {
+        let districtId = 
+            item?.site_district ||
+            item?.['site_district_id'] ||
+            this.applicationData?.['site_district'] ||
+            (this.applicationData as any)?.siteDistrict ||
+            (this.applicationData as any)?.['site_district_id'] ||
+            (this.applicationData as any)?.district_code ||
+            (this.applicationData as any)?.districtCode ||
+            (this.applicationData as any)?.site_district_name ||
+            (this.applicationData as any)?.raw?.site_district;
+
+        if (districtId && typeof districtId === 'object') {
+            districtId = districtId.id || districtId.district_code || districtId.districtCode || districtId.district || districtId.district_name;
+        }
+
+        if (!districtId && applicationId && applicationId.includes('/')) {
+            const parts = applicationId.split('/');
+            if (parts.length >= 2 && /^\d+$/.test(parts[1])) {
+                districtId = parts[1];
+            }
+        }
+
+        if (!districtId) {
+            this.continueApprovalWithOptionalNewLicenseFeeDialog(item, context, applicationId);
+            return;
+        }
+
+        const baseUrl = String(environment.apiBaseUrl || '').replace(/\/+$/, '');
+        const targetUrl = `${baseUrl}/masters/core/districts/${encodeURIComponent(String(districtId))}/site-enquiry-officers/`;
+
+        this.http.get<any>(targetUrl).subscribe({
+            next: (data: any) => {
+                const multipleEnabled = !!data?.multiple_site_enquiry;
+                const officers = Array.isArray(data?.officers) ? data.officers : (Array.isArray(data?.site_enquiry_officers) ? data.site_enquiry_officers : []);
+                const districtName = data?.district_name || this.applicationData?.site_district_name || 'this district';
+
+                if (multipleEnabled && officers.length > 1) {
+                    setTimeout(() => {
+                        this.showSelectSiteEnquiryOfficerDialog(item, context, applicationId, districtName, officers);
+                    }, 150);
+                } else if (multipleEnabled && officers.length === 1) {
+                    setTimeout(() => {
+                        this.showSingleOfficerSiteEnquiryConfirmation(item, context, applicationId, districtName, officers[0]);
+                    }, 150);
+                } else {
+                    this.continueApprovalWithOptionalNewLicenseFeeDialog(item, context, applicationId);
+                }
+            },
+            error: (err: any) => {
+                // Secondary fallback attempt without /core/
+                const fallbackUrl = `${baseUrl}/masters/districts/${encodeURIComponent(String(districtId))}/site-enquiry-officers/`;
+                this.http.get<any>(fallbackUrl).subscribe({
+                    next: (data: any) => {
+                        const multipleEnabled = !!data?.multiple_site_enquiry;
+                        const officers = Array.isArray(data?.officers) ? data.officers : (Array.isArray(data?.site_enquiry_officers) ? data.site_enquiry_officers : []);
+                        const districtName = data?.district_name || this.applicationData?.site_district_name || 'this district';
+
+                        if (multipleEnabled && officers.length > 1) {
+                            setTimeout(() => {
+                                this.showSelectSiteEnquiryOfficerDialog(item, context, applicationId, districtName, officers);
+                            }, 150);
+                        } else if (multipleEnabled && officers.length === 1) {
+                            setTimeout(() => {
+                                this.showSingleOfficerSiteEnquiryConfirmation(item, context, applicationId, districtName, officers[0]);
+                            }, 150);
+                        } else {
+                            this.continueApprovalWithOptionalNewLicenseFeeDialog(item, context, applicationId);
+                        }
+                    },
+                    error: (fallbackErr: any) => {
+                        console.warn('Could not fetch district site enquiry officers:', fallbackErr);
+                        this.continueApprovalWithOptionalNewLicenseFeeDialog(item, context, applicationId);
+                    }
+                });
+            }
+        });
+    }
+
+    private showSelectSiteEnquiryOfficerDialog(
+        item: any,
+        context: UserContext,
+        applicationId: string,
+        districtName: string,
+        officers: any[]
+    ): void {
+        const officerOptions: { [key: string]: string } = {};
+        officers.forEach(o => {
+            const extra = o.phone_number ? ` (Phone: ${o.phone_number})` : '';
+            officerOptions[String(o.id)] = `${o.name}${extra}`;
+        });
+
+        Swal.fire({
+            title: 'Select Site Enquiry Officer',
+            html: `
+                <div style="text-align: left; margin-bottom: 14px; font-size: 0.93rem; color: #334155; line-height: 1.5;">
+                    <p style="margin: 0 0 8px 0;">
+                        District <strong>${districtName}</strong> has multiple Site Enquiry Officers configured.
+                    </p>
+                    <p style="margin: 0; color: #64748b; font-size: 0.88rem;">
+                        Please choose which Site Enquiry Officer to forward application <strong>${applicationId}</strong> to for inspection:
+                    </p>
+                </div>
+            `,
+            input: 'select',
+            inputOptions: officerOptions,
+            inputPlaceholder: '-- Choose Site Enquiry Officer --',
+            showCancelButton: true,
+            confirmButtonText: 'Approve & Forward',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#64748b',
+            inputValidator: (value) => {
+                if (!value) {
+                    return 'Please select a Site Enquiry Officer to proceed!';
+                }
+                return null;
+            }
+        }).then(result => {
+            if (result.isConfirmed && result.value) {
+                const selectedOfficerId = parseInt(result.value, 10);
+                const selectedOfficer = officers.find(o => o.id === selectedOfficerId);
+                const officerName = selectedOfficer ? selectedOfficer.name : `Officer #${selectedOfficerId}`;
+
+                this.executeApproveAction(item, context, {
+                    workflowContextData: {
+                        site_enquiry_officer_id: selectedOfficerId,
+                        remarks: `Approved by District User and forwarded to ${officerName}`
+                    },
+                    successMessage: `Application approved and forwarded to ${officerName}.`
+                });
+            }
+        });
+    }
+
+    private showSingleOfficerSiteEnquiryConfirmation(
+        item: any,
+        context: UserContext,
+        applicationId: string,
+        districtName: string,
+        officer: any
+    ): void {
+        const officerName = officer?.name || officer?.username || 'the assigned officer';
+
+        Swal.fire({
+            title: 'Forward for Site Enquiry',
+            html: `
+                <div style="text-align: left; font-size: 0.93rem; color: #334155; line-height: 1.5;">
+                    <p style="margin: 0 0 10px 0;">
+                        Application <strong>${applicationId}</strong> in district <strong>${districtName}</strong> will be forwarded to:
+                    </p>
+                    <div style="background: #f1f5f9; padding: 10px 14px; border-radius: 8px; border-left: 4px solid #10b981;">
+                        <strong>${officerName}</strong>
+                        <div style="font-size: 0.82rem; color: #64748b; margin-top: 2px;">
+                            ${officer?.email || ''} ${officer?.phone_number ? ' | ' + officer.phone_number : ''}
+                        </div>
+                    </div>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Approve & Forward',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#64748b'
+        }).then(result => {
+            if (result.isConfirmed) {
+                this.executeApproveAction(item, context, {
+                    workflowContextData: {
+                        site_enquiry_officer_id: officer.id,
+                        remarks: `Approved and forwarded to Site Enquiry Officer: ${officerName}`
+                    },
+                    successMessage: `Application approved and forwarded to ${officerName}.`
+                });
+            }
+        });
     }
 
     private continueApprovalWithOptionalNewLicenseFeeDialog(

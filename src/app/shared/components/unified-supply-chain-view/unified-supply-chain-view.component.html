@@ -1377,6 +1377,15 @@
                                     <td class="fw-semibold bg-light">Site District</td>
                                     <td>{{ applicationData.site_district_name || applicationData.siteDistrictName || 'Not available' }}</td>
                                 </tr>
+                                <tr *ngIf="applicationData['site_enquiry_officer_name'] || applicationData['siteEnquiryOfficerName']">
+                                    <td class="fw-semibold bg-light">Assigned Site Enquiry Officer</td>
+                                    <td>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                            <i class="fa fa-user me-1"></i>
+                                            {{ applicationData['site_enquiry_officer_name'] || applicationData['siteEnquiryOfficerName'] }}
+                                        </span>
+                                    </td>
+                                </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Site Subdivision</td>
                                     <td>{{ applicationData.site_subdivision_name || applicationData.siteSubdivisionName || 'Not available' }}</td>
@@ -2041,6 +2050,15 @@
                                 <tr>
                                     <td class="fw-semibold bg-light detail-label-cell">District</td>
                                     <td>{{ applicationData.site_district_name || applicationData.siteDistrictName || applicationData.excise_district || 'Not available' }}</td>
+                                </tr>
+                                <tr *ngIf="applicationData['site_enquiry_officer_name'] || applicationData['siteEnquiryOfficerName']">
+                                    <td class="fw-semibold bg-light">Assigned Site Enquiry Officer</td>
+                                    <td>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                            <i class="fa fa-user me-1"></i>
+                                            {{ applicationData['site_enquiry_officer_name'] || applicationData['siteEnquiryOfficerName'] }}
+                                        </span>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Subdivision</td>

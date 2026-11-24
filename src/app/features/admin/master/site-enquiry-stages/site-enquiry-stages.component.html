@@ -1,0 +1,157 @@
+<div class="container-fluid site-enquiry-stages-container">
+  <!-- Info Banner -->
+  <div class="header-banner mat-elevation-z2">
+    <div class="banner-icon">
+      <mat-icon>alt_route</mat-icon>
+    </div>
+    <div class="banner-text">
+      <h2>Site Enquiry Stages Configuration</h2>
+      <p>
+        Configure whether <strong>District Users</strong> can manually choose between multiple <strong>Site Enquiry Officers</strong> when approving new license applications for each district.
+      </p>
+    </div>
+  </div>
+
+  <mat-card class="stages-card mat-elevation-z3">
+    <!-- Header with Search -->
+    <mat-card-header class="page-card-header">
+      <div class="title-with-badge">
+        <span class="page-title">District-Wise Site Enquiry Routing</span>
+        <span class="district-badge">{{ districtDataSource.length }} Districts</span>
+      </div>
+      <div class="header-controls">
+        <div class="search-box">
+          <mat-icon>search</mat-icon>
+          <input
+            type="text"
+            [(ngModel)]="searchTerm"
+            placeholder="Search district or code..."
+          />
+          <button
+            *ngIf="searchTerm"
+            mat-icon-button
+            class="clear-btn"
+            (click)="searchTerm = ''"
+          >
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+        <button mat-stroked-button color="primary" (click)="loadDistricts()" [disabled]="isLoading">
+          <mat-icon>refresh</mat-icon> Refresh
+        </button>
+      </div>
+    </mat-card-header>
+
+    <mat-card-content class="page-card-content">
+      <!-- Loading indicator -->
+      <div *ngIf="isLoading" class="loading-state">
+        <mat-spinner diameter="40"></mat-spinner>
+        <span>Loading district stages...</span>
+      </div>
+
+      <div class="table-container" *ngIf="!isLoading">
+        <mat-table [dataSource]="filteredDistricts">
+
+          <!-- Sl. No. Column -->
+          <ng-container matColumnDef="slNo">
+            <mat-header-cell *matHeaderCellDef style="flex: 0 0 70px;">Sl. No.</mat-header-cell>
+            <mat-cell *matCellDef="let element; let i = index" style="flex: 0 0 70px;">
+              <span class="sl-number">{{ i + 1 }}</span>
+            </mat-cell>
+          </ng-container>
+
+          <!-- District Name -->
+          <ng-container matColumnDef="district">
+            <mat-header-cell *matHeaderCellDef style="flex: 1 1 180px;">District</mat-header-cell>
+            <mat-cell *matCellDef="let element" style="flex: 1 1 180px;">
+              <div class="district-name-cell">
+                <mat-icon class="dist-icon">location_on</mat-icon>
+                <strong>{{ element.district_name || element.districtName || element.district }}</strong>
+              </div>
+            </mat-cell>
+          </ng-container>
+
+          <!-- District Code -->
+          <ng-container matColumnDef="districtCode">
+            <mat-header-cell *matHeaderCellDef style="flex: 0 0 120px;">District Code</mat-header-cell>
+            <mat-cell *matCellDef="let element" style="flex: 0 0 120px;">
+              <span class="code-badge">{{ element.district_code || element.districtCode }}</span>
+            </mat-cell>
+          </ng-container>
+
+          <!-- Site Enquiry Officers Column -->
+          <ng-container matColumnDef="siteEnquiryOfficers">
+            <mat-header-cell *matHeaderCellDef style="flex: 2 1 320px;">Site Enquiry Officers</mat-header-cell>
+            <mat-cell *matCellDef="let element" style="flex: 2 1 320px;">
+              <div class="officers-cell">
+                <div class="officer-count-badge" [class.multiple]="(element.officers_count ?? element.site_enquiry_officers_count ?? element.siteEnquiryOfficersCount ?? (element.officers?.length || element.site_enquiry_officers?.length || 0)) > 1">
+                  <mat-icon>person</mat-icon>
+                  <span>{{ (element.officers_count ?? element.site_enquiry_officers_count ?? element.siteEnquiryOfficersCount ?? (element.officers?.length || element.site_enquiry_officers?.length || 0)) }} Officer(s)</span>
+                </div>
+                <!-- Officer list chips -->
+                <div class="officers-list" *ngIf="(element.officers?.length || element.site_enquiry_officers?.length || element.siteEnquiryOfficers?.length)">
+                  <span
+                    class="officer-pill"
+                    *ngFor="let off of (element.officers || element.site_enquiry_officers || element.siteEnquiryOfficers)"
+                    [matTooltip]="'Email: ' + (off.email || 'N/A') + ' | Phone: ' + (off.phone_number || 'N/A')"
+                  >
+                    {{ off.name || off.username }}
+                  </span>
+                </div>
+                <span class="no-officers" *ngIf="!(element.officers?.length || element.site_enquiry_officers?.length || element.siteEnquiryOfficers?.length)">
+                  No officers assigned
+                </span>
+              </div>
+            </mat-cell>
+          </ng-container>
+
+          <!-- Multiple Site Enquiry Toggle -->
+          <ng-container matColumnDef="multipleSiteEnquiry">
+            <mat-header-cell *matHeaderCellDef style="flex: 1.5 1 220px;">Multiple Site Enquiry Toggle</mat-header-cell>
+            <mat-cell *matCellDef="let element" style="flex: 1.5 1 220px;">
+              <div class="toggle-cell">
+                <mat-slide-toggle
+                  [checked]="element.multiple_site_enquiry || element.multipleSiteEnquiry"
+                  [disabled]="updatingDistrictId === element.id"
+                  (change)="toggleMultipleSiteEnquiry(element, $event)"
+                  color="primary"
+                >
+                  <span class="toggle-label" [class.active]="element.multiple_site_enquiry || element.multipleSiteEnquiry">
+                    {{ (element.multiple_site_enquiry || element.multipleSiteEnquiry) ? 'Enabled' : 'Disabled' }}
+                  </span>
+                </mat-slide-toggle>
+                <mat-spinner *ngIf="updatingDistrictId === element.id" diameter="20" class="mini-spinner"></mat-spinner>
+              </div>
+            </mat-cell>
+          </ng-container>
+
+          <!-- Flow Behavior Status -->
+          <ng-container matColumnDef="status">
+            <mat-header-cell *matHeaderCellDef style="flex: 1.5 1 220px;">Routing Behavior</mat-header-cell>
+            <mat-cell *matCellDef="let element" style="flex: 1.5 1 220px;">
+              <span
+                class="status-pill"
+                [class.pill-manual]="element.multiple_site_enquiry || element.multipleSiteEnquiry"
+                [class.pill-auto]="!(element.multiple_site_enquiry || element.multipleSiteEnquiry)"
+              >
+                <mat-icon>{{ (element.multiple_site_enquiry || element.multipleSiteEnquiry) ? 'touch_app' : 'bolt' }}</mat-icon>
+                {{ (element.multiple_site_enquiry || element.multipleSiteEnquiry) ? 'District User Chooses' : 'Auto / Single Forward' }}
+              </span>
+            </mat-cell>
+          </ng-container>
+
+          <!-- Table rows -->
+          <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+          <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+
+        </mat-table>
+      </div>
+
+      <!-- Empty state -->
+      <div *ngIf="!isLoading && filteredDistricts.length === 0" class="empty-state">
+        <mat-icon>filter_none</mat-icon>
+        <p>No districts match your search.</p>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

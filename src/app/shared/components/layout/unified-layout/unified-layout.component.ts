@@ -1262,6 +1262,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     
     // Master Data
     if (normalized.includes('/admin/districts') ||
+        normalized.includes('/admin/site-enquiry-stages') ||
         normalized.includes('/admin/subdivisions') ||
         normalized.includes('/admin/roads') ||
         normalized.includes('/admin/police-stations') ||

@@ -225,6 +225,16 @@ export class AdminService {
     return this.http.delete(`${this.mastersUrl}/districts/${id}/delete/`);
   }
 
+  // ========================== SITE ENQUIRY STAGE CONFIGURATION ==========================
+  // Dedicated site_enquiry_stage_config table endpoints
+  getSiteEnquiryStages(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.mastersUrl}/site-enquiry-stages/`);
+  }
+
+  updateSiteEnquiryStage(districtId: number | string, changes: { multiple_site_enquiry: boolean }): Observable<any> {
+    return this.http.patch<any>(`${this.mastersUrl}/site-enquiry-stages/${districtId}/`, changes);
+  }
+
   // ========================== SUBDIVISION MANAGEMENT ==========================
 
   // Adds a new subdivision

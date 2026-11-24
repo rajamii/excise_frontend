@@ -31,7 +31,10 @@ export interface ActionExecutionOptions {
   providedIn: 'root'
 })
 export class UnifiedActionsService {
-  private workflowBaseUrl = `${environment.apiBaseUrl}/auth`;
+  private get workflowBaseUrl(): string {
+    const base = String(environment.apiBaseUrl || '').replace(/\/+$/, '');
+    return `${base}/auth`;
+  }
 
   constructor(
     private router: Router,
@@ -430,7 +433,12 @@ export class UnifiedActionsService {
       case 'salesman-barman-registration':
       case 'special-permit': {
         const remark = this.isStrictCommissionerUser() ? 'Approved' : 'Forwarded';
-        return this.executeWorkflowAdvance(item, 'approve', remark, options?.workflowContextData);
+        const officerId = (options?.workflowContextData as any)?.['site_enquiry_officer_id'] || (item as any)?.['__selectedSiteEnquiryOfficerId'];
+        const workflowContextData = {
+          ...(options?.workflowContextData || {}),
+          ...(officerId ? { site_enquiry_officer_id: parseInt(String(officerId), 10) } : {})
+        };
+        return this.executeWorkflowAdvance(item, 'approve', remark, workflowContextData);
       }
 
       case 'license-renewal':

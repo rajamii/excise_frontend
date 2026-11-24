@@ -91,6 +91,17 @@ const routes: Routes = [
             },
           },
           {
+            path: 'site-enquiry-stages',
+            loadComponent: () =>
+              import('./master/site-enquiry-stages/site-enquiry-stages.component').then(
+                (m) => m.SiteEnquiryStagesComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              requiredPermission: 'master.districts.view',
+            },
+          },
+          {
             path: 'subdivisions',
             loadComponent: () =>
               import('./master/subdivision/list/list.component').then(

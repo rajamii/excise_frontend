@@ -80,6 +80,15 @@ const routes: Routes = [
         data: { requiredPermission: 'master.districts.view' }
       },
       {
+        path: 'admin/site-enquiry-stages',
+        loadComponent: () =>
+          import('../admin/master/site-enquiry-stages/site-enquiry-stages.component').then(
+            (m) => m.SiteEnquiryStagesComponent
+          ),
+        canActivate: [UserRouteAccessService],
+        data: { requiredPermission: 'master.districts.view' }
+      },
+      {
         path: 'admin/subdivisions',
         loadComponent: () =>
           import('../admin/master/subdivision/list/list.component').then((m) => m.ListComponent),
@@ -426,6 +435,7 @@ const routes: Routes = [
       { path: 'roles', redirectTo: 'admin/roles', pathMatch: 'full' },
       // ✅ COMMENTED OUT: District redirect (matches commented route above)
       { path: 'districts', redirectTo: 'admin/districts', pathMatch: 'full' },
+      { path: 'site-enquiry-stages', redirectTo: 'admin/site-enquiry-stages', pathMatch: 'full' },
       { path: 'subdivisions', redirectTo: 'admin/subdivisions', pathMatch: 'full' },
       { path: 'police-stations', redirectTo: 'admin/police-stations', pathMatch: 'full' },
       { path: 'license-validity-period', redirectTo: 'admin/license-validity-period', pathMatch: 'full' },
