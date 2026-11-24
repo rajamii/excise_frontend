@@ -320,8 +320,8 @@
                     <div class="monthly-entry-title">
                       {{ row.label }}
                       @if (row.meta?.isPartialArrival) {
-                        <span class="badge bg-warning text-dark border border-warning ms-1" style="font-size: 0.72rem; vertical-align: middle;">
-                          <i class="bi bi-hourglass-split me-1"></i>{{ row.meta?.arrivalBadgeText || 'Partial Entry' }}
+                        <span class="badge ms-1" [ngClass]="row.meta?.isCompletedBatch ? 'bg-success text-white' : 'bg-warning text-dark border border-warning'" style="font-size: 0.72rem; vertical-align: middle;">
+                          <i class="bi me-1" [ngClass]="row.meta?.isCompletedBatch ? 'bi-check-circle-fill' : 'bi-hourglass-split'"></i>{{ row.meta?.arrivalBadgeText || 'Partial Entry' }}
                         </span>
                       }
                     </div>
@@ -336,9 +336,9 @@
                     </small>
                     }
                     @if (row.meta && row.meta.notes) {
-                    <small class="d-block fw-semibold monthly-entry-note" [ngClass]="row.meta?.isPartialArrival ? 'text-warning-emphasis' : 'text-success'">
-                      @if (row.meta?.isPartialArrival) {
-                        <i class="bi bi-exclamation-triangle-fill me-1 text-warning"></i>
+                    <small class="d-block fw-semibold monthly-entry-note" [ngClass]="row.meta.isCompletedBatch ? 'text-success' : (row.meta.isPartialArrival ? 'text-warning-emphasis' : 'text-success')">
+                      @if (row.meta.isPartialArrival) {
+                        <i class="bi me-1" [ngClass]="row.meta.isCompletedBatch ? 'bi-check-circle-fill text-success' : 'bi-exclamation-triangle-fill text-warning'"></i>
                       }
                       {{ row.meta.notes }}
                     </small>
@@ -353,8 +353,8 @@
                     </div>
                     @if (row.meta?.isPartialArrival) {
                       <div class="mt-1 d-flex flex-column align-items-center gap-1">
-                        <span class="badge bg-warning bg-opacity-25 text-dark border border-warning px-2 py-1" style="font-size: 0.7rem; font-weight: 600;">
-                          <i class="bi bi-pie-chart me-1"></i>Partial: {{ row.meta?.assignedCartonsCount }}/{{ row.meta?.expectedCartonsCount }} Cartons
+                        <span class="badge px-2 py-1" [ngClass]="row.meta?.isCompletedBatch ? 'bg-success bg-opacity-25 text-success border border-success' : 'bg-warning bg-opacity-25 text-dark border border-warning'" style="font-size: 0.7rem; font-weight: 600;">
+                          <i class="bi me-1" [ngClass]="row.meta?.isCompletedBatch ? 'bi-check-circle' : 'bi-pie-chart'"></i>{{ row.meta?.isCompletedBatch ? 'Completed' : 'Partial' }}: {{ row.meta?.assignedCartonsCount }}/{{ row.meta?.expectedCartonsCount }} Cartons
                         </span>
                         @if (row.meta?.pendingQuantity) {
                           <small class="text-warning-emphasis fw-bold" style="font-size: 0.68rem;">
@@ -367,19 +367,19 @@
                   <!-- Carton Ranges Display Box -->
                   <td colspan="9" class="p-2 align-middle">
                     @if (row.meta && row.meta.cartonRanges && row.meta.cartonRanges.length > 0) {
-                      <div class="border rounded p-2 bg-light" [ngClass]="row.meta?.isPartialArrival ? 'border-warning border-opacity-75' : 'border-success'">
+                      <div class="border rounded p-2 bg-light" [ngClass]="row.meta.isCompletedBatch ? 'border-success' : (row.meta.isPartialArrival ? 'border-warning border-opacity-75' : 'border-success')">
                         <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
                           <div class="d-flex align-items-center gap-2">
-                            <i class="bi" [ngClass]="row.meta?.isPartialArrival ? 'bi-boxes text-warning' : 'bi-boxes text-success'"></i>
-                            <strong [ngClass]="row.meta?.isPartialArrival ? 'text-dark' : 'text-success'" style="font-size: 0.8rem;">
+                            <i class="bi" [ngClass]="row.meta.isCompletedBatch ? 'bi-boxes text-success' : (row.meta.isPartialArrival ? 'bi-boxes text-warning' : 'bi-boxes text-success')"></i>
+                            <strong [ngClass]="row.meta.isPartialArrival && !row.meta.isCompletedBatch ? 'text-dark' : 'text-success'" style="font-size: 0.8rem;">
                               {{ row.meta.cartonRanges.length }} Roll{{ row.meta.cartonRanges.length > 1 ? 's' : '' }} Arrived
-                              @if (row.meta?.isPartialArrival && row.meta?.cartonNamesSummary) {
-                                <span class="text-muted fw-normal ms-1">(Carton{{ (row.meta?.assignedCartonsCount || 0) > 1 ? 's' : '' }}: {{ row.meta?.cartonNamesSummary }})</span>
+                              @if (row.meta.isPartialArrival && row.meta.cartonNamesSummary) {
+                                <span class="text-muted fw-normal ms-1">(Carton{{ (row.meta.assignedCartonsCount || 0) > 1 ? 's' : '' }}: {{ row.meta.cartonNamesSummary }})</span>
                               }
                             </strong>
                             @if (row.meta.isPartialArrival) {
-                              <span class="badge bg-warning text-dark border border-warning" style="font-size: 0.7rem;">
-                                <i class="bi bi-hourglass-split me-1"></i>Partial ({{ row.meta.assignedCartonsCount }}/{{ row.meta.expectedCartonsCount }} Cartons)
+                              <span class="badge" [ngClass]="row.meta.isCompletedBatch ? 'bg-success text-white' : 'bg-warning text-dark border border-warning'" style="font-size: 0.7rem;">
+                                <i class="bi me-1" [ngClass]="row.meta.isCompletedBatch ? 'bi-check-circle-fill' : 'bi-hourglass-split'"></i>{{ row.meta.arrivalBadgeText }}
                               </span>
                             }
                           </div>
@@ -432,7 +432,7 @@
                                 <span class="text-success fw-semibold">
                                   + Fresh Arrival:
                                   @if (row.meta.isPartialArrival) {
-                                    <small class="badge bg-warning text-dark py-0 px-1 ms-1" style="font-size: 0.65rem;">Partial ({{ row.meta.assignedCartonsCount }}/{{ row.meta.expectedCartonsCount }})</small>
+                                    <small class="badge py-0 px-1 ms-1" [ngClass]="row.meta.isCompletedBatch ? 'bg-success text-white' : 'bg-warning text-dark'" style="font-size: 0.65rem;">{{ row.meta.isCompletedBatch ? 'Completed' : 'Partial' }} ({{ row.meta.assignedCartonsCount }}/{{ row.meta.expectedCartonsCount }})</small>
                                   }
                                 </span>
                                 <span class="text-success fw-bold" style="font-size: 0.75rem;">{{ row.meta.freshArrivalForGroup | number }}</span>

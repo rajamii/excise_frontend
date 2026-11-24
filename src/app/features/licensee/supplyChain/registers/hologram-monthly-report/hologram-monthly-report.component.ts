@@ -88,7 +88,9 @@ interface StatementRow {
       quantity?: number;
     }>;
     isPartialArrival?: boolean;
+    isCompletedBatch?: boolean;
     assignedCartonsCount?: number;
+    cumulativeCartonsCount?: number;
     expectedCartonsCount?: number;
     totalOrderedQuantity?: number;
     pendingQuantity?: number;
@@ -620,6 +622,18 @@ export class HologramMonthlyReportComponent implements OnInit {
 
         console.log(`📦 Procurement ${refNo}: ${expandedRolls.length} rolls, ordered=${totalOrdered}, arrivedCartons=${totalArrivedCartons}/${expectedCartons}, split into ${batches.length} arrival batch(es)`);
 
+        // Sort batches chronologically so arrival order and cumulative counts are strictly progressive
+        batches.sort((a, b) => {
+          const dateA = a[0]?.received_date || a[0]?.receivedDate || a[0]?.arrived_date || a[0]?.arrivedDate || '';
+          const timeA = dateA ? new Date(dateA).getTime() : 0;
+          const dateB = b[0]?.received_date || b[0]?.receivedDate || b[0]?.arrived_date || b[0]?.arrivedDate || '';
+          const timeB = dateB ? new Date(dateB).getTime() : 0;
+          return timeA - timeB;
+        });
+
+        let runningCartonCount = 0;
+        let runningHologramCount = 0;
+
         // Create transaction item for each arrival batch
         batches.forEach((batchRolls, batchIdx) => {
           const firstRoll = batchRolls[0];
@@ -636,8 +650,12 @@ export class HologramMonthlyReportComponent implements OnInit {
           );
           const batchCartonSummary = batchCartonNames.join(', ');
 
-          const pendingHolograms = totalOrdered > 0 ? Math.max(0, totalOrdered - totalArrivedHolograms) : 0;
-          const pendingCartons = expectedCartons > 0 ? Math.max(0, expectedCartons - Math.max(totalArrivedCartons, batchCartonsCount)) : 0;
+          runningCartonCount += batchCartonsCount;
+          runningHologramCount += totalAmount;
+
+          const cumulativeCartons = Math.min(expectedCartons, runningCartonCount);
+          const pendingHolograms = totalOrdered > 0 ? Math.max(0, totalOrdered - runningHologramCount) : 0;
+          const pendingCartons = expectedCartons > 0 ? Math.max(0, expectedCartons - cumulativeCartons) : 0;
 
           // A batch is a partial arrival entry if:
           // 1. It is a genuine procurement (NOT a MANUAL inventory/stock opening entry)
@@ -666,6 +684,7 @@ export class HologramMonthlyReportComponent implements OnInit {
               totalBatches: batches.length,
               isPartialArrival: isPartial,
               batchCartonsCount: batchCartonsCount,
+              cumulativeCartonsCount: cumulativeCartons,
               expectedCartonsCount: expectedCartons || (batches.length > 1 ? batches.length : batchCartonsCount),
               totalOrderedQuantity: totalOrdered,
               totalArrivedHolograms: totalArrivedHolograms,
@@ -814,30 +833,37 @@ export class HologramMonthlyReportComponent implements OnInit {
           const isPartial = Boolean(arrival.isPartialArrival);
           const batchIdx = arrival.batchIndex || 1;
           const totalBatches = arrival.totalBatches || 1;
-          const assignedCartons = arrival.batchCartonsCount || 1;
+          const assignedCartons = arrival.cumulativeCartonsCount || arrival.batchCartonsCount || 1;
           const expectedCartons = arrival.expectedCartonsCount || assignedCartons;
           const pendingQty = arrival.pendingQuantity || 0;
           const pendingCartons = arrival.pendingCartonsCount !== undefined ? arrival.pendingCartonsCount : 0;
           const cartonNamesStr = arrival.cartonNamesSummary || '';
           const totalOrdered = arrival.totalOrderedQuantity || 0;
 
-          let badgeText = '';
-          let arrivalNotes = '';
-
-          // A reference is ONLY considered partial when isPartial is true AND pendingCartons > 0 AND assignedCartons < expectedCartons.
-          // When all cartons are completed (e.g. 8/8 or 3/3), it is a 100% full/normal arrival: NO badge, NO partial text.
+          // A reference is marked as partial arrival if it was entered in partial batches (e.g. 2/3 or 3/3 completed),
+          // even after all cartons arrive, so reviewers know it was entered in partial stages.
           const isReallyPartial = Boolean(
             !refNo.toUpperCase().includes('MANUAL') &&
             expectedCartons > 0 &&
             (assignedCartons < expectedCartons || totalBatches > 1 || isPartial)
           );
 
+          const isCompletedBatch = isReallyPartial && (assignedCartons >= expectedCartons || pendingCartons === 0);
+
+          let badgeText = '';
+          let arrivalNotes = '';
+
           if (isReallyPartial) {
-            badgeText = `Partial (${assignedCartons}/${expectedCartons} Cartons)`;
-            if (pendingCartons > 0 && pendingQty > 0) {
-              arrivalNotes = `Partial: ${assignedCartons} of ${expectedCartons} Cartons (${pendingCartons} Pending)`;
+            if (isCompletedBatch) {
+              badgeText = `Completed (${assignedCartons}/${expectedCartons} Cartons)`;
+              arrivalNotes = `Completed: ${assignedCartons} of ${expectedCartons} Cartons`;
             } else {
-              arrivalNotes = `Partial: ${assignedCartons} of ${expectedCartons} Cartons`;
+              badgeText = `Partial (${assignedCartons}/${expectedCartons} Cartons)`;
+              if (pendingCartons > 0 && pendingQty > 0) {
+                arrivalNotes = `Partial: ${assignedCartons} of ${expectedCartons} Cartons (${pendingCartons} Pending)`;
+              } else {
+                arrivalNotes = `Partial: ${assignedCartons} of ${expectedCartons} Cartons`;
+              }
             }
           } else {
             badgeText = '';
@@ -859,11 +885,13 @@ export class HologramMonthlyReportComponent implements OnInit {
               freshArrivalForGroup: arrivalAmount,
               closingBalanceForGroup: runningBalance,
               isPartialArrival: isReallyPartial,
+              isCompletedBatch: isCompletedBatch,
               assignedCartonsCount: assignedCartons,
+              cumulativeCartonsCount: assignedCartons,
               expectedCartonsCount: expectedCartons,
               totalOrderedQuantity: totalOrdered,
-              pendingQuantity: isReallyPartial ? pendingQty : 0,
-              pendingCartonsCount: isReallyPartial ? pendingCartons : 0,
+              pendingQuantity: isCompletedBatch ? 0 : pendingQty,
+              pendingCartonsCount: isCompletedBatch ? 0 : pendingCartons,
               cartonNamesSummary: cartonNamesStr,
               arrivalBadgeText: isReallyPartial ? badgeText : '',
               batchIndex: batchIdx,
@@ -1587,7 +1615,9 @@ export class HologramMonthlyReportComponent implements OnInit {
           ? joinUnique(ranges.map((r: any) => `${String(r?.cartoonNumber || '').trim()} ${String(r?.fromSerial || '').trim()}-${String(r?.toSerial || '').trim()}`.trim()))
           : (row.meta?.cartoonNumber || '');
         const arrivalTypeLabel = row.meta?.isPartialArrival
-          ? `ARRIVAL (Partial Entry ${row.meta.assignedCartonsCount || 1}/${row.meta.expectedCartonsCount || 1} Cartons)`
+          ? (row.meta.isCompletedBatch
+              ? `ARRIVAL (Completed ${row.meta.assignedCartonsCount || 1}/${row.meta.expectedCartonsCount || 1} Cartons)`
+              : `ARRIVAL (Partial Entry ${row.meta.assignedCartonsCount || 1}/${row.meta.expectedCartonsCount || 1} Cartons)`)
           : 'ARRIVAL';
         lines.push([
           arrivalTypeLabel,
