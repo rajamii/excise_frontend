@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { LicenseApplicationService } from '../../../../core/services/license-application.service';
 
 type ReceiptVm = {
   applicationId: string;
@@ -41,13 +42,15 @@ export class ApplicationFeeReceiptComponent {
   };
 
   private initialized = false;
+  private hasSyncedStatus = false;
   statusKind: 'success' | 'failed' | 'pending' | 'processing' = 'processing';
   headerTitle = 'Processing Payment...';
   statusLabel = 'Processing';
 
   constructor(
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private licenseAppService: LicenseApplicationService
   ) {
     this.route.queryParamMap.subscribe((params) => {
       let savedAppId = '';
@@ -143,6 +146,14 @@ export class ApplicationFeeReceiptComponent {
 
     this.headerTitle = 'Application Fee Payment Successful';
     this.statusLabel = 'Payment Successful';
+
+    if (this.vm.applicationId && !this.hasSyncedStatus && this.licenseAppService) {
+      this.hasSyncedStatus = true;
+      this.licenseAppService.checkNewLicensePaymentStatus(this.vm.applicationId).subscribe({
+        next: (res) => console.log('Receipt: verified payment status and advanced stage:', res),
+        error: (err) => console.warn('Receipt: payment status sync check error:', err)
+      });
+    }
   }
 
   get formattedAmount(): string {

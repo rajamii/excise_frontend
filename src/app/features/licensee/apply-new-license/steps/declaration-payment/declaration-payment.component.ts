@@ -1418,6 +1418,14 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       } catch {
         // no-op
       }
+
+      // Immediately notify backend to verify payment and transition workflow stage to District User
+      if (this.draftApplicationId) {
+        this.licenseAppService.checkNewLicensePaymentStatus(this.draftApplicationId).subscribe({
+          next: (res) => console.log('Payment verified and workflow transitioned to District User:', res),
+          error: (err) => console.warn('Payment status sync check error:', err)
+        });
+      }
     }
 
     const receiptStatus = isSuccess ? 'success' : (isPending ? 'pending' : 'failed');
