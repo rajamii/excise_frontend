@@ -639,15 +639,14 @@ export class HologramMonthlyReportComponent implements OnInit {
           const pendingHolograms = totalOrdered > 0 ? Math.max(0, totalOrdered - totalArrivedHolograms) : 0;
           const pendingCartons = expectedCartons > 0 ? Math.max(0, expectedCartons - Math.max(totalArrivedCartons, batchCartonsCount)) : 0;
 
-          // A reference is ONLY a partial arrival if:
+          // A batch is a partial arrival entry if:
           // 1. It is a genuine procurement (NOT a MANUAL inventory/stock opening entry)
-          // 2. Expected cartons > 0, and arrived cartons < expected cartons
-          // 3. And there are still pending cartons (> 0) remaining to arrive
+          // 2. Expected cartons > 0
+          // 3. And this batch contained fewer cartons than expected (batchCartonsCount < expectedCartons), OR procurement arrived in multiple batches (batches.length > 1)
           const isPartial = Boolean(
             !isManual &&
             expectedCartons > 0 &&
-            Math.max(totalArrivedCartons, batchCartonsCount) < expectedCartons &&
-            pendingCartons > 0
+            (batchCartonsCount < expectedCartons || batches.length > 1)
           );
 
           allTransactions.push({
@@ -818,7 +817,7 @@ export class HologramMonthlyReportComponent implements OnInit {
           const assignedCartons = arrival.batchCartonsCount || 1;
           const expectedCartons = arrival.expectedCartonsCount || assignedCartons;
           const pendingQty = arrival.pendingQuantity || 0;
-          const pendingCartons = Math.max(0, expectedCartons - assignedCartons);
+          const pendingCartons = arrival.pendingCartonsCount !== undefined ? arrival.pendingCartonsCount : 0;
           const cartonNamesStr = arrival.cartonNamesSummary || '';
           const totalOrdered = arrival.totalOrderedQuantity || 0;
 
@@ -827,11 +826,19 @@ export class HologramMonthlyReportComponent implements OnInit {
 
           // A reference is ONLY considered partial when isPartial is true AND pendingCartons > 0 AND assignedCartons < expectedCartons.
           // When all cartons are completed (e.g. 8/8 or 3/3), it is a 100% full/normal arrival: NO badge, NO partial text.
-          const isReallyPartial = Boolean(isPartial && pendingCartons > 0 && assignedCartons < expectedCartons);
+          const isReallyPartial = Boolean(
+            !refNo.toUpperCase().includes('MANUAL') &&
+            expectedCartons > 0 &&
+            (assignedCartons < expectedCartons || totalBatches > 1 || isPartial)
+          );
 
           if (isReallyPartial) {
             badgeText = `Partial (${assignedCartons}/${expectedCartons} Cartons)`;
-            arrivalNotes = `Partial: ${assignedCartons} of ${expectedCartons} Cartons (${pendingCartons} Pending)`;
+            if (pendingCartons > 0 && pendingQty > 0) {
+              arrivalNotes = `Partial: ${assignedCartons} of ${expectedCartons} Cartons (${pendingCartons} Pending)`;
+            } else {
+              arrivalNotes = `Partial: ${assignedCartons} of ${expectedCartons} Cartons`;
+            }
           } else {
             badgeText = '';
             arrivalNotes = `Received ${arrivalAmount.toLocaleString()} holograms in ${cartonRanges.length} roll(s)${cartonNamesStr ? ' (Carton: ' + cartonNamesStr + ')' : ''}`;
