@@ -87,6 +87,16 @@ interface StatementRow {
       rollAssignmentIndex: number;
       quantity?: number;
     }>;
+    isPartialArrival?: boolean;
+    assignedCartonsCount?: number;
+    expectedCartonsCount?: number;
+    totalOrderedQuantity?: number;
+    pendingQuantity?: number;
+    pendingCartonsCount?: number;
+    cartonNamesSummary?: string;
+    arrivalBadgeText?: string;
+    batchIndex?: number;
+    totalBatches?: number;
   };
 }
 
@@ -475,6 +485,15 @@ export class HologramMonthlyReportComponent implements OnInit {
       
       const allTransactions: TransactionItem[] = [];
       
+      // Build lookup map for procurement records by reference number
+      const procurementByRef = new Map<string, any>();
+      (procurementRows || []).forEach((p: any) => {
+        const ref = this.extractReferenceNo(p);
+        if (ref) {
+          procurementByRef.set(this.normalizeReferenceNo(ref), p);
+        }
+      });
+
       // Group arrivals by procurement reference, then split by arrival batch (to show partial arrivals in separate chronological boxes)
       const arrivalsByRef = new Map<string, any[]>();
       
@@ -532,6 +551,30 @@ export class HologramMonthlyReportComponent implements OnInit {
           return (a.id || 0) - (b.id || 0);
         });
 
+        // Determine total ordered holograms and expected cartons from procurement record
+        const normRef = this.normalizeReferenceNo(refNo);
+        const procurement = procurementByRef.get(normRef);
+
+        let totalOrdered = 0;
+        if (procurement) {
+          totalOrdered = Number(
+            procurement.numberOfHolograms ??
+            procurement.number_of_holograms ??
+            (
+              Number(procurement.local_qty ?? procurement.localQty ?? 0) +
+              Number(procurement.export_qty ?? procurement.exportQty ?? 0) +
+              Number(procurement.defence_qty ?? procurement.defenceQty ?? 0)
+            )
+          ) || Number(procurement.quantity ?? procurement.total_quantity ?? 0);
+          if (totalOrdered <= 0) {
+            totalOrdered = this.getProcurementQtyForSelectedType(procurement);
+          }
+        }
+
+        const allArrivedCartonNames = this.extractUniqueCartonNames(expandedRolls);
+        const totalArrivedCartons = allArrivedCartonNames.length;
+        const totalArrivedHolograms = expandedRolls.reduce((sum, r) => sum + Number(r.total_count || r.totalCount || r.quantity || 0), 0);
+
         // For manual inventory entries (MANUAL/...), keep all cartons together in a single arrival box.
         // For regular procurements, only split into separate arrival boxes if cartons were entered in distinct
         // partial arrival sessions (e.g. difference > 15 minutes between separate officer saves).
@@ -567,7 +610,12 @@ export class HologramMonthlyReportComponent implements OnInit {
           }
         }
 
-        console.log(`📦 Procurement ${refNo}: ${expandedRolls.length} rolls split into ${batches.length} arrival batch(es)`);
+        // Expected cartons (standard 100,000 holograms per carton in Sikkim Excise)
+        const expectedCartons = totalOrdered > 0
+          ? Math.max(1, Math.floor(totalOrdered / 100000))
+          : (batches.length > 1 ? batches.length : totalArrivedCartons);
+
+        console.log(`📦 Procurement ${refNo}: ${expandedRolls.length} rolls, ordered=${totalOrdered}, arrivedCartons=${totalArrivedCartons}/${expectedCartons}, split into ${batches.length} arrival batch(es)`);
 
         // Create transaction item for each arrival batch
         batches.forEach((batchRolls, batchIdx) => {
@@ -577,6 +625,20 @@ export class HologramMonthlyReportComponent implements OnInit {
 
           const aggregated = this.aggregateArrivalGroup(batchRolls);
           const totalAmount = aggregated.total;
+
+          const batchCartonNames = this.extractUniqueCartonNames(batchRolls);
+          const batchCartonsCount = batchCartonNames.length || Math.max(1, Math.round(totalAmount / 100000));
+          const batchCartonSummary = batchCartonNames.join(', ');
+
+          const isPartial = Boolean(
+            (expectedCartons > 0 && totalArrivedCartons < expectedCartons) ||
+            (expectedCartons > 0 && batchCartonsCount < expectedCartons) ||
+            (totalOrdered > 0 && totalArrivedHolograms < totalOrdered) ||
+            (batches.length > 1)
+          );
+
+          const pendingHolograms = Math.max(0, totalOrdered - totalArrivedHolograms);
+          const pendingCartons = Math.max(0, expectedCartons - totalArrivedCartons);
 
           allTransactions.push({
             type: 'ARRIVAL',
@@ -592,7 +654,16 @@ export class HologramMonthlyReportComponent implements OnInit {
               allRolls: batchRolls,
               cartonRangesNormalized: aggregated.ranges,
               batchIndex: batchIdx + 1,
-              totalBatches: batches.length
+              totalBatches: batches.length,
+              isPartialArrival: isPartial,
+              batchCartonsCount: batchCartonsCount,
+              expectedCartonsCount: expectedCartons || (batches.length > 1 ? batches.length : batchCartonsCount),
+              totalOrderedQuantity: totalOrdered,
+              totalArrivedHolograms: totalArrivedHolograms,
+              totalArrivedCartons: totalArrivedCartons,
+              pendingQuantity: pendingHolograms,
+              pendingCartonsCount: pendingCartons,
+              cartonNamesSummary: batchCartonSummary
             }
           });
         });
@@ -731,9 +802,33 @@ export class HologramMonthlyReportComponent implements OnInit {
           });
           
           const refNo = arrival.ref_no || arrival.refNo || 'N/A';
-          const batchInfo = (arrival.totalBatches && arrival.totalBatches > 1)
-            ? ` (Part ${arrival.batchIndex} of ${arrival.totalBatches})`
-            : '';
+          const isPartial = Boolean(arrival.isPartialArrival);
+          const batchIdx = arrival.batchIndex || 1;
+          const totalBatches = arrival.totalBatches || 1;
+          const assignedCartons = arrival.batchCartonsCount || 1;
+          const expectedCartons = arrival.expectedCartonsCount || assignedCartons;
+          const pendingQty = arrival.pendingQuantity || 0;
+          const pendingCartons = arrival.pendingCartonsCount || 0;
+          const cartonNamesStr = arrival.cartonNamesSummary || '';
+          const totalOrdered = arrival.totalOrderedQuantity || 0;
+
+          let badgeText = '';
+          let arrivalNotes = '';
+
+          if (isPartial) {
+            if (pendingQty > 0) {
+              badgeText = `Partially Arrived (${assignedCartons}/${expectedCartons} Cartons)`;
+              arrivalNotes = `Partial Entry: Received ${arrivalAmount.toLocaleString()} of ${totalOrdered.toLocaleString()} holograms in ${cartonRanges.length} roll(s) (${assignedCartons} of ${expectedCartons} Cartons${cartonNamesStr ? ': ' + cartonNamesStr : ''}) — ${pendingCartons} Carton${pendingCartons > 1 ? 's' : ''} (${pendingQty.toLocaleString()} units) Pending Arrival`;
+            } else if (totalBatches > 1) {
+              badgeText = `Partial Entry (Part ${batchIdx} of ${totalBatches} • ${assignedCartons}/${expectedCartons} Cartons)`;
+              arrivalNotes = `Partial Entry (Part ${batchIdx} of ${totalBatches}): Received ${arrivalAmount.toLocaleString()} holograms in ${cartonRanges.length} roll(s) (${assignedCartons} of ${expectedCartons} Cartons${cartonNamesStr ? ': ' + cartonNamesStr : ''})`;
+            } else {
+              badgeText = `Partially Arrived (${assignedCartons}/${expectedCartons} Cartons)`;
+              arrivalNotes = `Partial Entry: Received ${arrivalAmount.toLocaleString()} holograms in ${cartonRanges.length} roll(s) (${assignedCartons} of ${expectedCartons} Cartons${cartonNamesStr ? ': ' + cartonNamesStr : ''})`;
+            }
+          } else {
+            arrivalNotes = `Received ${arrivalAmount.toLocaleString()} holograms in ${cartonRanges.length} roll(s)${cartonNamesStr ? ' (Carton: ' + cartonNamesStr + ')' : ''}`;
+          }
           
           this.statementRows.push({
             rowType: 'ARRIVAL',
@@ -744,11 +839,21 @@ export class HologramMonthlyReportComponent implements OnInit {
               referenceNo: refNo,
               transactionDateTime: transaction.timestamp.toISOString(),
               cartonRanges: cartonRanges,
-              notes: `Received ${arrivalAmount} holograms in ${cartonRanges.length} roll(s)${batchInfo}`,
+              notes: arrivalNotes,
               isLastInGroup: true,
               openingBalanceForGroup: runningBalance - arrivalAmount,
               freshArrivalForGroup: arrivalAmount,
-              closingBalanceForGroup: runningBalance
+              closingBalanceForGroup: runningBalance,
+              isPartialArrival: isPartial,
+              assignedCartonsCount: assignedCartons,
+              expectedCartonsCount: expectedCartons,
+              totalOrderedQuantity: totalOrdered,
+              pendingQuantity: pendingQty,
+              pendingCartonsCount: pendingCartons,
+              cartonNamesSummary: cartonNamesStr,
+              arrivalBadgeText: badgeText,
+              batchIndex: batchIdx,
+              totalBatches: totalBatches
             }
           });
         } else {
@@ -1467,8 +1572,11 @@ export class HologramMonthlyReportComponent implements OnInit {
         const rollSummary = ranges.length > 0
           ? joinUnique(ranges.map((r: any) => `${String(r?.cartoonNumber || '').trim()} ${String(r?.fromSerial || '').trim()}-${String(r?.toSerial || '').trim()}`.trim()))
           : (row.meta?.cartoonNumber || '');
+        const arrivalTypeLabel = row.meta?.isPartialArrival
+          ? `ARRIVAL (Partial Entry ${row.meta.assignedCartonsCount || 1}/${row.meta.expectedCartonsCount || 1} Cartons)`
+          : 'ARRIVAL';
         lines.push([
-          'ARRIVAL',
+          arrivalTypeLabel,
           date,
           refNo,
           rollSummary,
@@ -4075,6 +4183,34 @@ export class HologramMonthlyReportComponent implements OnInit {
       row?.licenseeName ??
       ''
     ).trim();
+  }
+
+  extractUniqueCartonNames(rolls: any[]): string[] {
+    const names = new Set<string>();
+    for (const r of rolls || []) {
+      const raw = String(
+        r?.baseCartoonNumber ||
+        r?.base_cartoon_number ||
+        r?.cartoonNumber ||
+        r?.cartoon_number ||
+        r?.carton_number ||
+        r?.rollNumber ||
+        ''
+      ).trim();
+      if (!raw) continue;
+      // Strip roll suffix like (a), (b), etc. e.g. "ds(a)" -> "ds"
+      const clean = raw.replace(/\([a-zA-Z0-9]+\)$/, '').trim();
+      if (clean) {
+        names.add(clean);
+      }
+    }
+    return Array.from(names);
+  }
+
+  hasPartialArrivals(): boolean {
+    return (this.statementRows || []).some(
+      (r) => r.rowType === 'ARRIVAL' && r.meta?.isPartialArrival
+    );
   }
 }
 
