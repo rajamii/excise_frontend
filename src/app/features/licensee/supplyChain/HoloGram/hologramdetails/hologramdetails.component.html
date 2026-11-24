@@ -649,16 +649,31 @@
                     }
                     <br>
                     <strong>Status:</strong>
-                    @if (isPartiallyArrived(selectedRecordForUpdate)) {
-                        <span class="badge bg-warning text-dark ms-1">Partially Arrived ({{ getSavedCartonCount() }} of {{ getExpectedCartonCount() }} Cartons Saved)</span>
+                    @if (getPreviouslySavedCartonCount() > 0 && getPreviouslySavedCartonCount() < getExpectedCartonCount()) {
+                        <span class="badge bg-warning text-dark ms-1">Partially Arrived ({{ getPreviouslySavedCartonCount() }} of {{ getExpectedCartonCount() }} Cartons Already Saved)</span>
                         <div class="small text-muted mt-1">
                             <i class="bi bi-info-circle me-1"></i>
-                            You can enter cartons part-by-part as they arrive. When all {{ getExpectedCartonCount() }} cartons are entered, you can confirm full arrival.
+                            You can enter the remaining {{ getExpectedCartonCount() - getPreviouslySavedCartonCount() }} carton(s) below.
                         </div>
-                    } @else if (getSavedCartonCount() === getExpectedCartonCount() && getExpectedCartonCount() > 0) {
+                    } @else if (getTotalCartonsCount() === getExpectedCartonCount() && getExpectedCartonCount() > 0) {
                         <span class="badge bg-success ms-1">All {{ getExpectedCartonCount() }} Cartons Added - Ready for Full Arrival Confirmation</span>
                     } @else {
                         <span>Ready for physical arrival update (Enter carton details as received)</span>
+                    }
+                    @if (getPreviouslySavedCartonCount() > 0) {
+                        <div class="mt-2 pt-2 border-top border-info border-opacity-25 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div class="small text-dark">
+                                <i class="bi bi-check-circle-fill text-success me-1"></i>
+                                <strong>Previously Saved in Database:</strong>
+                                <span class="badge bg-success bg-opacity-25 text-success-emphasis border border-success ms-1 px-2 py-1 font-monospace">
+                                    {{ getPreviouslySavedCartonNames() }}
+                                </span>
+                                <span class="text-muted ms-2">({{ getPreviouslySavedHologramCount() | number }} holograms)</span>
+                            </div>
+                            <span class="badge bg-warning text-dark border border-warning">
+                                <i class="bi bi-hourglass-split me-1"></i>{{ getExpectedCartonCount() - getPreviouslySavedCartonCount() }} Carton{{ (getExpectedCartonCount() - getPreviouslySavedCartonCount()) > 1 ? 's' : '' }} Pending
+                            </span>
+                        </div>
                     }
                 </div>
 
@@ -680,9 +695,9 @@
                                 </h6>
                                 @if (selectedRecordForUpdate && isExpectedQuantityLakhAligned()) {
                                 <div class="d-flex align-items-center gap-2">
-                                    @if (getSavedCartonCount() < getExpectedCartonCount()) {
+                                    @if (getTotalCartonsCount() < getExpectedCartonCount()) {
                                     <span class="badge bg-light text-dark">
-                                        Carton {{ getSavedCartonCount() + 1 }} of {{ getExpectedCartonCount() }}
+                                        Carton {{ getTotalCartonsCount() + 1 }} of {{ getExpectedCartonCount() }}
                                     </span>
                                     <select class="form-select form-select-sm w-auto"
                                         (change)="prepareNextCartonEntry(); $any($event.target).value = ''">
@@ -828,20 +843,20 @@
                                 class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0">
                                     <i class="bi bi-boxes me-2"></i>
-                                    @if (selectedRecordForUpdate && isExpectedQuantityLakhAligned()) {
-                                    Saved Cartons ({{ getSavedCartonCount() }} / {{ getExpectedCartonCount() }})
+                                    @if (getPreviouslySavedCartonCount() > 0) {
+                                    Cartons to Add (Session: {{ getSavedCartonCount() }} / {{ getExpectedCartonCount() - getPreviouslySavedCartonCount() }} Pending)
                                     } @else {
-                                    Saved Cartons ({{ getSavedCartonCount() }})
+                                    Saved Cartons ({{ getSavedCartonCount() }} / {{ getExpectedCartonCount() }})
                                     }
                                 </h6>
-                                <span class="badge bg-light text-dark">Rolls: {{ savedCartons.length }}</span>
+                                <span class="badge bg-light text-dark">Session Rolls: {{ savedCartons.length }}</span>
                             </div>
                             <div class="card-body" style="max-height: 400px; overflow-y: auto;">
                                 @if (savedCartons.length === 0) {
                                 <div class="text-center text-muted py-4">
                                     <i class="bi bi-inbox" style="font-size: 3rem;"></i>
-                                    <p class="mt-2">No cartons saved yet</p>
-                                    <small>Fill the form on the left and click "Save Carton"</small>
+                                    <p class="mt-2 mb-1 fw-bold">No new cartons added yet in this session</p>
+                                    <small>Fill the form on the left and click "Save Carton" to add the remaining carton(s)</small>
                                 </div>
                                 }
 
@@ -901,22 +916,22 @@
                                     <div class="col-4">
                                         @if (selectedRecordForUpdate && isExpectedQuantityLakhAligned()) {
                                         <h5 class="text-primary mb-0">
-                                            {{ getSavedCartonCount() }} / {{ getExpectedCartonCount() }}
+                                            {{ getTotalCartonsCount() }} / {{ getExpectedCartonCount() }}
                                         </h5>
-                                        <small class="text-muted">Cartons (Current/Expected)</small>
+                                        <small class="text-muted">Cartons (Total/Expected)</small>
                                         } @else {
-                                        <h5 class="text-primary mb-0">{{ getSavedCartonCount() }}</h5>
+                                        <h5 class="text-primary mb-0">{{ getTotalCartonsCount() }}</h5>
                                         <small class="text-muted">Cartons</small>
                                         }
                                     </div>
                                     <div class="col-4">
                                         <h5 class="mb-0"
-                                            [class.text-success]="selectedRecordForUpdate && totalCalculatedHolograms === selectedRecordForUpdate.numberOfHolograms"
-                                            [class.text-warning]="selectedRecordForUpdate && totalCalculatedHolograms > 0 && totalCalculatedHolograms < selectedRecordForUpdate.numberOfHolograms"
-                                            [class.text-danger]="selectedRecordForUpdate && totalCalculatedHolograms > selectedRecordForUpdate.numberOfHolograms">
-                                            {{ totalCalculatedHolograms | number }}
+                                            [class.text-success]="selectedRecordForUpdate && (getPreviouslySavedHologramCount() + totalCalculatedHolograms) === selectedRecordForUpdate.numberOfHolograms"
+                                            [class.text-warning]="selectedRecordForUpdate && (getPreviouslySavedHologramCount() + totalCalculatedHolograms) > 0 && (getPreviouslySavedHologramCount() + totalCalculatedHolograms) < selectedRecordForUpdate.numberOfHolograms"
+                                            [class.text-danger]="selectedRecordForUpdate && (getPreviouslySavedHologramCount() + totalCalculatedHolograms) > selectedRecordForUpdate.numberOfHolograms">
+                                            {{ (getPreviouslySavedHologramCount() + totalCalculatedHolograms) | number }}
                                         </h5>
-                                        <small class="text-muted">Current</small>
+                                        <small class="text-muted">Total Quantity</small>
                                     </div>
                                     <div class="col-4">
                                         <h5 class="text-info mb-0">{{ selectedRecordForUpdate?.numberOfHolograms |
@@ -925,48 +940,43 @@
                                     </div>
                                 </div>
 
-                                @if (selectedRecordForUpdate && totalCalculatedHolograms > 0 && totalCalculatedHolograms
-                                < selectedRecordForUpdate.numberOfHolograms) { <div class="mt-2 text-center">
+                                @if (selectedRecordForUpdate && (getPreviouslySavedHologramCount() + totalCalculatedHolograms) > 0 && (getPreviouslySavedHologramCount() + totalCalculatedHolograms) < selectedRecordForUpdate.numberOfHolograms) {
+                                <div class="mt-2 text-center">
                                     <small class="text-info">
                                         <i class="bi bi-arrow-right-circle me-1"></i>
-                                        Need {{ (selectedRecordForUpdate.numberOfHolograms - totalCalculatedHolograms) |
-                                        number }} more holograms
+                                        Need {{ (selectedRecordForUpdate.numberOfHolograms - (getPreviouslySavedHologramCount() + totalCalculatedHolograms)) | number }} more holograms
                                     </small>
-                            </div>
-                            }
+                                </div>
+                                }
 
-                            @if (selectedRecordForUpdate && totalCalculatedHolograms ===
-                            selectedRecordForUpdate.numberOfHolograms && totalCalculatedHolograms > 0) {
-                            <div class="mt-2 text-center">
-                                <small class="text-success">
-                                    <i class="bi bi-check-circle-fill me-1"></i>
-                                    Complete! Ready to confirm arrival
-                                </small>
+                                @if (selectedRecordForUpdate && (getPreviouslySavedHologramCount() + totalCalculatedHolograms) === selectedRecordForUpdate.numberOfHolograms && (getPreviouslySavedHologramCount() + totalCalculatedHolograms) > 0) {
+                                <div class="mt-2 text-center">
+                                    <small class="text-success">
+                                        <i class="bi bi-check-circle-fill me-1"></i>
+                                        Complete! Ready to confirm arrival
+                                    </small>
+                                </div>
+                                }
                             </div>
-                            }
                         </div>
                     </div>
                 </div>
-            </div>
 
             <!-- Progress Messages -->
-            @if (savedCartons.length > 0 && selectedRecordForUpdate && totalCalculatedHolograms ===
-            selectedRecordForUpdate.numberOfHolograms) {
+            @if (savedCartons.length > 0 && selectedRecordForUpdate && (getPreviouslySavedHologramCount() + totalCalculatedHolograms) === selectedRecordForUpdate.numberOfHolograms) {
             <div class="alert alert-success d-flex align-items-center mt-3" role="alert">
                 <i class="bi bi-check-circle-fill me-2"></i>
-                <div>✅ Perfect! All {{ getSavedCartonCount() }} carton(s) have been entered with a total of {{
-                    totalCalculatedHolograms | number }} holograms matching the expected quantity. You can now confirm
-                    the arrival.</div>
+                <div>✅ Perfect! All {{ getExpectedCartonCount() }} carton(s) have been accounted for with a total of {{
+                    (getPreviouslySavedHologramCount() + totalCalculatedHolograms) | number }} holograms matching the expected quantity. You can now confirm the arrival.</div>
             </div>
             }
 
-            @if (savedCartons.length > 0 && selectedRecordForUpdate && totalCalculatedHolograms <
-                selectedRecordForUpdate.numberOfHolograms) {
+            @if (savedCartons.length > 0 && selectedRecordForUpdate && (getPreviouslySavedHologramCount() + totalCalculatedHolograms) < selectedRecordForUpdate.numberOfHolograms) {
             <div class="alert alert-info d-flex align-items-center mt-3" role="alert">
                 <i class="bi bi-info-circle-fill me-2"></i>
                 <div>
-                    📦 <strong>Partial Arrival:</strong> You have entered {{ getSavedCartonCount() }} of {{ getExpectedCartonCount() }} carton(s) ({{ totalCalculatedHolograms | number }} holograms).
-                    You can save this partial arrival now. You can re-open to add remaining {{ getExpectedCartonCount() - getSavedCartonCount() }} carton(s) whenever they arrive.
+                    📦 <strong>Partial Arrival:</strong> You have added {{ getSavedCartonCount() }} carton(s) in this session (total {{ getTotalCartonsCount() }} of {{ getExpectedCartonCount() }} cartons, {{ (getPreviouslySavedHologramCount() + totalCalculatedHolograms) | number }} holograms).
+                    You can save this partial arrival now and add remaining carton(s) whenever they arrive.
                 </div>
             </div>
             }
@@ -977,17 +987,17 @@
                 Cancel
             </button>
             <div class="d-flex gap-2">
-                @if (selectedRecordForUpdate && totalCalculatedHolograms < selectedRecordForUpdate.numberOfHolograms) {
+                @if (selectedRecordForUpdate && (getPreviouslySavedHologramCount() + totalCalculatedHolograms) < selectedRecordForUpdate.numberOfHolograms) {
                 <button type="button" class="btn btn-primary btn-lg" (click)="saveArrivalUpdate()"
                     [disabled]="savedCartons.length === 0">
                     <i class="bi bi-save me-2"></i>
-                    Save Partial Arrival ({{ getSavedCartonCount() }}/{{ getExpectedCartonCount() }} Carton{{ getSavedCartonCount() > 1 ? 's' : '' }})
+                    Save Partial Arrival ({{ getTotalCartonsCount() }}/{{ getExpectedCartonCount() }} Cartons)
                 </button>
                 } @else {
                 <button type="button" class="btn btn-success btn-lg" (click)="saveArrivalUpdate()"
                     [disabled]="savedCartons.length === 0">
                     <i class="bi bi-check-circle me-2"></i>
-                    Confirm Full Arrival ({{ getSavedCartonCount() }}/{{ getExpectedCartonCount() }} Carton{{ getExpectedCartonCount() > 1 ? 's' : '' }})
+                    Confirm Full Arrival ({{ getTotalCartonsCount() }}/{{ getExpectedCartonCount() }} Cartons)
                 </button>
                 }
             </div>

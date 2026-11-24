@@ -373,19 +373,19 @@
                             <i class="bi" [ngClass]="row.meta?.isPartialArrival ? 'bi-boxes text-warning' : 'bi-boxes text-success'"></i>
                             <strong [ngClass]="row.meta?.isPartialArrival ? 'text-dark' : 'text-success'" style="font-size: 0.8rem;">
                               {{ row.meta.cartonRanges.length }} Roll{{ row.meta.cartonRanges.length > 1 ? 's' : '' }} Arrived
-                              @if (row.meta?.cartonNamesSummary) {
+                              @if (row.meta?.isPartialArrival && row.meta?.cartonNamesSummary) {
                                 <span class="text-muted fw-normal ms-1">(Carton{{ (row.meta?.assignedCartonsCount || 0) > 1 ? 's' : '' }}: {{ row.meta?.cartonNamesSummary }})</span>
                               }
                             </strong>
-                            @if (row.meta?.isPartialArrival) {
+                            @if (row.meta.isPartialArrival) {
                               <span class="badge bg-warning text-dark border border-warning" style="font-size: 0.7rem;">
-                                <i class="bi bi-hourglass-split me-1"></i>Partially Arrived ({{ row.meta?.assignedCartonsCount }}/{{ row.meta?.expectedCartonsCount }} Cartons)
+                                <i class="bi bi-hourglass-split me-1"></i>Partial ({{ row.meta.assignedCartonsCount }}/{{ row.meta.expectedCartonsCount }} Cartons)
                               </span>
                             }
                           </div>
-                          @if (row.meta?.isPartialArrival && row.meta?.pendingQuantity) {
+                          @if (row.meta.isPartialArrival && row.meta.pendingQuantity) {
                             <div class="badge bg-warning bg-opacity-10 text-dark border border-warning" style="font-size: 0.7rem; font-weight: 600;">
-                              <i class="bi bi-clock-history me-1 text-danger"></i>{{ row.meta?.pendingCartonsCount }} Carton{{ (row.meta?.pendingCartonsCount || 0) > 1 ? 's' : '' }} ({{ row.meta?.pendingQuantity | number }} units) Pending Arrival
+                              <i class="bi bi-clock-history me-1 text-danger"></i>{{ row.meta.pendingCartonsCount }} Carton{{ (row.meta.pendingCartonsCount || 0) > 1 ? 's' : '' }} Pending ({{ row.meta.pendingQuantity | number }})
                             </div>
                           }
                         </div>
@@ -431,8 +431,8 @@
                               <div class="d-flex justify-content-between align-items-center" style="line-height: 1.4;">
                                 <span class="text-success fw-semibold">
                                   + Fresh Arrival:
-                                  @if (row.meta?.isPartialArrival) {
-                                    <small class="badge bg-warning text-dark py-0 px-1 ms-1" style="font-size: 0.65rem;">Partial ({{ row.meta?.assignedCartonsCount }}/{{ row.meta?.expectedCartonsCount }})</small>
+                                  @if (row.meta.isPartialArrival) {
+                                    <small class="badge bg-warning text-dark py-0 px-1 ms-1" style="font-size: 0.65rem;">Partial ({{ row.meta.assignedCartonsCount }}/{{ row.meta.expectedCartonsCount }})</small>
                                   }
                                 </span>
                                 <span class="text-success fw-bold" style="font-size: 0.75rem;">{{ row.meta.freshArrivalForGroup | number }}</span>
