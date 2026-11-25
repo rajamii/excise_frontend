@@ -2653,6 +2653,77 @@
     </div>
 </div>
 
+<!-- ── Second Confirmation Popup for New License Fee Selection ── -->
+<div class="fee-confirm-modal-backdrop" *ngIf="newLicenseFeeConfirmModalOpen" (click)="cancelNewLicenseFeeSecondConfirm()"></div>
+<div class="fee-confirm-modal" *ngIf="newLicenseFeeConfirmModalOpen && pendingNewLicenseFeeSelection as sel" role="dialog" aria-modal="true" aria-label="Confirm Fee Selection" (click)="cancelNewLicenseFeeSecondConfirm()">
+    <div class="fee-confirm-modal-container" (click)="$event.stopPropagation()">
+        <div class="fee-confirm-modal-header">
+            <div class="fee-confirm-header-left">
+                <div class="fee-confirm-icon-badge">
+                    <i class="bi bi-shield-check"></i>
+                </div>
+                <div>
+                    <div class="fee-confirm-modal-title">Confirm Fee Selection</div>
+                    <div class="fee-confirm-modal-subtitle">{{ sel.applicationId }}</div>
+                </div>
+            </div>
+            <button type="button" class="fee-confirm-modal-close" (click)="cancelNewLicenseFeeSecondConfirm()" aria-label="Close">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+        <div class="fee-confirm-modal-body">
+            <div class="fee-confirm-callout">
+                <i class="bi bi-exclamation-circle-fill"></i>
+                <span>Are you sure you want to set the fees which you have selected?</span>
+            </div>
+
+            <div class="fee-confirm-meta">
+                <div class="fee-confirm-meta-row">
+                    <span class="fee-confirm-meta-label">License Category</span>
+                    <span class="fee-confirm-meta-value">{{ sel.licenseCategoryName || '-' }}</span>
+                </div>
+                <div class="fee-confirm-meta-row">
+                    <span class="fee-confirm-meta-label">Subcategory</span>
+                    <span class="fee-confirm-meta-value">{{ sel.licenseSubcategoryName || '-' }}</span>
+                </div>
+                <div class="fee-confirm-meta-row">
+                    <span class="fee-confirm-meta-label">Location</span>
+                    <span class="fee-confirm-meta-value">{{ sel.locationDescription || sel.locationCode || '-' }}</span>
+                </div>
+            </div>
+
+            <div class="fee-confirm-amounts">
+                <div class="fee-confirm-amount-card fee-confirm-amount-card--primary">
+                    <span class="fee-confirm-amount-label">License Fee</span>
+                    <strong class="fee-confirm-amount-value">₹ {{ sel.licenseFee.licenseFee ?? sel.licenseFee.license_fee ?? 0 }}</strong>
+                </div>
+                <div class="fee-confirm-amount-card">
+                    <span class="fee-confirm-amount-label">Security Amount</span>
+                    <strong class="fee-confirm-amount-value">₹ {{ sel.licenseFee.securityAmount ?? sel.licenseFee.security_amount ?? 0 }}</strong>
+                </div>
+                <div class="fee-confirm-amount-card">
+                    <span class="fee-confirm-amount-label">Renewal Amount</span>
+                    <strong class="fee-confirm-amount-value">₹ {{ sel.licenseFee.renewalAmount ?? sel.licenseFee.renewal_amount ?? 0 }}</strong>
+                </div>
+                <div class="fee-confirm-amount-card">
+                    <span class="fee-confirm-amount-label">Late Fee</span>
+                    <strong class="fee-confirm-amount-value">₹ {{ sel.licenseFee.lateFee ?? sel.licenseFee.late_fee ?? 0 }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="fee-confirm-modal-footer">
+            <button type="button" class="fee-confirm-btn fee-confirm-btn--cancel" (click)="cancelNewLicenseFeeSecondConfirm()">
+                <i class="bi bi-arrow-left me-1"></i> Go Back
+            </button>
+            <button type="button" class="fee-confirm-btn fee-confirm-btn--submit" (click)="submitConfirmedNewLicenseFeeApproval()">
+                <i class="bi bi-check2-circle me-1"></i> Yes, Confirm &amp; Submit
+            </button>
+        </div>
+    </div>
+</div>
+
 <div class="docs-modal-backdrop" *ngIf="docsModalOpen" (click)="closeDocsModal()"></div>
 <div class="docs-modal" *ngIf="docsModalOpen" role="dialog" aria-modal="true" aria-label="Uploaded Documents" (click)="closeDocsModal()">
     <div class="docs-modal-container" (click)="$event.stopPropagation()">

@@ -552,6 +552,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     siteEnquiryActiveTab = 1;
     siteEnquiryReportSections: any[] = [];
     newLicenseFeeApprovalModalOpen = false;
+    newLicenseFeeConfirmModalOpen = false;
+    pendingNewLicenseFeeSelection: NewLicenseFeeApprovalResult | null = null;
     newLicenseFeeApprovalOptionsLoading = false;
     newLicenseFeeApprovalFeeLoading = false;
     newLicenseFeeApprovalOptionsError = '';
@@ -3455,6 +3457,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     }
 
     cancelNewLicenseFeeApproval(): void {
+        this.newLicenseFeeConfirmModalOpen = false;
+        this.pendingNewLicenseFeeSelection = null;
         this.newLicenseFeeApprovalModalOpen = false;
         this.pendingNewLicenseFeeApproval = null;
         this.resetNewLicenseFeeApprovalState();
@@ -3489,7 +3493,27 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
             licenseFee: this.newLicenseFeeApprovalDetails
         };
 
+        this.pendingNewLicenseFeeSelection = selection;
+        this.newLicenseFeeConfirmModalOpen = true;
+        this.cdr.detectChanges();
+    }
+
+    cancelNewLicenseFeeSecondConfirm(): void {
+        this.newLicenseFeeConfirmModalOpen = false;
+        this.pendingNewLicenseFeeSelection = null;
+        this.cdr.detectChanges();
+    }
+
+    submitConfirmedNewLicenseFeeApproval(): void {
+        const selection = this.pendingNewLicenseFeeSelection;
         const pendingApproval = this.pendingNewLicenseFeeApproval;
+        if (!selection || !pendingApproval) {
+            this.newLicenseFeeConfirmModalOpen = false;
+            return;
+        }
+
+        this.newLicenseFeeConfirmModalOpen = false;
+        this.pendingNewLicenseFeeSelection = null;
         this.newLicenseFeeApprovalModalOpen = false;
         this.pendingNewLicenseFeeApproval = null;
         this.resetNewLicenseFeeApprovalState();
