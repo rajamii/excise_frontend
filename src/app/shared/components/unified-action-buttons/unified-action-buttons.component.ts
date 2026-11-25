@@ -480,17 +480,17 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     const normalizedAction = this.normalizeActionName(button?.action);
     const normalizedButton: ActionButtonConfig = { ...button, action: normalizedAction };
 
+    // District users choose the Site Enquiry Officer immediately after clicking
+    // Approve. Do not show the general document declaration on this route.
+    if (normalizedAction === 'APPROVE' && this.isDistrictUserNewLicenseApproval()) {
+      void this.routeDistrictNewLicenseApproval(normalizedButton);
+      return;
+    }
+
     if (this.shouldRequireNewLicenseUploadsDeclaration(normalizedAction)) {
       this.showNewLicenseUploadsDeclaration(normalizedButton).then((res: any) => {
         if (res && res.confirmed) {
-          const contextData: any = {};
-          if (res.selectedOfficerId) {
-            contextData.site_enquiry_officer_id = res.selectedOfficerId;
-            if (this.item) {
-              (this.item as any).__selectedSiteEnquiryOfficerId = res.selectedOfficerId;
-            }
-          }
-          this.continueActionAfterDeclaration(normalizedButton, contextData);
+          this.continueActionAfterDeclaration(normalizedButton);
         }
       });
       return;
@@ -526,77 +526,135 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     return idOrRef.startsWith('NLI/') || idOrRef.startsWith('NA/');
   }
 
-  private isDistrictUserNewLicenseApproval(action: string): boolean {
-    const act = this.normalizeActionName(action);
-    if (act !== 'APPROVE') return false;
-
+  private isDistrictUserNewLicenseApproval(): boolean {
     if (!this.isNewLicenseApplicationItem()) return false;
-
     const itemAny = this.item as any;
+    const stage = itemAny?.current_stage ?? itemAny?.currentStage;
     const stageName = String(
-      itemAny?.currentStageName ??
-      itemAny?.current_stage_name ??
-      itemAny?.display_stage ??
-      itemAny?.currentStage ??
-      itemAny?.current_stage ??
-      itemAny?.status ??
-      ''
+      itemAny?.currentStageName ?? itemAny?.current_stage_name ?? itemAny?.display_stage ??
+      (typeof stage === 'object' ? stage?.name ?? stage?.stage_name ?? stage?.id : stage) ?? itemAny?.status ?? ''
     ).toLowerCase();
-
-    const isStageDistrictUser = stageName.includes('district user') || stageName.includes('district_user') || stageName === '2' || stageName.includes('stage 2');
-
-    const userRole = String(this.accountService.getUserProfileSync()?.role?.name ?? '').trim().toLowerCase();
-    const isUserDistrictRole = userRole.includes('district');
-
-    return isStageDistrictUser || isUserDistrictRole;
-  }
-
-  private getDistrictIdentifierForSiteEnquiry(): string | number | null {
-    const itemAny = this.item as any;
-    const idOrRef = String(
-      itemAny?.application_id ||
-      itemAny?.applicationId ||
-      itemAny?.referenceNo ||
-      itemAny?.refNo ||
-      itemAny?.id ||
-      ''
-    ).trim();
-
-    let districtId =
-      itemAny?.site_district ||
-      itemAny?.site_district_id ||
-      itemAny?.district ||
-      itemAny?.district_id ||
-      itemAny?.district_code ||
-      itemAny?.districtCode ||
-      itemAny?.site_district_name;
-
-    if (districtId && typeof districtId === 'object') {
-      districtId = districtId.id || districtId.district_code || districtId.districtCode || districtId.district;
-    }
-
-    if (!districtId && idOrRef && idOrRef.includes('/')) {
-      const parts = idOrRef.split('/');
-      if (parts.length >= 2 && /^\d+$/.test(parts[1])) {
-        districtId = parts[1];
-      }
-    }
-
-    return districtId || null;
-  }
-
-  private async fetchSiteEnquiryOfficersForDistrict(districtId: string | number): Promise<any> {
-    const baseUrl = String(environment.apiBaseUrl || '').replace(/\/+$/, '');
+    let storedUser: any = null;
     try {
-      const targetUrl = `${baseUrl}/masters/core/districts/${encodeURIComponent(String(districtId))}/site-enquiry-officers/`;
-      return await firstValueFrom(this.http.get<any>(targetUrl));
+      const storedUserText = localStorage.getItem('currentUser') || sessionStorage.getItem('currentUser');
+      storedUser = storedUserText ? JSON.parse(storedUserText) : null;
     } catch {
-      try {
-        const fallbackUrl = `${baseUrl}/masters/districts/${encodeURIComponent(String(districtId))}/site-enquiry-officers/`;
-        return await firstValueFrom(this.http.get<any>(fallbackUrl));
-      } catch {
-        return null;
+      storedUser = null;
+    }
+    const profile = this.accountService.getUserProfileSync();
+    const roleName = String(profile?.role?.name || storedUser?.role?.name || localStorage.getItem('role') || '').toLowerCase();
+    const roleId = Number(profile?.role?.id || storedUser?.role?.id || storedUser?.roleId || localStorage.getItem('role_id') || 0);
+    return stageName.includes('district user') || stageName.includes('district_user') || stageName === '2' ||
+      stageName.includes('stage 2') || roleId === 4 || roleName.includes('district');
+  }
+
+  private getNewLicenseDistrictIdentifier(): string | number | null {
+    const itemAny = this.item as any;
+    const idOrRef = String(itemAny?.application_id || itemAny?.applicationId || itemAny?.referenceNo || itemAny?.refNo || itemAny?.id || '').trim();
+    const match = idOrRef.match(/^(?:NLI|NA)\/(\d+)\//i);
+    if (match) return match[1];
+
+    const direct = itemAny?.site_district_id ?? itemAny?.district_id ?? itemAny?.district_code ?? itemAny?.districtCode;
+    if (direct !== undefined && direct !== null && String(direct).trim() !== '') return direct;
+
+    const district = itemAny?.site_district || itemAny?.district;
+    if (district && typeof district === 'object') {
+      return district.id ?? district.district_code ?? district.districtCode ?? district.district ?? null;
+    }
+    return district || itemAny?.site_district_name || null;
+  }
+
+  private async routeDistrictNewLicenseApproval(button: ActionButtonConfig): Promise<void> {
+    const districtId = this.getNewLicenseDistrictIdentifier();
+    if (!districtId) {
+      Swal.fire('District unavailable', 'Could not determine the application district. The application was not approved.', 'error');
+      return;
+    }
+
+    const baseUrl = String(environment.apiBaseUrl || '').replace(/\/+$/, '');
+    const url = `${baseUrl}/masters/core/districts/${encodeURIComponent(String(districtId))}/site-enquiry-officers/`;
+    try {
+      const data = await firstValueFrom(this.http.get<any>(url));
+      const enabledValue = data?.multiple_site_enquiry ?? data?.multipleSiteEnquiry;
+      const enabled = enabledValue === true || enabledValue === 1 || String(enabledValue).toLowerCase() === 'true';
+      const officers = Array.isArray(data?.officers) ? data.officers : (Array.isArray(data?.site_enquiry_officers) ? data.site_enquiry_officers : []);
+
+      if (!enabled) {
+        this.continueActionAfterDeclaration(button);
+        return;
       }
+      if (officers.length === 0) {
+        Swal.fire('No Site Enquiry Officers', `Multiple Site Enquiry is enabled for ${data?.district_name || 'this district'}, but there are no active officers. The application was not approved.`, 'error');
+        return;
+      }
+
+      let selectedOfficerId: number;
+      if (officers.length === 1) {
+        selectedOfficerId = Number(officers[0].id);
+      } else {
+        const options: Record<string, string> = {};
+        officers.forEach((officer: any) => {
+          const contact = [officer.phone_number, officer.email].filter(Boolean).join(' · ');
+          const name = officer.name || officer.username || `Officer #${officer.id}`;
+          options[String(officer.id)] = contact ? `${name} — ${contact}` : name;
+        });
+        const applicationId = String(this.item?.referenceNo || this.item?.['application_id'] || this.item?.['applicationId'] || 'this application');
+        const districtName = String(data?.district_name || 'this district');
+        const result = await Swal.fire({
+          title: 'Select Site Enquiry Officer',
+          html: `
+            <style>
+              .swal2-popup.site-enquiry-routing-popup { width: min(560px, calc(100vw - 32px)) !important; padding: 30px 32px 26px !important; border-radius: 18px !important; box-shadow: 0 24px 70px rgba(15, 23, 42, .24) !important; }
+              .site-enquiry-routing-popup .swal2-title { padding: 0 !important; margin: 0 0 10px !important; color: #172554 !important; font-size: 25px !important; font-weight: 700 !important; letter-spacing: -.35px; }
+              .site-enquiry-routing-popup .swal2-html-container { margin: 0 !important; color: #475569 !important; }
+              .site-enquiry-routing-popup .routing-intro { margin: 0 0 20px; color: #64748b; font-size: 14px; line-height: 1.55; }
+              .site-enquiry-routing-popup .routing-summary { display: flex; flex-wrap: wrap; gap: 9px; margin: 0 0 22px; padding: 13px; border: 1px solid #dbeafe; border-radius: 12px; background: linear-gradient(135deg, #eff6ff, #f8fafc); text-align: left; }
+              .site-enquiry-routing-popup .routing-chip { display: inline-flex; align-items: center; gap: 7px; max-width: 100%; padding: 7px 10px; border: 1px solid #dbeafe; border-radius: 8px; background: #fff; color: #1e3a8a; font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }
+              .site-enquiry-routing-popup .routing-label { display: block; margin: 0 0 8px; color: #1e293b; font-size: 13px; font-weight: 700; text-align: left; }
+              .site-enquiry-routing-popup .swal2-select { display: block !important; width: 100% !important; min-height: 50px !important; margin: 0 !important; padding: 0 42px 0 14px !important; border: 1px solid #cbd5e1 !important; border-radius: 10px !important; background-color: #fff !important; color: #0f172a !important; font-size: 14px !important; box-shadow: 0 1px 2px rgba(15, 23, 42, .05) !important; outline: none !important; }
+              .site-enquiry-routing-popup .swal2-select:focus { border-color: #2563eb !important; box-shadow: 0 0 0 4px rgba(37, 99, 235, .14) !important; }
+              .site-enquiry-routing-popup .swal2-actions { gap: 10px !important; margin: 22px 0 0 !important; }
+              .site-enquiry-routing-popup .routing-confirm, .site-enquiry-routing-popup .routing-cancel { min-height: 44px; margin: 0 !important; padding: 0 19px !important; border: 0 !important; border-radius: 9px !important; font-size: 14px !important; font-weight: 700 !important; transition: transform .15s ease, box-shadow .15s ease; }
+              .site-enquiry-routing-popup .routing-confirm { background: #2563eb !important; box-shadow: 0 5px 12px rgba(37, 99, 235, .22) !important; }
+              .site-enquiry-routing-popup .routing-confirm:hover { background: #1d4ed8 !important; transform: translateY(-1px); }
+              .site-enquiry-routing-popup .routing-cancel { background: #f1f5f9 !important; color: #334155 !important; }
+              .site-enquiry-routing-popup .routing-cancel:hover { background: #e2e8f0 !important; }
+              @media (max-width: 480px) { .swal2-popup.site-enquiry-routing-popup { padding: 24px 20px 20px !important; } .site-enquiry-routing-popup .swal2-title { font-size: 21px !important; } }
+            </style>
+            <p class="routing-intro">Choose the officer who will conduct the site inspection. The application will be forwarded after you confirm.</p>
+            <div class="routing-summary">
+              <span class="routing-chip">Application&nbsp; ${this.escapeHtml(applicationId)}</span>
+              <span class="routing-chip">District&nbsp; ${this.escapeHtml(districtName)}</span>
+            </div>
+            <label class="routing-label" for="swal2-select">Site Enquiry Officer</label>
+          `,
+          input: 'select',
+          inputOptions: options,
+          inputPlaceholder: 'Choose an officer',
+          inputValidator: value => value ? null : 'Please select a Site Enquiry Officer to proceed.',
+          customClass: {
+            popup: 'site-enquiry-routing-popup',
+            confirmButton: 'routing-confirm',
+            cancelButton: 'routing-cancel'
+          },
+          buttonsStyling: false,
+          showCancelButton: true,
+          confirmButtonText: 'Approve & Forward',
+          cancelButtonText: 'Cancel'
+        });
+        if (!result.isConfirmed || !result.value) return;
+        selectedOfficerId = Number(result.value);
+      }
+
+      if (!Number.isFinite(selectedOfficerId) || selectedOfficerId <= 0) {
+        Swal.fire('Invalid officer', 'The selected Site Enquiry Officer could not be identified. The application was not approved.', 'error');
+        return;
+      }
+      if (this.item) (this.item as any).__selectedSiteEnquiryOfficerId = selectedOfficerId;
+      this.continueActionAfterDeclaration(button, { site_enquiry_officer_id: selectedOfficerId });
+    } catch (error) {
+      console.error('Could not load Site Enquiry Officers for district approval:', error);
+      Swal.fire('Unable to load officers', 'Site Enquiry Officers could not be loaded. The application was not approved. Please retry.', 'error');
     }
   }
 
@@ -618,26 +676,6 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
     const label = String(button?.label || button?.action || 'Proceed').trim();
     const action = this.normalizeActionName(button?.action);
 
-    const isDistrictApprove = this.isDistrictUserNewLicenseApproval(action);
-    let districtName = '';
-    let officers: any[] = [];
-    let hasMultipleOfficers = false;
-
-    if (isDistrictApprove) {
-      const districtId = this.getDistrictIdentifierForSiteEnquiry();
-      if (districtId) {
-        const data = await this.fetchSiteEnquiryOfficersForDistrict(districtId);
-        if (data) {
-          districtName = data.district_name || (this.item as any)?.site_district_name || 'District';
-          const multipleEnabled = !!data.multiple_site_enquiry;
-          const rawOfficers = Array.isArray(data.officers) ? data.officers : (Array.isArray(data.site_enquiry_officers) ? data.site_enquiry_officers : []);
-          if (multipleEnabled && rawOfficers.length > 1) {
-            officers = rawOfficers;
-            hasMultipleOfficers = true;
-          }
-        }
-      }
-    }
 
     const confirmationText =
       button?.confirmationMessage ||
@@ -647,34 +685,8 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
           ? 'Please confirm you have verified all the details and uploaded documents before rejecting.'
           : 'Please confirm you have verified all the details and uploaded documents before raising an objection.');
 
-    let officerDropdownHtml = '';
-    if (hasMultipleOfficers) {
-      const optionsHtml = officers.map(o => {
-        const extra = o.phone_number ? ` (Phone: ${o.phone_number})` : (o.email ? ` (${o.email})` : '');
-        return `<option value="${o.id}">${this.escapeHtml(o.name || o.username)}${this.escapeHtml(extra)}</option>`;
-      }).join('');
-
-      officerDropdownHtml = `
-        <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 12px 14px; margin-top: 14px; text-align: left;">
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-            <span style="font-size: 16px;">👤</span>
-            <label for="siteEnquiryOfficerSelect" style="margin: 0; font-size: 13px; font-weight: 600; color: #166534;">
-              Select Site Enquiry Officer (${this.escapeHtml(districtName)}): <span style="color: #dc2626;">*</span>
-            </label>
-          </div>
-          <p style="margin: 0 0 8px 0; font-size: 12px; color: #15803d; line-height: 1.35;">
-            District <strong>${this.escapeHtml(districtName)}</strong> has multiple Site Enquiry Officers enabled. Please choose which officer will conduct the inspection:
-          </p>
-          <select id="siteEnquiryOfficerSelect" style="display: block; width: 100%; box-sizing: border-box; margin: 0; padding: 8px 10px; font-size: 13px; border: 1px solid #86efac; border-radius: 6px; background: white; color: #1e293b; outline: none;">
-            <option value="">-- Choose Site Enquiry Officer --</option>
-            ${optionsHtml}
-          </select>
-        </div>
-      `;
-    }
-
     return Swal.fire({
-      title: hasMultipleOfficers ? 'Declaration & Site Enquiry Routing' : 'Declaration',
+      title: 'Declaration',
       html: `
         <div style="text-align:left;">
           <div style="margin-bottom: 12px; color: #374151; font-size: 14px;">
@@ -686,7 +698,6 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
               I declare that I have checked all uploaded documents and they are correct.
             </label>
           </div>
-          ${officerDropdownHtml}
         </div>
       `,
       icon: 'warning',
@@ -701,32 +712,19 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
         if (confirmBtn) confirmBtn.disabled = true;
 
         const checkbox = document.getElementById('uploadsDeclaration') as HTMLInputElement | null;
-        const select = document.getElementById('siteEnquiryOfficerSelect') as HTMLSelectElement | null;
-
         const validateInputs = () => {
           const isChecked = !!checkbox?.checked;
-          const isOfficerValid = hasMultipleOfficers ? !!select?.value : true;
           const btn = Swal.getConfirmButton();
-          if (btn) btn.disabled = !(isChecked && isOfficerValid);
+          if (btn) btn.disabled = !isChecked;
         };
 
         if (checkbox) checkbox.addEventListener('change', validateInputs);
-        if (select) select.addEventListener('change', validateInputs);
       },
       preConfirm: () => {
         const checkbox = document.getElementById('uploadsDeclaration') as HTMLInputElement | null;
         if (!checkbox?.checked) {
           Swal.showValidationMessage('Please accept the declaration to continue.');
           return false as any;
-        }
-
-        if (hasMultipleOfficers) {
-          const select = document.getElementById('siteEnquiryOfficerSelect') as HTMLSelectElement | null;
-          if (!select?.value) {
-            Swal.showValidationMessage('Please select a Site Enquiry Officer to proceed.');
-            return false as any;
-          }
-          return { confirmed: true, selectedOfficerId: parseInt(select.value, 10) };
         }
 
         return { confirmed: true };

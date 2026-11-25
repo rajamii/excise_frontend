@@ -2582,6 +2582,16 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                     this.openSiteEnquiryAndApprove(item, context, applicationId);
                     return;
                 }
+                // A failed workflow lookup must not silently approve a new-license
+                // application that may be at the district-to-site-enquiry handoff.
+                if (this.applicationType === 'new-license' || this.isNewLicense()) {
+                    this.snackBar.open(
+                        'Could not verify the application stage. Please retry; the application was not approved.',
+                        'Close',
+                        { duration: 5000 }
+                    );
+                    return;
+                }
                 this.continueApprovalWithOptionalNewLicenseFeeDialog(item, context, applicationId);
             }
         });
@@ -2649,21 +2659,22 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         if (!isNewLicense) {
             return false;
         }
+        const currentStage = source?.current_stage ?? source?.currentStage ??
+            this.applicationData?.['current_stage'] ?? this.applicationData?.['currentStage'];
         const stageName = String(
             source?.currentStageName ??
             source?.current_stage_name ??
-            source?.currentStage ??
-            source?.current_stage ??
             source?.status ??
             this.applicationData?.currentStageName ??
             (this.applicationData as any)?.current_stage_name ??
-            this.applicationData?.currentStage ??
-            (this.applicationData as any)?.current_stage ??
+            (typeof currentStage === 'object' ? currentStage?.name ?? currentStage?.stage_name ?? currentStage?.id : currentStage) ??
             this.applicationData?.status ??
             ''
         ).toLowerCase();
 
-        return stageName.includes('district user') || stageName.includes('district_user') || stageName === '2' || stageName.includes('stage 2');
+        return stageName.includes('district user') || stageName.includes('district_user') || stageName === '2' || stageName.includes('stage 2') ||
+            this.roleService.hasRole(4) ||
+            (typeof localStorage !== 'undefined' && Number(localStorage.getItem('role_id')) === 4);
     }
 
     private isTransitionToSiteEnquiryFromDistrictUser(stages: any[]): boolean {
@@ -2702,7 +2713,11 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         }
 
         if (!districtId) {
-            this.continueApprovalWithOptionalNewLicenseFeeDialog(item, context, applicationId);
+            this.snackBar.open(
+                'Could not determine the application district, so it was not approved. Please refresh and try again.',
+                'Close',
+                { duration: 5000 }
+            );
             return;
         }
 
@@ -2711,48 +2726,31 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
 
         this.http.get<any>(targetUrl).subscribe({
             next: (data: any) => {
-                const multipleEnabled = !!data?.multiple_site_enquiry;
+                const multipleEnabled = data?.multiple_site_enquiry === true || data?.multiple_site_enquiry === 1 || data?.multiple_site_enquiry === 'true';
                 const officers = Array.isArray(data?.officers) ? data.officers : (Array.isArray(data?.site_enquiry_officers) ? data.site_enquiry_officers : []);
                 const districtName = data?.district_name || this.applicationData?.site_district_name || 'this district';
 
                 if (multipleEnabled && officers.length > 1) {
-                    setTimeout(() => {
-                        this.showSelectSiteEnquiryOfficerDialog(item, context, applicationId, districtName, officers);
-                    }, 150);
+                    this.showSelectSiteEnquiryOfficerDialog(item, context, applicationId, districtName, officers);
                 } else if (multipleEnabled && officers.length === 1) {
-                    setTimeout(() => {
-                        this.showSingleOfficerSiteEnquiryConfirmation(item, context, applicationId, districtName, officers[0]);
-                    }, 150);
+                    this.showSingleOfficerSiteEnquiryConfirmation(item, context, applicationId, districtName, officers[0]);
+                } else if (multipleEnabled) {
+                    this.snackBar.open(
+                        `Multiple Site Enquiry is enabled for ${districtName}, but no active officers were returned. The application was not approved.`,
+                        'Close',
+                        { duration: 6000 }
+                    );
                 } else {
                     this.continueApprovalWithOptionalNewLicenseFeeDialog(item, context, applicationId);
                 }
             },
-            error: (err: any) => {
-                // Secondary fallback attempt without /core/
-                const fallbackUrl = `${baseUrl}/masters/districts/${encodeURIComponent(String(districtId))}/site-enquiry-officers/`;
-                this.http.get<any>(fallbackUrl).subscribe({
-                    next: (data: any) => {
-                        const multipleEnabled = !!data?.multiple_site_enquiry;
-                        const officers = Array.isArray(data?.officers) ? data.officers : (Array.isArray(data?.site_enquiry_officers) ? data.site_enquiry_officers : []);
-                        const districtName = data?.district_name || this.applicationData?.site_district_name || 'this district';
-
-                        if (multipleEnabled && officers.length > 1) {
-                            setTimeout(() => {
-                                this.showSelectSiteEnquiryOfficerDialog(item, context, applicationId, districtName, officers);
-                            }, 150);
-                        } else if (multipleEnabled && officers.length === 1) {
-                            setTimeout(() => {
-                                this.showSingleOfficerSiteEnquiryConfirmation(item, context, applicationId, districtName, officers[0]);
-                            }, 150);
-                        } else {
-                            this.continueApprovalWithOptionalNewLicenseFeeDialog(item, context, applicationId);
-                        }
-                    },
-                    error: (fallbackErr: any) => {
-                        console.warn('Could not fetch district site enquiry officers:', fallbackErr);
-                        this.continueApprovalWithOptionalNewLicenseFeeDialog(item, context, applicationId);
-                    }
-                });
+            error: (error: any) => {
+                console.error('Could not fetch district site enquiry officers:', error);
+                this.snackBar.open(
+                    'Could not load Site Enquiry Officers. Please retry; the application was not approved.',
+                    'Close',
+                    { duration: 5000 }
+                );
             }
         });
     }
