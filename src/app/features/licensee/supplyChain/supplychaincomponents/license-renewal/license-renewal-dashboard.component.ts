@@ -13,6 +13,7 @@ import { RoleService } from '../../../../../core/services/role.service';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
 import { SidebarPendingBadgeService } from '../../../../../shared/services/sidebar-pending-badge.service';
 import { ApplicationMovementComponent } from '../../../licensee-dashboard/application-table/application-movement/application-movement.component';
+import { replaceRoleNamesWithLevels } from '../../../../../shared/utils/role-level.util';
 
 interface RenewalCounts {
   applied: number;
@@ -637,10 +638,11 @@ export class LicenseRenewalDashboardComponent implements OnInit {
   private formatStageName(value: string): string {
     const raw = String(value || '').trim();
     if (!raw) return '-';
-    return raw
+    const formatted = raw
       .replace(/[_-]+/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
       .replace(/\b\w/g, (char) => char.toUpperCase());
+    return replaceRoleNamesWithLevels(formatted);
   }
 }

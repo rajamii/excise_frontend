@@ -44,6 +44,7 @@ import {
   filterRowsForSupplyChainSidebarMenus,
   isLicenseeWalletNavEligible
 } from '../../shared/utils/wallet-nav-eligibility.util';
+import { mapRoleOrStageToLevel } from '../../shared/utils/role-level.util';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MyLicensesComponent } from '../licensee/my-licenses/my-licenses.component';
 import { SecretaryBulkSpiritComponent } from '../secretary/components/secretary-bulk-spirit/secretary-bulk-spirit.component';
@@ -2512,10 +2513,14 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       roleFromUser = this.humanizeRoleName(roleFromUser);
     }
 
+    const resolvedRoleId = Number(this.currentUser?.roleId || this.currentUser?.role?.id || 0);
     if (roleFromUser) {
-      this.userRoleDisplayName = roleFromUser;
+      this.userRoleDisplayName = mapRoleOrStageToLevel(roleFromUser, resolvedRoleId);
     } else if (this.currentUser?.roleId) {
-      this.userRoleDisplayName = this.roleService.getRoleName(this.currentUser.roleId);
+      this.userRoleDisplayName = mapRoleOrStageToLevel(
+        this.roleService.getRoleName(this.currentUser.roleId),
+        this.currentUser.roleId
+      );
     } else {
       this.userRoleDisplayName = 'User';
     }
@@ -2535,12 +2540,12 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     if (roleId === 4 || roleId === 8) return true;
 
     const roleName = String(
-      this.userRoleDisplayName ||
       this.currentUser?.role?.name ||
       this.currentUser?.role?.displayName ||
       (this.accountService?.getCurrentUser() as any)?.role?.name ||
       (this.roleService?.getCurrentUser() as any)?.role?.name ||
       localStorage.getItem('role') ||
+      this.userRoleDisplayName ||
       ''
     ).toLowerCase().trim();
 
@@ -2548,6 +2553,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
       roleName.includes('district') ||
       roleName.includes('enquiry') ||
       roleName.includes('sub_enquiry') ||
+      roleName === 'level 1' ||
+      roleName === 'level 2' ||
       roleName.includes('site_enquiry')
     );
   }

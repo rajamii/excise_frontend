@@ -7,6 +7,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { UnifiedApplication } from '../../../../core/models/unified-application.model';
+import { replaceRoleNamesWithLevels } from '../../../../shared/utils/role-level.util';
 import { ApplicationMovementComponent } from './application-movement/application-movement.component';
 import { RoleService } from '../../../../core/services/role.service';
 
@@ -53,7 +54,12 @@ export class ApplicationTableComponent implements OnInit, OnChanges {
         'site_admin': 'Site Administrator',
         'licensee': 'Licensee',
         'permit_section': 'Permit Section',
-        'commissioner': 'Commissioner',
+        'district_user': 'Level 1',
+        'sub_enquiry_officer': 'Level 2',
+        'site_enquiry_officer': 'Level 2',
+        'site_inquiry_officer': 'Level 2',
+        'joint_commissioner': 'Level 3',
+        'commissioner': 'Level 4',
         'it_cell': 'IT Cell',
         'officer_in_charge': 'Officer In Charge'
     };
@@ -106,7 +112,8 @@ export class ApplicationTableComponent implements OnInit, OnChanges {
             return 'Pending';
         }
 
-        return this.stageDisplayMapping[normalized] || this.stageDisplayMapping[raw] || raw || 'N/A';
+        const display = this.stageDisplayMapping[normalized] || this.stageDisplayMapping[raw] || raw || 'N/A';
+        return replaceRoleNamesWithLevels(display);
     }
 
     getLatestRemarks(element: UnifiedApplication): string {

@@ -27,6 +27,7 @@ import {
   filterRowsForSupplyChainSidebarMenus,
   isLicenseeWalletNavEligible
 } from '../../../utils/wallet-nav-eligibility.util';
+import { mapRoleOrStageToLevel } from '../../../utils/role-level.util';
 
 @Component({
   selector: 'app-unified-layout',
@@ -2631,13 +2632,14 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       roleFromUser = this.humanizeRoleName(roleFromUser);
     }
 
-    if (roleFromUser) {
-      return roleFromUser;
-    }
     const roleId = Number(u?.roleId || u?.role?.id || 0);
+
+    if (roleFromUser) {
+      return mapRoleOrStageToLevel(roleFromUser, roleId);
+    }
     if (roleId) {
       const name = this.roleService.getRoleName(roleId);
-      if (name && name !== 'User') return name;
+      if (name && name !== 'User') return mapRoleOrStageToLevel(name, roleId);
     }
     if (this.isLicenseeUser()) {
       return 'Licensee';
@@ -2660,13 +2662,13 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     if (roleId === 4 || roleId === 8) return true;
 
     const roleName = String(
-      this.userRoleDisplayName ||
       this.currentUser?.role?.name ||
       this.currentUser?.role?.displayName ||
       this.user?.role?.name ||
       (this.accountService?.getCurrentUser() as any)?.role?.name ||
       (this.roleService?.getCurrentUser() as any)?.role?.name ||
       localStorage.getItem('role') ||
+      this.userRoleDisplayName ||
       ''
     ).toLowerCase().trim();
 
@@ -2674,7 +2676,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       roleName.includes('district') ||
       roleName.includes('enquiry') ||
       roleName.includes('sub_enquiry') ||
-      roleName.includes('site_enquiry')
+      roleName.includes('site_enquiry') ||
+      roleName === 'level 1' ||
+      roleName === 'level 2'
     );
   }
 

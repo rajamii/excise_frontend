@@ -17,6 +17,7 @@ import { SidebarPendingBadgeService } from '../../../../../shared/services/sideb
 import { ResolveObjectionsDialogComponent } from './resolve-objections-dialog/resolve-objections-dialog.component';
 import { ObjectionDetailsDialogComponent } from './objection-details-dialog/objection-details-dialog.component';
 import { ApplicationFeeSlipDialogComponent } from './application-fee-slip-dialog/application-fee-slip-dialog.component';
+import { replaceRoleNamesWithLevels } from '../../../../../shared/utils/role-level.util';
 
 export interface ActiveCountdownTimer {
   timerType: 'objection' | 'payment';
@@ -627,7 +628,7 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
               `Application Fee of &#8377;500.00 Paid Successfully!` +
               `</p>` +
               `<p style="font-size:13px; color:#475569;">` +
-              `Application <b>${this.escapeHtml(applicationId)}</b> has been submitted and moved to <b>District User</b> for initial review.` +
+              `Application <b>${this.escapeHtml(applicationId)}</b> has been submitted and moved to <b>Level 1</b> for initial review.` +
               `</p>` +
               `</div>`,
             confirmButtonText: 'Done',
@@ -710,7 +711,7 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
             <div style="font-size:13px; color:#92400e; line-height:1.45;">
               <div style="font-weight:700; margin-bottom:3px;">Payment Status Reconciliation</div>
               If money was debited from your account, clicking retry queries BillDesk to confirm payment without paying again.
-              If the gateway reports success, the application advances to District User. If failed, you can retry payment cleanly.
+              If the gateway reports success, the application advances to Level 1. If failed, you can retry payment cleanly.
             </div>
           </div>
 
@@ -813,7 +814,7 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
               `</p>` +
               `<p style="font-size:13px; color:#475569;">` +
               `BillDesk confirmed the transaction. Application <b>${this.escapeHtml(applicationId)}</b> ` +
-              `has been submitted and moved to <b>District User</b> for initial review.` +
+              `has been submitted and moved to <b>Level 1</b> for initial review.` +
               `</p>` +
               `</div>`,
             confirmButtonText: 'Done',
@@ -1298,7 +1299,9 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
         currentStage = this.simplifyStageForLicensee(finalStatusGroup, currentStageRaw);
       }
     } else {
-      currentStage = String(item?.display_stage || item?.displayStage || this.computeCurrentStageLabel(item, finalStatusGroup, currentStageRaw));
+      currentStage = replaceRoleNamesWithLevels(
+        String(item?.display_stage || item?.displayStage || this.computeCurrentStageLabel(item, finalStatusGroup, currentStageRaw))
+      );
     }
 
     const transactions = Array.isArray(item?.transactions) ? item.transactions : [];
@@ -1565,7 +1568,7 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
   private toDisplayRoleName(roleName: string): string {
     const cleaned = String(roleName || '').trim();
     if (!cleaned) return 'Admin';
-    return cleaned
+    const formatted = cleaned
       .replace(/[_\-]+/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
@@ -1573,6 +1576,7 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
       .filter(Boolean)
       .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
       .join(' ');
+    return replaceRoleNamesWithLevels(formatted);
   }
 
   private computeUpdatedObjectionFields(item: any): string[] {
@@ -1669,9 +1673,10 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
     if (Number.isFinite(stageId) && String(stageId) === raw) {
       if (stageId === 23) return 'Awaiting Payment';
     }
-    return raw
+    const formatted = raw
       .replace(/_/g, ' ')
       .replace(/\b\w/g, (c) => c.toUpperCase());
+    return replaceRoleNamesWithLevels(formatted);
   }
 
   private simplifyStageForLicensee(statusGroup: NewLicenseItem['statusGroup'], stageValue: any): string {

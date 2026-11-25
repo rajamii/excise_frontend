@@ -4,6 +4,7 @@ import { MatTableDataSource } from '@angular/material/table';
 import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { LicenseApplication, Transaction } from '../../../../../core/models/license-application.model';
+import { mapRoleOrStageToLevel } from '../../../../../shared/utils/role-level.util';
 
 @Component({
   selector: 'app-application-movement',
@@ -68,9 +69,8 @@ export class ApplicationMovementComponent {
     return parts.join(' ') || String(user.username || '').trim() || '-';
   }
 
-  /** Returns the display name for a forwarded_by role object */
-  getForwardedByName(txn: any): string {
-    if (txn?.forwarded_by_name) return txn.forwarded_by_name;
+  private getRawForwardedByName(txn: any): string {
+    if (txn?.forwarded_by_name) return String(txn.forwarded_by_name).trim();
 
     const role = txn?.forwarded_by || txn?.forwardedBy;
     if (!role) return '-';
@@ -78,14 +78,29 @@ export class ApplicationMovementComponent {
     return String(role.name || role.roleName || '').trim() || '-';
   }
 
-  /** Returns the display name for a forwarded_to role object */
-  getForwardedToName(txn: any): string {
-    if (txn?.forwarded_to_name) return txn.forwarded_to_name;
+  private getRawForwardedToName(txn: any): string {
+    if (txn?.forwarded_to_name) return String(txn.forwarded_to_name).trim();
 
     const role = txn?.forwarded_to || txn?.forwardedTo;
     if (!role) return '-';
 
     return String(role.name || role.roleName || '').trim() || '-';
+  }
+
+  /** Returns the display name (level-mapped) for a forwarded_by role object */
+  getForwardedByName(txn: any): string {
+    const raw = this.getRawForwardedByName(txn);
+    if (raw === '-') return '-';
+    const roleId = txn?.forwarded_by?.id ?? txn?.forwardedBy?.id ?? txn?.forwarded_by_id ?? null;
+    return mapRoleOrStageToLevel(raw, roleId);
+  }
+
+  /** Returns the display name (level-mapped) for a forwarded_to role object */
+  getForwardedToName(txn: any): string {
+    const raw = this.getRawForwardedToName(txn);
+    if (raw === '-') return '-';
+    const roleId = txn?.forwarded_to?.id ?? txn?.forwardedTo?.id ?? txn?.forwarded_to_id ?? null;
+    return mapRoleOrStageToLevel(raw, roleId);
   }
 
   /** Returns 1-2 letter initials for the user avatar */
@@ -107,7 +122,7 @@ export class ApplicationMovementComponent {
       return lower.includes('commissioner');
     };
 
-    const forwardedBy = this.getForwardedByName(element);
+    const forwardedBy = this.getRawForwardedByName(element);
     if (isStrictCommissioner(forwardedBy)) {
       return true;
     }
