@@ -2762,37 +2762,498 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         districtName: string,
         officers: any[]
     ): void {
+        const escapeHtml = (val: string) => String(val || '').replace(/[&<>"']/g, (m: string) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m] || m));
         const officerOptions: { [key: string]: string } = {};
         officers.forEach(o => {
-            const extra = o.phone_number ? ` (Phone: ${o.phone_number})` : '';
-            officerOptions[String(o.id)] = `${o.name}${extra}`;
+            const extra = [o.phone_number, o.email].filter(Boolean).join(' · ');
+            const name = o.name || `Officer #${o.id}`;
+            officerOptions[String(o.id)] = extra ? `${name} (${extra})` : name;
         });
 
+        const officersHTML = officers.map((officer: any) => {
+          const name = officer.name || officer.username || `Officer #${officer.id}`;
+          const contact = [officer.phone_number, officer.email].filter(Boolean).join(' · ');
+          const initial = (name.replace(/^Shri\s+|^Smt\.\s+/i, '').trim()[0] || 'O').toUpperCase();
+          return `
+            <div class="dropdown-item" data-id="${officer.id}" data-name="${escapeHtml(name)}" data-contact="${escapeHtml(contact)}">
+              <div class="officer-avatar">${initial}</div>
+              <div class="officer-info">
+                <div class="officer-name">${escapeHtml(name)}</div>
+                ${contact ? `<div class="officer-contact">${escapeHtml(contact)}</div>` : ''}
+              </div>
+              <div class="item-check">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1c2b78" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+            </div>
+          `;
+        }).join('');
+
         Swal.fire({
-            title: 'Select Site Enquiry Officer',
             html: `
-                <div style="text-align: left; margin-bottom: 14px; font-size: 0.93rem; color: #334155; line-height: 1.5;">
-                    <p style="margin: 0 0 8px 0;">
-                        District <strong>${districtName}</strong> has multiple Site Enquiry Officers configured.
-                    </p>
-                    <p style="margin: 0; color: #64748b; font-size: 0.88rem;">
-                        Please choose which Site Enquiry Officer to forward application <strong>${applicationId}</strong> to for inspection:
-                    </p>
-                </div>
-            `,
-            input: 'select',
-            inputOptions: officerOptions,
-            inputPlaceholder: '-- Choose Site Enquiry Officer --',
-            showCancelButton: true,
-            confirmButtonText: 'Approve & Forward',
-            cancelButtonText: 'Cancel',
-            confirmButtonColor: '#10b981',
-            cancelButtonColor: '#64748b',
-            inputValidator: (value) => {
-                if (!value) {
-                    return 'Please select a Site Enquiry Officer to proceed!';
+              <style>
+                .swal2-popup.site-enquiry-modal {
+                  width: 500px !important;
+                  max-width: calc(100vw - 32px) !important;
+                  padding: 20px 22px 18px !important;
+                  border-radius: 12px !important;
+                  background: #ffffff !important;
+                  box-shadow: 0 16px 40px -8px rgba(15, 23, 42, 0.22), 0 0 1px 1px rgba(15, 23, 42, 0.08) !important;
+                  border: 1px solid #e2e8f0 !important;
+                  font-family: inherit !important;
+                  text-align: left !important;
+                  overflow: visible !important;
                 }
-                return null;
+                .site-enquiry-modal .swal2-title {
+                  display: none !important;
+                }
+                .site-enquiry-modal .swal2-html-container {
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  text-align: left !important;
+                  color: #334155 !important;
+                  overflow: visible !important;
+                }
+                .site-enquiry-modal .seo-header {
+                  display: flex;
+                  align-items: center;
+                  gap: 12px;
+                  padding-right: 28px;
+                }
+                .site-enquiry-modal .seo-icon-box {
+                  width: 38px;
+                  height: 38px;
+                  border-radius: 9px;
+                  background: #eff6ff;
+                  border: 1px solid #bfdbfe;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  flex-shrink: 0;
+                  color: #1c2b78;
+                }
+                .site-enquiry-modal .seo-title-area h3 {
+                  margin: 0;
+                  font-size: 16.5px;
+                  font-weight: 700;
+                  color: #1c2b78;
+                  line-height: 1.25;
+                }
+                .site-enquiry-modal .seo-title-area p {
+                  margin: 2px 0 0;
+                  font-size: 12px;
+                  color: #64748b;
+                  line-height: 1.35;
+                }
+                .site-enquiry-modal .seo-divider {
+                  height: 1px;
+                  background: #e2e8f0;
+                  margin: 14px 0;
+                }
+                .site-enquiry-modal .seo-meta-bar {
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+                  background: #f8fafc;
+                  border: 1px solid #e2e8f0;
+                  border-radius: 8px;
+                  padding: 8px 14px;
+                  margin-bottom: 14px;
+                }
+                .site-enquiry-modal .seo-meta-col {
+                  display: flex;
+                  flex-direction: column;
+                  min-width: 0;
+                }
+                .site-enquiry-modal .seo-meta-label {
+                  font-size: 10px;
+                  font-weight: 700;
+                  color: #64748b;
+                  letter-spacing: 0.05em;
+                  text-transform: uppercase;
+                  margin-bottom: 2px;
+                }
+                .site-enquiry-modal .seo-meta-val {
+                  font-size: 13px;
+                  font-weight: 600;
+                  color: #0f172a;
+                  white-space: nowrap;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                }
+                .site-enquiry-modal .seo-meta-divider {
+                  width: 1px;
+                  height: 24px;
+                  background: #cbd5e1;
+                  margin: 0 12px;
+                  flex-shrink: 0;
+                }
+                .site-enquiry-modal .seo-field-label {
+                  display: block;
+                  font-size: 13px;
+                  font-weight: 600;
+                  color: #1e293b;
+                  margin-bottom: 6px;
+                }
+                .site-enquiry-modal .seo-req {
+                  color: #ef4444;
+                  font-weight: 700;
+                }
+
+                /* Custom Rich Dropdown */
+                .site-enquiry-modal .custom-dropdown {
+                  position: relative;
+                  width: 100%;
+                }
+                .site-enquiry-modal .custom-dropdown-trigger {
+                  display: flex !important;
+                  align-items: center !important;
+                  justify-content: space-between !important;
+                  width: 100% !important;
+                  min-height: 42px !important;
+                  padding: 0 12px !important;
+                  border: 1.5px solid #cbd5e1 !important;
+                  border-radius: 8px !important;
+                  background-color: #ffffff !important;
+                  cursor: pointer !important;
+                  transition: all .15s ease !important;
+                  user-select: none !important;
+                  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+                  outline: none !important;
+                }
+                .site-enquiry-modal .custom-dropdown-trigger:hover {
+                  border-color: #94a3b8 !important;
+                }
+                .site-enquiry-modal .custom-dropdown-trigger.open,
+                .site-enquiry-modal .custom-dropdown-trigger:focus {
+                  border-color: #1c2b78 !important;
+                  box-shadow: 0 0 0 3px rgba(28, 43, 120, 0.12) !important;
+                }
+                .site-enquiry-modal .trigger-content {
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  overflow: hidden;
+                  white-space: nowrap;
+                  flex: 1;
+                }
+                .site-enquiry-modal .trigger-icon {
+                  color: #64748b;
+                  display: flex;
+                  align-items: center;
+                  flex-shrink: 0;
+                }
+                .site-enquiry-modal .custom-dropdown-trigger.open .trigger-icon {
+                  color: #1c2b78;
+                }
+                .site-enquiry-modal .trigger-text {
+                  font-size: 13.5px !important;
+                  color: #0f172a !important;
+                  overflow: hidden !important;
+                  text-overflow: ellipsis !important;
+                  white-space: nowrap !important;
+                  background: transparent !important;
+                  opacity: 1 !important;
+                  display: block !important;
+                }
+                .site-enquiry-modal .trigger-text.seo-placeholder {
+                  color: #64748b !important;
+                  font-weight: 400 !important;
+                  background: transparent !important;
+                  opacity: 1 !important;
+                }
+                .site-enquiry-modal .trigger-arrow {
+                  color: #64748b;
+                  display: flex;
+                  align-items: center;
+                  flex-shrink: 0;
+                  transition: transform .2s ease;
+                  margin-left: 8px;
+                }
+                .site-enquiry-modal .custom-dropdown-trigger.open .trigger-arrow {
+                  transform: rotate(180deg);
+                  color: #1c2b78;
+                }
+                .site-enquiry-modal .custom-dropdown-menu {
+                  position: relative !important;
+                  margin-top: 6px !important;
+                  background: #ffffff !important;
+                  border: 1.5px solid #cbd5e1 !important;
+                  border-radius: 8px !important;
+                  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+                  max-height: 250px !important;
+                  overflow-y: auto !important;
+                  overflow-x: hidden !important;
+                  padding: 4px !important;
+                  width: 100% !important;
+                }
+                .site-enquiry-modal .dropdown-item {
+                  display: flex;
+                  align-items: center;
+                  gap: 10px;
+                  padding: 8px 10px;
+                  border-radius: 6px;
+                  cursor: pointer;
+                  transition: background .12s ease;
+                  margin-bottom: 2px;
+                }
+                .site-enquiry-modal .dropdown-item:hover {
+                  background: #f1f5f9;
+                }
+                .site-enquiry-modal .dropdown-item.selected {
+                  background: #eff6ff;
+                }
+                .site-enquiry-modal .officer-avatar {
+                  width: 30px;
+                  height: 30px;
+                  border-radius: 50%;
+                  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+                  color: #3730a3;
+                  font-size: 12px;
+                  font-weight: 700;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  flex-shrink: 0;
+                }
+                .site-enquiry-modal .dropdown-item.selected .officer-avatar {
+                  background: #1c2b78;
+                  color: #ffffff;
+                }
+                .site-enquiry-modal .officer-info {
+                  display: flex;
+                  flex-direction: column;
+                  min-width: 0;
+                  flex: 1;
+                }
+                .site-enquiry-modal .officer-name {
+                  font-size: 13px;
+                  font-weight: 600;
+                  color: #1e293b;
+                  line-height: 1.3;
+                }
+                .site-enquiry-modal .dropdown-item.selected .officer-name {
+                  color: #1c2b78;
+                  font-weight: 700;
+                }
+                .site-enquiry-modal .officer-contact {
+                  font-size: 11.5px;
+                  color: #64748b;
+                  margin-top: 1px;
+                }
+                .site-enquiry-modal .item-check {
+                  display: none;
+                  margin-left: 6px;
+                  flex-shrink: 0;
+                }
+                .site-enquiry-modal .dropdown-item.selected .item-check {
+                  display: block;
+                }
+
+                .site-enquiry-modal .swal2-validation-message {
+                  background: #fef2f2 !important;
+                  color: #b91c1c !important;
+                  border: 1px solid #fecaca !important;
+                  border-radius: 8px !important;
+                  font-size: 12.5px !important;
+                  font-weight: 500 !important;
+                  margin: 8px 0 0 !important;
+                  padding: 8px 12px !important;
+                  text-align: left !important;
+                }
+                .site-enquiry-modal .swal2-actions {
+                  display: flex !important;
+                  justify-content: flex-end !important;
+                  align-items: center !important;
+                  gap: 10px !important;
+                  margin: 16px 0 0 !important;
+                  padding: 12px 0 0 !important;
+                  border-top: 1px solid #e2e8f0 !important;
+                  width: 100% !important;
+                }
+                .site-enquiry-modal .seo-btn-cancel,
+                .site-enquiry-modal .seo-btn-confirm {
+                  height: 38px !important;
+                  min-height: 38px !important;
+                  margin: 0 !important;
+                  border-radius: 8px !important;
+                  font-size: 13.5px !important;
+                  font-weight: 600 !important;
+                  cursor: pointer !important;
+                  transition: all .15s ease !important;
+                  font-family: inherit !important;
+                  display: inline-flex !important;
+                  align-items: center !important;
+                  justify-content: center !important;
+                }
+                .site-enquiry-modal .seo-btn-cancel {
+                  padding: 0 16px !important;
+                  background: #ffffff !important;
+                  color: #475569 !important;
+                  border: 1px solid #cbd5e1 !important;
+                }
+                .site-enquiry-modal .seo-btn-cancel:hover {
+                  background: #f8fafc !important;
+                  color: #1e293b !important;
+                  border-color: #94a3b8 !important;
+                }
+                .site-enquiry-modal .seo-btn-confirm {
+                  padding: 0 18px !important;
+                  background: #1c2b78 !important;
+                  color: #ffffff !important;
+                  border: 1px solid #1c2b78 !important;
+                  box-shadow: 0 2px 4px rgba(28, 43, 120, 0.2) !important;
+                  gap: 6px !important;
+                }
+                .site-enquiry-modal .seo-btn-confirm:hover {
+                  background: #142057 !important;
+                  border-color: #142057 !important;
+                  box-shadow: 0 4px 8px rgba(28, 43, 120, 0.28) !important;
+                }
+                .site-enquiry-modal .swal2-close {
+                  position: absolute !important;
+                  top: 16px !important;
+                  right: 16px !important;
+                  width: 28px !important;
+                  height: 28px !important;
+                  border: none !important;
+                  background: transparent !important;
+                  border-radius: 6px !important;
+                  color: #94a3b8 !important;
+                  font-size: 20px !important;
+                  display: flex !important;
+                  align-items: center !important;
+                  justify-content: center !important;
+                  cursor: pointer !important;
+                  transition: all .15s ease !important;
+                  padding: 0 !important;
+                  margin: 0 !important;
+                }
+                .site-enquiry-modal .swal2-close:hover {
+                  color: #1e293b !important;
+                  background: #f1f5f9 !important;
+                }
+              </style>
+              <div class="seo-header">
+                <div class="seo-icon-box">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <polyline points="16 11 18 13 22 9"></polyline>
+                  </svg>
+                </div>
+                <div class="seo-title-area">
+                  <h3>Select Site Enquiry Officer</h3>
+                  <p>Assign an officer to conduct the physical site inspection</p>
+                </div>
+              </div>
+              <div class="seo-divider"></div>
+              <div class="seo-meta-bar">
+                <div class="seo-meta-col">
+                  <span class="seo-meta-label">APPLICATION NO.</span>
+                  <span class="seo-meta-val" title="${escapeHtml(applicationId)}">${escapeHtml(applicationId)}</span>
+                </div>
+                <div class="seo-meta-divider"></div>
+                <div class="seo-meta-col">
+                  <span class="seo-meta-label">DISTRICT</span>
+                  <span class="seo-meta-val" title="${escapeHtml(districtName)}">${escapeHtml(districtName)}</span>
+                </div>
+              </div>
+              <div>
+                <label class="seo-field-label">
+                  Site Enquiry Officer <span class="seo-req">*</span>
+                </label>
+                <div class="custom-dropdown" id="custom-officer-dropdown">
+                  <div class="custom-dropdown-trigger" id="custom-dropdown-trigger" tabindex="0">
+                    <div class="trigger-content">
+                      <div class="trigger-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                          <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                      </div>
+                      <span class="trigger-text seo-placeholder" id="dropdown-selected-text">Choose an officer...</span>
+                    </div>
+                    <div class="trigger-arrow">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </div>
+                  </div>
+                  <div class="custom-dropdown-menu" id="custom-dropdown-menu" style="display: none;">
+                    ${officersHTML}
+                  </div>
+                  <input type="hidden" id="selected-officer-id" value="" />
+                </div>
+              </div>
+            `,
+            customClass: {
+              popup: 'site-enquiry-modal',
+              confirmButton: 'seo-btn-confirm',
+              cancelButton: 'seo-btn-cancel'
+            },
+            buttonsStyling: false,
+            showCancelButton: true,
+            showCloseButton: true,
+            reverseButtons: true,
+            confirmButtonText: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-2px;margin-right:4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>Approve &amp; Forward',
+            cancelButtonText: 'Cancel',
+            didOpen: (popup) => {
+              const trigger = popup.querySelector('#custom-dropdown-trigger') as HTMLElement;
+              const menu = popup.querySelector('#custom-dropdown-menu') as HTMLElement;
+              const textSpan = popup.querySelector('#dropdown-selected-text') as HTMLElement;
+              const hiddenInput = popup.querySelector('#selected-officer-id') as HTMLInputElement;
+              const items = popup.querySelectorAll('.dropdown-item');
+
+              const closeMenu = () => {
+                if (menu) menu.style.display = 'none';
+                if (trigger) trigger.classList.remove('open');
+              };
+
+              if (trigger && menu) {
+                trigger.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  const isOpen = menu.style.display === 'block';
+                  if (isOpen) {
+                    closeMenu();
+                  } else {
+                    menu.style.display = 'block';
+                    trigger.classList.add('open');
+                  }
+                });
+              }
+
+              items.forEach(item => {
+                item.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  items.forEach(i => i.classList.remove('selected'));
+                  item.classList.add('selected');
+                  const id = item.getAttribute('data-id') || '';
+                  const name = item.getAttribute('data-name') || '';
+                  const contact = item.getAttribute('data-contact') || '';
+                  if (hiddenInput) hiddenInput.value = id;
+                  if (textSpan) {
+                    textSpan.classList.remove('seo-placeholder');
+                    textSpan.innerHTML = contact
+                      ? `<strong>${name}</strong> <span style="color:#64748b; font-size:12px; margin-left:4px;">(${contact})</span>`
+                      : `<strong>${name}</strong>`;
+                  }
+                  closeMenu();
+                  const valMsg = popup.querySelector('.swal2-validation-message') as HTMLElement;
+                  if (valMsg) valMsg.style.display = 'none';
+                });
+              });
+            },
+            preConfirm: () => {
+              const popup = Swal.getPopup();
+              const hiddenInput = popup?.querySelector('#selected-officer-id') as HTMLInputElement;
+              const value = hiddenInput?.value;
+              if (!value) {
+                Swal.showValidationMessage('Please select a Site Enquiry Officer to proceed.');
+                return false;
+              }
+              return value;
             }
         }).then(result => {
             if (result.isConfirmed && result.value) {
