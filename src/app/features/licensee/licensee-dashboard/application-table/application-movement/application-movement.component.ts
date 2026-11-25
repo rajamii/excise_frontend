@@ -176,16 +176,21 @@ export class ApplicationMovementComponent {
   }
 
   /** Returns semantic category for remark badge */
-  getRemarkType(elementOrRemarks: any): 'approved' | 'rejected' | 'objection' | 'forwarded' | 'neutral' {
+  getRemarkType(elementOrRemarks: any): 'approved' | 'rejected' | 'objection' | 'reverted' | 'forwarded' | 'neutral' {
     let remarks: string;
+    let actionLower = '';
     if (typeof elementOrRemarks === 'string') {
       remarks = elementOrRemarks;
     } else {
       remarks = this.getDisplayRemarks(elementOrRemarks);
+      actionLower = String(elementOrRemarks?.action || elementOrRemarks?.action_type || '').toLowerCase();
     }
 
+    const lower = (remarks || '').toLowerCase();
+    if (lower.includes('revert') || actionLower.includes('revert')) {
+      return 'reverted';
+    }
     if (!remarks || remarks === 'No remarks recorded') return 'neutral';
-    const lower = remarks.toLowerCase();
     if (lower.includes('reject') || lower.includes('suspend') || lower.includes('terminat') || lower.includes('cancel')) {
       return 'rejected';
     }
