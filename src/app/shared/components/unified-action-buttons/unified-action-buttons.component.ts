@@ -601,7 +601,14 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
         const applicationId = String(this.item?.referenceNo || this.item?.['application_id'] || this.item?.['applicationId'] || 'this application');
         const districtName = String(data?.district_name || 'this district');
         const officersHTML = officers.map((officer: any) => {
-          const name = officer.name || officer.username || `Officer #${officer.id}`;
+          const parts = [
+            officer?.first_name ?? officer?.firstName,
+            officer?.middle_name ?? officer?.middleName,
+            officer?.last_name ?? officer?.lastName
+          ]
+            .map((p: any) => String(p || '').trim())
+            .filter(Boolean);
+          const name = parts.join(' ') || officer.name || officer.username || `Officer #${officer.id}`;
           const contact = [officer.phone_number, officer.email].filter(Boolean).join(' · ');
           const initial = (name.replace(/^Shri\s+|^Smt\.\s+/i, '').trim()[0] || 'O').toUpperCase();
           return `

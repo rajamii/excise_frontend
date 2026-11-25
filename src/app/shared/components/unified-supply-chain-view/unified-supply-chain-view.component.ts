@@ -2766,15 +2766,26 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         officers: any[]
     ): void {
         const escapeHtml = (val: string) => String(val || '').replace(/[&<>"']/g, (m: string) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m] || m));
+        const getOfficerFullName = (o: any): string => {
+            const parts = [
+                o?.first_name ?? o?.firstName,
+                o?.middle_name ?? o?.middleName,
+                o?.last_name ?? o?.lastName
+            ]
+                .map((p: any) => String(p || '').trim())
+                .filter(Boolean);
+            return parts.join(' ') || String(o?.name || o?.username || '').trim() || `Officer #${o?.id}`;
+        };
+
         const officerOptions: { [key: string]: string } = {};
         officers.forEach(o => {
             const extra = [o.phone_number, o.email].filter(Boolean).join(' · ');
-            const name = o.name || `Officer #${o.id}`;
+            const name = getOfficerFullName(o);
             officerOptions[String(o.id)] = extra ? `${name} (${extra})` : name;
         });
 
         const officersHTML = officers.map((officer: any) => {
-          const name = officer.name || officer.username || `Officer #${officer.id}`;
+          const name = getOfficerFullName(officer);
           const contact = [officer.phone_number, officer.email].filter(Boolean).join(' · ');
           const initial = (name.replace(/^Shri\s+|^Smt\.\s+/i, '').trim()[0] || 'O').toUpperCase();
           return `
