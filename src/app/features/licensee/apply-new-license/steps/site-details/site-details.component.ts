@@ -88,6 +88,12 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   }
 
   /**
+   * Category IDs for which Trade License is NOT applicable:
+   * Category 10: "Pachwai" ({10, "Pachwai", 61, true, false, false}) in masters_licensecategory
+   */
+  private readonly TRADE_LICENSE_EXEMPT_CATEGORY_IDS = new Set([10]);
+
+  /**
    * Subcategory IDs for which Trade License is NOT applicable:
    * Foreign Liquor Retail Shop (10), Retail Sale of Denatured Spirit (11),
    * Brewing/Sale of Pachwai by Retail (23), Brewing of Pachwai (24),
@@ -95,33 +101,99 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
    */
   private readonly TRADE_LICENSE_EXEMPT_SUBCATEGORY_IDS = new Set([10, 11, 23, 24, 30]);
 
-  /** Set once in ngOnInit — true when the selected subcategory is trade-licence-exempt */
+  /** Set in ngOnInit and rechecked dynamically in ngDoCheck — true when the selected category/subcategory is trade-licence-exempt */
   hideTradeLicense = false;
+  private lastKeyInfoDataStr = '';
+
+  isTradeLicenseExempt(keyInfo?: any): boolean {
+    try {
+      if (!keyInfo) {
+        keyInfo = JSON.parse(sessionStorage.getItem('keyInfoData') || '{}');
+      }
+      if (!keyInfo || typeof keyInfo !== 'object') return false;
+
+      const catId = Number(
+        keyInfo.licenseCategory ??
+        keyInfo.license_category ??
+        keyInfo.category ??
+        keyInfo.categoryId ??
+        0
+      );
+      const catName = String(
+        keyInfo.license_category_name ??
+        keyInfo.category_name ??
+        keyInfo.categoryName ??
+        ''
+      ).trim().toLowerCase();
+
+      const subCatId = Number(
+        keyInfo.licenseSubCategory ??
+        keyInfo.license_sub_category ??
+        keyInfo.subCategory ??
+        keyInfo.subCategoryId ??
+        0
+      );
+      const subCatName = String(
+        keyInfo.license_sub_category_name ??
+        keyInfo.subcategory_name ??
+        keyInfo.subCategoryName ??
+        ''
+      ).trim().toLowerCase();
+
+      // Check Category: ID 10 is Pachwai ({10, "Pachwai", 61, true, false, false})
+      if (this.TRADE_LICENSE_EXEMPT_CATEGORY_IDS.has(catId) || catName.includes('pachwai')) {
+        return true;
+      }
+
+      // Check Subcategory: 23 (Brewing/Sale of Pachwai by Retail), 24 (Brewing of Pachwai), 10, 11, 30
+      if (this.TRADE_LICENSE_EXEMPT_SUBCATEGORY_IDS.has(subCatId) || subCatName.includes('pachwai')) {
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      console.error('[TradeLicense] error checking exemption', e);
+      return false;
+    }
+  }
 
   private computeHideTradeLicense(): void {
     try {
       const keyInfo = JSON.parse(sessionStorage.getItem('keyInfoData') || '{}');
-      const subCatId = Number(
-        keyInfo.licenseSubCategory ?? keyInfo.license_sub_category ?? 0
-      );
-      console.log('[TradeLicense] subCatId from keyInfoData:', subCatId);
-      const exempt = subCatId > 0 && this.TRADE_LICENSE_EXEMPT_SUBCATEGORY_IDS.has(subCatId);
+      const exempt = this.isTradeLicenseExempt(keyInfo);
       this.hideTradeLicense = exempt;
-      console.log('[TradeLicense] hideTradeLicense =', exempt);
+      console.log('[TradeLicense] computeHideTradeLicense: exempt =', exempt, 'keyInfo:', keyInfo);
+
+      const ctrl = this.siteDetailsForm?.get('tradeLicenseCovered');
+      const doc = this.documents?.find(d => d.name === 'trade_license');
 
       if (exempt) {
-        const ctrl = this.siteDetailsForm?.get('tradeLicenseCovered');
         if (ctrl) {
           ctrl.clearValidators();
           ctrl.setValue(null, { emitEvent: false });
           ctrl.updateValueAndValidity({ emitEvent: false });
         }
-        const doc = this.documents?.find(d => d.name === 'trade_license');
-        if (doc) { doc.required = false; }
+        if (doc) {
+          doc.required = false;
+        }
         this.clearDocumentSelection('trade_license');
+
+        // Also clean up siteDetailsData in session so no residual trade license data is saved
+        const siteDataStr = sessionStorage.getItem('siteDetailsData');
+        if (siteDataStr) {
+          try {
+            const siteData = JSON.parse(siteDataStr);
+            if (siteData.trade_license_covered !== null || siteData.trade_license) {
+              siteData.trade_license_covered = null;
+              delete siteData.trade_license;
+              sessionStorage.setItem('siteDetailsData', JSON.stringify(siteData));
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
       } else {
         // Restore required validator when not exempt
-        const ctrl = this.siteDetailsForm?.get('tradeLicenseCovered');
         if (ctrl && !ctrl.validator) {
           ctrl.setValidators([Validators.required, Validators.pattern(/^Yes$/)]);
           ctrl.updateValueAndValidity({ emitEvent: false });
@@ -231,6 +303,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     });
 
     this.setupConditionalValidation();
+    this.computeHideTradeLicense();
 
     this.siteDetailsForm.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => {
       this.saveToSessionStorage();
@@ -432,6 +505,12 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   }
 
   ngDoCheck(): void {
+    const currentKeyInfoStr = sessionStorage.getItem('keyInfoData') || '';
+    if (currentKeyInfoStr !== this.lastKeyInfoDataStr) {
+      this.lastKeyInfoDataStr = currentKeyInfoStr;
+      this.computeHideTradeLicense();
+    }
+
     const selectLicenseData = sessionStorage.getItem('selectLicenseData');
     if (selectLicenseData) {
       const parsed = JSON.parse(selectLicenseData);
@@ -510,10 +589,10 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
         const tradeLicenseDocument = this.documents.find((document) => document.name === 'trade_license');
 
         if (tradeLicenseDocument) {
-          tradeLicenseDocument.required = value === 'Yes';
+          tradeLicenseDocument.required = !this.hideTradeLicense && value === 'Yes';
         }
 
-        if (value !== 'Yes') {
+        if (value !== 'Yes' || this.hideTradeLicense) {
           this.clearDocumentSelection('trade_license');
         }
 
@@ -534,7 +613,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       nocDocument.required = currentSiteOwnedValue === 'No' && nocControl?.value === 'Yes';
     }
     if (tradeLicenseDocument) {
-      tradeLicenseDocument.required = currentTradeLicenseValue === 'Yes';
+      tradeLicenseDocument.required = !this.hideTradeLicense && currentTradeLicenseValue === 'Yes';
     }
 
     if (currentSiteOwnedValue === 'Yes') {

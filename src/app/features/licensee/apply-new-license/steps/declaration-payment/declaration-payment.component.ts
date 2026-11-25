@@ -394,6 +394,12 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Category IDs exempt from Trade License requirement:
+   * Category 10: "Pachwai" ({10, "Pachwai", 61, true, false, false}) in masters_licensecategory
+   */
+  private readonly TRADE_LICENSE_EXEMPT_CATEGORY_IDS = new Set([10]);
+
+  /**
    * Subcategory IDs exempt from Trade License requirement:
    * Foreign Liquor Retail Shop (10), Retail Sale of Denatured Spirit (11),
    * Brewing/Sale of Pachwai by Retail (23), Brewing of Pachwai (24),
@@ -404,8 +410,47 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
   private isTradeLicenseExempt(): boolean {
     try {
       const keyInfo = this.getParsedSession<any>('keyInfoData');
-      const subCatId = Number(keyInfo?.licenseSubCategory ?? keyInfo?.license_sub_category ?? 0);
-      return subCatId > 0 && this.TRADE_LICENSE_EXEMPT_SUBCATEGORY_IDS.has(subCatId);
+      if (!keyInfo || typeof keyInfo !== 'object') return false;
+
+      const catId = Number(
+        keyInfo.licenseCategory ??
+        keyInfo.license_category ??
+        keyInfo.category ??
+        keyInfo.categoryId ??
+        0
+      );
+      const catName = String(
+        keyInfo.license_category_name ??
+        keyInfo.category_name ??
+        keyInfo.categoryName ??
+        ''
+      ).trim().toLowerCase();
+
+      const subCatId = Number(
+        keyInfo.licenseSubCategory ??
+        keyInfo.license_sub_category ??
+        keyInfo.subCategory ??
+        keyInfo.subCategoryId ??
+        0
+      );
+      const subCatName = String(
+        keyInfo.license_sub_category_name ??
+        keyInfo.subcategory_name ??
+        keyInfo.subCategoryName ??
+        ''
+      ).trim().toLowerCase();
+
+      // Check Category: ID 10 is Pachwai ({10, "Pachwai", 61, true, false, false})
+      if (this.TRADE_LICENSE_EXEMPT_CATEGORY_IDS.has(catId) || catName.includes('pachwai')) {
+        return true;
+      }
+
+      // Check Subcategory: 23 (Brewing/Sale of Pachwai by Retail), 24 (Brewing of Pachwai), 10, 11, 30
+      if (this.TRADE_LICENSE_EXEMPT_SUBCATEGORY_IDS.has(subCatId) || subCatName.includes('pachwai')) {
+        return true;
+      }
+
+      return false;
     } catch {
       return false;
     }
@@ -473,6 +518,12 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
         if (k.endsWith('_code') || k.endsWith('code') || k.endsWith('Name')) return false;
         if (this.isCompanionDisplayNameField(k, data)) return false;
         if (this.documentFieldKeys.has(k)) return false;
+
+        // Skip Trade License in review if exempt
+        if (this.isTradeLicenseExempt()) {
+          const normKey = k.toLowerCase().replace(/_/g, '');
+          if (normKey.includes('tradelicense')) return false;
+        }
 
         const normalized = k.toLowerCase().replace(/_/g, '');
         if (processedFields.has(normalized)) return false;
