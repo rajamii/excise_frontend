@@ -32,6 +32,7 @@ import { RoleService } from '../../../core/services/role.service';
 import { UnifiedDashboardService } from '../../../core/services/unified-dashboard.service';
 import { SidebarPendingBadgeService } from '../../services/sidebar-pending-badge.service';
 import { Objection } from '../../../core/models/license-application.model';
+import { replaceRoleNamesWithLevels } from '../../utils/role-level.util';
 
 // Constants
 import {
@@ -6885,7 +6886,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         if (!this.shouldSimplifyStatusForLicensee()) {
             const stage = this.getRawStageToken();
             const base = this.hasText(stage) ? stage : status;
-            return this.getFormattedStatus(base);
+            return replaceRoleNamesWithLevels(this.getFormattedStatus(base));
         }
         const stage = this.getRawStageToken();
         return this.simplifyStageForLicensee(stage, status);
