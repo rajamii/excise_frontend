@@ -2492,6 +2492,15 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                 });
                 return;
             }
+            if (isNewLicenseApp && event.contextData?.site_enquiry_routing_checked) {
+                this.executeApproveAction(event.item, context, {
+                    workflowContextData: {
+                        remarks: 'Approved by District User; Site Enquiry routing checked.'
+                    },
+                    successMessage: 'Application approved successfully.'
+                });
+                return;
+            }
             this.handleApproveWithDynamicPrechecks(event.item, context);
             return;
         }

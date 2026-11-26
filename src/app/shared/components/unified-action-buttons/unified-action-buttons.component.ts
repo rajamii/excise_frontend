@@ -580,7 +580,10 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       const officers = Array.isArray(data?.officers) ? data.officers : (Array.isArray(data?.site_enquiry_officers) ? data.site_enquiry_officers : []);
 
       if (!enabled) {
-        this.continueActionAfterDeclaration(button);
+        const declaration = await this.showNewLicenseUploadsDeclaration(button);
+        if (declaration.confirmed) {
+          this.continueActionAfterDeclaration(button, { site_enquiry_routing_checked: true });
+        }
         return;
       }
       if (officers.length === 0) {
@@ -589,9 +592,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
       }
 
       let selectedOfficerId: number;
-      if (officers.length === 1) {
-        selectedOfficerId = Number(officers[0].id);
-      } else {
+      {
         const options: Record<string, string> = {};
         officers.forEach((officer: any) => {
           const contact = [officer.phone_number, officer.email].filter(Boolean).join(' · ');
@@ -736,6 +737,112 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
               .site-enquiry-modal .seo-req {
                 color: #ef4444;
                 font-weight: 700;
+              }
+              .site-enquiry-modal .seo-declaration {
+                display: flex;
+                align-items: flex-start;
+                gap: 10px;
+                margin: 0 0 16px;
+                padding: 13px 14px;
+                border: 1px solid #bfdbfe;
+                border-left: 4px solid #2563eb;
+                border-radius: 10px;
+                background: linear-gradient(110deg, #eff6ff 0%, #f8fbff 68%, #ffffff 100%);
+                color: #334155;
+                font-size: 12.5px;
+                line-height: 1.45;
+                cursor: pointer;
+                box-shadow: 0 2px 8px rgba(37, 99, 235, .06);
+                transition: background .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+              }
+              .site-enquiry-modal .seo-declaration:hover {
+                border-color: #60a5fa;
+                box-shadow: 0 5px 14px rgba(37, 99, 235, .11);
+                transform: translateY(-1px);
+              }
+              .site-enquiry-modal .seo-declaration:has(input:checked) {
+                border-color: #86efac;
+                border-left-color: #16a34a;
+                background: linear-gradient(110deg, #f0fdf4, #ffffff);
+                box-shadow: 0 3px 12px rgba(22, 163, 74, .09);
+              }
+              .site-enquiry-modal .declaration-icon {
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                width:30px;
+                height:30px;
+                flex:0 0 30px;
+                border-radius:8px;
+                background:#dbeafe;
+                color:#1d4ed8;
+              }
+              .site-enquiry-modal .seo-declaration:has(input:checked) .declaration-icon {
+                background:#dcfce7;
+                color:#15803d;
+              }
+              .site-enquiry-modal .declaration-copy { flex:1; padding-top:1px; }
+              .site-enquiry-modal .declaration-heading {
+                display:flex;
+                align-items:center;
+                gap:7px;
+                margin-bottom:3px;
+                color:#1e3a8a;
+                font-size:12px;
+                font-weight:700;
+              }
+              .site-enquiry-modal .declaration-required {
+                padding:2px 6px;
+                border-radius:999px;
+                background:#dbeafe;
+                color:#1d4ed8;
+                font-size:9px;
+                font-weight:800;
+                letter-spacing:.06em;
+                text-transform:uppercase;
+              }
+              .site-enquiry-modal .declaration-text { display:block; color:#475569; }
+              .site-enquiry-modal .declaration-check {
+                width:18px !important;
+                height:18px !important;
+                margin:2px 0 0 !important;
+                accent-color:#1c2b78;
+                flex:0 0 18px;
+                cursor:pointer;
+              }
+              .site-enquiry-modal .custom-dropdown-trigger.locked {
+                border-style:dashed !important;
+                border-color:#cbd5e1 !important;
+                background:#f1f5f9 !important;
+                box-shadow:none !important;
+                opacity:.62;
+                cursor:not-allowed !important;
+                filter:saturate(.55);
+              }
+              .site-enquiry-modal .custom-dropdown-trigger.locked:hover {
+                border-color:#cbd5e1 !important;
+                transform:none !important;
+              }
+              .site-enquiry-modal .dropdown-lock-hint {
+                display:flex;
+                align-items:center;
+                gap:6px;
+                margin-top:6px;
+                color:#64748b;
+                font-size:11px;
+                transition:opacity .16s ease;
+              }
+              .site-enquiry-modal .dropdown-lock-hint.unlocked { display:none; }
+              .site-enquiry-modal .custom-dropdown-trigger.locked-nudge { animation: seoNudge .25s ease-in-out 2; }
+              @keyframes seoNudge { 0%,100% { transform:translateX(0); } 35% { transform:translateX(-3px); } 70% { transform:translateX(3px); } }
+              .site-enquiry-modal .seo-btn-confirm:disabled {
+                background:#94a3b8 !important;
+                border-color:#94a3b8 !important;
+                box-shadow:none !important;
+                opacity:.65 !important;
+                cursor:not-allowed !important;
+                transform:none !important;
+                filter:grayscale(.18);
               }
 
               /* Custom Rich Dropdown */
@@ -997,12 +1104,25 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
                 <span class="seo-meta-val" title="${this.escapeHtml(districtName)}">${this.escapeHtml(districtName)}</span>
               </div>
             </div>
+            <label class="seo-declaration" for="site-enquiry-declaration">
+              <span class="declaration-icon" aria-hidden="true">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11z"></path>
+                  <path d="m9 12 2 2 4-4"></path>
+                </svg>
+              </span>
+              <span class="declaration-copy">
+                <span class="declaration-heading">Document verification <span class="declaration-required">Required</span></span>
+                <span class="declaration-text">I declare that I have checked the application details and uploaded documents and confirm they are correct.</span>
+              </span>
+              <input class="declaration-check" type="checkbox" id="site-enquiry-declaration" />
+            </label>
             <div>
               <label class="seo-field-label">
                 Site Enquiry Officer <span class="seo-req">*</span>
               </label>
               <div class="custom-dropdown" id="custom-officer-dropdown">
-                <div class="custom-dropdown-trigger" id="custom-dropdown-trigger" tabindex="0">
+                <div class="custom-dropdown-trigger locked" id="custom-dropdown-trigger" tabindex="-1" aria-disabled="true" title="Accept the declaration to unlock officer selection">
                   <div class="trigger-content">
                     <div class="trigger-icon">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1023,6 +1143,12 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
                 </div>
                 <input type="hidden" id="selected-officer-id" value="" />
               </div>
+              <div class="dropdown-lock-hint" id="dropdown-lock-hint">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                Accept the declaration above to unlock officer selection.
+              </div>
             </div>
           `,
           customClass: {
@@ -1041,7 +1167,36 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
             const menu = popup.querySelector('#custom-dropdown-menu') as HTMLElement;
             const textSpan = popup.querySelector('#dropdown-selected-text') as HTMLElement;
             const hiddenInput = popup.querySelector('#selected-officer-id') as HTMLInputElement;
+            const declaration = popup.querySelector('#site-enquiry-declaration') as HTMLInputElement;
+            const confirmButton = Swal.getConfirmButton();
             const items = popup.querySelectorAll('.dropdown-item');
+            const lockHint = popup.querySelector('#dropdown-lock-hint') as HTMLElement;
+
+            const updateConfirmButton = () => {
+              const accepted = !!declaration?.checked;
+              if (trigger) {
+                trigger.classList.toggle('locked', !accepted);
+                trigger.setAttribute('aria-disabled', String(!accepted));
+                trigger.tabIndex = accepted ? 0 : -1;
+                trigger.title = accepted ? 'Choose a Site Enquiry Officer' : 'Accept the declaration to unlock officer selection';
+              }
+              if (lockHint) lockHint.classList.toggle('unlocked', accepted);
+              if (confirmButton) confirmButton.disabled = !accepted || !hiddenInput?.value;
+            };
+            updateConfirmButton();
+            declaration?.addEventListener('change', () => {
+              if (!declaration.checked) {
+                if (hiddenInput) hiddenInput.value = '';
+                items.forEach(item => item.classList.remove('selected'));
+                if (textSpan) {
+                  textSpan.textContent = 'Choose an officer...';
+                  textSpan.classList.add('seo-placeholder');
+                }
+                if (menu) menu.style.display = 'none';
+                trigger?.classList.remove('open');
+              }
+              updateConfirmButton();
+            });
 
             const closeMenu = () => {
               if (menu) menu.style.display = 'none';
@@ -1051,6 +1206,12 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
             if (trigger && menu) {
               trigger.addEventListener('click', (e) => {
                 e.stopPropagation();
+                if (!declaration?.checked) {
+                  trigger.classList.remove('locked-nudge');
+                  void trigger.offsetWidth;
+                  trigger.classList.add('locked-nudge');
+                  return;
+                }
                 const isOpen = menu.style.display === 'block';
                 if (isOpen) {
                   closeMenu();
@@ -1077,6 +1238,7 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
                     : `<strong>${name}</strong>`;
                 }
                 closeMenu();
+                updateConfirmButton();
                 const valMsg = popup.querySelector('.swal2-validation-message') as HTMLElement;
                 if (valMsg) valMsg.style.display = 'none';
               });
@@ -1085,7 +1247,12 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
           preConfirm: () => {
             const popup = Swal.getPopup();
             const hiddenInput = popup?.querySelector('#selected-officer-id') as HTMLInputElement;
+            const declaration = popup?.querySelector('#site-enquiry-declaration') as HTMLInputElement;
             const value = hiddenInput?.value;
+            if (!declaration?.checked) {
+              Swal.showValidationMessage('Please accept the declaration to continue.');
+              return false;
+            }
             if (!value) {
               Swal.showValidationMessage('Please select a Site Enquiry Officer to proceed.');
               return false;
@@ -1102,7 +1269,10 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
         return;
       }
       if (this.item) (this.item as any).__selectedSiteEnquiryOfficerId = selectedOfficerId;
-      this.continueActionAfterDeclaration(button, { site_enquiry_officer_id: selectedOfficerId });
+      this.continueActionAfterDeclaration(button, {
+        site_enquiry_routing_checked: true,
+        site_enquiry_officer_id: selectedOfficerId
+      });
     } catch (error) {
       console.error('Could not load Site Enquiry Officers for district approval:', error);
       Swal.fire('Unable to load officers', 'Site Enquiry Officers could not be loaded. The application was not approved. Please retry.', 'error');
