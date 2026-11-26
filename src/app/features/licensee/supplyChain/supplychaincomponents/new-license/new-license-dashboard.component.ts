@@ -1253,7 +1253,7 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
       : this.formatDate(item?.created_at || item?.createdAt || item?.submitted_on);
 
     const applicationId = String(item?.application_id || item?.applicationId || item?.id || 'N/A');
-    const isApproved = Boolean((item?.is_approved ?? item?.isApproved ?? rawLower.includes('approved') ?? (rawStatusGroup === 'approved')) && !isRejected && !isTerminated);
+    const isApproved = Boolean((item?.is_approved || item?.isApproved || rawLower.includes('approved') || rawStatusGroup === 'approved') && !isRejected && !isTerminated);
     const licenseNumber = this.deriveNewLicenseNaNumber(applicationId, item);
 
     let finalStatusGroup: NewLicenseItem['statusGroup'] = 'pending';
@@ -1278,7 +1278,9 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
         finalStatusGroup = 'pending';
       }
     } else {
-      finalStatusGroup = (rawStatusGroup === 'applied' && rawLower.includes('initial')) ? 'applied' : 'pending';
+      finalStatusGroup = (rawStatusGroup === 'applied' && rawLower.includes('initial'))
+        ? 'applied'
+        : (rawStatusGroup === 'approved' ? 'approved' : 'pending');
     }
 
     // Licensee UX: a failed/unpaid application fee means the application is not submitted to workflow yet.
