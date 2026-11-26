@@ -4965,7 +4965,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
                     },
                     {
                         number: '9',
-                        question: 'Special Remarks, if any :',
+                        question: 'Site Enquiry Officer Remarks :',
                         value: getText('special_remarks') || 'None'
                     },
                     {
