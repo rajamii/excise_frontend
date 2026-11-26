@@ -1296,53 +1296,558 @@ export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
   private async showNewLicenseUploadsDeclaration(button: ActionButtonConfig): Promise<{ confirmed: boolean; selectedOfficerId?: number }> {
     const label = String(button?.label || button?.action || 'Proceed').trim();
     const action = this.normalizeActionName(button?.action);
+    const applicationId = String(
+      this.item?.referenceNo ||
+      this.item?.['application_id'] ||
+      this.item?.['applicationId'] ||
+      this.item?.['refNo'] ||
+      this.item?.['id'] ||
+      'Application'
+    ).trim();
 
+    const isReject = action === 'REJECT';
+    const isObjection = action === 'RAISE_OBJECTION';
 
-    const confirmationText =
+    const actionBadgeClass = isReject ? 'reject' : isObjection ? 'objection' : 'approve';
+    const actionBadgeText = isReject ? 'Reject' : isObjection ? 'Raise Objection' : 'Approve';
+
+    const headerIconSvg = isReject
+      ? `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`
+      : isObjection
+        ? `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`
+        : `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>`;
+
+    const btnIconSvg = isReject
+      ? `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-2px;margin-right:4px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`
+      : isObjection
+        ? `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-2px;margin-right:4px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`
+        : `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-2px;margin-right:4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+
+    const noticeText =
       button?.confirmationMessage ||
-      (action === 'APPROVE'
-        ? 'Please confirm you have verified all the details and uploaded documents.'
-        : action === 'REJECT'
-          ? 'Please confirm you have verified all the details and uploaded documents before rejecting.'
-          : 'Please confirm you have verified all the details and uploaded documents before raising an objection.');
+      (isReject
+        ? 'Please confirm that all application details and uploaded documents have been reviewed before recording this rejection.'
+        : isObjection
+          ? 'Please confirm that all application details and uploaded documents have been examined prior to raising an objection.'
+          : 'Please verify that all submitted details and uploaded documents meet regulatory compliance requirements before approving.');
+
+    const cardTitle = isReject
+      ? 'Rejection Review Declaration'
+      : isObjection
+        ? 'Objection Review Declaration'
+        : 'Document &amp; Detail Verification';
+
+    const cardDesc = isReject
+      ? 'I declare that I have checked the application details and uploaded documents and confirm justifiable grounds for rejection.'
+      : isObjection
+        ? 'I declare that I have checked the application details and uploaded documents and identified discrepancies requiring clarification.'
+        : 'I declare that I have thoroughly checked all uploaded documents and application details, and confirm they are correct and verified.';
 
     return Swal.fire({
-      title: 'Declaration',
       html: `
-        <div style="text-align:left;">
-          <div style="margin-bottom: 12px; color: #374151; font-size: 14px;">
-            ${this.escapeHtml(confirmationText)}
+        <style>
+          .swal2-popup.declaration-modal {
+            width: 520px !important;
+            max-width: calc(100vw - 32px) !important;
+            padding: 22px 24px 20px !important;
+            border-radius: 14px !important;
+            background: #ffffff !important;
+            box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.22), 0 0 1px 1px rgba(15, 23, 42, 0.08) !important;
+            border: 1px solid #e2e8f0 !important;
+            font-family: inherit !important;
+            text-align: left !important;
+            overflow: visible !important;
+          }
+          .declaration-modal .swal2-title {
+            display: none !important;
+          }
+          .declaration-modal .swal2-html-container {
+            margin: 0 !important;
+            padding: 0 !important;
+            text-align: left !important;
+            font-family: inherit !important;
+            overflow: visible !important;
+          }
+          .declaration-modal .decl-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px 22px;
+            margin: -22px -24px 16px -24px;
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+            border-bottom: 1px solid #e2e8f0;
+            border-radius: 14px 14px 0 0;
+            transition: all .2s ease;
+          }
+          .declaration-modal .decl-header.checked {
+            background: linear-gradient(180deg, #f0fdf4 0%, #ecfdf5 100%);
+            border-bottom-color: #bbf7d0;
+          }
+          .declaration-modal .decl-icon-box {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            color: #1c2b78;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+            transition: all .2s ease;
+          }
+          .declaration-modal .decl-icon-box.reject {
+            background: #fef2f2;
+            border-color: #fecaca;
+            color: #dc2626;
+          }
+          .declaration-modal .decl-icon-box.objection {
+            background: #fffbeb;
+            border-color: #fde68a;
+            color: #b45309;
+          }
+          .declaration-modal .decl-header.checked .decl-icon-box {
+            background: #ffffff;
+            border-color: #86efac;
+            color: #059669;
+          }
+          .declaration-modal .decl-title-area h3 {
+            font-size: 16.5px;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0;
+            line-height: 1.25;
+          }
+          .declaration-modal .decl-title-area p {
+            font-size: 12.5px;
+            color: #64748b;
+            margin: 2px 0 0;
+          }
+          .declaration-modal .decl-meta-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 9px 14px;
+            margin-bottom: 14px;
+          }
+          .declaration-modal .decl-meta-col {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+          }
+          .declaration-modal .decl-meta-label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .06em;
+            color: #64748b;
+            text-transform: uppercase;
+          }
+          .declaration-modal .decl-meta-val {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1e293b;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 1px;
+          }
+          .declaration-modal .decl-action-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 11.5px;
+            font-weight: 700;
+            letter-spacing: .02em;
+          }
+          .declaration-modal .decl-action-pill.approve {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+          }
+          .declaration-modal .decl-action-pill.reject {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+          }
+          .declaration-modal .decl-action-pill.objection {
+            background: #fffbeb;
+            color: #92400e;
+            border: 1px solid #fde68a;
+          }
+          .declaration-modal .decl-notice {
+            font-size: 12.5px;
+            color: #475569;
+            line-height: 1.45;
+            margin-bottom: 14px;
+            background: #f8fafc;
+            border-left: 3px solid #1c2b78;
+            padding: 9px 12px;
+            border-radius: 0 6px 6px 0;
+            transition: all .2s ease;
+          }
+          .declaration-modal .decl-notice.checked {
+            border-left-color: #059669 !important;
+            background: #f0fdf4 !important;
+            color: #166534 !important;
+          }
+          .declaration-modal .decl-notice.reject {
+            border-left-color: #dc2626;
+            background: #fff5f5;
+          }
+          .declaration-modal .decl-notice.objection {
+            border-left-color: #d97706;
+            background: #fffdf5;
+          }
+          .declaration-modal .decl-card {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 13px 14px;
+            border-radius: 10px;
+            background: #ffffff;
+            border: 1.5px solid #cbd5e1;
+            cursor: pointer;
+            transition: all .2s ease;
+            user-select: none;
+            margin-bottom: 4px;
+          }
+          .declaration-modal .decl-card:hover {
+            border-color: #94a3b8;
+            background: #f8fafc;
+          }
+          .declaration-modal .decl-card.checked {
+            border-color: #059669 !important;
+            background: #f0fdf4 !important;
+            box-shadow: 0 3px 12px rgba(5, 150, 105, 0.14) !important;
+          }
+          .declaration-modal .decl-card.checked.reject {
+            border-color: #dc2626 !important;
+            background: #fef2f2 !important;
+            box-shadow: 0 2px 6px rgba(220, 38, 38, 0.08) !important;
+          }
+          .declaration-modal .decl-card.checked.objection {
+            border-color: #d97706 !important;
+            background: #fffbeb !important;
+            box-shadow: 0 2px 6px rgba(217, 119, 6, 0.08) !important;
+          }
+          .declaration-modal .decl-card-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: #f1f5f9;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 1px;
+            transition: all .2s ease;
+          }
+          .declaration-modal .decl-card.checked .decl-card-icon {
+            background: #059669 !important;
+            color: #ffffff !important;
+          }
+          .declaration-modal .decl-card.checked.reject .decl-card-icon {
+            background: #dc2626 !important;
+            color: #ffffff !important;
+          }
+          .declaration-modal .decl-card.checked.objection .decl-card-icon {
+            background: #d97706 !important;
+            color: #ffffff !important;
+          }
+          .declaration-modal .decl-card-body {
+            flex: 1;
+            min-width: 0;
+          }
+          .declaration-modal .decl-card-title {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            line-height: 1.3;
+            transition: color .2s ease;
+          }
+          .declaration-modal .decl-card.checked .decl-card-title {
+            color: #065f46 !important;
+          }
+          .declaration-modal .decl-badge-req {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 4px;
+            background: #fee2e2;
+            color: #b91c1c;
+            text-transform: uppercase;
+            letter-spacing: .03em;
+            transition: all .2s ease;
+          }
+          .declaration-modal .decl-card.checked .decl-badge-req {
+            background: #dcfce7 !important;
+            color: #15803d !important;
+            border: 1px solid #bbf7d0 !important;
+          }
+          .declaration-modal .decl-card-desc {
+            font-size: 12px;
+            color: #475569;
+            line-height: 1.45;
+            margin-top: 4px;
+            transition: color .2s ease;
+          }
+          .declaration-modal .decl-card.checked .decl-card-desc {
+            color: #166534 !important;
+          }
+          .declaration-modal .decl-card-check {
+            display: flex;
+            align-items: center;
+            margin-top: 2px;
+            flex-shrink: 0;
+          }
+          .declaration-modal .decl-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: #059669;
+            border-radius: 4px;
+          }
+          .declaration-modal .decl-checkbox.reject {
+            accent-color: #dc2626;
+          }
+          .declaration-modal .decl-checkbox.objection {
+            accent-color: #d97706;
+          }
+          .declaration-modal .swal2-actions {
+            display: flex !important;
+            justify-content: flex-end !important;
+            align-items: center !important;
+            gap: 10px !important;
+            margin: 18px 0 0 !important;
+            padding: 14px 0 0 !important;
+            border-top: 1px solid #e2e8f0 !important;
+            width: 100% !important;
+          }
+          .declaration-modal .decl-btn-cancel,
+          .declaration-modal .decl-btn-confirm {
+            height: 38px !important;
+            min-height: 38px !important;
+            margin: 0 !important;
+            border-radius: 8px !important;
+            font-size: 13.5px !important;
+            font-weight: 600 !important;
+            cursor: pointer !important;
+            transition: all .15s ease !important;
+            font-family: inherit !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+          }
+          .declaration-modal .decl-btn-cancel {
+            padding: 0 16px !important;
+            background: #ffffff !important;
+            color: #475569 !important;
+            border: 1px solid #cbd5e1 !important;
+          }
+          .declaration-modal .decl-btn-cancel:hover {
+            background: #f8fafc !important;
+            color: #1e293b !important;
+            border-color: #94a3b8 !important;
+          }
+          .declaration-modal .decl-btn-confirm {
+            padding: 0 18px !important;
+            background: #059669 !important;
+            color: #ffffff !important;
+            border: 1px solid #059669 !important;
+            box-shadow: 0 2px 4px rgba(5, 150, 105, 0.2) !important;
+            gap: 6px !important;
+          }
+          .declaration-modal .decl-btn-confirm:hover:not(:disabled) {
+            background: #047857 !important;
+            border-color: #047857 !important;
+            box-shadow: 0 4px 10px rgba(5, 150, 105, 0.3) !important;
+          }
+          .declaration-modal .decl-btn-confirm.reject {
+            background: #dc2626 !important;
+            border-color: #dc2626 !important;
+            box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2) !important;
+          }
+          .declaration-modal .decl-btn-confirm.reject:hover:not(:disabled) {
+            background: #b91c1c !important;
+            border-color: #b91c1c !important;
+          }
+          .declaration-modal .decl-btn-confirm.objection {
+            background: #d97706 !important;
+            border-color: #d97706 !important;
+            box-shadow: 0 2px 4px rgba(217, 119, 6, 0.2) !important;
+          }
+          .declaration-modal .decl-btn-confirm.objection:hover:not(:disabled) {
+            background: #b45309 !important;
+            border-color: #b45309 !important;
+          }
+          .declaration-modal .decl-btn-confirm.disabled {
+            opacity: 0.55 !important;
+            background: #94a3b8 !important;
+            border-color: #94a3b8 !important;
+            color: #ffffff !important;
+            cursor: not-allowed !important;
+            box-shadow: none !important;
+          }
+          .declaration-modal .swal2-close {
+            position: absolute !important;
+            top: 14px !important;
+            right: 16px !important;
+            width: 28px !important;
+            height: 28px !important;
+            border: none !important;
+            background: transparent !important;
+            border-radius: 6px !important;
+            color: #94a3b8 !important;
+            font-size: 20px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+            transition: all .15s ease !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            z-index: 10 !important;
+          }
+          .declaration-modal .swal2-close:hover {
+            color: #1e293b !important;
+            background: #e2e8f0 !important;
+          }
+          .declaration-modal .swal2-validation-message {
+            background: #fef2f2 !important;
+            color: #b91c1c !important;
+            border: 1px solid #fecaca !important;
+            border-radius: 8px !important;
+            font-size: 12.5px !important;
+            font-weight: 500 !important;
+            margin: 10px 0 0 !important;
+            padding: 8px 12px !important;
+            text-align: left !important;
+          }
+        </style>
+        <div class="decl-header" id="decl-header-box">
+          <div class="decl-icon-box ${actionBadgeClass}">
+            ${headerIconSvg}
           </div>
-          <div style="display:flex; align-items:flex-start; gap:10px; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb;">
-            <input type="checkbox" id="uploadsDeclaration" style="margin-top: 2px; width: 16px; height: 16px; cursor: pointer;" />
-            <label for="uploadsDeclaration" style="margin: 0; cursor: pointer; color: #111827; font-size: 14px; line-height: 1.35; font-weight: 500;">
-              I declare that I have checked all uploaded documents and they are correct.
-            </label>
+          <div class="decl-title-area">
+            <h3>Officer Verification Declaration</h3>
+            <p>Document &amp; application review confirmation</p>
           </div>
         </div>
+        <div class="decl-meta-bar">
+          <div class="decl-meta-col">
+            <span class="decl-meta-label">APPLICATION NO.</span>
+            <span class="decl-meta-val" title="${this.escapeHtml(applicationId)}">${this.escapeHtml(applicationId)}</span>
+          </div>
+          <div class="decl-meta-col" style="align-items: flex-end;">
+            <span class="decl-meta-label">WORKFLOW ACTION</span>
+            <span class="decl-action-pill ${actionBadgeClass}">${actionBadgeText}</span>
+          </div>
+        </div>
+        <div class="decl-notice ${actionBadgeClass}" id="decl-notice-box">
+          ${this.escapeHtml(noticeText)}
+        </div>
+        <label class="decl-card" for="uploadsDeclaration" id="decl-card-box">
+          <div class="decl-card-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+          </div>
+          <div class="decl-card-body">
+            <div class="decl-card-title">
+              ${cardTitle}
+              <span class="decl-badge-req" id="decl-badge">Mandatory</span>
+            </div>
+            <div class="decl-card-desc">
+              ${cardDesc}
+            </div>
+          </div>
+          <div class="decl-card-check">
+            <input type="checkbox" id="uploadsDeclaration" class="decl-checkbox ${actionBadgeClass}" />
+          </div>
+        </label>
       `,
-      icon: 'warning',
+      customClass: {
+        popup: 'declaration-modal',
+        confirmButton: `decl-btn-confirm ${actionBadgeClass}`,
+        cancelButton: 'decl-btn-cancel'
+      },
+      buttonsStyling: false,
       showCancelButton: true,
-      confirmButtonText: `Proceed (${label})`,
+      showCloseButton: true,
+      reverseButtons: true,
+      confirmButtonText: `${btnIconSvg}Proceed (${label})`,
       cancelButtonText: 'Cancel',
-      confirmButtonColor: action === 'REJECT' ? '#dc3545' : '#2563eb',
-      cancelButtonColor: '#6c757d',
       focusConfirm: false,
-      didOpen: () => {
+      didOpen: (popup) => {
         const confirmBtn = Swal.getConfirmButton();
-        if (confirmBtn) confirmBtn.disabled = true;
+        if (confirmBtn) {
+          confirmBtn.disabled = true;
+          confirmBtn.classList.add('disabled');
+        }
 
-        const checkbox = document.getElementById('uploadsDeclaration') as HTMLInputElement | null;
-        const validateInputs = () => {
+        const checkbox = popup.querySelector('#uploadsDeclaration') as HTMLInputElement | null;
+        const cardBox = popup.querySelector('#decl-card-box') as HTMLElement | null;
+        const headerBox = popup.querySelector('#decl-header-box') as HTMLElement | null;
+        const noticeBox = popup.querySelector('#decl-notice-box') as HTMLElement | null;
+        const badge = popup.querySelector('#decl-badge') as HTMLElement | null;
+
+        const updateState = () => {
           const isChecked = !!checkbox?.checked;
-          const btn = Swal.getConfirmButton();
-          if (btn) btn.disabled = !isChecked;
+          if (confirmBtn) {
+            confirmBtn.disabled = !isChecked;
+            if (isChecked) {
+              confirmBtn.classList.remove('disabled');
+            } else {
+              confirmBtn.classList.add('disabled');
+            }
+          }
+          if (cardBox) {
+            if (isChecked) {
+              cardBox.classList.add('checked');
+              if (isReject) cardBox.classList.add('reject');
+              if (isObjection) cardBox.classList.add('objection');
+            } else {
+              cardBox.classList.remove('checked', 'reject', 'objection');
+            }
+          }
+          if (headerBox && !isReject && !isObjection) {
+            if (isChecked) {
+              headerBox.classList.add('checked');
+            } else {
+              headerBox.classList.remove('checked');
+            }
+          }
+          if (noticeBox && !isReject && !isObjection) {
+            if (isChecked) {
+              noticeBox.classList.add('checked');
+            } else {
+              noticeBox.classList.remove('checked');
+            }
+          }
+          if (badge) {
+            badge.innerText = isChecked ? 'Verified' : 'Mandatory';
+          }
+          const valMsg = popup.querySelector('.swal2-validation-message') as HTMLElement | null;
+          if (valMsg && isChecked) valMsg.style.display = 'none';
         };
 
-        if (checkbox) checkbox.addEventListener('change', validateInputs);
+        if (checkbox) checkbox.addEventListener('change', updateState);
       },
       preConfirm: () => {
-        const checkbox = document.getElementById('uploadsDeclaration') as HTMLInputElement | null;
+        const popup = Swal.getPopup();
+        const checkbox = popup?.querySelector('#uploadsDeclaration') as HTMLInputElement | null;
         if (!checkbox?.checked) {
           Swal.showValidationMessage('Please accept the declaration to continue.');
           return false as any;
