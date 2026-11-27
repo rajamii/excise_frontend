@@ -322,9 +322,32 @@ export class AccountService {
     this.clearAllServiceCaches();
 
     if (isPlatformBrowser(this.platformId)) {
-      // Preserve certain keys across logout
+      // Preserve certain keys across logout/expiry so users don't lose draft progress
       const blockedUsers = localStorage.getItem(this.blockedUsersStorageKey);
-      const dismissedBanner = sessionStorage.getItem('dismissedLicenseBanner');
+      const preservedSessionKeys = [
+        'dismissedLicenseBanner',
+        'selectLicenseData',
+        'keyInfoData',
+        'applicantDetailsData',
+        'memberDetailsData',
+        'siteDetailsData',
+        'unitDetailsData',
+        'new_license_current_step',
+        'new_license_draft_application_id',
+        'new_license_submitted_application_id',
+        'new_license_sbm_application_id',
+        'new_license_sbm_submitted',
+        'licenseCategories',
+        'licenseSubcategories',
+        'licenseTypes'
+      ];
+      const preservedSessionData: Record<string, string> = {};
+      preservedSessionKeys.forEach(key => {
+        const val = sessionStorage.getItem(key);
+        if (val !== null) {
+          preservedSessionData[key] = val;
+        }
+      });
       
       localStorage.clear();
       sessionStorage.clear();
@@ -333,11 +356,11 @@ export class AccountService {
       if (blockedUsers) {
         localStorage.setItem(this.blockedUsersStorageKey, blockedUsers);
       }
-      if (dismissedBanner) {
-        sessionStorage.setItem('dismissedLicenseBanner', dismissedBanner);
-      }
+      Object.entries(preservedSessionData).forEach(([key, val]) => {
+        sessionStorage.setItem(key, val);
+      });
       
-      console.log('💾 Cleared localStorage and sessionStorage (preserved banner dismissal state)');
+      console.log('💾 Cleared localStorage and sessionStorage (preserved application draft & banner states)');
     }
 
     this.userIdentity = null;

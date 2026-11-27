@@ -994,19 +994,25 @@ export class LoginComponent extends BaseComponent {
 
   private handleAuthResponse(res: any): void {
 
-    let accessToken: string | null = null;
-    let refreshToken: string | null = null;
-
-    if (res.authenticatedUser?.access && res.authenticatedUser?.refresh) {
-      accessToken = res.authenticatedUser.access;
-      refreshToken = res.authenticatedUser.refresh;
-    } else if (res.access && res.refresh) {
-      accessToken = res.access;
-      refreshToken = res.refresh;
-    } else if (res.token && res.refresh_token) {
-      accessToken = res.token;
-      refreshToken = res.refresh_token;
-    }
+    const authUser = res?.authenticated_user || res?.authenticatedUser || res?.user || res;
+    let accessToken: string | null =
+      authUser?.access ||
+      authUser?.tokens?.access ||
+      res?.access ||
+      res?.tokens?.access ||
+      authUser?.token ||
+      res?.token ||
+      localStorage.getItem('access') ||
+      null;
+    let refreshToken: string | null =
+      authUser?.refresh ||
+      authUser?.tokens?.refresh ||
+      res?.refresh ||
+      res?.tokens?.refresh ||
+      authUser?.refresh_token ||
+      res?.refresh_token ||
+      localStorage.getItem('refresh') ||
+      null;
 
     if (accessToken && refreshToken) {
       localStorage.setItem('access', accessToken);

@@ -2,7 +2,10 @@ import { isPlatformBrowser } from '@angular/common';
 import { HttpEvent, HttpHandler, HttpInterceptor, HttpRequest, HttpErrorResponse } from '@angular/common/http';
 import { Inject, Injectable, PLATFORM_ID } from '@angular/core';
 import { Observable, catchError, switchMap, throwError, BehaviorSubject, filter, take, timeout } from 'rxjs';
+import { Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
+import { AccountService } from '../services/account.service';
+import { StateStorageService } from '../config/state-storage.service';
 
 @Injectable()
 export class JwtRefreshInterceptor implements HttpInterceptor {
@@ -14,7 +17,10 @@ export class JwtRefreshInterceptor implements HttpInterceptor {
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object, // Check if code is running in browser
-    private authService: AuthService // Service to handle API calls including refresh
+    private authService: AuthService, // Service to handle API calls including refresh
+    private router: Router,
+    private accountService: AccountService,
+    private stateStorageService: StateStorageService
   ) {}
 
   /**
@@ -76,10 +82,15 @@ export class JwtRefreshInterceptor implements HttpInterceptor {
       const refreshToken = localStorage.getItem('refresh');
 
       if (!refreshToken) {
-        console.error('No refresh token found. This might be a login issue.');
-        // Don't logout immediately - let the error propagate so the component can handle it
+        console.error('No refresh token found. User session has expired.');
         this.isRefreshing = false;
-        return throwError(() => new Error('No refresh token available'));
+        this.logoutAndRedirect();
+        return throwError(() => new HttpErrorResponse({
+          error: { detail: 'Session expired. Please log in again.' },
+          status: 401,
+          statusText: 'Unauthorized',
+          url: req.url || undefined
+        }));
       }
 
       // Call API to get new access token using the refresh token
@@ -94,7 +105,12 @@ export class JwtRefreshInterceptor implements HttpInterceptor {
           if (!newAccessToken) {
             console.error('No new access token received, logging out.');
             this.logoutAndRedirect();
-            return throwError(() => new Error('No new access token received'));
+            return throwError(() => new HttpErrorResponse({
+              error: { detail: 'Failed to refresh authentication token.' },
+              status: 401,
+              statusText: 'Unauthorized',
+              url: req.url || undefined
+            }));
           }
 
           // Store new access token and continue with the original request
@@ -126,11 +142,28 @@ export class JwtRefreshInterceptor implements HttpInterceptor {
   }
 
   /**
-   * Clears stored tokens and optionally triggers logout logic.
+   * Clears stored tokens and redirects to login with sessionExpired query parameter.
    */
   private logoutAndRedirect() {
-    localStorage.removeItem('access');
-    localStorage.removeItem('refresh');
-    this.authService.logout(); // Optionally call backend logout endpoint
+    if (isPlatformBrowser(this.platformId)) {
+      try {
+        const currentUrl = window.location.pathname + window.location.search;
+        if (currentUrl && !currentUrl.includes('/login')) {
+          this.stateStorageService.storeUrl(currentUrl);
+        }
+      } catch {
+        // no-op
+      }
+      localStorage.removeItem('access');
+      localStorage.removeItem('refresh');
+      try {
+        this.accountService.clearAppData();
+      } catch {
+        // no-op
+      }
+      void this.router.navigate(['/login'], {
+        queryParams: { sessionExpired: true }
+      });
+    }
   }
 }

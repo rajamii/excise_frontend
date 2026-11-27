@@ -1222,6 +1222,38 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
           error: (err: any) => {
             Swal.close();
             console.error('New License draft creation failed:', err);
+
+            const isAuthExpired =
+              err?.status === 401 ||
+              String(err?.message || '').toLowerCase().includes('refresh token') ||
+              String(err?.error?.detail || '').toLowerCase().includes('token') ||
+              String(err?.error?.detail || '').toLowerCase().includes('credential') ||
+              String(err?.error?.code || '').toLowerCase().includes('token_not_valid');
+
+            if (isAuthExpired) {
+              this.isSubmitting = false;
+              Swal.fire({
+                title: 'Session Expired',
+                html: `
+                  <div style="font-size: 15px; color: #374151; line-height: 1.5; text-align: center;">
+                    Your login session has expired.
+                    <br><br>
+                    <strong>Don't worry!</strong> Your application data has been safely saved in this browser.
+                    <br>Please log in again to complete your submission.
+                  </div>
+                `,
+                icon: 'warning',
+                confirmButtonText: 'Log In Again',
+                allowOutsideClick: false,
+                confirmButtonColor: '#0f766e',
+              }).then(() => {
+                this.router.navigate(['/login'], {
+                  queryParams: { sessionExpired: true }
+                });
+              });
+              return;
+            }
+
             const errorMessage = this.formatErrorMessage(err);
             Swal.fire({
               title: 'Submission Failed',
@@ -1620,7 +1652,10 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       }
     }
 
-    const message = err?.error?.message || err?.message || err?.statusText;
+    let message = err?.error?.message || err?.error?.detail || err?.message || err?.statusText;
+    if (String(message || '').toLowerCase().includes('refresh token')) {
+      message = 'Your login session has expired. Please log in again to continue.';
+    }
     const status = err?.status ? ` (Status: ${err.status})` : '';
     if (message) return `${message}${status}`;
 
