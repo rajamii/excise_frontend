@@ -16,9 +16,27 @@
                 <button class="btn btn-info btn-sm" (click)="autoCalculateFromDaily()" title="Refresh data from daily register">
                   <i class="bi bi-arrow-clockwise me-1"></i>Refresh
                 </button>
-                <button class="btn btn-outline-success btn-sm" (click)="exportMonthlyReportCsv()" [disabled]="!overviewSummary" title="Export selected month report (CSV for Excel)">
-                  <i class="bi bi-download me-1"></i>Export
-                </button>
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-outline-success btn-sm" (click)="exportMonthlyReportSvg()" [disabled]="!overviewSummary || isExporting" title="Export statement as .svg file for department verification">
+                    <span *ngIf="isExporting" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    <i *ngIf="!isExporting" class="bi bi-download me-1"></i>{{ isExporting ? 'Exporting SVG...' : 'Export' }}
+                  </button>
+                  <button type="button" class="btn btn-outline-success btn-sm dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" [disabled]="!overviewSummary || isExporting" title="Choose export format">
+                    <span class="visually-hidden">Toggle Dropdown</span>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                    <li>
+                      <button class="dropdown-item py-2" type="button" (click)="exportMonthlyReportSvg()">
+                        <i class="bi bi-file-earmark-image text-success me-2"></i>Export as .SVG (Official Department Copy)
+                      </button>
+                    </li>
+                    <li>
+                      <button class="dropdown-item py-2" type="button" (click)="exportMonthlyReportCsv()">
+                        <i class="bi bi-file-earmark-spreadsheet text-primary me-2"></i>Export as .CSV (Excel Spreadsheet)
+                      </button>
+                    </li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
@@ -155,8 +173,39 @@
       
 
       <!-- Data Table Section -->
-      <div class="bg-white">
+      <div #reportContainer id="monthly-statement-report-container" class="bg-white">
         <div class="container-fluid p-3">
+          <!-- Department Verification Header (Shows in View and Exported SVG) -->
+          <div class="department-verification-header mb-4 p-3 bg-white border border-2 border-primary rounded shadow-sm">
+            <div class="row align-items-center">
+              <div class="col-md-7 col-12 mb-2 mb-md-0">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="gov-badge-icon bg-primary text-white p-2 rounded-3 text-center d-flex align-items-center justify-content-center shadow-sm" style="width: 52px; height: 52px; min-width: 52px;">
+                    <i class="bi bi-shield-shaded fs-3"></i>
+                  </div>
+                  <div>
+                    <div class="text-uppercase small fw-bold text-primary tracking-wider mb-0" style="letter-spacing: 0.5px;">Excise Department • Government of Assam</div>
+                    <h4 class="h5 mb-1 fw-bold text-dark">Monthly Statement of Hologram (Verification Copy)</h4>
+                    <div class="text-secondary small d-flex flex-wrap align-items-center gap-2">
+                      <span class="badge bg-light text-dark border"><i class="bi bi-building me-1 text-primary"></i><strong>Manufacturing Unit:</strong> {{ getManufacturingUnitDisplay() }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-5 col-12 text-md-end text-start">
+                <div class="d-inline-flex flex-column align-items-md-end gap-1">
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-primary px-3 py-1 fs-6 fw-bold"><i class="bi bi-upc-scan me-1"></i>{{ getCurrentHologramTypeDisplay() }}</span>
+                    <span class="badge bg-secondary px-2 py-1 small">{{ getSelectedMonthName() }} {{ selectedYear }}</span>
+                  </div>
+                  <div class="text-muted small mt-1">
+                    <i class="bi bi-calendar-event me-1 text-success"></i>Downloaded Date: <strong class="text-dark">{{ exportDateDisplay || (todayDate | date:'dd MMM yyyy, hh:mm a') }}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           @if (overviewSummary) {
           <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-5 g-3 mb-3">
 
@@ -1057,6 +1106,60 @@
                 }
               </tbody>
             </table>
+          </div>
+
+          <!-- Department Verification & Signatures Section (Included in SVG Export) -->
+          <div *ngIf="overviewSummary" class="verification-signatures-block mt-4 p-4 bg-light border border-2 border-secondary border-opacity-25 rounded shadow-sm">
+            <div class="row align-items-center mb-4 pb-2 border-bottom">
+              <div class="col-md-9 col-12">
+                <div class="d-flex align-items-center gap-2">
+                  <i class="bi bi-patch-check-fill text-success fs-5"></i>
+                  <span class="fw-semibold text-dark small">
+                    This is an official certified monthly statement of holograms reconciled with physical balance, daily issue registers, and production logs under the Assam Excise Rules.
+                  </span>
+                </div>
+              </div>
+              <div class="col-md-3 col-12 text-md-end text-start mt-2 mt-md-0">
+                <span class="badge bg-success bg-opacity-10 text-success border border-success px-3 py-2 fw-bold">
+                  <i class="bi bi-shield-check me-1"></i>Verified Statement
+                </span>
+              </div>
+            </div>
+
+            <div class="row g-4 text-center">
+              <div class="col-md-4 col-12">
+                <div class="signature-box p-3 bg-white border rounded shadow-sm h-100 d-flex flex-column justify-content-between">
+                  <div class="seal-placeholder mb-4" style="height: 48px;"></div>
+                  <div class="border-top border-dark border-2 pt-2">
+                    <strong class="d-block text-dark small">Factory / Distillery Representative</strong>
+                    <div class="text-muted small">Authorized Signatory</div>
+                    <div class="text-secondary small mt-1">Date: ____________________</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-4 col-12">
+                <div class="signature-box p-3 bg-white border rounded shadow-sm h-100 d-flex flex-column justify-content-between">
+                  <div class="seal-placeholder mb-4" style="height: 48px;"></div>
+                  <div class="border-top border-dark border-2 pt-2">
+                    <strong class="d-block text-dark small">Officer-in-Charge / Excise Inspector</strong>
+                    <div class="text-muted small">Range / Station Seal & Signature</div>
+                    <div class="text-secondary small mt-1">Date: ____________________</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-4 col-12">
+                <div class="signature-box p-3 bg-white border rounded shadow-sm h-100 d-flex flex-column justify-content-between">
+                  <div class="seal-placeholder mb-4" style="height: 48px;"></div>
+                  <div class="border-top border-dark border-2 pt-2">
+                    <strong class="d-block text-dark small">Superintendent of Excise</strong>
+                    <div class="text-muted small">District Excise Office Seal</div>
+                    <div class="text-secondary small mt-1">Date: ____________________</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

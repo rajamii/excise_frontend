@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import html2canvas from 'html2canvas';
 import { HologramDataService } from '../../services/hologram-data.service';
 import { SupplyChainProfileService } from '../../../../../core/services/supply-chain-profile.service';
 import { SecretaryService } from '../../../../secretary/services/secretary.service';
@@ -144,6 +145,14 @@ export class HologramMonthlyReportComponent implements OnInit {
   statementRows: StatementRow[] = [];
   approvedEntriesCount: number = 0;
   isLoading: boolean = false;
+  // ViewChild for Export container
+  @ViewChild('reportContainer') reportContainer?: ElementRef<HTMLElement>;
+
+  // Export State
+  isExporting: boolean = false;
+  exportDateDisplay: string = '';
+  todayDate: Date = new Date();
+
   establishmentLine: string = '';
   private createdDistilleryBreweryNames: string[] = [];
   private oicMappedEstablishmentNames: string[] = [];
@@ -1539,6 +1548,150 @@ export class HologramMonthlyReportComponent implements OnInit {
       return 'utilization-row';
     }
     return '';
+  }
+
+  /**
+   * Helper to get active manufacturing unit / distillery display name
+   */
+  getManufacturingUnitDisplay(): string {
+    if (this.establishmentLine && this.establishmentLine.trim()) {
+      return this.establishmentLine.trim();
+    }
+    if (this.commissionerMode) {
+      return this.selectedManufacturingUnit || 'All Manufacturing Units';
+    }
+    return 'Assigned Manufacturing Unit';
+  }
+
+  /**
+   * Helper to get full name of selected month
+   */
+  getSelectedMonthName(): string {
+    const monthMap: Record<string, string> = {
+      jan: 'January', feb: 'February', mar: 'March', apr: 'April',
+      may: 'May', jun: 'June', jul: 'July', aug: 'August',
+      sep: 'September', oct: 'October', nov: 'November', dec: 'December'
+    };
+    return monthMap[this.selectedMonth?.toLowerCase()] || this.selectedMonth || '';
+  }
+
+  /**
+   * Helper to escape characters for SVG/XML text
+   */
+  escapeXml(unsafe: string): string {
+    return (unsafe || '').replace(/[<>&'"]/g, (c) => {
+      switch (c) {
+        case '<': return '&lt;';
+        case '>': return '&gt;';
+        case '&': return '&amp;';
+        case '\'': return '&apos;';
+        case '"': return '&quot;';
+        default: return c;
+      }
+    });
+  }
+
+  /**
+   * Export Monthly Hologram Statement as SVG with exact table view, manufacturing unit, and download date
+   */
+  async exportMonthlyReportSvg(): Promise<void> {
+    if (!this.overviewSummary || this.isExporting) {
+      return;
+    }
+
+    const reportEl = this.reportContainer?.nativeElement || document.getElementById('monthly-statement-report-container');
+    if (!reportEl) {
+      console.error('Report container element not found for export');
+      return;
+    }
+
+    this.isExporting = true;
+    const now = new Date();
+    this.exportDateDisplay = now.toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+
+    try {
+      // Allow Angular a tick to render exportDateDisplay
+      await new Promise(resolve => setTimeout(resolve, 80));
+
+      // Find any table-responsive wrapper inside the container to avoid horizontal clipping
+      const tableWrapper = reportEl.querySelector('.table-responsive') as HTMLElement;
+      let prevOverflow = '';
+      let prevMaxWidth = '';
+      if (tableWrapper) {
+        prevOverflow = tableWrapper.style.overflow;
+        prevMaxWidth = tableWrapper.style.maxWidth;
+        tableWrapper.style.overflow = 'visible';
+        tableWrapper.style.maxWidth = 'none';
+      }
+
+      // Calculate width and height to capture full content without clipping
+      const fullWidth = Math.max(reportEl.scrollWidth, tableWrapper ? tableWrapper.scrollWidth : 1800, 1600);
+      const fullHeight = reportEl.scrollHeight;
+
+      const canvas = await html2canvas(reportEl, {
+        scale: 2, // 2x high resolution for crisp text & print quality
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        width: fullWidth,
+        height: fullHeight,
+        windowWidth: fullWidth + 100,
+        scrollX: 0,
+        scrollY: 0
+      });
+
+      // Restore table overflow styles
+      if (tableWrapper) {
+        tableWrapper.style.overflow = prevOverflow;
+        tableWrapper.style.maxWidth = prevMaxWidth;
+      }
+
+      const imgData = canvas.toDataURL('image/png');
+      const width = canvas.width;
+      const height = canvas.height;
+
+      const monthNumber = this.getMonthNumber(this.selectedMonth);
+      const monthKey = `${this.selectedYear}-${String(monthNumber).padStart(2, '0')}`;
+      const unit = this.getManufacturingUnitDisplay();
+      const safeUnit = unit.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_') || 'MANUFACTURING_UNIT';
+      const filename = `monthly_hologram_statement_${safeUnit}_${monthKey}_${this.selectedHologramType}.svg`;
+
+      const svgDoc = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
+     width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+  <title>Monthly Statement of Holograms - ${this.escapeXml(unit)} - ${this.selectedMonth.toUpperCase()} ${this.selectedYear}</title>
+  <desc>
+    Manufacturing Unit: ${this.escapeXml(unit)}
+    Hologram Category: ${this.selectedHologramType}
+    Period: ${this.getSelectedMonthName()} ${this.selectedYear}
+    Downloaded On: ${this.exportDateDisplay}
+    Verification Status: Official Copy for Department Verification
+  </desc>
+  <image width="${width}" height="${height}" xlink:href="${imgData}"/>
+</svg>`;
+
+      const blob = new Blob([svgDoc], { type: 'image/svg+xml;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to export Monthly Hologram Statement as SVG:', err);
+    } finally {
+      this.isExporting = false;
+    }
   }
 
   /**
