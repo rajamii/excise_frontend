@@ -551,6 +551,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     siteEnquiryReportEntries: SiteEnquiryReportField[] = [];
     siteEnquiryActiveTab = 1;
     siteEnquiryReportSections: any[] = [];
+    hasExistingSiteEnquiryReport = false;
     newLicenseFeeApprovalModalOpen = false;
     newLicenseFeeConfirmModalOpen = false;
     pendingNewLicenseFeeSelection: NewLicenseFeeApprovalResult | null = null;
@@ -1178,10 +1179,12 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         this.addComputedFields(mappedData, apiData, config);
 
         this.applicationData = mappedData;
+        this.hasExistingSiteEnquiryReport = false;
         this.resetSiteEnquiryReportState();
         this.calculateNewLicenseUploads();
         this.loadObjectionsForCurrentApplication();
         this.loadWorkflowActions();
+        this.checkAndPreloadSiteEnquiryReport();
 
         if (this.pendingOpenSupplyLetter) {
             this.pendingOpenSupplyLetter = false;
@@ -4495,6 +4498,54 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         return false;
     }
 
+    private isSiteEnquiryOfficerUser(): boolean {
+        if (this.roleService.hasRole(8)) return true;
+        const currentUser = this.roleService.getCurrentUser();
+        const userRoleId = Number(currentUser?.roleId || (currentUser?.role as any)?.id || 0);
+        if (userRoleId === 8) return true;
+        const roleName = String(currentUser?.role?.name || currentUser?.role?.displayName || '').toLowerCase().trim();
+        if (roleName.includes('enquiry') || roleName.includes('inquiry')) return true;
+        if (this.isBrowser) {
+            try {
+                const storedRoleId = Number(localStorage.getItem('role_id') || sessionStorage.getItem('role_id') || 0);
+                const storedRole = String(localStorage.getItem('role') || sessionStorage.getItem('role') || '').toLowerCase();
+                if (storedRoleId === 8 || storedRole.includes('enquiry') || storedRole.includes('inquiry')) return true;
+            } catch {
+                // ignore
+            }
+        }
+        return false;
+    }
+
+    private checkAndPreloadSiteEnquiryReport(): void {
+        if (!this.isNewLicense()) return;
+        const isAuthorizedUser =
+            this.isSiteEnquiryOfficerUser() ||
+            this.isCommissionerOrJointCommissioner() ||
+            this.roleService.hasRole(9) ||
+            this.roleService.hasRole(10) ||
+            this.roleService.hasRole(8);
+        if (!isAuthorizedUser) return;
+
+        const appId = this.getCurrentApplicationId();
+        if (!appId) return;
+
+        this.licenseApplicationService.getSiteEnquiryReport(appId).subscribe({
+            next: (report: any) => {
+                if (report && Object.keys(report).length > 0) {
+                    this.hasExistingSiteEnquiryReport = true;
+                    this.siteEnquiryReport = report;
+                    this.siteEnquiryReportSections = this.buildSiteEnquirySections(report);
+                    this.siteEnquiryReportEntries = this.buildSiteEnquiryReportEntries(report);
+                    this.cdr.markForCheck();
+                }
+            },
+            error: () => {
+                // Not submitted yet or error - silent fallback
+            }
+        });
+    }
+
     private isPendingAtJointCommissionerStage(): boolean {
         const stageText = String(
             this.applicationData?.currentStageName ??
@@ -5374,13 +5425,25 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
             this.isCommissionerOrJointCommissioner() ||
             this.roleService.hasRole(9) ||
             this.roleService.hasRole(10) ||
-            this.isStrictJointCommissionerUser();
+            this.roleService.hasRole(8) ||
+            this.isStrictJointCommissionerUser() ||
+            this.isSiteEnquiryOfficerUser();
 
         if (!isAuthorizedUser) {
             return false;
         }
 
-        return this.hasReachedJointCommissionerOrLater() || !!this.siteEnquiryReport;
+        const hasSubmittedReport =
+            this.hasReachedJointCommissionerOrLater() ||
+            this.hasExistingSiteEnquiryReport ||
+            Boolean(
+                (this.applicationData as any)?.site_enquiry_is_reverted ||
+                (this.applicationData as any)?.siteEnquiryIsReverted ||
+                (this.applicationData as any)?.has_site_enquiry_report ||
+                (this.applicationData as any)?.site_enquiry_report
+            );
+
+        return hasSubmittedReport || !!this.siteEnquiryReport;
     }
 
     get currentSiteEnquirySectionIndex(): number {
@@ -6179,21 +6242,30 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         }
 
         this.siteEnquiryReportModalOpen = true;
-        this.siteEnquiryReportLoading = true;
         this.siteEnquiryReportError = '';
-        this.siteEnquiryReport = null;
-        this.siteEnquiryReportEntries = [];
+        if (!this.siteEnquiryReport) {
+            this.siteEnquiryReportLoading = true;
+            this.siteEnquiryReportEntries = [];
+        } else {
+            this.siteEnquiryReportLoading = false;
+            this.siteEnquiryActiveTab = 1;
+            this.siteEnquiryReportSections = this.buildSiteEnquirySections(this.siteEnquiryReport);
+            this.siteEnquiryReportEntries = this.buildSiteEnquiryReportEntries(this.siteEnquiryReport);
+        }
 
         this.licenseApplicationService.getSiteEnquiryReport(applicationId).subscribe({
             next: (report: Record<string, any>) => {
                 this.siteEnquiryReport = report || null;
+                this.hasExistingSiteEnquiryReport = Boolean(report && Object.keys(report).length > 0);
                 this.siteEnquiryActiveTab = 1;
                 this.siteEnquiryReportSections = this.buildSiteEnquirySections(report || {});
                 this.siteEnquiryReportEntries = this.buildSiteEnquiryReportEntries(report || {});
                 this.siteEnquiryReportLoading = false;
             },
             error: (error: any) => {
-                this.siteEnquiryReportError = this.extractHttpErrorMessage(error, 'Failed to load site enquiry report.', 'site enquiry');
+                if (!this.siteEnquiryReport) {
+                    this.siteEnquiryReportError = this.extractHttpErrorMessage(error, 'Failed to load site enquiry report.', 'site enquiry');
+                }
                 this.siteEnquiryReportLoading = false;
             }
         });
