@@ -409,7 +409,7 @@
                     <i class="bi bi-eye-fill"></i>
                   </button>
                   <button
-                    *ngIf="isCommissionerAdmin()"
+                    *ngIf="canViewSiteEnquiryReportAction(row)"
                     type="button"
                     class="btn btn-link p-0 action-eye action-report me-2"
                     title="View Site Enquiry Report"
@@ -675,7 +675,7 @@
       </div>
     </div>
 
-    <div class="site-enquiry-modal-footer" *ngIf="siteEnquiryReportSections.length > 1">
+    <div class="site-enquiry-modal-footer">
       <div class="site-enquiry-footer-left">
         <button type="button" class="btn btn-outline-secondary" (click)="closeSiteEnquiryReportModal()">
           Close

@@ -236,6 +236,48 @@ export class NewLicenseDashboardComponent implements OnInit, OnDestroy {
     return normalized.includes('commissioner');
   }
 
+  isJointCommissioner(): boolean {
+    if (this.roleService.hasRole(9)) return true;
+    const user = this.roleService.getCurrentUser() as any;
+    const roleId = Number(
+      user?.roleId ??
+      user?.role?.id ??
+      (typeof localStorage !== 'undefined' ? localStorage.getItem('role_id') : 0) ??
+      0
+    );
+    if (roleId === 9) return true;
+    const roleName = String(
+      user?.role?.name ||
+      user?.role?.displayName ||
+      (typeof localStorage !== 'undefined' ? localStorage.getItem('role') : '') ||
+      ''
+    ).toLowerCase();
+    return roleName.includes('joint');
+  }
+
+  isSiteEnquiryOfficer(): boolean {
+    if (this.roleService.hasRole(8)) return true;
+    const user = this.roleService.getCurrentUser() as any;
+    const roleId = Number(
+      user?.roleId ??
+      user?.role?.id ??
+      (typeof localStorage !== 'undefined' ? localStorage.getItem('role_id') : 0) ??
+      0
+    );
+    if (roleId === 8) return true;
+    const roleName = String(
+      user?.role?.name ||
+      user?.role?.displayName ||
+      (typeof localStorage !== 'undefined' ? localStorage.getItem('role') : '') ||
+      ''
+    ).toLowerCase();
+    return roleName.includes('enquiry') || roleName.includes('inquiry');
+  }
+
+  canViewSiteEnquiryReportAction(row?: NewLicenseItem): boolean {
+    return this.isCommissionerAdmin() || this.isJointCommissioner() || this.isSiteEnquiryOfficer();
+  }
+
   canCommissionerAct(row: NewLicenseItem): boolean {
     if (!this.isCommissionerAdmin()) return false;
     if (!row || row.statusGroup !== 'pending') return false;
