@@ -331,75 +331,143 @@
               </div>
             </td>
               <td class="text-nowrap align-middle">
-                <button *ngIf="row.canView" class="btn btn-link p-0 action-eye me-2" title="View Details" (click)="viewApplication(row)">
-                  <i class="bi bi-eye-fill"></i>
-                </button>
-              <button
-                *ngIf="isLicenseeUser() && row.statusGroup === 'objection'"
-                class="btn btn-sm btn-fix-objection me-2"
-                title="Resolve Objections"
-                (click)="resolveObjections(row)"
-              >
-                <i class="bi bi-tools me-1"></i>Fix
-              </button>
-              <button
-                *ngIf="!isLicenseeUser() && row.hasObjectionHistory"
-                class="btn btn-link p-0 action-eye me-2"
-                title="View Objection Details"
-                (click)="viewObjectionDetails(row)"
-              >
-                <i class="bi bi-info-circle-fill"></i>
-              </button>
-              <button
-                *ngIf="isLicenseeUser() && row.canPayLicenseFee"
-                class="btn btn-sm btn-success me-2 fw-bold shadow-sm"
-                title="Make Payment for License Fee & Security Deposit"
-                (click)="payLicenseFee(row)"
-              >
-                <i class="bi bi-credit-card me-1"></i>Make Payment
-              </button>
-              <!-- Application Fee Payment Actions -->
-              <ng-container *ngIf="isLicenseeUser() && row.canPayNow">
-                <!-- Failed Payment: Prominent Pay Now button -->
-                <button
-                  *ngIf="row.paymentStatus === 'Failed'"
-                  class="btn btn-sm btn-primary me-2 pay-now-btn"
-                  title="Retry Application Fee Payment (₹500)"
-                  (click)="payNow(row)"
-                >
-                  <i class="bi bi-arrow-repeat me-1"></i>Pay Now
-                </button>
+                <!-- Commissioner Admin View: Eye & Timeline above, 2 buttons per line below -->
+                <ng-container *ngIf="canCommissionerAct(row); else standardActions">
+                  <div class="commissioner-action-wrapper">
+                    <!-- Top Row: Eye & Timeline (Icons only) -->
+                    <div class="commissioner-top-actions">
+                      <button
+                        *ngIf="row.canView"
+                        type="button"
+                        class="btn btn-link p-0 action-eye"
+                        title="View Details"
+                        (click)="viewApplication(row)">
+                        <i class="bi bi-eye-fill"></i>
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-link p-0 action-eye"
+                        title="View Timeline"
+                        (click)="viewTimeline(row)">
+                        <i class="bi bi-clock-history"></i>
+                      </button>
+                    </div>
 
-                <!-- Pending Payment: Awaiting Response Indicator + Check/Retry Gateway Status button -->
-                <div *ngIf="row.paymentStatus === 'Pending'" class="d-inline-flex flex-column align-items-start me-2">
-                  <span class="badge bg-warning text-dark d-inline-flex align-items-center py-1 px-2 mb-1" title="Payment initiated, awaiting response from BillDesk">
-                    <i class="bi bi-hourglass-split me-1"></i>Awaiting Response
-                  </span>
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-outline-warning text-dark d-inline-flex align-items-center py-1 px-2"
-                    style="font-size: 0.75rem; font-weight: 600; border-color: #f59e0b;"
-                    title="Query BillDesk to check if payment succeeded or failed"
-                    (click)="checkPendingStatus(row)"
-                  >
-                    <i class="bi bi-arrow-clockwise me-1"></i>Retry (Check Status)
+                    <!-- 2x2 Action Buttons Grid -->
+                    <div class="commissioner-action-grid">
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-action-approve"
+                        [disabled]="processingRowId === row.applicationId"
+                        title="Approve Application"
+                        (click)="approveByCommissioner(row)">
+                        <span *ngIf="processingRowId === row.applicationId" class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        <i *ngIf="processingRowId !== row.applicationId" class="bi bi-check-circle-fill me-1"></i>
+                        <span>Approve</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-action-reject"
+                        [disabled]="processingRowId === row.applicationId"
+                        title="Reject Application"
+                        (click)="rejectByCommissioner(row)">
+                        <i class="bi bi-x-circle-fill me-1"></i>
+                        <span>Reject</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-action-revert"
+                        [disabled]="processingRowId === row.applicationId"
+                        title="Revert Application"
+                        (click)="revertByCommissioner(row)">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i>
+                        <span>Revert</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-action-objection"
+                        [disabled]="processingRowId === row.applicationId"
+                        title="Raise Objection"
+                        (click)="raiseObjectionByCommissioner(row)">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                        <span>Raise Objection</span>
+                      </button>
+                    </div>
+                  </div>
+                </ng-container>
+
+                <!-- Standard Actions for Other Users / Other Stages -->
+                <ng-template #standardActions>
+                  <button *ngIf="row.canView" class="btn btn-link p-0 action-eye me-2" title="View Details" (click)="viewApplication(row)">
+                    <i class="bi bi-eye-fill"></i>
                   </button>
-                </div>
+                  <button
+                    *ngIf="isLicenseeUser() && row.statusGroup === 'objection'"
+                    class="btn btn-sm btn-fix-objection me-2"
+                    title="Resolve Objections"
+                    (click)="resolveObjections(row)"
+                  >
+                    <i class="bi bi-tools me-1"></i>Fix
+                  </button>
+                  <button
+                    *ngIf="!isLicenseeUser() && row.hasObjectionHistory"
+                    class="btn btn-link p-0 action-eye me-2"
+                    title="View Objection Details"
+                    (click)="viewObjectionDetails(row)"
+                  >
+                    <i class="bi bi-info-circle-fill"></i>
+                  </button>
+                  <button
+                    *ngIf="isLicenseeUser() && row.canPayLicenseFee"
+                    class="btn btn-sm btn-success me-2 fw-bold shadow-sm"
+                    title="Make Payment for License Fee & Security Deposit"
+                    (click)="payLicenseFee(row)"
+                  >
+                    <i class="bi bi-credit-card me-1"></i>Make Payment
+                  </button>
+                  <!-- Application Fee Payment Actions -->
+                  <ng-container *ngIf="isLicenseeUser() && row.canPayNow">
+                    <!-- Failed Payment: Prominent Pay Now button -->
+                    <button
+                      *ngIf="row.paymentStatus === 'Failed'"
+                      class="btn btn-sm btn-primary me-2 pay-now-btn"
+                      title="Retry Application Fee Payment (₹500)"
+                      (click)="payNow(row)"
+                    >
+                      <i class="bi bi-arrow-repeat me-1"></i>Pay Now
+                    </button>
 
-                <!-- Unpaid without explicit status -->
-                <button
-                  *ngIf="row.paymentStatus !== 'Failed' && row.paymentStatus !== 'Pending'"
-                  class="btn btn-sm btn-primary me-2 pay-now-btn"
-                  title="Pay Application Fee (₹500)"
-                  (click)="payNow(row)"
-                >
-                  <i class="bi bi-credit-card me-1"></i>Pay Now
-                </button>
-              </ng-container>
-              <button *ngIf="!isLicenseeUser()" class="btn btn-link p-0 action-eye" title="View Timeline" (click)="viewTimeline(row)">
-                <i class="bi bi-clock-history"></i>
-              </button>
-            </td>
+                    <!-- Pending Payment: Awaiting Response Indicator + Check/Retry Gateway Status button -->
+                    <div *ngIf="row.paymentStatus === 'Pending'" class="d-inline-flex flex-column align-items-start me-2">
+                      <span class="badge bg-warning text-dark d-inline-flex align-items-center py-1 px-2 mb-1" title="Payment initiated, awaiting response from BillDesk">
+                        <i class="bi bi-hourglass-split me-1"></i>Awaiting Response
+                      </span>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-warning text-dark d-inline-flex align-items-center py-1 px-2"
+                        style="font-size: 0.75rem; font-weight: 600; border-color: #f59e0b;"
+                        title="Query BillDesk to check if payment succeeded or failed"
+                        (click)="checkPendingStatus(row)"
+                      >
+                        <i class="bi bi-arrow-clockwise me-1"></i>Retry (Check Status)
+                      </button>
+                    </div>
+
+                    <!-- Unpaid without explicit status -->
+                    <button
+                      *ngIf="row.paymentStatus !== 'Failed' && row.paymentStatus !== 'Pending'"
+                      class="btn btn-sm btn-primary me-2 pay-now-btn"
+                      title="Pay Application Fee (₹500)"
+                      (click)="payNow(row)"
+                    >
+                      <i class="bi bi-credit-card me-1"></i>Pay Now
+                    </button>
+                  </ng-container>
+                  <button *ngIf="!isLicenseeUser()" class="btn btn-link p-0 action-eye" title="View Timeline" (click)="viewTimeline(row)">
+                    <i class="bi bi-clock-history"></i>
+                  </button>
+                </ng-template>
+              </td>
           </tr>
         </tbody>
       </table>

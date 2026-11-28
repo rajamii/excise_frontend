@@ -457,6 +457,7 @@ table {
   }
 }
 
+
 .app-id-link {
   color: #1d4ed8;
   cursor: pointer;
@@ -955,6 +956,7 @@ tr.row-needs-action {
     text-overflow: ellipsis;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
 
     &--pin {
@@ -975,4 +977,106 @@ tr.row-needs-action {
     letter-spacing: 0.03em;
   }
 }
+
+/* ==========================================================================
+   Commissioner Admin Action Column Styles (Eye/Timeline above, 2x2 Grid below)
+   ========================================================================== */
+.commissioner-action-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 210px;
+  max-width: 240px;
+  padding: 4px 0;
+  gap: 6px;
+}
+
+.commissioner-top-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  width: 100%;
+  padding-bottom: 5px;
+  border-bottom: 1px dashed #e2e8f0;
+
+  .action-eye {
+    font-size: 1.15rem;
+    line-height: 1;
+
+    i {
+      font-size: 1.15rem;
+    }
+  }
+}
+
+.commissioner-action-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  width: 100%;
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    padding: 4px 6px;
+    line-height: 1.3;
+    border: none;
+    color: #ffffff;
+    white-space: nowrap;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    transition: all 0.15s ease-in-out;
+
+    i {
+      font-size: 0.8rem;
+    }
+
+    &:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+    }
+
+    &:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+  }
+
+  .btn-action-approve {
+    background-color: #16a34a;
+
+    &:hover:not(:disabled) {
+      background-color: #15803d;
+    }
+  }
+
+  .btn-action-reject {
+    background-color: #dc2626;
+
+    &:hover:not(:disabled) {
+      background-color: #b91c1c;
+    }
+  }
+
+  .btn-action-revert {
+    background-color: #b91c1c;
+
+    &:hover:not(:disabled) {
+      background-color: #991b1b;
+    }
+  }
+
+  .btn-action-objection {
+    background-color: #ea580c;
+
+    &:hover:not(:disabled) {
+      background-color: #c2410c;
+    }
+  }
+}
+
 
