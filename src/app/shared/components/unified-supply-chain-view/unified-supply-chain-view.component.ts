@@ -4476,15 +4476,42 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         return this.getWorkflowApplicationId(this.applicationData);
     }
 
+    private isStrictJointCommissionerUser(): boolean {
+        if (this.roleService.hasRole(9)) return true;
+        const currentUser = this.roleService.getCurrentUser();
+        const userRoleId = Number(currentUser?.roleId || (currentUser?.role as any)?.id || 0);
+        if (userRoleId === 9) return true;
+        const roleName = String(currentUser?.role?.name || currentUser?.role?.displayName || '').toLowerCase().trim();
+        if (roleName.includes('joint')) return true;
+        if (this.isBrowser) {
+            try {
+                const storedRoleId = Number(localStorage.getItem('role_id') || sessionStorage.getItem('role_id') || 0);
+                const storedRole = String(localStorage.getItem('role') || sessionStorage.getItem('role') || '').toLowerCase();
+                if (storedRoleId === 9 || storedRole.includes('joint')) return true;
+            } catch {
+                // ignore
+            }
+        }
+        return false;
+    }
+
     private isPendingAtJointCommissionerStage(): boolean {
         const stageText = String(
             this.applicationData?.currentStageName ??
             (this.applicationData as any)?.current_stage_name ??
             ''
         ).toLowerCase();
-        const stageToken = stageText.replace(/[^a-z]/g, '');
-        if (!stageToken.includes('jointcommissioner')) {
-            return false;
+        const stageToken = stageText.replace(/[^a-z0-9]/g, '');
+        const isJcStage = stageToken.includes('jointcommissioner') || stageToken.includes('level3');
+        if (!isJcStage) {
+            const stageId = Number(
+                this.applicationData?.currentStage ??
+                (this.applicationData as any)?.current_stage_id ??
+                0
+            );
+            if (stageId !== 3) {
+                return false;
+            }
         }
 
         const statusText = String(this.applicationData?.status ?? '').toLowerCase();
@@ -4495,6 +4522,85 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
         const isPendingLike = combined.includes('pending') || (!isRejectedLike && !isObjectionLike && !isApprovedLike);
 
         return isPendingLike && !isRejectedLike && !isObjectionLike && !isApprovedLike;
+    }
+
+    private hasReachedJointCommissionerOrLater(): boolean {
+        if ((this.applicationData as any)?.has_site_enquiry_report || (this.applicationData as any)?.site_enquiry_report) {
+            return true;
+        }
+
+        const stageText = String(
+            this.applicationData?.currentStageName ??
+            (this.applicationData as any)?.current_stage_name ??
+            (this.applicationData as any)?.currentStage ??
+            (this.applicationData as any)?.stage ??
+            ''
+        ).toLowerCase();
+        const stageToken = stageText.replace(/[^a-z0-9]/g, '');
+
+        const statusText = String(
+            this.applicationData?.status ??
+            (this.applicationData as any)?.application_status ??
+            ''
+        ).toLowerCase();
+        const statusToken = statusText.replace(/[^a-z0-9]/g, '');
+
+        const combined = `${stageText} ${statusText} ${stageToken} ${statusToken}`;
+
+        // Clearly at or past Joint Commissioner stage (Level 3 / Joint Commissioner / Level 4 / Commissioner / Payment / Approved)
+        const isAtOrPast =
+            combined.includes('jointcommissioner') ||
+            combined.includes('joint_commissioner') ||
+            combined.includes('joint commissioner') ||
+            combined.includes('level3') ||
+            combined.includes('commissioner') ||
+            combined.includes('level4') ||
+            combined.includes('awaitingpayment') ||
+            combined.includes('awaiting_payment') ||
+            combined.includes('payment') ||
+            combined.includes('payslip') ||
+            combined.includes('approved') ||
+            combined.includes('licenseissued') ||
+            combined.includes('license_issued') ||
+            combined.includes('completed');
+
+        if (isAtOrPast) {
+            return true;
+        }
+
+        // Check numeric stage ID
+        const stageId = Number(
+            this.applicationData?.currentStage ??
+            (this.applicationData as any)?.current_stage_id ??
+            (this.applicationData as any)?.current_stage ??
+            0
+        );
+        // Stage 1: District User, Stage 2: Site Enquiry Officer, Stage 3: Joint Commissioner, Stage 4: Commissioner, Stage 23: Awaiting Payment
+        if (stageId >= 3) {
+            return true;
+        }
+
+        // Exclude initial stages: District User (level 1) and Site Enquiry Officer (level 2)
+        const isInitialStage =
+            combined.includes('district') ||
+            combined.includes('level1') ||
+            (combined.includes('siteenquiry') && !combined.includes('joint') && !combined.includes('commissioner')) ||
+            (combined.includes('level2') && !combined.includes('joint') && !combined.includes('commissioner'));
+
+        if (isInitialStage) {
+            return false;
+        }
+
+        // Check if Site Enquiry Officer was assigned or report exists
+        const hasOfficer = Boolean(
+            (this.applicationData as any)?.site_enquiry_officer_id ||
+            (this.applicationData as any)?.site_enquiry_officer_name
+        );
+        if (hasOfficer && (combined.includes('objection') || combined.includes('reject'))) {
+            return true;
+        }
+
+        return false;
     }
 
     private buildSiteEnquiryReportEntries(report: Record<string, any>): SiteEnquiryReportField[] {
@@ -5260,7 +5366,21 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
     }
 
     canViewSiteEnquiryReport(): boolean {
-        return this.isNewLicense() && this.roleService.hasRole(9) && this.isPendingAtJointCommissionerStage();
+        if (!this.isNewLicense()) {
+            return false;
+        }
+
+        const isAuthorizedUser =
+            this.isCommissionerOrJointCommissioner() ||
+            this.roleService.hasRole(9) ||
+            this.roleService.hasRole(10) ||
+            this.isStrictJointCommissionerUser();
+
+        if (!isAuthorizedUser) {
+            return false;
+        }
+
+        return this.hasReachedJointCommissionerOrLater() || !!this.siteEnquiryReport;
     }
 
     get currentSiteEnquirySectionIndex(): number {
@@ -5303,6 +5423,12 @@ export class UnifiedSupplyChainViewComponent implements OnInit, OnDestroy {
 
     canRevertSiteEnquiryReport(): boolean {
         if (!this.canViewSiteEnquiryReport()) {
+            return false;
+        }
+        if (!this.isStrictJointCommissionerUser()) {
+            return false;
+        }
+        if (!this.isPendingAtJointCommissionerStage()) {
             return false;
         }
         if (this.siteEnquiryReportLoading || !!this.siteEnquiryReportError) {
